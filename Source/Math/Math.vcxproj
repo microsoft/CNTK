@@ -229,8 +229,8 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Error Condition="'$(MathLibrary)' == 'MKL' And '$(CNTK_MKL_PATH)' == ''" Text="CNTK custom MKL location not specified, see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#mkl for instructions." />
-    <Error Condition="'$(MathLibrary)' == 'MKL' And !Exists('$(CNTKCustomMKLPath)')" Text="CNTK custom MKL version $(CNTKCustomMKLVersion) not found. See https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#mkl for instructions." />
-    <Error Condition="!$(HasBoost)" Text="The Boost library is required to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
+    <Error Condition="'$(MathLibrary)' == 'MKL' And '$(CNTK_MKL_PATH)' == ''" Text="CNTK custom MKL location not specified, see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#mkl for instructions." />
+    <Error Condition="'$(MathLibrary)' == 'MKL' And !Exists('$(CNTKCustomMKLPath)')" Text="CNTK custom MKL version $(CNTKCustomMKLVersion) not found. See https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#mkl for instructions." />
+    <Error Condition="!$(HasBoost)" Text="The Boost library is required to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
 </Project>

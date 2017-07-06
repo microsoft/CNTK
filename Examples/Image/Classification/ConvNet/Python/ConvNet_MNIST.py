@@ -8,7 +8,7 @@ from __future__ import print_function
 import numpy as np
 import sys
 import os
-import cntk
+import cntk as C
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -17,14 +17,14 @@ model_path = os.path.join(abs_path, "Models")
 
 # Define the reader for both training and evaluation action.
 def create_reader(path, is_training, input_dim, label_dim):
-    return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(path, cntk.io.StreamDefs(
-        features  = cntk.io.StreamDef(field='features', shape=input_dim),
-        labels    = cntk.io.StreamDef(field='labels',   shape=label_dim)
-    )), randomize=is_training, max_sweeps = cntk.io.INFINITELY_REPEAT if is_training else 1)
+    return C.io.MinibatchSource(C.io.CTFDeserializer(path, C.io.StreamDefs(
+        features=C.io.StreamDef(field='features', shape=input_dim),
+        labels=C.io.StreamDef(field='labels',   shape=label_dim)
+    )), randomize=is_training, max_sweeps=C.io.INFINITELY_REPEAT if is_training else 1)
 
 
 # Creates and trains a feedforward classification model for MNIST images
-def convnet_mnist(debug_output=False):
+def convnet_mnist(debug_output=False, epoch_size=60000, minibatch_size=64, max_epochs=40):
     image_height = 28
     image_width  = 28
     num_channels = 1
@@ -32,42 +32,37 @@ def convnet_mnist(debug_output=False):
     num_output_classes = 10
 
     # Input variables denoting the features and label data
-    input_var = cntk.ops.input((num_channels, image_height, image_width), np.float32)
-    label_var = cntk.ops.input(num_output_classes, np.float32)
+    input_var = C.ops.input_variable((num_channels, image_height, image_width), np.float32)
+    label_var = C.ops.input_variable(num_output_classes, np.float32)
 
     # Instantiate the feedforward classification model
-    scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)
+    scaled_input = C.ops.element_times(C.ops.constant(0.00390625), input_var)
 
-    with cntk.layers.default_options(activation=cntk.ops.relu, pad=False): 
-        conv1 = cntk.layers.Convolution2D((5,5), 32, pad=True)(scaled_input)
-        pool1 = cntk.layers.MaxPooling((3,3), (2,2))(conv1)
-        conv2 = cntk.layers.Convolution2D((3,3), 48)(pool1)
-        pool2 = cntk.layers.MaxPooling((3,3), (2,2))(conv2)
-        conv3 = cntk.layers.Convolution2D((3,3), 64)(pool2)
-        f4    = cntk.layers.Dense(96)(conv3)
-        drop4 = cntk.layers.Dropout(0.5)(f4)
-        z     = cntk.layers.Dense(num_output_classes, activation=None)(drop4)
+    with C.layers.default_options(activation=C.ops.relu, pad=False):
+        conv1 = C.layers.Convolution2D((5,5), 32, pad=True)(scaled_input)
+        pool1 = C.layers.MaxPooling((3,3), (2,2))(conv1)
+        conv2 = C.layers.Convolution2D((3,3), 48)(pool1)
+        pool2 = C.layers.MaxPooling((3,3), (2,2))(conv2)
+        conv3 = C.layers.Convolution2D((3,3), 64)(pool2)
+        f4    = C.layers.Dense(96)(conv3)
+        drop4 = C.layers.Dropout(0.5)(f4)
+        z     = C.layers.Dense(num_output_classes, activation=None)(drop4)
 
-    ce = cntk.losses.cross_entropy_with_softmax(z, label_var)
-    pe = cntk.metrics.classification_error(z, label_var)
+    ce = C.losses.cross_entropy_with_softmax(z, label_var)
+    pe = C.metrics.classification_error(z, label_var)
 
     reader_train = create_reader(os.path.join(data_path, 'Train-28x28_cntk_text.txt'), True, input_dim, num_output_classes)
 
-    # training config
-    epoch_size = 60000                    # for now we manually specify epoch size
-    minibatch_size = 64
-    max_epochs = 40
-
     # Set learning parameters
     lr_per_sample    = [0.001]*10 + [0.0005]*10 + [0.0001]
-    lr_schedule      = cntk.learning_rate_schedule(lr_per_sample, cntk.learners.UnitType.sample, epoch_size)
+    lr_schedule      = C.learning_rate_schedule(lr_per_sample, C.learners.UnitType.sample, epoch_size)
     mm_time_constant = [0]*5 + [1024]
-    mm_schedule      = cntk.learners.momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
+    mm_schedule      = C.learners.momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
 
     # Instantiate the trainer object to drive the model training
-    learner = cntk.learners.momentum_sgd(z.parameters, lr_schedule, mm_schedule)
-    progress_printer = cntk.logging.ProgressPrinter(tag='Training', num_epochs=max_epochs)
-    trainer = cntk.Trainer(z, (ce, pe), learner, progress_printer)
+    learner = C.learners.momentum_sgd(z.parameters, lr_schedule, mm_schedule)
+    progress_printer = C.logging.ProgressPrinter(tag='Training', num_epochs=max_epochs)
+    trainer = C.Trainer(z, (ce, pe), learner, progress_printer)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -75,7 +70,7 @@ def convnet_mnist(debug_output=False):
         label_var : reader_train.streams.labels
     }
 
-    cntk.logging.log_number_of_parameters(z) ; print()
+    C.logging.log_number_of_parameters(z) ; print()
 
     # Get minibatches of images to train with and perform model training
     for epoch in range(max_epochs):       # loop over epochs

@@ -114,6 +114,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(ShiftNode))                            return New<ShiftNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
     else if (nodeType == OperationNameOf(SigmoidNode))                          return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(StableSigmoidNode))                    return New<StableSigmoidNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SinNode))                              return New<SinNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SliceNode))                            return New<SliceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SoftmaxNode))                          return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
@@ -299,9 +300,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateROIPoolingNode(const std::wstring& nodeName, const TensorShape& roiOutputShape)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateROIPoolingNode(const std::wstring& nodeName, PoolKind poolKind, const TensorShape& roiOutputShape, double spatialScale)
 {
-    return net.AddNodeToNetWithElemType(New<ROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, roiOutputShape));
+    return net.AddNodeToNetWithElemType(New<ROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, poolKind, roiOutputShape, spatialScale));
 }
 
 template <class ElemType>
@@ -396,9 +397,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Avera
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ROIPooling(const ComputationNodePtr inputValues, const ComputationNodePtr inputROIs, const TensorShape& roiOutputShape, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ROIPooling(const ComputationNodePtr inputValues, const ComputationNodePtr inputROIs, PoolKind poolKind, const TensorShape& roiOutputShape, double spatialScale, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<ROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, roiOutputShape), { inputValues, inputROIs });
+    return net.AddNodeToNetAndAttachInputs(New<ROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, poolKind, roiOutputShape, spatialScale), { inputValues, inputROIs });
 }
 
 template <class ElemType>

@@ -11,11 +11,12 @@ the forward and the backward pass
 
 from __future__ import division
 import numpy as np
+import cntk as C
 import pytest
 from cntk.ops.tests.ops_test_utils import _test_binary_op, AA, precision, PRECISION_TO_TYPE,\
         unittest_helper
 
-from cntk import edit_distance_error, input, dropout
+from cntk import edit_distance_error, dropout
 
 
 TARGET_OUT_PAIRS_CLASSIFICATION = [
@@ -125,9 +126,9 @@ def test_ndcg(value, output, gain, device_id, precision):
 
     from cntk.metrics import ndcg_at_1
 
-    g = input((1,))
-    s = input((1,))
-    n = input((1,))
+    g = C.input_variable((1,))
+    s = C.input_variable((1,))
+    n = C.input_variable((1,))
     f = ndcg_at_1(s, n, g)
 
     actual_value = f.eval({s:score, n:gain, g:group})
@@ -140,13 +141,13 @@ EDIT_DISTANCE_ERROR_TEST_CASES = [
     ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 0, 0, False, [], 1.0),
     ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 1, 0, 0, False, [], 2.0),
     ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 1, 1, False, [], 1.0),
-    ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 1, 1, True, [1], 2.0),
+    ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 1, 1, True, [1], 1.0),
 ]
 
 @pytest.mark.parametrize("left_input, right_input, subPen, delPen, insPen, squashInputs, tokensToIgnore, result", EDIT_DISTANCE_ERROR_TEST_CASES)
 def test_edit_distance_error(left_input, right_input, subPen, delPen, insPen, squashInputs, tokensToIgnore, result, device_id, precision):
-    i1 = input(shape=(2,))
-    i2 = input(shape=(2,))
+    i1 = C.input_variable(shape=(2,))
+    i2 = C.input_variable(shape=(2,))
     arguments = {i1 : left_input, i2 : right_input}
     a = edit_distance_error(i1, i2, subPen, delPen, insPen, squashInputs, tokensToIgnore)
     assert np.allclose(result, a.eval(arguments))

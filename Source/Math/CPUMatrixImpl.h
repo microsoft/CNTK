@@ -109,7 +109,15 @@ CPUMatrix<ElemType>::CPUMatrix()
 template <class ElemType>
 static ElemType* NewArray(size_t n)
 {
-    ElemType* p = new ElemType[n]();
+    // We need to allocate possibly one more element for the following reason.
+    // At some point we might want to fill a buffer with the result of a random
+    // number generator. The RNG is oblivious to whether the buffer is on the 
+    // CPU or GPU but it needs to keep an accurate tally of how many numbers it
+    // has generated. The trouble stems from the fact that generating an odd 
+    // number gaussians on the GPU is not supported so we must always 
+    // generate an even number. So since we wouldn't know how to update the tally
+    // we are making this allocate one more element in the worst case.
+    ElemType* p = new ElemType[AsMultipleOf(n, 2)]();
 #if 0 // _DEBUG
         ElemType nan = Matrix<ElemType>::MakeNan(__LINE__);
         for (size_t i = 0; i < n; i++)
@@ -1019,24 +1027,96 @@ void CPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemTy
     }
 }
 
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetUniformRandomValue(RNGHandle& rngHandle, const ElemType low, const ElemType high)
+{
+    if (IsEmpty())
+        LogicError("SetUniformRandomValue: Matrix is empty.");
+
+    CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
+    if (cpuRNGHandle == nullptr)
+        LogicError("rngHandle must be a CPURNGHandle.");
+
+    boost::random::uniform_real_distribution<ElemType> r(low, high);
+    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r]() {return r(cpuRNGHandle->Generator()); });
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetGaussianRandomValue(RNGHandle& rngHandle, const ElemType mean, const ElemType stdev)
+{
+    if (IsEmpty())
+        LogicError("SetGaussianRandomValue: Matrix is empty.");
+
+    CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
+    if (cpuRNGHandle == nullptr)
+        LogicError("rngHandle must be a CPURNGHandle.");
+
+    boost::random::normal_distribution<ElemType> r(mean, stdev);
+    auto n = AsMultipleOf(GetNumElements(), 2);
+    std::generate(Data(), Data() + n, [&cpuRNGHandle, &r]() {return r(cpuRNGHandle->Generator()); });
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetGumbelRandomValue(RNGHandle& rngHandle, const ElemType loc, const ElemType scale)
+{
+    if (IsEmpty())
+        LogicError("SetGumbelRandomValue: Matrix is empty.");
+
+    CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
+    if (cpuRNGHandle == nullptr)
+        LogicError("rngHandle must be a CPURNGHandle.");
+
+    boost::random::uniform_real_distribution<ElemType> r(0, 1);
+    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r, loc, scale]() {return loc - scale * log(-log1p(-r(cpuRNGHandle->Generator()))); });
+}
+
+
 template <class ElemType>
 void CPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
     if (sigma <= 0)
-        InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
+        InvalidArgument("SetGaussianRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
-        LogicError("SetUniformRandomValue: Matrix is empty.");
+        LogicError("SetGaussianRandomValue: Matrix is empty.");
 
     auto& us = *this;
 
     std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
     boost::random::normal_distribution<ElemType> r(mean, sigma);
 
-    // #pragma omp parallel for   // is it thread safe?
+    // #pragma omp parallel for is not thread safe. Also the results would not be deterministic
     foreach_coord (i, j, us)
     {
         us(i, j) = r(generator);
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+{
+    if (sigma <= 0)
+        InvalidArgument("SetTruncatedNormalRandomValue: sigma must be a positive value.");
+
+    if (IsEmpty())
+        LogicError("SetTruncatedNormalRandomValue: Matrix is empty.");
+
+    auto& us = *this;
+
+    std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
+    boost::random::normal_distribution<ElemType> r(mean, sigma);
+
+    const ElemType high = mean + 2 * sigma;
+    const ElemType low = mean - 2 * sigma;
+    // #pragma omp parallel for is not thread safe. Also the results would not be deterministic
+    foreach_coord(i, j, us)
+    {
+        ElemType tmp = 0;
+        do
+            tmp = r(generator);
+        while (tmp < low || tmp > high ); // Rejection sampling is fine here because the acceptance probability is about 0.9545 
+        us(i, j) = tmp;
     }
 }
 
@@ -1235,7 +1315,7 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
 
 template <class ElemType>
 void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum)
+    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
     auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
@@ -1259,9 +1339,16 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
     for (long i = 0; i < n; i++)
     {
         ElemType g = grad[i];
-        ElemType adaSqr = adaWeight * smoothAda[i] + (1.0f - adaWeight) * g * g;
-        smoothAda[i] = adaSqr;
-        ElemType ada = sqrt(adaSqr);
+        ElemType ada;
+        if (!adamax)
+        {
+            ElemType adaSqr = adaWeight * smoothAda[i] + (1.0f - adaWeight) * g * g;
+            smoothAda[i] = adaSqr;
+            ada = sqrt(adaSqr);
+        }
+        else
+            ada = smoothAda[i] = std::max(adaWeight * smoothAda[i], abs(g));
+
         ElemType w = adaMul * (ElemType)( 1.0 / (ada + epsilon));
         g = momentum * smoothMom[i] + unitGainFactor * g;
         smoothMom[i] = g;
@@ -1276,14 +1363,15 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
                                       ElemType RMS_WGT_MAX,
                                       ElemType RMS_WGT_DEC,
                                       ElemType RMS_WGT_MIN,
-                                      const bool needAveMultiplier)
+                                      const bool needAveMultiplier,
+                                      const bool initialized)
 {
     const ElemType floor = 1e-6f;
 
     size_t n = gradients.GetNumElements();
     ElemType* curr_grad = gradients.Data();
 
-    if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 3)
+    if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 3 || !initialized)
     {
         RequireSize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
         SetValue(0.0);
@@ -4417,11 +4505,12 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
 // roiData: ROIs            [4 x numROIs x N], 
 // dst: Pooled ROIs         [PW x PH x C x numROIs x N]
 // argmax: max positions    [PW x PH x C x numROIs x N]
+// spatialScale             ratio of input feature map to the original image.
 // where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
 template <class ElemType>
-void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                            const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, 
-                                            CPUMatrix<ElemType>& argmax) const
+void CPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                              const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, 
+                                              CPUMatrix<ElemType>& argmax, double spatialScale) const
 {
     size_t roiOutputSize = pooledHeight * pooledWidth * channels;
 
@@ -4436,18 +4525,21 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
             // each ROI is 4 elements: (x, y, w, h).
             int base = roiIdx * 4;
 
-            // scaled ROI numbers (relative to original image size)
-            // roi points are doubles that represent location relative to image
-            ElemType scX = rois(base, (ElemType)0);
-            ElemType scY = rois(base + (ElemType)1, (ElemType)0);
-            ElemType scW = rois(base + (ElemType)2, (ElemType)0);
-            ElemType scH = rois(base + (ElemType)3, (ElemType)0);
+            // roi points represent the absolute location of the roi
+            // in the original image.
+            ElemType scX1 = rois(base, (ElemType)0);
+            ElemType scY1 = rois(base + (ElemType)1, (ElemType)0);
+            ElemType scX2 = rois(base + (ElemType)2, (ElemType)0);
+            ElemType scY2 = rois(base + (ElemType)3, (ElemType)0);
 
             // compute actual spatial location of the ROI in our featuremap.
-            size_t x = (size_t)round(scX * width);
-            size_t y = (size_t)round(scY * height);
-            ElemType roiW = (ElemType)max(round(scW * width),  (ElemType)1);
-            ElemType roiH = (ElemType)max(round(scH * height), (ElemType)1);
+            size_t x1 = (size_t)round(scX1 * spatialScale);
+            size_t y1 = (size_t)round(scY1 * spatialScale);
+            size_t x2 = (size_t)round(scX2 * spatialScale);
+            size_t y2 = (size_t)round(scY2 * spatialScale);
+
+            ElemType roiW = (ElemType)max(x2 - x1 + 1, (size_t)1);
+            ElemType roiH = (ElemType)max(y2 - y1 + 1, (size_t)1);
 
             const ElemType winW = roiW / (ElemType)pooledWidth;
             const ElemType winH = roiH / (ElemType)pooledHeight;
@@ -4470,14 +4562,14 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
 
                     // offset window based on ROI top left corner.
                     // these indices are into the input slice.
-                    hstart = min(max(hstart + y, (size_t)0), height);
-                    wstart = min(max(wstart + x, (size_t)0), width);
-                    hend   = min(max(hend + y,   (size_t)0), height);
-                    wend   = min(max(wend + x,   (size_t)0), width);
+                    hstart = min(max(hstart + y1, (size_t)0), height);
+                    wstart = min(max(wstart + x1, (size_t)0), width);
+                    hend = min(max(hend + y1, (size_t)0), height);
+                    wend = min(max(wend + x1, (size_t)0), width);
 
                     bool isempty = (hend <= hstart) || (wend <= wstart);
 
-                    for (size_t c = 0; c < channels; c++) 
+                    for (size_t c = 0; c < channels; c++)
                     {
                         // [W x H x C x R x N]; R = ROIs per image
                         size_t outputIdx = roiIdx * roiOutputSize + outw + outh * pooledWidth + c * pooledHeight * pooledWidth;
@@ -4512,13 +4604,13 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
 // in their output. For each ROI, it checks the argmax data to see if that ROI indeed chose
 // this pixel location as the maximum. If so, it increments the gradient term for the input location.
 template <class ElemType>
-void CPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                             const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, 
-                                             CPUMatrix<ElemType>& argmax) const
+void CPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                                const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, 
+                                                CPUMatrix<ElemType>& argmax, double spatialScale) const
 {
     // loop over images in the batch.
 #pragma omp parallel for
-    for (int imgIdx = 0; imgIdx < numImg; imgIdx++) 
+    for (int imgIdx = 0; imgIdx < numImg; imgIdx++)
     {
         // ROIs for this image. length 4*numRois;
         auto rois = roiData.ColumnSlice(imgIdx, 1).Data();
@@ -4528,44 +4620,48 @@ void CPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
 
         // loop over spatial locations in the image.
 #pragma omp parallel for
-        for (int w = 0; w < width; w++) 
+        for (int w = 0; w < width; w++)
         {
 #pragma omp parallel for
-            for (int h = 0; h < width; h++) 
+            for (int h = 0; h < width; h++)
             {
                 // loop over the ROIs seeing which ones contain this location.
-                for (int roiN = 0; roiN < numRois; roiN++) 
+                for (int roiN = 0; roiN < numRois; roiN++)
                 {
                     // each ROI is 4 elements: (x, y, w, h).
                     int roiOffset = roiN * 4;
 
-                    // ROI data is relative to original image size
-                    size_t roiStartW =     (size_t)round(rois[roiOffset + 0] * width);
-                    size_t roiStartH =     (size_t)round(rois[roiOffset + 1] * height);
-                    size_t roiWidth  = max((size_t)round(rois[roiOffset + 2] * width),  (size_t)1);
-                    size_t roiHeight = max((size_t)round(rois[roiOffset + 3] * height), (size_t)1);
+                    // ROI data points represent the absolute location of the roi
+                    // in the original image.
+                    size_t roiStartW = (size_t)round(rois[roiOffset + 0] * spatialScale);
+                    size_t roiStartH = (size_t)round(rois[roiOffset + 1] * spatialScale);
+                    size_t roiEndW = (size_t)round(rois[roiOffset + 2] * spatialScale);
+                    size_t roiEndH = (size_t)round(rois[roiOffset + 3] * spatialScale);
+
+                    size_t roiWidth = max(roiEndW - roiStartW + 1, (size_t)1);
+                    size_t roiHeight = max(roiEndH - roiStartH + 1, (size_t)1);
 
                     // skip this ROI if it doesn't contain the current input location.
                     const bool inROI = (w >= roiStartW && w < roiStartW + roiWidth &&
-                                        h >= roiStartH && h < roiStartH + roiHeight);
+                        h >= roiStartH && h < roiStartH + roiHeight);
                     if (!inROI)
                         continue;
 
                     ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
-                    ElemType winW = (ElemType)roiWidth  / (ElemType)pooledWidth;
+                    ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
 
                     // what pooled nodes in the output for this ROI could have pooled this input location?
                     size_t phstart = (size_t)((h - roiStartH) / winH);
                     size_t pwstart = (size_t)((w - roiStartW) / winW);
-                    size_t phend   = (size_t)(ceil((h - roiStartH + 1) / winH));
-                    size_t pwend   = (size_t)(ceil((w - roiStartW + 1) / winW));
+                    size_t phend = (size_t)(ceil((h - roiStartH + 1) / winH));
+                    size_t pwend = (size_t)(ceil((w - roiStartW + 1) / winW));
 
                     phstart = min(max(phstart, (size_t)0), pooledHeight);
-                    phend   = min(max(phend,   (size_t)0), pooledHeight);
+                    phend = min(max(phend, (size_t)0), pooledHeight);
                     pwstart = min(max(pwstart, (size_t)0), pooledWidth);
-                    pwend   = min(max(pwend,   (size_t)0), pooledWidth);
+                    pwend = min(max(pwend, (size_t)0), pooledWidth);
 
-                    for (size_t c = 0; c < channels; c++) 
+                    for (size_t c = 0; c < channels; c++)
                     {
                         ElemType gradient = 0;
                         // [W x H x C x N]
@@ -4579,10 +4675,14 @@ void CPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
                             for (size_t pw = pwstart; pw < pwend; pw++)
                             {
                                 if ((size_t)offsetArgmax[ph * pooledWidth + pw] == (w + h * width))
+                                {
                                     gradient += offsetPoolGrad[ph * pooledWidth + pw];
+                                }
                             }
                         }
-                        grad(index, imgIdx) = gradient;
+
+#pragma omp atomic
+                        grad(index, imgIdx) += gradient;
                     }
                 }
             }
@@ -5990,7 +6090,7 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
 // phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
 // uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
 // uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
-// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
 // uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
 // numChannels (input): channel number in this minibatch
 // uttNum (input): number of utterances
@@ -6963,7 +7063,7 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
         CaseTensorOpWithFnAndReduction(Max);
         CaseTensorOpWithFnAndReduction(ElementwiseProduct);
     default:
-        LogicError("Specified ElementWiseOperator op %d not suported as reduction operation.", (int)reductionOp);
+        LogicError("Specified ElementWiseOperator op %d not supported as reduction operation.", (int)reductionOp);
     }
 }
 

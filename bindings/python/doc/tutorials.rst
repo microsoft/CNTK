@@ -1,6 +1,8 @@
 Tutorials
 =========
 
+*For a quick tour if you are familiar with another deep learning toolkit please fast forward to CNTK 200.*
+
 #.  *Classify cancer using simulated data (Logistic Regression)*
      CNTK 101: :cntktut:`Logistic Regression <CNTK_101_LogisticRegression>` with NumPy
 
@@ -11,6 +13,7 @@ Tutorials
      CNTK 103 Part A: :cntktut:`MNIST data preparation <CNTK_103A_MNIST_DataLoader>`,
      Part B: :cntktut:`Multi-class logistic regression classifier <CNTK_103B_MNIST_LogisticRegression>`
      Part C: :cntktut:`Multi-layer perceptron classifier <CNTK_103C_MNIST_MultiLayerPerceptron>`
+     Part D: :cntktut:`Convolutional neural network classifier <CNTK_103D_MNIST_ConvolutionalNeuralNetwork>`
 
 #.  *Learn how to predict the stock market*
      CNTK 104: :cntktut:`Time Series basics <CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy>` with finance data
@@ -22,6 +25,9 @@ Tutorials
 #.  *Forecasting using data from an IOT device*
      CNTK 106: LSTM based forecasting - Part A: :cntktut:`with simulated data <CNTK_106A_LSTM_Timeseries_with_Simulated_Data>`,
      Part B: :cntktut:`with real IOT data <CNTK_106B_LSTM_Timeseries_with_IOT_Data>`
+
+#.  *Quick tour for those familiar with other deep learning toolkits*
+     CNTK 200: :cntktut:`Guided Tour <CNTK_200_GuidedTour>`
 
 #.  *Recognize objects in images from CIFAR-10 data (Convolutional Network, CNN)*
      CNTK 201 Part A: :cntktut:`CIFAR data preparation <CNTK_201A_CIFAR-10_DataLoader>`,
@@ -46,6 +52,9 @@ Tutorials
 
 #.  *Training with Sampled Softmax*
      CNTK 207: :cntktut:`Training with Sampled Softmax <CNTK_207_Training_with_Sampled_Softmax>`
+
+#.  *Training with Connectionist Temporal Classification*
+     CNTK 208: :cntktut:`Training with Connectionist Temporal Classification <CNTK_208_Speech_Connectionist_Temporal_Classification>`
 
 #.  *Recognize flowers and animals in natural scene images using deep transfer learning*
      CNTK 301: :cntktut:`Deep transfer learning with pre-trained ResNet model <CNTK_301_Image_Recognition_with_Deep_Transfer_Learning>`

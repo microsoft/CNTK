@@ -94,6 +94,9 @@
     <ClInclude Include="ReaderConstants.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="MemoryBuffer.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">
@@ -136,6 +139,12 @@
       <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="ReaderUtil.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="DataDeserializerBase.cpp">
+      <Filter>Deserializers</Filter>
+    </ClCompile>
+    <ClCompile Include="MemoryBuffer.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>

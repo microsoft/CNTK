@@ -196,6 +196,7 @@ rm -f $baseBinariesPath/bin/readertests
 rm -f $baseBinariesPath/bin/V2LibraryEndToEndTests 
 rm -f $baseBinariesPath/bin/v2librarytests
 rm -rf $baseBinariesPath/python
+rm -f $baseBinariesPath/lib/java/Main.class
 
 # Make Include directory
 mkdir -p $baseIncludePath

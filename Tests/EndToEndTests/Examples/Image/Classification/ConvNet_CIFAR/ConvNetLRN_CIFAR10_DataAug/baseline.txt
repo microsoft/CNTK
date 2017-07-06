@@ -1,0 +1,681 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU X5680 @ 3.33GHz
+    Hardware threads: 12
+    Total Memory: 33537232 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/d/GitHub/CNTK/x64/release/cntk.exe configFile=D:\GitHub\CNTK\Examples\Image\Classification\ConvNet\BrainScript/ConvNetLRN_CIFAR10_DataAug.cntk currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10 RunDir=C:\cygwin64\tmp\cntk-test-20170508114544.893734\Examples\Image\Classification\ConvNet_ConvNetLRN_CIFAR10_DataAug@release_gpu DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10 ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\ConvNet\BrainScript OutputDir=C:\cygwin64\tmp\cntk-test-20170508114544.893734\Examples\Image\Classification\ConvNet_ConvNetLRN_CIFAR10_DataAug@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=false stderr=- TrainConvNet=[SGD=[epochSize=4096,maxEpochs=3,numMBsToShowResult=16]]
+CNTK 2.0rc2+ (HEAD fbb53d, May  8 2017 10:15:58) on CHAZHANG at 2017/05/08 19:45:46
+
+D:\GitHub\CNTK\x64\release\cntk.exe  configFile=D:\GitHub\CNTK\Examples\Image\Classification\ConvNet\BrainScript/ConvNetLRN_CIFAR10_DataAug.cntk  currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10  RunDir=C:\cygwin64\tmp\cntk-test-20170508114544.893734\Examples\Image\Classification\ConvNet_ConvNetLRN_CIFAR10_DataAug@release_gpu  DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10  ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\ConvNet\BrainScript  OutputDir=C:\cygwin64\tmp\cntk-test-20170508114544.893734\Examples\Image\Classification\ConvNet_ConvNetLRN_CIFAR10_DataAug@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=false  stderr=-  TrainConvNet=[SGD=[epochSize=4096,maxEpochs=3,numMBsToShowResult=16]]
+Changed current directory to D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
+05/08/2017 19:45:46: Redirecting stderr to file -_TrainConvNet_Eval.log
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: May  8 2017 10:09:53
+		Last modified date: Mon May  8 09:12:53 2017
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: yes
+		With ASGD: yes
+		Math lib: mkl
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+		CUB_PATH: C:\src\cub-1.4.1
+		CUDNN_PATH: C:\local\cudnn-8.0-v5.1\cuda
+		Build Branch: master
+		Build SHA1: 190dc1b3042d62c20aeba5bd336bbeaa8a6466ca
+		Built by chazhang on CHAZHANG
+		Build Path: D:\GitHub\CNTK\Source\CNTKv2LibraryDll\
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+		Device[0]: cores = 2688; computeCapability = 3.5; type = "GeForce GTX TITAN"; total memory = 6144 MB; free memory = 5538 MB
+-------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:command=TrainConvNet:Eval
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\ConvNet\BrainScript
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:dataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:deviceId=0
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:Eval={
+    action = "eval"
+evalNodeNames = errs:top5Errs  
+    minibatchSize = 512
+    reader = {
+        verbosity = 0 ; randomize = false
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/test_map.txt"
+            input = {
+                features = { transforms = (
+                   { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                   { type = "Mean"; meanFile = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/CIFAR-10_mean.xml" } : 
+                   { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+}
+
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:forceDeterministicAlgorithms=false
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:modelPath=C:\cygwin64\tmp\cntk-test-20170508114544.893734\Examples\Image\Classification\ConvNet_ConvNetLRN_CIFAR10_DataAug@release_gpu/Models/ConvNetLRN_CIFAR10_DataAug
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:outputDir=C:\cygwin64\tmp\cntk-test-20170508114544.893734\Examples\Image\Classification\ConvNet_ConvNetLRN_CIFAR10_DataAug@release_gpu
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:precision=float
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:rootDir=../../..
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20170508114544.893734\Examples\Image\Classification\ConvNet_ConvNetLRN_CIFAR10_DataAug@release_gpu
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:stderr=-
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:timestamping=true
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:traceLevel=1
+configparameters: ConvNetLRN_CIFAR10_DataAug.cntk:TrainConvNet={
+    action = "train"
+    BrainScriptNetworkBuilder = {
+        imageShape = 32:32:3
+        labelDim = 10
+        featScale = 1/256
+        Normalize{f} = x => f .* x
+        LRN {k, n, alpha, beta} = {
+            apply (x) = {
+                x2 = x .* x
+                x2s = SplitDimension(x2, 3, 1) 
+                W = ParameterTensor{(1:1:2*n+1:1), learningRateMultiplier = 0, initValue = alpha/(2*n+1)}
+                y = Convolution (W, x2s, (1:1:2*n+1), mapDims = 1, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, maxTempMemSizeInSamples = 0)
+                b = FlattenDimensions(y, 3, 2)
+                den = Exp (beta .* Log(k + b)) 
+                r = x .* Reciprocal(den)
+            }.r
+        }.apply
+        model = Sequential (
+            Normalize {featScale} :
+            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
+            LRN {1.0, 4, 0.001, 0.75} : 
+            MaxPoolingLayer {(3:3), stride = (2:2)} :
+            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
+            LRN {1.0, 4, 0.001, 0.75} : 
+            MaxPoolingLayer {(3:3), stride = (2:2)} :
+            DenseLayer {256} : ReLU : Dropout : 
+            DenseLayer {128} : ReLU : Dropout : 
+            LinearLayer {labelDim}
+        )
+        features = Input {imageShape}
+        labels   = Input {labelDim}
+        z = model (features)
+        ce       = CrossEntropyWithSoftmax     (labels, z)
+        errs     = ClassificationError         (labels, z)
+top5Errs = ClassificationError         (labels, z, topN=5)  
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+evaluationNodes = (errs)  
+        outputNodes     = (z)
+    }
+    SGD = {
+        epochSize = 0
+        minibatchSize = 64
+        learningRatesPerSample = 0.0015625*20:0.00046875*20:0.00015625*20:0.000046875*10:0.000015625
+        momentumAsTimeConstant = 0*20:600*20:1200
+        maxEpochs = 80
+        L2RegWeight = 0.002
+        dropoutRate = 0.5
+        numMBsToShowResult = 100
+    }
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/train_map.txt"
+            input = {
+                features = { transforms = (
+                    { type = "Crop" ; cropType = "RandomSide" ; sideRatio = 0.8 ; jitterType = "UniRatio" } :
+                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                    { type = "Mean" ; meanFile = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/CIFAR-10_mean.xml" } : 
+                    { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+} [SGD=[epochSize=4096,maxEpochs=3,numMBsToShowResult=16]]
+
+05/08/2017 19:45:46: Commands: TrainConvNet Eval
+05/08/2017 19:45:46: precision = "float"
+
+05/08/2017 19:45:46: ##############################################################################
+05/08/2017 19:45:46: #                                                                            #
+05/08/2017 19:45:46: # TrainConvNet command (train action)                                        #
+05/08/2017 19:45:46: #                                                                            #
+05/08/2017 19:45:46: ##############################################################################
+
+05/08/2017 19:45:46: 
+Creating virgin network.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[128 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[256 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 64] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 64] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 64] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 64] as glorotUniform later when dimensions are fully known.
+
+Post-processing network...
+
+4 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	top5Errs = ClassificationError()
+	z = Plus()
+
+Validating network. 72 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> model.arrayOfFunctions[19].W = LearnableParameter() :  -> [10 x 0]
+Validating --> model.arrayOfFunctions[16].arrayOfFunctions[0].W = LearnableParameter() :  -> [128 x 0]
+Validating --> model.arrayOfFunctions[13].arrayOfFunctions[0].W = LearnableParameter() :  -> [256 x 0]
+Validating --> model.arrayOfFunctions[9].W = LearnableParameter() :  -> [3 x 3 x 0 x 64]
+Validating --> model.arrayOfFunctions[7].W = LearnableParameter() :  -> [3 x 3 x 0 x 64]
+Validating --> model.arrayOfFunctions[3].W = LearnableParameter() :  -> [3 x 3 x 0 x 64]
+Validating --> model.arrayOfFunctions[1].W = LearnableParameter() :  -> [3 x 3 x 0 x 64]
+Validating --> _z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x = LearnableParameter() :  -> [1]
+Validating --> features = InputValue() :  -> [32 x 32 x 3 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x = ElementTimes (_z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x, features) : [1], [32 x 32 x 3 x *] -> [32 x 32 x 3 x *]
+Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 3 x 64].
+Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 3 x 64] <- glorotUniform(seed=7, init dims=[576 x 27], range=0.099751(0.099751*1.000000), onCPU=true.
+)Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.c = Convolution (model.arrayOfFunctions[1].W, z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x) : [3 x 3 x 3 x 64], [32 x 32 x 3 x *] -> [32 x 32 x 64 x *]
+Validating --> model.arrayOfFunctions[1].b = LearnableParameter() :  -> [1 x 1 x 64]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.res.x = Plus (z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.c, model.arrayOfFunctions[1].b) : [32 x 32 x 64 x *], [1 x 1 x 64] -> [32 x 32 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.x = RectifiedLinear (z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.res.x) : [32 x 32 x 64 x *] -> [32 x 32 x 64 x *]
+Node 'model.arrayOfFunctions[3].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node 'model.arrayOfFunctions[3].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 64 x 64] <- glorotUniform(seed=6, init dims=[576 x 576], range=0.072169(0.072169*1.000000), onCPU=true.
+)Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.c = Convolution (model.arrayOfFunctions[3].W, z.x._._.x._._.x.x.x._.x._.x.x.x._.x) : [3 x 3 x 64 x 64], [32 x 32 x 64 x *] -> [32 x 32 x 64 x *]
+Validating --> model.arrayOfFunctions[3].b = LearnableParameter() :  -> [1 x 1 x 64]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.res.x = Plus (z.x._._.x._._.x.x.x._.x._.x.x.x._.c, model.arrayOfFunctions[3].b) : [32 x 32 x 64 x *], [1 x 1 x 64] -> [32 x 32 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x = RectifiedLinear (z.x._._.x._._.x.x.x._.x._.x.x.x._.res.x) : [32 x 32 x 64 x *] -> [32 x 32 x 64 x *]
+Validating --> _z.x._._.x._._.x.x.x._.x._.x.x.den._ = LearnableParameter() :  -> [1]
+Validating --> _z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._ = LearnableParameter() :  -> [1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.W = LearnableParameter() :  -> [1 x 1 x 9 x 1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x2 = ElementTimes (z.x._._.x._._.x.x.x._.x._.x.x.x, z.x._._.x._._.x.x.x._.x._.x.x.x) : [32 x 32 x 64 x *], [32 x 32 x 64 x *] -> [32 x 32 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x2s = Reshape (z.x._._.x._._.x.x.x._.x._.x.x.x2) : [32 x 32 x 64 x *] -> [32 x 32 x 64 x 1 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.y = Convolution (z.x._._.x._._.x.x.x._.x._.x.x.W, z.x._._.x._._.x.x.x._.x._.x.x.x2s) : [1 x 1 x 9 x 1], [32 x 32 x 64 x 1 x *] -> [32 x 32 x 64 x 1 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.b = Reshape (z.x._._.x._._.x.x.x._.x._.x.x.y) : [32 x 32 x 64 x 1 x *] -> [32 x 32 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._ = Plus (_z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._, z.x._._.x._._.x.x.x._.x._.x.x.b) : [1], [32 x 32 x 64 x *] -> [32 x 32 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1] = Log (z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._) : [32 x 32 x 64 x *] -> [32 x 32 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.den._ = ElementTimes (_z.x._._.x._._.x.x.x._.x._.x.x.den._, z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]) : [1], [32 x 32 x 64 x *] -> [32 x 32 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.den = Exp (z.x._._.x._._.x.x.x._.x._.x.x.den._) : [32 x 32 x 64 x *] -> [32 x 32 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.r.ElementTimesArgs[1] = Reciprocal (z.x._._.x._._.x.x.x._.x._.x.x.den) : [32 x 32 x 64 x *] -> [32 x 32 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.r = ElementTimes (z.x._._.x._._.x.x.x._.x._.x.x.x, z.x._._.x._._.x.x.x._.x._.x.x.r.ElementTimesArgs[1]) : [32 x 32 x 64 x *], [32 x 32 x 64 x *] -> [32 x 32 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x._.x._.x = Pooling (z.x._._.x._._.x.x.x._.x._.x.x.r) : [32 x 32 x 64 x *] -> [15 x 15 x 64 x *]
+Node 'model.arrayOfFunctions[7].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node 'model.arrayOfFunctions[7].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 64 x 64] <- glorotUniform(seed=5, init dims=[576 x 576], range=0.072169(0.072169*1.000000), onCPU=true.
+)Validating --> z.x._._.x._._.x.x.x._.x._.c = Convolution (model.arrayOfFunctions[7].W, z.x._._.x._._.x.x.x._.x._.x) : [3 x 3 x 64 x 64], [15 x 15 x 64 x *] -> [15 x 15 x 64 x *]
+Validating --> model.arrayOfFunctions[7].b = LearnableParameter() :  -> [1 x 1 x 64]
+Validating --> z.x._._.x._._.x.x.x._.x._.res.x = Plus (z.x._._.x._._.x.x.x._.x._.c, model.arrayOfFunctions[7].b) : [15 x 15 x 64 x *], [1 x 1 x 64] -> [15 x 15 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x._.x = RectifiedLinear (z.x._._.x._._.x.x.x._.x._.res.x) : [15 x 15 x 64 x *] -> [15 x 15 x 64 x *]
+Node 'model.arrayOfFunctions[9].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node 'model.arrayOfFunctions[9].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 64 x 64] <- glorotUniform(seed=4, init dims=[576 x 576], range=0.072169(0.072169*1.000000), onCPU=true.
+)Validating --> z.x._._.x._._.x.x.x._.c = Convolution (model.arrayOfFunctions[9].W, z.x._._.x._._.x.x.x._.x) : [3 x 3 x 64 x 64], [15 x 15 x 64 x *] -> [15 x 15 x 64 x *]
+Validating --> model.arrayOfFunctions[9].b = LearnableParameter() :  -> [1 x 1 x 64]
+Validating --> z.x._._.x._._.x.x.x._.res.x = Plus (z.x._._.x._._.x.x.x._.c, model.arrayOfFunctions[9].b) : [15 x 15 x 64 x *], [1 x 1 x 64] -> [15 x 15 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x = RectifiedLinear (z.x._._.x._._.x.x.x._.res.x) : [15 x 15 x 64 x *] -> [15 x 15 x 64 x *]
+Validating --> _z.x._._.x._._.x.x.den._ = LearnableParameter() :  -> [1]
+Validating --> _z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._ = LearnableParameter() :  -> [1]
+Validating --> z.x._._.x._._.x.x.W = LearnableParameter() :  -> [1 x 1 x 9 x 1]
+Validating --> z.x._._.x._._.x.x.x2 = ElementTimes (z.x._._.x._._.x.x.x, z.x._._.x._._.x.x.x) : [15 x 15 x 64 x *], [15 x 15 x 64 x *] -> [15 x 15 x 64 x *]
+Validating --> z.x._._.x._._.x.x.x2s = Reshape (z.x._._.x._._.x.x.x2) : [15 x 15 x 64 x *] -> [15 x 15 x 64 x 1 x *]
+Validating --> z.x._._.x._._.x.x.y = Convolution (z.x._._.x._._.x.x.W, z.x._._.x._._.x.x.x2s) : [1 x 1 x 9 x 1], [15 x 15 x 64 x 1 x *] -> [15 x 15 x 64 x 1 x *]
+Validating --> z.x._._.x._._.x.x.b = Reshape (z.x._._.x._._.x.x.y) : [15 x 15 x 64 x 1 x *] -> [15 x 15 x 64 x *]
+Validating --> z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._ = Plus (_z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._, z.x._._.x._._.x.x.b) : [1], [15 x 15 x 64 x *] -> [15 x 15 x 64 x *]
+Validating --> z.x._._.x._._.x.x.den._.ElementTimesArgs[1] = Log (z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._) : [15 x 15 x 64 x *] -> [15 x 15 x 64 x *]
+Validating --> z.x._._.x._._.x.x.den._ = ElementTimes (_z.x._._.x._._.x.x.den._, z.x._._.x._._.x.x.den._.ElementTimesArgs[1]) : [1], [15 x 15 x 64 x *] -> [15 x 15 x 64 x *]
+Validating --> z.x._._.x._._.x.x.den = Exp (z.x._._.x._._.x.x.den._) : [15 x 15 x 64 x *] -> [15 x 15 x 64 x *]
+Validating --> z.x._._.x._._.x.x.r.ElementTimesArgs[1] = Reciprocal (z.x._._.x._._.x.x.den) : [15 x 15 x 64 x *] -> [15 x 15 x 64 x *]
+Validating --> z.x._._.x._._.x.x.r = ElementTimes (z.x._._.x._._.x.x.x, z.x._._.x._._.x.x.r.ElementTimesArgs[1]) : [15 x 15 x 64 x *], [15 x 15 x 64 x *] -> [15 x 15 x 64 x *]
+Validating --> _z.x._._.x._._.x = Pooling (z.x._._.x._._.x.x.r) : [15 x 15 x 64 x *] -> [7 x 7 x 64 x *]
+Node 'model.arrayOfFunctions[13].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 7 x 7 x 64].
+Node 'model.arrayOfFunctions[13].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[256 x 7 x 7 x 64] <- glorotUniform(seed=3, init dims=[256 x 3136], range=0.042058(0.042058*1.000000), onCPU=true.
+)Validating --> z.x._._.x._._.x.PlusArgs[0] = Times (model.arrayOfFunctions[13].arrayOfFunctions[0].W, _z.x._._.x._._.x) : [256 x 7 x 7 x 64], [7 x 7 x 64 x *] -> [256 x *]
+Validating --> model.arrayOfFunctions[13].arrayOfFunctions[0].b = LearnableParameter() :  -> [256]
+Validating --> z.x._._.x._._.x = Plus (z.x._._.x._._.x.PlusArgs[0], model.arrayOfFunctions[13].arrayOfFunctions[0].b) : [256 x *], [256] -> [256 x *]
+Validating --> z.x._._.x._ = RectifiedLinear (z.x._._.x._._.x) : [256 x *] -> [256 x *]
+Validating --> _z.x._._.x = Dropout (z.x._._.x._) : [256 x *] -> [256 x *]
+Node 'model.arrayOfFunctions[16].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 256].
+Node 'model.arrayOfFunctions[16].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[128 x 256] <- glorotUniform(seed=2, init dims=[128 x 256], range=0.125000(0.125000*1.000000), onCPU=true.
+)Validating --> z.x._._.x.PlusArgs[0] = Times (model.arrayOfFunctions[16].arrayOfFunctions[0].W, _z.x._._.x) : [128 x 256], [256 x *] -> [128 x *]
+Validating --> model.arrayOfFunctions[16].arrayOfFunctions[0].b = LearnableParameter() :  -> [128]
+Validating --> z.x._._.x = Plus (z.x._._.x.PlusArgs[0], model.arrayOfFunctions[16].arrayOfFunctions[0].b) : [128 x *], [128] -> [128 x *]
+Validating --> z.x._ = RectifiedLinear (z.x._._.x) : [128 x *] -> [128 x *]
+Validating --> z.x = Dropout (z.x._) : [128 x *] -> [128 x *]
+Node 'model.arrayOfFunctions[19].W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 128].
+Node 'model.arrayOfFunctions[19].W' (LearnableParameter operation): Initializing Parameter[10 x 128] <- glorotUniform(seed=1, init dims=[10 x 128], range=0.208514(0.208514*1.000000), onCPU=true.
+)Validating --> z.PlusArgs[0] = Times (model.arrayOfFunctions[19].W, z.x) : [10 x 128], [128 x *] -> [10 x *]
+Validating --> model.arrayOfFunctions[19].b = LearnableParameter() :  -> [10]
+Validating --> z = Plus (z.PlusArgs[0], model.arrayOfFunctions[19].b) : [10 x *], [10] -> [10 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, z) : [10 x *], [10 x *] -> [1]
+Validating --> errs = ClassificationError (labels, z) : [10 x *], [10 x *] -> [1]
+Validating --> inputs.inputs[2] = LearnableParameter() :  -> [1 x 1]
+Validating --> top5Errs = ClassificationError (labels, z, inputs.inputs[2]) : [10 x *], [10 x *], [1 x 1] -> [1]
+
+Validating network. 48 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 64, Kernel: 3 x 3 x 3, Map: 64, Stride: 1 x 1 x 3, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.x._._.x._._.x.x.x._.x._.x.x.x._.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 64, Output: 32 x 32 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.x._._.x._._.x.x.x._.x._.x.x.y: using cuDNN convolution engine for geometry: Input: 32 x 32 x 64 x 1, Output: 32 x 32 x 64 x 1, Kernel: 1 x 1 x 9 x 1, Map: 1, Stride: 1 x 1 x 1 x 1, Sharing: (1, 1, 1, 1), AutoPad: (1, 1, 1, 0), LowerPad: 0 x 0 x 0 x 0, UpperPad: 0 x 0 x 0 x 0.
+z.x._._.x._._.x.x.x._.x._.x: using cuDNN convolution engine for geometry: Input: 32 x 32 x 64, Output: 15 x 15 x 64, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.x._._.x._._.x.x.x._.x._.c: using cuDNN convolution engine for geometry: Input: 15 x 15 x 64, Output: 15 x 15 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.x._._.x._._.x.x.x._.c: using cuDNN convolution engine for geometry: Input: 15 x 15 x 64, Output: 15 x 15 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.x._._.x._._.x.x.y: using cuDNN convolution engine for geometry: Input: 15 x 15 x 64 x 1, Output: 15 x 15 x 64 x 1, Kernel: 1 x 1 x 9 x 1, Map: 1, Stride: 1 x 1 x 1 x 1, Sharing: (1, 1, 1, 1), AutoPad: (1, 1, 1, 0), LowerPad: 0 x 0 x 0 x 0, UpperPad: 0 x 0 x 0 x 0.
+_z.x._._.x._._.x: using cuDNN convolution engine for geometry: Input: 15 x 15 x 64, Output: 7 x 7 x 64, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+
+
+
+Post-processing network complete.
+
+05/08/2017 19:45:47: 
+Model has 72 nodes. Using GPU 0.
+
+05/08/2017 19:45:47: Training criterion:   ce = CrossEntropyWithSoftmax
+05/08/2017 19:45:47: Evaluation criterion: errs = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 131 matrices, 98 are shared as 21, and 33 are not shared.
+
+Here are the ones that share memory:
+	{ model.arrayOfFunctions[7].b : [1 x 1 x 64] (gradient)
+	  z.x._._.x._._.x.x.x2s : [15 x 15 x 64 x 1 x *] }
+	{ z.x._._.x._._.x.x.x._.x : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x : [15 x 15 x 64 x *] (gradient) }
+	{ z.x._._.x._._.x.x.b : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.den._.ElementTimesArgs[1] : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.x._.c : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.res.x : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.res.x : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.res.x : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.den : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.den._ : [32 x 32 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.r : [32 x 32 x 64 x *] (gradient) }
+	{ model.arrayOfFunctions[9].W : [3 x 3 x 64 x 64] (gradient)
+	  z.x._._.x._._.x.x.r : [15 x 15 x 64 x *] }
+	{ z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1] : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.r.ElementTimesArgs[1] : [32 x 32 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.c : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.res.x : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.x2s : [32 x 32 x 64 x 1 x *] (gradient) }
+	{ _z.x._._.x : [256 x *] (gradient)
+	  model.arrayOfFunctions[9].b : [1 x 1 x 64] (gradient)
+	  z : [10 x *]
+	  z.x : [128 x *] (gradient)
+	  z.x._._.x : [128 x *] (gradient)
+	  z.x._._.x._._.x : [256 x *]
+	  z.x._._.x._._.x.x.b : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.den : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.den._.ElementTimesArgs[1] : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.r : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x2s : [15 x 15 x 64 x 1 x *] (gradient) }
+	{ model.arrayOfFunctions[19].W : [10 x 128] (gradient)
+	  z : [10 x *] (gradient) }
+	{ _z.x._._.x._._.x : [7 x 7 x 64 x *] (gradient)
+	  z.x._._.x._ : [256 x *]
+	  z.x._._.x._._.x.PlusArgs[0] : [256 x *]
+	  z.x._._.x._._.x.x.den._ : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._ : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.r.ElementTimesArgs[1] : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.y : [15 x 15 x 64 x 1 x *] (gradient) }
+	{ model.arrayOfFunctions[16].arrayOfFunctions[0].W : [128 x 256] (gradient)
+	  z.x : [128 x *] }
+	{ _z.x._._.x : [256 x *]
+	  model.arrayOfFunctions[13].arrayOfFunctions[0].W : [256 x 7 x 7 x 64] (gradient)
+	  z.x._._.x._._.x : [256 x *] (gradient) }
+	{ model.arrayOfFunctions[13].arrayOfFunctions[0].b : [256] (gradient)
+	  z.PlusArgs[0] : [10 x *]
+	  z.PlusArgs[0] : [10 x *] (gradient)
+	  z.x._ : [128 x *] (gradient)
+	  z.x._._.x : [128 x *]
+	  z.x._._.x.PlusArgs[0] : [128 x *] (gradient) }
+	{ model.arrayOfFunctions[3].W : [3 x 3 x 64 x 64] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.b : [32 x 32 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.b : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1] : [32 x 32 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.res.x : [32 x 32 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.c : [32 x 32 x 64 x *] }
+	{ z.x._._.x._._.x.x.den._ : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._ : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.r.ElementTimesArgs[1] : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.x._.c : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.x._.res.x : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.c : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.r.ElementTimesArgs[1] : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x2 : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.x2 : [15 x 15 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.y : [15 x 15 x 64 x 1 x *] }
+	{ z.x._._.x._._.x.x.x : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.c : [15 x 15 x 64 x *] (gradient) }
+	{ model.arrayOfFunctions[1].b : [1 x 1 x 64] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.x : [32 x 32 x 64 x *] }
+	{ z.x._._.x._._.x.x.x._.x._.x.x.den._ : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._ : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.r : [32 x 32 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.res.x : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.x : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.c : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.x2 : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.y : [32 x 32 x 64 x 1 x *] (gradient) }
+	{ model.arrayOfFunctions[7].W : [3 x 3 x 64 x 64] (gradient)
+	  z.x._._.x._._.x.x.den : [15 x 15 x 64 x *] }
+	{ _z.x._._.x._._.x : [7 x 7 x 64 x *]
+	  z.x._._.x._._.x.x.x : [15 x 15 x 64 x *] (gradient) }
+	{ z.x._ : [128 x *]
+	  z.x._._.x.PlusArgs[0] : [128 x *]
+	  z.x._._.x._ : [256 x *] (gradient)
+	  z.x._._.x._._.x.PlusArgs[0] : [256 x *] (gradient) }
+	{ model.arrayOfFunctions[1].W : [3 x 3 x 3 x 64] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x : [15 x 15 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._ : [32 x 32 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x : [32 x 32 x 64 x *] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.c : [32 x 32 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.res.x : [32 x 32 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x2 : [32 x 32 x 64 x *]
+	  z.x._._.x._._.x.x.x._.x._.x.x.y : [32 x 32 x 64 x 1 x *] }
+	{ model.arrayOfFunctions[3].b : [1 x 1 x 64] (gradient)
+	  z.x._._.x._._.x.x.x._.x._.x.x.x : [32 x 32 x 64 x *] }
+
+Here are the ones that don't share memory:
+	{top5Errs : [1]}
+	{labels : [10 x *]}
+	{model.arrayOfFunctions[19].W : [10 x 128]}
+	{model.arrayOfFunctions[19].b : [10]}
+	{inputs.inputs[2] : [1 x 1]}
+	{model.arrayOfFunctions[16].arrayOfFunctions[0].W : [128 x 256]}
+	{model.arrayOfFunctions[16].arrayOfFunctions[0].b : [128]}
+	{model.arrayOfFunctions[13].arrayOfFunctions[0].b : [256]}
+	{_z.x._._.x._._.x.x.den._ : [1]}
+	{model.arrayOfFunctions[13].arrayOfFunctions[0].W : [256 x 7 x 7 x 64]}
+	{model.arrayOfFunctions[9].W : [3 x 3 x 64 x 64]}
+	{model.arrayOfFunctions[9].b : [1 x 1 x 64]}
+	{model.arrayOfFunctions[7].W : [3 x 3 x 64 x 64]}
+	{z.x._._.x._._.x.x.W : [1 x 1 x 9 x 1]}
+	{_z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._ : [1]}
+	{model.arrayOfFunctions[3].b : [1 x 1 x 64]}
+	{model.arrayOfFunctions[7].b : [1 x 1 x 64]}
+	{features : [32 x 32 x 3 x *]}
+	{model.arrayOfFunctions[1].b : [1 x 1 x 64]}
+	{_z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x : [1]}
+	{_z.x._._.x._._.x.x.x._.x._.x.x.den._ : [1]}
+	{model.arrayOfFunctions[1].W : [3 x 3 x 3 x 64]}
+	{model.arrayOfFunctions[3].W : [3 x 3 x 64 x 64]}
+	{_z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._ : [1]}
+	{z.x._._.x._._.x.x.x._.x._.x.x.W : [1 x 1 x 9 x 1]}
+	{ce : [1]}
+	{errs : [1]}
+	{z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x : [32 x 32 x 3 x *]}
+	{model.arrayOfFunctions[16].arrayOfFunctions[0].b : [128] (gradient)}
+	{model.arrayOfFunctions[19].b : [10] (gradient)}
+	{z.x._._.x._._.x.x.x._.x._.x.x.den : [32 x 32 x 64 x *]}
+	{z.x._._.x._._.x.x.x._.x._.x.x.x2s : [32 x 32 x 64 x 1 x *]}
+	{ce : [1] (gradient)}
+
+
+05/08/2017 19:45:47: Training 949834 parameters in 14 out of 14 parameter tensors and 59 nodes with gradient:
+
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[13].arrayOfFunctions[0].W' (LearnableParameter operation) : [256 x 7 x 7 x 64]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[13].arrayOfFunctions[0].b' (LearnableParameter operation) : [256]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[16].arrayOfFunctions[0].W' (LearnableParameter operation) : [128 x 256]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[16].arrayOfFunctions[0].b' (LearnableParameter operation) : [128]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[19].W' (LearnableParameter operation) : [10 x 128]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[19].b' (LearnableParameter operation) : [10]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation) : [3 x 3 x 3 x 64]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[1].b' (LearnableParameter operation) : [1 x 1 x 64]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[3].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[3].b' (LearnableParameter operation) : [1 x 1 x 64]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[7].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[7].b' (LearnableParameter operation) : [1 x 1 x 64]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[9].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+05/08/2017 19:45:47: 	Node 'model.arrayOfFunctions[9].b' (LearnableParameter operation) : [1 x 1 x 64]
+
+05/08/2017 19:45:47: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+Setting dropout rate to 0.5.
+
+05/08/2017 19:45:47: Starting Epoch 1: learning rate per sample = 0.001563  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+05/08/2017 19:45:47: Starting minibatch loop.
+(GPU): creating curand object with seed 0
+(GPU): creating curand object with seed 1
+05/08/2017 19:45:50:  Epoch[ 1 of 3]-Minibatch[   1-  16, 25.00%]: ce = 2.29859829 * 1024; errs = 88.867% * 1024; time = 3.4698s; samplesPerSecond = 295.1
+05/08/2017 19:45:51:  Epoch[ 1 of 3]-Minibatch[  17-  32, 50.00%]: ce = 2.29957533 * 1024; errs = 87.402% * 1024; time = 0.7139s; samplesPerSecond = 1434.4
+05/08/2017 19:45:52:  Epoch[ 1 of 3]-Minibatch[  33-  48, 75.00%]: ce = 2.28886795 * 1024; errs = 86.719% * 1024; time = 0.7142s; samplesPerSecond = 1433.8
+05/08/2017 19:45:53:  Epoch[ 1 of 3]-Minibatch[  49-  64, 100.00%]: ce = 2.25136232 * 1024; errs = 85.352% * 1024; time = 0.7140s; samplesPerSecond = 1434.2
+05/08/2017 19:45:53: Finished Epoch[ 1 of 3]: [Training] ce = 2.28460097 * 4096; errs = 87.085% * 4096; totalSamplesSeen = 4096; learningRatePerSample = 0.0015625; epochTime=5.61935s
+05/08/2017 19:45:53: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170508114544.893734\Examples\Image\Classification\ConvNet_ConvNetLRN_CIFAR10_DataAug@release_gpu/Models/ConvNetLRN_CIFAR10_DataAug.1'
+
+05/08/2017 19:45:53: Starting Epoch 2: learning rate per sample = 0.001563  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+05/08/2017 19:45:53: Starting minibatch loop.
+(GPU): creating curand object with seed 2
+(GPU): creating curand object with seed 3
+05/08/2017 19:45:53:  Epoch[ 2 of 3]-Minibatch[   1-  16, 25.00%]: ce = 2.21036029 * 1024; errs = 83.789% * 1024; time = 0.7465s; samplesPerSecond = 1371.7
+05/08/2017 19:45:54:  Epoch[ 2 of 3]-Minibatch[  17-  32, 50.00%]: ce = 2.16653085 * 1024; errs = 82.715% * 1024; time = 0.7154s; samplesPerSecond = 1431.5
+05/08/2017 19:45:55:  Epoch[ 2 of 3]-Minibatch[  33-  48, 75.00%]: ce = 2.15736771 * 1024; errs = 81.836% * 1024; time = 0.7206s; samplesPerSecond = 1421.1
+05/08/2017 19:45:56:  Epoch[ 2 of 3]-Minibatch[  49-  64, 100.00%]: ce = 2.15728092 * 1024; errs = 82.031% * 1024; time = 0.7190s; samplesPerSecond = 1424.2
+05/08/2017 19:45:56: Finished Epoch[ 2 of 3]: [Training] ce = 2.17288494 * 4096; errs = 82.593% * 4096; totalSamplesSeen = 8192; learningRatePerSample = 0.0015625; epochTime=2.90469s
+05/08/2017 19:45:56: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170508114544.893734\Examples\Image\Classification\ConvNet_ConvNetLRN_CIFAR10_DataAug@release_gpu/Models/ConvNetLRN_CIFAR10_DataAug.2'
+
+05/08/2017 19:45:56: Starting Epoch 3: learning rate per sample = 0.001563  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+05/08/2017 19:45:56: Starting minibatch loop.
+(GPU): creating curand object with seed 4
+(GPU): creating curand object with seed 5
+05/08/2017 19:45:56:  Epoch[ 3 of 3]-Minibatch[   1-  16, 25.00%]: ce = 2.11107063 * 1024; errs = 78.320% * 1024; time = 0.7465s; samplesPerSecond = 1371.7
+05/08/2017 19:45:57:  Epoch[ 3 of 3]-Minibatch[  17-  32, 50.00%]: ce = 2.11705589 * 1024; errs = 79.004% * 1024; time = 0.7137s; samplesPerSecond = 1434.9
+05/08/2017 19:45:58:  Epoch[ 3 of 3]-Minibatch[  33-  48, 75.00%]: ce = 2.09411049 * 1024; errs = 78.027% * 1024; time = 0.7141s; samplesPerSecond = 1434.0
+05/08/2017 19:45:59:  Epoch[ 3 of 3]-Minibatch[  49-  64, 100.00%]: ce = 2.09136295 * 1024; errs = 77.344% * 1024; time = 0.7128s; samplesPerSecond = 1436.7
+05/08/2017 19:45:59: Finished Epoch[ 3 of 3]: [Training] ce = 2.10339999 * 4096; errs = 78.174% * 4096; totalSamplesSeen = 12288; learningRatePerSample = 0.0015625; epochTime=2.89028s
+05/08/2017 19:45:59: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170508114544.893734\Examples\Image\Classification\ConvNet_ConvNetLRN_CIFAR10_DataAug@release_gpu/Models/ConvNetLRN_CIFAR10_DataAug'
+
+05/08/2017 19:45:59: Action "train" complete.
+
+
+05/08/2017 19:45:59: ##############################################################################
+05/08/2017 19:45:59: #                                                                            #
+05/08/2017 19:45:59: # Eval command (eval action)                                                 #
+05/08/2017 19:45:59: #                                                                            #
+05/08/2017 19:45:59: ##############################################################################
+
+
+Post-processing network...
+
+3 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	top5Errs = ClassificationError()
+
+Validating network. 72 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> model.arrayOfFunctions[19].W = LearnableParameter() :  -> [10 x 128]
+Validating --> model.arrayOfFunctions[16].arrayOfFunctions[0].W = LearnableParameter() :  -> [128 x 256]
+Validating --> model.arrayOfFunctions[13].arrayOfFunctions[0].W = LearnableParameter() :  -> [256 x 7 x 7 x 64]
+Validating --> model.arrayOfFunctions[9].W = LearnableParameter() :  -> [3 x 3 x 64 x 64]
+Validating --> model.arrayOfFunctions[7].W = LearnableParameter() :  -> [3 x 3 x 64 x 64]
+Validating --> model.arrayOfFunctions[3].W = LearnableParameter() :  -> [3 x 3 x 64 x 64]
+Validating --> model.arrayOfFunctions[1].W = LearnableParameter() :  -> [3 x 3 x 3 x 64]
+Validating --> _z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x = LearnableParameter() :  -> [1]
+Validating --> features = InputValue() :  -> [32 x 32 x 3 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x = ElementTimes (_z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x, features) : [1], [32 x 32 x 3 x *1] -> [32 x 32 x 3 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.c = Convolution (model.arrayOfFunctions[1].W, z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x) : [3 x 3 x 3 x 64], [32 x 32 x 3 x *1] -> [32 x 32 x 64 x *1]
+Validating --> model.arrayOfFunctions[1].b = LearnableParameter() :  -> [1 x 1 x 64]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.res.x = Plus (z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.c, model.arrayOfFunctions[1].b) : [32 x 32 x 64 x *1], [1 x 1 x 64] -> [32 x 32 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.x = RectifiedLinear (z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.res.x) : [32 x 32 x 64 x *1] -> [32 x 32 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.c = Convolution (model.arrayOfFunctions[3].W, z.x._._.x._._.x.x.x._.x._.x.x.x._.x) : [3 x 3 x 64 x 64], [32 x 32 x 64 x *1] -> [32 x 32 x 64 x *1]
+Validating --> model.arrayOfFunctions[3].b = LearnableParameter() :  -> [1 x 1 x 64]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x._.res.x = Plus (z.x._._.x._._.x.x.x._.x._.x.x.x._.c, model.arrayOfFunctions[3].b) : [32 x 32 x 64 x *1], [1 x 1 x 64] -> [32 x 32 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x = RectifiedLinear (z.x._._.x._._.x.x.x._.x._.x.x.x._.res.x) : [32 x 32 x 64 x *1] -> [32 x 32 x 64 x *1]
+Validating --> _z.x._._.x._._.x.x.x._.x._.x.x.den._ = LearnableParameter() :  -> [1]
+Validating --> _z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._ = LearnableParameter() :  -> [1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.W = LearnableParameter() :  -> [1 x 1 x 9 x 1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x2 = ElementTimes (z.x._._.x._._.x.x.x._.x._.x.x.x, z.x._._.x._._.x.x.x._.x._.x.x.x) : [32 x 32 x 64 x *1], [32 x 32 x 64 x *1] -> [32 x 32 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.x2s = Reshape (z.x._._.x._._.x.x.x._.x._.x.x.x2) : [32 x 32 x 64 x *1] -> [32 x 32 x 64 x 1 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.y = Convolution (z.x._._.x._._.x.x.x._.x._.x.x.W, z.x._._.x._._.x.x.x._.x._.x.x.x2s) : [1 x 1 x 9 x 1], [32 x 32 x 64 x 1 x *1] -> [32 x 32 x 64 x 1 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.b = Reshape (z.x._._.x._._.x.x.x._.x._.x.x.y) : [32 x 32 x 64 x 1 x *1] -> [32 x 32 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._ = Plus (_z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._, z.x._._.x._._.x.x.x._.x._.x.x.b) : [1], [32 x 32 x 64 x *1] -> [32 x 32 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1] = Log (z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._) : [32 x 32 x 64 x *1] -> [32 x 32 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.den._ = ElementTimes (_z.x._._.x._._.x.x.x._.x._.x.x.den._, z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]) : [1], [32 x 32 x 64 x *1] -> [32 x 32 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.den = Exp (z.x._._.x._._.x.x.x._.x._.x.x.den._) : [32 x 32 x 64 x *1] -> [32 x 32 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.r.ElementTimesArgs[1] = Reciprocal (z.x._._.x._._.x.x.x._.x._.x.x.den) : [32 x 32 x 64 x *1] -> [32 x 32 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x.x.r = ElementTimes (z.x._._.x._._.x.x.x._.x._.x.x.x, z.x._._.x._._.x.x.x._.x._.x.x.r.ElementTimesArgs[1]) : [32 x 32 x 64 x *1], [32 x 32 x 64 x *1] -> [32 x 32 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.x = Pooling (z.x._._.x._._.x.x.x._.x._.x.x.r) : [32 x 32 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x._.c = Convolution (model.arrayOfFunctions[7].W, z.x._._.x._._.x.x.x._.x._.x) : [3 x 3 x 64 x 64], [15 x 15 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> model.arrayOfFunctions[7].b = LearnableParameter() :  -> [1 x 1 x 64]
+Validating --> z.x._._.x._._.x.x.x._.x._.res.x = Plus (z.x._._.x._._.x.x.x._.x._.c, model.arrayOfFunctions[7].b) : [15 x 15 x 64 x *1], [1 x 1 x 64] -> [15 x 15 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.x = RectifiedLinear (z.x._._.x._._.x.x.x._.x._.res.x) : [15 x 15 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x._.c = Convolution (model.arrayOfFunctions[9].W, z.x._._.x._._.x.x.x._.x) : [3 x 3 x 64 x 64], [15 x 15 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> model.arrayOfFunctions[9].b = LearnableParameter() :  -> [1 x 1 x 64]
+Validating --> z.x._._.x._._.x.x.x._.res.x = Plus (z.x._._.x._._.x.x.x._.c, model.arrayOfFunctions[9].b) : [15 x 15 x 64 x *1], [1 x 1 x 64] -> [15 x 15 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x = RectifiedLinear (z.x._._.x._._.x.x.x._.res.x) : [15 x 15 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> _z.x._._.x._._.x.x.den._ = LearnableParameter() :  -> [1]
+Validating --> _z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._ = LearnableParameter() :  -> [1]
+Validating --> z.x._._.x._._.x.x.W = LearnableParameter() :  -> [1 x 1 x 9 x 1]
+Validating --> z.x._._.x._._.x.x.x2 = ElementTimes (z.x._._.x._._.x.x.x, z.x._._.x._._.x.x.x) : [15 x 15 x 64 x *1], [15 x 15 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.x2s = Reshape (z.x._._.x._._.x.x.x2) : [15 x 15 x 64 x *1] -> [15 x 15 x 64 x 1 x *1]
+Validating --> z.x._._.x._._.x.x.y = Convolution (z.x._._.x._._.x.x.W, z.x._._.x._._.x.x.x2s) : [1 x 1 x 9 x 1], [15 x 15 x 64 x 1 x *1] -> [15 x 15 x 64 x 1 x *1]
+Validating --> z.x._._.x._._.x.x.b = Reshape (z.x._._.x._._.x.x.y) : [15 x 15 x 64 x 1 x *1] -> [15 x 15 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._ = Plus (_z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._, z.x._._.x._._.x.x.b) : [1], [15 x 15 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.den._.ElementTimesArgs[1] = Log (z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._) : [15 x 15 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.den._ = ElementTimes (_z.x._._.x._._.x.x.den._, z.x._._.x._._.x.x.den._.ElementTimesArgs[1]) : [1], [15 x 15 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.den = Exp (z.x._._.x._._.x.x.den._) : [15 x 15 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.r.ElementTimesArgs[1] = Reciprocal (z.x._._.x._._.x.x.den) : [15 x 15 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> z.x._._.x._._.x.x.r = ElementTimes (z.x._._.x._._.x.x.x, z.x._._.x._._.x.x.r.ElementTimesArgs[1]) : [15 x 15 x 64 x *1], [15 x 15 x 64 x *1] -> [15 x 15 x 64 x *1]
+Validating --> _z.x._._.x._._.x = Pooling (z.x._._.x._._.x.x.r) : [15 x 15 x 64 x *1] -> [7 x 7 x 64 x *1]
+Validating --> z.x._._.x._._.x.PlusArgs[0] = Times (model.arrayOfFunctions[13].arrayOfFunctions[0].W, _z.x._._.x._._.x) : [256 x 7 x 7 x 64], [7 x 7 x 64 x *1] -> [256 x *1]
+Validating --> model.arrayOfFunctions[13].arrayOfFunctions[0].b = LearnableParameter() :  -> [256]
+Validating --> z.x._._.x._._.x = Plus (z.x._._.x._._.x.PlusArgs[0], model.arrayOfFunctions[13].arrayOfFunctions[0].b) : [256 x *1], [256] -> [256 x *1]
+Validating --> z.x._._.x._ = RectifiedLinear (z.x._._.x._._.x) : [256 x *1] -> [256 x *1]
+Validating --> _z.x._._.x = Dropout (z.x._._.x._) : [256 x *1] -> [256 x *1]
+Validating --> z.x._._.x.PlusArgs[0] = Times (model.arrayOfFunctions[16].arrayOfFunctions[0].W, _z.x._._.x) : [128 x 256], [256 x *1] -> [128 x *1]
+Validating --> model.arrayOfFunctions[16].arrayOfFunctions[0].b = LearnableParameter() :  -> [128]
+Validating --> z.x._._.x = Plus (z.x._._.x.PlusArgs[0], model.arrayOfFunctions[16].arrayOfFunctions[0].b) : [128 x *1], [128] -> [128 x *1]
+Validating --> z.x._ = RectifiedLinear (z.x._._.x) : [128 x *1] -> [128 x *1]
+Validating --> z.x = Dropout (z.x._) : [128 x *1] -> [128 x *1]
+Validating --> z.PlusArgs[0] = Times (model.arrayOfFunctions[19].W, z.x) : [10 x 128], [128 x *1] -> [10 x *1]
+Validating --> model.arrayOfFunctions[19].b = LearnableParameter() :  -> [10]
+Validating --> z = Plus (z.PlusArgs[0], model.arrayOfFunctions[19].b) : [10 x *1], [10] -> [10 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, z) : [10 x *1], [10 x *1] -> [1]
+Validating --> errs = ClassificationError (labels, z) : [10 x *1], [10 x *1] -> [1]
+Validating --> inputs.inputs[2] = LearnableParameter() :  -> [1 x 1]
+Validating --> top5Errs = ClassificationError (labels, z, inputs.inputs[2]) : [10 x *1], [10 x *1], [1 x 1] -> [1]
+
+Validating network. 48 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 64, Kernel: 3 x 3 x 3, Map: 64, Stride: 1 x 1 x 3, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.x._._.x._._.x.x.x._.x._.x.x.x._.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 64, Output: 32 x 32 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.x._._.x._._.x.x.x._.x._.x.x.y: using cuDNN convolution engine for geometry: Input: 32 x 32 x 64 x 1, Output: 32 x 32 x 64 x 1, Kernel: 1 x 1 x 9 x 1, Map: 1, Stride: 1 x 1 x 1 x 1, Sharing: (1, 1, 1, 1), AutoPad: (1, 1, 1, 0), LowerPad: 0 x 0 x 0 x 0, UpperPad: 0 x 0 x 0 x 0.
+z.x._._.x._._.x.x.x._.x._.x: using cuDNN convolution engine for geometry: Input: 32 x 32 x 64, Output: 15 x 15 x 64, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.x._._.x._._.x.x.x._.x._.c: using cuDNN convolution engine for geometry: Input: 15 x 15 x 64, Output: 15 x 15 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.x._._.x._._.x.x.x._.c: using cuDNN convolution engine for geometry: Input: 15 x 15 x 64, Output: 15 x 15 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.x._._.x._._.x.x.y: using cuDNN convolution engine for geometry: Input: 15 x 15 x 64 x 1, Output: 15 x 15 x 64 x 1, Kernel: 1 x 1 x 9 x 1, Map: 1, Stride: 1 x 1 x 1 x 1, Sharing: (1, 1, 1, 1), AutoPad: (1, 1, 1, 0), LowerPad: 0 x 0 x 0 x 0, UpperPad: 0 x 0 x 0 x 0.
+_z.x._._.x._._.x: using cuDNN convolution engine for geometry: Input: 15 x 15 x 64, Output: 7 x 7 x 64, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+
+
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 72 matrices, 45 are shared as 4, and 27 are not shared.
+
+Here are the ones that share memory:
+	{ z.x._._.x._._.x.x.den._ : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.b : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.den._ : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.r.ElementTimesArgs[1] : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.res.x : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.x : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.c : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x2s : [32 x 32 x 64 x 1 x *1] }
+	{ z.PlusArgs[0] : [10 x *1]
+	  z.x._ : [128 x *1]
+	  z.x._._.x.PlusArgs[0] : [128 x *1]
+	  z.x._._.x._ : [256 x *1]
+	  z.x._._.x._._.x.PlusArgs[0] : [256 x *1]
+	  z.x._._.x._._.x.x.den : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._ : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.r : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.c : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.res.x : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1] : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x : [32 x 32 x 3 x *1]
+	  z.x._._.x._._.x.x.x2 : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.y : [15 x 15 x 64 x 1 x *1] }
+	{ _z.x._._.x : [256 x *1]
+	  _z.x._._.x._._.x : [7 x 7 x 64 x *1]
+	  z : [10 x *1]
+	  z.x : [128 x *1]
+	  z.x._._.x : [128 x *1]
+	  z.x._._.x._._.x : [256 x *1]
+	  z.x._._.x._._.x.x.b : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.den._.ElementTimesArgs[1] : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.r.ElementTimesArgs[1] : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.res.x : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.c : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x2s : [15 x 15 x 64 x 1 x *1] }
+	{ z.x._._.x._._.x.x.x : [15 x 15 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.den : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._ : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.r : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.c : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.res.x : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.x2 : [32 x 32 x 64 x *1]
+	  z.x._._.x._._.x.x.x._.x._.x.x.y : [32 x 32 x 64 x 1 x *1] }
+
+Here are the ones that don't share memory:
+	{ce : [1]}
+	{_z.x._._.x._._.x.x.den._ : [1]}
+	{_z.x._._.x._._.x.x.x._.x._.x.x.den._ : [1]}
+	{_z.x._._.x._._.x.x.x._.x._.x.x.den._.ElementTimesArgs[1]._ : [1]}
+	{_z.x._._.x._._.x.x.x._.x._.x.x.x._.x._.x : [1]}
+	{_z.x._._.x._._.x.x.den._.ElementTimesArgs[1]._ : [1]}
+	{inputs.inputs[2] : [1 x 1]}
+	{model.arrayOfFunctions[13].arrayOfFunctions[0].W : [256 x 7 x 7 x 64]}
+	{model.arrayOfFunctions[16].arrayOfFunctions[0].W : [128 x 256]}
+	{model.arrayOfFunctions[19].W : [10 x 128]}
+	{features : [32 x 32 x 3 x *1]}
+	{labels : [10 x *1]}
+	{model.arrayOfFunctions[13].arrayOfFunctions[0].b : [256]}
+	{model.arrayOfFunctions[16].arrayOfFunctions[0].b : [128]}
+	{model.arrayOfFunctions[19].b : [10]}
+	{model.arrayOfFunctions[3].W : [3 x 3 x 64 x 64]}
+	{model.arrayOfFunctions[7].b : [1 x 1 x 64]}
+	{z.x._._.x._._.x.x.W : [1 x 1 x 9 x 1]}
+	{model.arrayOfFunctions[9].W : [3 x 3 x 64 x 64]}
+	{model.arrayOfFunctions[1].b : [1 x 1 x 64]}
+	{model.arrayOfFunctions[1].W : [3 x 3 x 3 x 64]}
+	{model.arrayOfFunctions[3].b : [1 x 1 x 64]}
+	{model.arrayOfFunctions[9].b : [1 x 1 x 64]}
+	{model.arrayOfFunctions[7].W : [3 x 3 x 64 x 64]}
+	{z.x._._.x._._.x.x.x._.x._.x.x.W : [1 x 1 x 9 x 1]}
+	{top5Errs : [1]}
+	{errs : [1]}
+
+05/08/2017 19:46:03: Minibatch[1-20]: errs = 72.970% * 10000; top5Errs = 19.840% * 10000
+05/08/2017 19:46:03: Final Results: Minibatch[1-20]: errs = 72.970% * 10000; top5Errs = 19.840% * 10000
+
+05/08/2017 19:46:03: Action "eval" complete.
+
+05/08/2017 19:46:03: __COMPLETED__

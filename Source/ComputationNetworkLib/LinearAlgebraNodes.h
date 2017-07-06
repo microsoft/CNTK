@@ -126,6 +126,11 @@ public:
             inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
         }
     }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return true;
+    }
 };
 
 template class LogPlusNode<float>;
@@ -239,7 +244,7 @@ template class MinusNode<double>;
 // -----------------------------------------------------------------------
 // ElementTimesNode (factor1, factor2)
 // This allows broadcasting, and can thus also scale with a row, a column, or a scalar,
-// as well as mutliplying with a diagonal matrix (if represented as a column vector).
+// as well as multiplying with a diagonal matrix (if represented as a column vector).
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -602,7 +607,7 @@ public:
                 }
                 else
                 {
-                    ElementTimesNode<ElemType>::ForwardPropImpl(*this, fr, false/*allowBroadcast*/);
+                    ElementTimesNode<ElemType>::ForwardPropImpl(*this, fr, true/*allowBroadcast*/);
                 }
                 return;
             }
@@ -1420,7 +1425,7 @@ public:
 
         // TODO: We could do something more interesting with tensors.
         //       E.g. apply a cos distance of a whole set of data with a single reference.
-        SetDims(Environment().IsV2Library() ? TensorShape() : TensorShape(1), Input(1)->HasMBLayout());
+        SetDims(TensorShape::Scalar(Environment().IsV2Library()), Input(1)->HasMBLayout());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

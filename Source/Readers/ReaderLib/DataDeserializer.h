@@ -20,16 +20,16 @@ struct KeyType
 {
     KeyType() : m_sequence(0), m_sample(0) {}
 
-    KeyType(size_t sequence, size_t sample) : m_sequence(sequence), m_sample(sample) {}
+    KeyType(size_t sequence, uint32_t sample) : m_sequence(sequence), m_sample(sample) {}
 
     // Possible sequence common prefix.
     // size_t m_prefix;
 
     // Identifies sequence between different deserializers.
-    size_t m_sequence : 40;
+    size_t m_sequence;
 
     // Sample id.
-    size_t m_sample : 24;
+    uint32_t m_sample;
 };
 
 class Chunk;

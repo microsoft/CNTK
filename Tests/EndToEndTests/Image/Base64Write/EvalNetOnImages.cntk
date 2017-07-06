@@ -23,6 +23,7 @@ Output = {
 
     reader = {
         verbosity = 0 ;  randomize = false
+        useNumericSequenceKeys = false
         deserializers = ({
             type = "Base64ImageDeserializer" ; module = "ImageReader"
             file = "$data$"

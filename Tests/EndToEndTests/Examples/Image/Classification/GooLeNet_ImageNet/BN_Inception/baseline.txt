@@ -1,0 +1,425 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU X5680 @ 3.33GHz
+    Hardware threads: 12
+    Total Memory: 33537232 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/d/GitHub/CNTK/x64/release/cntk.exe configFile=D:\GitHub\CNTK\Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript/BN-Inception.cntk currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\ImageNet RunDir=C:\cygwin64\tmp\cntk-test-20170508162706.535572\Examples\Image\Classification\GooLeNet_ImageNet_BN_Inception@release_gpu DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\ImageNet ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript OutputDir=C:\cygwin64\tmp\cntk-test-20170508162706.535572\Examples\Image\Classification\GooLeNet_ImageNet_BN_Inception@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true traceLevel=0 stderr=- Train=[SGD=[epochSize=4,minibatchSize=2,maxEpochs=2,numMBsToShowResult=1]] Eval=[minibatchSize=2]
+CNTK 2.0rc2+ (HEAD fbb53d, May  8 2017 10:15:58) on CHAZHANG at 2017/05/09 00:27:08
+
+D:\GitHub\CNTK\x64\release\cntk.exe  configFile=D:\GitHub\CNTK\Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript/BN-Inception.cntk  currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\ImageNet  RunDir=C:\cygwin64\tmp\cntk-test-20170508162706.535572\Examples\Image\Classification\GooLeNet_ImageNet_BN_Inception@release_gpu  DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\ImageNet  ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript  OutputDir=C:\cygwin64\tmp\cntk-test-20170508162706.535572\Examples\Image\Classification\GooLeNet_ImageNet_BN_Inception@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  traceLevel=0  stderr=-  Train=[SGD=[epochSize=4,minibatchSize=2,maxEpochs=2,numMBsToShowResult=1]]  Eval=[minibatchSize=2]
+Changed current directory to D:\GitHub\CNTK\Examples\Image\DataSets\ImageNet
+ping [requestnodes (before change)]: 1 nodes pinging each other
+ping [requestnodes (after change)]: 1 nodes pinging each other
+requestnodes [MPIWrapperMpi]: using 1 out of 1 MPI nodes on a single host (1 requested); we (0) are in (participating)
+ping [mpihelper]: 1 nodes pinging each other
+05/09/2017 00:27:08: Redirecting stderr to file -_Train_Eval.logrank0
+CNTK 2.0rc2+ (HEAD fbb53d, May  8 2017 10:15:58) on CHAZHANG at 2017/05/09 00:27:08
+
+D:\GitHub\CNTK\x64\release\cntk.exe  configFile=D:\GitHub\CNTK\Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript/BN-Inception.cntk  currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\ImageNet  RunDir=C:\cygwin64\tmp\cntk-test-20170508162706.535572\Examples\Image\Classification\GooLeNet_ImageNet_BN_Inception@release_gpu  DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\ImageNet  ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript  OutputDir=C:\cygwin64\tmp\cntk-test-20170508162706.535572\Examples\Image\Classification\GooLeNet_ImageNet_BN_Inception@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  traceLevel=0  stderr=-  Train=[SGD=[epochSize=4,minibatchSize=2,maxEpochs=2,numMBsToShowResult=1]]  Eval=[minibatchSize=2]
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: May  8 2017 10:09:53
+		Last modified date: Mon May  8 09:12:53 2017
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: yes
+		With ASGD: yes
+		Math lib: mkl
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+		CUB_PATH: C:\src\cub-1.4.1
+		CUDNN_PATH: C:\local\cudnn-8.0-v5.1\cuda
+		Build Branch: master
+		Build SHA1: 190dc1b3042d62c20aeba5bd336bbeaa8a6466ca
+		Built by chazhang on CHAZHANG
+		Build Path: D:\GitHub\CNTK\Source\CNTKv2LibraryDll\
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+		Device[0]: cores = 2688; computeCapability = 3.5; type = "GeForce GTX TITAN"; total memory = 6144 MB; free memory = 5627 MB
+-------------------------------------------------------------------
+05/09/2017 00:27:08: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
+
+05/09/2017 00:27:08: ##############################################################################
+05/09/2017 00:27:08: #                                                                            #
+05/09/2017 00:27:08: # Train command (train action)                                               #
+05/09/2017 00:27:08: #                                                                            #
+05/09/2017 00:27:08: ##############################################################################
+
+Node 'model.conv1.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [7 x 7 x 3 x 64].
+Node 'model.conv1.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.conv1.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.conv1.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.conv1.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.conv2a.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 64 x 64].
+Node 'model.conv2a.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.conv2a.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.conv2a.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.conv2a.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.conv2b.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 192].
+Node 'model.conv2b.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.conv2b.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.conv2b.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.conv2b.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception3a.branch1x1.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 192 x 64].
+Node 'model.inception3a.branch1x1.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch1x1.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch1x1.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch1x1.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 192 x 64].
+Node 'model.inception3a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node 'model.inception3a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 192 x 64].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 96].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 96 x 96].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 192 x 32].
+Node 'model.inception3a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'model.inception3a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'model.inception3a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'model.inception3a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'model.inception3b.branch1x1.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 64].
+Node 'model.inception3b.branch1x1.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch1x1.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch1x1.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch1x1.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 64].
+Node 'model.inception3b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 96].
+Node 'model.inception3b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 64].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 96].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 96 x 96].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 64].
+Node 'model.inception3b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3c.branch3x3.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 320 x 128].
+Node 'model.inception3c.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception3c.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception3c.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception3c.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception3c.branch3x3.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 160].
+Node 'model.inception3c.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception3c.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception3c.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception3c.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 320 x 64].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 96].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 96 x 96].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception3c.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4a.branch1x1.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 224].
+Node 'model.inception4a.branch1x1.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception4a.branch1x1.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception4a.branch1x1.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception4a.branch1x1.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception4a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 64].
+Node 'model.inception4a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception4a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception4a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception4a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.inception4a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 96].
+Node 'model.inception4a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 96].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 96 x 128].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 128].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 128].
+Node 'model.inception4a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch1x1.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 192].
+Node 'model.inception4b.branch1x1.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4b.branch1x1.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4b.branch1x1.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4b.branch1x1.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 96].
+Node 'model.inception4b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 96 x 128].
+Node 'model.inception4b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 96].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 96 x 128].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 128].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 128].
+Node 'model.inception4b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch1x1.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 160].
+Node 'model.inception4c.branch1x1.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch1x1.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch1x1.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch1x1.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 128].
+Node 'model.inception4c.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch3x3.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 160].
+Node 'model.inception4c.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 128].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 160].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 160 x 160].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4c.branch_pool.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 576 x 128].
+Node 'model.inception4c.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4c.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4d.branch1x1.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 608 x 96].
+Node 'model.inception4d.branch1x1.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4d.branch1x1.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4d.branch1x1.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4d.branch1x1.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [96 x 1].
+Node 'model.inception4d.branch3x3.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 608 x 128].
+Node 'model.inception4d.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4d.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4d.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4d.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4d.branch3x3.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 192].
+Node 'model.inception4d.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 608 x 160].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 160 x 192].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 192 x 192].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4d.branch_pool.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 608 x 128].
+Node 'model.inception4d.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4d.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4d.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4d.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4e.branch3x3.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 608 x 128].
+Node 'model.inception4e.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4e.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4e.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4e.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception4e.branch3x3.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 192].
+Node 'model.inception4e.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4e.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4e.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4e.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 608 x 192].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 192 x 256].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'model.inception4e.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'model.inception5a.branch1x1.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1056 x 352].
+Node 'model.inception5a.branch1x1.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [352 x 1].
+Node 'model.inception5a.branch1x1.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [352 x 1].
+Node 'model.inception5a.branch1x1.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [352 x 1].
+Node 'model.inception5a.branch1x1.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [352 x 1].
+Node 'model.inception5a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1056 x 192].
+Node 'model.inception5a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5a.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 192 x 320].
+Node 'model.inception5a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [320 x 1].
+Node 'model.inception5a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [320 x 1].
+Node 'model.inception5a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [320 x 1].
+Node 'model.inception5a.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [320 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1056 x 160].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [160 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 160 x 224].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 224 x 224].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5a.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1056 x 128].
+Node 'model.inception5a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception5a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception5a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception5a.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception5b.branch1x1.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 352].
+Node 'model.inception5b.branch1x1.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [352 x 1].
+Node 'model.inception5b.branch1x1.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [352 x 1].
+Node 'model.inception5b.branch1x1.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [352 x 1].
+Node 'model.inception5b.branch1x1.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [352 x 1].
+Node 'model.inception5b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 192].
+Node 'model.inception5b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5b.branch3x3.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 192 x 320].
+Node 'model.inception5b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [320 x 1].
+Node 'model.inception5b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [320 x 1].
+Node 'model.inception5b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [320 x 1].
+Node 'model.inception5b.branch3x3.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [320 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 192].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [192 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 192 x 224].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 224 x 224].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5b.branch3x3dbl.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [224 x 1].
+Node 'model.inception5b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 128].
+Node 'model.inception5b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception5b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception5b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.inception5b.branch_pool.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.z.W' (LearnableParameter operation) operation: Tensor shape was inferred as [1000 x 1 x 1 x 1024].
+05/09/2017 00:27:10: 
+Model has 654 nodes. Using GPU 0.
+
+05/09/2017 00:27:10: Training criterion:   ce = CrossEntropyWithSoftmax
+
+05/09/2017 00:27:10: Evaluation criteria:
+05/09/2017 00:27:10: 	errs = ClassificationError
+05/09/2017 00:27:10: 	top5Errs = ClassificationError
+
+05/09/2017 00:27:10: Training 11285224 parameters in 209 parameter tensors.
+
+05/09/2017 00:27:13: Finished Epoch[ 1 of 2]: [Training] ce = 19.31412196 * 4; errs = 100.000% * 4; top5Errs = 100.000% * 4; totalSamplesSeen = 4; learningRatePerSample = 1.8; epochTime=2.13883s
+05/09/2017 00:27:24: Final Results: Minibatch[1-513]: ce = 5.94565419e+13 * 1024; perplexity = inf; errs = 99.805% * 1024; top5Errs = 99.121% * 1024
+05/09/2017 00:27:24: Finished Epoch[ 1 of 2]: [Validate] ce = 5.94565419e+13 * 1024; errs = 99.805% * 1024; top5Errs = 99.121% * 1024
+05/09/2017 00:27:25: Finished Epoch[ 2 of 2]: [Training] ce = 43.67440224 * 4; errs = 100.000% * 4; top5Errs = 100.000% * 4; totalSamplesSeen = 8; learningRatePerSample = 1.8; epochTime=0.317135s
+05/09/2017 00:27:36: Final Results: Minibatch[1-513]: ce = 4.51060467e+23 * 1024; perplexity = inf; errs = 99.805% * 1024; top5Errs = 98.926% * 1024
+05/09/2017 00:27:36: Finished Epoch[ 2 of 2]: [Validate] ce = 4.51060467e+23 * 1024; errs = 99.805% * 1024; top5Errs = 98.926% * 1024
+
+
+05/09/2017 00:27:37: ##############################################################################
+05/09/2017 00:27:37: #                                                                            #
+05/09/2017 00:27:37: # Eval command (test action)                                                 #
+05/09/2017 00:27:37: #                                                                            #
+05/09/2017 00:27:37: ##############################################################################
+
+05/09/2017 00:27:49: Final Results: Minibatch[1-513]: errs = 99.805% * 1024; top5Errs = 98.926% * 1024
+
+05/09/2017 00:27:49: __COMPLETED__

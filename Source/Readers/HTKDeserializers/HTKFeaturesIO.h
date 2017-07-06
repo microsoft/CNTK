@@ -22,8 +22,9 @@
 #include <wchar.h>
 #include "simplesenonehmm.h"
 #include <array>
+#include <ReaderUtil.h>
 
-namespace msra { namespace asr {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
 
@@ -68,8 +69,8 @@ protected:
 
     static short swapshort(short v) noexcept
     {
-        const unsigned char* b = (const unsigned char*) &v;
-        return (short) ((b[0] << 8) + b[1]);
+        const unsigned char* b = (const unsigned char*)&v;
+        return (short)((b[0] << 8) + b[1]);
     }
     static unsigned short swapunsignedshort(unsigned short v) noexcept
     {
@@ -78,8 +79,8 @@ protected:
     }
     static int swapint(int v) noexcept
     {
-        const unsigned char* b = (const unsigned char*) &v;
-        return (int) (((((b[0] << 8) + b[1]) << 8) + b[2]) << 8) + b[3];
+        const unsigned char* b = (const unsigned char*)&v;
+        return (int)(((((b[0] << 8) + b[1]) << 8) + b[2]) << 8) + b[3];
     }
 
     struct fileheader
@@ -92,7 +93,7 @@ protected:
         {
             nsamples = fgetint(f);
             sampperiod = fgetint(f);
-            sampsize = (unsigned short) fgetshort(f);
+            sampsize = (unsigned short)fgetshort(f);
             sampkind = fgetshort(f);
         }
 
@@ -104,11 +105,11 @@ protected:
                 RuntimeError("reading idx feature cache header: invalid magic");
             nsamples = swapint(fgetint(f));
             sampperiod = 0;
-            sampkind = (short) 9; // user type
+            sampkind = (short)9; // user type
             int nRows = swapint(fgetint(f));
             int nCols = swapint(fgetint(f));
             int rawsampsize = nRows * nCols;
-            sampsize = (unsigned short) rawsampsize; // features are stored as bytes;
+            sampsize = (unsigned short)rawsampsize; // features are stored as bytes;
             if (sampsize != rawsampsize)
                 RuntimeError("reading idx feature cache header: sample size overflow");
         }
@@ -117,7 +118,7 @@ protected:
         {
             fputint(f, nsamples);
             fputint(f, sampperiod);
-            fputshort(f, (short) sampsize);
+            fputshort(f, (short)sampsize);
             fputshort(f, sampkind);
         }
         void byteswap()
@@ -184,7 +185,7 @@ public:
     struct parsedpath
     {
         // Note: This is not thread-safe
-        static std::unordered_map<std::wstring, unsigned int> archivePathStringMap;
+        static std::unordered_map<std::string, unsigned int> archivePathStringMap;
         static std::vector<std::wstring> archivePathStringVector;
 
         uint32_t s, e;       // first and last frame inside the archive file; (0, INT_MAX) if not given
@@ -206,46 +207,45 @@ public:
             RuntimeError("parsedpath: malformed path '%s'", path.c_str());
         }
 
-        // consume and return up to 'delim'; remove from 'input' (we try to avoid C++0x here for VS 2008 compat)
-        static string consume(string& input, const char* delim)
-        {
-            vector<string> parts = msra::strfun::split(input, delim); // (not very efficient, but does not matter here)
-            if (parts.size() == 1)
-                input.clear(); // not found: consume to end
-            else
-                input = parts[1]; // found: break at delimiter
-            return parts[0];
-        }
-
     public:
         // constructor parses a=b[s,e] syntax and fills in the file
         // Can be used implicitly e.g. by passing a string to open().
         static parsedpath Parse(const string& pathParam, string& logicalPath)
         {
-            parsedpath result;
+            const static string ubyte("-ubyte");
 
-            string xpath(pathParam);
+            const static std::vector<bool> equal = DelimiterHash({ '=' });
+            const static std::vector<bool> leftBracket = DelimiterHash({ '[' });
+            const static std::vector<bool> comma = DelimiterHash({ ',' });
+            const static std::vector<bool> rightBracket = DelimiterHash({ ']' });
+
+            parsedpath result;
             string archivepath;
 
-            // parse out logical path
-            logicalPath = consume(xpath, "=");
+            auto start = pathParam.data();
+            auto end = start + pathParam.size();
+            boost::iterator_range<const char*> token;
+
+            start = ReadTillDelimiter(start, end, equal, token);
+            logicalPath.assign(token.begin(), token.end());
+
             result.isidxformat = false;
-            if (xpath.empty()) // no '=' detected: pass entire file (it's not an archive)
+            if (start == end) // no '=' detected: pass entire file (it's not an archive)
             {
                 archivepath = logicalPath;
                 result.s = 0;
                 result.e = UINT_MAX;
                 result.isarchive = false;
                 // check for "-ubyte" suffix in path name => it is an idx file
-                string ubyte("-ubyte");
                 size_t pos = archivepath.size() >= ubyte.size() ? archivepath.size() - ubyte.size() : 0;
                 string suffix = archivepath.substr(pos, ubyte.size());
                 result.isidxformat = ubyte == suffix;
             }
             else // a=b[s,e] syntax detected
             {
-                archivepath = consume(xpath, "[");
-                if (xpath.empty()) // actually it's only a=b
+                start = ReadTillDelimiter(start, end, leftBracket, token);
+                archivepath.assign(token.begin(), token.end());
+                if (start == end) // actually it's only a=b
                 {
                     result.s = 0;
                     result.e = UINT_MAX;
@@ -253,19 +253,21 @@ public:
                 }
                 else
                 {
-                    result.s = msra::strfun::toint(consume(xpath, ",").c_str());
-                    if (xpath.empty())
+                    start = ReadTillDelimiter(start, end, comma, token);
+                    if (start == end)
                         malformed(pathParam);
-                    result.e = msra::strfun::toint(consume(xpath, "]").c_str());
-                    // TODO \r should be handled elsewhere; refine this
-                    if (!xpath.empty() && xpath != "\r")
+
+                    result.s = msra::strfun::toint(token.begin());
+                    start = ReadTillDelimiter(start, end, rightBracket, token);
+                    if (start != end && *start != '\r')
                         malformed(pathParam);
+
+                    result.e = msra::strfun::toint(token.begin());
                     result.isarchive = true;
                 }
             }
 
-            auto warchivepath = msra::strfun::utf16(archivepath);
-            auto iter = archivePathStringMap.find(warchivepath);
+            auto iter = archivePathStringMap.find(archivepath);
             if (iter != archivePathStringMap.end())
             {
                 result.archivePathIdx = iter->second;
@@ -273,8 +275,8 @@ public:
             else
             {
                 result.archivePathIdx = (unsigned int)archivePathStringMap.size();
-                archivePathStringMap[warchivepath] = result.archivePathIdx;
-                archivePathStringVector.push_back(warchivepath);
+                archivePathStringMap[archivepath] = result.archivePathIdx;
+                archivePathStringVector.push_back(msra::strfun::utf16(archivepath));
             }
 
             logicalPath = logicalPath.substr(0, logicalPath.find_last_of("."));
@@ -288,7 +290,7 @@ public:
         }
 
         // get duration in frames
-        size_t numframes() const
+        uint32_t numframes() const
         {
             if (!isarchive)
                 RuntimeError("parsedpath: this mode requires an input script with start and end frames given");
@@ -316,7 +318,7 @@ private:
             H.idxRead(f2);
 
         // take a guess as to whether we need byte swapping or not
-        bool needbyteswapping2 = ((unsigned int) swapint(H.sampperiod) < (unsigned int) H.sampperiod);
+        bool needbyteswapping2 = ((unsigned int)swapint(H.sampperiod) < (unsigned int)H.sampperiod);
         if (needbyteswapping2)
             H.byteswap();
 
@@ -490,8 +492,8 @@ public:
             // read into temp vector
             freadOrDie(tmpByteVector, featdim, f);
             v.resize(featdim);
-            foreach_index (k, v)
-                v[k] = (float) tmpByteVector[k];
+            foreach_index(k, v)
+                v[k] = (float)tmpByteVector[k];
         }
         else // need to decompress
         {
@@ -501,7 +503,7 @@ public:
                 msra::util::byteswap(tmp);
             // 'decompress' it
             v.resize(tmp.size());
-            foreach_index (k, v)
+            foreach_index(k, v)
                 v[k] = (tmp[k] + b[k]) / a[k];
         }
         curframe++;
@@ -534,7 +536,7 @@ public:
     // read an entire utterance into an already allocated matrix
     // Matrix type needs to have operator(i,j)
     template <class MATRIX>
-    void read(const parsedpath& ppath, const string& kindstr, const unsigned int period, MATRIX& feat, bool needsExpansion=false)
+    void read(const parsedpath& ppath, const string& kindstr, const unsigned int period, MATRIX& feat, bool needsExpansion = false)
     {
         // open the file and check dimensions
         size_t numframes2 = open(ppath);
@@ -614,9 +616,9 @@ private:
         if (te < ts)
             RuntimeError("htkmlfentry: end time below start time??");
         // save
-        firstframe = (unsigned int) ts;
-        numframes = (unsigned int) (te - ts);
-        classid = (unsigned short) uid;
+        firstframe = (unsigned int)ts;
+        numframes = (unsigned int)(te - ts);
+        classid = (unsigned short)uid;
         // check for numeric overflow
         if (firstframe != ts || firstframe + numframes != te || classid != uid)
             RuntimeError("htkmlfentry: not enough bits for one of the values");
@@ -647,7 +649,7 @@ private:
 public:
     // parse format with original HTK state align MLF format and state list
     void parsewithstatelist(const vector<char*>& toks, const unordered_map<std::string, size_t>& statelisthash, const double htkTimeToFrame,
-                            std::unordered_map<std::string, size_t>& hmmnamehash)
+        std::unordered_map<std::string, size_t>& hmmnamehash)
     {
         size_t ts, te;
         parseframerange(toks, ts, te, htkTimeToFrame);
@@ -688,5 +690,4 @@ public:
     }
 };
 
-};
-}; // namespaces
+}}}; // namespaces

@@ -11,6 +11,7 @@ import math
 import cntk
 import numpy as np
 
+import cntk as C
 from cntk.logging import *
 from cntk import input, cross_entropy_with_softmax, classification_error
 from cntk import Trainer, cntk_py 
@@ -42,8 +43,8 @@ model_name   = "ResNet_CIFAR10_DataAug.model"
 # Create network
 def create_resnet_network(network_name):
     # Input variables denoting the features and label data
-    input_var = input((num_channels, image_height, image_width))
-    label_var = input((num_classes))
+    input_var = C.input_variable((num_channels, image_height, image_width))
+    label_var = C.input_variable((num_classes))
 
     # create model, and configure learning parameters 
     if network_name == 'resnet20': 
@@ -116,7 +117,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         model_inputs_to_streams = input_map,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
         progress_frequency=epoch_size,
-        test_config = TestConfig(source=test_source, mb_size=16)
+        test_config = TestConfig(test_source, minibatch_size=16)
     ).train()
     
     if profiling:
@@ -146,7 +147,7 @@ def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, n
     trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up, progress_printer)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, profiling)
+    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling)
 
 
 if __name__=='__main__':
@@ -196,18 +197,17 @@ if __name__=='__main__':
     # Create distributed trainer factory
     print("Start training: quantize_bit = {}, epochs = {}, distributed_after = {}".format(num_quantization_bits, epochs, warm_up))
 
-    try:
-        resnet_cifar10(train_data, test_data, mean_data,
-                       network_name, 
-                       epoch_size,
-                       num_quantization_bits,
-                       block_size=args['block_samples'],
-                       warm_up=args['distributed_after'],
-                       max_epochs=epochs,
-                       restore=not args['restart'],
-                       scale_up=scale_up,
-                       log_to_file=args['logdir'],
-                       profiling=args['profile'])
-    finally:
-        # Must call MPI finalize when process exit
-        Communicator.finalize()
+    resnet_cifar10(train_data, test_data, mean_data,
+                   network_name, 
+                   epoch_size,
+                   num_quantization_bits,
+                   block_size=args['block_samples'],
+                   warm_up=args['distributed_after'],
+                   max_epochs=epochs,
+                   restore=not args['restart'],
+                   scale_up=scale_up,
+                   log_to_file=args['logdir'],
+                   profiling=args['profile'])
+
+    # Must call MPI finalize when process exit without exceptions
+    Communicator.finalize()
