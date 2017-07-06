@@ -18,7 +18,7 @@
     <!-- see http://docs.nvidia.com/cuda/pascal-compatibility-guide/index.html#building-applications-with-pascal-support -->
     <NvidiaCompute Condition="$(DebugBuild)">compute_30,sm_30</NvidiaCompute>
     <NvidiaCompute Condition="$(ReleaseBuild) And '$(CudaVersion)' == '7.5'">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_52,sm_52;</NvidiaCompute>
-    <NvidiaCompute Condition="$(ReleaseBuild) And '$(CudaVersion)' == '8.0'">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_52,sm_52;compute_61,sm_61;</NvidiaCompute>
+    <NvidiaCompute Condition="$(ReleaseBuild) And '$(CudaVersion)' == '8.0'">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;</NvidiaCompute>
 
     <NvmlDll>%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml.dll</NvmlDll>
     <NvmlDll Condition="Exists('c:\local\bindrop\NVSMI\nvml.dll')">c:\local\bindrop\NVSMI\nvml.dll</NvmlDll>

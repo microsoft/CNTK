@@ -124,7 +124,7 @@
     <CudaCompile>
       <FastMath>true</FastMath>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_30,sm_30;compute_35,sm_35;$(NvidiaCompute)</CodeGeneration>
+      <CodeGeneration>$(NvidiaCompute)</CodeGeneration>
       <GPUDebugInfo>true</GPUDebugInfo>
       <GenerateLineInfo>true</GenerateLineInfo>
       <HostDebugInfo>true</HostDebugInfo>
