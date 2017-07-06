@@ -177,8 +177,10 @@ def test_op_reshape_parameter():
 
 SLICE_TEST_CASES_STATIC = [
     #(input_data, slice_params(beg_index, end_index, axis), expected_result)
-    ([[1, 2], [-3, 4]], (1, 2, 0), [[-3, 4]]),
-    ([[1,2],[-3,4]], (1,2,1), [[2],[4]]),
+    ([[1, 2], [-3, 4]], (1, 2, 0, 1), [[-3, 4]]),
+    ([[1,2],[-3,4]], (1,2,1, 1), [[2],[4]]),
+	([[1,2],[-3,4]], (0,2,1, -1), [[2, 1],[4, -3]]),
+	([[1,2],[-3,4]], (0,2,0, 2), [[1, 2]]),
 ]
 
 @pytest.mark.parametrize("input_data, slice_params, expected_result",
@@ -187,7 +189,7 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
 
     input_data = AA(input_data, dtype=PRECISION_TO_TYPE[precision])
 
-    def _ax_slices(x, beg_index, end_index, axis):
+    def _ax_slices(x, beg_index, end_index, axis, strides):
         '''
         Creates a NumPy slicing array from slice operator's arguments
         '''
@@ -195,9 +197,9 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
         for i in range(0, len(x.shape)):
             if i == axis:
                 if end_index >= x.shape[i]:
-                    ax_slices.append([beg_index, ])
+                    ax_slices.append(slice(beg_index, None, abs(strides)))
                 else:
-                    ax_slices.append([beg_index, end_index])
+                    ax_slices.append(slice(beg_index, end_index, abs(strides)))
             else:
                 ax_slices.append(slice(None))  # corresponds to ':'
         return ax_slices
@@ -208,9 +210,9 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
     # input tensor, having 1 for elements that were taken and 0 for elements
     # that were dropped.
 
-    def grad_slice(x, beg_index, end_index, axis):
+    def grad_slice(x, beg_index, end_index, axis, strides):
         res = np.zeros_like(x)
-        ax_slices = _ax_slices(x, beg_index, end_index, axis)
+        ax_slices = _ax_slices(x, beg_index, end_index, axis, strides)
         res[ax_slices] = x[ax_slices]
         res[res != 0] = 1
         return res
@@ -224,7 +226,8 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
                    expected_forward, expected_backward,
                    {'begin_index': slice_params[0],
                     'end_index': slice_params[1],
-                    'axis': slice_params[2]})
+                    'axis': slice_params[2],
+                    'strides': slice_params[3]})
 
 SLICE_OVERLOAD_TEST_CASES_STATIC = [
     # (input_data, slices, axis, expected_result)

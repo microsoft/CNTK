@@ -559,7 +559,9 @@ public:
             m_beginIndex.push_back((int)beginIndex);
             m_endIndex.push_back((int)(beginIndex + height));
             if (modelVersion >= CNTK_MODEL_VERSION_3)
-                fstream >> axis >> stride_multiplier;
+                fstream >> axis;
+            if (modelVersion >= CNTK_MODEL_VERSION_26)
+                fstream >> stride_multiplier;
             m_axis.push_back(axis); 
             m_stride_multiplier.push_back(stride_multiplier);
         }
