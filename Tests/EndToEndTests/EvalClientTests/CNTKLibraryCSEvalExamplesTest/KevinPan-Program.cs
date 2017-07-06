@@ -12,6 +12,8 @@ namespace NewsInsightEvaluation
     class KevinProgram
     {
 
+        private static Object lockObj = new Object();
+
         public static void KevinMain()
         {
 
@@ -58,29 +60,48 @@ namespace NewsInsightEvaluation
             //self_attention_version.Init();
             //Console.WriteLine("complete loading model: {0}", self_attention_version.name);
 
+
             var model_file = @"E:\CNTKMisc\KevinPan-Memory\trained_model\cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002.dnn";
             var modelFunc = Function.Load(model_file, DeviceDescriptor.CPUDevice);
 
             var parallel_model_list_1 = new BlockingCollection<Function>();
             // var parallel_model_list = new List<ModelEvaluation>();
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 20; i++)
             {
                 // parallel_model_list.Add(model.CloneByFile());
 
                 parallel_model_list_1.Add(modelFunc.Clone(ParameterCloningMethod.Share));  //CloneByFile()); // model.Clone());
             }
 
+            var queryText = "24 hours of le mans";
+            var documentText = "live stream for one of motorsport s biggest events ground to a halt by cyberattacks";
+            var querySequence = CreateSequence(queryText);
+            var documentSequence = CreateSequence(documentText);
+
             int validate_sample_count = 0;
             var samples = new List<int>(50);
+            var querySeqList = new BlockingCollection<List<float>>();
+            var documentSeqList = new BlockingCollection<List<float>>();
+
             for (int i = 0; i < 50; i++)
+            {
                 samples.Add(i);
+                var q = new List<float>(querySequence);
+                var d = new List<float>(documentSequence);
+                querySeqList.Add(q);
+                documentSeqList.Add(d);
+            }
+
             Parallel.ForEach(samples, new ParallelOptions() { MaxDegreeOfParallelism = samples.Count }, (sample) =>
             // Parallel.ForEach(validation_samples, new ParallelOptions() { MaxDegreeOfParallelism = validation_samples.Count }, (sample) =>
             {
                 var m = parallel_model_list_1.Take();
                 try
                 {
-                    CosineDistance(m, "24 hours of le mans", "live stream for one of motorsport s biggest events ground to a halt by cyberattacks");
+                    List<float> q = querySeqList.Take();
+                    List<float> d = documentSeqList.Take();
+                    Console.WriteLine(string.Format("start validating sample {0}...", sample));
+                    CosineDistance(m, q, d);
 
                     // sample.Validate(m);
                     //sample.RecordPositiveDocument(positive_record);
@@ -95,26 +116,26 @@ namespace NewsInsightEvaluation
             });
 
 
-            Validation v = new Validation
-            {
-                raw_data_path = @"E:\CNTKMisc\KevinPan-Memory\trained_model\validate",
-                validation_sample_count = 50,
-                model_parallel_count = 5, // 20,
-                negative_document_count = 1
-            };
+            //Validation v = new Validation
+            //{
+            //    raw_data_path = @"E:\CNTKMisc\KevinPan-Memory\trained_model\validate",
+            //    validation_sample_count = 50,
+            //    model_parallel_count = 5, // 20,
+            //    negative_document_count = 1
+            //};
             // v.BuildSamples();
 
             // v.Validate(self_attention_version);
 
-            var without_attention = new ModelEvaluation
-            {
-                model_file = @"E:\CNTKMisc\KevinPan-Memory\trained_model\cntk_2_0_6_layer_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_50_model_batch_900000_58410932.dnn",
-                name = "cntk_2_0_6_layer_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_50_model_batch_900000_58410932"
-            };
-            without_attention.Init();
-            Console.WriteLine("complete loading model: {0}", without_attention.name);
+            //var without_attention = new ModelEvaluation
+            //{
+            //    model_file = @"E:\CNTKMisc\KevinPan-Memory\trained_model\cntk_2_0_6_layer_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_50_model_batch_900000_58410932.dnn",
+            //    name = "cntk_2_0_6_layer_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_50_model_batch_900000_58410932"
+            //};
+            //without_attention.Init();
+            //Console.WriteLine("complete loading model: {0}", without_attention.name);
 
-            v.Validate(without_attention);
+            //v.Validate(without_attention);
 
             //{
             //    //var pq = "2017 cholistan desert rally winners";
@@ -130,51 +151,79 @@ namespace NewsInsightEvaluation
             //}
         }
 
-        public static float CosineDistance(Function modelFunc, string query, string document)
+        public static List<float> CreateSequence(string rawText)
+        {
+            List<float> sequence = new List<float>();
+            string s = TextUtils.N1Normalize(rawText);
+            var words = s.Split(' ');
+            for (int i = 0; i < words.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(words[i]))
+                {
+                    float[] v = new float[49293];
+                    var encode = TextUtils.EncodeWord2Letter3Gram(words[i], Data.Vocabulary);
+                    foreach (var e in encode)
+                    {
+                        v[e.Key] = e.Value;
+                    }
+                    sequence.AddRange(v);
+                }
+            }
+
+            return sequence;
+        }
+
+        public static float CosineDistance(Function modelFunc, List<float> querySeq, List<float> docSeq)
         {
             var cosine_distance = modelFunc.FindByName("query_positive_document_cosine_distance");
-            var queryRecurrenceOutput = cosine_distance.Arguments[0];
-            var positiveDocumentRecurrenceOutput = cosine_distance.Arguments[1];
-            var queryDocumentCosineDistance = cosine_distance.Output;
+            //var queryRecurrenceOutput = cosine_distance.Arguments[0];
+            //var positiveDocumentRecurrenceOutput = cosine_distance.Arguments[1];
+            //var queryDocumentCosineDistance = cosine_distance.Output;
 
-            var queryInput = modelFunc.Arguments.Where(variable => string.Equals(variable.Name, "query")).Single();
-            var documentInput = modelFunc.Arguments.Where(variable => string.Equals(variable.Name, "positive_document")).Single();
+            var evalFunc = Function.AsComposite(cosine_distance);
+            var queryInput = evalFunc.Arguments.Where(variable => string.Equals(variable.Name, "query")).Single();
+            var documentInput = evalFunc.Arguments.Where(variable => string.Equals(variable.Name, "positive_document")).Single();
 
             var queryInputShape = queryInput.Shape;
             var documentInputShape = documentInput.Shape;
 
             var intputs = new Dictionary<Variable, Value>();
-            var queryInputValue = CreateSequenceInput(queryInputShape, query);
-            var documentInputValue = CreateSequenceInput(documentInputShape, document);
+            var queryInputValue = Value.CreateSequence<float>(queryInputShape, querySeq, DeviceDescriptor.CPUDevice);  // CreateSequenceInput(queryInputShape, query);
+            var documentInputValue = Value.CreateSequence<float>(documentInputShape, docSeq, DeviceDescriptor.CPUDevice); // CreateSequenceInput(documentInputShape, document);
             intputs.Add(queryInput, queryInputValue);
             intputs.Add(documentInput, documentInputValue);
 
             var outputs = new Dictionary<Variable, Value>();
-            var evalFunc = Function.Combine(new[] { queryRecurrenceOutput, positiveDocumentRecurrenceOutput, queryDocumentCosineDistance });
+            //var q1 = queryRecurrenceOutput.Owner.Output;
+            //var p1 = positiveDocumentRecurrenceOutput.Owner.Output;
+            //var evalFunc = Function.Combine(new[] { q1, p1, queryDocumentCosineDistance });
+            //var evalFunc = Function.AsComposite(cosine_distance);
 
-            var queryRecurrenceOutput1 = evalFunc.Outputs[0];
-            var positiveDocumentRecurrenceOutput1 = evalFunc.Outputs[1];
-            var queryDocumentCosineDistance1 = evalFunc.Outputs[2];
-            outputs.Add(queryRecurrenceOutput1, null);
-            outputs.Add(positiveDocumentRecurrenceOutput1, null);
-            outputs.Add(queryDocumentCosineDistance1, null);
+            outputs.Add(evalFunc.Output, null);
+            //var queryRecurrenceOutput1 = evalFunc.Outputs[0];
+            //var positiveDocumentRecurrenceOutput1 = evalFunc.Outputs[1];
+            //var queryDocumentCosineDistance1 = evalFunc.Outputs[2];
+            //outputs.Add(queryRecurrenceOutput1, null);
+            //outputs.Add(positiveDocumentRecurrenceOutput1, null);
+            //outputs.Add(queryDocumentCosineDistance1, null);
 
             {
                 evalFunc.Evaluate(intputs, outputs, DeviceDescriptor.CPUDevice);
             }
 
-            var queryEmbeddingValue = outputs[queryRecurrenceOutput1];
-            var documentEmbeddingValue = outputs[positiveDocumentRecurrenceOutput1];
-            var queryDocumentCosineDistanceValue = outputs[queryDocumentCosineDistance1];
+            //var queryEmbeddingValue = outputs[queryRecurrenceOutput1];
+            //var documentEmbeddingValue = outputs[positiveDocumentRecurrenceOutput1];
+            //var queryDocumentCosineDistanceValue = outputs[queryDocumentCosineDistance1];
 
-            var queryEmbeddingOutput = queryEmbeddingValue.GetDenseData<float>(queryRecurrenceOutput1);
-            var documentEmbeddingOutput = documentEmbeddingValue.GetDenseData<float>(positiveDocumentRecurrenceOutput1);
-            var queryDocumentCosineDistanceOutput = queryDocumentCosineDistanceValue.GetDenseData<float>(queryDocumentCosineDistance1);
+            //var queryEmbeddingOutput = queryEmbeddingValue.GetDenseData<float>(queryRecurrenceOutput1);
+            //var documentEmbeddingOutput = documentEmbeddingValue.GetDenseData<float>(positiveDocumentRecurrenceOutput1);
+            //var queryDocumentCosineDistanceOutput = queryDocumentCosineDistanceValue.GetDenseData<float>(queryDocumentCosineDistance1);
 
-            var d = Utils.Cosine(queryEmbeddingOutput[0].ToArray(), documentEmbeddingOutput[0].ToArray());
+            //var d = Utils.Cosine(queryEmbeddingOutput[0].ToArray(), documentEmbeddingOutput[0].ToArray());
 
             //Console.WriteLine("queryDocumentCosineDistanceOutput = {0}", queryDocumentCosineDistanceOutput[0][0]);
 
+            var d = 0;
             return d;
         }
 
