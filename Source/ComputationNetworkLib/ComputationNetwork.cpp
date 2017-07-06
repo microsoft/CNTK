@@ -84,7 +84,7 @@ void ComputationNetwork::ClearNetwork()
 // serialization
 // -----------------------------------------------------------------------
 
-// after after editing--network is possibly not validated/compiled
+// after editing--network is possibly not validated/compiled
 void ComputationNetwork::SaveEdited(const wstring& fileName, const FileOptions fileFormat)
 {
     if (!IsCompiled())

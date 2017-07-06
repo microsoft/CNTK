@@ -632,7 +632,7 @@ public:
         }
 
         // Update K (number of url pairs that have smaller or equal gain), rk (rank of 
-        // score in descending order) and and m_pairwiseDifferences (save for gradient 
+        // score in descending order) and m_pairwiseDifferences (save for gradient 
         // computation).
         size_t pairCount = 0;
         for (auto &qu : m_queryUrls)
