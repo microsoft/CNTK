@@ -423,6 +423,15 @@
 	"dateadded": "4/14/2017"
     },
     {
+        "category": ["Speech"],
+        "name":  "Connectionist Temporal Classification",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_208_Speech_Connectionist_Temporal_Classification.ipynb",
+        "description":  "Train a speech recognition LSTM acoustic model with CTC criteria.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "5/20/2017"
+    },
+    {
         "category": ["Speech", "Text"],
         "name":  "Grapheme to Phoneme (G2P)",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceToSequence/CMUDict",

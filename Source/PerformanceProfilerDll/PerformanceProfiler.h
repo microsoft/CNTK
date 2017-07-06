@@ -23,7 +23,7 @@
 // custom events, ProfilerSyncGpu() can be called to sync the GPU.
 //
 // When there is a need to profile I/O bandwidth (or throughput), the ProfilerThroughputBegin()
-// and ProfilerThroughputBegin() calls should be used. The throughput APIs can only be used
+// and ProfilerThroughputEnd() calls should be used. The throughput APIs can only be used
 // with fixed events.
 //
 // CNTK specifics

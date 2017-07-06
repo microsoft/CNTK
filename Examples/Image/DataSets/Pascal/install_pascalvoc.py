@@ -4,16 +4,16 @@ import os.path
 import tarfile
 import zipfile
 try: 
-    from urllib.request import urlretrieve 
+    from urllib.request import urlretrieve, ContentTooShortError
 except ImportError: 
-    from urllib import urlretrieve
+    from urllib import urlretrieve, ContentTooShortError
     
 def download_and_untar(url, filename, filesize):
     if not os.path.exists(filename):
         print ('Downloading ' + filesize + ' from ' + url + ', may take a while...')
         try:
             urlretrieve(url, filename)
-        except (urllib.ContentTooShortError, IOError) as e:
+        except (ContentTooShortError, IOError) as e:
             print ("Error downloading file: " + str(e))
             os.remove(filename)
             quit()

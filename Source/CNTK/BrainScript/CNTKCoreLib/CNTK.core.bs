@@ -625,7 +625,7 @@ MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, l
 # 2D pooling
 MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
-ROIPooling (input, ROIs, shape) = new ComputationNode { operation = 'ROIPooling' ; inputs = _AsNodes (input : ROIs) ; roiOutputShape = new TensorShape [ dims = shape ] ; tag='' /*plus the function args*/ } 
+ROIPooling (input, ROIs, shape, spatialScale = 0.0625) = new ComputationNode { operation = 'ROIPooling' ; inputs = _AsNodes (input : ROIs) ; pool = 'max' ; roiOutputShape = new TensorShape [ dims = shape ] ; featureScale = spatialScale ; tag='' /*plus the function args*/ } 
 ColumnwiseCrossProduct = KhatriRaoProduct // deprecated 
 ErrorPrediction = ClassificationError   # legacy name
 Delay = PastValue 
