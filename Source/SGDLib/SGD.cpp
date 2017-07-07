@@ -636,7 +636,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             // TODO(dataASGD) making evaluator becoming nondistributed one when using ASGD, since Multiverso has another background thread using MPI.
             //                Making the evaluation serial (non-distributed) will slowdown training especially when validation set is large.
-            SimpleEvaluator<ElemType> evalforvalidation(net, UsingAsyncGradientAggregation(i + 1) ?nullptr : m_mpi, m_enableDistributedMBReading);
+            SimpleEvaluator<ElemType> evalforvalidation(net, UsingAsyncGradientAggregation(i + 1) ?nullptr : m_mpi, m_enableDistributedMBReading, 
+                m_numMBsToShowResult, m_firstMBsToShowResult, m_traceLevel, m_maxSamplesInRAM, m_numSubminiBatches);
             vector<wstring> cvSetTrainAndEvalNodes;
             if (criterionNodes.size() > 0)
             {
