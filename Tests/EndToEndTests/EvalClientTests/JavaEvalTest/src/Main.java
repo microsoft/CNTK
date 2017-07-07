@@ -52,10 +52,9 @@ public class Main {
 
         float[] resizedCHW = new float[imageSize];
 
-        int i = 0;
-        for (int c = 0; c < imageChannels; c++) {
+        for (int c = 0, i = 0; c < imageChannels; c++) {
             for (int h = 0; h < bImg.getHeight(); h++) {
-                for (int w = 0; w < bImg.getWidth(); w++) {
+                for (int w = 0; w < bImg.getWidth(); w++, i++) {
                     Color color = new Color(bImg.getRGB(w, h));
                     if (c == 0) {
                         resizedCHW[i] = color.getBlue();
@@ -64,7 +63,6 @@ public class Main {
                     } else {
                         resizedCHW[i] = color.getRed();
                     }
-                    i++;
                 }
             }
         }
