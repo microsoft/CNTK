@@ -86,7 +86,7 @@
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>$(NvidiaCompute);</CodeGeneration>
+      <CodeGeneration>$(NvidiaCompute)</CodeGeneration>
       <CudaRuntime>None</CudaRuntime>
       <NvccCompilation>compile</NvccCompilation>
       <GenerateLineInfo>true</GenerateLineInfo>

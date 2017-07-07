@@ -213,7 +213,7 @@ ifdef SUPPORT_AVX2
 endif
 
 # Set up nvcc target architectures (will generate code to support them all, i.e. fat-binary, in release mode)
-# In debug mode we will rely on JIT to create code "on the fly" for the underlying architecture
+# In debug mode we only include cubin/PTX for 30 and rely on PTX / JIT to generate the required native cubin format
 # see also http://docs.nvidia.com/cuda/pascal-compatibility-guide/index.html#building-applications-with-pascal-support
 GENCODE_SM30 := -gencode arch=compute_30,code=\"sm_30,compute_30\"
 GENCODE_SM35 := -gencode arch=compute_35,code=\"sm_35,compute_35\"
@@ -234,7 +234,11 @@ ifdef CNTK_CODE_COVERAGE
 endif
 
 ifeq ("$(BUILDTYPE)","debug")
-  GENCODE_FLAGS := $(GENCODE_SM30)
+  ifdef CNTK_CUDA_CODEGEN_DEBUG
+    GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_DEBUG)
+  else
+    GENCODE_FLAGS := $(GENCODE_SM30)
+  endif
 
   CXXFLAGS += -g
   LDFLAGS += -rdynamic
@@ -243,13 +247,11 @@ ifeq ("$(BUILDTYPE)","debug")
 endif
 
 ifeq ("$(BUILDTYPE)","release")
-  GENCODE_FLAGS := $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50) $(GENCODE_SM52) $(GENCODE_SM60) $(GENCODE_SM61)
-
-  CXXFLAGS += -g -O4
-  LDFLAGS += -rdynamic
-  COMMON_FLAGS += -DNDEBUG -DNO_SYNC
-  CUFLAGS += -O3 -g -use_fast_math $(GENCODE_FLAGS)
-endif
+  ifdef CNTK_CUDA_CODEGEN_RELEASE
+    GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_RELEASE)
+  else
+    GENCODE_FLAGS := $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50) $(GENCODE_SM52) $(GENCODE_SM60) $(GENCODE_SM61)
+  endif
 
 ifdef CNTK_CUDA_DEVICE_DEBUGINFO
   CUFLAGS += -G
