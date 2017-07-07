@@ -105,7 +105,7 @@
     <NvidiaCompute Condition="$(DebugBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30</NvidiaCompute>
  
     <NvidiaCompute Condition="$(ReleaseBuild)">$(CNTK_CUDA_CODEGEN_RELEASE)</NvidiaCompute>
-    <NvidiaCompute Condition="$(ReleaseBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;</NvidiaCompute>
+    <NvidiaCompute Condition="$(ReleaseBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_52,sm_52;compute_60,sm_60;compute_61,sm_61</NvidiaCompute>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
@@ -117,7 +117,7 @@
     <NvidiaCompute Condition="$(DebugBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30</NvidiaCompute>
  
     <NvidiaCompute Condition="$(ReleaseBuild)">$(CNTK_CUDA_CODEGEN_RELEASE)</NvidiaCompute>
-    <NvidiaCompute Condition="$(ReleaseBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_52,sm_52;</NvidiaCompute>
+    <NvidiaCompute Condition="$(ReleaseBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_52,sm_52</NvidiaCompute>
   </PropertyGroup>
 
   <PropertyGroup>

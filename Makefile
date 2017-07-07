@@ -253,6 +253,12 @@ ifeq ("$(BUILDTYPE)","release")
     GENCODE_FLAGS := $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50) $(GENCODE_SM52) $(GENCODE_SM60) $(GENCODE_SM61)
   endif
 
+  CXXFLAGS += -g -O4
+  LDFLAGS += -rdynamic
+  COMMON_FLAGS += -DNDEBUG -DNO_SYNC
+  CUFLAGS += -O3 -g -use_fast_math $(GENCODE_FLAGS)
+endif
+
 ifdef CNTK_CUDA_DEVICE_DEBUGINFO
   CUFLAGS += -G
 endif
