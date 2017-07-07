@@ -83,7 +83,7 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, add_loss_functions=True,
 
         # RPN losses
         rpn_loss_cls = cross_entropy_with_softmax(rpn_cls_prob_ignore, rpn_labels_ignore, axis=0)
-        rpn_loss_bbox = user_function(SmoothL1Loss(rpn_bbox_pred, rpn_bbox_targets, rpn_bbox_inside_weights))
+        rpn_loss_bbox = SmoothL1Loss(1.0, rpn_bbox_pred, rpn_bbox_targets, rpn_bbox_inside_weights, 1.0)
         rpn_losses = plus(reduce_sum(rpn_loss_cls), reduce_sum(rpn_loss_bbox), name="rpn_losses")
 
     return rpn_rois, rpn_losses
