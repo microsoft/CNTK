@@ -20,4 +20,3 @@ def readlabel(xmlfilename):
     return clsname
 if __name__ == "__main__":
     name = readlabel(sys.argv[1])
-    print(len(name))

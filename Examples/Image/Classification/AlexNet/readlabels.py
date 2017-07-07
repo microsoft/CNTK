@@ -52,11 +52,6 @@ def readval(valdir, anndir, classdict):
         labels = readlabel(annfile)
         labels = list(set(labels))
         valdict[valfile] = classdict[labels[0]]
-        """
-        if len(lbl) > 1:
-            print('Multiple labels found.')
-            print(lbl)
-        """
     print("""Time taken to identify the labels for validation image = %.2f
          seconds""" % (time.time() - timeinit))
     return valdict

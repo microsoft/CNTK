@@ -16,6 +16,31 @@ We use the ILSVRC2012 datasets to demonstrate how to train the AlexNet which won
 
 ILSVRC2012 datasets are not included in the CNTK distribution. You may obtain it through http://image-net.org.
 
+### Preparing the data for processing
+Having downloaded the ILSVRC2012 dataset and storing it in $ILSVRC12 path, run the code in [readlabels.py](./readlabels.py) as follows :
+
+```python
+python readlabels.py $ILSVRC2012/Data/CLS-LOC/train $ILSVRC2012/Data/CLS-LOC/val $ILSVRC2012/Annotations/CLS-LOC/val 
+```
+This will create 3 files as follows :
+#### train_map.txt 
+A text file with the following format -
+```
+<Full path to image1 of training subset of CLS-LOC competition> <TAB> <Integer Label of the class of image1>
+<Full path to image2 of	training subset	of CLS-LOC competition>	<TAB> <Integer Label of	the class of image2>
+...
+<Full path to image1281167 of	training subset	of CLS-LOC competition>	<TAB> <Integer Label of	the class of image1281167>
+```
+#### val_map.txt
+Same format as above, but for the validation images of CLS-LOC competition
+### classmappings.txt
+A text file with the following format -
+```
+<Wordnet ID of class1> <TAB> <Integer label of class1>
+<Wordnet ID of class2> <TAB> <Integer label of class2>
+...
+<Wordnet ID of class1000> <TAB> <Integer label of class1000>
+```
 ## Details
 
 We give examples for both Python and BrainScript. Compared to the original AlexNet, and the Caffe implementation of AlexNet (https://github.com/BVLC/caffe/tree/master/models/bvlc_alexnet), our model differs slightly in that we no longer split the convolution layers into two groups (model parallelism). As a result our model has very slightly more parameters, but achieves better accuracy.
