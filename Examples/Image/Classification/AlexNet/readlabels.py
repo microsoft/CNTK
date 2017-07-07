@@ -65,9 +65,6 @@ def readval(valdir, anndir, classdict):
 if __name__ == "__main__":
     traindict, classdict = readtrain(sys.argv[1])
     valdict = readval(sys.argv[2], sys.argv[3], classdict)
-    #print(traindict)
-    #print(classdict)
-    #print(valdict)
     with  open("train_map.txt", "w") as f:
         for  key in traindict.keys():
             f.write(key + "\t" + str(traindict[key]) + "\n")
