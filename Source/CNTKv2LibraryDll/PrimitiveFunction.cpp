@@ -365,7 +365,6 @@ namespace CNTK
                         case PrimitiveOpType::LabelsToGraph:
                         case PrimitiveOpType::StopGradient:
                         case PrimitiveOpType::ELU:
-                        case PrimitiveOpType::SELU:
                         case PrimitiveOpType::StableSigmoid:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());

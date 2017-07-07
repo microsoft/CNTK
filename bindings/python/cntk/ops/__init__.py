@@ -1253,7 +1253,7 @@ def elu(x, name=''):
 
 
 @typemap
-def selu(x, name=''):
+def selu(x, scale=1.0507009873554804934193349852946, alpha=1.6732632423543772848170429916717, name=''):
     '''
     Scaled exponential linear unit operation. Computes the element-wise exponential linear
     of ``x``: ``scale * x`` for ``x >= 0`` and ``x``: ``scale * alpha * (exp(x)-1)`` otherwise.
@@ -1274,7 +1274,7 @@ def selu(x, name=''):
     '''
     from cntk.cntk_py import selu
     x = sanitize_input(x)
-    return selu(x, name)
+    return selu(x, scale, alpha, name)
 
 
 @typemap

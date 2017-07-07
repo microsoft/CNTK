@@ -92,7 +92,6 @@ namespace CNTK
         {PrimitiveOpType::NoOp, L"NoOp"},
         {PrimitiveOpType::StopGradient, L"StopGradient"},
         {PrimitiveOpType::ELU, L"ELU"},
-        {PrimitiveOpType::SELU, L"SELU"},
         {PrimitiveOpType::CosDistanceWithNegativeSamples, L"CosDistanceWithNegativeSamples"},
         {PrimitiveOpType::OneHot, L"OneHotOp" },
         {PrimitiveOpType::Pow, L"Pow"},
@@ -770,8 +769,7 @@ namespace CNTK
         // Version 13: Add Gather op.
         // Version 14: Add StableSigmoid
         // Version 15: Add RandomDistribution
-        // Version 16: Add SELU node.
-        static const size_t s_serializationVersion = 16;
+        static const size_t s_serializationVersion = 15;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);
