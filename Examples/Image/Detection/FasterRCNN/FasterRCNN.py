@@ -10,6 +10,7 @@ import numpy as np
 import os, sys
 import argparse
 import cntk
+import cntk as C
 from cntk import Trainer, UnitType, load_model, user_function, Axis, input_variable, parameter, times, combine, \
     softmax, roipooling, reduce_sum, plus, CloneMethod,alias, Communicator
 from cntk.core import Value
@@ -254,7 +255,7 @@ def create_faster_rcnn_predictor(features, scaled_gt_boxes, dims_input):
 
     # loss functions
     loss_cls = cross_entropy_with_softmax(cls_score, label_targets, axis=1)
-    loss_box = user_function(SmoothL1Loss(bbox_pred, bbox_targets, bbox_inside_weights))
+    loss_box = SmoothL1Loss(1.0, bbox_pred, bbox_targets, bbox_inside_weights, 1.0)
     detection_losses = reduce_sum(loss_cls) + reduce_sum(loss_box)
 
     loss = rpn_losses + detection_losses
@@ -518,7 +519,7 @@ def train_faster_rcnn_alternating(debug_output=False):
 
         # loss functions
         loss_cls = cross_entropy_with_softmax(cls_score, label_targets, axis=1)
-        loss_box = user_function(SmoothL1Loss(bbox_pred, bbox_targets, bbox_inside_weights))
+        loss_box = SmoothL1Loss(1.0, bbox_pred, bbox_targets, bbox_inside_weights, 1.0)
         detection_losses = plus(reduce_sum(loss_cls), reduce_sum(loss_box), name="detection_losses")
         stage1_frcn_network = combine([rois, cls_score, bbox_pred, detection_losses])
 

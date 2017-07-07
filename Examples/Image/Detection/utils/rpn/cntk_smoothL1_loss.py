@@ -7,16 +7,39 @@
 from cntk import output_variable
 from cntk.ops.functions import UserFunction
 import numpy as np
-
+import cntk as C
 DEBUG = False
 
-class SmoothL1Loss(UserFunction):
+def _SmoothL1Loss(sigma, bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights):
+    """
+        From https://github.com/smallcorgi/Faster-RCNN_TF/blob/master/lib/fast_rcnn/train.py
+
+        ResultLoss = outside_weights * SmoothL1(inside_weights * (bbox_pred - bbox_targets))
+        SmoothL1(x) = 0.5 * (sigma * x)^2,    if |x| < 1 / sigma^2
+                        |x| - 0.5 / sigma^2,    otherwise
+    """
+    sigma2 = sigma * sigma
+
+    inside_mul = C.element_times(bbox_inside_weights, C.minus(bbox_pred, bbox_targets))
+
+    smooth_l1_sign = C.less(C.abs(inside_mul), 1.0 / sigma2)
+    smooth_l1_option1 = C.element_times(C.element_times(inside_mul, inside_mul), 0.5 * sigma2)
+    smooth_l1_option2 = C.minus(C.abs(inside_mul), 0.5 / sigma2)
+    smooth_l1_result = C.plus(C.element_times(smooth_l1_option1, smooth_l1_sign),
+                              C.element_times(smooth_l1_option2, C.abs(C.minus(smooth_l1_sign, 1.0))))
+
+    return C.element_times(bbox_outside_weights, smooth_l1_result)
+
+def SmoothL1Loss(sigma, bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights):
+    return C.user_function(SmoothL1LossNode(bbox_pred, bbox_targets, bbox_inside_weights))
+
+class SmoothL1LossNode(UserFunction):
     '''
     Computes a smooth L1 loss
     '''
 
     def __init__(self, arg1, arg2, arg3, name='SmoothL1Loss'):
-        super(SmoothL1Loss, self).__init__([arg1, arg2, arg3], name=name)
+        super(SmoothL1LossNode, self).__init__([arg1, arg2, arg3], name=name)
 
     def infer_outputs(self):
         return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
@@ -48,12 +71,12 @@ class SmoothL1Loss(UserFunction):
     def backward(self, state, root_gradients, variables):
         # Derivative of smooth L1 loss:
         #
-        # - root_gradients      , if diff <= -1
-        # diff * root_gradients , if -1 < diff < 1
-        # root_gradients        , else
+        # f'(x) = x         if |x| < 1
+        #       = sign(x)   otherwise
 
         if DEBUG:
             print("SmoothL1 backward")
+
         # A gradient is only required for predictions, not for targets
         if self.inputs[0] in variables:
             diff = state
@@ -72,7 +95,7 @@ class SmoothL1Loss(UserFunction):
             variables[self.inputs[0]] = gradients
 
     def clone(self, cloned_inputs):
-        return SmoothL1Loss(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2])
+        return SmoothL1LossNode(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2])
 
     def serialize(self):
         internal_state = {}
@@ -80,4 +103,4 @@ class SmoothL1Loss(UserFunction):
 
     @staticmethod
     def deserialize(inputs, name, state):
-        return SmoothL1Loss(inputs[0], inputs[1], inputs[2], name=name)
+        return SmoothL1LossNode(inputs[0], inputs[1], inputs[2], name=name)
