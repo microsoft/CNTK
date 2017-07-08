@@ -365,6 +365,7 @@ COMMON_SRC =\
 	$(SOURCEDIR)/Common/ExceptionWithCallStack.cpp \
 	$(SOURCEDIR)/Common/Eval.cpp \
 	$(SOURCEDIR)/Common/File.cpp \
+	$(SOURCEDIR)/Common/HadoopFileSystem.cpp \
 	$(SOURCEDIR)/Common/TimerUtility.cpp \
 	$(SOURCEDIR)/Common/fileutil.cpp \
 	$(SOURCEDIR)/Common/Sequences.cpp \

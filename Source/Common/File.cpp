@@ -32,6 +32,7 @@
 
 #define PCLOSE_ERROR -1
 #define WRITE_BUFFER_SIZE (1024 * 1024)
+#define HDFS_PREFIX "hdfs://"
 
 #include <boost/algorithm/string.hpp>
 
@@ -70,6 +71,12 @@ static bool IsNonFilePath(const String& filename)
 template<class String>
 /*static*/ bool File::Exists(const String& filename)
 {
+    if (m_hdfsFile != nullptr &&
+        filename.compare(0, HDFS_PREFIX.size(), HDFS_PREFIX))
+    {
+        return m_hdfsFile->Exists(filename.substr(HDFS_PREFIX.size()));
+    }
+
     return IsNonFilePath(filename) || fexists(filename);
 }
 
@@ -80,7 +87,17 @@ template<class String>
 /*static*/ void File::MakeIntermediateDirs(const String& filename)
 {
     if (!IsNonFilePath(filename))
-        msra::files::make_intermediate_dirs(filename);
+    {
+        if (m_hdfsFile != nullptr &&
+        filename.compare(0, HDFS_PREFIX.size(), HDFS_PREFIX))
+        {
+            m_hdfsFile->make_intermediate_dirs(filename.substr(HDFS_PREFIX.size()));
+        }
+        else
+        {
+            msra::files::make_intermediate_dirs(filename);
+        }
+    }
 }
 
 //template /*static*/ void File::MakeIntermediateDirs<string> (const string&  filename); // implement this if needed
@@ -89,6 +106,14 @@ template /*static*/ void File::MakeIntermediateDirs<wstring>(const wstring& file
 // all constructors call this
 void File::Init(const wchar_t* filename, int fileOptions)
 {
+    // Init as Hadoop_file_system if filename starts with "hdfs://"
+    m_hdfsFile = nullptr;
+    if (filename.compare(0, HDFS_PREFIX.size(), HDFS_PREFIX))
+    {
+        m_hdfsFile = new hdfsFile(filename.substr(HDFS_PREFIX.size()), fileOptions);
+        return;
+    }
+
     m_filename = filename;
     m_options = fileOptions;
     if (m_filename.empty())
@@ -162,6 +187,12 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // (wstring only for now; feel free to make this a template if needed)
 /*static*/ wstring File::DirectoryPathOf(wstring path)
 {
+    if (m_hdfsFile != nullptr &&
+        filename.compare(0, HDFS_PREFIX.size(), HDFS_PREFIX))
+    {
+        return m_hdfsFile->DirectoryPathOf(path);
+    }
+
 #ifdef _WIN32
     // Win32 accepts forward slashes, but it seems that PathRemoveFileSpec() does not
     // TODO:
@@ -214,6 +245,12 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // (wstring only for now; feel free to make this a template if needed)
 /*static*/ wstring File::FileNameOf(wstring path)
 {
+    if (m_hdfsFile != nullptr &&
+        filename.compare(0, HDFS_PREFIX.size(), HDFS_PREFIX))
+    {
+        return m_hdfsFile->FileNameOf(path);
+    }
+
 #ifdef WIN32
     static const wstring delim = L"\\:/";
 #else
@@ -250,6 +287,11 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // skip to given delimiter character
 void File::SkipToDelimiter(int delim)
 {
+    if (m_hdfsFile != nullptr)
+    {
+        RuntimeError("File: skip to delimiter not supported for files on HDFS.");
+    }
+
     int ch = 0;
 
     while (ch != delim)
@@ -265,6 +307,10 @@ void File::SkipToDelimiter(int delim)
 
 bool File::IsTextBased()
 {
+    if (m_hdfsFile != nullptr)
+    {
+        return true;
+    }
     return !!(m_options & fileOptionsText);
 }
 
@@ -273,6 +319,11 @@ bool File::IsTextBased()
 // Note: this does not check for errors when the File corresponds to pipe stream. In this case, use Flush() before closing a file you are writing.
 File::~File(void)
 {
+    if (m_hdfsFile != nullptr) {
+        delete m_hdfsfile;
+        return;
+    }
+
     int rc = 0;
     if (m_pcloseNeeded)
     {
@@ -298,7 +349,14 @@ File::~File(void)
 
 void File::Flush()
 {
-    fflushOrDie(m_file);
+    if (m_hdfsFile != nullptr)
+    {
+        m_hdfsFile->Flush();
+    }
+    else
+    {
+        fflushOrDie(m_file);
+    }
 }
 
 // read a line
@@ -341,6 +399,10 @@ static void fgets(STRING & s, FILE * f)
 // str - string
 void File::GetLine(string& str)
 {
+    if (m_hdfsFile != nullptr)
+    {
+        return m_hdfsFile->GetLine(str);
+    }
     fgets(str, m_file);
 }
 
@@ -351,6 +413,11 @@ static void PushBackString(vector<wstring>& lines, string& s)       { lines.push
 template <typename STRING>
 static void FileGetLines(File& file, /*out*/ std::vector<STRING>& lines)
 {
+    if (file.m_hdfsFile != nullptr)
+    {
+        file.m_hdfsFile->GetLines(lines);
+        return;
+    }
     lines.clear();
     string line;
     while (!file.IsEOF())
@@ -624,6 +691,10 @@ bool File::IsUnicodeBOM(bool skip)
 // WARNING: calling this will reset the EOF marker, so do so with care
 size_t File::Size()
 {
+    if (m_hdfsFile != nullptr)
+    {
+        return m_hdfsFile->Size();
+    }
     if (!CanSeek())
         RuntimeError("File: attempted to get Size() on non-seekable stream");
     return filesize(m_file);
@@ -673,6 +744,8 @@ int File::EndOfLineOrEOF(bool skip)
 // Buffer write stream
 int File::Setvbuf()
 {
+    if (m_hdfsFile != null)
+        return -1;
     return setvbuf(this->m_file, NULL, _IOFBF, WRITE_BUFFER_SIZE);
 }
 

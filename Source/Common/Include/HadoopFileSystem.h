@@ -4,113 +4,25 @@
 //
 #pragma once
 
-#include "Basics.h"
-#include <stdio.h>
-#include <string>
-#include <vector>
-#include <stdint.h>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif // NOMINMAX
-#include "Windows.h"
+#include "File.h"
+
+#ifdef USE_HDFS
+#include <hdfs.h>
 #endif
-#ifdef __unix__
-#include <unistd.h>
-#endif
-#include "HadoopFileSystem.h"
-#include "fileutil.h" // for f{ge,pu}t{,Text}()
-#include <fstream>    // for LoadMatrixFromTextFile() --TODO: change to using this File class
-#include <sstream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-using namespace std;
-
-// file options, Type of textfile to use
-enum FileOptions
-{
-    fileOptionsNull = 0,                                        // invalid value
-    fileOptionsBinary = 1,                                      // binary file
-    fileOptionsText = 2,                                        // text based file, UTF-8
-    fileOptionsType = fileOptionsBinary | fileOptionsText,      // file types
-    fileOptionsRead = 8,                                        // open in read mode
-    fileOptionsWrite = 16,                                      // open in write mode
-    fileOptionsSequential = 32,                                 // optimize for sequential reads (allocates big buffer)
-    fileOptionsReadWrite = fileOptionsRead | fileOptionsWrite,  // read/write mode
-    fileOptionsAppend = 128,                                    // open in append mode
-};
-
-// markers used for text files
-enum FileMarker
-{
-    fileMarkerNull = 0,          // invalid value
-    fileMarkerBeginFile = 1,     // begin of file marker
-    fileMarkerEndFile = 2,       // end of file marker
-    fileMarkerBeginList = 3,     // Beginning of list marker
-    fileMarkerListSeparator = 4, // separate elements of a list
-    fileMarkerEndList = 5,       // end of line/list marker
-    fileMarkerBeginSection = 6,  // beginning of section
-    fileMarkerEndSection = 7,    // end of section
-};
-
-// attempt a given operation (lambda) and retry multiple times
-// body - the lambda to retry, must be restartable
-
-template <typename FUNCTION>
-static void attempt(int retries, const FUNCTION& body)
-{
-    for (int attempt = 1;; attempt++)
-    {
-        try
-        {
-            body();
-            if (attempt > 1)
-                fprintf(stderr, "attempt: success after %d retries\n", attempt);
-            break;
-        }
-        catch (const std::exception& e)
-        {
-#ifdef _WIN32
-            void sleep(size_t ms);
-#endif
-            if (attempt >= retries)
-                throw; // failed N times --give up and rethrow the error
-            fprintf(stderr, "attempt: %s, retrying %d-th time out of %d...\n", e.what(), attempt + 1, retries);
-// wait a little, then try again
-#ifdef _WIN32
-            ::Sleep(1000);
-#else // assuming __unix__
-            ::sleep(1);
-#endif
-        }
-    }
-}
-
-template <typename FUNCTION>
-static void attempt(const FUNCTION& body)
-{
-    static const int retries = 5;
-    attempt<FUNCTION>(retries, body);
-    // msra::util::attempt<FUNCTION> (retries, body);
-}
-
-class File
-{
+class hdfs_File {
 private:
     std::wstring m_filename;
-    FILE* m_file;        // file handle
-    bool m_pcloseNeeded; // was opened with popen(), use pclose() when destructing
+    hdfsFS m_fs;         // hadoop filesystem handle
+    hdfsFile m_file;     // file handler
     bool m_seekable;     // this stream is seekable
     int m_options;       // FileOptions ored togther
-    void Init(const wchar_t* filename, int fileOptions);
-    hdfsFile* m_hdfsFile; // handle for hdfs file
 
 public:
-    File(const std::wstring& filename, int fileOptions);
-    File(const std::string&  filename, int fileOptions);
-    File(const wchar_t* filename, int fileOptions);
-    ~File();
+    hdfs_File(const std::string& filename, int fileOptions);
+    ~hdfs_File();
 
     void Flush();
 
@@ -118,24 +30,6 @@ public:
     size_t Size();
     uint64_t GetPosition();
     void SetPosition(uint64_t pos);
-    void SkipToDelimiter(int delim);
-
-    bool IsTextBased();
-
-    bool IsUnicodeBOM(bool skip = false);
-    bool IsEOF();
-    bool IsWhiteSpace(bool skip = false);
-    int EndOfLineOrEOF(bool skip = false);
-    int Setvbuf();
-
-    // TryGetText - for text value, try and get a particular type
-    // returns - true if value returned, otherwise false, can't parse
-    template <typename T>
-    bool TryGetText(T& val)
-    {
-        assert(IsTextBased());
-        return !!ftrygetText(m_file, val);
-    }
 
     void GetLine(std::string& str);
     void GetLines(std::vector<std::wstring>& lines);
@@ -154,12 +48,9 @@ public:
     static std::wstring DirectoryPathOf(std::wstring path);
     static std::wstring FileNameOf(std::wstring path);
 
-    // get path of current executable
-    static std::wstring GetExecutablePath();
-
     // put operator for basic types
     template <typename T>
-    File& operator<<(T val)
+    hdfs_File& operator<<(T val)
     {
         {
             if (IsTextBased())
@@ -253,25 +144,15 @@ public:
         return *this;
     }
 
-    operator FILE*() const { return m_file; }
+    operator hdfs_File*() const { return this; }
 
-    // Read a matrix stored in text format from 'filePath' (whitespace-separated columns, newline-separated rows),
-    // and return a flat vector containing the contents of this file in column-major format.
-    // filePath: path to file containing matrix in text format.
-    // numRows/numCols: after this function is called, these parameters contain the number of rows/columns in the matrix.
-    // returns: a flat array containing the contents of this file in column-major format
-    // This function does not quite fit here, but it fits elsewhere even worse. TODO: change to use File class!
     template <class ElemType>
     static std::vector<ElemType> LoadMatrixFromTextFile(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
-    // same as LoadMatrixFromTextFile() but from a string literal
-    // This function fits even less...
+
     template <class ElemType>
     static std::vector<ElemType> LoadMatrixFromStringLiteral(const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 
     // Read a label file.
-    // A label file is a sequence of text lines with one token per line, where each line maps a string to an index, starting with 0.
-    // This function allows spaces inside the word name, but trims surrounding spaces.
-    // TODO: Move this to class File, as this is similar in nature to LoadMatrixFromTextFile().
     template <class LabelType>
     static void LoadLabelFile(const std::wstring& filePath, std::vector<LabelType>& retLabels)
     {
@@ -291,7 +172,6 @@ public:
             retLabels.push_back(trim(str));
         }
     }
-
 };
 
 }}}
