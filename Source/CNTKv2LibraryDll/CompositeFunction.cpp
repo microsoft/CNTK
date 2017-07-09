@@ -710,18 +710,19 @@ namespace CNTK
                     std::vector<int> beginIndex, endIndex, strides;
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
                         functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
-                        functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndexVec) &&
-                        functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
+                        functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
                     {
                         axis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
                         beginIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
                         endIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
-                        strides = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
+                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
+                            strides = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
+                        else
+                            strides.resize(axis.size(), 1);
                     }
                     else if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis) &&
                         functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
-                        functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndex) &&
-                        functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStrides))
+                        functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndex))
                     {
                         axis.push_back(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
                         beginIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
