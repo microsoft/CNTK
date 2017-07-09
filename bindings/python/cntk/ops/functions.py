@@ -1517,7 +1517,7 @@ class Function(cntk_py.Function):
         if is_file:
             return cntk_py.Function.load(model, device)
 
-        raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
+        raise ValueError('Cannot load the model {} that is neither a file nor a byte buffer.'.format(model))
 
     @staticmethod
     def with_signature(*args, **kwargs):
