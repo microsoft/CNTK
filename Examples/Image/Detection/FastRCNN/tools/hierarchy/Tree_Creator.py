@@ -108,18 +108,72 @@ def remove_nodes_with_one_child_only(node):
 
 
 class TreeMap():
+    @staticmethod
+    def tree_map_from_tree_str(tree_str, use_background=True, use_multiply_with_parent=True):
+        def _find_nodes_of_cls_map(node, cls_map):
+            nodes = []
+            tagged = []
+            todo=[node]
 
-    def __init__(self, cls_maps, use_background=True, use_multiply_with_parent=True, only_valid_leafs=False, reduce_graph=False):
-        self.root_node = DAC_Utils.get_new_root_node()
-        self.meta_map = create_DAC_from_clsmaps(cls_maps, self.root_node)
-        DAC_to_Tree(self.root_node)
-        if only_valid_leafs: remove_invalid_leafs_from_Tree(self.root_node)
-        if reduce_graph: self.root_node = remove_nodes_with_one_child_only(self.root_node)
-        remove_valid_scoring(self.root_node)
+            while todo:
+                lnode = todo.pop()
+                if lnode in tagged: continue
+                if cls_map in lnode.cls_maps:
+                    nodes.append(lnode)
+                tagged.append(lnode)
+                todo.extend(lnode.next)
+                todo.extend(lnode.prev)
 
-        self.use_background=use_background
-        self.use_multiply_with_parent=use_multiply_with_parent
+            return nodes
+
+        root_node, cls_maps = DAC_Utils.deserialize(tree_str)
+        meta_map={}
+        for cls_map in cls_maps:
+            nodes = _find_nodes_of_cls_map(root_node, cls_map)
+            node_map = {}
+
+            for name in cls_map.cls_map:
+                for node in nodes:
+                    if name in node.strings:
+                        node_map[name]=node
+                        break
+            meta_map[cls_map] = node_map
+
+        return TreeMap(root_node, meta_map, use_background=use_background, use_multiply_with_parent=use_multiply_with_parent)
+
+    @staticmethod
+    def tree_map_from_cls_maps(cls_maps, use_background=True, use_multiply_with_parent=True, only_valid_leafs=False, reduce_graph=False):
+        root_node = DAC_Utils.get_new_root_node()
+        meta_map = create_DAC_from_clsmaps(cls_maps, root_node)
+        DAC_to_Tree(root_node)
+        if only_valid_leafs: remove_invalid_leafs_from_Tree(root_node)
+        if reduce_graph: root_node = remove_nodes_with_one_child_only(root_node)
+        remove_valid_scoring(root_node)
+
+        return TreeMap(root_node=root_node, meta_map=meta_map, use_background=use_background, use_multiply_with_parent=use_multiply_with_parent)
+
+
+
+    def __init__(self, root_node, meta_map,use_background=True, use_multiply_with_parent=True):
+        self.root_node = root_node
+        self.meta_map = meta_map
+        self.use_background = use_background
+        self.use_multiply_with_parent = use_multiply_with_parent
         self._create_nr_of_entries()
+
+
+    if False:
+        def __init__(self, cls_maps, use_background=True, use_multiply_with_parent=True, only_valid_leafs=False, reduce_graph=False):
+            self.root_node = DAC_Utils.get_new_root_node()
+            self.meta_map = create_DAC_from_clsmaps(cls_maps, self.root_node)
+            DAC_to_Tree(self.root_node)
+            if only_valid_leafs: remove_invalid_leafs_from_Tree(self.root_node)
+            if reduce_graph: self.root_node = remove_nodes_with_one_child_only(self.root_node)
+            remove_valid_scoring(self.root_node)
+
+            self.use_background=use_background
+            self.use_multiply_with_parent=use_multiply_with_parent
+            self._create_nr_of_entries()
 
     def refresh_tree(self):
         self._create_single_row_view()

@@ -140,10 +140,12 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
             for box in range(rois_per_image):
                 processed_vector = HCT.top_down_eval(net_out[box])
                 processed_vector_no_bg = output_mapper.get_prediciton_vector(processed_vector)
+                assert np.add.reduce(processed_vector_no_bg)>0
                 box_labels =  np.where(processed_vector_no_bg>0)[0]
                 box_scores = processed_vector_no_bg[box_labels]
                 #if len(box_labels) > 1 or box_labels[0]!=0: import ipdb;ipdb.set_trace()
                 if not len(box_labels>0): import ipdb;ipdb.set_trace()
+                # append the box for each label
                 for i in range(len(box_labels)):
                     cords_score_label.append(np.concatenate([rois[box], [box_scores[i], box_labels[i]]]))
 
@@ -167,9 +169,9 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
             print("Processed {} samples".format(img_i+1))
     #import ipdb;ipdb.set_trace()
     # calculate mAP
-    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=True)
+    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=False)
     ap_list = []
-    for class_name in aps:
+    for class_name in sorted(aps):
         ap_list += [aps[class_name]]
         print('AP for {:>15} = {:.6f}'.format(class_name, aps[class_name]))
     print('Mean AP = {:.6f}'.format(np.nanmean(ap_list)))

@@ -6,6 +6,8 @@
 
 import nltk
 from nltk.corpus import wordnet as wn
+from json import dumps, loads
+from tools.ClassMap import ClassMap
 
 
 class DAC_Node():
@@ -133,7 +135,116 @@ class DAC_Utils():
 
     @staticmethod
     def print_Tree(tree, indent=""):
-        content = str(tree.syn) if hasattr(tree, "syn") else "Raw_Node: " + tree.strings[0]
+        content = str(tree.syn) if hasattr(tree, "syn") and tree.syn is not None else "Raw_Node: " + tree.strings[0]
         print(indent + content)
         for i in range(len(tree.next)):
             DAC_Utils.print_Tree(tree.next[i], indent + "|  ")
+
+
+    @staticmethod
+    def serialize(node, multiple_roots=True):
+        def _apply_serialization_indices(node, value):
+            done_map={}
+            todo = [node]
+            while todo:
+                lnode = todo.pop()
+                if not lnode in done_map:
+                #if not hasattr(lnode, "__serialize_id"):
+                #    lnode.__serialize_id = value
+                    done_map[lnode]=value
+                    value +=1
+                    todo.extend(lnode.next)
+                    if multiple_roots: todo.extend(node.prev)
+            return value, done_map
+
+        def _remove_serialization_indicies(node):
+            if node and hasattr(node, "__serialize_id"):
+                #node.__serialize_id = None
+                for child in node.next:
+                    _remove_serialization_indicies(child)
+                if multiple_roots:
+                    for parent in node.prev:
+                        _remove_serialization_indicies(parent)
+
+        def _get_node_repr(node, id_map):
+            # use JSON style where each node is referenced by an id
+            node_repr={}
+            #node["id"]=node.__serialize_id
+            node_repr["id"] =id_map[node]
+            node_repr["strings"]=node.strings
+            node_repr["syn"]=str(node.syn)
+            node_repr["cls_maps"]=[]
+            for cls_map in node.cls_maps:
+                node_repr["cls_maps"].append(cls_map.file)
+            node_repr["childrens"]=[]
+            for child in node.next:
+                #node_repr["childrens"].append(child.__serialize_id)
+                node_repr["childrens"].append(id_map[child])
+            return node_repr
+
+        node_count, node_map=_apply_serialization_indices(node, 0)
+        dac_repr_list = [None]*node_count
+        todo=[node]
+        while todo:
+           lnode = todo.pop()
+           #if dac_repr_list[lnode.__serialize_id] is None:
+           #    dac_repr_list[lnode.__serialize_id]=_get_node_repr(lnode)
+           ind =node_map[lnode]
+           if dac_repr_list[ind] is None:
+               dac_repr_list[ind]=_get_node_repr(lnode, node_map)
+               todo.extend(lnode.next)
+               if multiple_roots:
+                   todo.extend(lnode.prev)
+        #_remove_serialization_indicies(node)
+
+        return dumps(dac_repr_list)
+
+
+    @staticmethod
+    def deserialize(string):
+        def _find_syn_by_str(syn_str):
+            return None
+
+        def _create_DAC_Node_from_repr(repr, cls_maps):
+            node = DAC_Node()
+            node.strings.extend(repr["strings"])
+            node.syn = _find_syn_by_str(repr["syn"])
+            if node.syn is None and not node.strings and repr["syn"] is not None:
+                node.strings.append(repr["syn"])
+
+            # recreate cls_maps too
+            for cls_map_str in repr["cls_maps"]:
+                found = None
+                for cls_map in cls_maps:
+                    if cls_map.file == cls_map_str:
+                        found=cls_map
+                        break
+
+                if found is None:
+                    cls_map = ClassMap(cls_map_str)
+                    cls_maps.append(cls_map)
+
+                node.cls_maps.append(cls_map)
+            return node
+
+
+        dac_repr_list = loads(string)
+        nr_of_nodes = len(dac_repr_list)
+        cls_maps=[]
+        dac_list = [None]*nr_of_nodes
+        # create nodes
+        for i in range(nr_of_nodes):
+            dac_list[i]=_create_DAC_Node_from_repr(dac_repr_list[i], cls_maps)
+
+        # create double links
+        for i in range(nr_of_nodes):
+            for j in dac_repr_list[i]["childrens"]:
+                dac_list[i].next.append(dac_list[j])
+                dac_list[j].prev.append(dac_list[i])
+
+        root_node = dac_list[0].get_root() if dac_list else None
+
+        return root_node, cls_maps
+
+
+
