@@ -481,8 +481,7 @@ namespace CNTK
                             std::vector<int> beginIndex, endIndex, strides; 
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
-                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndexVec) && 
-                                m_attributes.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
                             {
                                 auto &axisDictionary = m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
                                 for (auto& value : axisDictionary)
@@ -490,17 +489,22 @@ namespace CNTK
 
                                 beginIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
                                 endIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
-                                strides = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
+                                if (m_attributes.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
+                                    strides = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
+                                else
+                                    strides.resize(axis.size(), 1);
                             }
                             else if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxis) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
-                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndex) &&
-                                m_attributes.Contains(PrimitiveFunction::AttributeNameSliceStrides))
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndex))
                             {
                                 axis.push_back(NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape()));
                                 beginIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
                                 endIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
-                                strides.push_back(m_attributes[PrimitiveFunction::AttributeNameSliceStrides].Value<int>());
+                                if (m_attributes.Contains(PrimitiveFunction::AttributeNameSliceStrides))
+                                    strides.push_back(m_attributes[PrimitiveFunction::AttributeNameSliceStrides].Value<int>());
+                                else
+                                    strides.push_back(1);
                             }
                             else
                             {
