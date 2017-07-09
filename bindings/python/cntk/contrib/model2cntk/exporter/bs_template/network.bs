@@ -1,0 +1,77 @@
+# PRE_DEFINE FUNCTIONS FOR MODEL2CNTK USED
+#
+
+CB_ConvolutionLayer {   numOutput,
+                        filterShape,
+                        bias = true,
+                        stride = (1:1),
+                        pad = false,
+                        lowerPad = (0:0),
+                        weightInit = 'uniform',
+                        weightInitScale = 1,
+                        biasInit = 0,
+                        weightSetting = (1:1),
+                        biasSetting = (1:1)
+                        } =
+{
+    W = ParameterTensor{(filterShape[0]:filterShape[1]:0:numOutput), init=weightInit, initValueScale = weightInitScale, learningRateMultiplier = weightSetting[0], regularizationMultiplier = weightSetting[1]}
+    b = ParameterTensor{(1:1:numOutput), initValue = biasInit, learningRateMultiplier = biasSetting[0], regularizationMultiplier = biasSetting[1]}
+    sharing = true    # TODO: support this
+    transpose = false # TODO: support this
+    apply (x) = {
+        c = Convolution (W, x, filterShape, mapDims = numOutput, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, transpose = transpose)
+        res = if bias then c + b else c	
+    }.res
+}.apply
+
+CB_BatchNormalizationLayer {    scaleInit = 1,
+                                biasInit = 0,
+                                scaleSetting = (1:1),
+                                biasSetting = (1:1),
+                                spatialRank = 2,
+                                normalizationTimeConstant = 5000,
+                                blendTimeConstant = 0,
+                                useCntkEngine = false
+                                } =
+{
+    normShape = (0:1)
+    scale = ParameterTensor{normShape, initValue = scaleInit, learningRateMultiplier = scaleSetting[0], regularizationMultiplier = scaleSetting[1]}
+    bias = ParameterTensor{normShape, initValue = biasInit, learningRateMultiplier = biasSetting[0], regularizationMultiplier = biasSetting[1]}
+    mean = ParameterTensor{normShape, initValue = 0, learningRateMultiplier = 0}
+    variance = ParameterTensor{normShape, initValue = 0, learningRateMultiplier = 0}
+    apply (x) = BatchNormalization (x, scale, bias, mean, variance, spatialRank > 0, normalizationTimeConstant = normalizationTimeConstant, blendTimeConstant = blendTimeConstant, useCntkEngine = useCntkEngine)
+}.apply
+
+CB_LinearLayer {    numOutput,
+                    bias = true,
+                    weightInit = 'uniform',
+                    weightInitScale = 1,
+                    biasInit = 0,
+                    weightSetting = (1:1),
+                    biasSetting = (1:1)
+                    } =
+{
+    # TODO: Support multiple rank of tensor
+    W = ParameterTensor {(numOutput:0), init = weightInit, initValueScale = weightInitScale, learningRateMultiplier = weightSetting[0], regularizationMultiplier = weightSetting[1]}
+    b = ParameterTensor {numOutput, initValue = biasInit, learningRateMultiplier = biasSetting[0], regularizationMultiplier = biasSetting[1]}
+    apply (x) =
+	    if bias
+	    then Times (W, x, outputRank=1, inferInputRankToMap=0) + b
+	    else Times (W, x, outputRank=1, inferInputRankToMap=0)
+}.apply
+
+CB_PoolingLayer {   poolKind,            # "max" or "average"
+                    filterShape,         # e.g. (3:3)
+                    stride = (1:1),
+                    pad = false,
+                    lowerPad = 0
+                    } = # TODO: support this
+{
+    apply (x) = Pooling (x, poolKind, filterShape, stride = stride, autoPadding = pad, lowerPad = lowerPad)
+}.apply
+
+CB_Splice {     axis = 3 # TODO: Why? CHW or HWC?
+                } =
+{
+    apply (x) = Splice (x, axis = axis)
+}.apply
