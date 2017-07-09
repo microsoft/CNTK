@@ -1515,7 +1515,7 @@ class Function(cntk_py.Function):
             return cntk_py.Function.load_from_buffer(model, device)
 
         if is_file:
-            return cntk_py.Function.load(model, device)
+            return cntk_py.Function.load(str(model), device)
 
         raise ValueError('Cannot load the model {} that is neither a file nor a byte buffer.'.format(model))
 
