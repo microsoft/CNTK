@@ -34,7 +34,7 @@ def test_simple_mnist_bs_error(device_id):
     from cntk.ops.tests.ops_test_utils import cntk_device
     try_set_default_device(cntk_device(device_id))
 
-    cmdStr = "cntk configFile=07_Deconvolution_BS.cntk"
+    cmdStr = os.environ["TEST_CNTK_BINARY"] + " configFile=07_Deconvolution_BS.cntk"
 
     pid = subprocess.Popen(cmdStr.split(" "), cwd=getting_started_path)
     pid.wait()

@@ -124,15 +124,16 @@ def generate_visualization(use_brain_script_model, testing=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-type", metavar="string", help="Python | BrainScript. Specify if you trained your model with Python or BrainScript")
+    parser.add_argument("-type", metavar="string", help="Python | BrainScript. Specify if you trained your model with Python or BrainScript. Default Python.", default="Python")
     args = parser.parse_args()
 
     args.types = ["Python", "BrainScript"]
-    if not args.type in args.types:
+    if not args.type.lower() in [t.lower() for t in args.types]:
         print("-t argument must be one of", args.types, file=sys.stderr)
         sys.exit(1)
 
-    print("Using %s model for the visualization" % (args.type))
+    use_brain_script_model = args.type.lower() == "brainscript"
 
-    use_brain_script_model = args.type == "BrainScript"
+    print("Using %s model to generate the visualization" % (args.types[1] if use_brain_script_model else args.types[0]))
+
     generate_visualization(use_brain_script_model)
