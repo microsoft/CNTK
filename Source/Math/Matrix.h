@@ -204,6 +204,7 @@ public:
 
     void SGDUpdate(Matrix<ElemType>& gradients, ElemType learnRatePerSample);
     void MomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, bool unitGainMomentum = true);
+    void KeMomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, size_t actualMBSize, bool unitGainMomentum = true);
     void NesterovAcceleratedMomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, bool unitGainMomentum = true);
 
     ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);

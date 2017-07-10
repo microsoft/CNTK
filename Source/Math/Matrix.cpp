@@ -1624,6 +1624,51 @@ void Matrix<ElemType>::MomentumSGDUpdate(Matrix<ElemType>& gradients,
         });
 }
 
+template <class ElemType>
+void Matrix<ElemType>::KeMomentumSGDUpdate(Matrix<ElemType>& gradients,
+                                           Matrix<ElemType>& smoothedGradients,
+                                           ElemType learnRatePerSample,
+                                           ElemType momentum,
+                                           size_t actualMBSize,
+                                           bool unitGainMomentum)
+{
+    DecideAndMoveToRightDevice(smoothedGradients, gradients, *this);
+
+    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
+    ElemType lr = -(unitGainFactor * learnRatePerSample * actualMBSize);
+    ElemType alpha = 1 / ElemType(actualMBSize);
+
+    DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
+    {
+        // 1) sg_t = momentum * sg_{t-1} + 1 / mbSize * g_{t-1}
+        // Classic momentum (unitGainFactor == 1.0):
+        // 2) w_t = w_{t-1} - (learnRatePerSample * mbSize) * sg_t
+        // Unit-gain momentum (unitGainFactor == 1.0 - momentum):
+        // 2) w_t = w_{t-1} - ((1.0 - momentum) * learnRatePerSample * mbSize) * sg_t
+        ScaleAndAdd(alpha, gradients, momentum, smoothedGradients);
+        ScaleAndAdd(lr, smoothedGradients, *this);
+    },
+    {
+        ScaleAndAdd(alpha, gradients, momentum, smoothedGradients);
+        ScaleAndAdd(lr, smoothedGradients, *this);
+    },
+    // no sparse implement
+    {
+        if (momentum != 0)
+        {
+            gradients.m_CPUSparseMatrix->NormalGrad(*smoothedGradients.m_CPUMatrix, momentum, unitGainMomentum);
+        }
+    ScaleAndAdd(-learnRatePerSample, gradients, *this);
+    },
+    {
+        if (momentum != 0)
+        {
+            gradients.m_GPUSparseMatrix->NormalGrad(*smoothedGradients.m_GPUMatrix, momentum, unitGainMomentum);
+        }
+    ScaleAndAdd(-learnRatePerSample, gradients, *this);
+    });
+}
+
 // Nesterov accelerated SGD update.
 // Modifies "this" parameter matrix, on which this method is invoked.
 template <class ElemType>

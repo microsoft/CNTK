@@ -2301,8 +2301,13 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
         // the momentum value for the next epoch is non-zero.
         if (!useNesterovMomentum)
         {
-            functionValues.MomentumSGDUpdate(gradientValues, smoothedGradientValues, 
-                                             ElemType(learnRatePerSample), ElemType(momentum));
+            bool useKeUpdate = true;
+            if (useKeUpdate)
+                functionValues.KeMomentumSGDUpdate(gradientValues, smoothedGradientValues, 
+                                                   ElemType(learnRatePerSample), ElemType(momentum), actualMBSize);
+            else
+                functionValues.MomentumSGDUpdate(gradientValues, smoothedGradientValues, 
+                                                 ElemType(learnRatePerSample), ElemType(momentum));
         }
         else
         {
