@@ -1,20 +1,8 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
+# Copyright (c) Microsoft. All rights reserved.
 
-"""Fast R-CNN config system.
-
-This file specifies default config options for Fast R-CNN. You should not
-change values in this file. Instead, you should write a config file (in yaml)
-and use cfg_from_file(yaml_file) to load it and override the default options.
-
-Most tools in $ROOT/tools take a --cfg option to specify an override file.
-    - See tools/{train,test}_net.py for example code that uses cfg_from_file()
-    - See experiments/cfgs/*.yml for example YAML config override files
-"""
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
 
 import os
 import os.path as osp
@@ -23,8 +11,6 @@ import numpy as np
 from easydict import EasyDict as edict
 
 __C = edict()
-# Consumers can get config by:
-#   from fast_rcnn_config import cfg
 cfg = __C
 
 #
@@ -33,53 +19,45 @@ cfg = __C
 
 __C.CNTK = edict()
 
+__C.CNTK.MAKE_MODE = True
+__C.CNTK.TRAIN_E2E = True # E2E or 4-stage training
+__C.CNTK.TRAIN_CONV_LAYERS = True
+__C.CNTK.USE_MEAN_GRADIENT = True
+__C.CNTK.FORCE_DETERMINISTIC = True
 __C.CNTK.FAST_MODE = False
-__C.CNTK.MAKE_MODE = False
-__C.CNTK.TRAIN_E2E = False
-__C.CNTK.DEBUG_OUTPUT = True
-__C.CNTK.USE_MEAN_GRADIENT = False
-__C.CNTK.TRAIN_CONV_LAYERS = False
 
 __C.CNTK.DATASET = "Grocery" # "Grocery" or "Pascal"
-__C.CNTK.BASE_MODEL = "VGG16" # "VGG16" or "AlexNet"
+__C.CNTK.BASE_MODEL = "AlexNet" # "VGG16" or "AlexNet"
 __C.CNTK.CONV_BIAS_INIT = 0.0
+__C.CNTK.SIGMA_RPN_L1 = 3.0
+__C.CNTK.SIGMA_DET_L1 = 1.0
+__C.CNTK.BIAS_LR_MULT = 2.0
 
 # Learning parameters
 __C.CNTK.L2_REG_WEIGHT = 0.0005
 __C.CNTK.MOMENTUM_PER_MB = 0.9
 
 # E2E config
-# Caffe Faster R-CNN parameters are: base_lr: 0.001, lr_policy: "step", gamma: 0.1, stepsize: 50000, momentum: 0.9, weight_decay: 0.0005
-# ==> CNTK: lr_per_sample = [0.001] * 10 + [0.0001] * 10 + [0.00001]
-# Current setting for CNTK on Grocery (AlexNet: 92.7 mAP, VGG 93.2 mAP):
 __C.CNTK.E2E_MAX_EPOCHS = 20
-__C.CNTK.E2E_LR_PER_SAMPLE = [0.00001] * 10 + [0.000001] * 10 + [0.0000001]
+__C.CNTK.E2E_LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 10 + [0.00001]
 
-# caffe rpn training: lr = [0.001] * 12 + [0.0001] * 4, momentum = 0.9, weight decay = 0.0005 (cf. stage1_rpn_solver60k80k.pt)
-__C.CNTK.RPN_EPOCHS = 4 # 16
-__C.CNTK.RPN_LR_PER_SAMPLE = [0.001] * 6 + [0.0001] * 4
-
-# caffe frcn training: lr = [0.001] * 6 + [0.0001] * 2, momentum = 0.9, weight decay = 0.0005 (cf. stage1_fast_rcnn_solver30k40k.pt)
-#__C.CNTK.FRCN_EPOCHS = 8
-#__C.CNTK.FRCN_LR_PER_SAMPLE = [0.001] * 6 + [0.00001] * 2
-# Current setting for CNTK AlexNet (92.5 mAP on Grocery):
-__C.CNTK.FRCN_EPOCHS = 10
-__C.CNTK.FRCN_LR_PER_SAMPLE = [0.000015] * 8 + [0.00001] * 8 + [0.000001]
-# Current setting for CNTK VGG16:
-#__C.CNTK.FRCN_EPOCHS = 20
-#__C.CNTK.FRCN_LR_PER_SAMPLE = [0.0000005] * 8 + [0.00000005]
-#__C.CNTK.FRCN_LR_PER_SAMPLE = [0.0000005] * 8 + [0.00000005]
+# 4-stage config (alternating training scheme)
+__C.CNTK.RPN_EPOCHS = 16
+__C.CNTK.RPN_LR_PER_SAMPLE = [0.001] * 12 + [0.0001] * 4
+__C.CNTK.FRCN_EPOCHS = 8
+__C.CNTK.FRCN_LR_PER_SAMPLE = [0.001] * 6 + [0.0001] * 2
 
 __C.CNTK.INPUT_ROIS_PER_IMAGE = 50
-__C.CNTK.IMAGE_WIDTH = 850 # 1000
-__C.CNTK.IMAGE_HEIGHT = 850 # 1000
+__C.CNTK.IMAGE_WIDTH = 850
+__C.CNTK.IMAGE_HEIGHT = 850
 
-__C.CNTK.RESULTS_NMS_THRESHOLD = 0.3
+__C.CNTK.RESULTS_NMS_THRESHOLD = 0.3 # see also: __C.TEST.NMS = 0.3
 __C.CNTK.RESULTS_NMS_CONF_THRESHOLD = 0.0
-__C.CNTK.RESULTS_BGR_PLOT_THRESHOLD = 0.3
+__C.CNTK.RESULTS_BGR_PLOT_THRESHOLD = 0.1
 
 __C.CNTK.GRAPH_TYPE = "png" # "png" or "pdf"
-__C.CNTK.VISUALIZE_RESULTS = False
+__C.CNTK.DEBUG_OUTPUT = True
+__C.CNTK.VISUALIZE_RESULTS = True
 __C.CNTK.DRAW_NEGATIVE_ROIS = False
 __C.CNTK.DRAW_UNREGRESSED_ROIS = False
 
@@ -92,10 +70,8 @@ __C.CNTK.DIMS_STREAM_NAME = 'dims'
 # Data sets
 #
 if __C.CNTK.DATASET == "Grocery":
-    __C.CNTK.CLASSES = ('__background__',  # always index 0
-                        'avocado', 'orange', 'butter', 'champagne', 'eggBox', 'gerkin', 'joghurt', 'ketchup',
-                        'orangeJuice', 'onion', 'pepper', 'tomato', 'water', 'milk', 'tabasco', 'mustard')
     __C.CNTK.MAP_FILE_PATH = "../../DataSets/Grocery"
+    __C.CNTK.CLASS_MAP_FILE = "class_map.txt"
     __C.CNTK.TRAIN_MAP_FILE = "train_img_file.txt"
     __C.CNTK.TEST_MAP_FILE = "test_img_file.txt"
     __C.CNTK.TRAIN_ROI_FILE = "train_roi_file.txt"
@@ -105,10 +81,8 @@ if __C.CNTK.DATASET == "Grocery":
     __C.CNTK.PROPOSAL_LAYER_PARAMS = "'feat_stride': 16\n'scales':\n - 4 \n - 8 \n - 12"
 
 if __C.CNTK.DATASET == "Pascal":
-    __C.CNTK.CLASSES = ('__background__',  # always index 0
-                        'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable',
-                        'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor')
     __C.CNTK.MAP_FILE_PATH = "../../DataSets/Pascal/mappings"
+    __C.CNTK.CLASS_MAP_FILE = "class_map.txt"
     __C.CNTK.TRAIN_MAP_FILE = "trainval2007.txt"
     __C.CNTK.TRAIN_ROI_FILE = "trainval2007_rois_abs-xyxy_noPad_skipDif.txt"
     __C.CNTK.TEST_MAP_FILE = "test2007.txt"
@@ -124,36 +98,34 @@ if __C.CNTK.DATASET == "Pascal":
 if __C.CNTK.BASE_MODEL == "AlexNet":
     __C.CNTK.BASE_MODEL_FILE = "AlexNet.model"
     __C.CNTK.FEATURE_NODE_NAME = "features"
-    __C.CNTK.LAST_CONV_NODE_NAME = "conv5.y" # == relu
-    __C.CNTK.START_TRAIN_CONV_NODE_NAME = "conv3.y"
+    __C.CNTK.LAST_CONV_NODE_NAME = "conv5.y"
+    __C.CNTK.START_TRAIN_CONV_NODE_NAME = __C.CNTK.FEATURE_NODE_NAME
     __C.CNTK.POOL_NODE_NAME = "pool3"
     __C.CNTK.LAST_HIDDEN_NODE_NAME = "h2_d"
+    __C.CNTK.RPN_NUM_CHANNELS = 256
     __C.CNTK.ROI_DIM = 6
+    __C.CNTK.E2E_LR_FACTOR = 1.0
+    __C.CNTK.RPN_LR_FACTOR = 1.0
+    __C.CNTK.FRCN_LR_FACTOR = 1.0
 
 if __C.CNTK.BASE_MODEL == "VGG16":
-    __C.CNTK.BASE_MODEL_FILE = "VGG16_ImageNet_Caffe.model" # "VGG16_ImageNet.cntkmodel"
+    __C.CNTK.BASE_MODEL_FILE = "VGG16_ImageNet_Caffe.model"
     __C.CNTK.FEATURE_NODE_NAME = "data"
     __C.CNTK.LAST_CONV_NODE_NAME = "relu5_3"
-    __C.CNTK.START_TRAIN_CONV_NODE_NAME = "pool2"
+    __C.CNTK.START_TRAIN_CONV_NODE_NAME = "pool2" # __C.CNTK.FEATURE_NODE_NAME
     __C.CNTK.POOL_NODE_NAME = "pool5"
     __C.CNTK.LAST_HIDDEN_NODE_NAME = "drop7"
+    __C.CNTK.RPN_NUM_CHANNELS = 512
     __C.CNTK.ROI_DIM = 7
+    __C.CNTK.E2E_LR_FACTOR = 1.0
+    __C.CNTK.RPN_LR_FACTOR = 1.0
+    __C.CNTK.FRCN_LR_FACTOR = 1.0
 
 #
 # Training options
 #
 
 __C.TRAIN = edict()
-
-# Scales to use during training (can list multiple scales)
-# Each scale is the pixel size of an image's shortest side
-__C.TRAIN.SCALES = (600,)
-
-# Max pixel size of the longest side of a scaled input image
-__C.TRAIN.MAX_SIZE = 1000
-
-# Images to use per minibatch
-__C.TRAIN.IMS_PER_BATCH = 2
 
 # Minibatch size (number of regions of interest [ROIs])
 __C.TRAIN.BATCH_SIZE = 128
@@ -179,34 +151,18 @@ __C.TRAIN.BBOX_REG = True
 # be used as a bounding-box regression training example
 __C.TRAIN.BBOX_THRESH = 0.5
 
-# Iterations between snapshots
-__C.TRAIN.SNAPSHOT_ITERS = 10000
-
-# solver.prototxt specifies the snapshot path prefix, this adds an optional
-# infix to yield the path: <prefix>[_<infix>]_iters_XYZ.caffemodel
-__C.TRAIN.SNAPSHOT_INFIX = ''
-
-# Use a prefetch thread in roi_data_layer.layer
-# So far I haven't found this useful; likely more engineering work is required
-__C.TRAIN.USE_PREFETCH = False
-
 # Normalize the targets (subtract empirical mean, divide by empirical stddev)
 __C.TRAIN.BBOX_NORMALIZE_TARGETS = True
 # Deprecated (inside weights)
 __C.TRAIN.BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
 # Normalize the targets using "precomputed" (or made up) means and stdevs
 # (BBOX_NORMALIZE_TARGETS must also be True)
-__C.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED = False
+__C.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED = True
 __C.TRAIN.BBOX_NORMALIZE_MEANS = (0.0, 0.0, 0.0, 0.0)
 __C.TRAIN.BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
 
 # Train using these proposals
 __C.TRAIN.PROPOSAL_METHOD = 'selective_search'
-
-# Make minibatches from images that have similar aspect ratios (i.e. both
-# tall and thin or both short and wide) in order to avoid wasting computation
-# on zero-padding.
-__C.TRAIN.ASPECT_GROUPING = True
 
 # IOU >= thresh: positive example
 __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
@@ -240,20 +196,9 @@ __C.TRAIN.RPN_POSITIVE_WEIGHT = -1.0
 
 __C.TEST = edict()
 
-# Scales to use during testing (can list multiple scales)
-# Each scale is the pixel size of an image's shortest side
-__C.TEST.SCALES = (600,)
-
-# Max pixel size of the longest side of a scaled input image
-__C.TEST.MAX_SIZE = 1000
-
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
 __C.TEST.NMS = 0.3
-
-# Experimental: treat the (K+1) units in the cls_score layer as linear
-# predictors (trained, eg, with one-vs-rest SVMs).
-__C.TEST.SVM = False
 
 # Test using bounding-box regressors
 __C.TEST.BBOX_REG = True
@@ -267,9 +212,9 @@ __C.TEST.PROPOSAL_METHOD = 'selective_search'
 ## NMS threshold used on RPN proposals
 __C.TEST.RPN_NMS_THRESH = 0.7
 ## Number of top scoring boxes to keep before apply NMS to RPN proposals
-__C.TEST.RPN_PRE_NMS_TOP_N = 12000 # caffe: 6000
+__C.TEST.RPN_PRE_NMS_TOP_N = 6000
 ## Number of top scoring boxes to keep after applying NMS to RPN proposals
-__C.TEST.RPN_POST_NMS_TOP_N = 2000 # caffe: 300
+__C.TEST.RPN_POST_NMS_TOP_N = 300
 # Proposal height and width both need to be greater than RPN_MIN_SIZE (at orig image scale)
 __C.TEST.RPN_MIN_SIZE = 16
 
@@ -296,41 +241,12 @@ __C.RNG_SEED = 3
 # A small number that's used many times
 __C.EPS = 1e-14
 
-# Root directory of project
-__C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
-
-# Data directory
-__C.DATA_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'data'))
-
-# Model directory
-__C.MODELS_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'models', 'pascal_voc'))
-
-# Name (or path to) the matlab executable
-__C.MATLAB = 'matlab'
-
-# Place outputs under an experiments directory
-__C.EXP_DIR = 'default'
-
 # Use GPU implementation of non-maximum suppression
 __C.USE_GPU_NMS = True
 
 # Default GPU device id
 __C.GPU_ID = 0
 
-
-def get_output_dir(imdb, net=None):
-    """Return the directory where experimental artifacts are placed.
-    If the directory does not exist, it is created.
-
-    A canonical path is built using the name from an imdb and a network
-    (if not None).
-    """
-    outdir = osp.abspath(osp.join(__C.ROOT_DIR, 'output', __C.EXP_DIR, imdb.name))
-    if net is not None:
-        outdir = osp.join(outdir, net.name)
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-    return outdir
 
 def _merge_a_into_b(a, b):
     """Merge config dictionary a into config dictionary b, clobbering the

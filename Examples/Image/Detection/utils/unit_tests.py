@@ -1,3 +1,9 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
 import os, sys
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path))

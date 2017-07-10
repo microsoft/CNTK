@@ -1,20 +1,8 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
+# Copyright (c) Microsoft. All rights reserved.
 
-"""Fast R-CNN config system.
-
-This file specifies default config options for Fast R-CNN. You should not
-change values in this file. Instead, you should write a config file (in yaml)
-and use cfg_from_file(yaml_file) to load it and override the default options.
-
-Most tools in $ROOT/tools take a --cfg option to specify an override file.
-    - See tools/{train,test}_net.py for example code that uses cfg_from_file()
-    - See experiments/cfgs/*.yml for example YAML config override files
-"""
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
 
 import os
 import os.path as osp
@@ -23,9 +11,57 @@ import numpy as np
 from easydict import EasyDict as edict
 
 __C = edict()
-# Consumers can get config by:
-#   from fast_rcnn_config import cfg
 cfg = __C
+
+#
+# CNTK parameters
+#
+
+__C.CNTK = edict()
+
+__C.CNTK.MAKE_MODE = False
+__C.CNTK.TRAIN_E2E = True
+__C.CNTK.TRAIN_CONV_LAYERS = True
+__C.CNTK.USE_MEAN_GRADIENT = True
+__C.CNTK.FORCE_DETERMINISTIC = True
+__C.CNTK.FAST_MODE = False
+
+__C.CNTK.CONV_BIAS_INIT = 0.0
+__C.CNTK.SIGMA_RPN_L1 = 3.0
+__C.CNTK.SIGMA_DET_L1 = 1.0
+__C.CNTK.BIAS_LR_MULT = 2.0
+
+# Learning parameters
+__C.CNTK.L2_REG_WEIGHT = 0.0005
+__C.CNTK.MOMENTUM_PER_MB = 0.9
+
+# E2E config
+__C.CNTK.E2E_MAX_EPOCHS = 20
+__C.CNTK.E2E_LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 10 + [0.00001]
+
+# 4-stage config (alternating training scheme)
+__C.CNTK.RPN_EPOCHS = 16
+__C.CNTK.RPN_LR_PER_SAMPLE = [0.001] * 12 + [0.0001] * 4
+__C.CNTK.FRCN_EPOCHS = 8
+__C.CNTK.FRCN_LR_PER_SAMPLE = [0.001] * 6 + [0.0001] * 2
+
+__C.CNTK.INPUT_ROIS_PER_IMAGE = 50
+__C.CNTK.IMAGE_WIDTH = 850
+__C.CNTK.IMAGE_HEIGHT = 850
+
+__C.CNTK.RESULTS_NMS_THRESHOLD = 0.3 # see also: __C.TEST.NMS = 0.3
+__C.CNTK.RESULTS_NMS_CONF_THRESHOLD = 0.0
+__C.CNTK.RESULTS_BGR_PLOT_THRESHOLD = 0.1
+
+__C.CNTK.GRAPH_TYPE = "png" # "png" or "pdf"
+__C.CNTK.DEBUG_OUTPUT = True
+__C.CNTK.VISUALIZE_RESULTS = True
+__C.CNTK.DRAW_NEGATIVE_ROIS = False
+__C.CNTK.DRAW_UNREGRESSED_ROIS = False
+
+__C.CNTK.FEATURE_STREAM_NAME = 'features'
+__C.CNTK.ROI_STREAM_NAME = 'roiAndLabel'
+__C.CNTK.DIMS_STREAM_NAME = 'dims'
 
 
 #
@@ -33,16 +69,6 @@ cfg = __C
 #
 
 __C.TRAIN = edict()
-
-# Scales to use during training (can list multiple scales)
-# Each scale is the pixel size of an image's shortest side
-__C.TRAIN.SCALES = (600,)
-
-# Max pixel size of the longest side of a scaled input image
-__C.TRAIN.MAX_SIZE = 1000
-
-# Images to use per minibatch
-__C.TRAIN.IMS_PER_BATCH = 2
 
 # Minibatch size (number of regions of interest [ROIs])
 __C.TRAIN.BATCH_SIZE = 128
@@ -56,7 +82,7 @@ __C.TRAIN.FG_THRESH = 0.5
 # Overlap threshold for a ROI to be considered background (class = 0 if
 # overlap in [LO, HI))
 __C.TRAIN.BG_THRESH_HI = 0.5
-__C.TRAIN.BG_THRESH_LO = 0.1
+__C.TRAIN.BG_THRESH_LO = 0.0
 
 # Use horizontally-flipped images during training?
 __C.TRAIN.USE_FLIPPED = True
@@ -68,37 +94,19 @@ __C.TRAIN.BBOX_REG = True
 # be used as a bounding-box regression training example
 __C.TRAIN.BBOX_THRESH = 0.5
 
-# Iterations between snapshots
-__C.TRAIN.SNAPSHOT_ITERS = 10000
-
-# solver.prototxt specifies the snapshot path prefix, this adds an optional
-# infix to yield the path: <prefix>[_<infix>]_iters_XYZ.caffemodel
-__C.TRAIN.SNAPSHOT_INFIX = ''
-
-# Use a prefetch thread in roi_data_layer.layer
-# So far I haven't found this useful; likely more engineering work is required
-__C.TRAIN.USE_PREFETCH = False
-
 # Normalize the targets (subtract empirical mean, divide by empirical stddev)
 __C.TRAIN.BBOX_NORMALIZE_TARGETS = True
 # Deprecated (inside weights)
 __C.TRAIN.BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
 # Normalize the targets using "precomputed" (or made up) means and stdevs
 # (BBOX_NORMALIZE_TARGETS must also be True)
-__C.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED = False
+__C.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED = True
 __C.TRAIN.BBOX_NORMALIZE_MEANS = (0.0, 0.0, 0.0, 0.0)
 __C.TRAIN.BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
 
 # Train using these proposals
 __C.TRAIN.PROPOSAL_METHOD = 'selective_search'
 
-# Make minibatches from images that have similar aspect ratios (i.e. both
-# tall and thin or both short and wide) in order to avoid wasting computation
-# on zero-padding.
-__C.TRAIN.ASPECT_GROUPING = True
-
-# Use RPN to detect objects
-__C.TRAIN.HAS_RPN = False
 # IOU >= thresh: positive example
 __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
 # IOU < thresh: negative example
@@ -131,20 +139,9 @@ __C.TRAIN.RPN_POSITIVE_WEIGHT = -1.0
 
 __C.TEST = edict()
 
-# Scales to use during testing (can list multiple scales)
-# Each scale is the pixel size of an image's shortest side
-__C.TEST.SCALES = (600,)
-
-# Max pixel size of the longest side of a scaled input image
-__C.TEST.MAX_SIZE = 1000
-
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
 __C.TEST.NMS = 0.3
-
-# Experimental: treat the (K+1) units in the cls_score layer as linear
-# predictors (trained, eg, with one-vs-rest SVMs).
-__C.TEST.SVM = False
 
 # Test using bounding-box regressors
 __C.TEST.BBOX_REG = True
@@ -187,41 +184,12 @@ __C.RNG_SEED = 3
 # A small number that's used many times
 __C.EPS = 1e-14
 
-# Root directory of project
-__C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
-
-# Data directory
-__C.DATA_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'data'))
-
-# Model directory
-__C.MODELS_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'models', 'pascal_voc'))
-
-# Name (or path to) the matlab executable
-__C.MATLAB = 'matlab'
-
-# Place outputs under an experiments directory
-__C.EXP_DIR = 'default'
-
 # Use GPU implementation of non-maximum suppression
 __C.USE_GPU_NMS = True
 
 # Default GPU device id
 __C.GPU_ID = 0
 
-
-def get_output_dir(imdb, net=None):
-    """Return the directory where experimental artifacts are placed.
-    If the directory does not exist, it is created.
-
-    A canonical path is built using the name from an imdb and a network
-    (if not None).
-    """
-    outdir = osp.abspath(osp.join(__C.ROOT_DIR, 'output', __C.EXP_DIR, imdb.name))
-    if net is not None:
-        outdir = osp.join(outdir, net.name)
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-    return outdir
 
 def _merge_a_into_b(a, b):
     """Merge config dictionary a into config dictionary b, clobbering the
