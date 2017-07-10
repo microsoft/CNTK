@@ -15,6 +15,9 @@ sys.path.append(os.path.join(abs_path, ".."))
 from utils.map.map_helpers import evaluate_detections
 
 
+use_real_gt_not_sel_search_as_gt_info = True
+gt_boxes_rel_center = True
+
 def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
     output_mapper = HCT.tree_map.get_output_mapper()
     classes = output_mapper.get_all_classes()
@@ -26,12 +29,14 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
     image_width=1000
     feature_node_name='data'
     rois_per_image=2000
+    gts_per_image = 20
 
     image_input = input_variable((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis()])#, name=feature_node_name)
     #roi_input = input_variable((rois_per_image, 5), dynamic_axes=[Axis.default_batch_axis()])
     roi_input = input_variable((rois_per_image, 4), dynamic_axes=[Axis.default_batch_axis()])
     #dims_input = input_variable((6), dynamic_axes=[Axis.default_batch_axis()])
     label_input = input_variable((rois_per_image, num_classes))
+    gt_input = input_variable((100))
     frcn_eval = eval_model(image_input, roi_input)
 
     if False:
@@ -58,10 +63,11 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
             minibatch_source.streams.rois: roi_input,
             minibatch_source.streams.roiLabels: label_input
         }
-        input_map = {
+        input_map = {# add real gtb
             image_input: minibatch_source.streams.features,
             roi_input: minibatch_source.streams.rois,
-            label_input: minibatch_source.streams.roiLabels
+            label_input: minibatch_source.streams.roiLabels,
+            gt_input: minibatch_source.streams.gts
         }
 
     #img_key = cfg["CNTK"].FEATURE_NODE_NAME
@@ -75,6 +81,8 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
 
     all_boxes = [[[] for _ in range(num_test_images)] for _ in range(num_classes)]
 
+
+
     # evaluate test images and write netwrok output to file
     print("Evaluating Faster R-CNN model for %s images." % num_test_images)
     print(type(classes))
@@ -83,17 +91,37 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
         #import ipdb;ipdb.set_trace()
         mb_data = minibatch_source.next_minibatch(1, input_map=input_map)
 
+        if use_real_gt_not_sel_search_as_gt_info:
+            gt_data = mb_data[gt_input].asarray()
+            gt_data.shape = (gts_per_image, 5)
+            all_gt_boxes=gt_data[np.where(gt_data[:,4]!=0)] # remove padded boxes!
 
-        # todo: use actual gtbs and not selsearch-res
-        gt_row = mb_data[roi_input].asarray()
-        gt_row = gt_row.reshape((rois_per_image, 4))
-        lbl_row= mb_data[label_input].asarray()
-        lbl_row.shape = (rois_per_image, num_original_classes)
-        lbl_clmn = np.argmax(lbl_row, axis=1)
-        lbl_clmn.shape+=(1,)
-        gt_row = np.concatenate([gt_row, lbl_clmn], axis=1)
+            if gt_boxes_rel_center:
+                #from rel_center to abs_edge
+                #make abs
+                all_gt_boxes[:,[0, 2]]*=1000
+                all_gt_boxes[:,[1, 3]] *= 1000
+                #make edge
+                w=all_gt_boxes[:,2]
+                h=all_gt_boxes[:,3]
+                x_c=all_gt_boxes[:,0]
+                y_c = all_gt_boxes[:, 1]
 
-        all_gt_boxes = gt_row[np.where(gt_row[:,-1] > 0)]
+                all_gt_boxes[:, 0] = x_c - w / 2
+                all_gt_boxes[:, 1] = y_c - h / 2
+                all_gt_boxes[:, 2] = x_c + w / 2
+                all_gt_boxes[:, 3] = y_c + h / 2
+            #all_gt_boxes = np.round(all_gt_boxes)
+        else:
+            gt_row = mb_data[roi_input].asarray()
+            gt_row = gt_row.reshape((rois_per_image, 4))
+            lbl_row= mb_data[label_input].asarray()
+            lbl_row.shape = (rois_per_image, num_original_classes)
+            lbl_clmn = np.argmax(lbl_row, axis=1)
+            lbl_clmn.shape+=(1,)
+            gt_row = np.concatenate([gt_row, lbl_clmn], axis=1)
+
+            all_gt_boxes = gt_row[np.where(gt_row[:,-1] > 0)]
 
         for cls_index in range(num_original_classes):
             if cls_index == 0: continue
@@ -108,12 +136,14 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
             train_vector,_ = HCT.get_vectors_for_label(as_onehot)
             reduced_vector = output_mapper.get_prediciton_vector(train_vector) # remove lower backgrounds
             cls_names=np.asarray(classes)[np.where(reduced_vector>0)]
+            import ipdb;ipdb.set_trace()
+
             for cls_name in cls_names:
                 all_gt_infos[cls_name].append({'bbox': np.array(cls_gt_boxes),
                                            'difficult': [False] * len(cls_gt_boxes),
                                            'det': [False] * len(cls_gt_boxes)})
 
-
+        #import ipdb;ipdb.set_trace()
 
         output = frcn_eval.eval({image_input: mb_data[image_input], roi_input: np.reshape(mb_data[roi_input].asarray(), roi_input.shape)})
         #out_dict = dict([(k.name, k) for k in output])
@@ -125,7 +155,6 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
         #scores = out_cls_pred.max(axis=1)
         #regressed_rois = regress_rois(out_rpn_rois, out_bbox_regr, labels)  # (300, 4)
 
-        #TODO: score all responsible labels
         #labels=np.argmax(output[0], axis=1)
         #scores = np.max(output[0],axis=1)
         rois = mb_data[roi_input].asarray()
@@ -152,6 +181,7 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
             return np.asarray(cords_score_label)
 
         coords_score_label = _process_output_slice(output[0], rois)
+        coords_score_label = np.concatenate([all_gt_boxes[:,0:4],np.ones((len(all_gt_boxes),1)),all_gt_boxes[:,4:5]], axis=1)
         print(coords_score_label.shape)
         #print(coords_score_label)
         #import ipdb;ipdb.set_trace()
@@ -167,9 +197,9 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
 
         if (img_i+1) % 100 == 0:
             print("Processed {} samples".format(img_i+1))
-    #import ipdb;ipdb.set_trace()
     # calculate mAP
-    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=False)
+    import ipdb;ipdb.set_trace()
+    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=True, use_07_metric=False)
     ap_list = []
     for class_name in sorted(aps):
         ap_list += [aps[class_name]]
