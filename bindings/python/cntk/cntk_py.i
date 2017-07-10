@@ -1,36 +1,23 @@
-%module(directors="1") cntk_py
+%module(directors="1", threads="1") cntk_py
 
-// Macro to run a method with a released GIL.
-%define RUN_WITHOUT_GIL(METHOD)
-%feature("except") METHOD %{
-    START_EXCEPTION_HANDLING
-    AllowThreadsGuard allowThreads;
-    $action
-    END_EXCEPTION_HANDLING
-%}
-%enddef
+// By defaul we do not release thread lock, we do this
+// for a set of long running operations C++ operations.
+%feature("nothreadallow");
 
-// Macros to run a method with aquired GIL.
-%define RUN_WITH_GIL(METHOD)
-%feature("except") METHOD %{
-    START_EXCEPTION_HANDLING
-    GilStateGuard gilGuard;
-    $action
-    END_EXCEPTION_HANDLING
-%}
-%enddef
+%threadallow CNTK::MinibatchSource::GetNextMinibatch;
+%threadallow CNTK::MinibatchSource::StreamInfos;
+%threadallow CNTK::MinibatchSource::GetCheckpointState;
+%threadallow CNTK::MinibatchSource::RestoreFromCheckpoint;
+%threadallow CNTK::MinibatchSource::~MinibatchSource;
 
-// Swig does not understand fully specified exceptions,
-// So we use a mask * to allow release of GIL on all methods
-// with the following signatures.
+%threadallow CNTK::Trainer::TrainMinibatch;
+%threadallow CNTK::Trainer::TestMinibatch;
+%threadallow CNTK::Trainer::SaveCheckpoint;
+%threadallow CNTK::Trainer::RestoreFromCheckpoint;
 
-// TODO: This should also be done for the training session and trainer.
-// BUT: All directors should handle GIL properly, which requires changes in the API
-RUN_WITHOUT_GIL(*::GetNextMinibatch);
-RUN_WITHOUT_GIL(*::StreamInfos);
-RUN_WITHOUT_GIL(*::GetCheckpointState);
-RUN_WITHOUT_GIL(*::RestoreFromCheckpoint);
-RUN_WITHOUT_GIL(~MinibatchSource);
+%threadallow CNTK::Evaluator::TestMinibatch;
+
+%threadallow CNTK::TrainingSession::Train;
 
 %include "stl.i"
 %include "std_wstring.i"
