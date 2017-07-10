@@ -61,17 +61,23 @@ class ProposalTargetLayer(UserFunction):
         # Proposal ROIs (0, x1, y1, x2, y2) coming from RPN
         # (i.e., rpn.proposal_layer.ProposalLayer), or any other source
         all_rois = bottom[0][0,:]
+        # remove zero padded proposals
+        keep0 = np.where(
+            ((all_rois[:, 2] - all_rois[:, 0]) > 0) &
+            ((all_rois[:, 3] - all_rois[:, 1]) > 0)
+        )
+        all_rois = all_rois[keep0]
+
         # GT boxes (x1, y1, x2, y2, label)
         # TODO(rbg): it's annoying that sometimes I have extra info before
         # and other times after box coordinates -- normalize to one format
         gt_boxes = bottom[1][0,:]
-
         # remove zero padded ground truth boxes
-        keep = np.where(
+        keep1 = np.where(
             ((gt_boxes[:,2] - gt_boxes[:,0]) > 0) &
             ((gt_boxes[:,3] - gt_boxes[:,1]) > 0)
         )
-        gt_boxes = gt_boxes[keep]
+        gt_boxes = gt_boxes[keep1]
 
         assert gt_boxes.shape[0] > 0, \
             "No ground truth boxes provided"
@@ -86,7 +92,7 @@ class ProposalTargetLayer(UserFunction):
         assert np.all(all_rois[:, 0] == 0), \
                 'Only single item batches are supported'
 
-        rois_per_image = cfg["TRAIN"].RPN_POST_NMS_TOP_N
+        rois_per_image = cfg.TRAIN.BATCH_SIZE
         fg_rois_per_image = np.round(cfg["TRAIN"].FG_FRACTION * rois_per_image).astype(int)
 
         # Sample rois with classification labels and bounding box regression
@@ -97,6 +103,7 @@ class ProposalTargetLayer(UserFunction):
             deterministic=self._determininistic_mode)
 
         if DEBUG:
+            print ('num rois: {}'.format(rois_per_image))
             print ('num fg: {}'.format((labels > 0).sum()))
             print ('num bg: {}'.format((labels == 0).sum()))
             self._count += 1
@@ -197,6 +204,10 @@ def _compute_targets(ex_rois, gt_rois, labels):
     assert gt_rois.shape[1] == 4
 
     targets = bbox_transform(ex_rois, gt_rois)
+    if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
+        # Optionally normalize targets by a precomputed mean and stdev
+        targets = ((targets - np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS))
+                / np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS))
 
     return np.hstack((labels[:, np.newaxis], targets)).astype(np.float32, copy=False)
 

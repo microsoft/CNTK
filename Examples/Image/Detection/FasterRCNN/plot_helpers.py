@@ -1,6 +1,12 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
 from __future__ import print_function
 from builtins import str
-import pdb, sys, os, time
+import sys, os, time
 import numpy as np
 from easydict import EasyDict
 from builtins import range
@@ -12,13 +18,7 @@ import cntk
 from cntk import input_variable, Axis
 from utils.nms.nms_wrapper import apply_nms_to_single_image_results
 from cntk_helpers import regress_rois
-
-try:
-    import cv2
-except ImportError:
-    import pip
-    pip.main(['install', '--user', 'cv2'])
-    import cv2
+import cv2 # pip install opencv-python
 
 available_font = "arial.ttf"
 try:
@@ -44,7 +44,7 @@ def visualizeResultsFaster(imgPath, roiLabels, roiScores, roiRelCoords, padWidth
         h_border = int((imgHeight - imgWidth)/2)
         v_border = 0
 
-    PAD_COLOR = [104, 117, 124] # [114, 114, 114]
+    PAD_COLOR = [103, 116, 123] # [114, 114, 114]
     cv_img = cv2.imread(imgPath)
     rgb_img = cv2.cvtColor(cv_img,cv2.COLOR_BGR2RGB)
     resized = cv2.resize(rgb_img, (imgWidth, imgHeight), interpolation=cv2.INTER_NEAREST)
@@ -56,10 +56,9 @@ def visualizeResultsFaster(imgPath, roiLabels, roiScores, roiRelCoords, padWidth
         assert(len(roiLabels) == len(roiScores))
         minScore = min(roiScores)
         print("roiScores min: {}, max: {}, threshold: {}".format(minScore, max(roiScores), decisionThreshold))
-        if minScore < decisionThreshold:
+        if minScore > decisionThreshold:
             decisionThreshold = minScore * 0.5
             print("reset decision threshold to: {}".format(decisionThreshold))
-            #pdb.set_trace()
 
     # draw multiple times to avoid occlusions
     for iter in range(0,3):
@@ -107,9 +106,7 @@ def load_resize_and_pad(image_path, width, height, pad_value=114):
     img = cv2.imread(image_path)
     img_width = len(img[0])
     img_height = len(img)
-
     scale_w = img_width > img_height
-
     target_w = width
     target_h = height
 
@@ -122,10 +119,8 @@ def load_resize_and_pad(image_path, width, height, pad_value=114):
 
     top = int(max(0, np.round((height - target_h) / 2)))
     left = int(max(0, np.round((width - target_w) / 2)))
-
     bottom = height - top - target_h
     right = width - left - target_w
-
     resized_with_pad = cv2.copyMakeBorder(resized, top, bottom, left, right,
                                           cv2.BORDER_CONSTANT, value=[pad_value, pad_value, pad_value])
 
@@ -158,7 +153,6 @@ def eval_and_plot_faster_rcnn(eval_model, num_images_to_plot, test_map_file, img
 
         # evaluate single image
         _, cntk_img_input, dims = load_resize_and_pad(imgPath, img_shape[2], img_shape[1])
-
 
         dims_input = np.array(dims, dtype=np.float32)
         dims_input.shape = (1,) + dims_input.shape
@@ -194,32 +188,8 @@ def eval_and_plot_faster_rcnn(eval_model, num_images_to_plot, test_map_file, img
 
 
 ####################################
-# Subset of helper library
-# used in the fastRCNN code
+# helper library
 ####################################
-# Typical meaning of variable names -- Computer Vision:
-#    pt                     = 2D point (column,row)
-#    img                    = image
-#    width,height (or w/h)  = image dimensions
-#    bbox                   = bbox object (stores: left, top,right,bottom co-ordinates)
-#    rect                   = rectangle (order: left, top, right, bottom)
-#    angle                  = rotation angle in degree
-#    scale                  = image up/downscaling factor
-
-# Typical meaning of variable names -- general:
-#    lines,strings = list of strings
-#    line,string   = single string
-#    xmlString     = string with xml tags
-#    table         = 2D row/column matrix implemented using a list of lists
-#    row,list1D    = single row in a table, i.e. single 1D-list
-#    rowItem       = single item in a row
-#    list1D        = list of items, not necessarily strings
-#    item          = single item of a list1D
-#    slotValue     = e.g. "terminator" in: play <movie> terminator </movie>
-#    slotTag       = e.g. "<movie>" or "</movie>" in: play <movie> terminator </movie>
-#    slotName      = e.g. "movie" in: play <movie> terminator </movie>
-#    slot          = e.g. "<movie> terminator </movie>" in: play <movie> terminator </movie>
-
 
 def imread(imgPath, boThrowErrorIfExifRotationTagSet = True):
     if not os.path.exists(imgPath):

@@ -5,14 +5,7 @@
 # ==============================================================================
 
 import zipfile
-
-try:
-    import cv2
-except ImportError:
-    import pip
-    pip.main(['install', '--user', 'opencv-python'])
-    import cv2
-
+import cv2 # pip install opencv-python
 import numpy as np
 import os
 import pdb

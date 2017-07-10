@@ -109,6 +109,15 @@
     },
     {
         "category": ["Image"],
+        "name":  "Faster R-CNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Detection/FasterRCNN",
+        "description":  "Train object detection from images by adapting pre-trained classification models on arbitrarily sized regions of interest using ROI pooling and region proposal networks.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "7/25/2017"
+    },
+    {
+        "category": ["Image"],
         "name":  "GoogLeNet (BN-Inception)",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/BN-Inception#cntk-examples-imageclassificationgooglenetbn-inception",
         "description":  "GoogLeNet (BN-Inception) network for image classification.",
