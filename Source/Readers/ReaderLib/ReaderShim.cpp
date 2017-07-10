@@ -71,6 +71,8 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
     {
         m_nameToStreamId.insert(std::make_pair(i.m_name, i.m_id));
     }
+
+    m_currentState = m_reader->GetState();
 }
 
 template <class ElemType>
@@ -116,7 +118,7 @@ void ReaderShim<ElemType>::SetCurrentSamplePosition(size_t currentSamplePosition
 
     // Set current position.
     Dictionary state;
-    state[L"globalSamplePosition"] = currentSamplePosition;
+    state[L"minibatchSourcePosition"] = currentSamplePosition;
     m_reader->SetState(state);
     m_endOfEpoch = false;
 
@@ -436,7 +438,7 @@ size_t ReaderShim<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
 template <class ElemType>
 size_t ReaderShim<ElemType>::GetCurrentSamplePosition()
 {
-    return m_currentState[L"globalSamplePosition"].Value<size_t>();
+    return m_currentState[L"minibatchSourcePosition"].Value<size_t>();
 }
 template <class ElemType>
 Dictionary ReaderShim<ElemType>::GetState()

@@ -12,11 +12,11 @@
 
 namespace CNTK
 {
-#define StartExceptionHandling                                                                  \
+#define START_EXCEPTION_HANDLING                                                                \
     try                                                                                         \
     {
 
-#define EndExceptionHandling                                                                    \
+#define END_EXCEPTION_HANDLING                                                                  \
     }                                                                                           \
     catch (const Swig::DirectorException &e) { SWIG_exception(SWIG_RuntimeError, e.what()); }   \
     catch (const Microsoft::MSR::CNTK::IExceptionWithCallStackBase& err)                        \

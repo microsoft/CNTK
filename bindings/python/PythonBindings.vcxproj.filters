@@ -362,7 +362,6 @@
       <Filter>cntk\ops\tests</Filter>
     </None>
   </ItemGroup>
-</Project>
   <ItemGroup>
     <ClInclude Include="cntk\cntk_py_wrap.h">
       <Filter>cntk</Filter>

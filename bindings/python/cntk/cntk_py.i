@@ -1,46 +1,36 @@
 %module(directors="1") cntk_py
 
-%feature("except") *::StreamInfos %{
-    StartExceptionHandling;
+// Macro to run a method with a released GIL.
+%define RUN_WITHOUT_GIL(METHOD)
+%feature("except") METHOD %{
+    START_EXCEPTION_HANDLING
     AllowThreadsGuard allowThreads;
     $action
-    EndExceptionHandling;
+    END_EXCEPTION_HANDLING
 %}
+%enddef
 
-%feature("except") *::GetNextMinibatch %{
-    StartExceptionHandling;
-    AllowThreadsGuard allowThreads;
+// Macros to run a method with aquired GIL.
+%define RUN_WITH_GIL(METHOD)
+%feature("except") METHOD %{
+    START_EXCEPTION_HANDLING
+    GilStateGuard gilGuard;
     $action
-    EndExceptionHandling;
+    END_EXCEPTION_HANDLING
 %}
+%enddef
 
-%feature("except") *::GetCheckpointState %{
-    StartExceptionHandling;
-    AllowThreadsGuard allowThreads;
-    $action
-    EndExceptionHandling;
-%}
+// Swig does not understand fully specified exceptions,
+// So we use a mask * to allow release of GIL on all methods
+// with the following signatures.
 
-%feature("except") *::RestoreFromCheckpoint %{
-    StartExceptionHandling;
-    AllowThreadsGuard allowThreads;
-    $action
-    EndExceptionHandling;
-%}
-
-%feature("except") *::Train %{
-    StartExceptionHandling;
-    AllowThreadsGuard allowThreads;
-    $action
-    EndExceptionHandling;
-%}
-
-%feature("except") ~MinibatchSource %{
-    StartExceptionHandling;
-    AllowThreadsGuard allowThreads;
-    $action
-    EndExceptionHandling;
-%}
+// TODO: This should also be done for the training session and trainer.
+// BUT: All directors should handle GIL properly, which requires changes in the API
+RUN_WITHOUT_GIL(*::GetNextMinibatch);
+RUN_WITHOUT_GIL(*::StreamInfos);
+RUN_WITHOUT_GIL(*::GetCheckpointState);
+RUN_WITHOUT_GIL(*::RestoreFromCheckpoint);
+RUN_WITHOUT_GIL(~MinibatchSource);
 
 %include "stl.i"
 %include "std_wstring.i"
@@ -729,6 +719,7 @@ public:
 
 %{
     #include "CNTKLibrary.h"
+    #include "CNTKLibraryExperimental.h"
     #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
     #include "numpy/ndarraytypes.h"
     #include "numpy/arrayobject.h"
@@ -1625,6 +1616,7 @@ namespace CNTK
         const std::unordered_set<StreamInformation>& StreamInfos() override
         {
             std::call_once(m_streamInfosInitFlag, [this]() {
+                GilStateGuard gilGuard;
                 PyObject *pylist = PyList_New(0);
 
                 // Necassary due to SWIG convention, it seems the reference is stolen by the function,
@@ -1673,6 +1665,7 @@ namespace CNTK
             size_t workerRank,
             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) override
         {
+            GilStateGuard gilGuard;
             PyObject* pyInfoMap = PyDict_New();
 
             // Necassary due to SWIG convention, it seems the reference is stolen by the function,
@@ -1717,6 +1710,7 @@ namespace CNTK
 
         Dictionary GetCheckpointState() const
         {
+            GilStateGuard gilGuard;
             return _GetCheckpointState();
         }
     };

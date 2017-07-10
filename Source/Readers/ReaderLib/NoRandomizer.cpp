@@ -62,7 +62,7 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
         m_config.m_totalEpochSizeInSamples = m_sweepSizeInSamples;
 
     Dictionary state;
-    state[L"globalSamplePosition"] = m_config.m_totalEpochSizeInSamples * config.m_epochIndex;
+    state[L"minibatchSourcePosition"] = m_config.m_totalEpochSizeInSamples * config.m_epochIndex;
     SetState(state);
 }
 
@@ -151,7 +151,7 @@ void NoRandomizer::GetNextSequenceDescriptions(size_t numGlobalSamplesToLoad, si
 Dictionary NoRandomizer::GetState()
 {
     Dictionary result;
-    result[L"globalSamplePosition"] = m_globalSamplePosition;
+    result[L"minibatchSourcePosition"] = m_globalSamplePosition;
     return result;;
 }
 
@@ -253,7 +253,7 @@ Sequences NoRandomizer::GetNextSequences(size_t globalSampleCount, size_t localS
 
 void NoRandomizer::SetState(const Dictionary& state)
 {
-    size_t samplePosition = state[L"globalSamplePosition"].Value<size_t>();
+    size_t samplePosition = ValueOf(state, L"minibatchSourcePosition");
 
     m_currentSequencePositionInChunk = 0;
     m_globalSamplePosition = samplePosition;

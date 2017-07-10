@@ -9,6 +9,6 @@
 #include "Reader.h"
 
 // Current a stop gap to redirec to CNTK v2 interfaces.
-#include "CNTKLibrary.h"
+#include "CNTKLibraryExperimental.h"
 #include "Config.h"
 using Microsoft::MSR::CNTK::ConfigParameters;

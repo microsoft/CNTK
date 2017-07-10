@@ -68,11 +68,6 @@ private:
     }
 
 protected:
-    inline size_t ValueOf(const Dictionary& d, const std::wstring& k)
-    {
-        return d[k].ValueType() == DictionaryValue::Type::Int ? (size_t)d[k].Value<int>() : d[k].Value<size_t>();
-    };
-
     // Checks if a sequence descriptor is a special marker for the end of the sweep.
     inline bool IsEndOfSweep(const SequenceDescription& sequence)
     {

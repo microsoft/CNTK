@@ -16,7 +16,7 @@ struct Sequences
 {
     // Data for up to a requested number of sequences.
     // Indices in the outer vector have to correspond to the stream ids returned from the GetStreamDescriptions().
-    std::vector<std::vector<::CNTK::SequenceDataPtr>> m_data;
+    std::vector<std::vector<SequenceDataPtr>> m_data;
 
     // Indicates whether the returned data comes from a sweep end or
     // crosses a sweep boundary (and as a result includes sequences 

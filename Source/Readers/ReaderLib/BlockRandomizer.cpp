@@ -56,7 +56,7 @@ BlockRandomizer::BlockRandomizer(
 Dictionary BlockRandomizer::GetState()
 {
     Dictionary result;
-    result[L"globalSamplePosition"] = m_globalSamplePosition;
+    result[L"minibatchSourcePosition"] = m_globalSamplePosition;
     return result;
 }
 
@@ -86,7 +86,7 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 
     m_epochStartPosition = m_epochSize * config.m_epochIndex;
     Dictionary state;
-    state[L"globalSamplePosition"] = m_epochStartPosition;
+    state[L"minibatchSourcePosition"] = m_epochStartPosition;
     SetState(state);
     if (m_verbosity >= Notification)
     {
@@ -472,7 +472,7 @@ void BlockRandomizer::Prefetch(ChunkIdType chunkId)
 
 void BlockRandomizer::SetState(const Dictionary& state)
 {
-    auto currentSamplePosition = state[L"globalSamplePosition"].Value<size_t>();
+    auto currentSamplePosition = ValueOf(state, L"minibatchSourcePosition");
     PrepareNewSweepIfNeeded(currentSamplePosition);
 
     // Sets sequence cursor to the sequence that corresponds to the epoch start position.

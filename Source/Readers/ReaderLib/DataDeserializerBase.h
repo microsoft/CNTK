@@ -24,7 +24,7 @@ public:
         return GetSequenceDescriptionByKey(primary.m_key, result);
     }
 
-    virtual std::vector<StreamInformation> GetStreamDescriptions() override
+    virtual std::vector<::CNTK::StreamInformation> GetStreamDescriptions() override
     {
         return m_streams;
     }

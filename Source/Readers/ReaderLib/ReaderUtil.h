@@ -192,4 +192,10 @@ inline T* ReadTillDelimiter(T* begin, T* end, const std::vector<bool>& delimiter
     return end;
 }
 
+// Returns size_t or int value casted to size_t if present, otherwise throws.
+inline size_t ValueOf(const Dictionary& d, const std::wstring& k)
+{
+    return d[k].ValueType() == DictionaryValue::Type::Int ? (size_t)d[k].Value<int>() : d[k].Value<size_t>();
+};
+
 }

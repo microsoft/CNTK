@@ -54,7 +54,6 @@ namespace CNTK
         size_t m_maxNumSweepsToRead;
         size_t m_truncationLength;
         std::unordered_map<StreamInformation, MinibatchData> m_minibatchData;
-        std::vector<StreamInformation> m_compositeDataReaderStreamDescs;
 
         // Restore state
         Internal::Optional<Dictionary> m_restorePosition;
