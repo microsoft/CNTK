@@ -2849,7 +2849,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     floatargvector momentumPerSample = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
     floatargvector momentumAsTimeConstant = configSGD(L"momentumAsTimeConstant", ConfigRecordType::Array(floatargvector()));
     bool useNesterovMomentum = configSGD(L"useNAG", false);
-    bool useMomentumCorrection = configSGD(L"MomentumCorrection", false);
+    bool useMomentumCorrection = configSGD(L"momentumCorrection", false);
 
     m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t) 0);
 
