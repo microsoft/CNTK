@@ -31,7 +31,7 @@ template <class ElemType>
         UpdateRngOffset(GetRngOffset() + result.GetNumElements());
         break;
     default:
-        RuntimeError("RandomDistributionNode::ForwardProp: Unkown random distribution type code %d", m_type);
+        RuntimeError("RandomDistributionNode::ForwardProp: Unknown random distribution type code %d", m_type);
     }
 }
 
