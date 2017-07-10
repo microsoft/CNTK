@@ -12,7 +12,7 @@ from cntk.io import MinibatchSource, ImageDeserializer, CTFDeserializer, StreamD
 from cntk.io.transforms import scale
 from cntk.layers import placeholder, Constant
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
-from cntk.logging import log_number_of_parameters, ProgressPrinter
+from cntk.logging import log_number_of_parameters, ProgressPrinter, TraceLevel
 from cntk.logging.graph import find_by_name, plot
 import PARAMETERS
 import numpy as np
@@ -31,9 +31,11 @@ train_map_filename = 'train.txt'
 test_map_filename = 'test.txt'
 rois_filename_postfix = '.rois.txt'
 roilabels_filename_postfix = '.roilabels.txt'
+gt_filename_postfix = '.GTRois.txt'
 features_stream_name = 'features'
 roi_stream_name = 'rois'
 label_stream_name = 'roiLabels'
+gt_stream_name = 'roiAndLabel'
 
 p = PARAMETERS.get_parameters_for_dataset()
 base_path = p.cntkFilesDir
@@ -66,6 +68,7 @@ else:
 def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, data_path, data_set):
     rois_dim = 4 * n_rois
     label_dim = n_classes * n_rois
+    gt_dim=100
 
     path = os.path.normpath(os.path.join(abs_path, data_path))
     if data_set == 'test':
@@ -74,6 +77,7 @@ def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, dat
         map_file = os.path.join(path, train_map_filename)
     roi_file = os.path.join(path, data_set + rois_filename_postfix)
     label_file = os.path.join(path, data_set + roilabels_filename_postfix)
+    gt_file = os.path.join(p.imgDir, data_set + gt_filename_postfix)
 
     if not os.path.exists(map_file) or not os.path.exists(roi_file) or not os.path.exists(label_file):
         raise RuntimeError("File '%s', '%s' or '%s' does not exist. "
@@ -92,9 +96,11 @@ def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, dat
         rois = StreamDef(field=roi_stream_name, shape=rois_dim, is_sparse=False)))
     label_source = CTFDeserializer(label_file, StreamDefs(
         roiLabels = StreamDef(field=label_stream_name, shape=label_dim, is_sparse=False)))
+    gt_source = CTFDeserializer(gt_file, StreamDefs(
+        gts = StreamDef(field=gt_stream_name, shape=gt_dim)))
 
     # define a composite reader
-    return MinibatchSource([image_source, roi_source, label_source], max_samples=sys.maxsize, randomize=data_set == "train")
+    return MinibatchSource([image_source, roi_source, label_source, gt_source], max_samples=sys.maxsize, randomize=data_set == "train", trace_level=TraceLevel.Error,)
 
 # Defines the Fast R-CNN network model for detecting objects in images
 def frcn_predictor(features, rois, n_classes, model_path):

@@ -8,6 +8,7 @@ from cntk.ops.functions import UserFunction
 from cntk import *
 
 my_path = os.path.dirname(os.path.realpath(__file__))
+my_path = my_path.replace('\\','/')
 cls_maps = [ClassMap(my_path + r"/../../DataSets/Grocery/Class_map.txt")]
 tree_map = TreeMap.tree_map_from_cls_maps(cls_maps, use_background=True, only_valid_leafs=True, reduce_graph=True, use_multiply_with_parent=False)
 params = par.get_parameters_for_dataset()
@@ -33,7 +34,7 @@ flat_tree_grocery_str = '[' \
     '   {"id": 16, "childrens": [], "syn": "Synset(\'avocado.n.01\')", "strings": ["avocado"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}' \
     ']'
 
-if False:
+if True:
     tree_map = TreeMap.tree_map_from_tree_str(flat_tree_grocery_str, use_background=True, use_multiply_with_parent=False)
     cls_maps = list(tree_map.meta_map.keys())
 
@@ -57,7 +58,8 @@ def top_down_eval(vector):
 
     # switch to tree descending to get log(N) instead of n
     for region in tree_map.softmax_regions:
-        if start < region[0]: continue
+        # todo: check: if start < region[0]: continue
+        if start >= region[1]: continue
 
         node_index = np.argmax(vector[region[0]:region[1]], axis=0) + region[0]
         #if np.add.reduce(out_vec)==0 and np.argmax(vector[0:3])!=0: import ipdb;ipdb.set_trace()
