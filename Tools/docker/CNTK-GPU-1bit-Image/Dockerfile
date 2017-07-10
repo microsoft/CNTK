@@ -51,7 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         # For Java Bindings
         openjdk-7-jdk \
         # For SWIG
-        libpcre++-dev && \
+        libpcre3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN OPENMPI_VERSION=1.10.3 && \
@@ -147,7 +147,8 @@ RUN mv /bin/sh /bin/sh.orig && \
 RUN cd /root && \
     wget -q http://prdownloads.sourceforge.net/swig/swig-3.0.10.tar.gz -O - | tar xvfz - && \
     cd swig-3.0.10 && \
-    ./configure --without-perl5 && \
+    # Note: we specify --without-alllang to suppress building tests and examples for specific languages.
+    ./configure --without-alllang && \
     make -j $(nproc) && \
     make install
 

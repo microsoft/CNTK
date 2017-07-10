@@ -461,7 +461,7 @@ template class NDCG1EvalNode<double>;
 // Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
 // Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
 // 
-// The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and tokensToIgnore contains label '-' then
+// The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and tokensToIgnore contains index of label '-' then
 // given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
 //
 // The returned error is computed as: EditDistance(s1,s2) * length(s1') / length(s1)
@@ -480,7 +480,7 @@ public:
     // delPen - deletion penalty
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
-    // tokensToIgnore - list of samples to ignore during edit distance evaluation
+    // tokensToIgnore - list of indices of samples to ignore during edit distance evaluation
     EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 1.0f, float delPen = 1.0f, float insPen = 1.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
         : Base(deviceId, name), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen), m_squashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
     {
@@ -512,6 +512,7 @@ public:
         MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
         Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_subPen, m_delPen, m_insPen, m_squashInputs, m_tokensToIgnore);
+        Value().TransferToDeviceIfNotThere(Input(0)->GetDeviceId());
     }
 
     virtual void Validate(bool isFinalValidationPass) override
@@ -575,7 +576,7 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // tokensToIgnore - list of samples to ignore during edit distance evaluation
-    static ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
+    ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
         float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& tokensToIgnore)
     {
         std::vector<int> firstSeqVec, secondSeqVec;
@@ -615,8 +616,12 @@ public:
 
                 //calculate edit distance
                 size_t firstSize = firstSeqVec.size();
-                totalSampleNum += firstSize;
                 size_t secondSize = secondSeqVec.size();
+                if (Base::HasEnvironmentPtr() && Base::Environment().IsV2Library())
+                    totalSampleNum += secondSize;
+                else 
+                    totalSampleNum += firstSize;
+
                 grid.Resize(firstSize + 1, secondSize + 1);
                 insMatrix.Resize(firstSize + 1, secondSize + 1);
                 delMatrix.Resize(firstSize + 1, secondSize + 1);

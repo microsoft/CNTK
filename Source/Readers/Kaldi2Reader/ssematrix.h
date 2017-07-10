@@ -511,7 +511,7 @@ public:
     }
 
 private:
-    // guess how many colunmns of this matrix will fit into the cache
+    // guess how many columns of this matrix will fit into the cache
     // This is a helper function for matrix matprod and variants.
     // Result also gets aligned to 4 because matprod benefits from it.
     size_t cacheablecols() const
