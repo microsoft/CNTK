@@ -1,9 +1,8 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
 
 import numpy as np
 
@@ -41,7 +40,7 @@ def bbox_transform(ex_rois, gt_rois):
 # pred_w = np.exp(dw) * widths
 def bbox_transform_inv(boxes, deltas):
     if boxes.shape[0] == 0:
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         return np.zeros((0, deltas.shape[1]), dtype=deltas.dtype)
 
     boxes = boxes.astype(deltas.dtype, copy=False)
