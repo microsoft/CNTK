@@ -727,7 +727,10 @@ namespace CNTK
                         axis.push_back(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
                         beginIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
                         endIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
-                        strides.push_back(functionConfig[PrimitiveFunction::AttributeNameSliceStrides].Value<int>());
+                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStrides))
+                            strides.push_back(functionConfig[PrimitiveFunction::AttributeNameSliceStrides].Value<int>());
+                        else
+                            strides.push_back(1);
                     }
                     else
                     {
