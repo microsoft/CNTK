@@ -10,7 +10,7 @@
 #include "Basics.h"
 #include "ReaderConstants.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 class MemoryBuffer
 {
@@ -72,4 +72,4 @@ private:
     size_t m_line;                               // Current line.
 };
 
-}}}
+}

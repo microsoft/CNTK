@@ -21,35 +21,38 @@ using namespace Microsoft::MSR::CNTK;
 
 #pragma warning(disable: 4459) // declaration of 'boost_scope_exit_aux_args' hides global declaration
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
-// A thin wrapper around CNTK text format reader
-template <class ElemType>
-class CNTKTextFormatReaderTestRunner
-{
-    TextParser<ElemType> m_parser;
-
-public:
-    ChunkPtr m_chunk;
-
-    CNTKTextFormatReaderTestRunner(const string& filename,
-        const vector<StreamDescriptor>& streams, unsigned int maxErrors) :
-        m_parser(std::make_shared<CorpusDescriptor>(true), wstring(filename.begin(), filename.end()), streams, true)
+    // A thin wrapper around CNTK text format reader
+    template <class ElemType>
+    class CNTKTextFormatReaderTestRunner
     {
-        m_parser.SetMaxAllowedErrors(maxErrors);
-        m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Info);
-        m_parser.SetChunkSize(SIZE_MAX);
-        m_parser.SetNumRetries(0);
-        m_parser.Initialize();
-    }
-    // Retrieves a chunk of data.
-    void LoadChunk()
-    {
-        m_chunk = m_parser.GetChunk(0);
-    }
-};
+        TextParser<ElemType> m_parser;
 
-namespace Test {
+    public:
+        ChunkPtr m_chunk;
+
+        CNTKTextFormatReaderTestRunner(const string& filename,
+            const vector<StreamDescriptor>& streams, unsigned int maxErrors) :
+            m_parser(std::make_shared<CorpusDescriptor>(true), wstring(filename.begin(), filename.end()), streams, true)
+        {
+            m_parser.SetMaxAllowedErrors(maxErrors);
+            m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Info);
+            m_parser.SetChunkSize(SIZE_MAX);
+            m_parser.SetNumRetries(0);
+            m_parser.Initialize();
+        }
+        // Retrieves a chunk of data.
+        void LoadChunk()
+        {
+            m_chunk = m_parser.GetChunk(0);
+        }
+    };
+}
+
+namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
+
+using namespace ::CNTK;
 
 struct CNTKTextFormatReaderFixture : ReaderFixture
 {
@@ -756,12 +759,12 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_invalid_inputs)
     vector<StreamDescriptor> streams(2);
     streams[0].m_alias = "A";
     streams[0].m_name = L"A";
-    streams[0].m_storageType = StorageType::dense;
+    streams[0].m_storageFormat = StorageFormat::Dense;
     streams[0].m_sampleDimension = 1;
 
     streams[1].m_alias = "B";
     streams[1].m_name = L"B";
-    streams[1].m_storageType = StorageType::sparse_csc;
+    streams[1].m_storageFormat = StorageFormat::SparseCSC;
     streams[1].m_sampleDimension = 10;
 
     CNTKTextFormatReaderTestRunner<float> testRunner("invalid_inputs.txt", streams, 99999);
@@ -813,7 +816,7 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_no_trailing_newline_valid_input)
     vector<StreamDescriptor> streams(1);
     streams[0].m_alias = "A";
     streams[0].m_name = L"A";
-    streams[0].m_storageType = StorageType::dense;
+    streams[0].m_storageFormat = StorageFormat::Dense;
     streams[0].m_sampleDimension = 1;
 
     string filename = "no_trailing_newline.txt";
@@ -846,7 +849,7 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_no_trailing_newline_invalid_input)
     vector<StreamDescriptor> streams(1);
     streams[0].m_alias = "A";
     streams[0].m_name = L"A";
-    streams[0].m_storageType = StorageType::dense;
+    streams[0].m_storageFormat = StorageFormat::Dense;
     streams[0].m_sampleDimension = 1;
 
     string filename = "no_trailing_newline.txt";
@@ -877,7 +880,7 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_extra_input_should_be_ignored)
     vector<StreamDescriptor> streams(1);
     streams[0].m_alias = "A";
     streams[0].m_name = L"A";
-    streams[0].m_storageType = StorageType::dense;
+    streams[0].m_storageFormat = StorageFormat::Dense;
     streams[0].m_sampleDimension = 1;
 
     string filename = "extra_input.txt";

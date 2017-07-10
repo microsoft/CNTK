@@ -1012,7 +1012,7 @@ def GlobalMaxPooling(name=''):
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
     '''
-    return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False, op_name='GlobalMaxPooling', name=name)
+    return _Pooling(PoolingType_Max, NDShape.unknown().dimensions(), pad=False, op_name='GlobalMaxPooling', name=name)
 
 
 def GlobalAveragePooling(name=''):
@@ -1042,7 +1042,7 @@ def GlobalAveragePooling(name=''):
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
     '''
-    return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False, op_name='GlobalAveragePooling', name=name)
+    return _Pooling(PoolingType_Average, NDShape.unknown().dimensions(), pad=False, op_name='GlobalAveragePooling', name=name)
 
 
 # Create a max unpooling layer

@@ -8,11 +8,11 @@
 #include "CudaMemoryProvider.h"
 #include "HeapMemoryProvider.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
-std::vector<StreamDescriptionPtr> ReaderBase::GetStreamDescriptions()
+std::vector<StreamInformation> ReaderBase::GetStreamDescriptions()
 {
-    return m_deserializer->GetStreamDescriptions();
+    return m_deserializer->StreamInfos();
 }
 
 ReaderBase::~ReaderBase()
@@ -39,13 +39,13 @@ void ReaderBase::StartEpoch(const EpochConfiguration& config, const std::map<std
         {
             // TODO: In case when the network requires less inputs,
             // we should not even have them.
-            if (m_requiredInputs.find(streams[i]->m_name) == m_requiredInputs.end())
+            if (m_requiredInputs.find(streams[i].m_name) == m_requiredInputs.end())
             {
                 m_memoryProviders[i] = std::make_shared<HeapMemoryProvider>();
                 continue;
             }
 
-            int deviceId = m_requiredInputs[streams[i]->m_name];
+            int deviceId = m_requiredInputs[streams[i].m_name];
             if (deviceId < 0)
                 m_memoryProviders[i] = std::make_shared<HeapMemoryProvider>();
             else
@@ -63,14 +63,14 @@ Minibatch ReaderBase::ReadMinibatch()
     return m_packer->ReadMinibatch();
 }
 
-size_t ReaderBase::GetCurrentSamplePosition()
+std::map<std::wstring, size_t> ReaderBase::GetState()
 {
-    return m_sequenceEnumerator->GetCurrentSamplePosition();
+    return m_sequenceEnumerator->GetState();
 }
 
-void ReaderBase::SetCurrentSamplePosition(size_t currentSamplePosition)
+void ReaderBase::SetState(const std::map<std::wstring, size_t>& state)
 {
-    m_sequenceEnumerator->SetCurrentSamplePosition(currentSamplePosition);
+    m_sequenceEnumerator->SetState(state);
     m_packer->Reset();
 }
 
@@ -80,4 +80,4 @@ void ReaderBase::SetConfiguration(const ReaderConfiguration& config, const std::
     m_packer->SetConfiguration(config, m_memoryProviders);
 }
 
-}}}
+}

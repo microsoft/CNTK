@@ -2719,7 +2719,7 @@ def placeholder(shape=None, dynamic_axes=None, name=''):
     from cntk.cntk_py import placeholder_variable, NDShape, Axis
 
     if shape is None:
-        shape = NDShape.unknown.dimensions()
+        shape = NDShape.unknown().dimensions()
     else:
         shape = sanitize_shape(shape)
 

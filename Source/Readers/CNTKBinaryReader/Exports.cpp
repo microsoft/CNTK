@@ -12,8 +12,11 @@
 #include "CNTKBinaryReader.h"
 #include "HeapMemoryProvider.h"
 #include "CudaMemoryProvider.h"
+#include "V2Dependencies.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 // TODO: Memory provider should be injected by SGD.
 
@@ -31,4 +34,4 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 {
     *preader = new ReaderShim<double>(factory);
 }
-} } }
+}

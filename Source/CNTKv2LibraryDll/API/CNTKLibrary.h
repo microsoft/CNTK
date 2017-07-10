@@ -34,16 +34,6 @@
 namespace CNTK
 {
     ///
-    /// Checked mode enables additional runtime verification such as:
-    /// - Tracking NaN occurrences in sequence gaps.
-    /// - Function graph verification after binding of free static axes to actual values at runtime
-    /// 
-    /// Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
-    ///
-    CNTK_API void SetCheckedMode(bool enable);
-    bool GetCheckedMode();
-
-    ///
     /// Enumeration type denoting data type of symbolic data entities or actual data.
     ///
     enum class DataType : unsigned int
@@ -51,11 +41,11 @@ namespace CNTK
         Unknown = 0,
         Float = 1,
         Double = 2,
+        UChar = 3, // So far only used internally in deserializers.
 
         /* TODO:
         Bit,
         Char,
-        UChar,
         Short,
         UShort,
         Int,
@@ -150,6 +140,262 @@ namespace CNTK
         Warning = 1,
         Info = 2
     };
+
+    ///
+    /// Denotes a multi-dimensional rectangular shape.
+    ///
+    class NDShape final
+    {
+        friend bool operator==(const NDShape& first, const NDShape& second);
+        friend class PrimitiveFunction;
+
+        static const size_t SentinelDimValueForUnknownShape = (size_t)-2;
+    public:
+
+        ///
+        /// A placeholder value to use for an axis whose dimension is unknown and is to be inferred by the system.
+        ///
+        static const size_t InferredDimension = (size_t)-1;
+
+        ///
+        /// A placeholder value to use for an axis whose dimension is unbound and is only determined
+        /// when actual data is bound to the variable. Note that since the actual dimension is bound
+        /// from actual minibatch data, the dimension can vary across different evaluations.
+        ///
+        static const size_t FreeDimension = (size_t)-3;
+
+        ///
+        /// A placeholder shape to use to denote an unknown shape
+        ///
+        inline static const NDShape& Unknown()
+        {
+            const static NDShape unknown(1, SentinelDimValueForUnknownShape);
+            return unknown;
+        }
+
+    public:
+        ///
+        /// Construct a NDShape with 0 axes, which denotes a scalar.
+        ///
+        NDShape() {}
+
+        ///
+        /// Construct a NDShape instance with the specified rank and dimensionality in each axis.
+        ///
+        explicit NDShape(size_t numAxes, size_t dimension = InferredDimension)
+            : m_shapeDims(numAxes, dimension)
+        {}
+
+        ///
+        /// Construct a NDShape instance with specified dimensions.
+        ///
+        NDShape(const std::vector<size_t>& dimensions)
+            : m_shapeDims(dimensions)
+        {}
+
+        ///
+        /// Construct a NDShape instance with specified dimensions.
+        ///
+        NDShape(const std::initializer_list<size_t>& dimensions)
+            : m_shapeDims(dimensions)
+        {}
+
+        ///
+        /// Returns the dimensions of 'this' shape as a std::vector<size_t>
+        ///
+        const std::vector<size_t>& Dimensions() const { return m_shapeDims; }
+
+        ///
+        /// Returns a boolean indicating if 'this' shape is the special Unknown shape
+        ///
+        bool IsUnknown() const { return (*this == NDShape::Unknown()); }
+
+        ///
+        /// Returns the rank of 'this' shape.
+        ///
+        size_t Rank() const { return m_shapeDims.size(); }
+
+        ///
+        /// Returns a reference to dimension size for the specified axis.
+        ///
+        size_t& operator[](size_t axisId)
+        {
+            return m_shapeDims.at(axisId);
+        }
+
+        ///
+        /// Returns the dimension size for the specified axis.
+        ///
+        size_t operator[](size_t axisId) const
+        {
+            return m_shapeDims.at(axisId);
+        }
+
+        ///
+        /// Creates and returns a new NDShape instance with the same dimensions as 'this' shape's specified axis range [beginAxisId, endAxisId).
+        ///
+        NDShape SubShape(size_t beginAxisId = 0, size_t endAxisId = SIZE_MAX) const
+        {
+            endAxisId = (endAxisId == SIZE_MAX) ? Rank() : endAxisId;
+            if ((endAxisId < beginAxisId) || (endAxisId > Rank()))
+                InvalidArgument("NDShape::SubShape: The specified endAxisId (%zu) must not exceed the rank (%zu) of 'this' NDShape and must be >= than the specified beginAxisId (%zu)", endAxisId, Rank(), beginAxisId);
+
+            std::vector<size_t> subShapeDims(m_shapeDims.begin() + beginAxisId, m_shapeDims.begin() + endAxisId);
+            return subShapeDims;
+        }
+
+        ///
+        /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is unknown/inferred (aka == NDShape::InferredDimension).
+        ///
+        bool HasInferredDimension() const
+        {
+            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), (size_t)InferredDimension) != m_shapeDims.end());
+        }
+
+        ///
+        /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is free (aka == NDShape::FreeDimension).
+        ///
+        bool HasFreeDimension() const
+        {
+            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), (size_t)FreeDimension) != m_shapeDims.end());
+        }
+
+        ///
+        /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is free or inferred
+        /// i.e. (== NDShape::FreeDimension or == NDShape::InferredDimension).
+        ///
+        bool HasUnboundDimension() const
+        {
+            return HasFreeDimension() || HasInferredDimension();
+        }
+
+        ///
+        /// Returns the total size of the rectangular shape that 'this' shape denotes.
+        ///
+        size_t TotalSize() const
+        {
+            if (HasUnboundDimension())
+                RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension or FreeDimension.", AsString().c_str());
+
+            size_t totalSize = 1;
+            for (auto dim : m_shapeDims)
+                totalSize *= dim;
+
+            return totalSize;
+        }
+
+        ///
+        /// Creates and returns a new shape constructed by appending the dimensions of the specified 'shape' to 'this' shape's dimensions.
+        ///
+        NDShape AppendShape(const NDShape& shape) const
+        {
+            std::vector<size_t> newShapeDims(Rank() + shape.Rank());
+            std::copy(m_shapeDims.begin(), m_shapeDims.end(), newShapeDims.begin());
+            std::copy(shape.m_shapeDims.begin(), shape.m_shapeDims.end(), newShapeDims.begin() + m_shapeDims.size());
+
+            return newShapeDims;
+        }
+
+        ///
+        /// Create a string representation of 'this' NDShape for display/printing purposes
+        ///
+        std::wstring AsString() const
+        {
+            if (IsUnknown())
+            {
+                return L"[???]";
+            }
+            else
+            {
+                bool reverseShape = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+                auto displayShape = *this;
+                if (reverseShape)
+                {
+                    for (size_t i = 0, j = Rank() - 1; i < Rank(); ++i, --j)
+                        displayShape[i] = (*this)[j];
+                }
+
+                std::wstringstream wStrStream;
+                wStrStream << L"[";
+                for (size_t i = 0; i < Rank(); i++)
+                {
+                    if (i != 0)
+                        wStrStream << L" x ";
+
+                    if (displayShape[i] == InferredDimension)
+                        wStrStream << "?";
+                    else if (displayShape[i] == FreeDimension)
+                        wStrStream << "*";
+                    else
+                        wStrStream << displayShape[i];
+                }
+                wStrStream << L"]";
+                return wStrStream.str();
+            }
+        }
+
+    private:
+        std::vector<size_t> m_shapeDims;
+    };
+
+    inline bool operator==(const NDShape& first, const NDShape& second)
+    {
+        return first.m_shapeDims == second.m_shapeDims;
+    }
+
+    inline bool operator!=(const NDShape& first, const NDShape& second)
+    {
+        return !(first == second);
+    }
+
+    typedef int SparseIndexType;
+
+    static const unsigned long SentinelValueForAutoSelectRandomSeed = std::numeric_limits<unsigned long>::max() - 2; // An arbitrary choice of sentinel value
+
+    ///
+    /// Describes an input stream: its name, element type, storage, etc.
+    ///
+    struct StreamInformation
+    {
+        StreamInformation() : m_id(0), m_storageFormat(StorageFormat::Dense), m_elementType(DataType::Unknown),
+            m_sampleLayout(NDShape::Unknown())
+        {}
+
+        std::wstring m_name;           // Unique name of the stream
+        size_t m_id;                   // Unique identifier of the stream
+        StorageFormat m_storageFormat; // Storage format of the stream
+        DataType m_elementType;        // Element type of the stream
+        NDShape m_sampleLayout;        // Layout of the sample for the stream
+        bool m_definesMbSize = false;  // Flag indicating whether this stream defines minibatch size.
+
+        std::wstring AsString() const
+        {
+            return m_name + L"(" + m_sampleLayout.AsString() + L")";
+        }
+    };
+
+    inline bool operator==(const StreamInformation& left, const StreamInformation& right)
+    {
+        return ((left.m_id == right.m_id) &&
+            (left.m_name == right.m_name) &&
+            (left.m_storageFormat == right.m_storageFormat) &&
+            (left.m_elementType == right.m_elementType) &&
+            (left.m_sampleLayout == right.m_sampleLayout));
+    }
+
+    // Some projects require only some generic data types/interfaces from this file, and do not want to link explicitely to CNTKv2Library.
+    // In this case they have to define CNTK_HEADERONLY_DEFINITIONS before including CNTKLibrary.h
+#ifndef CNTK_HEADERONLY_DEFINITIONS
+    ///
+    /// Checked mode enables additional runtime verification such as:
+    /// - Tracking NaN occurrences in sequence gaps.
+    /// - Function graph verification after binding of free static axes to actual values at runtime
+    /// 
+    /// Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
+    ///
+    CNTK_API void SetCheckedMode(bool enable);
+    bool GetCheckedMode();
+
 
     ///
     /// Specifies global logging verbosity level.
@@ -324,213 +570,6 @@ namespace CNTK
     protected:
         virtual ~IDictionarySerializable() {}
     };
-
-    ///
-    /// Denotes a multi-dimensional rectangular shape.
-    ///
-    class NDShape final
-    {
-        friend bool operator==(const NDShape& first, const NDShape& second);
-        friend class PrimitiveFunction;
-
-        static const size_t SentinelDimValueForUnknownShape = (size_t)-2;
-    public:
-
-        ///
-        /// A placeholder value to use for an axis whose dimension is unknown and is to be inferred by the system.
-        ///
-        static const size_t InferredDimension = (size_t)-1;
-
-        ///
-        /// A placeholder value to use for an axis whose dimension is unbound and is only determined
-        /// when actual data is bound to the variable. Note that since the actual dimension is bound
-        /// from actual minibatch data, the dimension can vary across different evaluations.
-        ///
-        static const size_t FreeDimension = (size_t)-3;
-
-        ///
-        /// A placeholder shape to use to denote an unknown shape
-        ///
-        CNTK_API static const NDShape Unknown;
-
-    public:
-        ///
-        /// Construct a NDShape with 0 axes, which denotes a scalar.
-        ///
-        NDShape() {}
-
-        ///
-        /// Construct a NDShape instance with the specified rank and dimensionality in each axis.
-        ///
-        explicit NDShape(size_t numAxes, size_t dimension = InferredDimension)
-            : m_shapeDims(numAxes, dimension)
-        {}
-
-        ///
-        /// Construct a NDShape instance with specified dimensions.
-        ///
-        NDShape(const std::vector<size_t>& dimensions)
-            : m_shapeDims(dimensions)
-        {}
-
-        ///
-        /// Construct a NDShape instance with specified dimensions.
-        ///
-        NDShape(const std::initializer_list<size_t>& dimensions)
-            : m_shapeDims(dimensions)
-        {}
-
-        ///
-        /// Returns the dimensions of 'this' shape as a std::vector<size_t>
-        ///
-        const std::vector<size_t>& Dimensions() const { return m_shapeDims; }
-
-        ///
-        /// Returns a boolean indicating if 'this' shape is the special Unknown shape
-        ///
-        bool IsUnknown() const { return (*this == NDShape::Unknown); }
-
-        ///
-        /// Returns the rank of 'this' shape.
-        ///
-        size_t Rank() const { return m_shapeDims.size(); }
-
-        ///
-        /// Returns a reference to dimension size for the specified axis.
-        ///
-        size_t& operator[](size_t axisId) 
-        {
-            return m_shapeDims.at(axisId); 
-        }
-
-        ///
-        /// Returns the dimension size for the specified axis.
-        ///
-        size_t operator[](size_t axisId) const 
-        {
-            return m_shapeDims.at(axisId); 
-        }
-
-        ///
-        /// Creates and returns a new NDShape instance with the same dimensions as 'this' shape's specified axis range [beginAxisId, endAxisId).
-        ///
-        NDShape SubShape(size_t beginAxisId = 0, size_t endAxisId = SIZE_MAX) const
-        {
-            endAxisId = (endAxisId == SIZE_MAX) ? Rank() : endAxisId;
-            if ((endAxisId < beginAxisId) || (endAxisId > Rank()))
-                InvalidArgument("NDShape::SubShape: The specified endAxisId (%zu) must not exceed the rank (%zu) of 'this' NDShape and must be >= than the specified beginAxisId (%zu)", endAxisId, Rank(), beginAxisId);
-
-            std::vector<size_t> subShapeDims(m_shapeDims.begin() + beginAxisId, m_shapeDims.begin() + endAxisId);
-            return subShapeDims;
-        }
-
-        ///
-        /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is unknown/inferred (aka == NDShape::InferredDimension).
-        ///
-        bool HasInferredDimension() const
-        {
-            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), (size_t)InferredDimension) != m_shapeDims.end());
-        }
-
-        ///
-        /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is free (aka == NDShape::FreeDimension).
-        ///
-        bool HasFreeDimension() const
-        {
-            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), (size_t)FreeDimension) != m_shapeDims.end());
-        }
-
-        ///
-        /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is free or inferred
-        /// i.e. (== NDShape::FreeDimension or == NDShape::InferredDimension).
-        ///
-        bool HasUnboundDimension() const
-        {
-            return HasFreeDimension() || HasInferredDimension();
-        }
-
-        ///
-        /// Returns the total size of the rectangular shape that 'this' shape denotes.
-        ///
-        size_t TotalSize() const
-        {
-            if (HasUnboundDimension())
-                RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension or FreeDimension.", AsString().c_str());
-
-            size_t totalSize = 1;
-            for (auto dim : m_shapeDims)
-                totalSize *= dim;
-
-            return totalSize;
-        }
-
-        ///
-        /// Creates and returns a new shape constructed by appending the dimensions of the specified 'shape' to 'this' shape's dimensions.
-        ///
-        NDShape AppendShape(const NDShape& shape) const
-        {
-            std::vector<size_t> newShapeDims(Rank() + shape.Rank());
-            std::copy(m_shapeDims.begin(), m_shapeDims.end(), newShapeDims.begin());
-            std::copy(shape.m_shapeDims.begin(), shape.m_shapeDims.end(), newShapeDims.begin() + m_shapeDims.size());
-
-            return newShapeDims;
-        }
-
-        ///
-        /// Create a string representation of 'this' NDShape for display/printing purposes
-        ///
-        std::wstring AsString() const
-        {
-            if (IsUnknown())
-            {
-                return L"[???]";
-            }
-            else
-            {
-                bool reverseShape = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
-                auto displayShape = *this;
-                if (reverseShape)
-                {
-                    for (size_t i = 0, j = Rank() - 1; i < Rank(); ++i, --j)
-                        displayShape[i] = (*this)[j];
-                }
-
-                std::wstringstream wStrStream;
-                wStrStream << L"[";
-                for (size_t i = 0; i < Rank(); i++)
-                {
-                    if (i != 0)
-                        wStrStream << L" x ";
-
-                    if (displayShape[i] == InferredDimension)
-                        wStrStream << "?";
-                    else if (displayShape[i] == FreeDimension)
-                        wStrStream << "*";
-                    else
-                        wStrStream << displayShape[i];
-                }
-                wStrStream << L"]";
-                return wStrStream.str();
-            }
-        }
-
-    private:
-        std::vector<size_t> m_shapeDims;
-    };
-
-    inline bool operator==(const NDShape& first, const NDShape& second)
-    {
-        return first.m_shapeDims == second.m_shapeDims;
-    }
-
-    inline bool operator!=(const NDShape& first, const NDShape& second)
-    {
-        return !(first == second);
-    }
-
-    typedef int SparseIndexType;
-
-    static const unsigned long SentinelValueForAutoSelectRandomSeed = std::numeric_limits<unsigned long>::max() - 2; // An arbitrary choice of sentinel value
 
     ///
     /// Denotes a multi-dimensional writable or read-only array of elemental values.
@@ -1918,7 +1957,7 @@ private:
     ///
     inline Variable PlaceholderVariable(const std::wstring& name = L"")
     {
-        return PlaceholderVariable(NDShape::Unknown, name, Axis::UnknownDynamicAxes());
+        return PlaceholderVariable(NDShape::Unknown(), name, Axis::UnknownDynamicAxes());
     }
 
     ///
@@ -2807,7 +2846,7 @@ namespace CNTK
         void ResizeOutputBuffer(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
             auto shape = outputVariable.Shape();
-            if (shape == NDShape::Unknown || shape.HasUnboundDimension())
+            if (shape.IsUnknown() || shape.HasUnboundDimension())
                 RuntimeError("The outputVariable '%S' shape '%S' is unknown shape, has inferred dimension or free dimension for at least one axis.",
                               outputVariable.AsString().c_str(), shape.AsString().c_str());
 
@@ -4771,32 +4810,6 @@ namespace CNTK
         double blockLearningRate = 1.0);
 
     ///
-    /// Describes an input stream: its name, element type, storage, etc.
-    ///
-    struct StreamInformation
-    {
-        std::wstring m_name;           // Unique name of the stream
-        size_t m_id;                   // Unique identifier of the stream
-        StorageFormat m_storageFormat; // Storage format of the stream
-        DataType m_elementType;        // Element type of the stream
-        NDShape m_sampleLayout;        // Layout of the sample for the stream
-
-        std::wstring AsString() const
-        {
-            return m_name + L"(" + m_sampleLayout.AsString() + L")";
-        }
-    };
-
-    inline bool operator==(const StreamInformation& left, const StreamInformation& right)
-    {
-        return ((left.m_id == right.m_id) &&
-            (left.m_name == right.m_name) &&
-            (left.m_storageFormat == right.m_storageFormat) &&
-            (left.m_elementType == right.m_elementType) &&
-            (left.m_sampleLayout == right.m_sampleLayout));
-    }
-
-    ///
     /// Evaluator is a top-level abstraction for evaluating a model's performance with specified error criterion.
     ///
     class Evaluator : public std::enable_shared_from_this<Evaluator>
@@ -5068,12 +5081,12 @@ namespace CNTK
         MinibatchData(ValuePtr value) : MinibatchData(value, 0)
         {}
 
-        MinibatchData(ValuePtr value, size_t numSamples, bool sweepEnd = false) 
+        MinibatchData(ValuePtr value, size_t numSamples, bool sweepEnd = false)
             : MinibatchData(value, numSamples, numSamples, sweepEnd)
         {}
 
-        MinibatchData(ValuePtr value, size_t numSequences, size_t numSamples, bool sweepEnd) 
-            : data(value), numberOfSequences(numSequences), numberOfSamples(numSamples), sweepEnd(sweepEnd) 
+        MinibatchData(ValuePtr value, size_t numSequences, size_t numSamples, bool sweepEnd)
+            : data(value), numberOfSequences(numSequences), numberOfSamples(numSamples), sweepEnd(sweepEnd)
         {}
 
         std::wstring AsString() const
@@ -5086,7 +5099,7 @@ namespace CNTK
         ValuePtr data;
         size_t numberOfSequences;
         size_t numberOfSamples;
-        bool sweepEnd; 
+        bool sweepEnd;
     };
 
     ///
@@ -5174,7 +5187,7 @@ namespace CNTK
     };
 
     typedef Dictionary Deserializer;
-    
+
     ///
     /// A configuration required to instantiate the CNTK built-in composite minibatch source.
     /// 
@@ -5193,7 +5206,7 @@ namespace CNTK
         /// returns empty minibatches on subsequent calls to GetNextMinibatch(). 'maxSweeps' and 'maxSamples' 
         /// are mutually exclusive, an exception will be raised if both have non-default values.
         /// 
-        size_t maxSamples { MinibatchSource::InfinitelyRepeat };
+        size_t maxSamples{ MinibatchSource::InfinitelyRepeat };
 
         ///
         /// The maximum allowed number of sweeps over the input dataset. After this number has been reached, 
@@ -5201,26 +5214,26 @@ namespace CNTK
         /// 'maxSweeps' and 'maxSamples' are mutually exclusive, an exception will be raised if both have 
         /// non-default values.
         /// 
-        size_t maxSweeps { MinibatchSource::InfinitelyRepeat };
+        size_t maxSweeps{ MinibatchSource::InfinitelyRepeat };
 
         ///
         /// Size of the randomization window in chunks, non-zero value enables randomization. 
         /// 'randomizationWindowInChunks' and 'randomizationWindowInSamples' are mutually exclusive,
         /// an exception will be raised if both have non-zero values.
         ///
-        size_t randomizationWindowInChunks { MinibatchSource::DefaultRandomizationWindowInChunks };
+        size_t randomizationWindowInChunks{ MinibatchSource::DefaultRandomizationWindowInChunks };
 
         ///
         /// Size of the randomization window in samples, non-zero value enables randomization. 
         /// 'randomizationWindowInChunks' and 'randomizationWindowInSamples' are mutually exclusive,
         /// an exception will be raised if both have non-zero values.
         ///
-        size_t randomizationWindowInSamples { 0 };
+        size_t randomizationWindowInSamples{ 0 };
 
         ///
         /// Initial randomization seed value (incremented every sweep when the input data is re-randomized).
         ///
-        size_t randomizationSeed { 0 };
+        size_t randomizationSeed{ 0 };
 
         ///
         /// Output verbosity level.
@@ -5232,14 +5245,14 @@ namespace CNTK
         /// cannot be used in frame mode, an exception will be raised if frame mode is enabled and the 
         /// truncation length is non-zero).
         ///
-        size_t truncationLength { 0 };
+        size_t truncationLength{ 0 };
 
         ///
         /// Switches the frame mode on and off. If the frame mode is enabled the input data will be processed
         /// as individual frames ignoring all sequence information (this option cannot be used for BPTT,
         /// an exception will be raised if frame mode is enabled and the truncation length is non-zero).
         ///
-        bool isFrameModeEnabled { false };
+        bool isFrameModeEnabled{ false };
 
         ///
         /// Specifies if the deserialization should be done on a single or multiple threads. 
@@ -5295,8 +5308,8 @@ namespace CNTK
     CNTK_API ImageTransform ReaderCrop(const wchar_t* cropType = L"center",
         std::pair<int, int> cropSize = std::make_pair(0, 0),
         std::pair<float, float> sideRatio = std::make_pair(0.0f, 0.0f),
-        std::pair<float, float> areaRatio = std::make_pair(0.0f, 0.0f), 
-        std::pair<float, float> aspectRatio = std::make_pair(1.0f, 1.0f), 
+        std::pair<float, float> areaRatio = std::make_pair(0.0f, 0.0f),
+        std::pair<float, float> aspectRatio = std::make_pair(1.0f, 1.0f),
         const wchar_t* jitterType = L"none");
 
     /// 
@@ -5400,7 +5413,21 @@ namespace CNTK
     {
         return ((left.m_globalRank == right.m_globalRank) && (left.m_hostId == right.m_hostId));
     }
+}
 
+namespace std
+{
+    template <> struct hash<::CNTK::DistributedWorkerDescriptor>
+    {
+        size_t operator()(const ::CNTK::DistributedWorkerDescriptor& x) const
+        {
+            return std::hash<size_t>()(x.m_globalRank);
+        }
+    };
+}
+
+namespace CNTK
+{
     ///
     /// A communicator interface exposing communication primitives that serve as building blocks 
     /// for distributed training.
@@ -5836,16 +5863,6 @@ namespace CNTK
         const CheckpointConfig& checkpointing = { L"" },
         const CrossValidationConfig& crossValidation = { nullptr },
         const TestConfig& test = { nullptr });
-}
 
-
-namespace std 
-{
-    template <> struct hash<::CNTK::DistributedWorkerDescriptor>
-    {
-        size_t operator()(const ::CNTK::DistributedWorkerDescriptor& x) const
-        {
-             return std::hash<size_t>()(x.m_globalRank);
-        }
-    };
+#endif // !CNTK_HEADERONLY_DEFINITIONS
 }
