@@ -336,7 +336,7 @@ namespace CNTK
 
     void CompositeFunction::CopyState(const CompositeFunction& source)
     {
-        // Collect a vector of stateful funciton uids using a pre-order traversal of a function graphs.
+        // Collect a vector of stateful function uids using a pre-order traversal of a function graphs.
         auto collectStatefulFunctionUIDs = [](const Function& function) -> vector<wstring> {
             vector<wstring> uids;
             PreorderTraverseFunctions(function.RootFunction(), [&uids](const FunctionPtr& funcPtr) {

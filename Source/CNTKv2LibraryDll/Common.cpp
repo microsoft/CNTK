@@ -75,7 +75,7 @@ namespace CNTK
 
         // This is used to generate a default seed value for random parameter initializer and also 
         // for stateful nodes (dropout, and both flavors of random sample). The 'perWorkerLocalValue' flag
-        // indicates if the generated value should be identical accross individual workers in distributed 
+        // indicates if the generated value should be identical across individual workers in distributed 
         // setting or if each worker should get a different seed value.        
         size_t GenerateRandomSeed(bool perWorkerLocalValue /*= false*/)
         {

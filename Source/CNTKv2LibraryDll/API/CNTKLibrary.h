@@ -35,7 +35,7 @@ namespace CNTK
 {
     ///
     /// Checked mode enables additional runtime verification such as:
-    /// - Tracking NaN occurences in sequence gaps.
+    /// - Tracking NaN occurrences in sequence gaps.
     /// - Function graph verification after binding of free static axes to actual values at runtime
     /// 
     /// Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
@@ -2200,7 +2200,7 @@ private:
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
     // However we have a couple of derivatives of the type to extend the base interface and thus we ensure that the derived types do not have additional fields.
     // This check is weak in that the derives types may sneak in some additional fields if the base type had some padding at the end, without changing the object size
-    // but it should be good enough for catching any accidental addiiton of fields.
+    // but it should be good enough for catching any accidental addition of fields.
     static_assert(sizeof(Constant) == sizeof(Variable), "The Constant type should not have any data fields beyond what its base type 'Variable' has.");
 }
 
@@ -4963,7 +4963,7 @@ namespace CNTK
         CNTK_API const std::vector<LearnerPtr>& ParameterLearners() const;
 
         ///
-        /// Total number of samples seen from the begining of the training.
+        /// Total number of samples seen from the beginning of the training.
         ///
         CNTK_API size_t TotalNumberOfSamplesSeen() const;
 

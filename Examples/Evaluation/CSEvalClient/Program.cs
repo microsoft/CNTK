@@ -333,10 +333,10 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             // Specifies the number of times to iterate through the test file (epochs)
             int numRounds = 1;
 
-            // Counts the number of evaluations accross all models
+            // Counts the number of evaluations across all models
             int count = 0;
 
-            // Counts the number of failed evaluations (output != expected) accross all models
+            // Counts the number of failed evaluations (output != expected) across all models
             int errorCount = 0;
 
             // The examples assume the executable is running from the data folder

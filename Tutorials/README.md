@@ -24,4 +24,4 @@ A step-by-step walk through for each of these is provided in the [documentation]
 * Hello World - Logistic Regression ([Details](https://docs.microsoft.com/en-us/cognitive-toolkit/Tutorials))
 * Image Hands On ([Details](https://docs.microsoft.com/en-us/cognitive-toolkit/Hands-On-Labs-Image-Recognition)) 
 * SLU (Language Understanding) Hands On ([Details](https://docs.microsoft.com/en-us/cognitive-toolkit/Hands-On-Labs-Language-Understanding))
-* Object detection using Fast R-CNN ([Code](https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Detection/FastRCNN), [Details]https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN))
+* Object detection using Fast R-CNN ([Code](https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Detection/FastRCNN), [Details](https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN))
