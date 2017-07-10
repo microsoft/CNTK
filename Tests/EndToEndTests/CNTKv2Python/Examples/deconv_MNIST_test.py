@@ -34,9 +34,13 @@ def test_simple_mnist_bs_error(device_id):
     from cntk.ops.tests.ops_test_utils import cntk_device
     try_set_default_device(cntk_device(device_id))
 
-    cmdStr = os.environ["TEST_CNTK_BINARY"] + " configFile=07_Deconvolution_BS.cntk"
+    cntkPath = os.environ["TEST_CNTK_BINARY"]
+    if sys.platform == "win32":
+        p = subprocess.Popen(["cygpath", "-aw", os.environ["TEST_CNTK_BINARY"]], stdout=subprocess.PIPE)
+        out = p.communicate()[0]
+        cntkPath = out.decode(sys.getdefaultencoding()).strip()
 
-    pid = subprocess.Popen(cmdStr.split(" "), cwd=getting_started_path)
+    pid = subprocess.Popen([cntkPath, "configFile=07_Deconvolution_BS.cntk"], cwd=getting_started_path)
     pid.wait()
 
     assert pid.returncode == 0, "ERROR: cntk ended with exit code {}".format(pid.returncode)
