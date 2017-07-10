@@ -61,7 +61,7 @@ namespace NewsInsightEvaluation
             //Console.WriteLine("complete loading model: {0}", self_attention_version.name);
 
 
-            var model_file = @"E:\CNTKMisc\KevinPan-Memory\trained_model\cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002.dnn";
+            var model_file = @"C:\CNTKMisc\KevinPan-Memory\trained_model\cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002.dnn";
             var modelFunc = Function.Load(model_file, DeviceDescriptor.CPUDevice);
 
             var parallel_model_list_1 = new BlockingCollection<Function>();
