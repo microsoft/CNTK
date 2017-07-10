@@ -5,11 +5,11 @@ using System.Web.Http.Description;
 using Swashbuckle.Application;
 using Swashbuckle.Swagger;
 using WebActivatorEx;
-using EvalDll_AzureTutorial01;
+using CNTKAzureTutorial01;
 
 [assembly: PreApplicationStartMethod(typeof(SwaggerConfig), "Register")]
 
-namespace EvalDll_AzureTutorial01
+namespace CNTKAzureTutorial01
 {
     public class SwaggerConfig
     {
@@ -36,7 +36,7 @@ namespace EvalDll_AzureTutorial01
                         // hold additional metadata for an API. Version and title are required but you can also provide
                         // additional fields by chaining methods off SingleApiVersion.
                         //
-                        c.SingleApiVersion("v1", "EvalDll_AzureTutorial01");
+                        c.SingleApiVersion("v1", "CNTKAzureTutorial01");
 
                         // If your API has multiple versions, use "MultipleApiVersions" instead of "SingleApiVersion".
                         // In this case, you must provide a lambda that tells Swashbuckle which actions should be

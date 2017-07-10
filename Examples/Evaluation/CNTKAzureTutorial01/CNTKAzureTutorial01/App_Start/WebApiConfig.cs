@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
 
-namespace EvalDll_AzureTutorial01
+namespace CNTKAzureTutorial01
 {
     public static class WebApiConfig
     {

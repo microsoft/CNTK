@@ -12,7 +12,7 @@ using System.IO;
 using System.Drawing;
 
 
-namespace EvalDll_AzureTutorial01.Controllers
+namespace EvalDll_AzureTutorial.Controllers
 {
     public class ValuesController : ApiController
     {
