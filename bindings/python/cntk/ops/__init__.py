@@ -1251,7 +1251,6 @@ def elu(x, name=''):
     x = sanitize_input(x)
     return elu(x, name)
 
-
 @typemap
 def selu(x, scale=1.0507009873554804934193349852946, alpha=1.6732632423543772848170429916717, name=''):
     '''
@@ -1262,7 +1261,7 @@ def selu(x, scale=1.0507009873554804934193349852946, alpha=1.6732632423543772848
 
     Example:
         >>> C.selu([[-1, -0.5, 0, 1, 2]]).eval()
-        array([[-1.11133074, -0.69175819,  0.        ,  1.05070099,  2.10140197]], dtype=float32)
+        array([[-1.111331, -0.691758,  0.      ,  1.050701,  2.101402]], dtype=float32)
 
     Args:
         x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
