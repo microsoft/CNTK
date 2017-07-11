@@ -1,7 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
-from gym import spaces
 
 from .shared.discretize import BoxSpaceDiscretizer
 
@@ -13,7 +12,7 @@ class AgentBaseClass(object):
 
     def __init__(self, o_space, a_space):
         """Constructor for AgentBaseClass."""
-        if not isinstance(a_space, spaces.Discrete):
+        if self._classname(a_space) != 'gym.spaces.discrete.Discrete':
             raise ValueError(
                 'Action space {0} incompatible with {1}. (Only supports '
                 'Discrete action spaces.)'.format(a_space, self))
@@ -40,24 +39,24 @@ class AgentBaseClass(object):
         #   of length n. For case 3, it is the shape of array that represents
         #   the state. For example, an image input will have shape denoted as
         #   tuple (channel, width, height).
-        if not (isinstance(o_space, spaces.Discrete) or
-                isinstance(o_space, spaces.MultiBinary) or
-                isinstance(o_space, spaces.Box) or
-                isinstance(o_space, spaces.MultiDiscrete)):
+        if not (self._classname(o_space) == 'gym.spaces.discrete.Discrete' or
+                self._classname(o_space) == 'gym.spaces.multi_binary.MultiBinary' or
+                self._classname(o_space) == 'gym.spaces.box.Box' or
+                self._classname(o_space) == 'gym.spaces.multi_discrete.MultiDiscrete'):
             raise ValueError(
                 'Unsupported observation space type: {0}'.format(o_space))
 
         self._space_discretizer = None
         self._discrete_observation_space = \
-            isinstance(o_space, spaces.Discrete)
+            (self._classname(o_space) == 'gym.spaces.discrete.Discrete')
         # Set self._num_states for discrete observation space only.
         # Otherwise set it to None so that an exception will be raised
         # should it be used later in the code.
         self._num_states = \
             o_space.n if self._discrete_observation_space else None
 
-        if (isinstance(o_space, spaces.Discrete) or
-            isinstance(o_space, spaces.MultiBinary)):
+        if (self._classname(o_space) == 'gym.spaces.discrete.Discrete' or
+            self._classname(o_space) == 'gym.spaces.multi_binary.MultiBinary'):
             self._shape_of_inputs = (o_space.n,)
         else:
             self._shape_of_inputs = o_space.shape
@@ -123,7 +122,7 @@ class AgentBaseClass(object):
         pass
 
     def _discretize_observation_space(self, space, discretization_resolution):
-        if isinstance(space, spaces.Box):
+        if self._classname(space) == 'gym.spaces.box.Box':
             self._space_discretizer = BoxSpaceDiscretizer(
                 space,
                 discretization_resolution)
@@ -170,3 +169,6 @@ class AgentBaseClass(object):
             # are of type float32.
             o = o.astype(np.float32)
         return o
+
+    def _classname(self, instance):
+        return instance.__class__.__module__ + '.' + instance.__class__.__name__

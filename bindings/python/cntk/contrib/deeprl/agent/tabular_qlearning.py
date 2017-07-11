@@ -1,7 +1,6 @@
 import copy
 
 import numpy as np
-from gym import spaces
 
 from .agent import AgentBaseClass
 from .shared.qlearning_parameters import QLearningParameters
@@ -21,7 +20,7 @@ class TabularQLearning(AgentBaseClass):
                 '\n'.format(self._parameters.q_representation))
 
         # Discretize the observation space if necessary
-        if not isinstance(o_space, spaces.Discrete):
+        if self._classname(o_space) != 'gym.spaces.discrete.Discrete':
             self._discretize_observation_space(
                 o_space, self._parameters.discretization_resolution)
 

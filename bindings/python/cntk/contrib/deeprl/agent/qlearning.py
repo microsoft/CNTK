@@ -1,9 +1,8 @@
 import math
-import sys
 
 import numpy as np
 from cntk.learners import (UnitType, adam, learning_rate_schedule,
-                           momentum_schedule, sgd)
+                           momentum_schedule)
 from cntk.ops import input_variable
 from cntk.train.trainer import Trainer
 
