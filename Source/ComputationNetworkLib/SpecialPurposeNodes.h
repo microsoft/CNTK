@@ -1041,8 +1041,15 @@ public:
         auto& result = Value();
         auto& inputValue = InputRef(1).Value();
 
+
+        auto numRows = m_result->GetNumRows();
+        auto numCols = m_result->GetNumCols();
+
         m_result->AssignValuesOf(inputValue);
-        result.AssignValuesOf(inputValue);
+
+        m_result->Resize(numRows, numCols);
+
+        result.AssignValuesOf(*m_result);
     }
 
     virtual void /*ComputationNodeNonLooping::*/ PostForwardAndBackProp() override

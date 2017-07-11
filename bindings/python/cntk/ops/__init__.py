@@ -1978,6 +1978,18 @@ def splice(*inputs, **kw_axis_name):
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
 
 @typemap
+def detach_dynamic_axis(x, size, name=''):
+    from cntk.cntk_py import detach_dynamic_axis
+    x = sanitize_input(x)
+    return detach_dynamic_axis(x, size, name)
+
+@typemap
+def attach_dynamic_axis(x, axis, name=''):
+    from cntk.cntk_py import attach_dynamic_axis
+    x = sanitize_input(x)
+    return attach_dynamic_axis(x, axis, name)
+
+@typemap
 def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
     '''
     Create one hot tensor based on the input tensor

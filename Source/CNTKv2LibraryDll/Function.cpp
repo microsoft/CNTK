@@ -1239,6 +1239,20 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr AttachDynamicAxis(const Variable& operand, Axis& axis, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAttachDynamicAxis] = axis;
+        return UnaryOp(PrimitiveOpType::AttachDynamicAxis, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr DetachDynamicAxis(const Variable& operand, size_t size, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameDynamicAxisSize] = size;
+        return UnaryOp(PrimitiveOpType::DetachDynamicAxis, operand, std::move(additionalProperties), name);
+    }
+
     FunctionPtr GumbelRandom(const NDShape& shape, DataType dataType, double loc, double scale, unsigned long seed, const std::wstring& name)
     {
         if (scale < 0)

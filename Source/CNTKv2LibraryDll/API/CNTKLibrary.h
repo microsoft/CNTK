@@ -3593,6 +3593,10 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name = L"");
 
+    CNTK_API FunctionPtr AttachDynamicAxis(const Variable& operand, Axis& axis, const std::wstring& name = L"");
+
+    CNTK_API FunctionPtr DetachDynamicAxis(const Variable& operand, size_t size, const std::wstring& name);
+
     ///
     /// Create an instance of the random_sample operation on specified sampling weights input vector
     ///

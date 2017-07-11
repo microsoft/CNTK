@@ -608,8 +608,11 @@ void ComputationNetwork::ResetMBLayouts()
     for (auto node : GetNodesWithType(L"DynamicAxis"))
         node->LinkToMBLayout(make_shared<MBLayout>(1, 0, node->GetName()));
 
+    auto inputNodes = InputNodes(nullptr);
+    auto attachDynamicAxisNodes = GetNodesWithType(L"AttachDynamicAxis");
+    inputNodes.merge(attachDynamicAxisNodes);
     // This is now initialized inside of the Input nodes, with the proper connections.
-    for (auto node : InputNodes(nullptr))
+    for (auto node : inputNodes)
     {
         // TODO: use if (!Is<ITakesDynamicAxis>(node))...
         auto n = dynamic_pointer_cast<ITakesDynamicAxis>(node);

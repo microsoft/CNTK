@@ -470,6 +470,144 @@ private:
 template class ReconcileDynamicAxisNode<float>;
 template class ReconcileDynamicAxisNode<double>;
 
+template <class ElemType>
+class AttachDynamicAxisNode : public ComputationNode<ElemType>, public NumInputs<1>, public ITakesDynamicAxis
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() {
+        return L"AttachDynamicAxis";
+    }
+public:
+    AttachDynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& axisNodeName)
+        : Base(deviceId, name), m_dynamicAxisNodeName(axisNodeName)
+    {
+
+    }
+
+    virtual const std::wstring GetRequestedDynamicAxis() const 
+    {
+        return m_dynamicAxisNodeName;
+    }
+
+    AttachDynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : AttachDynamicAxisNode(deviceId, name, L"")
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto& inputValue = InputRef(0).Value();
+        auto& outputValue = Value();
+
+        outputValue.AssignValuesOf(inputValue);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto gradient = GradientTensorFor(rank, fr);
+        auto inputGradient = Input(0)->GradientTensorFor(rank, fr.AllowBroadcast());
+
+        if (Input(0)->ParentOverwritesGradient())
+            inputGradient.AssignCopyOf(gradient);
+        else
+            inputGradient.AddCopyOf(gradient);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        //MBLayout should be set during ResetMBLayout
+
+        auto sampleLayout = Input(0)->GetSampleLayout();
+        const auto& inputDims = sampleLayout.GetDims();
+        SmallVector<size_t> dims;
+        dims.append(inputDims.begin(), inputDims.end() - 1);
+        SetDims(TensorShape(dims), HasMBLayout());
+    }
+
+private:
+    std::wstring m_dynamicAxisNodeName;
+};
+
+template <class ElemType>
+class DetachDynamicAxisNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() {
+        return L"DetachDynamicAxis";
+    }
+public:
+    DetachDynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name, size_t size)
+        : Base(deviceId, name), m_size(size)
+    {
+
+    }
+
+    DetachDynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : DetachDynamicAxisNode(deviceId, name, 1)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto& inputValue = InputRef(0).Value();
+        auto& outputValue = Value();
+
+        outputValue.AssignValuesOf(inputValue);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto gradient = GradientTensorFor(rank, fr);
+        auto inputGradient = Input(0)->GradientTensorFor(rank, fr.AllowBroadcast());
+
+        if (Input(0)->ParentOverwritesGradient())
+            inputGradient.AssignCopyOf(gradient);
+        else
+            inputGradient.AddCopyOf(gradient);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override 
+    {
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override 
+    {
+        return false;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr;
+
+        auto sampleLayout = Input(0)->GetSampleLayout();
+        const auto& inputDims = sampleLayout.GetDims();
+        SmallVector<size_t> dims;
+        dims.append(inputDims.begin(), inputDims.end());
+        dims.push_back(m_size);
+        SetDims(TensorShape(dims), HasMBLayout());
+    }
+private:
+    size_t m_size;
+};
+
+template class DetachDynamicAxisNode<float>;
+template class DetachDynamicAxisNode<double>;
+
 // -----------------------------------------------------------------------
 // SliceNode (input)
 // This node extracts a slice of the first tensor dimension (row).
