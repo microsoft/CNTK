@@ -1,12 +1,13 @@
 import numpy as np
-from gym import spaces
 
 
 class BoxSpaceDiscretizer:
     """Discretize Box space."""
 
     def __init__(self, space, resolution):
-        if not isinstance(space, spaces.Box):
+        spaceclassname = \
+            space.__class__.__module__ + '.' + space.__class__.__name__
+        if spaceclassname != 'gym.spaces.box.Box':
             raise ValueError(
                 'Space {0} incompatible with {1}. (Only supports '
                 'Box space)'.format(space, self))
