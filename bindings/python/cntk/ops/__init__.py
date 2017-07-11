@@ -1251,6 +1251,30 @@ def elu(x, name=''):
     x = sanitize_input(x)
     return elu(x, name)
 
+@typemap
+def selu(x, scale=1.0507009873554804934193349852946, alpha=1.6732632423543772848170429916717, name=''):
+    '''
+    Scaled exponential linear unit operation. Computes the element-wise exponential linear
+    of ``x``: ``scale * x`` for ``x >= 0`` and ``x``: ``scale * alpha * (exp(x)-1)`` otherwise.
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.selu([[-1, -0.5, 0, 1, 2]]).eval()
+        array([[-1.111331, -0.691758,  0.      ,  1.050701,  2.101402]], dtype=float32)
+
+    Args:
+        x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
+        name (`str`, default to ''): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function:
+        An instance of :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import selu
+    x = sanitize_input(x)
+    return selu(x, scale, alpha, name)
+
 
 @typemap
 def leaky_relu(x, name=''):
