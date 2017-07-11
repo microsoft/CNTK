@@ -2088,6 +2088,42 @@ namespace CNTK
         }
     }
 
+    FunctionPtr Crop(const Variable& input,
+        const Variable& ref,
+        size_t offsetX,
+        size_t offsetY,
+        const std::wstring& name)
+    {
+        std::vector<Variable> operands = { input, ref };
+        Dictionary additionalAttributes;
+        additionalAttributes[PrimitiveFunction::AttributeNameOffset] = DictionaryValue({ offsetX, offsetY });
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(
+            PrimitiveOpType::Crop,
+            operands, std::move(additionalAttributes), name), name);
+    }
+
+    FunctionPtr Crop(const Variable& input,
+        const Variable& ref,
+        const std::wstring& name)
+    {
+        std::vector<Variable> operands = { input, ref };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(
+            PrimitiveOpType::Crop,
+            operands, Dictionary(), name), name);
+    }
+
+    FunctionPtr Crop(const Variable& input,
+        const Variable& ref,
+        const Variable& eqNodeInput,
+        const Variable& eqNodeRef,
+        const std::wstring& name)
+    {
+        std::vector<Variable> operands = { input, ref, eqNodeInput, eqNodeRef };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(
+            PrimitiveOpType::Crop,
+            operands, Dictionary(), name), name);
+    }
+
     namespace Internal
     {
         FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name)

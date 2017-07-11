@@ -1096,6 +1096,20 @@ namespace CNTK
                             outputShape = NDShape({ numNegativeSamples + 1 });
                             break;
                         }
+                        case PrimitiveOpType::Crop:
+                        {
+                            // Width and height are cropped, while remaining dimensions are unchanged.
+                            assert(m_inputs.size() == 2 || m_inputs.size() == 4);
+                            outputShape = m_inputs[1].Shape();
+                            const NDShape& input0Shape = m_inputs[0].Shape();
+                            assert(input0Shape.Rank() == outputShape.Rank());
+                            assert(input0Shape.Rank() >= 2);
+                            for (int i = 2; i < input0Shape.Rank(); ++i)
+                            {
+                                outputShape[i] = input0Shape[i];
+                            }
+                            break;
+                        }
                         default:
                             LogicError("Specified Primitive Function op %S is not supported", PrimitiveOpTypeName(m_op).c_str());
                             break;

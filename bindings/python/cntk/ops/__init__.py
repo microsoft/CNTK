@@ -3150,3 +3150,63 @@ def assign(ref, input, name=''):
     operand = sanitize_input(input, dtype)
     ref_operand = sanitize_input(ref, dtype)
     return assign(ref_operand, operand, name)
+
+@typemap
+def crop(input, ref, name = '', **kwargs):
+    '''
+    Crops input along spatial dimensions so that it matches spatial size of reference input.
+
+    If offset_x and offset_y are given, then crop offsets are given in pixels. Otherwise, they
+    are computed by traversing the network graph and computing affine transform between the
+    two inputs. Translation part of the transform determines the offsets. The transform is
+    computed as composition of the transforms between each input and their common ancestor, if
+    one can be found.
+
+    Equivalence nodes eq_node_input and eq_node_ref, if specified, are expected to be ancestors
+    of input and ref, respectively. They act like the same node for the purpose of finding a
+    common ancestor. They are used in cases when input and ref do not have a common ancestor.
+    Typically, equivalence nodes have the same spatial size (e.g. input image and ground
+    truth image in pixelwise semantic labeling).
+
+    Args:
+        input: class:`~cntk.ops.functions.Function` that outputs the tensor to be cropped
+        ref: class:`~cntk.ops.functions.Function` that outputs the reference tensor
+        offset_x (int, optional): horizontal crop offset
+        offset_y (int, optional): vertical crop offset
+        eq_node_input (optional): class:`~cntk.ops.functions.Function` that outputs equivalence node of input
+        eq_node_ref (optional): class:`~cntk.ops.functions.Function` that outputs equivalence node of ref
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import crop
+    arg_input = sanitize_input(input, get_data_type(input))
+    arg_ref = sanitize_input(ref,  get_data_type(ref))
+    offset_x = kwargs.pop('offset_x', None)
+    offset_y = kwargs.pop('offset_y', None)
+    eq_node_input = kwargs.pop('eq_node_input', None)
+    eq_node_ref = kwargs.pop('eq_node_ref', None)
+    if kwargs:
+        raise TypeError('Unexpected **kwargs: %r' % kwargs)
+    if offset_x != None:
+        # Crop with given offsets.
+        if offset_y == None:
+            raise TypeError('offset_y is required whenever offset_x is present.')
+        if eq_node_input != None or eq_node_ref != None:
+            raise TypeError('Equivalence nodes are incompatible with offset values.')
+        return crop(arg_input, arg_ref, offset_x, offset_y, name)
+    if eq_node_input != None:
+        # Crop with virtual ancestors.
+        if offset_x != None or offset_y != None:
+            raise TypeError('Equivalence nodes are incompatible with offset values.')
+        if eq_node_ref == None:
+            raise TypeError('eq_node_ref is required whenever eq_node_input is present.')
+        arg_eq_node_input = sanitize_input(eq_node_input, get_data_type(eq_node_input))
+        arg_eq_node_ref = sanitize_input(eq_node_ref, get_data_type(eq_node_ref))
+        return crop(arg_input, arg_ref, arg_eq_node_input, arg_eq_node_ref, name)
+    # Crop without virtual ancestors.
+    if offset_y != None:
+        raise TypeError('offset_x is required whenever offset_y is present.')
+    if eq_node_ref != None:
+        raise TypeError('eq_node_input is required whenever eq_node_ref is present.')
+    return crop(arg_input, arg_ref, name)
