@@ -97,7 +97,7 @@ namespace CNTKAzureTutorial01.Controllers
                 Stream imageStream = await httpClient.GetStreamAsync(imageUrl);
                 Bitmap bmp = new Bitmap(Bitmap.FromStream(imageStream));
 
-                var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                var resized = bmp.Resize(imageWidth, imageHeight, true);
                 List<float> resizedCHW = resized.ParallelExtractCHW();
 
                 // Create input data map
