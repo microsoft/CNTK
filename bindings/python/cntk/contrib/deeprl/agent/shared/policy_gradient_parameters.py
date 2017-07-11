@@ -47,8 +47,8 @@ class PolicyGradientParameters:
         # \theta <- \theta + \eta * g where \eta is learning rate, and
         # value network is updated as
         # \theta_v <- \theta_v + \eta * relative_step_size * gv. This allows
-        # policy network and value network to update at different learning
-        # rate. Alternatively, this can be viewed as relative weight between
+        # policy network and value network to be updated at different learning
+        # rates. Alternatively, this can be viewed as relative weight between
         # policy loss and value function loss.
         self.relative_step_size = self.config.getfloat(
             'PolicyGradient', 'RelativeStepSize', fallback=0.5)

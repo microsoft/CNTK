@@ -111,7 +111,7 @@ class AgentBaseClass(object):
 
     def evaluate(self, o):
         """Choose action for given observation without updating agent's status."""
-        a, _ = self._choose_action(self._preprocess(o))
+        a, _ = self._choose_action(self._preprocess_state(o))
         return a
 
     @abstractmethod
@@ -146,7 +146,7 @@ class AgentBaseClass(object):
         a[index] = 1
         return a
 
-    def _preprocess(self, state):
+    def _preprocess_state(self, state):
         """Preprocess state to generate input to neural network.
 
         When state is a scalar which is the index of the state space, convert

@@ -86,14 +86,14 @@ class QLearning(AgentBaseClass):
         # If gradient_clipping_threshold_per_sample is inf, gradient clipping
         # will not be performed. Set gradient_clipping_with_truncation to False
         # to clip the norm.
-        #opt = sgd(
-        #    self._q.parameters,
-        #    learning_rate_schedule(
-        #        self._parameters.initial_eta, UnitType.sample),
-        #    use_mean_gradient=True,
-        #    gradient_clipping_threshold_per_sample=
-        #        self._parameters.gradient_clipping_threshold,
-        #    gradient_clipping_with_truncation=False)
+        # opt = sgd(
+        #     self._q.parameters,
+        #     learning_rate_schedule(
+        #         self._parameters.initial_eta, UnitType.sample),
+        #     use_mean_gradient=True,
+        #     gradient_clipping_threshold_per_sample=
+        #         self._parameters.gradient_clipping_threshold,
+        #     gradient_clipping_with_truncation=False)
         opt = adam(
             self._q.parameters,
             learning_rate_schedule(
@@ -132,7 +132,7 @@ class QLearning(AgentBaseClass):
             self._preprocessor.reset()
 
         self._adjust_exploration_rate()
-        self._last_state = self._preprocess(state)
+        self._last_state = self._preprocess_state(state)
         self._last_action, action_behavior = \
             self._choose_action(self._last_state)
         self.episode_count += 1
@@ -145,7 +145,7 @@ class QLearning(AgentBaseClass):
 
         Return (action, debug_info) tuple where debug_info is a dictionary.
         """
-        next_encoded_state = self._preprocess(next_state)
+        next_encoded_state = self._preprocess_state(next_state)
         priority = self._compute_priority(
             self._last_state, self._last_action, reward, next_encoded_state)
         self._replay_memory.store(
@@ -241,9 +241,17 @@ class QLearning(AgentBaseClass):
                 self.step_count % self._parameters.q_update_frequency != 0:
             return
 
-        # Perform one minibatch update.
         self._adjust_learning_rate()
+        for i in range(self._parameters.replays_per_update):
+            self._replay_and_update()
 
+        # Clone target network periodically.
+        if self.step_count % \
+                self._parameters.target_q_update_frequency == 0:
+            self._target_q = self._q.clone('clone')
+
+    def _replay_and_update(self):
+        """Perform one minibatch update of Q."""
         input_values = []
         output_values = []
         if self._parameters.use_prioritized_replay:
@@ -300,11 +308,6 @@ class QLearning(AgentBaseClass):
                     self._input_variables: input_values,
                     self._output_variables: output_values
                 })
-
-        # Clone target network periodically.
-        if self.step_count % \
-                self._parameters.target_q_update_frequency == 0:
-            self._target_q = self._q.clone('clone')
 
     def _compute_td_err(self, state, action, reward, next_state):
         td_err = reward

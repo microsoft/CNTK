@@ -20,11 +20,9 @@ from cntk.contrib.deeprl.agent import agent_factory
 parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='CartPole-v0',
                     help='Environment that agent iteracts with.')
-parser.add_argument('--random_starts', type=int, default=30, help='Number of '
+parser.add_argument('--num_noop', type=int, default=30, help='Number of '
                     'no-op actions to be performed by the agent at the start '
                     'of an episode, for Atari environment only.')
-parser.add_argument('--agent', type=str, default='tabular_qlearning',
-                    help='Type of agent.')
 parser.add_argument('--agent_config', type=str, default='',
                     help='Config for agent.')
 parser.add_argument('--max_steps', type=int, default=1000000, help='Maximum '
@@ -69,8 +67,7 @@ if args.max_episode_steps <= 0:
         env.spec.tags['wrapper_config.TimeLimit.max_episode_steps']
 
 # Create an agent.
-agent = agent_factory.make_agent(args.agent,
-                                 args.agent_config,
+agent = agent_factory.make_agent(args.agent_config,
                                  o_space,
                                  a_space)
 
@@ -81,7 +78,7 @@ agent.save_parameter_settings(
     args.output_dir + '/' + args.output_dir + '.params')
 
 
-def new_episode_with_random_start():
+def new_episode():
     """Start a new episode.
 
     For Atari games, perform no-op actions at the beginning of the episode.
@@ -89,8 +86,8 @@ def new_episode_with_random_start():
     o = env.reset()
     if args.render:
         env.render()
-    if isinstance(env.env, AtariEnv) and args.random_starts > 0:
-        for t in range(args.random_starts):
+    if isinstance(env.env, AtariEnv):
+        for t in range(args.num_noop):
             o, r, isTerminal, _ = env.step(0)
             if isTerminal:
                 print('WARNING: Terminal signal received after {0} steps'
@@ -111,7 +108,7 @@ def evaluate_agent_if_necessary():
         i = 0
         agent.enter_evaluation()
 
-        o = new_episode_with_random_start()
+        o = new_episode()
         while i < args.eval_steps:
             i += 1
             a = agent.evaluate(o)
@@ -123,7 +120,7 @@ def evaluate_agent_if_necessary():
                 num_episodes += 1
                 total_reward += episode_reward
                 episode_reward = 0
-                o = new_episode_with_random_start()
+                o = new_episode()
 
         reward = episode_reward if num_episodes == 0 \
             else total_reward / num_episodes
@@ -164,7 +161,7 @@ while True:
     # Evaluate agent every --eval_period steps.
     evaluate_agent_if_necessary()
     # Learn from new episode.
-    o = new_episode_with_random_start()
+    o = new_episode()
     a, debug_info = agent.start(o)
     rewards = 0
     steps = 0

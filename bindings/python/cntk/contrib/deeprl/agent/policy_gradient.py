@@ -61,7 +61,7 @@ class ActorCritic(AgentBaseClass):
             self._preprocessor.reset()
 
         # Append new state and action
-        o = self._preprocess(state)
+        o = self._preprocess_state(state)
         action, _ = self._choose_action(o)
         self._trajectory_states.append(o)
         self._trajectory_actions.append(action)
@@ -72,7 +72,7 @@ class ActorCritic(AgentBaseClass):
 
     def step(self, reward, next_state):
         """Observe one transition and choose an action."""
-        o = self._preprocess(next_state)
+        o = self._preprocess_state(next_state)
         self._trajectory_rewards.append(reward)
         self._trajectory_states.append(o)
         self.step_count += 1
@@ -242,14 +242,15 @@ class ActorCritic(AgentBaseClass):
     def _process_accumulated_trajectory(self, keep_last):
         """Process accumulated trajectory to generate training data.
 
-        Last state/action without reward will be kept if keep_last is True.
+        Last state without action and reward will be kept if keep_last is True.
         """
         if not self._trajectory_states:
             return
 
         # If trajectory hasn't terminated, we have _trajectory_states
         # and sometimes _trajectory_actions having one more item than
-        # _trajectory_rewards.
+        # _trajectory_rewards. Same length is expected if called from
+        # start() or end(), where the trajectory has terminiated.
         if len(self._trajectory_states) == len(self._trajectory_rewards):
             initial_r = 0
         else:

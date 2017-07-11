@@ -89,6 +89,10 @@ class QLearningParameters:
         self.minibatch_size = self.config.getint(
             'QLearningAlgo', 'MinibatchSize', fallback=32)
 
+        # Number of replays per update.
+        self.replays_per_update = self.config.getint(
+            'QLearningAlgo', 'ReplaysPerUpdate', fallback=1)
+
         # Number of actions chosen between successive SGD updates of Q.
         self.q_update_frequency = self.config.getint(
             'QLearningAlgo', 'QUpdateFrequency', fallback=4)

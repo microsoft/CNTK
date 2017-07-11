@@ -429,6 +429,7 @@ class QLearningTest(unittest.TestCase):
         parameters.priority_epsilon = 0.1
         parameters.preprocessing = ''
         parameters.use_error_clipping = False
+        parameters.replays_per_update = 1 
 
     def _setup_replay_memory(self, replay_memory):
         replay_memory.sample_minibatch.side_effect = \

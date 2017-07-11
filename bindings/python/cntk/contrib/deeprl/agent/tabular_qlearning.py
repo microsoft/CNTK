@@ -37,7 +37,7 @@ class TabularQLearning(AgentBaseClass):
     def start(self, state):
         """Start a new episode."""
         self._adjust_exploration_rate()
-        self._last_state = self._preprocess(state)
+        self._last_state = self._preprocess_state(state)
         self._last_action, action_behavior = \
             self._choose_action(self._last_state)
         self.episode_count += 1
@@ -50,7 +50,7 @@ class TabularQLearning(AgentBaseClass):
         self._adjust_learning_rate()
         self.step_count += 1
 
-        next_encoded_state = self._preprocess(next_state)
+        next_encoded_state = self._preprocess_state(next_state)
         td_err = reward + self._parameters.gamma * \
             np.max(self._q[next_encoded_state]) - \
             self._q[self._last_state, self._last_action]
@@ -109,7 +109,7 @@ class TabularQLearning(AgentBaseClass):
         else:
             return np.argmax(self._q[state]), 'GREEDY'
 
-    def _preprocess(self, state):
+    def _preprocess_state(self, state):
         """Discretize state to table row index."""
         o = self._discretize_state_if_necessary(state)
         return o
