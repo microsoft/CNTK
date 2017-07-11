@@ -1108,6 +1108,35 @@ namespace CNTK
                 case PrimitiveOpType::Assign:
                     computationNodePtr = New<AssignNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::Crop:
+                    if (functionInputs.size() == 2)
+                    {
+                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameOffset))
+                        {
+                            // Crop with given offsets.
+                            const auto& offsets = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNameOffset].Value<std::vector<DictionaryValue>>());
+                            if (offsets.size() != 2)
+                            {
+                                CNTK::LogicError("Vector of crop offsets must have size 2.");
+                            }
+                            computationNodePtr = New<CropNode<ElementType>>(offsets[0], offsets[1], network->GetDeviceId(), internalNodeName);
+                        }
+                        else
+                        {
+                            // Crop with two inputs and automatic offset computation.
+                            computationNodePtr = New<CropNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                        }
+                    }
+                    else if (functionInputs.size() == 4)
+                    {
+                        // Crop with four inputs and automatic offset computation.
+                        computationNodePtr = New<CropNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    }
+                    else
+                    {
+                        CNTK::LogicError("Crop node must have 2 or 4 node inputs.");
+                    }
+                    break;
                 default:
                     CNTK::LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
                     break;

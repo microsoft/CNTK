@@ -3154,3 +3154,77 @@ def assign(ref, input, name=''):
     operand = sanitize_input(input, dtype)
     ref_operand = sanitize_input(ref, dtype)
     return assign(ref_operand, operand, name)
+
+@typemap
+def crop_manual(node_input, node_referent, offset_x, offset_y, name = ''):
+    '''
+    Crops input along spatial dimensions so that it matches spatial size of reference input.
+    Crop offsets are given in pixels.
+
+    Args:
+        node_input: class:`~cntk.ops.functions.Function` that outputs the tensor to be cropped
+        node_referent: class:`~cntk.ops.functions.Function` that outputs the reference tensor
+        offset_x (int): horizontal crop offset
+        offset_y (int): vertical crop offset
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import crop
+    arg_input = sanitize_input(node_input, get_data_type(node_input))
+    arg_ref = sanitize_input(node_referent,  get_data_type(node_referent))
+    return crop(arg_input, arg_ref, offset_x, offset_y, name)
+
+@typemap
+def crop_automatic(node_input, node_referent, name = ''):
+    '''
+    Crops input along spatial dimensions so that it matches spatial size of reference input.
+
+    Crop offsets are computed by traversing the network graph and computing affine transform
+    between the two inputs. Translation part of the transform determines the offsets. The transform
+    is computed as composition of the transforms between each input and their common ancestor.
+    The common ancestor is expected to exist.
+
+    Args:
+        node_input: class:`~cntk.ops.functions.Function` that outputs the tensor to be cropped
+        node_referent: class:`~cntk.ops.functions.Function` that outputs the reference tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import crop
+    arg_input = sanitize_input(node_input, get_data_type(node_input))
+    arg_ref = sanitize_input(node_referent,  get_data_type(node_referent))
+    return crop(arg_input, arg_ref, name)
+
+@typemap
+def crop_automatic_with_ancestors(node_input, node_referent, ancestor_input, ancestor_referent, name = ''):
+    '''
+    Crops input along spatial dimensions so that it matches spatial size of reference input.
+
+    Crop offsets are computed by traversing the network graph and computing affine transform
+    between the two inputs. Translation part of the transform determines the offsets. The transform
+    is computed as composition of the transforms between each input and their common ancestor.
+
+    ancestor_input and ancestor_referent are expected to be ancestors of node_input and
+    node_referent, respectively. They act like the same node for the purpose of finding a common
+    ancestor. They are used in cases when node_input and node_referent do not have a common
+    ancestor in the network. Typically, the ancestor nodes have the same spatial size. For example, in
+    pixelwise semantic labeling, ancestor_input would be the input image, and ancestor_referent would
+    be the ground truth image containing pixelwise labels.
+
+    Args:
+        node_input: class:`~cntk.ops.functions.Function` that outputs the tensor to be cropped
+        node_referent: class:`~cntk.ops.functions.Function` that outputs the reference tensor
+        ancestor_input (optional): class:`~cntk.ops.functions.Function` that outputs ancestor of node_input
+        ancestor_referent (optional): class:`~cntk.ops.functions.Function` that outputs ancestor of node_referent
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import crop
+    arg_node_input = sanitize_input(node_input, get_data_type(node_input))
+    arg_node_ref = sanitize_input(node_referent,  get_data_type(node_referent))
+    arg_ancestor_input = sanitize_input(ancestor_input, get_data_type(ancestor_input))
+    arg_ancestor_ref = sanitize_input(ancestor_referent,  get_data_type(ancestor_referent))
+    return crop(arg_node_input, arg_node_ref, arg_ancestor_input, arg_ancestor_ref, name)

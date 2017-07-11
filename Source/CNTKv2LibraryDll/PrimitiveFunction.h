@@ -109,6 +109,7 @@ namespace CNTK
         {PrimitiveOpType::UnpackBatch, L"UnpackBatchAxis"},
         {PrimitiveOpType::ToBatch, L"ToBatchAxis"},
         {PrimitiveOpType::Pad, L"Pad"},
+        {PrimitiveOpType::Crop, L"Crop"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -794,8 +795,9 @@ namespace CNTK
         // Version 14: Add StableSigmoid
         // Version 15: Add RandomDistribution
         // Version 16: Add to_batch/unpack_batch.
-        // Version 16: Add Pad.
-        static const size_t s_serializationVersion = 17;
+        // Version 17: Add Pad.
+        // Version 18: Add Crop node.
+        static const size_t s_serializationVersion = 18;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

@@ -394,7 +394,7 @@ namespace CNTK
     /// Checked mode enables additional runtime verification such as:
     /// - Tracking NaN occurrences in sequence gaps.
     /// - Function graph verification after binding of free static axes to actual values at runtime
-    ///
+    /// 
     /// Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
     ///
     CNTK_API void SetCheckedMode(bool enable);
@@ -4331,7 +4331,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-
+ 
     ///
     /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
     ///
@@ -5987,6 +5987,37 @@ namespace CNTK
         const CheckpointConfig& checkpointing = { L"" },
         const CrossValidationConfig& crossValidation = { nullptr },
         const TestConfig& test = { nullptr });
+
+    ///
+    /// Creates an instance of crop node, which crops one of its inputs along spatial dimensions only.
+    /// The size of the crop rectangle is determined by another input node.
+    /// The offset of the crop rectangle is either given explicitly or computed automatically by examining the network.
+    ///
+
+    ///
+    /// Creates an instance of crop node with explicitly specified crop offsets.
+    /// nodeInput: input node to be cropped.
+    /// nodeReferent: input node which determines the spatial size of output.
+    /// offsetX, offsetY: offset values in pixel which determine the position of crop rectangle.
+    ///
+    CNTK_API FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, size_t offsetX, size_t offsetY, const std::wstring& name = L"");
+
+    ///
+    /// Creates an instance of crop node with automatically computed crop offsets.
+    /// nodeInput: input node to be cropped.
+    /// nodeReferent: input node which determines the spatial size of output.
+    ///
+    CNTK_API FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, const std::wstring& name = L"");
+
+    ///
+    /// Creates an instance of crop node with automatically computed crop offsets and specified ancestor nodes.
+    /// This is used in cases when input nodes do not have common ancestor in the network.
+    /// nodeInput: input node to be cropped.
+    /// nodeReferent: input node which determines the spatial size of output.
+    /// ancestorInput: ancestor of nodeInput.
+    /// ancestorReferent: ancestor of nodeReferent which is treated as equal to ancestorInput for the purpose of computing crop offsets.
+    ///
+    CNTK_API FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, const Variable& ancestorInput, const Variable& ancestorReferent, const std::wstring& name = L"");
 
 #endif // !CNTK_HEADERONLY_DEFINITIONS
 }

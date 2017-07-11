@@ -612,3 +612,47 @@ def test_pad():
     expect_grad2 = np.asarray([[4., 6., 4.], [4., 6., 4.]])
     assert np.array_equal(grad2, expect_grad2)
 
+def test_crop():
+    # Small network.
+    node_input = C.input_variable((1, 5, 5))
+    node_referent = C.input_variable((1, 5, 5))
+    node_output = C.layers.Sequential([
+        C.layers.Convolution2D(filter_shape = (3, 3),
+                               num_filters = 1,
+                               init = 1,
+                               strides = (2, 2),
+                               pad = True,
+                               bias = False),
+        C.layers.MaxPooling(filter_shape = (3, 3),
+                            strides = (2, 2),
+                            pad = True),
+        C.layers.ConvolutionTranspose(filter_shape = (4, 4),
+                                      num_filters = 1,
+                                      strides = (4, 4),
+                                      init = 1,
+                                      bias = False)])(node_input)
+
+    # Input data.
+    input_map = {
+        node_input: -np.arange(25).reshape(1, 1, 5, 5).astype(np.float32),
+        node_referent: np.zeros([1, 1, 5, 5]).astype(np.float32)
+    }
+
+    # Expected cropped output.
+    expected = [-12, -12, -12, -24, -24] * 3 + [-63, -63, -63, -81, -81] * 2
+    expected = np.asarray(expected, dtype = np.float32).reshape(1, 1, 5, 5)
+
+    # Test crop with explicitly specified offsets.
+    cropped = C.crop_manual(node_output, node_referent, 1, 1).eval(input_map)
+    assert np.array_equal(cropped, expected)
+
+    # Test crop with automatically computed offsets where inputs
+    # have common ancestor.
+    cropped = C.crop_automatic(node_output, node_input).eval(input_map)
+    assert np.array_equal(cropped, expected)
+
+    # Test crop with automatically computed offsets where inputs do not
+    # have common ancestor.
+    cropped = C.crop_automatic_with_ancestors(
+        node_output, node_referent, node_input, node_referent).eval(input_map)
+    assert np.array_equal(cropped, expected)

@@ -516,6 +516,10 @@ namespace CNTK
 
                     return PerDimMeanVarianceNormalize(inputVars[0], meanValue, invStdDevValue, name);
                 }
+                else if (node->OperationName() == OperationNameOf(CropNode))
+                {
+                    opType = PrimitiveOpType::Crop;
+                }
                 else
                     InvalidArgument("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model.\n"
                                     "This is likely a deprecated operation; loading Brainscript/NDL models that contain deprecated operations, is not supported in Python/C++ API.\n"
