@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 from gym import spaces
 
-from agent.shared.discretize import BoxSpaceDiscretizer
+from cntk.contrib.deeprl.agent.shared.discretize import BoxSpaceDiscretizer
 
 
 class BoxSpaceDiscretizerTest(unittest.TestCase):

@@ -7,17 +7,17 @@ from cntk.losses import squared_error
 from cntk.ops import input_variable
 from gym import spaces
 
-from agent.qlearning import QLearning
-from agent.shared.cntk_utils import huber_loss
-from agent.shared.replay_memory import _Transition
+from cntk.contrib.deeprl.agent.qlearning import QLearning
+from cntk.contrib.deeprl.agent.shared.cntk_utils import huber_loss
+from cntk.contrib.deeprl.agent.shared.replay_memory import _Transition
 
 
 class QLearningTest(unittest.TestCase):
     """Unit tests for QLearning."""
 
-    @patch('agent.qlearning.ReplayMemory')
-    @patch('agent.qlearning.Models.feedforward_network')
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.ReplayMemory')
+    @patch('cntk.contrib.deeprl.agent.qlearning.Models.feedforward_network')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_init_dqn(self,
                       mock_parameters,
                       mock_model,
@@ -40,8 +40,8 @@ class QLearningTest(unittest.TestCase):
         mock_model.assert_called_with((1,), 2, '[2]', None)
         mock_replay_memory.assert_called_with(100, False)
 
-    @patch('agent.qlearning.ReplayMemory')
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.ReplayMemory')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_init_dqn_prioritized_replay(self,
                                          mock_parameters,
                                          mock_replay_memory):
@@ -55,8 +55,8 @@ class QLearningTest(unittest.TestCase):
         self.assertIsNotNone(sut._weight_variables)
         mock_replay_memory.assert_called_with(100, True)
 
-    @patch('agent.qlearning.ReplayMemory')
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.ReplayMemory')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_init_dqn_preprocessing(self,
                                     mock_parameters,
                                     mock_replay_memory):
@@ -87,8 +87,8 @@ class QLearningTest(unittest.TestCase):
         self.assertRaises(
             ValueError, QLearning, '', observation_space, action_space)
 
-    @patch('agent.qlearning.Models.dueling_network')
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.Models.dueling_network')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_init_dueling_dqn(self, mock_parameters, mock_model):
         self._setup_parameters(mock_parameters.return_value)
         mock_parameters.return_value.q_representation = 'dueling-dqn'
@@ -107,8 +107,8 @@ class QLearningTest(unittest.TestCase):
         self.assertIsNone(sut._preprocessor)
         mock_model.assert_called_with((1,), 2, '[2, [2], [2]]', None)
 
-    @patch('agent.qlearning.CustomizedModels.conv_dqn')
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.CustomizedModels.conv_dqn')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_init_customized_q(self, mock_parameters, mock_model):
         self._setup_parameters(mock_parameters.return_value)
         mock_parameters.return_value.q_representation = 'conv_dqn'
@@ -126,7 +126,7 @@ class QLearningTest(unittest.TestCase):
         self.assertIsNone(sut._preprocessor)
         mock_model.assert_called_with((1,), 2, None)
 
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_init_unsupported_q(self, mock_parameters):
         instance = mock_parameters.return_value
         instance.q_representation = 'undefined'
@@ -137,8 +137,8 @@ class QLearningTest(unittest.TestCase):
         self.assertRaises(
             ValueError, QLearning, '', observation_space, action_space)
 
-    @patch('agent.qlearning.Models.feedforward_network')
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.Models.feedforward_network')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_init_dqn_huber_loss(self, mock_parameters, mock_model):
         self._setup_parameters(mock_parameters.return_value)
         mock_parameters.return_value.use_error_clipping = True
@@ -150,8 +150,8 @@ class QLearningTest(unittest.TestCase):
 
         mock_model.assert_called_with((1,), 2, '[2]', huber_loss)
 
-    @patch('agent.qlearning.ReplayMemory')
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.ReplayMemory')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_update_q(self,
                       mock_parameters,
                       mock_replay_memory):
@@ -162,6 +162,7 @@ class QLearningTest(unittest.TestCase):
         action_space = spaces.Discrete(2)
         observation_space = spaces.Box(0, 1, (1,))
         sut = QLearning('', observation_space, action_space)
+        sut._trainer.train_minibatch = MagicMock()
         sut._choose_action = MagicMock(side_effect=[
             (1, 'GREEDY'),
             (0, 'GREEDY'),
@@ -206,8 +207,8 @@ class QLearningTest(unittest.TestCase):
         # learning rate remains 0.08 as Q is not updated during this time step.
         self.assertEqual(sut._trainer.parameter_learners[0].learning_rate(), 0.08)
 
-    @patch('agent.qlearning.ReplayMemory')
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.ReplayMemory')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_update_q_dqn(self,
                           mock_parameters,
                           mock_replay_memory):
@@ -234,8 +235,8 @@ class QLearningTest(unittest.TestCase):
             sut._trainer.train_minibatch.call_args[0][0][sut._output_variables],
             [np.array([10.36, 0.1], np.float32)])
 
-    @patch('agent.qlearning.ReplayMemory')
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.ReplayMemory')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_update_q_dqn_prioritized_replay(self,
                                              mock_parameters,
                                              mock_replay_memory):
@@ -288,8 +289,8 @@ class QLearningTest(unittest.TestCase):
             129.0496,
             places=6)  # (11.26 + 0.1) ^ 2
 
-    @patch('agent.qlearning.ReplayMemory')
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.ReplayMemory')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_update_q_double_dqn(self,
                                  mock_parameters,
                                  mock_replay_memory):
@@ -314,7 +315,7 @@ class QLearningTest(unittest.TestCase):
             sut._trainer.train_minibatch.call_args[0][0][sut._output_variables],
             [np.array([10.27, 0.1], np.float32)])
 
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_populate_replay_memory(self, mock_parameters):
         self._setup_parameters(mock_parameters.return_value)
         mock_parameters.return_value.preprocessing = 'SlidingWindow'
@@ -357,7 +358,7 @@ class QLearningTest(unittest.TestCase):
         self.assertIsNone(call_args[0][3])
         self.assertEqual(call_args[0][4], 3)
 
-    @patch('agent.qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_replay_start_size(self, mock_parameters):
         self._setup_parameters(mock_parameters.return_value)
         # Set exploration rate to 0

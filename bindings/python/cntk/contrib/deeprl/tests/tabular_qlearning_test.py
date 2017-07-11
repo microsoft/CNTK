@@ -4,7 +4,7 @@ from unittest.mock import patch
 import numpy as np
 from gym import spaces
 
-from agent.tabular_qlearning import TabularQLearning
+from cntk.contrib.deeprl.agent.tabular_qlearning import TabularQLearning
 
 
 class FakeTabularQLearning(TabularQLearning):
@@ -51,7 +51,7 @@ class TabularQLearningTest(unittest.TestCase):
         self.assertRaises(
             ValueError, TabularQLearning, '', observation_space, action_space)
 
-    @patch('agent.tabular_qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.tabular_qlearning.QLearningParameters')
     def test_init_unsupported_q(self, mock_qlearn_parameters):
         mock_qlearn_parameters.return_value.q_representation = 'undefined'
 
@@ -60,7 +60,7 @@ class TabularQLearningTest(unittest.TestCase):
         self.assertRaises(
             ValueError, TabularQLearning, '', observation_space, action_space)
 
-    @patch('agent.tabular_qlearning.QLearningParameters')
+    @patch('cntk.contrib.deeprl.agent.tabular_qlearning.QLearningParameters')
     def test_update(self, mock_qlearn_parameters):
         self._setup_qlearn_parameters(mock_qlearn_parameters.return_value)
         action_space = spaces.Discrete(2)

@@ -14,7 +14,7 @@ from gym.envs.atari.atari_env import AtariEnv
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 from env import env_factory
-from agent import agent_factory
+from cntk.contrib.deeprl.agent import agent_factory
 
 # Parse input arguments.
 parser = argparse.ArgumentParser()

@@ -1,6 +1,6 @@
 import unittest
 
-from agent.shared.replay_memory import ReplayMemory
+from cntk.contrib.deeprl.agent.shared.replay_memory import ReplayMemory
 
 
 class ReplayMemoryTest(unittest.TestCase):

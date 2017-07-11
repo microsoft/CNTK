@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 from cntk.layers import Dense
@@ -7,13 +7,13 @@ from cntk.losses import cross_entropy_with_softmax
 from cntk.ops import input_variable, placeholder
 from gym import spaces
 
-from agent.policy_gradient import ActorCritic
+from cntk.contrib.deeprl.agent.policy_gradient import ActorCritic
 
 
 class PolicyGradientTest(unittest.TestCase):
     """Unit tests for policy gradient."""
 
-    @patch('agent.policy_gradient.Models.feedforward_network')
+    @patch('cntk.contrib.deeprl.agent.policy_gradient.Models.feedforward_network')
     def test_init(self, mock_model):
         mock_model.side_effect = self._setup_test_model
 
@@ -30,14 +30,14 @@ class PolicyGradientTest(unittest.TestCase):
         self.assertEqual(mock_model.call_count, 2)
         mock_model.assert_has_calls(
             [
-                call((1,), 2, '[10]', cross_entropy_with_softmax,
+                unittest.mock.call((1,), 2, '[10]', cross_entropy_with_softmax,
                     use_placeholder_for_input=True),
-                call((1,), 1, '[10]', use_placeholder_for_input=True)
+                unittest.mock.call((1,), 1, '[10]', use_placeholder_for_input=True)
             ],
             any_order=True)
 
     @unittest.skip("Skip this as CNTK can't reset UID during test.")
-    @patch('agent.policy_gradient.PolicyGradientParameters')
+    @patch('cntk.contrib.deeprl.agent.policy_gradient.PolicyGradientParameters')
     def test_init_from_existing_model(self, mock_parameters):
         action_space = spaces.Discrete(3)
         observation_space = spaces.Box(
@@ -75,8 +75,8 @@ class PolicyGradientTest(unittest.TestCase):
         self.assertRaises(
             ValueError, ActorCritic, '', observation_space, action_space)
 
-    @patch('agent.policy_gradient.Models.feedforward_network')
-    @patch('agent.policy_gradient.PolicyGradientParameters')
+    @patch('cntk.contrib.deeprl.agent.policy_gradient.Models.feedforward_network')
+    @patch('cntk.contrib.deeprl.agent.policy_gradient.PolicyGradientParameters')
     def test_init_preprocess(self, mock_parameters, mock_model):
         self._setup_parameters(mock_parameters.return_value)
         mock_parameters.return_value.preprocessing = 'SlidingWindow'
@@ -92,14 +92,14 @@ class PolicyGradientTest(unittest.TestCase):
         self.assertEqual(mock_model.call_count, 2)
         mock_model.assert_has_calls(
             [
-                call((2, 1), 2, '[2]', cross_entropy_with_softmax,
+                unittest.mock.call((2, 1), 2, '[2]', cross_entropy_with_softmax,
                     use_placeholder_for_input=True),
-                call((2, 1), 1, '[2]', use_placeholder_for_input=True)
+                unittest.mock.call((2, 1), 1, '[2]', use_placeholder_for_input=True)
             ],
             any_order=True)
 
-    @patch('agent.policy_gradient.CustomizedModels.conv_dqn')
-    @patch('agent.policy_gradient.PolicyGradientParameters')
+    @patch('cntk.contrib.deeprl.agent.policy_gradient.CustomizedModels.conv_dqn')
+    @patch('cntk.contrib.deeprl.agent.policy_gradient.PolicyGradientParameters')
     def test_init_customized_model(self, mock_parameters, mock_model):
         action_space = spaces.Discrete(2)
         observation_space = spaces.Box(0, 1, (1,))
@@ -113,13 +113,13 @@ class PolicyGradientTest(unittest.TestCase):
         self.assertEqual(mock_model.call_count, 2)
         mock_model.assert_has_calls(
             [
-                call((1,), 2, cross_entropy_with_softmax,
+                unittest.mock.call((1,), 2, cross_entropy_with_softmax,
                     use_placeholder_for_input=True),
-                call((1,), 1, use_placeholder_for_input=True)
+                unittest.mock.call((1,), 1, use_placeholder_for_input=True)
             ],
             any_order=True)
 
-    @patch('agent.policy_gradient.PolicyGradientParameters')
+    @patch('cntk.contrib.deeprl.agent.policy_gradient.PolicyGradientParameters')
     def test_init_unsupported_model(self, mock_parameters):
         action_space = spaces.Discrete(2)
         observation_space = spaces.Box(0, 1, (1,))
@@ -137,7 +137,7 @@ class PolicyGradientTest(unittest.TestCase):
         self.assertRaises(
             ValueError, ActorCritic, '', observation_space, action_space)
 
-    @patch('agent.policy_gradient.PolicyGradientParameters')
+    @patch('cntk.contrib.deeprl.agent.policy_gradient.PolicyGradientParameters')
     def test_init_shared_representation(self, mock_parameters):
         action_space = spaces.Discrete(2)
         observation_space = spaces.Box(0, 1, (1,))
@@ -187,7 +187,7 @@ class PolicyGradientTest(unittest.TestCase):
         self.assertEqual(sut._trajectory_actions, [0, 1, 1])
         self.assertEqual(sut._trajectory_states, [0.1, 0.2, 0.3])
 
-    @patch('agent.policy_gradient.PolicyGradientParameters')
+    @patch('cntk.contrib.deeprl.agent.policy_gradient.PolicyGradientParameters')
     def test_rollout_preprocess(self, mock_parameters):
         self._setup_parameters(mock_parameters.return_value)
         mock_parameters.return_value.preprocessing = 'SlidingWindow'
@@ -225,7 +225,7 @@ class PolicyGradientTest(unittest.TestCase):
                 np.array([[0.2], [0.3]], np.float32)
             ])
 
-    @patch('agent.policy_gradient.PolicyGradientParameters')
+    @patch('cntk.contrib.deeprl.agent.policy_gradient.PolicyGradientParameters')
     def test_rollout_with_update(self, mock_parameters):
         self._setup_parameters(mock_parameters.return_value)
         mock_parameters.return_value.update_frequency = 2

@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from agent.shared.preprocessing import AtariPreprocessing
+from cntk.contrib.deeprl.agent.shared.preprocessing import AtariPreprocessing
 
 
 class AtariPreprocessingTest(unittest.TestCase):

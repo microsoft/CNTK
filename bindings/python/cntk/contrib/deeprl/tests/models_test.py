@@ -1,6 +1,6 @@
 import unittest
 
-from agent.shared.models import Models
+from cntk.contrib.deeprl.agent.shared.models import Models
 
 
 class ModelsTest(unittest.TestCase):

@@ -2,7 +2,7 @@ import unittest
 
 from gym import spaces
 
-from agent.agent import AgentBaseClass
+from cntk.contrib.deeprl.agent.agent import AgentBaseClass
 
 
 class AgentBaseClassTest(unittest.TestCase):
