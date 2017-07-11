@@ -194,7 +194,7 @@ protected:
     // Due to the GPU memory limitations, it is sometime not possible to hold the m_mbSize in RAM.
     // To mitigate this issue, we adopt the sub-minibatch implementation, where
     // each m_mbSize[epoch] is divided by a few sub-minibatch of which size will be no more than m_maxSamplesInRAM
-    // a forward-backward is performed for each sub-minibathch; a model update is performed after each minibatch
+    // a forward-backward is performed for each sub-minibatch; a model update is performed after each minibatch
     size_t m_numSubminiBatches;
     // alternative method to specify how to split minibatches into subminibatches
     // default is 1, which means no subminibatch is used

@@ -95,7 +95,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
      input_rank (int, defaults to `None`): number of inferred axes to add to W (`map_rank` must not be given)
      map_rank (int, defaults to `None`): expand W to leave exactly `map_rank` axes (`input_rank` must not be given)
      bias (bool, optional, defaults to `True`): the layer will have no bias if `False` is passed here
-     init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defualts to 0): initial value of weights `b`
+     init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
@@ -119,7 +119,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     #  - by default, equal to the dimensions of the input passed to Dense()
     #  - if input_rank is given, then the last 'input_rank' dimensions of the input (all others are not reduced over)
     #  - if map_rank is given, then the all but the first 'map_rank' dimensions of the input (those are not reduced over)
-    # where input_rank and map_rank are mutuallly exclusive.
+    # where input_rank and map_rank are mutually exclusive.
 
     output_rank = len(output_shape)   # support outputs with tensor layouts
 
@@ -158,7 +158,7 @@ def Embedding(shape=None, init=default_override_or(C.glorot_uniform()), weights=
     Layer factory function to create a embedding layer.
 
     An embedding is conceptually a lookup table. For every input token (e.g. a word or any category label), the corresponding
-    entry in in the lookup table is returned.
+    entry in the lookup table is returned.
 
     In CNTK, discrete items such as words are represented as one-hot vectors.
     The table lookup is realized as a matrix product, with a matrix

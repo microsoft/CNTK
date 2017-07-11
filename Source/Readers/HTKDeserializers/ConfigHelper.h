@@ -58,7 +58,7 @@ public:
         std::vector<std::wstring>& hmms,
         std::vector<std::wstring>& lattices);
 
-    // Gets mlf file paths from the configuraiton.
+    // Gets mlf file paths from the configuration.
     std::vector<std::wstring> GetMlfPaths() const;
 
     // Gets utterance paths from the configuration.

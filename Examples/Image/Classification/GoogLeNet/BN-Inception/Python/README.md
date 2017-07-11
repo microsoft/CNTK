@@ -24,7 +24,7 @@ For more parameter definitions, please use `-h` command to see the help text:
 
 ### BN_Inception_CIFAR10_Distributed.py
 
-[This example](./BN_Inception_CIFAR10_Distributed.py) is similar to BN_Inception_CIFAR10.py, but it adds support for distributed training via [MPI](https://en.wikipedia.org/wiki/Message_Passing_Interface). Details can be found in [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#32-python).
+[This example](./BN_Inception_CIFAR10_Distributed.py) is similar to BN_Inception_CIFAR10.py, but it adds support for distributed training via [MPI](https://en.wikipedia.org/wiki/Message_Passing_Interface). Details can be found in [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines#42-running-parallel-training-with-python).
 Note this example requires a multi-GPU machine or mpi hosts file to distribute to multiple machines.
 
 Simple aggregation, BN-Inception, with a 2-GPU machine:
@@ -49,9 +49,9 @@ For more parameter definitions, please use `-h` command to see the help text:
 
 ### BN_Inception_ImageNet_Distributed.py
 
-[This example](./BN_Inception_ImageNet_Distributed.py) is similar to BN_Inception_ImageNet.py, but it adds  distributed training support.
+[This example](./BN_Inception_ImageNet_Distributed.py) is similar to BN_Inception_ImageNet.py, but it adds distributed training support.
 
-To run it in a distributed manner, please check [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#32-python). For example, the command for distributed training on the same machine (with multiple GPUs) with Windows is:
+To run it in a distributed manner, please check [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines#42-running-parallel-training-with-python). For example, the command for distributed training on the same machine (with multiple GPUs) with Windows is:
 
 `mpiexec -n <#workers> python BN_Inception_ImageNet_Distributed.py`
 

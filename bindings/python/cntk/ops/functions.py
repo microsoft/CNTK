@@ -1,3 +1,8 @@
+"""
+CNTK function constructs. This is the core abstraction of all primitive operators in the CNTK computational graph.
+"""
+
+
 from os import path
 from enum import Enum, unique
 import sys
@@ -221,7 +226,7 @@ class Function(cntk_py.Function):
 
             # verify that we got the parameter order right
             out_arg_names = [arg.name for arg in out.signature]
-            assert out_arg_names == arg_names
+            assert out_arg_names == arg_names, (out_arg_names, arg_names)
 
             if len(out.signature) != len(args):
                 unfulfilled_args = set(out.signature) - set(args)
@@ -386,7 +391,7 @@ class Function(cntk_py.Function):
         # numeric: evaluate
         outputs = self.outputs
         _, output_map = self.forward(arg_map, outputs)
-        assert len(output_map) == len(outputs)
+        assert len(output_map) == len(outputs), (output_map, outputs)
         if len(output_map) > 1: # tuple-valued: return tuple
             return tuple(output_map[output] for output in outputs)
         else: # single value: return numpy array and that's it
@@ -617,7 +622,7 @@ class Function(cntk_py.Function):
              passing input data.
 
         Returns:
-           dict or NumPy Array: Dict with keys of ouput variable names and values of
+           dict or NumPy Array: Dict with keys of output variable names and values of
            output variable. A single NumPy array if there is only one output value.
         '''
         if outputs is None:
@@ -1510,9 +1515,9 @@ class Function(cntk_py.Function):
             return cntk_py.Function.load_from_buffer(model, device)
 
         if is_file:
-            return cntk_py.Function.load(model, device)
+            return cntk_py.Function.load(str(model), device)
 
-        raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
+        raise ValueError('Cannot load the model {} that is neither a file nor a byte buffer.'.format(model))
 
     @staticmethod
     def with_signature(*args, **kwargs):

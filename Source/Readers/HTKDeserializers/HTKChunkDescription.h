@@ -119,7 +119,7 @@ public:
 
     // Pages-in the data for this chunk.
     // this function supports retrying since we read from the unreliable network, i.e. do not return in a broken state
-    // We pass in the feature info variables to check that that data being read has expected properties.
+    // We pass in the feature info variables to check that data being read has expected properties.
     void RequireData(const string& featureKind, size_t featureDimension, unsigned int samplePeriod, int verbosity = 0) const
     {
         if (GetNumberOfUtterances() == 0)

@@ -9,8 +9,8 @@
 
 // perform all the boilerplate needed by halide. Basically takes a bunch of input parameters and packages them up into halide structs
 void invoke_halide_convolve(const float *filter, const float *input, int num_filters, int size, int channels, bool pad, int stride, int w, int h, const float *output) {
-    int out_w = pad == 0 ? (w - size)/stride + 1 : (w - 1)/stride + 1;
-    int out_h = pad == 0 ? (h - size)/stride + 1 : (h - 1)/stride + 1;
+    int out_w = !pad ? (w - size)/stride + 1 : (w - 1)/stride + 1;
+    int out_h = !pad ? (h - size)/stride + 1 : (h - 1)/stride + 1;
     
     // package up the filter buffer
     halide_buffer_t halide_filter_buf = {0};

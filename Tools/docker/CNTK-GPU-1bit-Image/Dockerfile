@@ -7,7 +7,7 @@ RUN test "$ENABLE_1BIT_SGD" = "true" ||  ( echo "\033[0;31m\
 You are attempting to build an image of CNTK with 1-bit Stochastic Gradient\n\
 Descent (1bit-SGD) enabled. Before proceeding further please ensure you     \n\ 
 understand the license difference between CNTK and 1bit-SGD. See            \n\
-https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD#license-difference-between-cntk-and-1bit-sgd\n\
+https://docs.microsoft.com/en-us/cognitive-toolkit/Enabling-1bit-SGD#license-difference-between-cntk-and-1bit-sgd \n\
 \n\
 To build the image pass the following parameter to Docker:\n\
 \n\
@@ -51,7 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         # For Java Bindings
         openjdk-7-jdk \
         # For SWIG
-        libpcre++-dev && \
+        libpcre3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN OPENMPI_VERSION=1.10.3 && \
@@ -147,7 +147,8 @@ RUN mv /bin/sh /bin/sh.orig && \
 RUN cd /root && \
     wget -q http://prdownloads.sourceforge.net/swig/swig-3.0.10.tar.gz -O - | tar xvfz - && \
     cd swig-3.0.10 && \
-    ./configure --without-perl5 && \
+    # Note: we specify --without-alllang to suppress building tests and examples for specific languages.
+    ./configure --without-alllang && \
     make -j $(nproc) && \
     make install
 

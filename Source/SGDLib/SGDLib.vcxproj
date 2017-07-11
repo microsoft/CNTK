@@ -154,6 +154,6 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Error Condition="!$(HasMultiverso) And '$(CNTK_ENABLE_ASGD)'!='false'" Text="CNTK requires Multiverso to build, Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#getting-cntk-source-code for installation instructions." />
+    <Error Condition="!$(HasMultiverso) And '$(CNTK_ENABLE_ASGD)'!='false'" Text="CNTK requires Multiverso to build, Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#enlisting-in-the-cntk-github-repository for installation instructions." />
   </Target>
 </Project>

@@ -1038,3 +1038,44 @@ def test_base64_is_equal_image(tmpdir):
         images2_stream = mb_source.streams['images2']
         images2 = mb[images2_stream].asarray()
         assert(images1 == images2).all()
+
+def test_prefetch_with_unpacking(tmpdir):
+    data = r'''0  |S0 1 1 1 1   |S1 1000
+1   |S0 2 2 2 2  |S1 100
+2   |S0 3 3 3 3  |S1 100
+3   |S0 1 1 1 1  |S1 10
+4   |S0 2 2 2 2  |S1 1
+5   |S0 3 3 3 3  |S1 2000
+6   |S0 1 1 1 1  |S1 200
+7   |S0 2 2 2 2  |S1 200
+8   |S0 3 3 3 3  |S1 20
+9   |S0 1 1 1 1  |S1 2
+'''
+    import time
+    tmpfile = _write_data(tmpdir, data)
+
+    input_dim = 4
+    num_output_classes = 1
+
+    mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
+        features=StreamDef(field='S0', shape=input_dim, is_sparse=False),
+        labels=StreamDef(field='S1', shape=num_output_classes, is_sparse=False)
+    )), randomize=False, max_samples=FULL_DATA_SWEEP)
+
+    input_map = { 'S0' : mb_source.streams.features, 'S1' : mb_source.streams.labels }
+    empty = False
+    mb_size = 3
+    # On the last minibatch there will be resize called, 
+    # due to 10%3 = 1 sample  in the minibatch
+    while not empty:
+        mb = mb_source.next_minibatch(mb_size, input_map=input_map)
+        time.sleep(1) # make sure the prefetch kicks in
+        if mb:
+            # Force unpacking to check that we do 
+            # not break prefetch 
+            actual_size = mb['S0'].shape[0]
+            assert (mb['S0'].asarray() == np.array([[[1, 1, 1, 1]],
+                                                    [[2, 2, 2, 2]],
+                                                    [[3, 3, 3, 3]]], dtype=np.float32)[0:actual_size]).all()
+        else:
+            empty = True

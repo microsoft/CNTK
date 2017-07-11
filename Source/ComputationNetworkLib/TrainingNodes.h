@@ -632,7 +632,7 @@ public:
         }
 
         // Update K (number of url pairs that have smaller or equal gain), rk (rank of 
-        // score in descending order) and and m_pairwiseDifferences (save for gradient 
+        // score in descending order) and m_pairwiseDifferences (save for gradient 
         // computation).
         size_t pairCount = 0;
         for (auto &qu : m_queryUrls)
@@ -1447,9 +1447,9 @@ public:
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 private:
-    // Approximates the expected number of occurences of a class in the sampled set.
+    // Approximates the expected number of occurrences of a class in the sampled set.
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
-    // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
+    // the probability that a specific class in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
     // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
     double EstimateInSampleFrequency(double p, double estimatedNumTries) const;
 

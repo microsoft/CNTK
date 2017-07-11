@@ -71,6 +71,7 @@ size_t ReaderBase::GetCurrentSamplePosition()
 void ReaderBase::SetCurrentSamplePosition(size_t currentSamplePosition)
 {
     m_sequenceEnumerator->SetCurrentSamplePosition(currentSamplePosition);
+    m_packer->Reset();
 }
 
 void ReaderBase::SetConfiguration(const ReaderConfiguration& config, const std::map<std::wstring, int>&)

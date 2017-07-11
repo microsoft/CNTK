@@ -318,7 +318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: Can this just exist inside SGD.cpp?
     // ===================================================================
 
-    // A sub-minibathc is a part of a minibatch which helps computing large minibatches that cannot load into GPU memory in one forward-backward computation
+    // A sub-minibatch is a part of a minibatch which helps computing large minibatches that cannot load into GPU memory in one forward-backward computation
     // The usage would be :
     //        SubminibatchHelpers sbhelper;
     //        for (;;)

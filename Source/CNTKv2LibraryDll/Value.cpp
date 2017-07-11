@@ -14,6 +14,7 @@
 #include "Utils.h"
 #include "Value.h"
 #include "Matrix.h"
+#include "CommonMatrix.h"
 #include "CPUSparseMatrix.h"
 #include "RecurrentNodes.h"
 
@@ -584,6 +585,62 @@ namespace CNTK
     }
 
     template <typename ElementType>
+    std::tuple<size_t, size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable)
+    {
+        auto varShape = outputVariable.Shape();
+        if (varShape == NDShape::Unknown || varShape.HasInferredDimension())
+            InvalidArgument("The outputVariable '%S' shape '%S' is of unknown shape or has inferred dimension for at least one axis.",
+                outputVariable.AsString().c_str(), varShape.AsString().c_str());
+
+        if (!outputVariable.IsSparse())
+            InvalidArgument("The outputVariable '%S' must be in the sparse format.", outputVariable.AsString().c_str());
+
+        size_t numOfSequences;
+        size_t maxSequenceLen;
+        std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable);
+
+        // Only support sequence without batch
+        if (numOfSequences != 1)
+            InvalidArgument("The Value cannot be copied to buffers in sparse format, since it contains multiple sequences. Only a single sequence is supported.");
+
+        if (MaskedCount() != 0)
+            RuntimeError("There should not be any masks for a Value containing only one single sequence.");
+
+        auto numNonZeroValues = std::get<3>(Data()->SparseCSCDataBuffers<ElementType>());
+        auto numOfColsInMatrix = GetMatrixDimensions(Shape()).second + 1;
+        return std::tuple<size_t, size_t, size_t>(maxSequenceLen, numOfColsInMatrix, numNonZeroValues);
+    }
+
+    template <typename ElementType>
+    void Value::CopyVariableValueToCSCSparse(size_t sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<ElementType>& nonZeroValues, size_t& numNonZeroValues)
+    {
+        // All sanity check has been done in ValidateSparseCSCAndGetIndexSizes().
+        NDArrayViewPtr cpuView;
+        if (Device().Type() == DeviceKind::GPU)
+        {
+            // Todo: GPUSparseMatrix to CPUSparseMatrix is not implemented in matrix, as a workaround the dense matrix is used as intermediate presentation.
+            // However, it is possible that data value very close to 0 could treated as 0 after transformation between dense and sparse.
+            auto cpuDenseView = MakeSharedObject<NDArrayView>(GetDataType(), StorageFormat::Dense, Shape(), DeviceDescriptor::CPUDevice());
+            cpuDenseView->CopyFrom(*Data());
+            cpuView = MakeSharedObject<NDArrayView>(GetDataType(), GetStorageFormat(), Shape(), DeviceDescriptor::CPUDevice());
+            cpuView->CopyFrom(*cpuDenseView);
+        }
+        else
+            cpuView = Data();
+
+        auto numOfColsInMatrix = GetMatrixDimensions(cpuView->Shape()).second + 1;
+        const ElementType* rawNonZeroValues;
+        const SparseIndexType* rawColStarts;
+        const SparseIndexType* rawRowIndices;
+
+        std::tie(rawNonZeroValues, rawColStarts, rawRowIndices, numNonZeroValues) = cpuView->SparseCSCDataBuffers<ElementType>();
+
+        memcpy(colStarts.data(), rawColStarts, numOfColsInMatrix * sizeof(SparseIndexType));
+        memcpy(nonZeroValues.data(), rawNonZeroValues, numNonZeroValues * sizeof(ElementType));
+        memcpy(rowIndices.data(), rawRowIndices, numNonZeroValues * sizeof(SparseIndexType));
+    }
+
+    template <typename ElementType>
     ElementType Value::AsScalar() const
     {
         if (Mask())
@@ -710,6 +767,10 @@ namespace CNTK
     template CNTK_API void Value::CopyVariableValueToVector<double>(const Variable& outputVariable, std::vector<std::vector<double>>& sequences);
     template CNTK_API void Value::CopyVariableValueToVector<float>(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences);
     template CNTK_API void Value::CopyVariableValueToVector<double>(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences);
+    template CNTK_API std::tuple<size_t, size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes<float>(const Variable& outputVariable);
+    template CNTK_API std::tuple<size_t, size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes<double>(const Variable& outputVariable);
+    template CNTK_API void Value::CopyVariableValueToCSCSparse<float>(size_t sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<float>& nonZeroValues, size_t& numNonZeroValues);
+    template CNTK_API void Value::CopyVariableValueToCSCSparse<double>(size_t sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<double>& nonZeroValues, size_t& numNonZeroValues);
     template float Value::AsScalar<float>() const;
     template double Value::AsScalar<double>() const;
 }
