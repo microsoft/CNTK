@@ -1748,6 +1748,17 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
     }
 
+    FunctionPtr SELU(const Variable& operand, double scale, double alpha, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero,
+            ElementTimes(Constant::Scalar(operand.GetDataType(), alpha), ELU(operandPlaceholder)),
+            operandPlaceholder);
+        result = ElementTimes(Constant::Scalar(operand.GetDataType(), scale), result);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"SELU", name);
+    }
+
     FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)
     {
         auto operandPlaceholder = PlaceholderVariable();
