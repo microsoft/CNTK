@@ -585,7 +585,7 @@ private:
     {
         auto inputSlice = InputRef(0).GetTensorSliceFor(rank, fr);    // input must be narrowed down
         for (int i = 0; i < (int)m_axis.size(); i++)  
-            inputSlice.NarrowTo(Axis(i)-1, BeginIndex(i), EndIndex(i), std::abs(m_stride_multiplier[i]), m_stride_multiplier[i] < 0);
+            inputSlice.NarrowTo(Axis(i)-1, BeginIndex(i), EndIndex(i), m_stride_multiplier[i]);
         return inputSlice;
     }
 
@@ -626,7 +626,7 @@ public:
 
             // propagate as much as we can
             if (isFinalValidationPass || (m_axis[i] - 1 < sampleLayout.GetRank() && 0 <= BeginIndex(i) && BeginIndex(i) <= EndIndex(i) && EndIndex(i) <= sampleLayout[m_axis[i] - 1])) // (the second condition guards against failing an out-of-bounds error if not isFinalValidationPass)
-                sampleLayout.NarrowTo(m_axis[i] - 1, BeginIndex(i), EndIndex(i), std::abs(m_stride_multiplier[i]), m_stride_multiplier[i] < 0);
+                sampleLayout.NarrowTo(m_axis[i] - 1, BeginIndex(i), EndIndex(i), m_stride_multiplier[i]);
         }
         SetDims(TensorShape(sampleLayout.GetDims()), HasMBLayout());
     }
