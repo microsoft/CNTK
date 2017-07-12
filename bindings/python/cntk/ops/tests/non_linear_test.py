@@ -467,10 +467,12 @@ def test_op_softplus(operand, device_id, precision):
     _test_unary_op(precision, device_id, softplus, operand,
                    expected_forward, expected_backward)
 
-SAMPLES = [  # 2 samples having 4 classes
+SAMPLES = [  # 5 samples having 4 classes
     [1, 1, 2, 3],
     [0, 0, 0, 0],
-    [3, 3, 4, 4]
+    [3, 3, 4, 4],
+    [1000, 1000, 1000, 1000],
+    [10000, 10000, 10000, 10000]
 ]
 
 
@@ -507,6 +509,30 @@ def test_op_softmax(sample, device_id, precision):
     _test_unary_op(precision, device_id, softmax, sample,
                    expected_forward, expected_backward)
 
+
+SAMPLES_AXIS = [  # 4 samples having 4 classes
+    [[1], [1], [1], [1]],
+    [[0], [0], [0], [0]],
+    [[1000], [1000], [1000], [1000]],
+    [[10000], [10000], [10000], [10000]]
+]
+
+
+@pytest.mark.parametrize("sample", SAMPLES_AXIS)
+def test_op_softmax_axis(sample, device_id, precision):
+    t = AA(sample, dtype=PRECISION_TO_TYPE[precision])
+    assert len(t.shape) == 1
+
+    x_max = t - t.max()
+    exp_x = np.exp(x_max)
+    forward = exp_x / np.sum(exp_x)
+
+    expected_forward = AA([forward])
+
+    from cntk import softmax
+    result = softmax(sample, axis=0).eval()
+
+    assert np.array_equal(result.asarray(), expected_forward)
 
 @pytest.mark.parametrize("sample", SAMPLES)
 def test_op_hardmax(sample, device_id, precision):

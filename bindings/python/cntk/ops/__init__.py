@@ -1482,6 +1482,10 @@ def softmax(x, axis=None, name=''):
         array([[[ 0.5     ,  0.5     ],
                 [ 0.119203,  0.880797]]], dtype=float32)
 
+        >>> C.softmax([[[1, 1], [3, 5]]], axis=1).eval()
+        array([[[ 0.1192029 ,  0.01798621],
+                [ 0.88079697,  0.9820137 ]]], dtype=float32)
+
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
         axis (int or :class:`~cntk.axis.Axis`): axis along which the softmax operation will be performed
@@ -1497,19 +1501,17 @@ def softmax(x, axis=None, name=''):
 
     # For softmax on different axis, simply swap axis then call the standard softmax.
     if is_last_axis:
-        z = softmax(x, name)
+        return softmax(x, name)
     else:
         from cntk.cntk_py import transpose_axes
         axis = sanitize_axis(axis)
         last_axis = sanitize_axis(last_axis)
+
         xp = placeholder()
-
         f = transpose_axes(xp, axis, last_axis)
-        f = softmax(f, name)
+        f = softmax(f)
         f = transpose_axes(f, last_axis, axis)
-        z = as_block(f, [(xp, x)], 'softmax', name)
-
-    return z
+        return as_block(f, [(xp, x)], 'softmax', name)
 
 @typemap
 def hardmax(x, name=''):
