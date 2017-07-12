@@ -416,12 +416,12 @@ public:
     // short-hand to initialize an MBLayout for the common case of frame mode
     // In frame mode, there is one parallel "sequence" per sample, which is 1 frame long.
     // This function provides an efficient short-cut implementation of AddSequence(t, t, 0, 1) for every sample t.
-    void InitAsFrameMode(size_t numSamples)
+    void InitAsFrameMode(size_t numSamples, size_t windowSize = 1)
     {
-        Init(numSamples, 1);
+        Init(numSamples, windowSize);
 
         // create sequences array
-        SequenceInfo virginSeqInfo = {0, 0, 0, 1};
+        SequenceInfo virginSeqInfo = {0, 0, 0, windowSize};
         m_sequences.resize(numSamples, virginSeqInfo); // pass it here since otherwise STL will initialize everything to 0 unnecessarily
 
         // update sequence indices
@@ -432,7 +432,7 @@ public:
             seqDesc.seqId = s;
             seqDesc.s = s;
         }
-        m_numFramesDeclared = numSamples;
+        m_numFramesDeclared = numSamples * windowSize;
 
         // create all the cached fast-lookup information
         m_distanceToStart.SetValue(0);

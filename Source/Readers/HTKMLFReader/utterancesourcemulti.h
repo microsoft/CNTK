@@ -35,6 +35,7 @@ class minibatchutterancesourcemulti : public minibatchsource
     const bool framemode;                    // true -> actually return frame-level randomized frames (not possible in lattice mode)
     const bool truncated;                    //false -> truncated utterance or not within minibatch
     size_t maxUtteranceLength;               //10000 ->maximum utterance length in non-frame and non-truncated mode
+    const bool windowedSequenceFrameMode = false;
 
     std::vector<std::vector<size_t>> counts; // [s] occurence count for all states (used for priors)
     int verbosity;
@@ -885,10 +886,11 @@ public:
     minibatchutterancesourcemulti(bool useMersenneTwister, const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
                                   const latticesource &lattices, const std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode, std::vector<bool> expandToUtt,
-                                  const size_t maxUtteranceLength, const bool truncated)
+                                  const size_t maxUtteranceLength, const bool truncated, const bool windowedSequenceFrameMode = false)
                                   : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), 
                                   lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), m_generatePhoneBoundaries(!lattices.empty()), 
-                                  m_frameRandomizer(randomizedchunks, useMersenneTwister), expandToUtt(expandToUtt), m_useMersenneTwister(useMersenneTwister), maxUtteranceLength(maxUtteranceLength), truncated(truncated)
+                                  m_frameRandomizer(randomizedchunks, useMersenneTwister), expandToUtt(expandToUtt), m_useMersenneTwister(useMersenneTwister), maxUtteranceLength(maxUtteranceLength), truncated(truncated),
+                                  windowedSequenceFrameMode(windowedSequenceFrameMode)
     // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
     // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
     {
@@ -1853,7 +1855,16 @@ public:
                     // page in the needed range of frames
                     if (leftcontext[i] == 0 && rightcontext[i] == 0)
                     {
-                        leftextent = rightextent = augmentationextent(uttframevectors[t].size(), vdim[i]);
+                        // TODO weixi: to change it back
+                        if (windowedSequenceFrameMode && i != 0)
+                        {
+                            leftextent = leftcontext[0];
+                            rightextent = rightcontext[0];
+                        }
+                        else
+                        {
+                            leftextent = rightextent = augmentationextent(uttframevectors[t].size(), vdim[i]);
+                        }
                     }
                     else
                     {

@@ -137,6 +137,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         InvalidArgument("network needs at least 1 input and 1 output specified!");
     }
 
+    m_windowSize = readerConfig(L"windowSize", 1);
+    m_windowedSequenceFrameMode = readerConfig(L"windowedSequenceFrameMode", false);
     // load data for all real-valued inputs (features)
     foreach_index (i, featureNames)
     {
@@ -174,7 +176,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         // update m_featDims to reflect the total input dimension (featDim x contextWindow), not the native feature dimension
         // that is what the lower level feature readers expect
-        m_featDims[i] = m_featDims[i] * (1 + numContextLeft[i] + numContextRight[i]);
+        m_featDims[i] = m_featDims[i] * (m_windowedSequenceFrameMode ? (1 + numContextLeft[0] + numContextRight[0]) : (1 + numContextLeft[i] + numContextRight[i]));
 
         wstring type = thisFeature(L"type", L"real");
         if (EqualCI(type, L"real"))
@@ -333,6 +335,21 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (m_frameMode && m_truncated)
     {
         InvalidArgument("'Truncated' cannot be 'true' in frameMode (i.e. when 'frameMode' is 'true')");
+    }
+
+    if (m_windowedSequenceFrameMode && !m_frameMode)
+    {
+        InvalidArgument("'windowedSequenceFrameMode' cannot be 'true' in non-frameMode (i.e. when 'frameMode' is 'false')");
+    }
+
+    if (m_windowedSequenceFrameMode && m_windowSize == 1)
+    {
+        InvalidArgument("'windowedSequenceFrameMode' cannot be 'true' when 'windowSize' is 1 or not set");
+    }
+
+    if (!m_windowedSequenceFrameMode && m_windowSize > 1)
+    {
+        InvalidArgument("'windowedSequenceFrameMode' cannot be 'false' when 'windowSize' is larger than 1");
     }
 
     // determine if we partial minibatches are desired
@@ -525,7 +542,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, m_featDims, m_labelDims,
                                                                          numContextLeft, numContextRight, randomize, 
                                                                          *m_lattices, m_latticeMap, m_frameMode, 
-                                                                         m_expandToUtt, m_maxUtteranceLength, m_truncated));
+                                                                         m_expandToUtt, m_maxUtteranceLength, m_truncated, m_windowedSequenceFrameMode));
         m_frameSource->setverbosity(m_verbosity);
     }
     else if (EqualCI(readMethod, L"rollingWindow"))
@@ -1007,7 +1024,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
             if (m_frameMode)
             {
                 assert(m_numSeqsPerMB == 1); // user must not request parallel sequences
-                m_pMBLayout->InitAsFrameMode(m_mbNumTimeSteps);
+                m_pMBLayout->InitAsFrameMode(m_mbNumTimeSteps, m_windowSize);
             }
             else
             {
@@ -1139,14 +1156,14 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                     if (m_nameToTypeMap[iter2->first] == InputOutputTypes::real)
                     {
                         id = m_featureNameToIdMap[iter2->first];
-                        dim = m_featureNameToDimMap[iter2->first];
-                        data.SetValue(dim, m_mbNumTimeSteps * m_numSeqsPerMB, data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
+                        dim = m_featureNameToDimMap[iter2->first] / m_windowSize;
+                        data.SetValue(dim, m_mbNumTimeSteps * m_numSeqsPerMB * m_windowSize, data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
                     }
                     else if (m_nameToTypeMap[iter2->first] == InputOutputTypes::category)
                     {
                         id = m_labelNameToIdMap[iter2->first];
                         dim = m_labelNameToDimMap[iter2->first];
-                        data.SetValue(dim, m_mbNumTimeSteps * m_numSeqsPerMB, data.GetDeviceId(), m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
+                        data.SetValue(dim, m_mbNumTimeSteps * m_numSeqsPerMB * m_windowSize, data.GetDeviceId(), m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
                     }
                 }
             }
@@ -1524,19 +1541,24 @@ void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(StreamMinibatchInputs
         {
             id = m_labelNameToIdMap[iter->first];
             dim = m_labelNameToDimMap[iter->first];
-            if (m_labelsBufferMultiIO[id] == nullptr || m_labelsBufferAllocatedMultiIO[id] < dim * m_mbNumTimeSteps * m_numSeqsPerMB)
+            if (m_labelsBufferMultiIO[id] == nullptr || m_labelsBufferAllocatedMultiIO[id] < dim * m_mbNumTimeSteps * m_numSeqsPerMB * m_windowSize)
             {
-                m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbNumTimeSteps * m_numSeqsPerMB);
-                memset(m_labelsBufferMultiIO[id].get(), 0, sizeof(ElemType) * dim * m_mbNumTimeSteps * m_numSeqsPerMB);
-                m_labelsBufferAllocatedMultiIO[id] = dim * m_mbNumTimeSteps * m_numSeqsPerMB;
+                m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbNumTimeSteps * m_numSeqsPerMB * m_windowSize);
+                memset(m_labelsBufferMultiIO[id].get(), 0, sizeof(ElemType) * dim * m_mbNumTimeSteps * m_numSeqsPerMB * m_windowSize);
+                m_labelsBufferAllocatedMultiIO[id] = dim * m_mbNumTimeSteps * m_numSeqsPerMB * m_windowSize;
             }
 
             for (size_t j = 0, k = startFr; j < framenum; j++, k++)
             {
                 for (int d = 0; d < dim; d++)
                 {
-                    m_labelsBufferMultiIO[id].get()[(k * m_numSeqsPerMB + channelIndex) * dim + d] = 
-                        m_labelsBufferMultiUtt[sourceChannelIndex].get()[j * dim + d + m_labelsStartIndexMultiUtt[id + sourceChannelIndex * numOfLabel]];
+                    size_t middle = (m_windowSize - 1) / 2;
+                    for (size_t w = 0; w < m_windowSize; w++)
+                    {
+                        m_labelsBufferMultiIO[id].get()[(k * m_numSeqsPerMB + channelIndex) * dim * m_windowSize + w * dim + d] =
+                            w == middle ? m_labelsBufferMultiUtt[sourceChannelIndex].get()[j * dim + d + m_labelsStartIndexMultiUtt[id + sourceChannelIndex * numOfLabel]]
+                                    : 0;
+                    }
                 }
             }
         }
