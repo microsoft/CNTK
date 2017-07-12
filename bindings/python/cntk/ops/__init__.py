@@ -1469,7 +1469,8 @@ def softmax(x, axis=None, name=''):
     therefore be interpreted as probabilities for mutually exclusive outcomes
     as in the case of multiclass classification.
 
-    If ``axis`` is given, the softmax will be computed along that axis.
+    If ``axis`` is given, the softmax will be computed along that axis. Otherwise, it
+    will be computed along the last axis.
 
     Example:
         >>> C.softmax([[1, 1, 2, 3]]).eval()
@@ -1483,8 +1484,8 @@ def softmax(x, axis=None, name=''):
                 [ 0.119203,  0.880797]]], dtype=float32)
 
         >>> C.softmax([[[1, 1], [3, 5]]], axis=1).eval()
-        array([[[ 0.1192029 ,  0.01798621],
-                [ 0.88079697,  0.9820137 ]]], dtype=float32)
+        array([[[ 0.119203,  0.017986],
+                [ 0.880797,  0.982014]]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
