@@ -1491,18 +1491,25 @@ def softmax(x, axis=None, name=''):
     '''
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
-    # softmax over a specific axis: implemented explicitly
-    # TODO: move this into the C++ API.
-    if axis is not None:
-        from cntk.cntk_py import reduce_log_sum, exp, minus
-        axis = sanitize_axis(axis)
-        Z = reduce_log_sum(x, axis)  # log denominator
-        # TODO: use as_block()
-        return exp(x - Z.output(), name) # this is the softmax
-        # (note: we need .output() here since the automatisms available outside are not available in here)
-    # softmax over all elements
-    return softmax(x, name)
 
+    last_axis = len(x.shape)-1
+    is_last_axis = (axis is None) or (axis == -1) or (axis == last_axis)
+
+    # For softmax on different axis, simply swap axis then call the standard softmax.
+    if is_last_axis:
+        z = softmax(x, name)
+    else:
+        from cntk.cntk_py import transpose_axes
+        axis = sanitize_axis(axis)
+        last_axis = sanitize_axis(last_axis)
+        xp = placeholder()
+
+        f = transpose_axes(xp, axis, last_axis)
+        f = softmax(f, name)
+        f = transpose_axes(f, last_axis, axis)
+        z = as_block(f, [(xp, x)], 'softmax', name)
+
+    return z
 
 @typemap
 def hardmax(x, name=''):
