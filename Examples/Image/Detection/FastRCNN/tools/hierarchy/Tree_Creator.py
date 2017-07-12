@@ -315,8 +315,8 @@ class TreeMap():
 
         return target, scale
 
-    def get_prediction(self):
-        return NotImplemented
+    #def get_prediction(self):
+    #    return NotImplemented
 
     def get_output_mapper(self):
         return Output_Mapper(self)
