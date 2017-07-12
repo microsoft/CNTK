@@ -1,12 +1,7 @@
 """Actor-Critic Policy Gradient."""
 
+import cntk as C
 import numpy as np
-from cntk.layers import Dense
-from cntk.learners import (UnitType, adam, learning_rate_schedule,
-                           momentum_schedule)
-from cntk.losses import cross_entropy_with_softmax, squared_error
-from cntk.ops import combine, input_variable, softmax
-from cntk.train.trainer import Trainer
 
 import ast
 
@@ -102,7 +97,7 @@ class ActorCritic(AgentBaseClass):
         shape_of_inputs = self._shape_of_inputs if self._preprocessor is None \
             else self._preprocessor.output_shape()
         self._input_variables = \
-            input_variable(shape=shape_of_inputs, dtype=np.float32)
+            C.ops.input_variable(shape=shape_of_inputs, dtype=np.float32)
 
         # Set up policy network.
         if self._parameters.policy_representation == 'nn':
@@ -110,7 +105,7 @@ class ActorCritic(AgentBaseClass):
                 shape_of_inputs,
                 self._num_actions,
                 self._parameters.policy_network_hidden_layers,
-                cross_entropy_with_softmax,
+                C.losses.cross_entropy_with_softmax,
                 use_placeholder_for_input=True)
         else:
             try:
@@ -119,7 +114,7 @@ class ActorCritic(AgentBaseClass):
                 model = model_definition_function(
                     shape_of_inputs,
                     self._num_actions,
-                    cross_entropy_with_softmax,
+                    C.losses.cross_entropy_with_softmax,
                     use_placeholder_for_input=True)
             except ValueError:
                 raise ValueError(
@@ -131,7 +126,7 @@ class ActorCritic(AgentBaseClass):
         self._policy_network_output_variables = model['outputs']
         # The weight is computed as part of the Actor-Critic algorithm.
         self._policy_network_weight_variables = \
-            input_variable(shape=(1,), dtype=np.float32)
+            C.ops.input_variable(shape=(1,), dtype=np.float32)
         self._policy_network_loss = \
             model['loss'] * self._policy_network_weight_variables
 
@@ -152,10 +147,11 @@ class ActorCritic(AgentBaseClass):
             # from cntk, _policy_network defined here doesn't include softmax
             # output layer. Therefore _value_network becomes _policy_network
             # plus one additional linear output layer.
-            self._value_network = Dense(1, activation=None)(self._policy_network)
-            self._value_network_output_variables = input_variable(
+            self._value_network = C.layers.Dense(1, activation=None)(
+                self._policy_network)
+            self._value_network_output_variables = C.ops.input_variable(
                 shape=(1,), dtype=np.float32)
-            self._value_network_loss = squared_error(
+            self._value_network_loss = C.losses.squared_error(
                 self._value_network, self._value_network_output_variables)
         else:
             if self._parameters.value_function_representation == 'nn':
@@ -182,24 +178,25 @@ class ActorCritic(AgentBaseClass):
             self._value_network_output_variables = model['outputs']
             self._value_network_loss = model['loss']  # squared_error by default
 
-        combined_networks = combine([self._policy_network, self._value_network])
+        combined_networks = C.ops.combine(
+            [self._policy_network, self._value_network])
         combined_loss = self._policy_network_loss + \
             self._parameters.regularization_weight * negative_of_entropy(
-                softmax(self._policy_network)) + \
+                C.ops.softmax(self._policy_network)) + \
             self._parameters.relative_step_size * self._value_network_loss
 
         # The learning rate will be updated later before each minibatch
         # training.
-        self._trainer = Trainer(
+        self._trainer = C.train.trainer.Trainer(
             combined_networks,
             (combined_loss, None),
-            adam(
+            C.learners.adam(
                 combined_networks.parameters,
-                learning_rate_schedule(
+                C.learners.learning_rate_schedule(
                     self._parameters.initial_eta,
-                    UnitType.sample),
-                momentum=momentum_schedule(self._parameters.momentum),
-                variance_momentum=momentum_schedule(0.999),
+                    C.learners.UnitType.sample),
+                momentum=C.learners.momentum_schedule(self._parameters.momentum),
+                variance_momentum=C.learners.momentum_schedule(0.999),
                 use_mean_gradient=True))
 
         print("Parameterized the agent's value function using neural network "
@@ -215,12 +212,13 @@ class ActorCritic(AgentBaseClass):
                     (self._parameters.initial_eta - self._parameters.eta_minimum) *
                     (1 - float(self.step_count)/self._parameters.eta_decay_step_count))
             self._trainer.parameter_learners[0].reset_learning_rate(
-                learning_rate_schedule(eta, UnitType.sample))
+                C.learners.learning_rate_schedule(
+                    eta, C.learners.UnitType.sample))
 
     def _choose_action(self, state):
         """Choose an action according to policy."""
         action_probs = \
-            softmax(self._evaluate_model(self._policy_network, state)).eval()
+            C.ops.softmax(self._evaluate_model(self._policy_network, state)).eval()
         return np.random.choice(self._num_actions, p=action_probs), action_probs
 
     def save(self, filename):

@@ -22,7 +22,7 @@ class AgentBaseClass(object):
                 'Discrete action spaces.)'.format(a_space, self))
         self._num_actions = a_space.n
 
-        # We assume the observation is in one of the following forms:
+        # We assume the observation is in one of the following cases:
         # 1. discrete, and takes values from 0 to n - 1
         # 2. can be discretized, and the raw state is converted to an internal
         #    state taking values from 0 to n - 1
@@ -144,7 +144,7 @@ class AgentBaseClass(object):
             return state
 
     def _index_to_vector(self, index, dimension):
-        # TODO(maoyi): Use sparse vector
+        # TODO: Use sparse vector
         a = np.zeros(dimension,)
         a[index] = 1
         return a

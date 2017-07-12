@@ -1,9 +1,7 @@
 """A set of predefined models used by Q learning or Actor-Critic."""
 
+import cntk as C
 import numpy as np
-from cntk.layers import AveragePooling, Dense, For, Sequential
-from cntk.losses import squared_error
-from cntk.ops import input_variable, placeholder, relu
 
 import ast
 
@@ -37,21 +35,21 @@ class Models:
             'inputs', 'outputs', 'loss' and 'f'.
         """
         # input/output
-        inputs = placeholder(shape=shape_of_inputs) \
+        inputs = C.ops.placeholder(shape=shape_of_inputs) \
             if use_placeholder_for_input \
-            else input_variable(shape=shape_of_inputs, dtype=np.float32)
-        outputs = input_variable(shape=(number_of_outputs,), dtype=np.float32)
+            else C.ops.input_variable(shape=shape_of_inputs, dtype=np.float32)
+        outputs = C.ops.input_variable(shape=(number_of_outputs,), dtype=np.float32)
 
         # network structure
         hidden_layers = ast.literal_eval(model_hidden_layers)
-        f = Sequential([
-            For(range(len(hidden_layers)),
-                lambda h: Dense(hidden_layers[h], activation=relu)),
-            Dense(number_of_outputs, activation=None)
+        f = C.layers.Sequential([
+            C.layers.For(range(len(hidden_layers)),
+                lambda h: C.layers.Dense(hidden_layers[h], activation=C.ops.relu)),
+            C.layers.Dense(number_of_outputs, activation=None)
         ])(inputs)
 
         if loss_function is None:
-            loss = squared_error(f, outputs)
+            loss = C.losses.squared_error(f, outputs)
         else:
             loss = loss_function(f, outputs)
 
@@ -90,37 +88,39 @@ class Models:
             'inputs', 'outputs', 'loss' and 'f'.
         """
         # input/output
-        inputs = placeholder(shape=shape_of_inputs) \
+        inputs = C.ops.placeholder(shape=shape_of_inputs) \
             if use_placeholder_for_input \
-            else input_variable(shape=shape_of_inputs, dtype=np.float32)
-        outputs = input_variable(shape=(number_of_outputs,), dtype=np.float32)
+            else C.ops.input_variable(shape=shape_of_inputs, dtype=np.float32)
+        outputs = C.ops.input_variable(
+            shape=(number_of_outputs,), dtype=np.float32)
 
         # network structure
         shared_hidden_layers, v_hidden_layers, a_hidden_layers =\
             Models._parse_dueling_network_structure(model_hidden_layers)
         # shared layers
-        s = For(range(len(shared_hidden_layers)),
-                lambda h: Dense(shared_hidden_layers[h], activation=relu))(inputs)
+        s = C.layers.For(
+            range(len(shared_hidden_layers)),
+            lambda h: C.layers.Dense(shared_hidden_layers[h], activation=C.ops.relu))(inputs)
         # Value function
-        v = Sequential([
-            For(range(len(v_hidden_layers)),
-                lambda h: Dense(v_hidden_layers[h], activation=relu)),
-            Dense(1, activation=None)
+        v = C.layers.Sequential([
+            C.layers.For(
+                range(len(v_hidden_layers)),
+                lambda h: C.layers.Dense(v_hidden_layers[h], activation=C.ops.relu)),
+            C.layers.Dense(1, activation=None)
         ])(s)
         # Advantage function
-        a = Sequential([
-            For(range(len(a_hidden_layers)),
-                lambda h: Dense(a_hidden_layers[h], activation=relu)),
-            Dense(number_of_outputs, activation=None)
+        a = C.layers.Sequential([
+            C.layers.For(
+                range(len(a_hidden_layers)),
+                lambda h: C.layers.Dense(a_hidden_layers[h], activation=C.ops.relu)),
+            C.layers.Dense(number_of_outputs, activation=None)
         ])(s)
         # Q = V + A - avg(A)
-        # TODO(maoyi): GlobalAveragePooling() may be a better alternative, but
-        # it gives segmentation fault for now.
-        avg_a = AveragePooling((number_of_outputs,))(a)
+        avg_a = C.layers.AveragePooling((number_of_outputs,))(a)
         q = v + a - avg_a
 
         if loss_function is None:
-            loss = squared_error(q, outputs)
+            loss = C.losses.squared_error(q, outputs)
         else:
             loss = loss_function(q, outputs)
 

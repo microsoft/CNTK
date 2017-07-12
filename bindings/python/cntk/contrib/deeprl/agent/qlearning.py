@@ -2,11 +2,8 @@
 
 import math
 
+import cntk as C
 import numpy as np
-from cntk.learners import (UnitType, adam, learning_rate_schedule,
-                           momentum_schedule)
-from cntk.ops import input_variable
-from cntk.train.trainer import Trainer
 
 import ast
 
@@ -76,7 +73,7 @@ class QLearning(AgentBaseClass):
         self._output_variables = model['outputs']
         if self._parameters.use_prioritized_replay:
             self._weight_variables = \
-                input_variable(shape=(1,), dtype=np.float32)
+                C.ops.input_variable(shape=(1,), dtype=np.float32)
             self._loss = model['loss'] * self._weight_variables
         else:
             self._loss = model['loss']
@@ -84,26 +81,18 @@ class QLearning(AgentBaseClass):
         # If gradient_clipping_threshold_per_sample is inf, gradient clipping
         # will not be performed. Set gradient_clipping_with_truncation to False
         # to clip the norm.
-        # opt = sgd(
-        #     self._q.parameters,
-        #     learning_rate_schedule(
-        #         self._parameters.initial_eta, UnitType.sample),
-        #     use_mean_gradient=True,
-        #     gradient_clipping_threshold_per_sample=
-        #         self._parameters.gradient_clipping_threshold,
-        #     gradient_clipping_with_truncation=False)
-        opt = adam(
+        opt = C.learners.adam(
             self._q.parameters,
-            learning_rate_schedule(
-                self._parameters.initial_eta, UnitType.sample),
+            C.learners.learning_rate_schedule(
+                self._parameters.initial_eta, C.learners.UnitType.sample),
             use_mean_gradient=True,
-            momentum=momentum_schedule(self._parameters.momentum),
-            variance_momentum=momentum_schedule(0.999),
+            momentum=C.learners.momentum_schedule(self._parameters.momentum),
+            variance_momentum=C.learners.momentum_schedule(0.999),
             gradient_clipping_threshold_per_sample=
                 self._parameters.gradient_clipping_threshold,
-            gradient_clipping_with_truncation=False,
-            gaussian_noise_injection_std_dev=1e-8)
-        self._trainer = Trainer(self._q, (self._loss, None), opt)
+            gradient_clipping_with_truncation=False)
+        self._trainer = C.train.trainer.Trainer(
+            self._q, (self._loss, None), opt)
 
         # Initialize target Q.
         self._target_q = self._q.clone('clone')
@@ -196,7 +185,8 @@ class QLearning(AgentBaseClass):
                 (1 - float(self.step_count)/self._parameters.eta_decay_step_count))
 
             self._trainer.parameter_learners[0].reset_learning_rate(
-                learning_rate_schedule(eta, UnitType.sample))
+                C.learners.learning_rate_schedule(
+                    eta, C.learners.UnitType.sample))
 
     def _adjust_exploration_rate(self):
         self._epsilon = self._parameters.epsilon_minimum + max(

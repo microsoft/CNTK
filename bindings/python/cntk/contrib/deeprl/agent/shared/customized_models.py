@@ -9,11 +9,8 @@ QRepresentation or PolicyRepresentation to path (module_name.function_name) of
 the function. QLearning/PolicyGradient will then automatically search for it.
 """
 
+import cntk as C
 import numpy as np
-from cntk.layers import Convolution, Dense, Sequential, default_options
-from cntk.losses import squared_error
-from cntk.ops import (constant, element_times, input_variable, minus,
-                      placeholder, relu)
 
 
 def conv_dqn(shape_of_inputs,
@@ -37,26 +34,27 @@ def conv_dqn(shape_of_inputs,
         'inputs', 'outputs', 'loss' and 'f'.
     """
     # input/output
-    inputs = placeholder(shape=shape_of_inputs) \
+    inputs = C.ops.placeholder(shape=shape_of_inputs) \
         if use_placeholder_for_input \
-        else input_variable(shape=shape_of_inputs, dtype=np.float32)
-    outputs = input_variable(shape=(number_of_outputs,), dtype=np.float32)
+        else C.ops.input_variable(shape=shape_of_inputs, dtype=np.float32)
+    outputs = C.ops.input_variable(
+        shape=(number_of_outputs,), dtype=np.float32)
 
     # network structure
-    inputs_remove_mean = minus(inputs, constant(128))
-    scaled_inputs = element_times(constant(0.00390625), inputs_remove_mean)
+    centered_inputs = inputs - 128
+    scaled_inputs = centered_inputs / 256
 
-    with default_options(activation=relu):
-        q = Sequential([
-            Convolution((8, 8), 32, strides=4),
-            Convolution((4, 4), 64, strides=2),
-            Convolution((3, 3), 64, strides=2),
-            Dense((512,)),
-            Dense(number_of_outputs, activation=None)
+    with C.layers.default_options(activation=C.ops.relu):
+        q = C.layers.Sequential([
+            C.layers.Convolution((8, 8), 32, strides=4),
+            C.layers.Convolution((4, 4), 64, strides=2),
+            C.layers.Convolution((3, 3), 64, strides=2),
+            C.layers.Dense((512,)),
+            C.layers.Dense(number_of_outputs, activation=None)
         ])(scaled_inputs)
 
     if loss_function is None:
-        loss = squared_error(q, outputs)
+        loss = C.losses.squared_error(q, outputs)
     else:
         loss = loss_function(q, outputs)
 
