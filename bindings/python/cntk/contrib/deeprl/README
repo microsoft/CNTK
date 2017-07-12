@@ -1,38 +1,8 @@
 Tools for RL, based on CNTK.
 
-Dependency:
-    - CNTK: https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-your-machine
-    - OpenAI Gym: https://gym.openai.com/docs
-    - Atari: https://github.com/openai/gym#atari
-             Use the following command to install Atari games on Windows:
-                pip install git+https://github.com/Kojoley/atari-py.git
-
-The following commands assume RL/ as the working directory.
-
-To run all unittest cases:
-    python -m unittest discover tests/
-
-To train an agent using
-    - TabularQLearning
-    python bin/run.py --env=CartPole-v0 --max_steps=100000 --agent=tabular_qlearning --agent_config=agent/config_examples/tabular_qlearning.cfg --eval_period=1000 --eval_steps=20000
-
-    - QLearning
-    python bin/run.py --env=CartPole-v0 --max_steps=100000 --agent=qlearning --agent_config=agent/config_examples/qlearning.cfg --eval_period=1000 --eval_steps=20000
-
-    - ActorCritic
-    python bin/run.py --env=CartPole-v0 --max_steps=100000 --agent=actor_critic --agent_config=agent/config_examples/policy_gradient.cfg --eval_period=1000 --eval_steps=20000
-
-    - RandomAgent
-    python bin/run.py --env=CartPole-v0 --max_steps=100 --agent=random --eval_period=1 --eval_steps=200000
-
-The evaluation results are written to --wks_file, which by default have the same name as output directory.
-To view the results, type the following command in python:
-
-import shelve
-d = shelve.open('out/out.wks')
-d['reward_history']
-d.close()
-
-Note, reading and writing sim_gym.wks simultaneously will corrupt the file. To
-check your results while the program is still running, make a copy of wks file
-and read the number from the copy.
+Related papers:
+- DQN https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
+- Prioritized Experience Replay https://arxiv.org/pdf/1511.05952.pdf
+- Dueling Network https://arxiv.org/pdf/1511.06581.pdf
+- Double Q Learning https://arxiv.org/pdf/1509.06461.pdf
+- Actor-Critic https://arxiv.org/pdf/1602.01783.pdf
