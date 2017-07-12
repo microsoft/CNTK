@@ -101,6 +101,7 @@ private:
 
     // assistent functions for GetCropRect****(). 
     double ApplyRatioJitter(const double minVal, const double maxVal, std::mt19937 &rng);
+    int ApplyIntJitter(const int minVal, const int maxVal, std::mt19937 &rng);
 
     cv::Rect GetCropRectCenter(int crow, int ccol, std::mt19937 &rng);
     cv::Rect GetCropRectRandomSide(int crow, int ccol, std::mt19937 &rng);
@@ -161,8 +162,13 @@ public:
 
 private:
     void Apply(uint8_t copyId, cv::Mat &mat) override;
+    
+    template <typename ElemType>
+    void NormImage(cv::Mat &mat, const cv::Mat &mean, const cv::Mat &std);
 
     cv::Mat m_meanImg;
+    cv::Mat m_meanNorm;
+    cv::Mat m_stdNorm;
 };
 
 // Transpose transformation from HWC to CHW (note: row-major notation).
@@ -235,11 +241,18 @@ private:
 
     void Apply(uint8_t copyId, cv::Mat &mat) override;
     template <typename ElemType>
-    void Apply(cv::Mat &mat);
+    void ApplyNormal(cv::Mat &mat);
+    template <typename ElemType>
+    void ApplyGrayScale(cv::Mat &mat);
 
+    template <typename ElemType>
+    void GrayScale(cv::Mat &mat, cv::Mat& gs);
+
+    bool m_useGrayScale;
     double m_brightnessRadius;
     double m_contrastRadius;
     double m_saturationRadius;
+    floatargvector m_grayScale;
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     conc_stack<std::unique_ptr<cv::Mat>> m_hsvTemp;

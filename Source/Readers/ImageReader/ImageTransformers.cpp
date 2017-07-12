@@ -86,10 +86,9 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
     floatargvector aspectRatio = config(L"aspectRatio", "1.0");
     m_aspectRatioMin = aspectRatio[0];
     m_aspectRatioMax = aspectRatio[1];
-    if (!(m_aspectRatioMin > 0 && m_aspectRatioMax <= 1.0) ||  
-        m_aspectRatioMin > m_aspectRatioMax)
+    if (m_aspectRatioMin > m_aspectRatioMax)
     {
-        RuntimeError("Invalid aspectRatio value, must be > 0 and <= 1. aspectMin must <= aspectMax");
+        RuntimeError("aspectMin must <= aspectMax");
     }
 
     m_jitterType = ParseJitterType(config(L"jitterType", ""));
@@ -183,6 +182,15 @@ double CropTransformer::ApplyRatioJitter(const double minVal, const double maxVa
         RuntimeError("Jitter type currently not implemented.");
     }
     return -1;
+}
+
+int CropTransformer::ApplyIntJitter(const int minVal, const int maxVal, std::mt19937 &rng)
+{
+    assert(minVal <= maxVal);
+    if (minVal == maxVal)
+        return minVal;
+    else
+        return UniIntT(minVal, maxVal)(rng);
 }
 
 cv::Rect CropTransformer::GetCropRectCenter(int crow, int ccol, std::mt19937 &rng) 
@@ -413,6 +421,11 @@ void ScaleTransformer::Apply(uint8_t, cv::Mat &mat)
 MeanTransformer::MeanTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
     std::wstring meanFile = config(L"meanFile", L"");
+    std::wstring normFile = config(L"normFile", L"");
+
+    if (!meanFile.empty() && !normFile.empty())
+        InvalidArgument("cannot use meanFile and normalizeFile at same time");
+
     if (meanFile.empty())
         m_meanImg.release();
     else
@@ -434,6 +447,30 @@ MeanTransformer::MeanTransformer(const ConfigParameters& config) : ImageTransfor
         fs.release();
         m_meanImg = m_meanImg.reshape(cchan, crow);
     }
+
+    if (normFile.empty())
+    {
+        m_meanNorm.release();
+        m_stdNorm.release();
+    }
+    else
+    {
+        cv::FileStorage fs;
+        fs.open(msra::strfun::utf8(normFile).c_str(), cv::FileStorage::READ);
+        if (!fs.isOpened())
+            RuntimeError("Could not open norm file: %ls", meanFile.c_str());
+
+        int cchan;
+        fs["Channel"] >> cchan;
+        fs["Mean"] >> m_meanNorm;
+        fs["Std"] >> m_stdNorm;
+        fs.release();
+        if (cchan != m_meanNorm.rows * m_meanNorm.cols *m_meanNorm.channels()
+            || cchan != m_stdNorm.rows * m_stdNorm.cols * m_stdNorm.channels())
+            RuntimeError("Invalid data in norm file: %ls", meanFile.c_str());
+        m_meanNorm.reshape(1, cchan);
+        m_stdNorm.reshape(1, cchan);
+    }
 }
 
 void MeanTransformer::Apply(uint8_t, cv::Mat &mat)
@@ -442,16 +479,59 @@ void MeanTransformer::Apply(uint8_t, cv::Mat &mat)
            (m_meanImg.size() == mat.size() &&
            m_meanImg.channels() == mat.channels()));
 
+    assert(m_meanNorm.size() == cv::Size(0, 0) ||
+        m_meanNorm.rows * m_meanNorm.cols * m_meanNorm.channels() == mat.channels());
+    assert(m_stdNorm.size() == cv::Size(0, 0) ||
+        m_stdNorm.rows * m_stdNorm.cols * m_stdNorm.channels() == mat.channels());
+
     if (m_meanImg.size() == mat.size())
     {
-        // If matrix has not been converted to the right type, do it now as maen requires floating point type.
+        // If matrix has not been converted to the right type, do it now as mean requires floating point type.
         ConvertToFloatingPointIfRequired(mat);
         mat = mat - m_meanImg;
     }
-    else
+    else if (m_meanImg.size() != cv::Size(0, 0))
     {
         fprintf(stderr, "WARNING: Mean file does not match the size of the input image, will be ignored.\n"
             "Please remove mean transformation from the config.\n");
+    }
+
+    size_t meanCount = m_meanNorm.rows * m_meanNorm.cols * m_meanNorm.channels();
+    size_t stdCount = m_stdNorm.rows * m_stdNorm.cols * m_stdNorm.channels();
+    if (meanCount == mat.channels() && stdCount == mat.channels())
+    {
+        ConvertToFloatingPointIfRequired(mat);
+        if (m_meanNorm.type() != mat.type())
+            m_meanNorm.convertTo(m_meanNorm, mat.type());
+        if (m_stdNorm.type() != mat.type())
+            m_stdNorm.convertTo(m_stdNorm, mat.type());
+
+        if (mat.type() == CV_64FC(mat.channels()))
+            NormImage<double>(mat, m_meanNorm, m_stdNorm);
+        else if (mat.type() == CV_32FC(mat.channels()))
+            NormImage<float>(mat, m_meanNorm, m_stdNorm);
+        else
+            RuntimeError("Unsupported type");
+    } 
+    else if (m_meanNorm.size() != cv::Size(0, 0) || m_stdNorm.size() != cv::Size(0, 0))
+    {
+        fprintf(stderr, "WARNING: Norm file does not match the size of the input image, will be ignored.\n"
+            "Please remove mean transformation from the config.\n");
+    }
+}
+
+template <typename ElemType>
+void MeanTransformer::NormImage(cv::Mat &mat, const cv::Mat &mean, const cv::Mat &std)
+{
+    size_t count = mat.rows * mat.cols * mat.channels();
+    ElemType* matPtr = reinterpret_cast<ElemType*>(mat.data);
+    for (int offset = 0; offset < count; offset += mat.channels())
+    {
+        for (int i = 0; i < mat.channels(); i++)
+        {
+            *(matPtr + offset + i) -= mean.at<ElemType>(i);
+            *(matPtr + offset + i) /= std.at<ElemType>(i);
+        }
     }
 }
 
@@ -660,6 +740,8 @@ void IntensityTransformer::Apply(cv::Mat &mat)
 
 ColorTransformer::ColorTransformer(const ConfigParameters &config) : ImageTransformerBase(config)
 {
+    m_useGrayScale = config(L"useGrayScale", false);
+
     m_brightnessRadius = config(L"brightnessRadius", "0.0"); 
     if (m_brightnessRadius < 0 || m_brightnessRadius > 1.0) 
         InvalidArgument("brightnessRadius must be >= 0.0 and <= 1.0"); 
@@ -671,7 +753,18 @@ ColorTransformer::ColorTransformer(const ConfigParameters &config) : ImageTransf
     m_saturationRadius = config(L"saturationRadius", "0.0");
     if (m_saturationRadius < 0 || m_saturationRadius > 1.0)
         InvalidArgument("saturationRadius must be >= 0.0 and <= 1.0");
-}
+
+    m_grayScale = config(L"grayScale", "0.0");
+    float count = 0;
+    for (size_t i = 0; i < m_grayScale.size(); i++)
+    {
+        if (m_grayScale[i] < 0 || m_grayScale[i] > 1.0)
+            InvalidArgument("grayScale must be >= 0.0 and <= 1.0");
+        count += m_grayScale[i];
+    }
+    if (m_useGrayScale && count != 1)
+        InvalidArgument("grayScale must set grayScale parameters in script");
+}   
 
 void ColorTransformer::StartEpoch(const EpochConfiguration &config)
 {
@@ -687,15 +780,102 @@ void ColorTransformer::Apply(uint8_t, cv::Mat &mat)
     ConvertToFloatingPointIfRequired(mat);
 
     if (mat.type() == CV_64FC(mat.channels()))
-        Apply<double>(mat);
+    {
+        if (!m_useGrayScale)
+            ApplyNormal<double>(mat);
+        else
+            ApplyGrayScale<double>(mat);
+    }
     else if (mat.type() == CV_32FC(mat.channels()))
-        Apply<float>(mat);
+    {
+        if (!m_useGrayScale)
+            ApplyNormal<float>(mat);
+        else
+            ApplyGrayScale<float>(mat);
+    }
     else
         RuntimeError("Unsupported type");
 }
 
 template <typename ElemType>
-void ColorTransformer::Apply(cv::Mat &mat)
+void ColorTransformer::ApplyGrayScale(cv::Mat &mat)
+{
+    auto seed = GetSeed();
+    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
+
+    std::vector<std::wstring> handles;
+    
+    if (m_brightnessRadius != 0)
+        handles.push_back(L"brightness");
+    if (m_contrastRadius != 0)
+        handles.push_back(L"contrast");
+    if (m_saturationRadius != 0)
+        handles.push_back(L"saturation");
+    if (handles.size() == 0)
+        return;
+    std::shuffle(handles.begin(), handles.end(), *rng);
+    
+    cv::Mat gs = mat.clone();
+    ElemType* gsPtr = reinterpret_cast<ElemType*>(gs.data);
+    ElemType* matPtr = reinterpret_cast<ElemType*>(mat.data);
+    size_t count = mat.rows * mat.cols * mat.channels();
+    for (std::wstring& handle : handles)
+    {
+        ElemType alpha = 1;
+        if (L"brightness" == handle)
+        {
+            UniRealT d(-m_brightnessRadius, m_brightnessRadius);
+            alpha = (ElemType)1 + (ElemType)d(*rng);
+            gs.setTo((ElemType)0);
+        }
+        else if (L"contrast" == handle)
+        {
+            UniRealT d(-m_contrastRadius, m_contrastRadius);
+            alpha = (ElemType)1 + (ElemType)d(*rng);
+            GrayScale<ElemType>(mat, gs);
+            ElemType gsSum = 0;
+            for (int i = 0; i < count; i++)
+                gsSum += *(gsPtr + i);
+            ElemType gsMean = (gsSum / mat.channels()) / (mat.rows * mat.cols);
+            gs.setTo(gsMean);
+        }
+        else if (L"saturation" == handle)
+        {
+            UniRealT d(-m_saturationRadius, m_saturationRadius);
+            alpha = (ElemType)1 + (ElemType)d(*rng);
+            GrayScale<ElemType>(mat, gs);
+        }
+        else
+            InvalidArgument("no such color transformer");
+
+        for (int offset = 0; offset < count; offset++)
+            *(matPtr + offset) = *(matPtr + offset) * alpha + *(gsPtr + offset) * (1 - alpha);
+    }
+}
+
+template <typename ElemType>
+void ColorTransformer::GrayScale(cv::Mat& mat, cv::Mat& gs)
+{
+    if(mat.channels() != m_grayScale.size())
+        InvalidArgument("grayScale size must be same as mat channels");
+
+    gs.setTo((ElemType)0);
+
+    size_t count = mat.rows * mat.cols * mat.channels();
+    ElemType* gsPtr = reinterpret_cast<ElemType*>(gs.data);
+    ElemType* matPtr = reinterpret_cast<ElemType*>(mat.data);
+    for (int offset = 0; offset < count; offset += mat.channels())
+    {
+        ElemType value = 0;
+        for (int i = 0; i < mat.channels(); i++)
+            value += *(matPtr + offset + i) * m_grayScale[i];
+        for (int i = 0; i < mat.channels(); i++)
+            *(gsPtr + offset + i) = value;
+    }
+}
+
+template <typename ElemType>
+void ColorTransformer::ApplyNormal(cv::Mat &mat)
 {
     auto seed = GetSeed();
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
