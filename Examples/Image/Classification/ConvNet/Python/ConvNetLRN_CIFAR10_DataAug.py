@@ -9,7 +9,6 @@ import os
 import math
 import numpy as np
 import cntk as C
-import _cntk_py
 import cntk.io.transforms as xforms
 
 # Paths relative to current python file.
@@ -67,7 +66,7 @@ def LocalResponseNormalization(k, n, alpha, beta, name=''):
 
 # Train and evaluate the network.
 def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_epochs = 80):
-    _cntk_py.set_computation_network_trace_level(0)
+    C.cntk_py.set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
     input_var = C.input_variable((num_channels, image_height, image_width))

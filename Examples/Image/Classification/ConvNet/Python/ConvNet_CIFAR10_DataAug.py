@@ -9,7 +9,6 @@ import os
 import math
 import numpy as np
 import cntk
-import _cntk_py
 import cntk.io.transforms as xforms
 
 from cntk.layers import Convolution2D, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense, default_options, identity, Sequential, For

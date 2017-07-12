@@ -10,7 +10,6 @@ import math
 import argparse
 import numpy as np
 import cntk as C
-import _cntk_py
 import cntk.io.transforms as xforms
 from cntk.train.training_session import *
 from cntk.logging import *
@@ -140,7 +139,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64, epoch_size=50000, num_quantization_bits=32,
                             block_size=3200, warm_up=0, max_epochs=2, restore=False, log_to_file=None, 
                             num_mbs_per_log=None, gen_heartbeat=False, profiling=False, tensorboard_logdir=None):
-    _cntk_py.set_computation_network_trace_level(0)
+    C.cntk_py.set_computation_network_trace_level(0)
 
     network = create_conv_network()
 

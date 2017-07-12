@@ -10,7 +10,6 @@ import math
 import argparse
 import numpy as np
 import cntk as C
-import _cntk_py
 import cntk.io.transforms as xforms
 
 from cntk.logging import *
@@ -173,7 +172,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 # Train and evaluate the network.
 def vgg19_train_and_eval(train_data, test_data, num_quantization_bits=32, minibatch_size=128, epoch_size = 1281167, max_epochs=80,
                          restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, testing=False):
-    _cntk_py.set_computation_network_trace_level(0)
+    C.cntk_py.set_computation_network_trace_level(0)
 
     progress_printer = ProgressPrinter(
         freq=num_mbs_per_log,

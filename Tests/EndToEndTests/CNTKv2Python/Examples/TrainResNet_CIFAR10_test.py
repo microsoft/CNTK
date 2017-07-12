@@ -9,7 +9,7 @@ import os
 import shutil
 import sys
 from cntk.ops.tests.ops_test_utils import cntk_device
-from cntk.cntk_py import DeviceKind_GPU
+from cntk.cntk_py import DeviceKind_GPU, set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
 from cntk.device import try_set_default_device
 import pytest
 
@@ -30,7 +30,6 @@ def test_cifar_resnet_error(device_id):
     # change dir to locate data.zip correctly
     os.chdir(base_path)
 
-    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_computation_network_trace_level(1)
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     #force_deterministic_algorithms()

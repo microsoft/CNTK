@@ -11,7 +11,7 @@ import sys
 import json
 import zipfile
 from cntk import load_model
-from cntk.cntk_py import DeviceKind_GPU
+from cntk.cntk_py import DeviceKind_GPU, set_fixed_random_seed, force_deterministic_algorithms
 from cntk.device import try_set_default_device, gpu
 from cntk.logging.graph import get_node_outputs
 from cntk.ops.tests.ops_test_utils import cntk_device
@@ -19,7 +19,6 @@ from cntk.ops.tests.ops_test_utils import cntk_device
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "TransferLearning"))
-from _cntk_py import set_fixed_random_seed, force_deterministic_algorithms
 from TransferLearning_Extended import train_and_eval
 from prepare_test_data import prepare_animals_data
 

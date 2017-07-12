@@ -12,7 +12,6 @@ import math
 import argparse
 import numpy as np
 import cntk
-import _cntk_py
 
 import cntk.io.transforms as xforms
 from cntk.debugging import start_profiler, stop_profiler
@@ -93,7 +92,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 # Train and evaluate the network.
 def bn_inception_train_and_eval(train_data, test_data, mean_data, num_quantization_bits=32, epoch_size=1281167, max_epochs=300, minibatch_size=None,
                          restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, scale_up=False, profiling=False):
-    _cntk_py.set_computation_network_trace_level(0)
+    C.cntk_py.set_computation_network_trace_level(0)
 
     # NOTE: scaling up minibatch_size increases sample throughput. In 8-GPU machine,
     # ResNet110 samples-per-second is ~7x of single GPU, comparing to ~3x without scaling

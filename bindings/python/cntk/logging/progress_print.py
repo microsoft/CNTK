@@ -556,7 +556,7 @@ def log_number_of_parameters(model, trace_level=0):
     parameters = model.parameters
     from functools import reduce
     from operator import add, mul
-    from _cntk_py import InferredDimension
+    from .._cntk_py import InferredDimension
     if any(any(dim == InferredDimension for dim in p.shape) for p in parameters):
         total_parameters = 'so far unspecified number of'
     else:

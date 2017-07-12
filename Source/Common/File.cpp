@@ -988,7 +988,7 @@ FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc
     }
 
     m_dllName += L".dll";
-    m_hModule = LoadLibrary(m_dllName.c_str());
+    m_hModule = LoadLibrary(m_dllName.c_str()); // TODO here
     if (m_hModule == NULL)
         RuntimeError("Plugin not found: '%ls'", m_dllName.c_str());
     // create a variable of each type just to call the proper templated version

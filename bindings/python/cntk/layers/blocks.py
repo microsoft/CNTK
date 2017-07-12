@@ -10,6 +10,7 @@ e.g. the LSTM block.
 '''
 
 from __future__ import division
+import warnings
 import numpy as np
 from cntk import placeholder, combine, alias
 from cntk.variables import Constant, Parameter
@@ -17,7 +18,7 @@ from cntk.ops import times, slice, sigmoid, tanh, softplus
 #from .typing import Signature
 from cntk.internal import _as_tuple
 from cntk.initializer import glorot_uniform
-from _cntk_py import InferredDimension
+from .._cntk_py import InferredDimension
 from cntk.default_options import get_default_override, default_override_or
 
 from cntk.ops.functions import Function
@@ -41,7 +42,7 @@ def _initializer_for(init, rank_params=None):
     # scalar constant: that's it, nothing further to do here
     if np.isscalar(init):
         # BUGBUG: this is sometimes required when dimensions are unknown; shouldn't.
-        from _cntk_py import constant_initializer
+        from .._cntk_py import constant_initializer
         return constant_initializer(init)
         #return init # TODO: change to this once this works, e.g. for layers.BatchNormalization()
 

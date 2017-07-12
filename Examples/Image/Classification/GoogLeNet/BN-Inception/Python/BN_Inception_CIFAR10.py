@@ -12,7 +12,6 @@ import math
 import argparse
 import numpy as np
 import cntk
-import _cntk_py
 
 import cntk.io.transforms as xforms
 from cntk.debugging import start_profiler, stop_profiler, enable_profiler
@@ -182,7 +181,7 @@ def train_and_test(network, trainer, train_source, test_source, max_epochs, mini
 # Train and evaluate the network.
 def bn_inception_train_and_eval(train_data, test_data, mean_data, minibatch_size=128, epoch_size=50000, max_epochs=200, 
                          restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, profiler_dir=None, testing_parameters=(10000,128)):
-    _cntk_py.set_computation_network_trace_level(0)
+    C.cntk_py.set_computation_network_trace_level(0)
 
     progress_writers = [ProgressPrinter(
         freq=num_mbs_per_log,
