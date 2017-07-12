@@ -61,13 +61,32 @@ public:
         if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
             MaskMissingGradientColumnsToZero(fr);
 
-        if (Input(inputIndex)->ParentOverwritesGradient())
-            inputGradient.AssignCopyOf(gradient);
+        if (Input(inputIndex)->IsGradientOptimized(this))
+        {
+            if (Input(inputIndex)->ParentGradientReused())
+            {
+                if (inputGradient.GetSOBPtr() != gradient.GetSOBPtr())
+                    LogicError("Gradients should be reused.");
+            }
+            else
+                inputGradient.AssignCopyOf(gradient);
+        }
         else
             inputGradient.AddCopyOf(gradient);
     }
 
-    virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
+    {
+        size_t i;
+        for (i = 0; i < GetNumInputs(); i++)
+        {
+            if (Input(i).get() == input) break;
+        }
+        if (i == GetNumInputs())
+            LogicError("Cannot find input.");
+
+        return this->InputMatchesOutput(i) ? ParentGradientOptimization::Reuse : ParentGradientOptimization::Overwrite;
+    }
 };
 
 template class PlusNode<float>;
@@ -118,18 +137,29 @@ public:
         if (inputIndex == 0)
         {
             // d/dx (ln( exp(x) + (exp(y)) = exp(x) / (exp(x) + exp(y)) = 1 / (1 + exp(y-x)) = sigmoid(x-y)
-            inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input1, input0);
+            if (Input(inputIndex)->IsGradientInitializedBy(this))
+                inputGradient.AssignElementwiseProductWithLogSumDerivativeOf(gradient, input1, input0);
+            else
+                inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input1, input0);
         }
         else
         {
             // d/dy (ln( exp(x) + (exp(y)) = exp(y) / (exp(x) + exp(y)) = 1 / (1 + exp(x-y)) = sigmoid(y-x)
-            inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
+            if (Input(inputIndex)->IsGradientInitializedBy(this))
+                inputGradient.AssignElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
+            else
+                inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
         }
     }
 
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
         return true;
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        return ParentGradientOptimization::Overwrite;
     }
 };
 
@@ -234,7 +264,24 @@ public:
             MaskMissingGradientColumnsToZero(fr);
 
         ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
-        inputGradient.AddCopyOf(gradient, sign);
+        if (Input(inputIndex)->IsGradientOptimized(this))
+        {
+            if (Input(inputIndex)->ParentGradientReused())
+            {
+                if (inputGradient.GetSOBPtr() != gradient.GetSOBPtr())
+                    LogicError("Gradients should be reused.");
+            }
+            else
+                inputGradient.AssignCopyOf(gradient, sign);
+        }
+        else
+            inputGradient.AddCopyOf(gradient, sign);
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
+    {
+        // only left operand can use gradient overwrite optimization
+        return (Input(0).get() == input && this->InputMatchesOutput(0)) ? ParentGradientOptimization::Reuse : ParentGradientOptimization::Overwrite;
     }
 };
 
@@ -275,6 +322,10 @@ public:
     }
 
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        return ParentGradientOptimization::Overwrite;
+    }
 
     template <typename classType>
     static void ForwardPropImpl(classType& c, const FrameRange& fr, bool allowBroadcast)
@@ -300,7 +351,7 @@ public:
         if (c.Input(inputIndex)->ReducesInTimeWrt(c.Input(1 - inputIndex)))
             c.Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
-        if (c.Input(inputIndex)->ParentOverwritesGradient())
+        if (c.Input(inputIndex)->IsGradientInitializedBy(&c))
             inputGradient.AssignElementwiseProductOf(gradient, otherInputValue);
         else
             inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
@@ -527,7 +578,7 @@ private:
 
         const auto& unpackedInputValue = unpackedInput[1 - inputIndex].GetSOB();
 
-        ElemType beta = InputRef(inputIndex).ParentOverwritesGradient() ? (ElemType)0 : (ElemType)1;
+        ElemType beta = InputRef(inputIndex).IsGradientInitializedBy(this) ? (ElemType)0 : (ElemType)1;
 
         // note the unpacked input is not the normal MBLayout (batchMajor), so do ColumnSlice directly
         if (inputIndex == 0)
@@ -663,7 +714,7 @@ public:
                     Matrix<ElemType> inputGradient = InputRef(inputIndex).GradientFor(fr);
                     Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd(
                         (ElemType)1.0, inputValue, gradient,
-                        Input(inputIndex)->ParentOverwritesGradient() ? (ElemType)0.0 : (ElemType)1.0,
+                        Input(inputIndex)->IsGradientInitializedBy(this) ? (ElemType)0.0 : (ElemType)1.0,
                         inputGradient);
                     // TODO: better move this special-casing into TensorView::AssignElementwiseProductOf()
                     // Note: We do not need to mask gaps here, since this code branch operates sample by sample (no reduction over samples).
@@ -679,7 +730,7 @@ public:
             auto sequenceRange = fr.GetSequenceRange();
             // when unroll, parent overwrite gradient should be ignored
             m_beingUnrolled = true;
-            if (Input(inputIndex)->ParentOverwritesGradient())
+            if (Input(inputIndex)->IsGradientInitializedBy(this))
             {
                 Input(inputIndex)->Gradient().SetValue(0);
             }
@@ -696,7 +747,7 @@ public:
         if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
             Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
-        bool overwriteInputGradient = (Input(inputIndex)->ParentOverwritesGradient() && !m_beingUnrolled);
+        bool overwriteInputGradient = (Input(inputIndex)->IsGradientInitializedBy(this) && !m_beingUnrolled);
 
         if (inputIndex == 0) // left derivative
         {
@@ -769,7 +820,7 @@ public:
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     // but both *inputs* are used, so we don't overload the InputUsed-() function which defaults to 'true'
 
-    virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override { return ParentGradientOptimization::Overwrite; }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {

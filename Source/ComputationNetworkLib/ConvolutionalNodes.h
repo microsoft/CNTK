@@ -330,7 +330,11 @@ public:
     }
 
     // TODO: the check for NeedsDynamicValidation() is a temporary resolution and needs to be properly handled when we look at support for free dimension convolution inputs. 
-    virtual bool ImplementsGradientOverwriteOptimization() const override { return Base::NeedsDynamicValidation() ? false : m_convEng->ImplementsGradientOverwriteOptimization(); }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        bool overwrite = Base::NeedsDynamicValidation() ? false : m_convEng->ImplementsGradientOverwriteOptimization();
+        return overwrite ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None;
+    }
 
 public:
     void Save(File& fstream) const override
@@ -423,16 +427,16 @@ public:
             auto& grad = InputRef(0).GradientAsMatrix();
             auto sliceInput1Value = InputRef(1).ValueFor(fr);
             if (!m_transpose)
-                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrixBackward);
+                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward);
             else
-                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrixBackward);
+                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward);
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
             auto& input0 = InputRef(0).ValueAsMatrix();
             auto sliceInput1Grad = InputRef(1).GradientFor(fr);
             if (!m_transpose)
-                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->ParentOverwritesGradient(), *m_tempMatrixBackward);
+                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->IsGradientInitializedBy(this), *m_tempMatrixBackward);
             else
             {
                 // REVIEW alexeyk: Forward overwrites values in sliceInput1Grad. Should handle correctly instead.
@@ -896,13 +900,18 @@ public:
         Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
+        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad, !InputRef(0).IsGradientInitializedBy(this));
     }
 
     bool OutputUsedInComputingInputNodesGradients() const override
     {
         // The PoolingNode requires output values only for max pooling.
         return m_poolKind == PoolKind::Max;
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        return ParentGradientOptimization::Overwrite;
     }
 
 public:
@@ -1193,7 +1202,12 @@ public:
         Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
+        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad, !InputRef(0).IsGradientInitializedBy(this));
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        return ParentGradientOptimization::Overwrite;
     }
 
     void Validate(bool isFinalValidationPass) override

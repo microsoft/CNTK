@@ -73,7 +73,7 @@ public:
         auto gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), Gradient(), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, std::shared_ptr<Matrix<char>>(nullptr), /*batchMajor=*/ false, &gapPadValue);
         auto inputGradient = InputRef(inputIndex).GradientTensorFor(InputRef(inputIndex).GetSampleLayout().GetRank(), FrameRange(InputRef(inputIndex).GetMBLayout()));
 
-        if (InputRef(inputIndex).ParentOverwritesGradient())
+        if (InputRef(inputIndex).IsGradientInitializedBy(this))
             inputGradient.AssignCopyOf(gradient);
         else
             inputGradient.AddCopyOf(gradient);
@@ -81,6 +81,7 @@ public:
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return false; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override { return ParentGradientOptimization::Overwrite; }
 
     virtual void Validate(bool isFinalValidationPass) override
     {

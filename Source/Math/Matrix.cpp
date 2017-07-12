@@ -4574,7 +4574,7 @@ void Matrix<ElemType>::MaxPoolingForward(const Matrix<int>& mpRowCol, const Matr
 template <class ElemType>
 void Matrix<ElemType>::MaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,
                                           const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices,
-                                          Matrix<ElemType>& grad) const
+                                          Matrix<ElemType>& grad, bool accumulateGradient) const
 {
     assert(mpRowCol.GetNumCols() == 1);
     assert(mpRowIndices.GetNumCols() == 1);
@@ -4587,10 +4587,10 @@ void Matrix<ElemType>::MaxPoolingBackward(const Matrix<ElemType>& out, const Mat
                             this,
                             m_CPUMatrix->MaxPoolingBackward(*(out.m_CPUMatrix), *(in.m_CPUMatrix),
                                                               *(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix),
-                                                              *(grad.m_CPUMatrix)),
+                                                              *(grad.m_CPUMatrix), accumulateGradient),
                             m_GPUMatrix->MaxPoolingBackward(*(out.m_GPUMatrix), *(in.m_GPUMatrix),
                                                               *(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix),
-                                                              *(grad.m_GPUMatrix)),
+                                                              *(grad.m_GPUMatrix), accumulateGradient),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
@@ -4669,7 +4669,7 @@ void Matrix<ElemType>::AveragePoolingForward(const Matrix<int>& mpRowCol, const 
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad, const bool poolIncludePad) const
+void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const
 {
     assert(mpRowCol.GetNumCols() == 1);
     assert(mpRowIndices.GetNumCols() == 1);
@@ -4680,8 +4680,8 @@ void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const
     // REVIEW alexeyk: add sparse version.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->AveragePoolingBackward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(grad.m_CPUMatrix), poolIncludePad),
-                            m_GPUMatrix->AveragePoolingBackward(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(grad.m_GPUMatrix)),
+                            m_CPUMatrix->AveragePoolingBackward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(grad.m_CPUMatrix), poolIncludePad, accumulateGradient),
+                            m_GPUMatrix->AveragePoolingBackward(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(grad.m_GPUMatrix), accumulateGradient),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
