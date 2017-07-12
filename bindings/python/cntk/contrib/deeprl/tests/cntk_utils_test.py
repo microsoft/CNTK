@@ -1,11 +1,9 @@
 import unittest
 
 import numpy as np
-from cntk.ops import input_variable
-
 from cntk.contrib.deeprl.agent.shared.cntk_utils import (huber_loss,
                                                          negative_of_entropy)
-
+from cntk.ops import input_variable
 
 
 class CNTKUtilsTest(unittest.TestCase):

@@ -1,15 +1,14 @@
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
+import cntk.contrib.deeprl.tests.spaces as spaces
 import numpy as np
-from cntk.layers import Dense
-from cntk.losses import squared_error
-from cntk.ops import input_variable
-from gym import spaces
-
 from cntk.contrib.deeprl.agent.qlearning import QLearning
 from cntk.contrib.deeprl.agent.shared.cntk_utils import huber_loss
 from cntk.contrib.deeprl.agent.shared.replay_memory import _Transition
+from cntk.layers import Dense
+from cntk.losses import squared_error
+from cntk.ops import input_variable
 
 
 class QLearningTest(unittest.TestCase):
@@ -429,7 +428,7 @@ class QLearningTest(unittest.TestCase):
         parameters.priority_epsilon = 0.1
         parameters.preprocessing = ''
         parameters.use_error_clipping = False
-        parameters.replays_per_update = 1 
+        parameters.replays_per_update = 1
 
     def _setup_replay_memory(self, replay_memory):
         replay_memory.sample_minibatch.side_effect = \

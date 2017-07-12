@@ -1,13 +1,12 @@
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
+import cntk.contrib.deeprl.tests.spaces as spaces
 import numpy as np
+from cntk.contrib.deeprl.agent.policy_gradient import ActorCritic
 from cntk.layers import Dense
 from cntk.losses import cross_entropy_with_softmax
 from cntk.ops import input_variable, placeholder
-from gym import spaces
-
-from cntk.contrib.deeprl.agent.policy_gradient import ActorCritic
 
 
 class PolicyGradientTest(unittest.TestCase):

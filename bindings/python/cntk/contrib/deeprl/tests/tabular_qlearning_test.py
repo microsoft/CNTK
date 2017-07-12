@@ -1,9 +1,8 @@
 import unittest
 from unittest.mock import patch
 
+import cntk.contrib.deeprl.tests.spaces as spaces
 import numpy as np
-from gym import spaces
-
 from cntk.contrib.deeprl.agent.tabular_qlearning import TabularQLearning
 
 

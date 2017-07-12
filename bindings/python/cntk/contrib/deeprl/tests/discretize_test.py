@@ -1,8 +1,7 @@
 import unittest
 
+import cntk.contrib.deeprl.tests.spaces as spaces
 import numpy as np
-from gym import spaces
-
 from cntk.contrib.deeprl.agent.shared.discretize import BoxSpaceDiscretizer
 
 

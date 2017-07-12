@@ -1,7 +1,6 @@
 import unittest
 
-from gym import spaces
-
+import cntk.contrib.deeprl.tests.spaces as spaces
 from cntk.contrib.deeprl.agent.agent import AgentBaseClass
 
 
@@ -24,7 +23,6 @@ class AgentBaseClassTest(unittest.TestCase):
     def test_init_discrete_observation_space(self):
         action_space = spaces.Discrete(2)
         observation_space = spaces.Discrete(3)
-
         sut = AgentBaseClass(observation_space, action_space)
 
         self.assertEqual(sut._num_actions, 2)
@@ -37,7 +35,6 @@ class AgentBaseClassTest(unittest.TestCase):
     def test_init_multibinary_observation_space(self):
         action_space = spaces.Discrete(2)
         observation_space = spaces.MultiBinary(3)
-
         sut = AgentBaseClass(observation_space, action_space)
 
         self.assertEqual(sut._num_actions, 2)
@@ -50,7 +47,6 @@ class AgentBaseClassTest(unittest.TestCase):
     def test_init_box_observation_space(self):
         action_space = spaces.Discrete(2)
         observation_space = spaces.Box(0, 1, (1,))
-
         sut = AgentBaseClass(observation_space, action_space)
 
         self.assertEqual(sut._num_actions, 2)
