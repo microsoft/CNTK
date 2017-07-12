@@ -120,7 +120,7 @@ def test_getitem():
     assert np.allclose(r, [[[1,2,3]]])
     f = y[1:4:2]
     r = f.eval([np.array([[1, 2, 3, 4, 5]])])
-    assert np.allclose(r, [[[2]]])
+    assert np.allclose(r, [[[2, 4]]])
 
 def test_initializer_scale():
     # this should work fine:

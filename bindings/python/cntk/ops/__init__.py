@@ -1916,12 +1916,12 @@ def slice(x, axis, begin_index, end_index, strides=None, name=''):
                 [ 4.]]], dtype=float32)
         >>> # slice with strides
         >>> C.slice(x1, 0, 0, 2, 2).eval({x1: np.asarray([[[1,2,-3],
-        ...                                             [4, 5, 6]]],dtype=np.float32)})
+        ...                                                [4, 5, 6]]],dtype=np.float32)})
         array([[[ 1.,  2., -3.]]], dtype=float32)
         <BLANKLINE>
         >>> # reverse
         >>> C.slice(x1, 0, 0, 2, -1).eval({x1: np.asarray([[[1,2,-3],
-        ...                                             [4, 5, 6]]],dtype=np.float32)})
+        ...                                                 [4, 5, 6]]],dtype=np.float32)})
         array([[[ 4.,  5.,  6.],
         [ 1.,  2., -3.]]], dtype=float32)
         <BLANKLINE>

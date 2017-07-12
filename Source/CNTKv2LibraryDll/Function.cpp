@@ -1139,21 +1139,8 @@ namespace CNTK
 
     FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name)
     {
-        bool bAllStaticAxis = true;
-        for (auto& a : axis)
-        {
-            if (!a.IsStaticAxis())
-            {
-                bAllStaticAxis = false;
-                break;
-            }
-        }
-
         std::vector<int> strides(axis.size(), 1);
-        if (bAllStaticAxis)
-            return Internal::Slice(operand, axis, beginIndex, endIndex, strides, name);
-
-        LogicError("Slice: Invalid axis argument provided. Slice along the dynamic batch axis is currently unsupported. To slice a sequence along its ordered dynamic axis use Sequence::Slice.");
+        return Slice(operand, axis, beginIndex, endIndex, strides, name);
     }
 
     FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name)
