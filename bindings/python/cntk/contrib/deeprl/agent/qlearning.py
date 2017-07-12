@@ -9,9 +9,7 @@ from cntk.train.trainer import Trainer
 import ast
 
 from .agent import AgentBaseClass
-from .shared import preprocessing as sp
 from .shared.cntk_utils import huber_loss
-from .shared.customized_models import CustomizedModels
 from .shared.models import Models
 from .shared.qlearning_parameters import QLearningParameters
 from .shared.replay_memory import ReplayMemory
@@ -33,11 +31,11 @@ class QLearning(AgentBaseClass):
         # Create preprocessor.
         if self._parameters.preprocessing:
             try:
-                preproc = getattr(sp, self._parameters.preprocessing)
+                preproc = self._import_method(self._parameters.preprocessing)
                 self._preprocessor = preproc(
                     self._shape_of_inputs,
                     *ast.literal_eval(self._parameters.preprocessing_args))
-            except AttributeError:
+            except ValueError:
                 raise ValueError(
                     'Unknown preprocessing method: "{0}"'
                     '\n'.format(self._parameters.preprocessing))
@@ -60,14 +58,13 @@ class QLearning(AgentBaseClass):
                 huber_loss if self._parameters.use_error_clipping else None)
         else:
             try:
-                model_definition_function = getattr(
-                    CustomizedModels,
+                model_definition_function = self._import_method(
                     self._parameters.q_representation)
                 model = model_definition_function(
                     shape_of_inputs,
                     self._num_actions,
                     huber_loss if self._parameters.use_error_clipping else None)
-            except AttributeError:
+            except ValueError:
                 raise ValueError(
                     'Unknown representation for Q-learning: "{0}"'
                     '\n'.format(self._parameters.q_representation))

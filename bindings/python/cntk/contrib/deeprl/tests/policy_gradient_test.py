@@ -78,7 +78,8 @@ class PolicyGradientTest(unittest.TestCase):
     @patch('cntk.contrib.deeprl.agent.policy_gradient.PolicyGradientParameters')
     def test_init_preprocess(self, mock_parameters, mock_model):
         self._setup_parameters(mock_parameters.return_value)
-        mock_parameters.return_value.preprocessing = 'SlidingWindow'
+        mock_parameters.return_value.preprocessing = \
+            'cntk.contrib.deeprl.agent.shared.preprocessing.SlidingWindow'
         mock_parameters.return_value.preprocessing_args = '(2, )'
         mock_model.side_effect = self._setup_test_model
 
@@ -97,14 +98,16 @@ class PolicyGradientTest(unittest.TestCase):
             ],
             any_order=True)
 
-    @patch('cntk.contrib.deeprl.agent.policy_gradient.CustomizedModels.conv_dqn')
+    @patch('cntk.contrib.deeprl.agent.shared.customized_models.conv_dqn')
     @patch('cntk.contrib.deeprl.agent.policy_gradient.PolicyGradientParameters')
     def test_init_customized_model(self, mock_parameters, mock_model):
         action_space = spaces.Discrete(2)
         observation_space = spaces.Box(0, 1, (1,))
         self._setup_parameters(mock_parameters.return_value)
-        mock_parameters.return_value.policy_representation = 'conv_dqn'
-        mock_parameters.return_value.value_function_representation = 'conv_dqn'
+        mock_parameters.return_value.policy_representation = \
+            'cntk.contrib.deeprl.agent.shared.customized_models.conv_dqn'
+        mock_parameters.return_value.value_function_representation = \
+            'cntk.contrib.deeprl.agent.shared.customized_models.conv_dqn'
         mock_model.side_effect = self._setup_test_model
 
         sut = ActorCritic('', observation_space, action_space)
@@ -189,7 +192,8 @@ class PolicyGradientTest(unittest.TestCase):
     @patch('cntk.contrib.deeprl.agent.policy_gradient.PolicyGradientParameters')
     def test_rollout_preprocess(self, mock_parameters):
         self._setup_parameters(mock_parameters.return_value)
-        mock_parameters.return_value.preprocessing = 'SlidingWindow'
+        mock_parameters.return_value.preprocessing = \
+            'cntk.contrib.deeprl.agent.shared.preprocessing.SlidingWindow'
         mock_parameters.return_value.preprocessing_args = '(2, "float32")'
 
         action_space = spaces.Discrete(2)

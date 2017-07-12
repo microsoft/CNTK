@@ -11,9 +11,7 @@ from cntk.train.trainer import Trainer
 import ast
 
 from .agent import AgentBaseClass
-from .shared import preprocessing as sp
 from .shared.cntk_utils import negative_of_entropy
-from .shared.customized_models import CustomizedModels
 from .shared.models import Models
 from .shared.policy_gradient_parameters import PolicyGradientParameters
 
@@ -29,7 +27,7 @@ class ActorCritic(AgentBaseClass):
 
         # Create preprocessor.
         if self._parameters.preprocessing:
-            preproc = getattr(sp, self._parameters.preprocessing)
+            preproc = self._import_method(self._parameters.preprocessing)
             self._preprocessor = preproc(
                 self._shape_of_inputs,
                 *ast.literal_eval(self._parameters.preprocessing_args))
@@ -116,15 +114,14 @@ class ActorCritic(AgentBaseClass):
                 use_placeholder_for_input=True)
         else:
             try:
-                model_definition_function = getattr(
-                    CustomizedModels,
+                model_definition_function = self._import_method(
                     self._parameters.policy_representation)
                 model = model_definition_function(
                     shape_of_inputs,
                     self._num_actions,
                     cross_entropy_with_softmax,
                     use_placeholder_for_input=True)
-            except AttributeError:
+            except ValueError:
                 raise ValueError(
                     'Unknown representation for policy: "{0}"'
                     '\n'.format(self._parameters.policy_representation))
@@ -169,14 +166,13 @@ class ActorCritic(AgentBaseClass):
                     use_placeholder_for_input=True)
             else:
                 try:
-                    model_definition_function = getattr(
-                        CustomizedModels,
+                    model_definition_function = self._import_method(
                         self._parameters.value_function_representation)
                     model = model_definition_function(
                         shape_of_inputs,
                         1,  # value network outputs a scalar
                         use_placeholder_for_input=True)
-                except AttributeError:
+                except ValueError:
                     raise ValueError(
                         'Unknown representation for value function: "{0}"'
                         '\n'.format(self._parameters.value_function_representation))

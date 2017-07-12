@@ -2,6 +2,8 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 
+from importlib import import_module
+
 from .shared.discretize import BoxSpaceDiscretizer
 
 
@@ -172,3 +174,13 @@ class AgentBaseClass(object):
 
     def _classname(self, instance):
         return instance.__class__.__module__ + '.' + instance.__class__.__name__
+
+    def _import_method(self, path):
+        """Import method specified as module_name.method_name."""
+        module_name, method_name = path.rsplit('.', 1)
+        try:
+            module = import_module(module_name)
+            method = getattr(module, method_name)
+        except (AttributeError, ImportError):
+            raise ValueError('Cannot import method: "{0}"'.format(path))
+        return method

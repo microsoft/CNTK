@@ -60,7 +60,8 @@ class QLearningTest(unittest.TestCase):
                                     mock_parameters,
                                     mock_replay_memory):
         self._setup_parameters(mock_parameters.return_value)
-        mock_parameters.return_value.preprocessing = 'AtariPreprocessing'
+        mock_parameters.return_value.preprocessing = \
+            'cntk.contrib.deeprl.agent.shared.preprocessing.AtariPreprocessing'
         mock_parameters.return_value.preprocessing_args = '()'
 
         action_space = spaces.Discrete(2)
@@ -106,11 +107,12 @@ class QLearningTest(unittest.TestCase):
         self.assertIsNone(sut._preprocessor)
         mock_model.assert_called_with((1,), 2, '[2, [2], [2]]', None)
 
-    @patch('cntk.contrib.deeprl.agent.qlearning.CustomizedModels.conv_dqn')
+    @patch('cntk.contrib.deeprl.agent.shared.customized_models.conv_dqn')
     @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_init_customized_q(self, mock_parameters, mock_model):
         self._setup_parameters(mock_parameters.return_value)
-        mock_parameters.return_value.q_representation = 'conv_dqn'
+        mock_parameters.return_value.q_representation = \
+            'cntk.contrib.deeprl.agent.shared.customized_models.conv_dqn'
         mock_model.return_value = self._setup_test_model()
 
         action_space = spaces.Discrete(2)
@@ -317,7 +319,8 @@ class QLearningTest(unittest.TestCase):
     @patch('cntk.contrib.deeprl.agent.qlearning.QLearningParameters')
     def test_populate_replay_memory(self, mock_parameters):
         self._setup_parameters(mock_parameters.return_value)
-        mock_parameters.return_value.preprocessing = 'SlidingWindow'
+        mock_parameters.return_value.preprocessing = \
+            'cntk.contrib.deeprl.agent.shared.preprocessing.SlidingWindow'
         mock_parameters.return_value.preprocessing_args = '(2, )'
 
         action_space = spaces.Discrete(2)
