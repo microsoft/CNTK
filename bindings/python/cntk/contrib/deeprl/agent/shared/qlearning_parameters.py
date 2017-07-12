@@ -1,3 +1,5 @@
+"""Q learning parameters."""
+
 import numpy as np
 
 import ast

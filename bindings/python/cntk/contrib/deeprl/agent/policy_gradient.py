@@ -1,4 +1,4 @@
-import sys
+"""Actor-Critic Policy Gradient."""
 
 import numpy as np
 from cntk.layers import Dense

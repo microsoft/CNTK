@@ -1,3 +1,5 @@
+"""Tabular Q-learning."""
+
 import copy
 
 import numpy as np

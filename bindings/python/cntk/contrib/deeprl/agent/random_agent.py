@@ -1,3 +1,5 @@
+"""Baseline agent that selects action uniformly randomly."""
+
 import numpy as np
 
 from .agent import AgentBaseClass

@@ -1,3 +1,5 @@
+"""Base class for defining an agent."""
+
 from abc import ABCMeta, abstractmethod
 
 import numpy as np

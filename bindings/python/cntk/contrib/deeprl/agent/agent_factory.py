@@ -1,3 +1,5 @@
+"""Factory method to create an agent."""
+
 import configparser
 
 from .policy_gradient import ActorCritic

@@ -1,3 +1,5 @@
+"""Utility functions."""
+
 import cntk.ops as C
 
 

@@ -1,3 +1,5 @@
+"""Discretize continuous environment space."""
+
 import numpy as np
 
 

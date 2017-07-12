@@ -1,3 +1,5 @@
+"""Base class for defining preprocessing, as well as two concrete examples."""
+
 from abc import ABCMeta, abstractmethod
 from collections import deque
 

@@ -1,3 +1,5 @@
+"""Deep Q-learning and its variants."""
+
 import math
 
 import numpy as np

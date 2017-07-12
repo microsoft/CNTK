@@ -1,3 +1,5 @@
+"""A set of predefined models used by Q learning or Actor-Critic."""
+
 import numpy as np
 from cntk.layers import AveragePooling, Dense, For, Sequential
 from cntk.losses import squared_error

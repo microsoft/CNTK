@@ -8,6 +8,7 @@ containing 'inputs', 'outputs', 'f' and 'loss'. In the config file, set
 QRepresentation or PolicyRepresentation to path (module_name.function_name) of
 the function. QLearning/PolicyGradient will then automatically search for it.
 """
+
 import numpy as np
 from cntk.layers import Convolution, Dense, Sequential, default_options
 from cntk.losses import squared_error
