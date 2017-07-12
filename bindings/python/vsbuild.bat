@@ -63,26 +63,20 @@ set DISTUTILS_USE_SDK=1
 pushd "%CNTK_LIB_PATH%"
 if errorlevel 1 echo Cannot change directory.&exit /b 1
 
-set CNTK_LIBRARIES=
-for %%D in (
-  Cntk.Composite-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.Core-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.Deserializers.Binary-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.Deserializers.HTK-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.Deserializers.TextFormat-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.Math-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.BinaryConvolutionExample-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll
-  libiomp5md.dll
-  mkl_cntk_p.dll
-) do (
-  if defined CNTK_LIBRARIES (
-    set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D
-  ) else (
-    set CNTK_LIBRARIES=%CNTK_LIB_PATH%\%%D
-  )
-)
+@REM Set up %CNTK_LIBRARIES%, all libraries relative to %CNTK_LIB_PATH% we need to package.
+
+set CNTK_LIBRARIES=^
+Cntk.Composite-%CNTK_COMPONENT_VERSION%.dll;^
+Cntk.Core-%CNTK_COMPONENT_VERSION%.dll;^
+Cntk.Deserializers.Binary-%CNTK_COMPONENT_VERSION%.dll;^
+Cntk.Deserializers.HTK-%CNTK_COMPONENT_VERSION%.dll;^
+Cntk.Deserializers.TextFormat-%CNTK_COMPONENT_VERSION%.dll;^
+Cntk.Math-%CNTK_COMPONENT_VERSION%.dll;^
+Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll;^
+Cntk.BinaryConvolutionExample-%CNTK_COMPONENT_VERSION%.dll;^
+Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll;^
+libiomp5md.dll;^
+mkl_cntk_p.dll
 
 @REM Cntk.Deserializers.Image-%CNTK_COMPONENT_VERSION%.dll (plus dependencies) is optional
 if exist Cntk.Deserializers.Image-%CNTK_COMPONENT_VERSION%.dll for %%D in (
@@ -90,7 +84,7 @@ if exist Cntk.Deserializers.Image-%CNTK_COMPONENT_VERSION%.dll for %%D in (
   opencv_world*.dll
   zip.dll
   zlib.dll
-) do set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D
+) do set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%%D
 
 if /i %p_GpuBuild% equ true for %%D in (
   cublas64_*.dll
@@ -99,9 +93,7 @@ if /i %p_GpuBuild% equ true for %%D in (
   curand64_*.dll
   cusparse64_*.dll
   nvml.dll
-) do (
-  set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D
-)
+) do set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%%D
 
 popd
 if errorlevel 1 echo Cannot restore directory.&exit /b 1

@@ -1744,7 +1744,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         name (str, optional): the name of the Function instance in the network
 
     Example:
-        >>> from _cntk_py import constant_initializer
+        >>> from .._cntk_py import constant_initializer
         >>> W = C.parameter((C.InferredDimension,4), constant_initializer(0.1))
         >>> x = C.input_variable(shape=(4,))
         >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))

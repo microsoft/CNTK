@@ -10,6 +10,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include "Windows.h"
+#include "File.h"
 #endif
 
 #if _DEBUG
@@ -27,15 +28,18 @@ int HandleDebugAssert(int,               // reportType  - ignoring reportType, p
 }
 #endif
 
-BOOL APIENTRY DllMain(HMODULE /*hModule*/,
+BOOL APIENTRY DllMain(HMODULE hModule,
                       DWORD ul_reason_for_call,
                       LPVOID /*lpReserved*/
                       )
 {
+	wchar_t dllName[MAX_PATH + 1] = { 0 };
+	std::wstring dllDir;
+
     switch (ul_reason_for_call)
     {
-#if _DEBUG
     case DLL_PROCESS_ATTACH:
+#if _DEBUG
         // Disabling assertions in test environment.
         // These functions should not lock anything, no deadlock expected.
         if (std::getenv("V2_LIB_TESTING"))
@@ -43,15 +47,19 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/,
             _set_error_mode(_OUT_TO_STDERR);
             _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, HandleDebugAssert);
         }
+#endif
+
+		GetModuleFileNameW(hModule, dllName, MAX_PATH + 1);
+		dllDir = Microsoft::MSR::CNTK::File::DirectoryPathOf(dllName);
+		SetDllDirectoryW(dllDir.c_str());
+
         break;
     case DLL_PROCESS_DETACH:
+#if _DEBUG
         // DLL_PROCESS_DETACH may have race condition with code page unload
         //_CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);
-        break;
-#else
-    case DLL_PROCESS_ATTACH:
-    case DLL_PROCESS_DETACH:
 #endif
+        break;
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:
         break;

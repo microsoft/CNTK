@@ -2,7 +2,6 @@ setlocal
 
 cd /d "%~dp0"
 set PYTHONPATH=%CD%\..
-set PATH=%CD%\..;%CD%\..\..\..\x64\Release;%PATH%
 
 sphinx-apidoc.exe ..\cntk --module-first --separate --no-toc --output-dir=. --force ^
   ..\cntk\cntk_py.py ^

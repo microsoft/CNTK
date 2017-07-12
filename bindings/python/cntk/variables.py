@@ -374,7 +374,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
         if pure:
             raise TypeError('parameters cannot be created inside a @Function def')
 
-        from _cntk_py import constant_initializer
+        from ._cntk_py import constant_initializer
         if np.isscalar(init):
             init = constant_initializer(init)
             if not shape:

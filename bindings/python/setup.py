@@ -1,9 +1,13 @@
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
 import sys
 import os
 import shutil
 from glob import glob
 import platform
-from warnings import warn
 from setuptools import setup, Extension, find_packages
 import numpy
 
@@ -35,7 +39,11 @@ if IS_WINDOWS:
 
 CNTK_PATH = os.path.join(os.path.dirname(__file__), "..", "..")
 CNTK_SOURCE_PATH = os.path.join(CNTK_PATH, "Source")
-PROJ_LIB_PATH = os.path.join(os.path.dirname(__file__), "cntk", "libs")
+
+# When called through MSBuild / Makefile, environment variables are set up to
+# to identify the shared library directory and list of required shared libraries.
+# Otherwise (setup.py called directly), assume it's a GPU SKU build with
+# default directories.
 
 if 'CNTK_LIB_PATH' in os.environ:
     CNTK_LIB_PATH = os.environ['CNTK_LIB_PATH']
@@ -47,61 +55,32 @@ else:
         CNTK_LIB_PATH = os.path.join(
             CNTK_PATH, "build", "gpu", "release", "lib")
 
-print("Using CNTK sources at '%s'" % os.path.abspath(CNTK_SOURCE_PATH))
-print("Using CNTK libs at '%s'" % os.path.abspath(CNTK_LIB_PATH))
-
-
-def lib_path(fn):
-    return os.path.normpath(os.path.join(CNTK_LIB_PATH, fn))
-
-
-def proj_lib_path(fn):
-    return os.path.normpath(os.path.join(PROJ_LIB_PATH, fn))
-
-
-def strip_path(fn):
-    return os.path.split(fn)[1]
-
-
-def strip_ext(fn):
-    return os.path.splitext(fn)[0]
-
-if IS_WINDOWS:
-    libname_rt_ext = '.dll'
-    cntkLibraryName = "Cntk.Core-" + os.environ['CNTK_COMPONENT_VERSION']
-    link_libs = [cntkLibraryName]
-else:
-    cntkLibraryName = "Cntk.Core-" + os.environ['CNTK_COMPONENT_VERSION']
-    link_libs = [cntkLibraryName]
-    libname_rt_ext = '.so'
-
+shared_library_glob = '*.dll' if IS_WINDOWS else '*.so*'
 
 if 'CNTK_LIBRARIES' in os.environ:
-  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split(';' if IS_WINDOWS else None)]
+    CNTK_SHARED_LIBARIES = [os.path.join(CNTK_LIB_PATH, fn) for fn in
+        os.environ['CNTK_LIBRARIES'].split(';' if IS_WINDOWS else None)]
 else:
-  rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
-                                                        '*' + libname_rt_ext))]
-
-# copy over the libraries to the cntk base directory so that the rpath is
-# correctly set
-if os.path.exists(PROJ_LIB_PATH):
-    shutil.rmtree(PROJ_LIB_PATH)
-
-os.mkdir(PROJ_LIB_PATH)
-
-for fn in rt_libs:
-    src_file = lib_path(fn)
-    tgt_file = proj_lib_path(fn)
-    shutil.copy(src_file, tgt_file)
+    CNTK_SHARED_LIBARIES = glob(os.path.join(CNTK_LIB_PATH, shared_library_glob))
 
 if 'CNTK_EXTRA_LIBRARIES' in os.environ:
-    for lib in os.environ['CNTK_EXTRA_LIBRARIES'].split():
-        shutil.copy(lib, PROJ_LIB_PATH)
-        rt_libs.append(strip_path(lib))
+    CNTK_SHARED_LIBARIES += os.environ['CNTK_EXTRA_LIBRARIES'].split(';' if IS_WINDOWS else None)
 
-# For package_data we need to have names relative to the cntk module.
-rt_libs = [os.path.join('libs', fn) for fn in rt_libs]
+# Copy all libraries into a package-local folder (root on Windows, libs on Linux)
+package_name = 'cntk'
+relative_shared_library_path = [] if IS_WINDOWS else ['libs']
+shared_library_path = os.path.join(os.path.dirname(__file__), package_name, *relative_shared_library_path)
 
+if not os.path.isdir(shared_library_path):
+    os.mkdir(shared_library_path)
+
+for fn in glob(os.path.join(shared_library_path, shared_library_glob)):
+    os.remove(fn)
+
+for fn in CNTK_SHARED_LIBARIES:
+    shutil.copy(fn, shared_library_path)
+
+# Extensions module
 extra_compile_args = [
     "-DSWIG",
     "-DUNICODE"
@@ -122,20 +101,19 @@ else:
     ]
     extra_link_args = []
 
-    # Expecting the dependent libs (libcntklibrary-2.0.so, etc.) inside
-    # site-packages/cntk/libs.
-    runtime_library_dirs = ['$ORIGIN/cntk/libs']
+    runtime_library_dirs = [os.path.join('$ORIGIN', *relative_shared_library_path)]
     os.environ["CXX"] = "mpic++"
 
 cntkV2LibraryInclude = os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API")
 cntkBindingCommon = os.path.join(CNTK_PATH, "bindings", "common")
 
 cntk_module = Extension(
-    name="_cntk_py",
+    name=package_name + '._cntk_py',
 
-    sources = [os.path.join("cntk", "cntk_py.i")],
+    sources = [os.path.join(package_name, "cntk_py.i")],
     swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon, "-Werror" ],
-    libraries = link_libs,
+    libraries = ["Cntk.Core-" + os.environ['CNTK_COMPONENT_VERSION']],
+
     library_dirs = [CNTK_LIB_PATH],
 
     runtime_library_dirs = runtime_library_dirs,
@@ -155,32 +133,22 @@ cntk_module = Extension(
         [os.path.join(cntkV2LibraryInclude, f) for f in ["CNTKLibraryInternals.h", "CNTKLibrary.h"]],
 )
 
-# Do not include examples
-packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
+packages = [x for x in find_packages() if x.startswith(package_name)]
 
-package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt'] }
+package_data = { package_name: ['pytest.ini', os.path.join(*(relative_shared_library_path + [shared_library_glob]))] }
 
-if IS_WINDOWS:
-    # On Windows copy all runtime libs to the base folder of Python
-    kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])],
-                  package_data = package_data)
-else:
-    # On Linux copy all runtime libs into the cntk/lib folder.
-    package_data['cntk'] += rt_libs
-    kwargs = dict(package_data = package_data)
-
-cntk_install_requires = [
+install_requires = [
     'numpy>=1.11',
     'scipy>=0.17'
 ]
 
 if IS_PY2:
-    cntk_install_requires.append('enum34>=1.1.6')
+    install_requires.append('enum34>=1.1.6')
 
-setup(name="cntk",
+setup(name=package_name,
       version="2.0",
-      url="http://cntk.ai",
+      url='https://docs.microsoft.com/cognitive-toolkit/',
       ext_modules=[cntk_module],
       packages=packages,
-      install_requires=cntk_install_requires,
-      **kwargs)
+      install_requires=install_requires,
+      package_data=package_data)

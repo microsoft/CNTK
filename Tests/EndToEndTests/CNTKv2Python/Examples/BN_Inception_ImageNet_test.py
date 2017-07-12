@@ -11,7 +11,7 @@ import signal
 import subprocess
 import re
 import pytest
-from cntk.cntk_py import DeviceKind_GPU
+from cntk.cntk_py import DeviceKind_GPU, set_fixed_random_seed, force_deterministic_algorithms
 from cntk.device import try_set_default_device
 from cntk.ops.tests.ops_test_utils import cntk_device
 
@@ -37,7 +37,6 @@ def test_bn_inception_imagenet(device_id):
     # change dir to locate data.zip correctly
     os.chdir(base_path)
 
-    from _cntk_py import set_fixed_random_seed, force_deterministic_algorithms
     set_fixed_random_seed(1)
     force_deterministic_algorithms()
 

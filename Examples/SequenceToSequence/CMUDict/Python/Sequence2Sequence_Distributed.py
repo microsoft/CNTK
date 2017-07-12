@@ -9,7 +9,6 @@ import numpy as np
 import sys
 import os
 import argparse
-import _cntk_py
 import cntk
 
 from cntk import Trainer
@@ -79,8 +78,7 @@ def train_and_test(s2smodel, train_reader, test_reader, block_size, num_quantiza
 
 def sequence_to_sequence_translator(train_data, test_data, epoch_size=908241, num_quantization_bits=default_quantization_bits, block_size=3200, warm_up=0, minibatch_size=72, max_epochs=10, randomize_data=False, log_to_file=None, num_mbs_per_log=10, gen_heartbeat=False):
     cntk.debugging.set_computation_network_trace_level(0)
-    from _cntk_py import set_fixed_random_seed
-    set_fixed_random_seed(1)
+    cntk.cntk_py.set_fixed_random_seed(1)
 
     from Sequence2Sequence import create_model
 

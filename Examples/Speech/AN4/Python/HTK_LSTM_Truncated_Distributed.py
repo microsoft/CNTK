@@ -10,7 +10,6 @@ import math
 import argparse
 import numpy as np
 import cntk
-import _cntk_py
 from cntk.train.distributed import *
 from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer, StreamDef, StreamDefs
 from cntk.layers import Recurrence, Dense, LSTM, Sequential, For

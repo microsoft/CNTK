@@ -190,4 +190,4 @@ RUN cd Examples/Image/DataSets/MNIST && \
     python install_mnist.py && \
     cd ../../../..
 
-ENV PATH=/cntk/build/gpu/release/bin:$PATH PYTHONPATH=/cntk/bindings/python LD_LIBRARY_PATH=/cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
+ENV PATH=/cntk/build/gpu/release/bin:$PATH PYTHONPATH=/cntk/bindings/python

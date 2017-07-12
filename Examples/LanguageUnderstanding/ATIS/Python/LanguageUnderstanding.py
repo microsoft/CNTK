@@ -192,11 +192,7 @@ if __name__=='__main__':
     args = vars(parser.parse_args())
     max_epochs = int(args['epochs'])
 
-    # TODO: leave these in for now as debugging aids; remove for beta
-    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-
-    from _cntk_py import set_fixed_random_seed
-    set_fixed_random_seed(1) # useful for testing
+    C.cntk_py.set_fixed_random_seed(1) # useful for testing
 
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True) 
     model = create_model_function()
