@@ -11,19 +11,18 @@ import os
 import math
 import argparse
 import numpy as np
-import cntk
-import _cntk_py
+import cntk as C
 
-import cntk.io.transforms as xforms
-from cntk.debugging import start_profiler, stop_profiler, enable_profiler
-from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from cntk.learners import learning_rate_schedule, momentum_schedule, nesterov, UnitType
-from cntk.logging import ProgressPrinter, log_number_of_parameters
-from cntk.losses import cross_entropy_with_softmax
-from cntk.metrics import classification_error
-from cntk.ops import input_variable
-from cntk.train import Trainer
-from cntk.ops import plus, element_times
+import C.io.transforms as xforms
+from C.debugging import start_profiler, stop_profiler, enable_profiler, set_computation_network_trace_level
+from C.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
+from C.learners import learning_rate_schedule, momentum_schedule, nesterov, UnitType
+from C.logging import ProgressPrinter, log_number_of_parameters
+from C.losses import cross_entropy_with_softmax
+from C.metrics import classification_error
+from C.ops import input_variable
+from C.train import Trainer
+from C.ops import plus, element_times
 
 from InceptionV3 import inception_v3_norm_model
 
@@ -186,7 +185,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 # Train and evaluate the network.
 def inception_v3_train_and_eval(train_data, test_data, minibatch_size=32, epoch_size=1281167, max_epochs=300, 
                          restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, profiler_dir=None, testing_parameters=(5000,32)):
-    _cntk_py.set_computation_network_trace_level(1)
+    set_computation_network_trace_level(1)
 
     progress_printer = ProgressPrinter(
         freq=num_mbs_per_log,
@@ -226,7 +225,7 @@ if __name__=='__main__':
     if args['profilerdir'] is not None:
         profiler_dir = args['profilerdir']
     if args['device'] is not None:
-        cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
+        C.device.try_set_default_device(C.device.gpu(args['device']))
 
     data_path = args['datadir']
 
@@ -239,11 +238,11 @@ if __name__=='__main__':
     test_data = os.path.join(data_path, 'val_map.txt')
 
     inception_v3_train_and_eval(train_data, test_data,
-                                         minibatch_size=args['minibatch_size'],
-                                         epoch_size=args['epoch_size'],
-                                         max_epochs=args['num_epochs'],
-                                         restore=not args['restart'],
-                                         log_to_file=args['logdir'],
-                                         num_mbs_per_log=100,
-                                         gen_heartbeat=True,
-                                         profiler_dir=args['profilerdir'])
+                                minibatch_size=args['minibatch_size'],
+                                epoch_size=args['epoch_size'],
+                                max_epochs=args['num_epochs'],
+                                restore=not args['restart'],
+                                log_to_file=args['logdir'],
+                                num_mbs_per_log=100,
+                                gen_heartbeat=True,
+                                profiler_dir=args['profilerdir'])
