@@ -8,6 +8,7 @@
 *.orig
 \#*
 .\#*
+.vscode
 
 # Local build configuration
 Config.make
