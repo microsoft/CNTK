@@ -171,7 +171,7 @@
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore CNTK::Internal::GetComputationNetworkTraceLevel;
 %ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
-%ignore CNTK::Internal::Convolution; 
+%ignore CNTK::Internal::Convolution;
 %ignore CNTK::Internal::UniversalLearner;
 
 %ignore CNTK::Function::RegisterUDFDeserializeCallback;

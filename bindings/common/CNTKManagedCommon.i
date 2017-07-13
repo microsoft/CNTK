@@ -68,6 +68,23 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %template(UnorderedMapVariableVariable) std::unordered_map<CNTK::Variable, CNTK::Variable>;
 %template(FunctionPtrVector) std::vector<std::shared_ptr<CNTK::Function>>;
 
+#define IGNORE_FUNCTION %rename("$ignore", %$isfunction, fullname=1)
+
+// They are defined twice under CNTK::Internal and under CNTK namespace
+%ignore CNTK::Internal::Combine;
+%ignore CNTK::Internal::Where;
+%ignore CNTK::Internal::Gather;
+%ignore CNTK::Internal::Scatter;
+%ignore CNTK::Internal::Slice;
+%ignore CNTK::Internal::MaxNumCPUThreadsSet;
+%ignore CNTK::Internal::CosineDistanceWithNegativeSamples;
+%ignore CNTK::Internal::Convolution;
+
+%rename(sequence_softmax) CNTK::Sequence::Softmax;
+%rename(sequence_reduce_max) CNTK::Sequence::ReduceMax;
+%rename(sequence_reduce_sum) CNTK::Sequence::ReduceSum;
+%rename(sequence_slice) CNTK::Sequence::Slice;
+
 IGNORE_CLASS CNTK::Internal::TensorBoardFileWriter;
 // suppress SWIG warning 302: Identifier redefined.
 %ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
