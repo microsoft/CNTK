@@ -499,7 +499,10 @@ public:
         auto& inputValue = InputRef(0).Value();
         auto& outputValue = Value();
 
+        auto origin_rows = outputValue.GetNumRows();
+        auto origin_cols = outputValue.GetNumCols();
         outputValue.AssignValuesOf(inputValue);
+        outputValue.Resize(origin_rows, origin_cols);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
@@ -564,7 +567,11 @@ public:
         auto& inputValue = InputRef(0).Value();
         auto& outputValue = Value();
 
+        auto origin_rows = outputValue.GetNumRows();
+        auto origin_cols = outputValue.GetNumCols();
+
         outputValue.AssignValuesOf(inputValue);
+        outputValue.Resize(origin_rows, origin_cols);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
