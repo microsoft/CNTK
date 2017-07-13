@@ -1,5 +1,7 @@
 """Replay memory for Q learning."""
 
+from __future__ import division
+
 import math
 import random
 from collections import namedtuple
@@ -106,7 +108,7 @@ class ReplayMemory:
             delta: change in priority
         """
         while index > 0:
-            index = int(math.floor((index - 1) / 2))
+            index = (index - 1) // 2
             self._memory[index] += delta
 
     def size(self):

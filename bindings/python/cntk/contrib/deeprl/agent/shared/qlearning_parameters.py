@@ -14,7 +14,7 @@ class QLearningParameters:
 
         Use default value if the value is not present.
         """
-        # TODO(maoyi): validate parameter values.
+        # TODO: validate parameter values.
         self.config = configparser.ConfigParser()
         self.config.optionxform = str
         self.config.read(config_file)

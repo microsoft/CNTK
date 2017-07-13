@@ -246,10 +246,10 @@ class ActorCritic(AgentBaseClass):
         # _trajectory_rewards. Same length is expected if called from
         # start() or end(), where the trajectory has terminiated.
         if len(self._trajectory_states) == len(self._trajectory_rewards):
-            initial_r = 0
+            bootstrap_r = 0
         else:
             # Bootstrap from last state
-            initial_r = np.asscalar(self._evaluate_model(
+            bootstrap_r = np.asscalar(self._evaluate_model(
                 self._value_network, self._trajectory_states[-1]))
             last_state = self._trajectory_states.pop()
             if len(self._trajectory_actions) != len(self._trajectory_rewards):
@@ -265,7 +265,7 @@ class ActorCritic(AgentBaseClass):
         for transition in zip(
                 self._trajectory_states,
                 self._trajectory_actions,
-                self._discount_rewards(initial_r)):
+                self._discount_rewards(bootstrap_r)):
             self._input_buffer.append(transition[0])
             self._value_network_output_buffer.append([transition[2]])
             self._policy_network_output_buffer.append(
@@ -301,9 +301,9 @@ class ActorCritic(AgentBaseClass):
         self._policy_network_output_buffer = []
         self._policy_network_weight_buffer = []
 
-    def _discount_rewards(self, initial_r):
+    def _discount_rewards(self, bootstrap_r):
         discounted_rewards = [0] * len(self._trajectory_rewards)
-        r = initial_r
+        r = bootstrap_r
         for t in reversed(range(len(self._trajectory_rewards))):
             r = r * self._parameters.gamma + self._trajectory_rewards[t]
             discounted_rewards[t] = r
