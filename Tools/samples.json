@@ -127,6 +127,15 @@
     },
     {
         "category": ["Image"],
+        "name":  "GoogLeNet (Inception-ResNet-V1)",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/Inception-ResNet-V1#cntk-examples-imageclassificationgooglenetinception-resnet-v1",
+        "description":  "GoogLeNet (Inception-ResNet-V1) network for image classification.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"],
+	"dateadded": "7/5/2017"
+    },
+    {
+        "category": ["Image"],
         "name":  "MNIST Logistic Regression (LR) OCR",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103B_MNIST_LogisticRegression.ipynb",
         "description":  "Recognize hand written digits (OCR) with MNIST data using multi-class LR.",
