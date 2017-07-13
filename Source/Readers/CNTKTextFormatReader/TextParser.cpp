@@ -657,7 +657,7 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
 
     while (bytesToRead && CanRead())
     {
-        char c = *m_pos;
+        unsigned char c = *m_pos;
 
         // stop as soon as there's a value delimiter, an input prefix
         // or a non-printable character (e.g., newline, carriage return).

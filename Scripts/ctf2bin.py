@@ -107,8 +107,8 @@ class DenseConverter(Converter):
 class SparseConverter(Converter):
 
     def add_sample(self, sample):
-        pairs = map(lambda x: (int(x[0]),float(x[1])),
-            [pair.split(':', 1) for pair in sample])
+        pairs = list(map(lambda x: (int(x[0]),float(x[1])),
+            [pair.split(':', 1) for pair in sample]))
 
         for pair in pairs:
             index = pair[0]
@@ -137,9 +137,9 @@ class SparseConverter(Converter):
             indices = []
             sizes = []
             for sample in sequence:
-                sizes.append(len(list(sample)))
-                ssample = sorted(sample, key=lambda x: x[0])
-                for (index, value) in ssample:
+                sizes.append(len(sample))
+                sample.sort(key=lambda x: x[0])
+                for (index, value) in sample:
                     indices.append(index)
                     values.append(value)
 
@@ -191,12 +191,11 @@ def get_converter(input_type, name, sample_dim, element_type):
 
 # parse the header to get the converters for this file
 # <name>    <alias>  <input format>  <sample size>
-def build_converters(header_file, element_type):
+def build_converters(streams_header, element_type):
     converters = OrderedDict();
-    with open(header_file, 'r') as inputs:
-        for line in inputs:
-            (name, alias, input_type, sample_dim) = line.strip().split()
-            converters[alias] = get_converter(input_type, name, int(sample_dim), element_type)
+    for line in streams_header:
+        (name, alias, input_type, sample_dim) = line.strip().split()
+        converters[alias] = get_converter(input_type, name, int(sample_dim), element_type)
     return converters
 
 class Chunk:
@@ -243,44 +242,35 @@ class Header:
             # uint32: number of samples in the chunk
             output_file.write(struct.pack('I', chunk.num_samples()))
 
-        output_file.write(struct.pack('q', header_offset));
+        output_file.write(struct.pack('q', header_offset))
 
+def process(input_name, output_name, streams, element_type, chunk_size=32<<20):
+    converters = build_converters(streams, element_type)
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Transforms a CNTK Text Format file into CNTK binary format given a header.")
-    parser.add_argument('--input', help="CNTK Text Format file to convert to binary.", required=True)
-    parser.add_argument('--header',  help="Header file describing each stream in the input.", required=True)
-    parser.add_argument('--chunk_size', type=int, help='Chunk size in bytes.', required=True)
-    parser.add_argument('--output', help='Name of the output file, stdout if not given', required=True)
-    parser.add_argument('--precision', help='Floating point precision (double or float). Default is float',
-        choices=["float", "double"], default="float", required=False)
-    args = parser.parse_args()
-
-    output = open(args.output, "wb")
+    output = open(output_name, "wb")
     # The very first 8 bytes of the file is the CBF magic number.
     output.write(struct.pack('Q', MAGIC_NUMBER));
     # Next 4 bytes is the CBF version.
     output.write(struct.pack('I', CBF_VERSION));
 
-    converters = build_converters(args.header, 
-        ElementType.FLOAT if args.precision == 'float' else ElementType.DOUBLE)
 
     header = Header(converters)
     chunk = Chunk()
 
-    with open(args.input, "r") as input_file:
+    with open(input_name, "r") as input_file:
         sequence = []
         seq_id = None
         estimated_chunk_size = 0
         for line in input_file:
             (prefix, _) = line.rstrip().split('|',1)
+            prefix = prefix.strip()
             # if the sequence id is empty or not equal to the previous sequence id,
             # we are at a new sequence.
             if((not seq_id and not prefix) or (len(prefix) > 0 and seq_id != prefix)):
                 if(len(sequence) > 0):
                     estimated_chunk_size += process_sequence(sequence, converters, chunk)
                     sequence = []
-                    if(estimated_chunk_size >= int(args.chunk_size)):
+                    if(estimated_chunk_size >= chunk_size):
                         write_chunk(output, converters, chunk)
                         header.add_chunk(chunk)
                         chunk = Chunk()
@@ -296,5 +286,21 @@ if __name__ == '__main__':
 
         header.write(output)
 
-        output.flush()
         output.close()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Transforms a CNTK Text Format file into CNTK binary format given a header.")
+    parser.add_argument('--input', help="CNTK Text Format file to convert to binary.", required=True)
+    parser.add_argument('--header',  help="Header file describing each stream in the input.", required=True)
+    parser.add_argument('--chunk_size', type=int, help='Chunk size in bytes.', required=True)
+    parser.add_argument('--output', help='Name of the output file, stdout if not given', required=True)
+    parser.add_argument('--precision', help='Floating point precision (double or float). Default is float',
+        choices=["float", "double"], default="float", required=False)
+    args = parser.parse_args()
+
+    with open(args.header) as header:
+        streams = header.readlines()
+    
+    element_type = ElementType.FLOAT if args.precision == 'float' else ElementType.DOUBLE
+    
+    process(args.input, args.output, streams, element_type, int(args.chunk_size))

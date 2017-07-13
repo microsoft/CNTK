@@ -415,6 +415,23 @@ namespace CNTK
         return ctf;
     }
 
+    Deserializer CBFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams)
+    {
+        Deserializer config;
+        Dictionary input;
+        for (const auto& s : streams)
+        {
+            if (s.m_streamAlias != s.m_streamName) 
+            {
+                Dictionary stream;
+                stream[L"alias"] = s.m_streamAlias;
+                input[s.m_streamName] = stream;
+            }
+        }
+        config.Add(L"type", L"CNTKBinaryFormatDeserializer", L"file", fileName, L"input", input);
+        return config;
+    }
+
     Deserializer HTKFeatureDeserializer(const std::vector<HTKFeatureConfiguration>& streams)
     {
         Deserializer htk;
@@ -514,11 +531,12 @@ namespace CNTK
             for (auto deserializerConfig : configuration.deserializers)
             {
                 static const std::unordered_map<std::wstring, std::wstring> deserializerTypeToModule = {
-                    { L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader" },
-                    { L"ImageDeserializer",          L"ImageReader" },
-                    { L"Base64ImageDeserializer",    L"ImageReader" },
-                    { L"HTKFeatureDeserializer",     L"HTKDeserializers" },
-                    { L"HTKMLFDeserializer",         L"HTKDeserializers" },
+                    { L"CNTKTextFormatDeserializer",   L"CNTKTextFormatReader" },
+                    { L"CNTKBinaryFormatDeserializer", L"CNTKBinaryReader" },
+                    { L"ImageDeserializer",            L"ImageReader" },
+                    { L"Base64ImageDeserializer",      L"ImageReader" },
+                    { L"HTKFeatureDeserializer",       L"HTKDeserializers" },
+                    { L"HTKMLFDeserializer",           L"HTKDeserializers" },
                 };
 
                 auto deserializerTypeName = deserializerConfig[L"type"].Value<std::wstring>();

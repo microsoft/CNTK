@@ -65,13 +65,6 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         return self.data.as_sequences(variable)
 
     @property
-    def data(self):
-        '''
-        The Value representation of the minibatch.
-        '''
-        return super(MinibatchData, self).data()
-
-    @property
     def shape(self):
         '''
         The shape of the data in this minibatch as tuple.
@@ -93,7 +86,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         sequence, `1` marks a sequence element as valid, and `0` marks it as
         invalid.
         '''
-        return self.data.mask().to_ndarray()
+        return self.data.mask
 
     @property
     def end_of_sweep(self):
@@ -885,6 +878,23 @@ def CTFDeserializer(filename, streams):
     sc = [cntk_py.StreamConfiguration(
         k, s.dim, s.is_sparse, s.stream_alias, s['defines_mb_size']) for k, s in streams.items()]
     return cntk_py.ctf_deserializer(filename, sc)
+
+def CBFDeserializer(filename, streams = {}):
+    '''
+    Configures the CNTK binary-format deserializer.
+
+    Args:
+        filename (str): file name containing the binary data
+        streams: any dictionary-like object that contains a mapping from stream
+          names to :class:`StreamDef` objects. Each StreamDef object configures
+          an input stream.
+
+    See also:
+        :cntkwiki:`CNTKBinaryReader format <BrainScript-CNTKBinary-Reader>`
+    '''
+    sc = [cntk_py.StreamConfiguration(
+        k, s.dim, s.is_sparse, s.stream_alias) for k, s in streams.items()]
+    return cntk_py.cbf_deserializer(filename, sc)
 
 # TODO: this should be a private class; use StreamDef instead
 

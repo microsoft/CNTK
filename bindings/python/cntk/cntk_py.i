@@ -37,6 +37,7 @@
 %rename(sequence_softmax) CNTK::Sequence::Softmax;
 %rename(momentum_as_time_constant_schedule) CNTK::MomentumAsTimeConstantSchedule;
 %rename(ctf_deserializer) CNTK::CTFDeserializer;
+%rename(cbf_deserializer) CNTK::CBFDeserializer;
 %rename(htk_feature_deserializer) CNTK::HTKFeatureDeserializer;
 %rename(htk_mlf_deserializer) CNTK::HTKMLFDeserializer;
 %rename(_stream_infos) CNTK::SwigMinibatchSource::StreamInfos(PyObject*);

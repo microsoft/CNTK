@@ -5346,6 +5346,11 @@ namespace CNTK
     CNTK_API  Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams);
 
     /// 
+    /// Create a CBFDeserializer with the specified options
+    /// 
+    CNTK_API  Deserializer CBFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams = {});
+
+    /// 
     /// Create an HTKFeatureDeserializer with the specified options
     /// 
     CNTK_API  Deserializer HTKFeatureDeserializer(const std::vector<HTKFeatureConfiguration>& streams);
