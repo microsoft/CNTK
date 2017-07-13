@@ -33,8 +33,8 @@ BOOL APIENTRY DllMain(HMODULE hModule,
                       LPVOID /*lpReserved*/
                       )
 {
-	wchar_t dllName[MAX_PATH + 1] = { 0 };
-	std::wstring dllDir;
+    wchar_t dllName[MAX_PATH + 1] = { 0 };
+    std::wstring dllDir;
 
     switch (ul_reason_for_call)
     {
@@ -49,9 +49,9 @@ BOOL APIENTRY DllMain(HMODULE hModule,
         }
 #endif
 
-		GetModuleFileNameW(hModule, dllName, MAX_PATH + 1);
-		dllDir = Microsoft::MSR::CNTK::File::DirectoryPathOf(dllName);
-		SetDllDirectoryW(dllDir.c_str());
+        GetModuleFileNameW(hModule, dllName, MAX_PATH + 1);
+        dllDir = Microsoft::MSR::CNTK::File::DirectoryPathOf(dllName);
+        SetDllDirectoryW(dllDir.c_str());
 
         break;
     case DLL_PROCESS_DETACH:
