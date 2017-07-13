@@ -11,16 +11,15 @@ import os
 import math
 import argparse
 import numpy as np
-import cntk
-import _cntk_py
+import cntk as C
 
-import cntk.io.transforms as xforms
-from cntk.debugging import start_profiler, stop_profiler
-from cntk.learners import learning_rate_schedule, momentum_schedule, nesterov, UnitType
-from cntk.logging import ProgressPrinter, log_number_of_parameters
-from cntk.train.distributed import data_parallel_distributed_learner, Communicator
-from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from cntk.train import training_session, CheckpointConfig, TestConfig, Trainer
+import C.io.transforms as xforms
+from C.debugging import start_profiler, stop_profiler, set_computation_network_trace_level
+from C.learners import learning_rate_schedule, momentum_schedule, nesterov, UnitType
+from C.logging import ProgressPrinter, log_number_of_parameters
+from C.train.distributed import data_parallel_distributed_learner, Communicator
+from C.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
+from C.train import training_session, CheckpointConfig, TestConfig, Trainer
 
 from InceptionV3_ImageNet import create_image_mb_source, create_inception_v3
 
@@ -93,7 +92,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 # Train and evaluate the network.
 def inception_v3_train_and_eval(train_data, test_data, num_quantization_bits=32, epoch_size=1281167, max_epochs=300, minibatch_size=None,
                          restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, scale_up=False, profiling=False):
-    _cntk_py.set_computation_network_trace_level(0)
+    set_computation_network_trace_level(0)
 
     # NOTE: scaling up minibatch_size increases sample throughput. In 8-GPU machine,
     # ResNet110 samples-per-second is ~7x of single GPU, comparing to ~3x without scaling
@@ -143,7 +142,7 @@ if __name__=='__main__':
     if args['logdir'] is not None:
         log_dir = args['logdir']
     if args['device'] is not None:
-        cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
+        C.device.try_set_default_device(C.device.gpu(args['device']))
 
     data_path = args['datadir']
 
