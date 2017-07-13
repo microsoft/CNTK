@@ -33,7 +33,7 @@ for filename in os.listdir(filepath):
                 xlist = []
                 ylist = []
 
-                # loop through to get name and and BBox values from object
+                # loop through to get name and BBox values from object
                 for child in child:
                     if str(child.tag) == 'name':
                         label = child.text

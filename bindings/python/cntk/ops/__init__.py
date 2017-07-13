@@ -1251,6 +1251,30 @@ def elu(x, name=''):
     x = sanitize_input(x)
     return elu(x, name)
 
+@typemap
+def selu(x, scale=1.0507009873554804934193349852946, alpha=1.6732632423543772848170429916717, name=''):
+    '''
+    Scaled exponential linear unit operation. Computes the element-wise exponential linear
+    of ``x``: ``scale * x`` for ``x >= 0`` and ``x``: ``scale * alpha * (exp(x)-1)`` otherwise.
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.selu([[-1, -0.5, 0, 1, 2]]).eval()
+        array([[-1.111331, -0.691758,  0.      ,  1.050701,  2.101402]], dtype=float32)
+
+    Args:
+        x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
+        name (`str`, default to ''): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function:
+        An instance of :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import selu
+    x = sanitize_input(x)
+    return selu(x, scale, alpha, name)
+
 
 @typemap
 def leaky_relu(x, name=''):
@@ -1445,7 +1469,8 @@ def softmax(x, axis=None, name=''):
     therefore be interpreted as probabilities for mutually exclusive outcomes
     as in the case of multiclass classification.
 
-    If ``axis`` is given, the softmax will be computed along that axis.
+    If ``axis`` is given, the softmax will be computed along that axis. Otherwise, it
+    will be computed along the last axis.
 
     Example:
         >>> C.softmax([[1, 1, 2, 3]]).eval()
@@ -1458,6 +1483,10 @@ def softmax(x, axis=None, name=''):
         array([[[ 0.5     ,  0.5     ],
                 [ 0.119203,  0.880797]]], dtype=float32)
 
+        >>> C.softmax([[[1, 1], [3, 5]]], axis=1).eval()
+        array([[[ 0.119203,  0.017986],
+                [ 0.880797,  0.982014]]], dtype=float32)
+
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
         axis (int or :class:`~cntk.axis.Axis`): axis along which the softmax operation will be performed
@@ -1467,18 +1496,23 @@ def softmax(x, axis=None, name=''):
     '''
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
-    # softmax over a specific axis: implemented explicitly
-    # TODO: move this into the C++ API.
-    if axis is not None:
-        from cntk.cntk_py import reduce_log_sum, exp, minus
-        axis = sanitize_axis(axis)
-        Z = reduce_log_sum(x, axis)  # log denominator
-        # TODO: use as_block()
-        return exp(x - Z.output(), name) # this is the softmax
-        # (note: we need .output() here since the automatisms available outside are not available in here)
-    # softmax over all elements
-    return softmax(x, name)
 
+    last_axis = len(x.shape)-1
+    is_last_axis = (axis is None) or (axis == -1) or (axis == last_axis)
+
+    # For softmax on different axis, simply swap axis then call the standard softmax.
+    if is_last_axis:
+        return softmax(x, name)
+    else:
+        from cntk.cntk_py import transpose_axes
+        axis = sanitize_axis(axis)
+        last_axis = sanitize_axis(last_axis)
+
+        xp = placeholder()
+        f = transpose_axes(xp, axis, last_axis)
+        f = softmax(f)
+        f = transpose_axes(f, last_axis, axis)
+        return as_block(f, [(xp, x)], 'softmax', name)
 
 @typemap
 def hardmax(x, name=''):
