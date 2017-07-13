@@ -2254,14 +2254,28 @@ public:
         Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-        if (IsEnabled())
-            sliceInput0Grad.AddElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
+        if (InputRef(0).IsGradientInitializedBy(this))
+        {
+            if (IsEnabled())
+                sliceInput0Grad.AssignElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
+            else
+                sliceInput0Grad.AssignValuesOf(sliceOutputGrad);
+        }
         else
-            sliceInput0Grad += sliceOutputGrad;
+        {
+            if (IsEnabled())
+                sliceInput0Grad.AddElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
+            else
+                sliceInput0Grad += sliceOutputGrad;
+        }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* /*input*/) const
+    {
+        return ParentGradientOptimization::Overwrite;
+    }
 
     virtual void UpdateFunctionMBSize() override
     {
@@ -2727,24 +2741,42 @@ public:
                               scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
                               blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
                               *m_savedMean, *m_savedInvStdDev,  // (in)  saved mean/invstddev values used in ForwardProp()
-                              *m_dScale, *m_dBias);             // (out) gradients for scale and bias
+                              *m_dScale, *m_dBias,              // (out) gradients for scale and bias
+                              !Input(DATA)->IsGradientInitializedBy(this)); // whether data gradient should be accumulated
 
             m_gradientValid = true;
         }
         if (inputIndex == SCALE) // derivative with respect to the scale, precomputed during input derivative computation
         {
             assert(m_gradientValid);
-            Input(SCALE)->Gradient() += *m_dScale;
+
+            if (Input(SCALE)->IsGradientInitializedBy(this))
+                Input(SCALE)->Gradient().AssignValuesOf(*m_dScale);
+            else
+                Input(SCALE)->Gradient() += *m_dScale;
         }
         else if (inputIndex == BIAS) // derivative with respect to the bias, precomputed during input derivative computation
         {
             assert(m_gradientValid);
-            Input(BIAS)->Gradient() += *m_dBias;
+
+            if (Input(BIAS)->IsGradientInitializedBy(this))
+                Input(BIAS)->Gradient().AssignValuesOf(*m_dBias);
+            else
+                Input(BIAS)->Gradient() += *m_dBias;
         }
         // No derivatives with respect to running mean and variance.
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const
+    {
+        auto iter = std::find_if(m_inputs.begin(), m_inputs.end(), [input](ComputationNodeBasePtr p) { return input == &*p; });
+        if (iter == m_inputs.end())
+            InvalidArgument("%ls is not an input of %ls.", input->NodeName().c_str(), NodeName().c_str());
+        auto inputIndex = iter - m_inputs.begin();
+        return (inputIndex == DATA || inputIndex == SCALE || inputIndex == BIAS) ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None;
+    }
 
     void Validate(bool isFinalValidationPass) override
     {

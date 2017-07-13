@@ -64,12 +64,12 @@ void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const M
 
 template <class ElemType>
 void BatchNormEngine<ElemType>::Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor,
-                                         const Mat& savedMean, const Mat& savedInvStdDev, Mat& scaleGrad, Mat& biasGrad)
+                                         const Mat& savedMean, const Mat& savedInvStdDev, Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad)
 {
     assert(!savedMean.IsEmpty());
     assert(!savedInvStdDev.IsEmpty());
     EnsureCompatible();
-    BackwardCore(in, srcGrad, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad);
+    BackwardCore(in, srcGrad, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad, accumulateDataGrad);
 }
 
 template <class ElemType>
@@ -105,8 +105,11 @@ protected:
     }
 
     void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& savedMean, const Mat& savedInvStdDev,
-                      Mat& scaleGrad, Mat& biasGrad) override
+                      Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad) override
     {
+        if (!accumulateDataGrad)
+            grad.SetValue((ElemType)0);
+
         srcGrad.BatchNormalizationBackward(in, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad);
     }
 };
