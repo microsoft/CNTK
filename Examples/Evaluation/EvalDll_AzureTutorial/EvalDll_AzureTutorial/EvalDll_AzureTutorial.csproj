@@ -10,8 +10,8 @@
     <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CNTKAzureTutorial01</RootNamespace>
-    <AssemblyName>CNTKAzureTutorial01</AssemblyName>
+    <RootNamespace>EvalDll_AzureTutorial</RootNamespace>
+    <AssemblyName>EvalDll_AzureTutorial</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <UseIISExpress>true</UseIISExpress>
     <IISExpressSSLPort />
@@ -23,8 +23,8 @@
     </NuGetPackageImportStamp>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Cntk.Core.Managed-2.0, Version=1.0.0.0, Culture=neutral, PublicKeyToken=21fff2ec8197defe, processorArchitecture=AMD64">
-      <HintPath>..\packages\CNTK.CPUOnly.2.0.0\lib\net45\x64\Cntk.Core.Managed-2.0.dll</HintPath>
+    <Reference Include="Cntk.Eval.Wrapper-2.0, Version=0.0.0.0, Culture=neutral, PublicKeyToken=52681d72504348ec, processorArchitecture=AMD64">
+      <HintPath>..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0.0\lib\net45\x64\Cntk.Eval.Wrapper-2.0.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
@@ -146,12 +146,12 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
-  <Import Project="..\packages\CNTK.CPUOnly.2.0.0\build\net45\CNTK.CPUOnly.targets" Condition="Exists('..\packages\CNTK.CPUOnly.2.0.0\build\net45\CNTK.CPUOnly.targets')" />
+  <Import Project="..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets" Condition="Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\CNTK.CPUOnly.2.0.0\build\net45\CNTK.CPUOnly.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.CPUOnly.2.0.0\build\net45\CNTK.CPUOnly.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

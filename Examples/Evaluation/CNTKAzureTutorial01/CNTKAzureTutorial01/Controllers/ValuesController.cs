@@ -6,11 +6,10 @@ using System.Net.Http;
 using System.Web.Http;
 using Swashbuckle.Swagger.Annotations;
 
-using Microsoft.MSR.CNTK.Extensibility.Managed;
+using CNTK;
 using System.Threading.Tasks;
 using System.IO;
 using System.Drawing;
-
 
 namespace CNTKAzureTutorial01.Controllers
 {
@@ -55,56 +54,70 @@ namespace CNTKAzureTutorial01.Controllers
         {
         }
 
-
-
         public async Task<string[]> EvaluateCustomDNN(string imageUrl)
         {
             string domainBaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
             string workingDirectory = Environment.CurrentDirectory;
+            DeviceDescriptor device = DeviceDescriptor.CPUDevice;
 
             try
             {
-                // This example requires the RestNet_18 model.
-                // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
-                int numThreads = 1;
                 List<float> outputs;
 
-                using (var model = new IEvaluateModelManagedF())
+                // Load the model.
+                // This example requires the ResNet20_CIFAR10_Python.model model.
+                // The model can be downloaded from <see cref="https://www.cntk.ai/Models/CNTK_Pretrained/ResNet20_CIFAR10_Python.model"/>
+                // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
+                string modelFilePath = Path.Combine(domainBaseDirectory, @"CNTK\Models\ResNet20_CIFAR10_Python.model");
+                if (!File.Exists(modelFilePath))
                 {
-                    // initialize the evaluation engine
-                    // TODO: initializing the evaluation engine should be one only once at the beginning
-                    var initParams = string.Format("numCPUThreads={0}", numThreads);
-                    model.Init(initParams);
-
-                    // load the model
-                    string modelFilePath = Path.Combine(domainBaseDirectory, @"CNTK\Models\ResNet_18.model");
-                    var modelOption = string.Format("modelPath=\"{0}\"", modelFilePath);
-                    model.CreateNetwork(modelOption, deviceId: -1);
-
-                    // Prepare input value in the appropriate structure and size
-                    var inDims = model.GetNodeDimensions(NodeGroup.Input);
-                    if (inDims.First().Value != 224 * 224 * 3)
-                    {
-                        throw new CNTKRuntimeException(string.Format("The input dimension for {0} is {1} which is not the expected size of {2}.", inDims.First(), inDims.First().Value, 224 * 224 * 3), string.Empty);
-                    }
-
-                    // Transform the image
-                    System.Net.Http.HttpClient httpClient = new HttpClient();
-                    Stream imageStream = await httpClient.GetStreamAsync(imageUrl);
-                    Bitmap bmp = new Bitmap(Bitmap.FromStream(imageStream));
-
-                    var resized = bmp.Resize(224, 224, true);
-                    var resizedCHW = resized.ParallelExtractCHW();
-                    var inputs = new Dictionary<string, List<float>>() { { inDims.First().Key, resizedCHW } };
-
-                    // We can call the evaluate method and get back the results (single layer output)...
-                    var outDims = model.GetNodeDimensions(NodeGroup.Output);
-                    outputs = model.Evaluate(inputs, outDims.First().Key);
+                    throw new FileNotFoundException(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
                 }
+
+                Function modelFunc = Function.Load(modelFilePath, device);
+
+                // Get input variable. The model has only one single input.
+                Variable inputVar = modelFunc.Arguments.Single();
+
+                // Get shape data for the input variable
+                NDShape inputShape = inputVar.Shape;
+                int imageWidth = inputShape[0];
+                int imageHeight = inputShape[1];
+                int imageChannels = inputShape[2];
+                int imageSize = inputShape.TotalSize;
+
+                // Get output variable
+                Variable outputVar = modelFunc.Output;
+
+                var inputDataMap = new Dictionary<Variable, Value>();
+                var outputDataMap = new Dictionary<Variable, Value>();
+
+                // // Image preprocessing to match input requirements of the model.
+                System.Net.Http.HttpClient httpClient = new HttpClient();
+                Stream imageStream = await httpClient.GetStreamAsync(imageUrl);
+                Bitmap bmp = new Bitmap(Bitmap.FromStream(imageStream));
+
+                var resized = bmp.Resize(imageWidth, imageHeight, true);
+                List<float> resizedCHW = resized.ParallelExtractCHW();
+
+                // Create input data map
+                var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
+                inputDataMap.Add(inputVar, inputVal);
+
+                // Create output data map
+                outputDataMap.Add(outputVar, null);
+
+                // Start evaluation on the device
+                modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+
+                // Get evaluate result as dense output
+                var outputVal = outputDataMap[outputVar];
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
                 List<string> o = new List<string>();
 
-                foreach (float f in outputs)
+                // Get results from index 0 in output data since our batch consists of only one image
+                foreach (float f in outputData[0])
                 {
                     o.Add(f.ToString());
                 }

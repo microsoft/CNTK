@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKAzureTutorial01", "CNTKAzureTutorial01\CNTKAzureTutorial01.csproj", "{2B7D7FFE-EC2B-4D20-8EB8-56FBDDF9EBE3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvalDll_AzureTutorial", "EvalDll_AzureTutorial\EvalDll_AzureTutorial.csproj", "{2B7D7FFE-EC2B-4D20-8EB8-56FBDDF9EBE3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
