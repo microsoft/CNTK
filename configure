@@ -1015,8 +1015,9 @@ then
     swig_path=$(find_swig)
     if test x$swig_path = x
     then
-        echo 'Cannot locate SWIG (>= 3.0.10), which is required Python/Java support.'
-        echo Check bindings/python/swig_install.sh for build instructions.
+        echo 'Cannot locate SWIG (>= 3.0.10), which is required for Python/Java support.'
+        echo Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Linux#optional-swig
+        echo for installation instructions.
         exit 1
     fi
 fi

@@ -106,7 +106,6 @@
       <Filter>cntk\io</Filter>
     </None>
     <None Include="setup.py" />
-    <None Include="swig_install.sh" />
     <None Include="cntk\losses\__init__.py">
       <Filter>cntk\losses</Filter>
     </None>
