@@ -19,8 +19,31 @@ use_real_gt_not_sel_search_as_gt_info = True
 #gt_boxes_rel_center = use_real_gt_not_sel_search_as_gt_info
 use_gtbs_as_preds_aka_fake_output = False
 
-output_scale = (1080, 1920)
 output_scale = (1000, 1000)
+#output_scale = (1080, 1920)
+#output_scale = (1200, 1200)
+#output_scale = (500, 500)
+#output_scale = (774, 980)
+
+###### Value Ranges as read #######
+#
+# rois (selective search)
+### x = [219, 774]
+### y = [  0, 980]
+#
+# gts (from dataset)
+### x = [0.142, 0.693]
+### y = [0.106, 0.781]
+### x_center = [0.219, 0.637]
+### y_center = [0.177, 0.704]
+### w = [0.041, 0.223]
+### h = [0.047, 0.200]
+
+img_list = [r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Grocery\testImages\WIN_20160803_11_28_42_Pro.jpg",
+                    r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Grocery\testImages\WIN_20160803_11_42_36_Pro.jpg",
+                    r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Grocery\testImages\WIN_20160803_11_46_03_Pro.jpg",
+                    r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Grocery\testImages\WIN_20160803_11_48_26_Pro.jpg",
+                    r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Grocery\testImages\WIN_20160803_12_37_07_Pro.jpg"]
 
 def prepare_ground_truth_boxes(gtbs, relative_coord=False, centered_coords=False, scale_input=None):
     """
@@ -38,22 +61,46 @@ def prepare_ground_truth_boxes(gtbs, relative_coord=False, centered_coords=False
     classes = HCT.output_mapper.get_all_classes()  # list of classes with new labels and indexing # todo: check if __background__ is present!!!
     all_gt_infos = {key: [] for key in classes}
     for image_i in range(num_test_images):
-        image_gtbs = gtbs[image_i]
+        image_gtbs = np.copy(gtbs[image_i])
         coords = image_gtbs[:,0:4]
         original_labels = image_gtbs[:,-1:]
         #mapped_labels = map_labels(original_labels)
 
+        #image_gtbs[:,0] = (image_gtbs[:,0] -7/32)*16/9 #*9/16+7/32
+        #image_gtbs[:, 0]-=6/32
+        #image_gtbs[:, 0]*=16/9
+        #image_gtbs[:,1]+=.1
+        #image_gtbs[:, 2] = image_gtbs[:, 2] * 16/9#9 / 16
 
+        #img = load_image(img_list[image_i])
+        #img =draw_bb_on_image(img, image_gtbs)
+        #plot_image(img)
         # make absolute
+
+        # make coords bounding
+        if centered_coords and False:
+            xy = coords[:, :2]
+            wh_half = coords[:, 2:] / 2
+            coords = np.concatenate([xy - wh_half, xy + wh_half], axis=1)
+
+        coords[:, [0, 2]] *= 9 / 16
+        coords[:, [0, 2]] += 7 / 32
+
         if relative_coord:
             coords*= scale_input + scale_input
 
-        # make coords bounding
-        if centered_coords:
-            xy = coords[:,:2]
-            wh_half = coords[:,2:]/2
-            coords = np.concatenate([xy - wh_half, xy + wh_half], axis = 1)
 
+        #coords[:, [1, 3]] *= 1252
+        #coords[:, [1, 3]] +=  -74
+
+        #import ipdb;ipdb.set_trace()
+        #img = draw_bb_on_image(img, points_to_xywh(coords/1000))
+        #plot_image(img)
+
+
+        #if True:
+        #    coords[:,[0,2]]*=9/16
+        #    coords[:, [0, 2]] += 1000*7/32
 
         # def to_one_hot(label, size):
         #     one_hot = np.zeros((size,))
@@ -414,7 +461,7 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
 
             # make absolute
             if use_real_gt_not_sel_search_as_gt_info:
-                scale_input = (1080, 1920)
+                scale_input = output_scale
                 coords *= scale_input + scale_input
                 xy = coords[:, :2]
                 wh_half = coords[:, 2:] / 2
@@ -437,7 +484,8 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
     all_gt_infos = prepare_ground_truth_boxes(gtbs=all_raw_gt_boxes, relative_coord=use_real_gt_not_sel_search_as_gt_info, centered_coords=use_real_gt_not_sel_search_as_gt_info, scale_input=output_scale)
     all_boxes = prepare_predictions(all_raw_outputs, all_raw_rois, num_classes)
 
-
+    visualize_gt(all_gt_infos)
+    visualize_rois(all_boxes)
 
     aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=False, use_07_metric=False)
     ap_list = []
@@ -450,6 +498,121 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
     import ipdb;
     ipdb.set_trace()
     return aps
+
+def visualize_gt(all_gt_infos, plot=True):
+    imgs = []
+    for img_path in img_list:
+        imgs.append(load_image(img_path))
+
+    for cls_name in all_gt_infos:
+        if cls_name == '__background__' : continue
+        pred_list = all_gt_infos[cls_name]
+        if not len(pred_list)== len(imgs): import ipdb;ipdb.set_trace()
+        for img_i in range(len(imgs)):
+            image = imgs[img_i]
+            pred = np.copy(pred_list[img_i]["bbox"])
+
+            add_rois_to_img(image, pred, cls_name)
+            #if pred.size==0: continue
+
+            #pred[:,0:4]/= output_scale+output_scale
+            #pred[:,[0,2]]-=7/32
+            #pred[:,[0,2]]*=16/9
+            #draw_bb_on_image(image, points_to_xywh(pred), cls_name)
+    if plot:
+        for img in imgs:
+            plot_image(img)
+
+    return imgs
+
+def visualize_rois(all_boxes, plot=True):
+    classes = HCT.output_mapper.get_all_classes()
+    imgs = []
+    for img_path in img_list:
+        imgs.append(load_image(img_path))
+
+    for cls_i in range(len(all_boxes)):
+
+        cls_name = classes[cls_i]
+        for img_i in range(len(imgs)):
+            image = imgs[img_i]
+            rois = np.copy(all_boxes[cls_i][img_i])
+
+            add_rois_to_img(image, rois, cls_name)
+            #if rois.size==0: continue
+
+            #rois[:,0:4] /= output_scale + output_scale
+            #rois[:, [0, 2]] -= 7 / 32
+            #rois[:,[0,2]] *= 16 / 9
+
+            #import ipdb;ipdb.set_trace()
+            #draw_bb_on_image(image, points_to_xywh(rois), cls_name)
+
+    if plot:
+        for img in imgs:
+            plot_image(img)
+
+    return imgs
+
+def add_rois_to_img(img, rois, cls_name):
+    if rois.size == 0: return
+
+    rois[:, 0:4] /= output_scale + output_scale
+    rois[:, [0, 2]] -= 7 / 32
+    rois[:, [0, 2]] *= 16 / 9
+
+    # import ipdb;ipdb.set_trace()
+    draw_bb_on_image(img, points_to_xywh(rois), cls_name)
+
+def draw_bb_on_image(image, bb_list, name=None):
+    import cv2
+    image_width = len(image[1])
+    image_height = len(image)
+
+    LIMIT_TO_FIRST = None
+    box_list_len = min(len(bb_list), LIMIT_TO_FIRST) if LIMIT_TO_FIRST is not None else len(bb_list)
+    for j in range(box_list_len):
+        box = bb_list[j]
+        xmin = int(image_width * (box[0] -  box[2] / 2))
+        xmax = int(image_width * (box[0] +  box[2] / 2))
+        ymin = int(image_height * (box[1] - box[3] / 2))
+        ymax = int(image_height * (box[1] + box[3] / 2))
+        if(xmax >= image_width or ymax >= image_height or xmin < 0 or ymin < 0):
+            print("Box out of bounds: (" + str(xmin) +","+ str(ymin) +") ("+ str(xmax) +","+ str(ymax) +")")
+            # print(box[5:])
+        xmax = image_width-1 if xmax >= image_width else xmax
+        ymax = image_height-1 if ymax >= image_height else ymax
+        xmin = 0 if xmin < 0 else xmin
+        ymin = 0 if ymin < 0 else ymin
+
+        color = (255, 255 - int(j*255/box_list_len), int(j*255/box_list_len))
+        cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 1)
+
+        if name is not None:
+            cv2.putText(image, name, (xmin, ymax), cv2.FONT_HERSHEY_SIMPLEX, 1, color,1)
+
+    return image
+
+def plot_image(image):
+    import matplotlib.pyplot as mp
+    mp.imshow(image)
+    mp.plot()
+    mp.show()
+
+def load_image(img_path):
+    import cv2
+    return cv2.imread(img_path)
+
+def points_to_xywh(points):
+    xywh = np.zeros(points.shape)
+
+    xywh[:, 0] = (points[:, 0] + points[:, 2]) / 2
+    xywh[:, 1] = (points[:, 1] + points[:, 3]) / 2
+    xywh[:, 2] = np.abs(points[:, 2] - points[:, 0])
+    xywh[:, 3] = np.abs(points[:, 3] - points[:, 1])
+    xywh[:, 4:] = points[:, 4:]
+
+    return xywh
 
 
 if __name__ == '__main__':
