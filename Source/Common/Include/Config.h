@@ -1550,6 +1550,14 @@ public:
     {
         return std::vector<T>::size();
     }
+
+    void reset(argvector<T>& values)
+    {
+        clear();
+        for (T& val : values)
+            push_back(val);
+        assert(size() == values.size());
+    }
 };
 
 typedef argvector<int> intargvector;

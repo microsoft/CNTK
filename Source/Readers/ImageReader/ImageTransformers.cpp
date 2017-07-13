@@ -754,7 +754,8 @@ ColorTransformer::ColorTransformer(const ConfigParameters &config) : ImageTransf
     if (m_saturationRadius < 0 || m_saturationRadius > 1.0)
         InvalidArgument("saturationRadius must be >= 0.0 and <= 1.0");
 
-    m_grayScale = config(L"grayScale", "0.0");
+    floatargvector grayVec = config(L"grayScale", "0.0");
+    m_grayScale.reset(grayVec);
     float count = 0;
     for (size_t i = 0; i < m_grayScale.size(); i++)
     {
