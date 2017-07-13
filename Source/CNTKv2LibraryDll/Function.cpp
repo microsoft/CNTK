@@ -686,10 +686,17 @@ namespace CNTK
                                 break;
                             case ParameterCloningMethod::Freeze:
                                 if (cloneeInput.IsParameter())
-                                    clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
+                                {
+                                    //parameter values can be updated so we need our own copy
+                                    const auto& ndav = Parameter(cloneeInput).Value();
+                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name());
+                                }
                                 else
-                                    clonedInput = Constant(Constant(cloneeInput).Value(), cloneeInput.Name());
-
+                                {
+                                    //constants can also be updated via non-sgd means
+                                    const auto& ndav = Constant(cloneeInput).Value();
+                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name());
+                                }
                                 leafVariablesCloneMap[cloneeInput] = clonedInput;
                                 break;
                             default:
