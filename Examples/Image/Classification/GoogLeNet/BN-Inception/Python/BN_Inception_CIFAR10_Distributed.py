@@ -93,7 +93,7 @@ def train_and_test(network, trainer, train_source, test_source, max_epochs, mini
 # Train and evaluate the network.
 def bn_inception_train_and_eval(train_data, test_data, mean_data, num_quantization_bits=32, epoch_size=50000, max_epochs=200, minibatch_size=None,
                          restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, scale_up=False, profiling=False):
-    C.cntk_py.set_computation_network_trace_level(0)
+    cntk.cntk_py.set_computation_network_trace_level(0)
 
     # NOTE: scaling up minibatch_size increases sample throughput. In 8-GPU machine,
     # ResNet110 samples-per-second is ~7x of single GPU, comparing to ~3x without scaling
