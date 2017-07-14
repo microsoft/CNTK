@@ -426,7 +426,9 @@ NormTransformer::NormTransformer(const ConfigParameters& config) : ImageTransfor
     m_range = m_maxValue - m_minValue;
     if ((m_minValue > m_maxValue) 
         || (m_range == 0 && m_minValue != 0))
+        InvalidArgument("minValue must < maxValue");
     else if (m_range > 255)
+        InvalidArgument("normalize range must < 255");
 }
 
 void NormTransformer::Apply(uint8_t, cv::Mat &mat)
