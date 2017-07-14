@@ -3593,8 +3593,16 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name = L"");
 
+    ///
+    /// Create an instance of attach dynamic axis operation that convert the input's first static axis to dynamic axis.
+    /// Only batch axis is supported now.
+    ///
     CNTK_API FunctionPtr AttachDynamicAxis(const Variable& operand, Axis& axis, const std::wstring& name = L"");
 
+    ///
+    /// Create an instance of detach dynamic axis operation that convert the input's last dynamic axis to static axis.
+    /// Only batch axis is supported now.
+    ///
     CNTK_API FunctionPtr DetachDynamicAxis(const Variable& operand, size_t size, const std::wstring& name);
 
     ///

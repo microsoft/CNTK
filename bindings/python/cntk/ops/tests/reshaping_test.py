@@ -479,3 +479,23 @@ def test_gather_op(device_id, precision):
     expectd2 = np.asarray([[[[0., 1.],[4.,5.]],[[2., 3.],[6., 7.]]],[[[4., 5.],[8.,9.]],[[6., 7.], [10., 11.]]]])
     assert np.array_equal(res2, expectd2)
 
+def test_convert_dynamic_axis():
+    batch_size = 4
+    a = C.constant(shape=(batch_size, 2, 3), value=1)
+    dynamic_a = C.attach_dynamic_axis(a, C.Axis.default_batch_axis())
+    assert len(dynamic_a.dynamic_axes) == 1
+    assert dynamic_a.shape == (2, 3)
+
+    x = C.input_variable((2, 3))
+    y = x + dynamic_a
+
+    const_a = C.detach_dynamic_axis(y, 4)
+    assert len(const_a.dynamic_axes) == 0
+    assert const_a.shape == (4, 2, 3)
+
+    f = C.assign(a, const_a)
+    z = x + 1
+    data = np.arange(24).reshape(4, 2, 3).astype('f')
+    f.eval({x:data})
+    expected = z.eval({x:data})
+    assert np.array_equal(a.value, expected)

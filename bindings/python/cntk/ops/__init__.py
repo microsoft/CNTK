@@ -1979,12 +1979,58 @@ def splice(*inputs, **kw_axis_name):
 
 @typemap
 def detach_dynamic_axis(x, size, name=''):
+    '''
+    Concatenate the input tensor's last dynamic axis to static axis.
+    Only tensors with batch axis are supported now.
+
+    Example:
+        >>> data = np.asarray([[[1, 2],
+        ...                      [4, 5]]], dtype=np.float32)
+
+        >>> x = C.input((2,2))
+        >>> C.detach_dynamic_axis(x, size=1).eval({x:data})
+        array([[[ 1.,  2.],
+                [ 4.,  5.]]], dtype=float32)
+
+    Args:
+        x: a tensor with dynamic axis
+        size: the dynamic axis size, the dynamic axis need to have fix size.
+        name: (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
     from cntk.cntk_py import detach_dynamic_axis
     x = sanitize_input(x)
     return detach_dynamic_axis(x, size, name)
 
 @typemap
 def attach_dynamic_axis(x, axis, name=''):
+    '''
+    Concatenate the input tensor's first axis to dynamic axis.
+    Only support convert to batch axis now.
+
+    Example:
+        >>> data = np.asarray([[[1, 2],
+        ...                      [4, 5]]], dtype=np.float32)
+
+        >>> x = C.constant(value=data)
+        >>> y = C.attach_dynamic_axis(x, C.Axis.default_batch_axis())
+        >>> y.shape
+        (2, 2)
+        >>> i = C.input((2,2))
+        >>> (i + y).eval({i:data})
+        array([[[ 2.,  4.],
+                [ 8.,  10.]]], dtype=float32)
+
+    Args:
+        x: a tensor with dynamic axis
+        size: the dynamic axis size, the dynamic axis need to have fix size.
+        name: (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
     from cntk.cntk_py import attach_dynamic_axis
     x = sanitize_input(x)
     return attach_dynamic_axis(x, axis, name)

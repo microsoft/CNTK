@@ -1241,6 +1241,9 @@ namespace CNTK
 
     FunctionPtr AttachDynamicAxis(const Variable& operand, Axis& axis, const std::wstring& name)
     {
+        if (axis != Axis::DefaultBatchAxis())
+            LogicError("AttachDynamicAxis: only batch axis is supported now");
+
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameAttachDynamicAxis] = axis;
         return UnaryOp(PrimitiveOpType::AttachDynamicAxis, operand, std::move(additionalProperties), name);
@@ -1248,6 +1251,9 @@ namespace CNTK
 
     FunctionPtr DetachDynamicAxis(const Variable& operand, size_t size, const std::wstring& name)
     {
+        if (operand.DynamicAxes().size() > 1)
+            LogicError("DetachDynamicAxis: only support input with batch axis itself.");
+
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameDynamicAxisSize] = size;
         return UnaryOp(PrimitiveOpType::DetachDynamicAxis, operand, std::move(additionalProperties), name);

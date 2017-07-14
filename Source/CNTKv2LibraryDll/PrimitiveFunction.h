@@ -772,7 +772,8 @@ namespace CNTK
         // Version 13: Add Gather op.
         // Version 14: Add StableSigmoid
         // Version 15: Add RandomDistribution
-        static const size_t s_serializationVersion = 15;
+        // Version 16: Add attach/detach dynamic axis node.
+        static const size_t s_serializationVersion = 16;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);
