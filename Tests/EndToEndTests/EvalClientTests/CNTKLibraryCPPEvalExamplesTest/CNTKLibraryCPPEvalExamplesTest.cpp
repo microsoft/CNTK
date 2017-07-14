@@ -10,10 +10,12 @@
 void MultiThreadsEvaluation(bool);
 bool ShouldRunOnCpu();
 bool ShouldRunOnGpu();
+void KevinPan();
 
 int main()
 {
-    if (ShouldRunOnGpu())
+    KevinPan();
+   /* if (ShouldRunOnGpu())
     {
         fprintf(stderr, "\n##### Test CNTKLibraryCPPEvalExamples on GPU device. #####\n");
         MultiThreadsEvaluation(true);
@@ -21,9 +23,10 @@ int main()
 
     if (ShouldRunOnCpu())
     {
+
         fprintf(stderr, "\n##### Test CNTKLibraryCPPEvalExamples on CPU device. #####\n");
         MultiThreadsEvaluation(false);
-    }
+    }*/
 
     fprintf(stderr, "Evaluation complete.\n");
 
