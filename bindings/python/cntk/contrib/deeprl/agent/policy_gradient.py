@@ -187,6 +187,7 @@ class ActorCritic(AgentBaseClass):
 
         # The learning rate will be updated later before each minibatch
         # training.
+        # TODO: allow user to specify learner through config file.
         self._trainer = C.train.trainer.Trainer(
             combined_networks,
             (combined_loss, None),

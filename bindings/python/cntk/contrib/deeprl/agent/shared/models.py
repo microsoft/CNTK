@@ -25,8 +25,8 @@ class Models:
             shape_of_inputs: tuple of array (input) dimensions.
             number_of_outputs: dimension of output, equals the number of
                 possible actions.
-            model_hidden_layers: list of integers representing number of nodes
-                in each hidden layer.
+            model_hidden_layers: string representing a list of integers
+                corresponding to number of nodes in each hidden layer.
             loss_function: if not specified, use squared loss by default.
             use_placeholder_for_input: if true, inputs have to be replaced
                 later with actual input_variable.

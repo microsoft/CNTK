@@ -81,6 +81,7 @@ class QLearning(AgentBaseClass):
         # If gradient_clipping_threshold_per_sample is inf, gradient clipping
         # will not be performed. Set gradient_clipping_with_truncation to False
         # to clip the norm.
+        # TODO: allow user to specify learner through config file.
         opt = C.learners.adam(
             self._q.parameters,
             C.learners.learning_rate_schedule(
