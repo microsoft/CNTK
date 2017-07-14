@@ -275,9 +275,12 @@ class QLearning(AgentBaseClass):
             weight_values = [[w / w_sum] for w in weight_values]
             self._trainer.train_minibatch(
                 {
-                    self._input_variables: input_values,
-                    self._output_variables: output_values,
-                    self._weight_variables: weight_values
+                    self._input_variables: np.array(input_values).astype(
+                        np.float32),
+                    self._output_variables: np.array(output_values).astype(
+                        np.float32),
+                    self._weight_variables: np.array(weight_values).astype(
+                        np.float32)
                 })
 
             # Update replay priority.
@@ -294,8 +297,10 @@ class QLearning(AgentBaseClass):
         else:
             self._trainer.train_minibatch(
                 {
-                    self._input_variables: input_values,
-                    self._output_variables: output_values
+                    self._input_variables: np.array(input_values).astype(
+                        np.float32),
+                    self._output_variables: np.array(output_values).astype(
+                        np.float32)
                 })
 
     def _compute_td_err(self, state, action, reward, next_state):

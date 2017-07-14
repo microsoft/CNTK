@@ -289,13 +289,17 @@ class ActorCritic(AgentBaseClass):
         # Train the policy network on one minibatch.
         self._trainer.train_minibatch(
             {
-                self._input_variables: self._input_buffer,
+                self._input_variables: np.array(self._input_buffer).astype(
+                    np.float32),
                 self._policy_network_output_variables:
-                    self._policy_network_output_buffer,
+                    np.array(self._policy_network_output_buffer).astype(
+                        np.float32),
                 self._policy_network_weight_variables:
-                    self._policy_network_weight_buffer,
+                    np.array(self._policy_network_weight_buffer).astype(
+                        np.float32),
                 self._value_network_output_variables:
-                    self._value_network_output_buffer
+                    np.array(self._value_network_output_buffer).astype(
+                        np.float32)
             })
 
         # Clear training data.
