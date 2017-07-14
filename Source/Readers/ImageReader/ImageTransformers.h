@@ -171,6 +171,21 @@ private:
     cv::Mat m_stdNorm;
 };
 
+class NormTransformer : public ImageTransformerBase
+{
+public:
+    explicit NormTransformer(const ConfigParameters& config);
+private:
+    void Apply(uint8_t copyId, cv::Mat &mat) override;
+
+    template <typename ElemType>
+    void NormImage(cv::Mat &mat);
+
+    double m_minValue;
+    double m_maxValue;
+    double m_range;
+};
+
 // Transpose transformation from HWC to CHW (note: row-major notation).
 class TransposeTransformer : public TransformBase
 {
@@ -252,7 +267,7 @@ private:
     double m_brightnessRadius;
     double m_contrastRadius;
     double m_saturationRadius;
-    floatargvector m_grayScale;
+    floatargvector m_grayScale;     //TODO: change to vector
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     conc_stack<std::unique_ptr<cv::Mat>> m_hsvTemp;

@@ -418,6 +418,44 @@ void ScaleTransformer::Apply(uint8_t, cv::Mat &mat)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+NormTransformer::NormTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
+{
+    floatargvector normValues = config(L"normValues", "0.0");
+    m_minValue = normValues[0];
+    m_maxValue = normValues[1];
+    m_range = m_maxValue - m_minValue;
+    if ((m_minValue > m_maxValue) 
+        || (m_range == 0 && m_minValue != 0))
+    else if (m_range > 255)
+}
+
+void NormTransformer::Apply(uint8_t, cv::Mat &mat)
+{
+    if (m_range == 0)
+        return;
+
+    ConvertToFloatingPointIfRequired(mat);
+    if (mat.type() == CV_64FC(mat.channels()))
+        NormImage<double>(mat);
+    else if (mat.type() == CV_32FC(mat.channels()))
+        NormImage<float>(mat);
+    else
+        RuntimeError("Unsupported type");
+}
+
+template <typename ElemType>
+void NormTransformer::NormImage(cv::Mat &mat)
+{
+    size_t count = mat.rows * mat.cols * mat.channels();
+    ElemType* matPtr = reinterpret_cast<ElemType*>(mat.data);
+    for (int offset = 0; offset < count; offset++)
+    {
+        *(matPtr + offset) *= ((ElemType)m_range / 255);
+        *(matPtr + offset) += (ElemType)m_minValue;
+        assert(*(matPtr + offset) <= m_maxValue);
+    }
+}
+
 MeanTransformer::MeanTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
     std::wstring meanFile = config(L"meanFile", L"");
