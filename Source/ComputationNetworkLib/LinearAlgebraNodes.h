@@ -285,10 +285,6 @@ public:
         auto in1 = c.InputRef(1).NodeName().c_str();
         auto baseMatrixPtr = c.InputRef(1).ValuePtr();
         auto matrixPtr = dynamic_pointer_cast<Matrix<ElemType>>(baseMatrixPtr);
-        if (wcsncmp(in1, L"Reciprocal", 10) == 0)
-            printf("elemenTimes %S: input0=%S, input1=%S (numRows=%d, numCol=%d)\n", c.NodeName().c_str(), in0, in1, (int)matrixPtr->GetNumRows(), (int)matrixPtr->GetNumCols());
-        if (matrixPtr->GetNumRows() == 0 || (int)matrixPtr->GetNumCols() == 0)
-            printf("**ERROR***\n");
         auto input0 = c.InputRef(0).ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
         auto input1 = c.InputRef(1).ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
         result.AssignElementwiseProductOf(input0, input1);

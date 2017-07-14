@@ -1316,11 +1316,6 @@ namespace CNTK
         computationNetwork->SetIsV2Library(true);
         computationNetwork->CompileNetwork();
         computationNetwork->SetEvalTimeStampsOutdatedWrtAll();
-        auto listOfNodes = computationNetwork->GetNodesWithType(L"Reciprocal");
-        for (auto node : listOfNodes)
-        {
-            printf("Name:%S, Time:%d\n", node->NodeName().c_str(), (int)node->GetEvalTimeStamp());
-        }
 
         // Verify that the shapes of the output Variables that we computed match the corresponding nodes in the ComputationNetwork
         for (auto varNodePair : variableToNodeMap)

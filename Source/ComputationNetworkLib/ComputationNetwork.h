@@ -156,8 +156,6 @@ public:
         set<ComputationNodeBasePtr> completedSEQNodes;
         for (auto& node : combinedEvalOrder)
         {
-            if (wcsncmp(node->NodeName().c_str(), L"Reciprocal", 10) == 0)
-                printf("In TraverseInSortedGlobalEvalOrder: process node=%S, timestamp=%d\n", node->NodeName().c_str(), (int)node->GetEvalTimeStamp());
             if (node->IsPartOfLoop())
             {
                 shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, node);
@@ -169,11 +167,7 @@ public:
             }
 
             if (node)
-            {
-                if (wcsncmp(node->NodeName().c_str(), L"Reciprocal", 10) == 0)
-                    printf("In TraverseInSortedGlobalEvalOrder: call forward on node=%S\n", node->NodeName().c_str());
                 action(node);
-            }
         }
     }
 

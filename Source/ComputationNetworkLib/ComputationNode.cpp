@@ -638,13 +638,6 @@ const std::string ComputationNodeBase::ShapeDescription() const
 template <class ElemType>
 /*virtual*/ void ComputationNode<ElemType>::BeginForwardProp()
 {
-
-    if (wcsncmp(NodeName().c_str(), L"Reciprocal", 10) == 0)
-    {  
-        const Matrix<ElemType>& m = Value();
-        printf("In BeginForwardProp(), before resize: name=%S numRows=%d numCols=%d\n", NodeName().c_str(), (int)m.GetNumRows(), (int)m.GetNumCols());
-    }
-
     Base::BeginForwardProp();
 
     if (NeedsDynamicValidation())
@@ -652,26 +645,13 @@ template <class ElemType>
 
     // update the actual m_value allocation
     if ((!IsLeaf() || Is<RandomDistributionNode<ElemType>>()) && !RequiresPreCompute()) // TODO: guard this through overrides instead
-    { 
-        if (wcsncmp(NodeName().c_str(), L"Reciprocal", 10) == 0)
-        {
-            printf("Do resize: : name=%S\n", NodeName().c_str());
-        }
         UpdateFunctionValuesSize();
-    }
 
     // give nodes a chance to update their internal state that may also have to match MB size
     UpdateFunctionMBSize();
 
     // and make sure dimensions are what we expect
     VerifyDataSize(Value());
-
-    if (wcsncmp(NodeName().c_str(), L"Reciprocal", 10) == 0)
-    {
-        const Matrix<ElemType>& m2 = Value();
-        printf("In BeginForwardProp(), after resize: name=%S numRows=%d numCols=%d\n", NodeName().c_str(), (int)m2.GetNumRows(), (int)m2.GetNumCols());
-    }
-
 }
 
 template <class ElemType>
