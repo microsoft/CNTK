@@ -38,13 +38,18 @@ if True:
     tree_map = TreeMap.tree_map_from_tree_str(flat_tree_grocery_str, use_background=True, use_multiply_with_parent=False)
     cls_maps = list(tree_map.meta_map.keys())
 
-
+output_mapper = tree_map.get_output_mapper()
 tree_map.root_node.print()
 #len(params.classes)
 
+def get_vectors_for_label_nr(label):
+    return tree_map.get_train_softmax_vectors(to_Set=[(cls_maps[0], label)], scale_value=1)
+
+
 def get_vectors_for_label(label):
     index = np.argmax(label)
-    return tree_map.get_train_softmax_vectors(to_Set=[(cls_maps[0], index)], scale_value=1)
+    return get_vectors_for_label_nr(index)
+
 
 
 

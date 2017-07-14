@@ -16,7 +16,136 @@ from utils.map.map_helpers import evaluate_detections
 
 
 use_real_gt_not_sel_search_as_gt_info = True
-gt_boxes_rel_center = True
+#gt_boxes_rel_center = use_real_gt_not_sel_search_as_gt_info
+use_gtbs_as_preds_aka_fake_output = False
+
+output_scale = (1080, 1920)
+output_scale = (1000, 1000)
+
+def prepare_ground_truth_boxes(gtbs, relative_coord=False, centered_coords=False, scale_input=None):
+    """
+    Creates an object that can be passed as the parameter "all_gt_infos" to "evaluate_detections" in map_helpers
+    Parameters
+    ----------
+    gtbs - arraylike of shape (nr_of_images, nr_of_boxes, cords+original_label) where nr_of_boxes may be a dynamic axis
+
+    Returns
+    -------
+    Object for parameter "all_gt_infos"
+    """
+    #import ipdb;ipdb.set_trace()
+    num_test_images = len(gtbs)
+    classes = HCT.output_mapper.get_all_classes()  # list of classes with new labels and indexing # todo: check if __background__ is present!!!
+    all_gt_infos = {key: [] for key in classes}
+    for image_i in range(num_test_images):
+        image_gtbs = gtbs[image_i]
+        coords = image_gtbs[:,0:4]
+        original_labels = image_gtbs[:,-1:]
+        #mapped_labels = map_labels(original_labels)
+
+
+        # make absolute
+        if relative_coord:
+            coords*= scale_input + scale_input
+
+        # make coords bounding
+        if centered_coords:
+            xy = coords[:,:2]
+            wh_half = coords[:,2:]/2
+            coords = np.concatenate([xy - wh_half, xy + wh_half], axis = 1)
+
+
+        # def to_one_hot(label, size):
+        #     one_hot = np.zeros((size,))
+        #     one_hot[label]=1
+        #     return one_hot
+
+        all_gt_boxes = []
+        for gtb_i in range(len(image_gtbs)):
+            label = int(original_labels[gtb_i][0])
+            train_vector, _ = HCT.get_vectors_for_label_nr(label)
+            reduced_vector = output_mapper.get_prediciton_vector(train_vector)  # remove lower backgrounds
+
+            original_cls_name = HCT.cls_maps[0].getClass(label)
+            for vector_i in range(1,len(reduced_vector)):
+                if reduced_vector[vector_i]==0 : continue
+                # else this label (vector_i) is active (either original or hypernym)
+
+                current_class_name = classes[vector_i]
+                if original_cls_name == current_class_name: original_cls_name = None
+
+                lbox = np.concatenate([coords[gtb_i], [vector_i]], axis=0)
+                lbox.shape=(1,)+lbox.shape
+                all_gt_boxes.append(lbox)
+
+            assert original_cls_name is None, "Original class label is not contained in mapped selection!"
+            #if not original_cls_name is None: import ipdb;ipdb.set_trace()
+
+        all_gt_boxes = np.concatenate(all_gt_boxes, axis=0)
+        print("---all_gt_boxes.shape")
+        print(all_gt_boxes.shape)
+
+
+
+        for cls_index, cls_name in enumerate(classes):
+            if cls_index == 0: continue
+            #   gtBoxes = [box for box, label in zip(gtBoxes, gtLabels) if
+            #              label.decode('utf-8') == self.classes[classIndex]]
+            cls_gt_boxes = all_gt_boxes[np.where(all_gt_boxes[:,-1] == cls_index)]
+            #   gtInfos.append({'bbox': np.array(gtBoxes),
+            #                   'difficult': [False] * len(gtBoxes),
+            #                   'det': [False] * len(gtBoxes)})
+            all_gt_infos[cls_name].append({'bbox': np.array(cls_gt_boxes),
+                                           'difficult': [False] * len(cls_gt_boxes),
+                                           'det': [False] * len(cls_gt_boxes)})
+
+
+    return all_gt_infos
+
+
+def prepare_predictions(outputs, roiss, num_classes):
+    """
+
+    Returns
+    -------
+
+    """
+    num_test_images = len(outputs)
+
+    all_boxes = [[[] for _ in range(num_test_images)] for _ in range(num_classes)]
+
+    for img_i in range(num_test_images):
+        output = outputs[img_i]
+        output.shape = output.shape[1:]
+        rois = roiss[img_i]
+
+        preds_for_img = []
+        for roi_i in range(len(output)):
+            pred_vector = output[roi_i]
+            roi = rois[roi_i]
+
+            processesed_vector = HCT.top_down_eval(pred_vector)
+            reduced_p_vector = HCT.output_mapper.get_prediciton_vector(processesed_vector)
+
+            assert len(reduced_p_vector)==num_classes
+            for label_i in range(num_classes):
+                if(reduced_p_vector[label_i]==0): continue
+                prediciton = np.concatenate([roi, [reduced_p_vector[label_i], label_i]]) # coords+score+label
+                prediciton.shape = (1,)+prediciton.shape
+                preds_for_img.append(prediciton)
+
+        preds_for_img = np.concatenate(preds_for_img, axis=0) # (nr_of_rois x 6) --> coords_scor_label
+
+        for cls_j in range(1, num_classes):
+            coords_score_label_for_cls = preds_for_img[np.where(preds_for_img[:,-1] == cls_j)]
+            all_boxes[cls_j][img_i] = coords_score_label_for_cls[:,:-1].astype(np.float32, copy=False)
+
+    return all_boxes
+
+
+
+
+
 
 def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
     output_mapper = HCT.tree_map.get_output_mapper()
@@ -25,8 +154,8 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
     num_classes = len(classes)
     num_original_classes=17
     num_channels=3
-    image_height=1000
-    image_width=1000
+    image_height=1000#980
+    image_width=1000#774
     feature_node_name='data'
     rois_per_image=2000
     gts_per_image = 20
@@ -81,38 +210,31 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
 
     all_boxes = [[[] for _ in range(num_test_images)] for _ in range(num_classes)]
 
+    all_raw_gt_boxes=[]
+    all_raw_outputs=[]
+    all_raw_rois=[]
 
 
     # evaluate test images and write netwrok output to file
     print("Evaluating Faster R-CNN model for %s images." % num_test_images)
     print(type(classes))
-    all_gt_infos = {key: [] for key in classes}
+#    all_gt_infos = {key: [] for key in classes}
     for img_i in range(0, num_test_images):
         #import ipdb;ipdb.set_trace()
         mb_data = minibatch_source.next_minibatch(1, input_map=input_map)
+ #       roi_data = mb_data[roi_input].asarray()
+ #       roi_data.shape=(2000,4)
+ #       print("--rois min, max")
+ #       print(np.minimum.reduce(roi_data, axis=0))
+ #       print(np.maximum.reduce(roi_data, axis=0))
 
         if use_real_gt_not_sel_search_as_gt_info:
+            # receives rel coords
             gt_data = mb_data[gt_input].asarray()
             gt_data.shape = (gts_per_image, 5)
             all_gt_boxes=gt_data[np.where(gt_data[:,4]!=0)] # remove padded boxes!
-
-            if gt_boxes_rel_center:
-                #from rel_center to abs_edge
-                #make abs
-                all_gt_boxes[:,[0, 2]]*=1000
-                all_gt_boxes[:,[1, 3]] *= 1000
-                #make edge
-                w=all_gt_boxes[:,2]
-                h=all_gt_boxes[:,3]
-                x_c=all_gt_boxes[:,0]
-                y_c = all_gt_boxes[:, 1]
-
-                all_gt_boxes[:, 0] = x_c - w / 2
-                all_gt_boxes[:, 1] = y_c - h / 2
-                all_gt_boxes[:, 2] = x_c + w / 2
-                all_gt_boxes[:, 3] = y_c + h / 2
-            #all_gt_boxes = np.round(all_gt_boxes)
-        else:
+        else :
+            #receives abs coords
             gt_row = mb_data[roi_input].asarray()
             gt_row = gt_row.reshape((rois_per_image, 4))
             lbl_row= mb_data[label_input].asarray()
@@ -120,92 +242,213 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
             lbl_clmn = np.argmax(lbl_row, axis=1)
             lbl_clmn.shape+=(1,)
             gt_row = np.concatenate([gt_row, lbl_clmn], axis=1)
-
             all_gt_boxes = gt_row[np.where(gt_row[:,-1] > 0)]
 
-        for cls_index in range(num_original_classes):
-            if cls_index == 0: continue
+        all_raw_gt_boxes.append(all_gt_boxes.copy())
+
+            #           if gt_boxes_rel_center:
+ #               #from rel_center to abs_edge
+ #               #make abs
+ #               all_gt_boxes[:,[0, 2]] *= 1000
+ #               all_gt_boxes[:,[1, 3]] *= 1000
+ #               #make edge
+ #               w=all_gt_boxes[:,2]
+ #               h=all_gt_boxes[:,3]
+ #               x_c=all_gt_boxes[:,0]
+ #               y_c = all_gt_boxes[:, 1]
+#
+ #               all_gt_boxes[:, 0] = x_c - w / 2
+ #               all_gt_boxes[:, 1] = y_c - h / 2
+ #               all_gt_boxes[:, 2] = x_c + w / 2
+ #               all_gt_boxes[:, 3] = y_c + h / 2
+ #           #all_gt_boxes = np.round(all_gt_boxes)
+ #           all_gt_data.append(all_gt_boxes)  # TODO remove Debung code
+ #       else:
+ #           gt_row = mb_data[roi_input].asarray()
+ #           gt_row = gt_row.reshape((rois_per_image, 4))
+ #           lbl_row= mb_data[label_input].asarray()
+ #           lbl_row.shape = (rois_per_image, num_original_classes)
+ #           lbl_clmn = np.argmax(lbl_row, axis=1)
+ #           lbl_clmn.shape+=(1,)
+ #           gt_row = np.concatenate([gt_row, lbl_clmn], axis=1)
+ #
+ #           all_gt_boxes = gt_row[np.where(gt_row[:,-1] > 0)]
+
+
+  #      for cls_index in range(num_original_classes):
+  #          if cls_index == 0: continue
             #   gtBoxes = [box for box, label in zip(gtBoxes, gtLabels) if
             #              label.decode('utf-8') == self.classes[classIndex]]
-            cls_gt_boxes = all_gt_boxes[np.where(all_gt_boxes[:,-1] == cls_index)]
+  #          cls_gt_boxes = all_gt_boxes[np.where(all_gt_boxes[:,-1] == cls_index)]
             #   gtInfos.append({'bbox': np.array(gtBoxes),
             #                   'difficult': [False] * len(gtBoxes),
             #                   'det': [False] * len(gtBoxes)})
-            as_onehot=np.zeros((num_original_classes,))
-            as_onehot[cls_index]=1
-            train_vector,_ = HCT.get_vectors_for_label(as_onehot)
-            reduced_vector = output_mapper.get_prediciton_vector(train_vector) # remove lower backgrounds
-            cls_names=np.asarray(classes)[np.where(reduced_vector>0)]
-            import ipdb;ipdb.set_trace()
+  #          as_onehot=np.zeros((num_original_classes,))
+  #          as_onehot[cls_index]=1
+  #          train_vector,_ = HCT.get_vectors_for_label(as_onehot)
+  #          reduced_vector = output_mapper.get_prediciton_vector(train_vector) # remove lower backgrounds
+  #          assert np.add.reduce(reduced_vector)>0
+            #cls_names=np.asarray(classes)[np.where(reduced_vector>0)]
+            #import ipdb;ipdb.set_trace()
 
-            for cls_name in cls_names:
-                all_gt_infos[cls_name].append({'bbox': np.array(cls_gt_boxes),
-                                           'difficult': [False] * len(cls_gt_boxes),
-                                           'det': [False] * len(cls_gt_boxes)})
+            # Append box for this class and all its hypernyms
+            #for cls_name in cls_names:
+  #          for i in np.where(reduced_vector>0)[0]:
+  #              cls_name=classes[i]
+                #if not cls_name == HCT.cls_maps[0].cls_map[i]: import ipdb;ipdb.set_trace()
+  #              local_cls_boxes = np.concatenate([np.array(cls_gt_boxes)[:,:-1],np.ones((len(cls_gt_boxes),1))*i], axis=1)
+                #if not np.alltrue(np.equal(local_cls_boxes, cls_gt_boxes)): import ipdb;ipdb.set_trace()
+  #              all_gt_infos[cls_name].append({'bbox': local_cls_boxes,
+  #                                         'difficult': [False] * len(cls_gt_boxes),
+  #                                         'det': [False] * len(cls_gt_boxes)})
 
         #import ipdb;ipdb.set_trace()
 
         output = frcn_eval.eval({image_input: mb_data[image_input], roi_input: np.reshape(mb_data[roi_input].asarray(), roi_input.shape)})
-        #out_dict = dict([(k.name, k) for k in output])
-        #out_cls_pred = output[out_dict['cls_pred']][0]                      # (300, 17)
-        #out_rpn_rois = output[out_dict['rpn_rois']][0]
-        #out_bbox_regr = output[out_dict['bbox_regr']][0]
-
-        #labels = out_cls_pred.argmax(axis=1)
-        #scores = out_cls_pred.max(axis=1)
-        #regressed_rois = regress_rois(out_rpn_rois, out_bbox_regr, labels)  # (300, 4)
-
-        #labels=np.argmax(output[0], axis=1)
-        #scores = np.max(output[0],axis=1)
         rois = mb_data[roi_input].asarray()
         rois.shape=(rois_per_image, 4)
 
+        all_raw_rois.append(rois.copy())
+        all_raw_outputs.append(output.copy())
+
+        if False:
+            def _process_output_slice(net_out, rois):
+
+                assert net_out.shape[0] == rois.shape[0], print(net_out.shape, rois.shape)
+                cords_score_label = []
+                for box in range(rois_per_image):#len(net_out)
+                    processed_vector = HCT.top_down_eval(net_out[box])
+                    processed_vector_no_bg = output_mapper.get_prediciton_vector(processed_vector)
+                    assert np.add.reduce(processed_vector_no_bg)>0
+                    box_labels =  np.where(processed_vector_no_bg>0)[0]
+                    box_scores = processed_vector_no_bg[box_labels]
+                    #if len(box_labels) > 1 or box_labels[0]!=0: import ipdb;ipdb.set_trace()
+                    if not len(box_labels>0): import ipdb;ipdb.set_trace()
+                    # append the box for each label
+                    for i in range(len(box_labels)):
+                        cords_score_label.append(np.concatenate([rois[box], [box_scores[i], box_labels[i]]]))
+
+                return np.asarray(cords_score_label)
+
+            coords_score_label = _process_output_slice(output[0], rois)
+
+            #fake output to be gtb!
+            fake_coords = all_gt_boxes[:,0:4]
+            fake_labels = all_gt_boxes[:,-1:]
+            fake_score = np.ones(fake_labels.shape)
+            fake_boxes = []
+            for fb_i in range(len(fake_labels)):
+                label = int(fake_labels[fb_i][0])
+                train_vector, _ = HCT.get_vectors_for_label_nr(label)
+                reduced_vector = output_mapper.get_prediciton_vector(train_vector)  # remove lower backgrounds
+
+                original_cls_name = HCT.cls_maps[0].getClass(label)
+                for vector_i in range(1, len(reduced_vector)):
+                    if reduced_vector[vector_i] == 0: continue
+                    # else this label (vector_i) is active (either original or hypernym)
+
+                    current_class_name = classes[vector_i]
+                    if original_cls_name == current_class_name: original_cls_name = None
+
+                    lbox = np.concatenate([fake_coords[fb_i], [1, vector_i]], axis=0)
+                    lbox.shape = (1,) + lbox.shape
+                    fake_boxes.append(lbox)
+
+                assert original_cls_name is None, "Original class label is not contained in mapped selection!"
+            fake_boxes = np.concatenate(fake_boxes, axis=0)
+
+            coords_score_label = fake_boxes
 
 
-        def _process_output_slice(net_out, rois):
+            #coords_score_label = np.concatenate([all_gt_boxes[:,0:4],np.ones((len(all_gt_boxes),1)),all_gt_boxes[:,4:5]], axis=1)
+            print(coords_score_label.shape)
 
-            assert net_out.shape[0] == rois.shape[0], print(net_out.shape, rois.shape)
-            cords_score_label = []
-            for box in range(rois_per_image):
-                processed_vector = HCT.top_down_eval(net_out[box])
-                processed_vector_no_bg = output_mapper.get_prediciton_vector(processed_vector)
-                assert np.add.reduce(processed_vector_no_bg)>0
-                box_labels =  np.where(processed_vector_no_bg>0)[0]
-                box_scores = processed_vector_no_bg[box_labels]
-                #if len(box_labels) > 1 or box_labels[0]!=0: import ipdb;ipdb.set_trace()
-                if not len(box_labels>0): import ipdb;ipdb.set_trace()
-                # append the box for each label
-                for i in range(len(box_labels)):
-                    cords_score_label.append(np.concatenate([rois[box], [box_scores[i], box_labels[i]]]))
+            #   shape of all_boxes: e.g. 21 classes x 4952 images x 58 rois x 5 coords+score
+            for cls_j in range(1, num_classes):
+                coords_score_label_for_cls = coords_score_label[np.where(coords_score_label[:,-1] == cls_j)]
+                all_boxes[cls_j][img_i] = coords_score_label_for_cls[:,:-1].astype(np.float32, copy=False)
 
-            return np.asarray(cords_score_label)
+            if (img_i+1) % 100 == 0:
+                print("Processed {} samples".format(img_i+1))
 
-        coords_score_label = _process_output_slice(output[0], rois)
-        coords_score_label = np.concatenate([all_gt_boxes[:,0:4],np.ones((len(all_gt_boxes),1)),all_gt_boxes[:,4:5]], axis=1)
-        print(coords_score_label.shape)
-        #print(coords_score_label)
-        #import ipdb;ipdb.set_trace()
-        #labels.shape = labels.shape + (1,)
-        #scores.shape = scores.shape + (1,)
-        #import ipdb;ipdb.set_trace()
-        #coords_score_label = np.hstack((rois, scores, labels))
 
-        #   shape of all_boxes: e.g. 21 classes x 4952 images x 58 rois x 5 coords+score
-        for cls_j in range(1, num_classes):
-            coords_score_label_for_cls = coords_score_label[np.where(coords_score_label[:,-1] == cls_j)]
-            all_boxes[cls_j][img_i] = coords_score_label_for_cls[:,:-1].astype(np.float32, copy=False)
 
-        if (img_i+1) % 100 == 0:
-            print("Processed {} samples".format(img_i+1))
-    # calculate mAP
-    import ipdb;ipdb.set_trace()
-    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=True, use_07_metric=False)
+    if use_gtbs_as_preds_aka_fake_output:
+        # fake_coords=[]
+        # fake_labels=[]
+        #
+        # for gtbs in all_raw_gt_boxes:
+        #     #per img gtbs
+        #     fake_box=[]
+        #     orig_labels = gtbs[:,4]
+        #     for label_i in len(gtbs):
+        #         label = orig_labels[label_i]
+        #
+        #         train_vector, _ = HCT.get_vectors_for_label_nr(label)
+        #         reduced_vector = output_mapper.get_prediciton_vector(train_vector)  # remove lower backgrounds
+        #
+        #         original_cls_name = HCT.cls_maps[0].getClass(label)
+        #         for vector_i in range(1, len(reduced_vector)):
+        #             if reduced_vector[vector_i] == 0: continue
+        #             # else this label (vector_i) is active (either original or hypernym)
+        #
+        #             current_class_name = classes[vector_i]
+        #             if original_cls_name == current_class_name: original_cls_name = None
+        #
+        #             lbox = np.concatenate([gtbs[label_i][:4], [vector_i]], axis=0)
+        #             lbox.shape = (1,) + lbox.shape
+        #             fake_box.append(lbox)
+        #
+        #         assert original_cls_name is None, "Original class label is not contained in mapped selection!"
+        #     fake_box=np.concatenate(fake_box, axis=0)
+        #     fake_coords.append(fake_box[:,:4])
+        #     fake_labels.append(fake_box[:,4:])
+        #
+        # all_raw_outputs = fake_labels
+        # all_raw_rois = fake_coords
+        fake_coords=[]
+        fake_outputs=[]
+
+        for gtbs in all_raw_gt_boxes:
+            coords = np.copy(gtbs[:,:4])
+
+            # make absolute
+            if use_real_gt_not_sel_search_as_gt_info:
+                scale_input = (1080, 1920)
+                coords *= scale_input + scale_input
+                xy = coords[:, :2]
+                wh_half = coords[:, 2:] / 2
+                coords = np.concatenate([xy - wh_half, xy + wh_half], axis=1)
+
+            fake_coords.append(coords)
+            labels = gtbs[:,4]
+
+            nr_of_labels = len(labels)
+            fake_out = np.zeros((nr_of_labels, num_classes))
+            for i in range(nr_of_labels):
+                fake_out[i] ,_= HCT.get_vectors_for_label_nr(int(labels[i]))
+            fake_out.shape = (1,) + fake_out.shape
+            fake_outputs.append(fake_out)
+
+        all_raw_outputs = fake_outputs
+        all_raw_rois = fake_coords
+
+
+    all_gt_infos = prepare_ground_truth_boxes(gtbs=all_raw_gt_boxes, relative_coord=use_real_gt_not_sel_search_as_gt_info, centered_coords=use_real_gt_not_sel_search_as_gt_info, scale_input=output_scale)
+    all_boxes = prepare_predictions(all_raw_outputs, all_raw_rois, num_classes)
+
+
+
+    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=False, use_07_metric=False)
     ap_list = []
-    for class_name in sorted(aps):
+    for class_name in classes:#sorted(aps):
+        if class_name == "__background__":continue
         ap_list += [aps[class_name]]
         print('AP for {:>15} = {:.6f}'.format(class_name, aps[class_name]))
     print('Mean AP = {:.6f}'.format(np.nanmean(ap_list)))
 
+    import ipdb;
+    ipdb.set_trace()
     return aps
 
 
