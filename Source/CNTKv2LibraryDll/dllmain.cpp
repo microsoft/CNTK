@@ -51,7 +51,9 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 
         GetModuleFileNameW(hModule, dllName, MAX_PATH + 1);
         dllDir = Microsoft::MSR::CNTK::File::DirectoryPathOf(dllName);
-        SetDllDirectoryW(dllDir.c_str());
+        //SetDllDirectoryW(dllDir.c_str());
+        SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+        AddDllDirectory(dllDir.c_str());
 
         break;
     case DLL_PROCESS_DETACH:

@@ -97,7 +97,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll; Cntk.PerformanceProfiler-$(CntkComponentVersion).dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll; nvml.dll; msmpi.dll; Cntk.PerformanceProfiler-$(CntkComponentVersion).dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
