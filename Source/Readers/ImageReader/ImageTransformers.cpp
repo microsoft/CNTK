@@ -108,6 +108,23 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
     {
         m_hFlip = false;
     }
+
+    m_scaleFirst = config(L"scaleFirst", false);
+    if (m_scaleFirst)
+    {
+        intargvector scaleSize = config(L"scaleSize", "0");
+        m_scaleWidth = scaleSize[0];
+        m_scaleHeight = scaleSize[1];
+        if (m_cropWidth < 0 || m_cropHeight < 0)
+            RuntimeError("Invalid cropSize value, must be >= 0");
+
+        string interpolation = config(L"scaleInterpolations", "linear");
+        if (AreEqualIgnoreCase(interpolation, "nearest"))      m_scaleInterp = cv::INTER_NEAREST;
+        else if (AreEqualIgnoreCase(interpolation, "cubic"))   m_scaleInterp = cv::INTER_CUBIC;
+        else if (AreEqualIgnoreCase(interpolation, "lanczos")) m_scaleInterp = cv::INTER_LANCZOS4;
+        else if (AreEqualIgnoreCase(interpolation, "linear"))  m_scaleInterp = cv::INTER_LINEAR;
+        else RuntimeError("Invalid interpolations value, must be nearest, cubic, lanczos or linear");
+    }
 }
 
 void CropTransformer::StartEpoch(const EpochConfiguration &config)
@@ -120,6 +137,9 @@ void CropTransformer::Apply(uint8_t copyId, cv::Mat &mat)
     auto seed = GetSeed();
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); }); 
     int viewIndex = m_cropType == CropType::MultiView10 ? (int)(copyId % ImageDeserializerBase::NumMultiViewCopies) : 0;
+
+    if (m_scaleFirst)
+        cv::resize(mat, mat, cv::Size((int)m_scaleWidth, (int)m_scaleHeight), 0, 0, m_scaleInterp);
 
     switch (m_cropType)
     {

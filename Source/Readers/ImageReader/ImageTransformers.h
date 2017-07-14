@@ -124,6 +124,11 @@ private:
 
     RatioJitterType m_jitterType;
     bool m_hFlip;
+
+    bool m_scaleFirst;
+    int m_scaleWidth;
+    int m_scaleHeight;
+    int m_scaleInterp;
 };
 
 // Scale transformation of the image.
