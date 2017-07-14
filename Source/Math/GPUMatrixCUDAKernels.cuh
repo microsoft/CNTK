@@ -379,6 +379,26 @@ __global__ void _elementWiseNegativeSineOnCuda(
 };
 
 template <class ElemType>
+__global__ void _elementWiseCoshOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = cosh_(a[id]);
+};
+
+template <class ElemType>
+__global__ void _elementWiseSinhOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = sinh_(a[id]);
+};
+
+template <class ElemType>
 __global__ void _setValue(
     ElemType* a,
     const ElemType v,
