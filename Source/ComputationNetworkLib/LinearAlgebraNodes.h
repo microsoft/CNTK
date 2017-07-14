@@ -281,10 +281,6 @@ public:
     {
         size_t rank = c.DetermineElementwiseTensorRank();
         auto result =             c.ValueTensorFor(rank, fr);
-        auto in0 = c.InputRef(0).NodeName().c_str();
-        auto in1 = c.InputRef(1).NodeName().c_str();
-        auto baseMatrixPtr = c.InputRef(1).ValuePtr();
-        auto matrixPtr = dynamic_pointer_cast<Matrix<ElemType>>(baseMatrixPtr);
         auto input0 = c.InputRef(0).ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
         auto input1 = c.InputRef(1).ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
         result.AssignElementwiseProductOf(input0, input1);

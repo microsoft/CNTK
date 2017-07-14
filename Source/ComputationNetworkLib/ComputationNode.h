@@ -742,7 +742,7 @@ public:
     // -----------------------------------------------------------------------
 
     virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
-    {    
+    {
 #ifdef TRACK_GAP_NANS
         fprintf(stderr, "BeginForwardProp: %ls %ls operation [%s]\n", NodeName().c_str(), OperationName().c_str(), std::string(GetTensorShape(DetermineElementwiseTensorRank())).c_str());
 #endif
