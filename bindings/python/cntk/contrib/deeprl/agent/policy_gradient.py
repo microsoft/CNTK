@@ -6,7 +6,7 @@ import numpy as np
 import ast
 
 from .agent import AgentBaseClass
-from .shared.cntk_utils import negative_of_entropy
+from .shared.cntk_utils import negative_of_entropy_with_softmax
 from .shared.models import Models
 from .shared.policy_gradient_parameters import PolicyGradientParameters
 
@@ -181,8 +181,8 @@ class ActorCritic(AgentBaseClass):
         combined_networks = C.ops.combine(
             [self._policy_network, self._value_network])
         combined_loss = self._policy_network_loss + \
-            self._parameters.regularization_weight * negative_of_entropy(
-                C.ops.softmax(self._policy_network)) + \
+            self._parameters.regularization_weight * \
+            negative_of_entropy_with_softmax(self._policy_network) + \
             self._parameters.relative_step_size * self._value_network_loss
 
         # The learning rate will be updated later before each minibatch
@@ -261,7 +261,9 @@ class ActorCritic(AgentBaseClass):
 
         if len(self._trajectory_states) != len(self._trajectory_rewards) or \
            len(self._trajectory_actions) != len(self._trajectory_rewards):
-            raise RuntimeError("Can't pair (state, action, reward)")
+            raise RuntimeError("Can't pair (state, action, reward). "
+                               "state/action can only be one more step ahead "
+                               "of rewrad in trajectory.")
 
         for transition in zip(
                 self._trajectory_states,

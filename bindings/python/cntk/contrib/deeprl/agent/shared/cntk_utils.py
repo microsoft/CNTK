@@ -14,6 +14,6 @@ def huber_loss(output, target):
         C.less(C.abs(a), 1), C.square(a) * 0.5, C.abs(a) - 0.5))
 
 
-def negative_of_entropy(p):
+def negative_of_entropy_with_softmax(p):
     """See https://en.wikipedia.org/wiki/Entropy_(information_theory)."""
-    return C.reduce_sum(C.log(p + 1e-8) * p)
+    return C.reduce_sum(C.softmax(p) * p) - C.reduce_log_sum_exp(p)

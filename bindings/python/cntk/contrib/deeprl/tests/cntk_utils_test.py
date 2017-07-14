@@ -1,8 +1,9 @@
 import unittest
 
 import numpy as np
+
 from cntk.contrib.deeprl.agent.shared.cntk_utils import (huber_loss,
-                                                         negative_of_entropy)
+                                                         negative_of_entropy_with_softmax)
 from cntk.ops import input_variable
 
 
@@ -25,8 +26,8 @@ class CNTKUtilsTest(unittest.TestCase):
         i = input_variable((2))
 
         np.testing.assert_almost_equal(
-            negative_of_entropy(i).eval({
-                i: [[0.5, 0.5], [1, 0]]
+            negative_of_entropy_with_softmax(i).eval({
+                i: [[0.5, 0.5], [1000, 1]]
             }),
             [-0.693147181, 0]
         )

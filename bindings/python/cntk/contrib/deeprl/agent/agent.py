@@ -165,12 +165,8 @@ class AgentBaseClass(object):
             o = self._index_to_vector(o, self._num_states)
         if self._preprocessor is not None:
             o = self._preprocessor.preprocess(o)
-        if o.dtype.name == 'uint8':
-            # This usually happens for image input.
-            o = o.astype(int)
-        elif o.dtype.name == 'float64':
-            # Not absolutely necessary. But functions in CNTK Layers library
-            # are of type float32.
+        # TODO: allow float64 dtype.
+        if o.dtype.name != 'float32':
             o = o.astype(np.float32)
         return o
 
