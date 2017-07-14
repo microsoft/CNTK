@@ -182,10 +182,6 @@
     <Link Condition="$(DebugBuild)">
       <AdditionalOptions>/nodefaultlib:vccorlibd /nodefaultlib:msvcrtd vccorlibd.lib msvcrtd.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
-    <!-- This is necessary because UWP build puts binaries into individual subfolders, ignoring OutDir settings -->
-    <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(TargetPath)" "$(TargetDir)\.."</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
 
   <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">

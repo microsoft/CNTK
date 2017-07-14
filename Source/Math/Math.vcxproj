@@ -94,10 +94,11 @@
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"</Command>
       <Message>Copying $(MathLibraryName) DLLs</Message>
-      <Command Condition="$(IsUWP)">xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."</Command>
-      <Command Condition="$(IsUWP)">xcopy /D /I /Y "$(TargetPath)" "$(TargetDir)\.."</Command>
+      <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"
+      if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."
+      if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetPath)" "$(TargetDir).."
+      </Command>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -133,10 +134,11 @@
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"</Command>
       <Message>Copying $(MathLibraryName) DLLs</Message>
-      <Command Condition="$(IsUWP)">xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."</Command>
-      <Command Condition="$(IsUWP)">xcopy /D /I /Y "$(TargetPath)" "$(TargetDir)\.."</Command>
+      <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"
+        if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."
+        if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetPath)" "$(TargetDir).."
+      </Command>
     </PostBuildEvent>
     <CudaCompile>
       <FastMath>true</FastMath>

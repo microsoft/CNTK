@@ -1,0 +1,14 @@
+#ifndef _BUILDINFO_H 
+#define _BUILDINFO_H 
+#define _MATHLIB_ "mkl"
+#define _BUILDER_ "arturl"     
+#define _BUILDMACHINE_ "arturl5"    
+#define _BUILDPATH_    "D:\\g\\CNTK\\Source\\CNTKv2LibraryDll\\"     
+#define _BUILDTYPE_ "Unknown"
+#define _BUILDTARGET_ "Unknown"
+#define _WITH_1BITSGD_ "no"
+#define _WITH_ASGD_ "no"
+#define _CUDA_PATH_    "NOT_DEFINED"     
+#define _MPI_NAME_ "Microsoft MPI" 
+#define _MPI_VERSION_ "8.0.12438.0" 
+#endif 

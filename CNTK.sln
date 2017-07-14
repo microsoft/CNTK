@@ -1584,6 +1584,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "fastRCNN", "fastRCNN", "{C2
 		Examples\Image\Detection\FastRCNN\fastRCNN\voc_eval.py = Examples\Image\Detection\FastRCNN\fastRCNN\voc_eval.py
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKLibraryCPPUWPEvalExamplesTests", "Tests\EndToEndTests\EvalClientTests\CNTKLibraryCPPUWPEvalExamplesTests\CNTKLibraryCPPUWPEvalExamplesTests.vcxproj", "{D5CB8825-0D1F-4940-9906-9BD87614B24E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -2215,6 +2220,17 @@ Global
 		{20DEE94F-2802-40B1-B88B-22755A03AA48}.Release_UWP|x64.ActiveCfg = Release_CpuOnly|x64
 		{20DEE94F-2802-40B1-B88B-22755A03AA48}.Release|x64.ActiveCfg = Release|x64
 		{20DEE94F-2802-40B1-B88B-22755A03AA48}.Release|x64.Build.0 = Release|x64
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Debug_CpuOnly|x64.ActiveCfg = Debug_UWP|x64
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Debug_UWP|x64.ActiveCfg = Debug_UWP|x64
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Debug_UWP|x64.Build.0 = Debug_UWP|x64
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Debug_UWP|x64.Deploy.0 = Debug_UWP|x64
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Debug|x64.ActiveCfg = Debug_UWP|x64
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Release_CpuOnly|x64.ActiveCfg = Release_UWP|x64
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Release_NoOpt|x64.ActiveCfg = Release_UWP|x64
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Release_UWP|x64.ActiveCfg = Release_UWP|x64
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Release_UWP|x64.Build.0 = Release_UWP|x64
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Release_UWP|x64.Deploy.0 = Release_UWP|x64
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Release|x64.ActiveCfg = Release_UWP|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2433,5 +2449,6 @@ Global
 		{20DEE94F-2802-40B1-B88B-22755A03AA48} = {65649688-3377-4FA9-8CD0-BDC3AC72E0AD}
 		{BEF04803-47B4-4322-B9D7-E10A8468E79F} = {4EAFF1B2-2D70-4486-B95E-684E39A50609}
 		{C28E4FD7-F9A9-4473-8E5D-D209AF36A1E7} = {4EAFF1B2-2D70-4486-B95E-684E39A50609}
+		{D5CB8825-0D1F-4940-9906-9BD87614B24E} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
 	EndGlobalSection
 EndGlobal
