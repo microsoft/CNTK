@@ -1,20 +1,21 @@
-# LightRNN
+  LightRNN
 
 This is the official implementation for [LightRNN: Memory and Computation-Efficient Recurrent Neural Networks](https://arxiv.org/abs/1610.09893) in CNTK.
-    
-## LightRNN: Memory and Computation-Efficient Recurrent Neural Networks
-To address the both model size and running time, especially for text corpora with large vocabularies, the author proposed to use 2-Component (2C) shared embedding for word representations. They allocate every word in the vocabulary into a table, each row of which is associated with a vector, and each column associated with another vector. Depending on its position in the table, a word is jointly represented by two components: a row vector and a column vector. Since the words in the same row share the row vector and the words in the same column share the column vector, we only need 2 \sqrt(V) vectors to represent a vocabulary of |V| unique words, which are far less than the |V| vectors required by existing approaches. The LightRNN algorithm significantly reduces the model size and speeds up the training process, without sacrifice of accuracy (it achieves similar, if not better, perplexity as compared to state-of-the-art language models).
 
-More details please refer the [LightRNN paper](https://arxiv.org/abs/1610.09893)
+## LightRNN: Memory and Computation-Efficient Recurrent Neural Networks
+Recurrent neural networks (RNNs) have achieved state-of-the-art performances in many natural language processing tasks, such as language modeling and machine translation. However, when the vocabulary is large, the RNN model will become very big (e.g., possibly beyond the memory capacity of a GPU device) and its training/inference will become very inefficient. LightRNN addesses this challenge using 2-Component (2C) shared embedding for word representations. It allocates every word in the vocabulary into a table, each row of which is associated with a vector, and each column associated with another vector. Depending on its position in the table, a word is jointly represented by two components: a row vector and a column vector. Since the words in the same row share the row vector and the words in the same column share the column vector, we only need $2 \sqrt{|V|}$ vectors to represent a vocabulary of $|V|$ unique words, which are far less than the $|V|$ vectors required by existing approaches. The LightRNN algorithm significantly reduces the model size and speeds up the training/inference process for corpora with large vocabularies.
+
+#### More details please refer to the NIPS 2016 paper (https://arxiv.org/abs/1610.09893)
+
 
 ## Requirements
 
-- CNTK binary: set up CNTK following this guide
+- CNTK
 - Python 2.7 or later. 
-- g++ 4.8 or later
+- g++
 
 __For multi gpu version__
-- openmpi
+- openmpi or other mpi program
 - mpi4py
 
 ## Details
@@ -28,8 +29,8 @@ The folder [LightRNN](LightRNN/) contains main structure of LightRNN.
     A overridden UserMinibatchSource which maps text to streams.
  - __[lightrnn.py](LightRNN/lightrnn.py)__
     The computation graph of LightRNN
- - __[pyreallocate.cpp](LightRNN/pyreallocate.cpp)__
-    Word reallocation.
+ - __[reallocate.py](LightRNN/reallocate.py)__
+    Word reallocation implemented by Python.
  - __[preprocess.py](LightRNN/preprocess.py)__
     The preprocess procedure of LightRNN
     - Options
@@ -57,7 +58,7 @@ The folder [LightRNN](LightRNN/) contains main structure of LightRNN.
         - `-layer <int> (default: 2)`, Number of layers.
         - `-dropout <float> (default: 0.2)`, Dropout rate.
         - `-lr <float> (default: 0.15)`, Learning rate.
-        - `-optim <string> (accepted: sgd, adam, adagrad, default: sgd)`, The optim method which provides sgd, adam and adagrad.
+        - `-optim <string> (accepted: sgd, adam, adagrad, default: sgd)`, The optimization method which provides sgd, adam and adagrad.
         - `-seqlength <int> (default: 32)`, number of timesteps to unroll for.
         - `-vocabsize <int> (default: 10000)`, Vocabulary size.
         - `-batchsize <int> (default: 20)`, Minibatch size.
@@ -85,17 +86,32 @@ __Multi-GPU__
 
 `mpiexec -n 2 python train.py -datadir ../PTB/Data -vocab_file ../PTB/Allocation/vocab.txt -vocabdir ../PTB/Allocation -vocabsize 10000 -epochs 12 13 -nhid 1000 -embed 1000 -optim adam -lr 0.1 -batchsize 20 -layer 2 -dropout 0.5`
 
-This command will train a LightRNN model on two GPU, you can specify the gpu number by using `mpiexec -n [gpus]`.
+This command will train a LightRNN model on two GPUs, you can specify the GPU number by using `mpiexec -n [gpus]`.
 
 ### [PTB/](PTB/)
-This folder contains an example of PTB dataset. You can use [download_data.py](PTB/Data/download_data.py) under [Data/](PTB/Data) to download the data and [generate.sh](PTB/Allocation/generate.sh) under [Allocation/](PTB/Allocation) to generate a vocabulary file and random table.
+This folder contains an example of PTB dataset. You can use [download_data.py](PTB/Data/download_data.py) under [Data/](PTB/Data) to download the data and [generate.py](PTB/Allocation/generate.py) under [Allocation/](PTB/Allocation) to generate a vocabulary file and random table.
+
+### [Test/](Test/)
+Include a test program. Run this file as follow:
+
+`python test_train.py`
+
+### Generate CPP dynamic library
+
+__For Linux User__
+
+run the [Makefile](Makefile) under the root directory by `make`.
+
+__For Windows User__
+
+Use the Visual Studio to open the project under the [DLL](https://github.com/Microsoft/LightRNN/tree/master/DLL) and build, put the dll file under the [LightRNN](LightRNN/).
 
 ## Experiment
 
 ### [ACL-French](https://www.dropbox.com/s/m83wwnlz3dw5zhk/large.zip?dl=0)
 The ACLW French corpus contains about 56M tokens, with a vocabulary of 136912 words. The parameters used in the experiment are as below.
 
-|Paramters Name|Value|
+|Parameter Name|Value|
 |:---|:---|
 |Vocabulary size|136912|
 |Hidden dim|1000|
@@ -138,7 +154,7 @@ We can achieve 122 perplexity (on the test set) after one epoch of training with
 The ClueWeb09 Data contains over 177 billion tokens. We select the top 10240000 most frequent words as the vocabulary, covering 99.057% tokens. We randomly sampled 1GB/1GB for evaluation/test.
 The model parameters include:
 
-|Paramters Name|Value|
+|Parameter Name|Value|
 |:---|:---|
 |Vocabulary size|10240000|
 |Hidden dim|512|
@@ -152,7 +168,7 @@ The model parameters include:
 |GPU Type|GeForce GTX Titan x|
 |GPU Number|4|
 
-We achieve a training speed of 77873 tokens/s with 4 GPUs. It takes 630 hours (26.7 days) to finish a epoch. 
+We achieve a training speed of 77873 tokens/s with 4 GPUs. It takes 630 hours (26.7 days) to finish an epoch. 
 
 __Train-Valid loss__
 
@@ -168,7 +184,6 @@ If you find LightRNN useful in your work, you can cite the paper as below:
         Year = {2016}
     }
 
-### Release Notes
-1. You need to ensure the version of openmpi correspond to the mpi which mpi4py uses. We recommend you to build mpi4py from source.
-2. We provide two word allocation alogrithm code which implemented by python and c++. If you don't use a c++ dynamix library, the program will use a python implentation. Besides, we has compared the perfermance between the c++ and python. The python version will be 5 times or more slower than c++. We recommend you use a c++ implemenation.
-3. We provide two dynamic libraries under [LightRNN](LightRNN/) for Ununtu and Windows. If you find these library are not useful(eg. MAC User), we suggest you install g++, and the program can generate it by self.
+### Notes
+1. It is recommended to build mpi4py from source to avoid mulitply-version conflicts of mpi.
+2. We provide two implemenations of word allocation using Python and C++ separately. If you don't use a C++ dynamic library, the Python implementation will be used. The Python version will be 5 times or more slower than C++ version. Therefore, C++ version is preferred.

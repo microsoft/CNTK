@@ -31,10 +31,10 @@ def run_command(**kwargs):
     return command
 
 def lightrnn_test(device_id):
-    expected_valid_error = 7.251514
-    expected_test_error = 7.305801
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU')
+    expected_valid_error = 7.251514
+    expected_test_error = 7.305801
 
     command = run_command(datadir=os.path.join(example_dir, '..', 'test'),
                           outputdir=os.path.join(example_dir, '..', 'LightRNN'),

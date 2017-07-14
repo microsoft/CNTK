@@ -99,30 +99,6 @@ def get_k_round_location_path(k):
     return os.path.join(opt.vocabdir, 'word-%d.location' % (k))
 
 
-####################################
-# Generate the c++ dynamic library #
-####################################
-
-def generate_dll():
-    if platform.system() == 'Linux':
-        dll_name = 'libpyreallocate.so'
-    else:
-        dll_name = 'libpyreallocate.dll'
-
-    path_dir = os.path.split(os.path.realpath(__file__))[0]
-    dll_path = os.path.join(path_dir, dll_name)
-    if os.path.exists(dll_path):
-        return
-    command = ['g++', '-o', dll_name, '-shared',
-               '-fPIC', 'pyreallocate.cpp', '-std=c++11']
-    try:
-        command = ' '.join(command)
-        os.system(command)
-        print('Successfully generated the dynamic library')
-    except:
-        print('Fail to generate the dynamic library, falling back to a slower implementation')
-
-
 ###########################
 # Word allocate algorithm #
 ###########################
@@ -379,7 +355,6 @@ def train(network, location_path, id):
 #################
 
 def main():
-    generate_dll()  # Generate the CPP dynamic library
     prepare_dir()  # create the vocab dir and model dir
 
     network = create_model(vocab_sqrt)

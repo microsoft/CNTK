@@ -4,46 +4,38 @@
 # for full license information.
 # ==============================================================================
 
-from six.moves.urllib import request
-# from urllib import request
+try:
+    from urllib.request import urlretrieve
+except:
+    from urllib import urlretrieve
 
 import os
 import tarfile
 import shutil
 
-url = "http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz"
+download_url = "http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz"
+save_file = 'temp.tgz'
 
-tmptgz = "tmp.tgz"
-tmpdir = './tmp/'
+def get_filename(name):
+    return './simple-examples/data/ptb.{}'.format(name)
 
-tar_path_test  = './simple-examples/data/ptb.test.txt'
-tar_path_train = './simple-examples/data/ptb.train.txt'
-tar_path_valid = './simple-examples/data/ptb.valid.txt'
-
-
-def append_eos(input_path, output_path):
+def add_eos(input_path, output_path):
     with open(input_path, 'r') as input_file, \
          open(output_path, 'w') as output_file:
         for line in input_file:
             line = line.strip()
-            output_file.write(line + " <eos>\n")
+            output_file.write(line + " </s>\n")
 
 if __name__=='__main__':
+    if not os.path.isfile(save_file):
+        urlretrieve(download_url, save_file)
 
-    if not os.path.isfile(tmptgz):
-        request.urlretrieve(url, tmptgz)
-
-    # extracting the files we need from the tarfile
-    fileReader = tarfile.open(tmptgz, 'r') 
-    fileReader.extract(tar_path_test,  path=tmpdir)
-    fileReader.extract(tar_path_train, path=tmpdir)
-    fileReader.extract(tar_path_valid, path=tmpdir)
-
-    append_eos(os.path.join(tmpdir, tar_path_test),  'test.txt')
-    append_eos(os.path.join(tmpdir, tar_path_train), 'train.txt')
-    append_eos(os.path.join(tmpdir, tar_path_valid), 'valid.txt')
+    fileReader = tarfile.open(save_file, 'r') 
+    for name in ['train.txt', 'test.txt', 'valid.txt']:
+        filename = get_filename(name)
+        fileReader.extract(filename, path='.')
+        add_eos(filename, name)
 
     fileReader.close()
-
-    os.remove(tmptgz)
-    shutil.rmtree(tmpdir)
+    os.remove(save_file)
+    shutil.rmtree('./simple-examples')
