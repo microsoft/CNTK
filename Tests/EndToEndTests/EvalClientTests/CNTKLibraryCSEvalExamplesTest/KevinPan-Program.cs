@@ -96,7 +96,7 @@ namespace NewsInsightEvaluation
             file.Close();
 
             var model_file = @"C:\CNTKMisc\KevinPan-Memory\trained_model\cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002.dnn";
-            var modelFunc = Function.Load(model_file, DeviceDescriptor.GPUDevice(0));
+            var modelFunc = Function.Load(model_file, DeviceDescriptor.CPUDevice);
 
             var parallel_model_list_1 = new BlockingCollection<Function>();
             // var parallel_model_list = new List<ModelEvaluation>();
@@ -250,8 +250,8 @@ namespace NewsInsightEvaluation
             var documentInputShape = documentInput.Shape;
 
             var intputs = new Dictionary<Variable, Value>();
-            var queryInputValue = Value.CreateSequence<float>(queryInputShape, querySeq, DeviceDescriptor.GPUDevice(0));  // CreateSequenceInput(queryInputShape, query);
-            var documentInputValue = Value.CreateSequence<float>(documentInputShape, docSeq, DeviceDescriptor.GPUDevice(0)); // CreateSequenceInput(documentInputShape, document);
+            var queryInputValue = Value.CreateSequence<float>(queryInputShape, querySeq, DeviceDescriptor.CPUDevice);  // CreateSequenceInput(queryInputShape, query);
+            var documentInputValue = Value.CreateSequence<float>(documentInputShape, docSeq, DeviceDescriptor.CPUDevice); // CreateSequenceInput(documentInputShape, document);
             intputs.Add(queryInput, queryInputValue);
             intputs.Add(documentInput, documentInputValue);
 
@@ -270,7 +270,7 @@ namespace NewsInsightEvaluation
             //outputs.Add(queryDocumentCosineDistance1, null);
 
             {
-                evalFunc.Evaluate(intputs, outputs, DeviceDescriptor.GPUDevice(0));
+                evalFunc.Evaluate(intputs, outputs, DeviceDescriptor.CPUDevice);
             }
 
             //var queryEmbeddingValue = outputs[queryRecurrenceOutput1];
@@ -308,7 +308,7 @@ namespace NewsInsightEvaluation
         //        }
         //    }
 
-        //    return Value.CreateSequence<float>(sampleShape, sequence, DeviceDescriptor.GPUDevice(0));
+        //    return Value.CreateSequence<float>(sampleShape, sequence, DeviceDescriptor.CPUDevice);
         //}
     }
 }
