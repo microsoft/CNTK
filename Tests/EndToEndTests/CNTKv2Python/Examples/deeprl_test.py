@@ -17,7 +17,7 @@ def test_deeprl():
     config_file = os.path.join(script_dir, 'config_examples', 'qlearning.cfg')
 
     subprocess.call([
-        'python', script_file, '--env=CartPole-v0', '--max_steps=5000',
+        'python', script_file, '--env=CartPole-v0', '--max_steps=6000',
         '--agent_config=' + config_file, '--eval_period=1000',
         '--eval_steps=20000'
     ])
@@ -27,8 +27,7 @@ def test_deeprl():
 
     wks = shelve.open(os.path.join(test_dir, 'output', 'output.wks'))
     rewards = wks['reward_history']
-    assert len(rewards) >= 4 and len(rewards) <= 5
-    # Consider lowering the threshold to 120 if test fails.
-    assert max(rewards) >= 150
+    assert len(rewards) >= 5 and len(rewards) <= 6
+    assert max(rewards) >= 120
 
     shutil.rmtree(os.path.join(test_dir, 'output'))
