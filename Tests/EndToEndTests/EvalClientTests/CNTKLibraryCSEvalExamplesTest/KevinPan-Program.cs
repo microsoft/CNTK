@@ -50,7 +50,7 @@ namespace NewsInsightEvaluation
             v.Validate(without_attention);
 #endif
 
-            //Data.Init(@"E:\CNTKMisc\KevinPan-Memory\trained_model\src.l3g.txt");
+            Data.Init(@"c:\CNTKMisc\KevinPan-Memory\trained_model\src.l3g.txt");
 
             //var self_attention_version = new ModelEvaluation
             //{
@@ -60,30 +60,73 @@ namespace NewsInsightEvaluation
             //self_attention_version.Init();
             //Console.WriteLine("complete loading model: {0}", self_attention_version.name);
 
+            var queryText = "24 hours of le mans";
+            var documentText = "live stream for one of motorsport s biggest events ground to a halt by cyberattacks";
+            var querySequence = CreateSequence(queryText);
+            StreamWriter file = new StreamWriter("queryTextInput.txt");
+            var numNonZeros = 0;
+            for (int i = 0; i < querySequence.Count; i++)
+            {
+
+                if (querySequence[i] != 0)
+                {
+                    Console.WriteLine("sequence[" + i + "]=" + querySequence[i]);
+                    var s = String.Format("{0}, ", i, querySequence[i]);
+                    numNonZeros++;
+                    file.Write(s);
+                }
+                
+            }
+            Console.WriteLine("Total: " + numNonZeros);
+            file.Close();
+            var documentSequence = CreateSequence(documentText);
+            file = new StreamWriter("documentTextInput.txt");
+            numNonZeros = 0;
+            for (int i = 0; i < documentSequence.Count; i++)
+            {
+                if (documentSequence[i] != 0)
+                {
+                    Console.WriteLine("sequence[" + i + "]=" + documentSequence[i]);
+                    var s = String.Format("{0}, ", i, documentSequence[i]);
+                    numNonZeros++;
+                    file.Write(s);
+                }
+            }
+            Console.WriteLine("Total: " + numNonZeros);
+            file.Close();
 
             var model_file = @"C:\CNTKMisc\KevinPan-Memory\trained_model\cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002.dnn";
-            var modelFunc = Function.Load(model_file, DeviceDescriptor.CPUDevice);
+            var modelFunc = Function.Load(model_file, DeviceDescriptor.GPUDevice(0));
 
             var parallel_model_list_1 = new BlockingCollection<Function>();
             // var parallel_model_list = new List<ModelEvaluation>();
-            for (int i = 0; i < 20; i++)
+            var numOfModels = 20;
+            for (int i = 0; i < numOfModels;  i++)
             {
                 // parallel_model_list.Add(model.CloneByFile());
 
                 parallel_model_list_1.Add(modelFunc.Clone(ParameterCloningMethod.Share));  //CloneByFile()); // model.Clone());
             }
 
-            var queryText = "24 hours of le mans";
-            var documentText = "live stream for one of motorsport s biggest events ground to a halt by cyberattacks";
-            var querySequence = CreateSequence(queryText);
-            var documentSequence = CreateSequence(documentText);
+            //var queryText = "24 hours of le mans";
+            //var documentText = "live stream for one of motorsport s biggest events ground to a halt by cyberattacks";
+            //var querySequence = CreateSequence(queryText);
+            //StreamWriter file = new StreamWriter("queryTextInput.txt");
+            //foreach (float val in querySequence)
+            //    file.WriteLine(val);
+            //file.Close();
+            //var documentSequence = CreateSequence(documentText);
+            //file = new StreamWriter("documentTextInput.txt");
+            //foreach (float val in documentSequence)
+            //    file.WriteLine(val);
+            //file.Close();
 
             int validate_sample_count = 0;
             var samples = new List<int>(50);
             var querySeqList = new BlockingCollection<List<float>>();
             var documentSeqList = new BlockingCollection<List<float>>();
 
-            for (int i = 0; i < 50; i++)
+            for (int i = 0; i < 20; i++)
             {
                 samples.Add(i);
                 var q = new List<float>(querySequence);
@@ -92,29 +135,45 @@ namespace NewsInsightEvaluation
                 documentSeqList.Add(d);
             }
 
-            Parallel.ForEach(samples, new ParallelOptions() { MaxDegreeOfParallelism = samples.Count }, (sample) =>
+            //Parallel.ForEach(samples, new ParallelOptions() { MaxDegreeOfParallelism = samples.Count }, (sample) =>
+            //// Parallel.ForEach(validation_samples, new ParallelOptions() { MaxDegreeOfParallelism = validation_samples.Count }, (sample) =>
+            //{
+            //    var m = parallel_model_list_1.Take();
+            //    try
+            //    {
+            //        List<float> q = querySeqList.Take();
+            //        List<float> d = documentSeqList.Take();
+            //        Console.WriteLine(string.Format("start validating sample {0}...", sample));
+            //        CosineDistance(m, q, d);
+
+            //        // sample.Validate(m);
+            //        //sample.RecordPositiveDocument(positive_record);
+            //        //sample.RecordNegativeDocument(negative_record);
+            //        System.Threading.Interlocked.Increment(ref validate_sample_count);
+            //        Console.WriteLine(string.Format("...validated {0} sample...", validate_sample_count));
+            //    }
+            //    finally
+            //    {
+            //        parallel_model_list_1.Add(m);
+            //    }
+            //});
+
+            Parallel.ForEach(parallel_model_list_1, new ParallelOptions() { MaxDegreeOfParallelism = parallel_model_list_1.Count }, (model) =>
             // Parallel.ForEach(validation_samples, new ParallelOptions() { MaxDegreeOfParallelism = validation_samples.Count }, (sample) =>
             {
-                var m = parallel_model_list_1.Take();
-                try
-                {
                     List<float> q = querySeqList.Take();
                     List<float> d = documentSeqList.Take();
-                    Console.WriteLine(string.Format("start validating sample {0}...", sample));
-                    CosineDistance(m, q, d);
+                    // Console.WriteLine(string.Format("start validating sample on model {0}...", samples.Take()));
+                    CosineDistance(model, q, d);
 
                     // sample.Validate(m);
                     //sample.RecordPositiveDocument(positive_record);
                     //sample.RecordNegativeDocument(negative_record);
                     System.Threading.Interlocked.Increment(ref validate_sample_count);
                     Console.WriteLine(string.Format("...validated {0} sample...", validate_sample_count));
-                }
-                finally
-                {
-                    parallel_model_list_1.Add(m);
-                }
-            });
 
+                
+            });
 
             //Validation v = new Validation
             //{
@@ -165,11 +224,14 @@ namespace NewsInsightEvaluation
                     foreach (var e in encode)
                     {
                         v[e.Key] = e.Value;
+                        //if (e.Value != 0)
+                        //    Console.WriteLine("Word=" + i + ", Index=" + e.Key + ",value=" + e.Value);
                     }
                     sequence.AddRange(v);
                 }
             }
 
+           
             return sequence;
         }
 
@@ -188,8 +250,8 @@ namespace NewsInsightEvaluation
             var documentInputShape = documentInput.Shape;
 
             var intputs = new Dictionary<Variable, Value>();
-            var queryInputValue = Value.CreateSequence<float>(queryInputShape, querySeq, DeviceDescriptor.CPUDevice);  // CreateSequenceInput(queryInputShape, query);
-            var documentInputValue = Value.CreateSequence<float>(documentInputShape, docSeq, DeviceDescriptor.CPUDevice); // CreateSequenceInput(documentInputShape, document);
+            var queryInputValue = Value.CreateSequence<float>(queryInputShape, querySeq, DeviceDescriptor.GPUDevice(0));  // CreateSequenceInput(queryInputShape, query);
+            var documentInputValue = Value.CreateSequence<float>(documentInputShape, docSeq, DeviceDescriptor.GPUDevice(0)); // CreateSequenceInput(documentInputShape, document);
             intputs.Add(queryInput, queryInputValue);
             intputs.Add(documentInput, documentInputValue);
 
@@ -208,7 +270,7 @@ namespace NewsInsightEvaluation
             //outputs.Add(queryDocumentCosineDistance1, null);
 
             {
-                evalFunc.Evaluate(intputs, outputs, DeviceDescriptor.CPUDevice);
+                evalFunc.Evaluate(intputs, outputs, DeviceDescriptor.GPUDevice(0));
             }
 
             //var queryEmbeddingValue = outputs[queryRecurrenceOutput1];
@@ -227,26 +289,26 @@ namespace NewsInsightEvaluation
             return d;
         }
 
-        public static Value CreateSequenceInput(NDShape sampleShape, string rawText)
-        {
-            List<float> sequence = new List<float>();
-            string s = TextUtils.N1Normalize(rawText);
-            var words = s.Split(' ');
-            for (int i = 0; i < words.Length; i++)
-            {
-                if (!string.IsNullOrWhiteSpace(words[i]))
-                {
-                    float[] v = new float[49293];
-                    var encode = TextUtils.EncodeWord2Letter3Gram(words[i], Data.Vocabulary);
-                    foreach (var e in encode)
-                    {
-                        v[e.Key] = e.Value;
-                    }
-                    sequence.AddRange(v);
-                }
-            }
+        //public static Value CreateSequenceInput(NDShape sampleShape, string rawText)
+        //{
+        //    List<float> sequence = new List<float>();
+        //    string s = TextUtils.N1Normalize(rawText);
+        //    var words = s.Split(' ');
+        //    for (int i = 0; i < words.Length; i++)
+        //    {
+        //        if (!string.IsNullOrWhiteSpace(words[i]))
+        //        {
+        //            float[] v = new float[49293];
+        //            var encode = TextUtils.EncodeWord2Letter3Gram(words[i], Data.Vocabulary);
+        //            foreach (var e in encode)
+        //            {
+        //                v[e.Key] = e.Value;
+        //            }
+        //            sequence.AddRange(v);
+        //        }
+        //    }
 
-            return Value.CreateSequence<float>(sampleShape, sequence, DeviceDescriptor.CPUDevice);
-        }
+        //    return Value.CreateSequence<float>(sampleShape, sequence, DeviceDescriptor.GPUDevice(0));
+        //}
     }
 }
