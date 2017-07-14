@@ -39,6 +39,7 @@ void RunKevinEvaluation(int thId, FunctionPtr model, const DeviceDescriptor& dev
 
     std::unordered_map<Variable, ValuePtr> outputs { {evalFunc->Output(), nullptr}};
 
+    fprintf(stderr, "%d evaluate starts.\n", thId);
     evalFunc->Evaluate(inputs, outputs, device);
 
     fprintf(stderr,"%d evaluate complete.\n", thId);

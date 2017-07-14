@@ -743,6 +743,7 @@ public:
 
     virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
     {
+       
 #ifdef TRACK_GAP_NANS
         fprintf(stderr, "BeginForwardProp: %ls %ls operation [%s]\n", NodeName().c_str(), OperationName().c_str(), std::string(GetTensorShape(DetermineElementwiseTensorRank())).c_str());
 #endif
@@ -771,6 +772,16 @@ public:
     // This is virtual because it is overridden by traversal nodes, which would check all their nodes' inputs.
     virtual bool IsOutOfDateWrtInputs() const
     {
+        if (wcsncmp(NodeName().c_str(), L"Reciprocal", 10) == 0)
+        {
+            printf ("NodeName=%S, EvalTimeStamp=%d, ", NodeName().c_str(), (int)GetEvalTimeStamp());
+            for (const auto & input : GetInputs())
+            {
+                printf("input %S with time stamp=%d ", input->NodeName().c_str(), (int)input->GetEvalTimeStamp());
+            }  
+            printf("\n");
+
+        }
         for (const auto & input : GetInputs())
             if (!input->IsOlderThan(*this))
                 return true;
@@ -1689,9 +1700,19 @@ protected:
     // set the size of the underlying Matrix object to match node dimensions
     void UpdateDataSize(Matrix<ElemType>& m)
     {
+        /*if (wcsncmp(NodeName().c_str(), L"Reciprocal", 10) == 0)
+        {
+            printf("In UpdateDataSize(), before resize: name=%S numRows=%d numCols=%d\n", NodeName().c_str(), (int)m.GetNumRows(), (int)m.GetNumCols());
+        }*/
+
         size_t rows, cols;
         DetermineDataSize(rows, cols);
         m.Resize(rows, cols);
+
+        /*if (wcsncmp(NodeName().c_str(), L"Reciprocal", 10) == 0)
+        {
+            printf("In UpdateDataSize(), after resize: name=%S numRows=%d numCols=%d\n", NodeName().c_str(), (int)m.GetNumRows(), (int)m.GetNumCols());
+        }*/
     }
     // and verify the condition that UpdateDataSize() creates (used for sanity checking after loading parameters)
     void VerifyDataSize(Matrix<ElemType>& m)

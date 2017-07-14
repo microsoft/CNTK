@@ -142,6 +142,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 }
 /*static*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const ComputationNodeBasePtr& node, const FrameRange& fr)
 {
+    if (wcsncmp(node->NodeName().c_str(), L"Reciprocal", 10) == 0)
+        printf("Enter PARTraversalFlowControlNode::ForwardProp: node=%S, timestamp=%d, isOutOfDateWrtInputs: %s\n", node->NodeName().c_str(), (int)node->GetEvalTimeStamp(), node->IsOutOfDateWrtInputs() ? "true" : "false");
     if (node->IsOutOfDateWrtInputs())
     {
         node->BeginForwardProp();
@@ -154,6 +156,9 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
             DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
     }
+    if (wcsncmp(node->NodeName().c_str(), L"Reciprocal", 10) == 0)
+        printf("Leave PARTraversalFlowControlNode::ForwardProp: node=%S, timestamp=%d\n", node->NodeName().c_str(), (int)node->GetEvalTimeStamp());
+
 }
 
 
@@ -406,6 +411,13 @@ void ComputationNetwork::ResetEvalTimeStamps()
 {
     for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         nodeIter->second->ResetEvalTimeStamp();
+}
+
+// TODO: do this on PARTraversalFlowControlNode
+void ComputationNetwork::SetEvalTimeStampsOutdatedWrtAll()
+{
+    for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+        nodeIter->second->SetEvalTimeStampOutdatedWrtAll();
 }
 
 /*static*/ void ComputationNetwork::BumpEvalTimeStamp(const vector<ComputationNodeBasePtr>& nodes)
