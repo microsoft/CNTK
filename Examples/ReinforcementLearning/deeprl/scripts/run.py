@@ -13,8 +13,8 @@ from gym.envs.atari.atari_env import AtariEnv
 
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-from env import env_factory
 from cntk.contrib.deeprl.agent import agent_factory
+from env import env_factory
 
 
 def new_episode():
@@ -36,9 +36,8 @@ def new_episode():
     return observation
 
 
-def evaluate_agent_if_necessary():
+def evaluate_agent_if_necessary(eval_count, start_time):
     """Evaluate agent every --eval_period steps."""
-    global eval_count, start_time
     if agent.step_count >= eval_count * args.eval_period:
         elapsed_time = time.time() - start_time
         total_reward = 0
@@ -88,6 +87,8 @@ def evaluate_agent_if_necessary():
         eval_count += 1
         start_time = time.time()
 
+    return eval_count, start_time
+
 
 if __name__ == '__main__':
     # Parse input arguments.
@@ -123,6 +124,10 @@ if __name__ == '__main__':
 
     if (args.seed >= 0):
         np.random.seed(args.seed)
+
+    # Use xrange for python 2.7 to speed up.
+    if sys.version_info.major < 3:
+        range = xrange
 
     # Create an OpenAI Gym environment, and obtain its state/action
     # information.
@@ -161,32 +166,32 @@ if __name__ == '__main__':
     # Stop when maximum number of steps are reached.
     while agent.step_count < args.max_steps:
         # Evaluate agent every --eval_period steps.
-        evaluate_agent_if_necessary()
+        eval_count, start_time = evaluate_agent_if_necessary(
+            eval_count, start_time)
         # Learn from new episode.
-        o = new_episode()
-        a, debug_info = agent.start(o)
+        observation = new_episode()
+        action, debug_info = agent.start(observation)
         rewards = 0
         steps = 0
         for t in range(args.max_episode_steps):
-            o, r, isTerminal, _ = env.step(a)
+            observation, reward, isTerminal, _ = env.step(action)
             if args.render:
                 env.render()
             if args.verbose:
                 print('\tStep\t{0}\t/\tAction\t{1},{2}\t/\tReward\t{3}'
                       ''.format(
                         agent.step_count,
-                        a,
+                        action,
                         debug_info.get('action_behavior'),
-                        r))
-            rewards += r
+                        reward))
+            rewards += reward
             steps += 1
             if isTerminal:
-                agent.end(r, o)
+                agent.end(reward, observation)
                 break
-            a, debug_info = agent.step(r, o)
+            action, debug_info = agent.step(reward, observation)
         print('Episode {0}\t{1}/{2} steps\t{3} total reward\tterminated = {4}'
               ''.format(
                 agent.episode_count, steps, agent.step_count, rewards, isTerminal))
         sys.stdout.flush()
-
     env.close()

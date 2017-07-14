@@ -7,8 +7,8 @@ import subprocess
 import pytest
 
 def test_deeprl():
-    #if platform.system() != 'Linux':
-    #    pytest.skip('test only runs on Linux (Gym Atari dependency)')
+    if platform.system() != 'Linux':
+        pytest.skip('test only runs on Linux (Gym Atari dependency)')
 
     test_dir = os.path.dirname(os.path.abspath(__file__))
     script_dir = os.path.join(test_dir, '..', '..', '..', '..', 'Examples',

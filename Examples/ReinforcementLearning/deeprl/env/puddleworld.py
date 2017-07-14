@@ -89,11 +89,5 @@ class PuddleWorld(gym.Env):
         self.puddle_centers.append(center)
         self.puddle_radii.append(radius)
 
-    # TODO(lihongli): The rendering function below does nothing.
     def _render(self, mode='human', close=False):
-        if close:
-            if self.viewer is not None:
-                self.viewer.close()
-                self.viewer = None
-            return
-        return self.viewer.render(return_rgb_array=(mode == 'rgb_array'))
+        pass

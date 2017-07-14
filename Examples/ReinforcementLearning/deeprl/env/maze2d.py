@@ -80,11 +80,5 @@ class Maze2D(gym.Env):
                 if not([x, y] in self.goal_states or [x, y] in self.initial_states):
                     self.wall_states.append([x, y])
 
-    # TODO(lihongli): The rendering function below does nothing.
     def _render(self, mode='human', close=False):
-        if close:
-            if self.viewer is not None:
-                self.viewer.close()
-                self.viewer = None
-            return
-        return self.viewer.render(return_rgb_array=(mode == 'rgb_array'))
+        pass
