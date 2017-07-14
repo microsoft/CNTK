@@ -908,7 +908,8 @@ inline bool MBLayout::IsBeyondStartOrEnd(const FrameRange &fr) const
 }
 
 // TODO: Remove this version (with sanity checks) after this has been tested. Then the function can be inlined above.
-inline size_t MBLayout::GetActualNumSamples() const { return m_numFramesDeclared - m_numGapFrames - m_numParallelSequences * m_rightSplice; }
+//inline size_t MBLayout::GetActualNumSamples() const { return m_numFramesDeclared - m_numGapFrames - m_numParallelSequences * m_rightSplice; }
+inline size_t MBLayout::GetActualNumSamples() const { return m_numFramesDeclared - m_numGapFrames; }
 
 // return m_columnsValidityMask(,), which is lazily created here upon first call
 // only called from MaskMissingColumnsTo()
@@ -944,11 +945,11 @@ inline const Matrix<char>& MBLayout::GetColumnsValidityMask(DEVICEID_TYPE device
                     }
                 }
             }
-            if (t >= nT - m_rightSplice) 
-            {
-                for (size_t s = 0; s < nS; s++)
-                    columnsValidityMask[(t * nS) + s] = 0;
-            }
+            //if (t >= nT - m_rightSplice) 
+            //{
+            //    for (size_t s = 0; s < nS; s++)
+            //        columnsValidityMask[(t * nS) + s] = 0;
+            //}
         }
         assert(gapsFound == m_numGapFrames); // sanity check
 
