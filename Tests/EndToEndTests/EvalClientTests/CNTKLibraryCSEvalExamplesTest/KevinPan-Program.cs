@@ -70,14 +70,14 @@ namespace NewsInsightEvaluation
 
                 if (querySequence[i] != 0)
                 {
-                    Console.WriteLine("sequence[" + i + "]=" + querySequence[i]);
+                    // Console.WriteLine("sequence[" + i + "]=" + querySequence[i]);
                     var s = String.Format("{0}, ", i, querySequence[i]);
                     numNonZeros++;
                     file.Write(s);
                 }
                 
             }
-            Console.WriteLine("Total: " + numNonZeros);
+            // Console.WriteLine("Total: " + numNonZeros);
             file.Close();
             var documentSequence = CreateSequence(documentText);
             file = new StreamWriter("documentTextInput.txt");
@@ -86,13 +86,13 @@ namespace NewsInsightEvaluation
             {
                 if (documentSequence[i] != 0)
                 {
-                    Console.WriteLine("sequence[" + i + "]=" + documentSequence[i]);
+                    // Console.WriteLine("sequence[" + i + "]=" + documentSequence[i]);
                     var s = String.Format("{0}, ", i, documentSequence[i]);
                     numNonZeros++;
                     file.Write(s);
                 }
             }
-            Console.WriteLine("Total: " + numNonZeros);
+            // Console.WriteLine("Total: " + numNonZeros);
             file.Close();
 
             var model_file = @"C:\CNTKMisc\KevinPan-Memory\trained_model\cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002.dnn";
