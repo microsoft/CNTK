@@ -271,6 +271,7 @@ class ActorCritic(AgentBaseClass):
                 self._discount_rewards(bootstrap_r)):
             self._input_buffer.append(transition[0])
             self._value_network_output_buffer.append([transition[2]])
+            # TODO: consider using cntk.ops.one_hot instead of _index_to_vector
             self._policy_network_output_buffer.append(
                 self._index_to_vector(transition[1], self._num_actions))
             self._policy_network_weight_buffer.append([transition[2]

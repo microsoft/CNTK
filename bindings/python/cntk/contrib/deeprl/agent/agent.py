@@ -144,7 +144,7 @@ class AgentBaseClass(object):
             return state
 
     def _index_to_vector(self, index, dimension):
-        # TODO: Use sparse vector
+        # TODO: consider using cntk.core.Value.one_hot here.
         a = np.zeros(dimension,)
         a[index] = 1
         return a
