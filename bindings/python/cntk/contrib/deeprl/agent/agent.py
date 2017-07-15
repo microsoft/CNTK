@@ -157,7 +157,7 @@ class AgentBaseClass(object):
 
         For other cases, state and input are the same, roughly.
 
-        CNTK only supports integer, float32 and float64. Performs appropriate
+        CNTK only supports float32 and float64. Performs appropriate
         type conversion as well.
         """
         o = self._discretize_state_if_necessary(state)
