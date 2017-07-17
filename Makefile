@@ -174,12 +174,13 @@ ifeq ("$(MATHLIB)","mkl")
   INCLUDEPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/include
   LIBS_LIST += m
 ifeq ("$(MKL_THREADING)","sequential")
-  LIBPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/sequential
+  MKL_LIB_PATH := $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/sequential
   LIBS_LIST += mkl_cntk_s
 else
-  LIBPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/parallel
+  MKL_LIB_PATH := $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/parallel
   LIBS_LIST += mkl_cntk_p iomp5 pthread
 endif
+  LIBPATH += $(MKL_LIB_PATH)
   COMMON_FLAGS += -DUSE_MKL
 endif
 
@@ -1448,7 +1449,7 @@ java: $(JAVA_LIBS)
 	mkdir -p $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux
 	echo $(JAVA_LIB:$(LIBDIR)/%=%) > $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_LOAD_MANIFEST
 	for so in libiomp5.so libmkl_cntk_p.so; do \
-	    cp -p $(MKL_PATH)/3/x64/parallel/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
+	    cp -p $(MKL_LIB_PATH)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
 	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
 	done
 	for so in $(JAVA_DEP_SO_NAMES); do \
