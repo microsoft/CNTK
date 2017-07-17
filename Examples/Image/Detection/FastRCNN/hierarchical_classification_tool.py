@@ -66,7 +66,14 @@ def top_down_eval(vector):
         # todo: check: if start < region[0]: continue
         if start >= region[1]: continue
 
-        node_index = np.argmax(vector[region[0]:region[1]], axis=0) + region[0]
+        MINIMUM_BG_VALUE = .65
+        if tree_map.use_background:
+            if vector[region[0]] < MINIMUM_BG_VALUE:
+                node_index = np.argmax(vector[region[0]+1:region[1]], axis=0) + region[0]+1
+            else:
+                node_index=region[0]
+        else:
+            node_index = np.argmax(vector[region[0]:region[1]], axis=0) + region[0]
         #if np.add.reduce(out_vec)==0 and np.argmax(vector[0:3])!=0: import ipdb;ipdb.set_trace()
         node = tree_map.as_in_network[node_index]
         if node is None: # background --> stop here!
