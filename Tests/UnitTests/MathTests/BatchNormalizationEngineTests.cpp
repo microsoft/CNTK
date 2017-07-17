@@ -290,7 +290,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             std::string emsg;
 
             BOOST_REQUIRE_MESSAGE(!dx.HasNan("dx"), "dx" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(dx, dxB, emsg, relErr * 16, absErr * 32), "dx" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(dx, dxB, emsg, relErr * 16, absErr * 64), "dx" << msg << ". " << emsg);
             // BUGBUG: Why does this pass for CNTK engine?
             BOOST_REQUIRE_MESSAGE(CountNans(dxBuf) == crow * 2 * ccol, "out" << msgNotNan);
             // REVIEW alexeyk: add cases for testing numerical stability.
