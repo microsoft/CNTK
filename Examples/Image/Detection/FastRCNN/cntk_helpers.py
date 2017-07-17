@@ -514,7 +514,8 @@ def im_detect(net, im, boxes, feature_scale=None, bboxIndices=None, boReturnClas
     scores = None
     if boReturnClassifierScore:
         if classifier == 'nn':
-            scores = softmax2D(cntkOutput)
+            #scores = softmax2D(cntkOutput)
+            scores = cntkOutput
         elif classifier == 'svm':
             svmBias = net.params['cls_score'][1].data.transpose()
             svmWeights = net.params['cls_score'][0].data.transpose()
@@ -810,11 +811,9 @@ def softmax(vec):
     return outVec
 
 def softmax2D(w):
-    #import ipdb;ipdb.set_trace()
-    #e = np.exp(w)
-    #dist = e / np.sum(e, axis=1)[:, np.newaxis]
-    #return dist
-    return w
+    e = np.exp(w)
+    dist = e / np.sum(e, axis=1)[:, np.newaxis]
+    return dist
 
 def getDictionary(keys, values, boConvertValueToInt = True):
     dictionary = {}

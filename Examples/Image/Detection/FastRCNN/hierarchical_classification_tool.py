@@ -34,8 +34,35 @@ flat_tree_grocery_str = '[' \
     '   {"id": 16, "childrens": [], "syn": "Synset(\'avocado.n.01\')", "strings": ["avocado"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}' \
     ']'
 
+tree_grocery_str = '[' \
+    '   {"id": 0, "childrens": [21, 17], "syn": "Synset(\'physical_entity.n.01\')", "strings": [], "cls_maps": []}, ' \
+    '   {"id": 1, "childrens": [], "syn": "Synset(\'water.n.01\')", "strings": ["water"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 2, "childrens": [], "syn": "Synset(\'champagne.n.01\')", "strings": ["champagne"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 3, "childrens": [], "syn": "Synset(\'juice.n.01\')", "strings": ["juice"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 4, "childrens": [], "syn": "Synset(\'catsup.n.01\')", "strings": ["ketchup"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 5, "childrens": [], "syn": "Synset(\'gherkin.n.01\')", "strings": ["gherkin"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 6, "childrens": [], "syn": "Synset(\'egg.n.02\')", "strings": ["eggs"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 7, "childrens": [], "syn": "Synset(\'milk.n.01\')", "strings": ["milk"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 8, "childrens": [], "syn": "Synset(\'yogurt.n.01\')", "strings": ["yoghurt"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 9, "childrens": [], "syn": "Synset(\'butter.n.01\')", "strings": ["butter"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 10, "childrens": [], "syn": "Synset(\'tomato.n.01\')", "strings": ["tomato"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 11, "childrens": [], "syn": "Synset(\'tabasco.n.01\')", "strings": ["tabasco"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 12, "childrens": [], "syn": "Synset(\'mustard.n.01\')", "strings": ["mustard"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 13, "childrens": [], "syn": "Synset(\'pepper.n.01\')", "strings": ["pepper"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 14, "childrens": [], "syn": "Synset(\'onion.n.01\')", "strings": ["onion"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 15, "childrens": [], "syn": "Synset(\'orange.n.01\')", "strings": ["orange"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]}, ' \
+    '   {"id": 16, "childrens": [], "syn": "Synset(\'avocado.n.01\')", "strings": ["avocado"], "cls_maps": ["' + my_path + '/../../DataSets/Grocery/Class_map.txt"]},' \
+    '   {"id": 17, "childrens": [20, 19, 18], "syn": null, "strings": ["packaged"], "cls_maps": []}, ' \
+    '   {"id": 18, "childrens": [11, 7, 4, 3, 2, 1], "syn": null, "strings": ["bottled"], "cls_maps": []}, ' \
+    '   {"id": 19, "childrens": [9, 6], "syn": null, "strings": ["boxed"], "cls_maps": []}, ' \
+    '   {"id": 20, "childrens": [12, 8, 5], "syn": null, "strings": ["jar"], "cls_maps": []}, ' \
+    '   {"id": 21, "childrens": [16, 15, 14, 13, 10], "syn": null, "strings": ["loose"], "cls_maps": []} ' \
+    ']'
+
+    #    '   {"id": 17, "childrens": [], "syn": null, "strings": [], "cls_maps": []' \
 if True:
     tree_map = TreeMap.tree_map_from_tree_str(flat_tree_grocery_str, use_background=True, use_multiply_with_parent=False)
+    #tree_map = TreeMap.tree_map_from_tree_str(tree_grocery_str, use_background=True, use_multiply_with_parent=False)
     cls_maps = list(tree_map.meta_map.keys())
 
 output_mapper = tree_map.get_output_mapper()
@@ -185,7 +212,7 @@ class Target_Creator(UserFunction): # usefoll for debugging...
 
     def forward(self, argument, device=None, outputs_to_retain=None):
         mb_size= len(argument)
-        output = np.zeros((mb_size, params.cntk_nrRois, tree_map.get_nr_of_required_neurons() ))
+        output = np.zeros((mb_size, params.cntk_nrRois, tree_map.get_nr_of_required_neurons() ), dtype=np.float32)
         for i in range(len(argument)):
             for j in range(len(argument[i])):
                 target,_=get_vectors_for_label(argument[i][j])

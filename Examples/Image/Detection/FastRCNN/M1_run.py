@@ -54,7 +54,7 @@ def _scramble_list(to_sc, perm):
     return out
 
 
-img_list = _scramble_list(img_list, [1, 3, 2, 4, 0])
+#img_list = _scramble_list(img_list, [1, 3, 2, 4, 0])
 
 
 def prepare_ground_truth_boxes(gtbs, relative_coord=False, centered_coords=False, is_16_9=False, scale_input=None):
@@ -226,13 +226,6 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
     for img_i in range(0, num_test_images):
         # import ipdb;ipdb.set_trace()
         mb_data = minibatch_source.next_minibatch(1, input_map=input_map)
-        #       roi_data = mb_data[roi_input].asarray()
-        #       roi_data.shape=(2000,4)
-        #       print("--rois min, max")
-        #       print(np.minimum.reduce(roi_data, axis=0))
-        #       print(np.maximum.reduce(roi_data, axis=0))
-
-
 
         if use_real_gt_not_sel_search_as_gt_info:
             # receives rel coords
@@ -328,69 +321,7 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
         all_raw_rois.append(rois.copy())
         all_raw_outputs.append(output.copy())
 
-        if False:
-            def _process_output_slice(net_out, rois):
-
-                assert net_out.shape[0] == rois.shape[0], print(net_out.shape, rois.shape)
-                cords_score_label = []
-                for box in range(rois_per_image):  # len(net_out)
-                    processed_vector = HCT.top_down_eval(net_out[box])
-                    processed_vector_no_bg = HCT.output_mapper.get_prediciton_vector(processed_vector)
-                    assert np.add.reduce(processed_vector_no_bg) > 0
-                    box_labels = np.where(processed_vector_no_bg > 0)[0]
-                    box_scores = processed_vector_no_bg[box_labels]
-                    # if len(box_labels) > 1 or box_labels[0]!=0: import ipdb;ipdb.set_trace()
-                    if not len(box_labels > 0): import ipdb;ipdb.set_trace()
-                    # append the box for each label
-                    for i in range(len(box_labels)):
-                        cords_score_label.append(np.concatenate([rois[box], [box_scores[i], box_labels[i]]]))
-
-                return np.asarray(cords_score_label)
-
-            coords_score_label = _process_output_slice(output[0], rois)
-
-            # fake output to be gtb!
-            fake_coords = all_gt_boxes[:, 0:4]
-            fake_labels = all_gt_boxes[:, -1:]
-            fake_score = np.ones(fake_labels.shape)
-            fake_boxes = []
-            for fb_i in range(len(fake_labels)):
-                label = int(fake_labels[fb_i][0])
-                train_vector, _ = HCT.get_vectors_for_label_nr(label)
-                reduced_vector = HCT.output_mapper.get_prediciton_vector(train_vector)  # remove lower backgrounds
-
-                original_cls_name = HCT.cls_maps[0].getClass(label)
-                for vector_i in range(1, len(reduced_vector)):
-                    if reduced_vector[vector_i] == 0: continue
-                    # else this label (vector_i) is active (either original or hypernym)
-
-                    current_class_name = classes[vector_i]
-                    if original_cls_name == current_class_name: original_cls_name = None
-
-                    lbox = np.concatenate([fake_coords[fb_i], [1, vector_i]], axis=0)
-                    lbox.shape = (1,) + lbox.shape
-                    fake_boxes.append(lbox)
-
-                assert original_cls_name is None, "Original class label is not contained in mapped selection!"
-            fake_boxes = np.concatenate(fake_boxes, axis=0)
-
-            coords_score_label = fake_boxes
-
-            # coords_score_label = np.concatenate([all_gt_boxes[:,0:4],np.ones((len(all_gt_boxes),1)),all_gt_boxes[:,4:5]], axis=1)
-            print(coords_score_label.shape)
-
-            #   shape of all_boxes: e.g. 21 classes x 4952 images x 58 rois x 5 coords+score
-            for cls_j in range(1, num_classes):
-                coords_score_label_for_cls = coords_score_label[np.where(coords_score_label[:, -1] == cls_j)]
-                all_boxes[cls_j][img_i] = coords_score_label_for_cls[:, :-1].astype(np.float32, copy=False)
-
-            if (img_i + 1) % 100 == 0:
-                print("Processed {} samples".format(img_i + 1))
-
-                #    if use_real_gt_not_sel_search_as_gt_info:
-                # the gt's are not in the correct order in the mb_s
-                #        all_raw_gt_boxes = _scramble_list(all_raw_gt_boxes, [1,3,2,4,0])
-
+    # TODO remove
     if use_gtbs_as_preds_aka_fake_output:
         fake_coords = []
         fake_outputs = []
@@ -437,7 +368,7 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
     for img_i in range(len(bb_img_rois_l)):
         save_image(bb_img_rois_l[img_i], ".", "test_rois_" + str(img_i) + ".png")
 
-    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=False, use_07_metric=False)
+    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=True, use_07_metric=False)
     ap_list = []
     for class_name in classes:  # sorted(aps):
         if class_name == "__background__": continue
