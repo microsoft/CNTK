@@ -23,6 +23,8 @@
 #include "StringUtil.h"
 #include "ReaderConstants.h"
 #include "V2Dependencies.h"
+#include "LTNoRandomizer.h"
+#include "LTTumblingWindowRandomizer.h"
 
 namespace CNTK {
 
@@ -85,13 +87,12 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     m_precision = config("precision", "float");
 
     // Creating deserializers.
-    // TODO: Currently the primary deserializer defines the corpus. The logic will be moved to CorpusDescriptor class.
-    CreateDeserializers(config);
-
+    bool composable = CreateDeserializers(config);
     if (m_deserializers.empty())
-    {
         InvalidArgument("Could not find deserializers in the reader config.");
-    }
+
+    if (!composable && m_deserializers.size() > 1)
+        InvalidArgument("Currently user defined deserializers do not support composability. Please specify a single deserializer.");
 
     DataDeserializerPtr deserializer = m_deserializers.front();
     if (m_deserializers.size() > 1)
@@ -114,45 +115,60 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     // It makes sense to put it to true for cases when deserialization is CPU intensive,
     // i.e. decompression of images.
     bool multiThreadedDeserialization = config(L"multiThreadedDeserialization", ContainsDeserializer(config, L"ImageDeserializer"));
-    if (randomize)
+
+    if (!composable) // Pick up simple interface.
     {
-        // By default randomizing the whole data set.
-        size_t randomizationWindow = requestDataSize;
-
-        // Currently in case of images, a single chunk is a single image. So no need to randomize, chunks will be randomized anyway.
-        if (ContainsDeserializer(config, L"ImageDeserializer") && m_deserializers.size() == 1)
+        if (randomize)
         {
-            randomizationWindow = 1;
-            m_packingMode = PackingMode::sample;
+            bool sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", false);
+            m_sequenceEnumerator = std::make_shared<LTTumblingWindowRandomizer>(deserializer,
+                sampleBasedRandomizationWindow, config(L"randomizationWindow", requestDataSize),
+                GetRandomSeed(config),
+                multiThreadedDeserialization, maxErrors);
         }
-
-        randomizationWindow = config(L"randomizationWindow", randomizationWindow);
-        bool sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", true);
-
-        if (ContainsDeserializer(config, L"CNTKTextFormatDeserializer") && !config.ExistsCurrent(L"randomizationWindow"))
-        {
-            if (!config.ExistsCurrent(L"sampleBasedRandomizationWindow") || // sampleBasedRandomizationWindow is not specified
-                !sampleBasedRandomizationWindow) // randomization window is in chunks
-            {
-                sampleBasedRandomizationWindow = false;
-                size_t chunkSizeBytes = config(L"chunkSizeInBytes", g_32MB); // 32 MB by default
-                randomizationWindow = g_4GB / chunkSizeBytes; // ~ 4 GB disk space worth of chunks
-                // TODO: decrease randomization window if m_deserializers.size() > 1 ?
-            }
-            else
-            {
-                // config explicitly says to use a sample-based window, but does not specify its size.
-                LogicError("'sampleBasedRandomizationWindow' (== 'true') requires that the 'randomizationWindow' is explicitly specified.");
-            }
-        }
-
-        bool shouldPrefetch = true;
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, 
-            multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow, GetRandomSeed(config));
+        else
+            m_sequenceEnumerator = std::make_shared<LTNoRandomizer>(deserializer, multiThreadedDeserialization, maxErrors);
     }
     else
     {
-        m_sequenceEnumerator = std::make_shared<NoRandomizer>(deserializer, multiThreadedDeserialization, maxErrors);
+        if (randomize)
+        {
+            // By default randomizing the whole data set.
+            size_t randomizationWindow = requestDataSize;
+
+            // Currently in case of images, a single chunk is a single image. So no need to randomize, chunks will be randomized anyway.
+            if (ContainsDeserializer(config, L"ImageDeserializer") && m_deserializers.size() == 1)
+            {
+                randomizationWindow = 1;
+                m_packingMode = PackingMode::sample;
+            }
+
+            randomizationWindow = config(L"randomizationWindow", randomizationWindow);
+            bool sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", true);
+
+            if (ContainsDeserializer(config, L"CNTKTextFormatDeserializer") && !config.ExistsCurrent(L"randomizationWindow"))
+            {
+                if (!config.ExistsCurrent(L"sampleBasedRandomizationWindow") || // sampleBasedRandomizationWindow is not specified
+                    !sampleBasedRandomizationWindow) // randomization window is in chunks
+                {
+                    sampleBasedRandomizationWindow = false;
+                    size_t chunkSizeBytes = config(L"chunkSizeInBytes", g_32MB); // 32 MB by default
+                    randomizationWindow = g_4GB / chunkSizeBytes; // ~ 4 GB disk space worth of chunks
+                                                                  // TODO: decrease randomization window if m_deserializers.size() > 1 ?
+                }
+                else
+                {
+                    // config explicitly says to use a sample-based window, but does not specify its size.
+                    LogicError("'sampleBasedRandomizationWindow' (== 'true') requires that the 'randomizationWindow' is explicitly specified.");
+                }
+            }
+
+            bool shouldPrefetch = true;
+            m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch,
+                multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow, GetRandomSeed(config));
+        }
+        else
+            m_sequenceEnumerator = std::make_shared<NoRandomizer>(deserializer, multiThreadedDeserialization, maxErrors);
     }
 
     // In case when there are transforms, applying them to the data.
@@ -216,7 +232,7 @@ std::vector<StreamInformation> CompositeDataReader::GetStreamDescriptions()
 // deserializers = [
 //        [ type = "ImageDataDeserializer" module = "ImageReader" ...]
 //        [ type = "CNTKTextFormatDeserializer" module = "CNTKTextFormatReader" ...]
-void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConfig)
+bool CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConfig)
 {
     argvector<ConfigValue> deserializerConfigs =
         readerConfig(L"deserializers", ConfigParameters::Array(argvector<ConfigValue>(vector<ConfigValue> {})));
@@ -224,6 +240,7 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
     assert(m_deserializers.empty());
 
     auto traceLevel = readerConfig.Find("traceLevel");
+    bool composable = true;
 
     bool primary = true;  // Currently, the first deserializer becomes primary - it drives chunking.
     for (size_t i = 0; i < deserializerConfigs.size(); ++i)
@@ -237,10 +254,12 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
             p.Insert("traceLevel", traceLevel);
         }
 
+        composable &= p(L"composable", true);
         DataDeserializerPtr d = CreateDeserializer(p, primary);
         primary = false;
         m_deserializers.push_back(d);
     }
+    return composable;
 }
 
 // Creates a particular deserializer based on the config: its loads the external module and calls CreateDeserializer
@@ -279,6 +298,9 @@ DataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamete
 void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerConfig)
 {
     std::string defaultModule = deserializerConfig("module");
+    if (!deserializerConfig.Exists("input"))
+        return;
+
     argvector<ConfigParameters> inputs = deserializerConfig("input");
     for (size_t i = 0; i < inputs.size(); ++i)
     {

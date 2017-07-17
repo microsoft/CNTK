@@ -15,7 +15,7 @@ from cntk.io import MinibatchSource, CTFDeserializer, CBFDeserializer, \
     FULL_DATA_SWEEP, INFINITELY_REPEAT, \
     DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS, \
     sequence_to_cntk_text_format, UserMinibatchSource, StreamInformation, \
-    MinibatchData
+    MinibatchData, UserDeserializer
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.logging import TraceLevel
 import cntk.io.transforms as xforms
@@ -1175,3 +1175,153 @@ def test_compare_cbf_and_ctf(input_pair, device_id, tmpdir):
     for randomize in [False, True]:
         for (num_mbs, mb_size) in zip([1, 1, 3, 10], [1, 10, 100, 2]):
             compare_cbf_and_ctf(num_mbs, mb_size, randomize)
+
+# Helper generator
+class GenDeserializer(UserDeserializer):
+    def __init__(self, stream_infos, num_chunks, num_sequences, max_sequence_len = 1):
+        super(GenDeserializer, self).__init__()
+        self._streams = stream_infos
+        self._num_chunks = num_chunks
+        self._num_sequences = num_sequences
+        self._max_sequence_len = max_sequence_len
+
+    def stream_infos(self):
+        return self._streams;
+
+    def num_chunks(self):
+        return self._num_chunks
+
+    def get_chunk(self, chunk_id):
+        import scipy.sparse as sp, random, functools
+        random.seed(chunk_id)
+        result = {}
+        for stream in self._streams:
+            total = functools.reduce(lambda x, y: x*y, stream.sample_shape)
+            count = 0       
+            chunk = []
+            for i in range(self._num_sequences):
+                if self._max_sequence_len == 1:
+                    shape = stream.sample_shape
+                else:
+                    seq_len = random.randint(1, self._max_sequence_len)
+                    shape = [seq_len]
+                    shape.extend(stream.sample_shape)
+                    shape = tuple(shape) if stream.storage_format == 'dense' else (shape[0], total)
+
+                if stream.storage_format == 'dense':
+                    data = np.full(shape=shape, fill_value=chunk_id, dtype=np.float32)
+                else:
+                    data = np.full(shape=shape, fill_value=chunk_id, dtype=np.float32)
+                    data = sp.csr_matrix(data, shape=shape, dtype=np.float32)
+                chunk.append(data)
+
+            if stream.storage_format == 'dense':
+                result[stream.name] = chunk if self._max_sequence_len != 1 else np.stack(chunk)
+            else: # sparse
+                result[stream.name] = chunk if self._max_sequence_len != 1 else sp.csr_matrix(sp.vstack(chunk))
+        return result
+
+def test_user_deserializer_sample_mode():
+    import scipy.sparse as sp
+    streams = [StreamInformation('x', 0, 'dense', np.float32, (2, 3)), 
+               StreamInformation('y', 1, 'sparse', np.float32, (1, 3))]
+
+    def run_minibatch_source(minibatch_source, num_chunks, num_samples_per_value):
+        sample_x_values = np.zeros(num_chunks, dtype=np.int32)
+        sample_y_values = np.zeros(num_chunks, dtype=np.int32)
+        mb_count = 0
+        while True:
+            if mb_count % 10 == 1: # perform checkpointing
+                checkpoint_state = minibatch_source.get_checkpoint_state()
+                for i in range(3): 
+                    minibatch_source.next_minibatch(20)
+                minibatch_source.restore_from_checkpoint(checkpoint_state)
+                mb_count +=1
+                continue            
+            mb = minibatch_source.next_minibatch(20)
+            mb_count += 1
+            if not mb:
+                break
+
+            for sequence in mb[minibatch_source.streams.x].asarray():
+                for sample in sequence:
+                    value = int(sample[0][0])
+                    sample_x_values[value] += 1
+
+            for sequence in mb[minibatch_source.streams.y].asarray():
+                for sample in sequence:
+                    value = int(sample[0][0])
+                    sample_y_values[value] += 1
+            mb = None
+
+        expected_values = np.full(num_chunks, fill_value=num_samples_per_value, dtype=np.int32)
+        assert (sample_x_values == expected_values).all()
+        assert (sample_y_values == expected_values).all()
+
+    # Big chunks
+    d = GenDeserializer(stream_infos=streams, num_chunks=20, num_sequences=100)
+    mbs = MinibatchSource([d], randomize=False, max_sweeps=2)
+    run_minibatch_source(mbs, num_chunks=20, num_samples_per_value=200)
+    # Randomized
+    mbs = MinibatchSource([d], randomize=True, max_sweeps=2, randomization_window_in_chunks=5)
+    run_minibatch_source(mbs, num_chunks=20, num_samples_per_value=200)
+
+    # Small chunks of 1
+    d = GenDeserializer(stream_infos=streams, num_chunks=20, num_sequences=1)
+    mbs = MinibatchSource([d], randomize=False, max_sweeps=3)
+    run_minibatch_source(mbs, num_chunks=20, num_samples_per_value=3)
+    # Randomized
+    mbs = MinibatchSource([d], randomize=True, max_sweeps=3, randomization_window_in_chunks=5)
+    run_minibatch_source(mbs, num_chunks=20, num_samples_per_value=3)
+
+def test_user_deserializer_sequence_mode():
+    import scipy.sparse as sp
+    streams = [StreamInformation('x', 0, 'dense', np.float32, (2, 3)), 
+               StreamInformation('y', 1, 'sparse', np.float32, (3,))]
+
+    def run_minibatch_source(minibatch_source, num_chunks, num_sequences_per_value):
+        sequence_x_values = np.zeros(num_chunks, dtype=np.int32)
+        sequence_y_values = np.zeros(num_chunks, dtype=np.int32)
+        mb_count = 0
+        while True:
+            if mb_count % 10 == 1: # perform checkpointing
+                checkpoint_state = minibatch_source.get_checkpoint_state()
+                for i in range(3): 
+                    minibatch_source.next_minibatch(20)
+                minibatch_source.restore_from_checkpoint(checkpoint_state)
+                mb_count +=1
+                continue            
+
+            mb = minibatch_source.next_minibatch(20)
+            mb_count += 1
+            if not mb:
+                break
+
+            for sequence in mb[minibatch_source.streams.x].asarray():
+                sequence_x_values[int(sequence[0][0][0])] +=1
+
+            for sequence in mb[minibatch_source.streams.y].as_sequences(C.sequence.input_variable((3,), True)):             
+                sequence_y_values[int(sequence.toarray()[0][0])] += 1
+            mb = None
+
+        expected_values = np.full(num_chunks, fill_value=num_sequences_per_value, dtype=np.int32)
+        assert (sequence_x_values == expected_values).all()
+        assert (sequence_y_values == expected_values).all()
+
+    # Big chunks
+    d = GenDeserializer(stream_infos=streams, num_chunks=15, 
+                        num_sequences=100, max_sequence_len=10)
+    mbs = MinibatchSource([d], randomize=False, max_sweeps=2)
+    run_minibatch_source(mbs, num_chunks=15, num_sequences_per_value=200)
+    # Randomized
+    mbs = MinibatchSource([d], randomize=True, max_sweeps=2, randomization_window_in_chunks=5)
+    run_minibatch_source(mbs, num_chunks=15, num_sequences_per_value=200)
+
+    # Small chunks of 1
+    d = GenDeserializer(stream_infos=streams, num_chunks=15,
+                        num_sequences=1, max_sequence_len=10)
+    mbs = MinibatchSource([d], randomize=False, max_sweeps=3)
+    run_minibatch_source(mbs, num_chunks=15, num_sequences_per_value=3)
+    # Randomized
+    mbs = MinibatchSource([d], randomize=True, max_sweeps=3, randomization_window_in_chunks=5)
+    run_minibatch_source(mbs, num_chunks=15, num_sequences_per_value=3)

@@ -97,6 +97,15 @@
     <ClInclude Include="MemoryBuffer.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="LocalTimelineRandomizerBase.h">
+      <Filter>Randomizers</Filter>
+    </ClInclude>
+    <ClInclude Include="LTNoRandomizer.h">
+      <Filter>Randomizers</Filter>
+    </ClInclude>
+    <ClInclude Include="LTTumblingWindowRandomizer.h">
+      <Filter>Randomizers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">
@@ -146,6 +155,15 @@
     </ClCompile>
     <ClCompile Include="MemoryBuffer.cpp">
       <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="LocalTimelineRandomizerBase.cpp">
+      <Filter>Randomizers</Filter>
+    </ClCompile>
+    <ClCompile Include="LTNoRandomizer.cpp">
+      <Filter>Randomizers</Filter>
+    </ClCompile>
+    <ClCompile Include="LTTumblingWindowRandomizer.cpp">
+      <Filter>Randomizers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
