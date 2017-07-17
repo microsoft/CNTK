@@ -433,8 +433,8 @@ def sgd(parameters, lr,
         gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
-         with truncation (ie. hard clipping). If set to False, rescale all gradients accoridng to Frobenius-norm (L2) 
-         to fit gradient_clipping_threshold_per_sample.d.
+         with truncation (ie. hard clipping). If set to False, rescale all gradients accoridng to Frobenius-norm (L2)
+         to fit gradient_clipping_threshold_per_sample.
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
@@ -488,7 +488,8 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
-         with truncation (ie. hard clipping). If set to False, rescale all gradients to fit the Frobenius-norm (L2) threshold.
+         with truncation (ie. hard clipping). If set to False, rescale all gradients accoridng to Frobenius-norm (L2)
+         to fit gradient_clipping_threshold_per_sample.
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
@@ -600,7 +601,8 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
         gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
-         with truncation (ie. hard clipping). If set to False, rescale all gradients to fit the Frobenius-norm (L2) threshold.
+         with truncation (ie. hard clipping). If set to False, rescale all gradients accoridng to Frobenius-norm (L2)
+         to fit gradient_clipping_threshold_per_sample.
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
@@ -651,7 +653,8 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
         gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
-         with truncation (ie. hard clipping). If set to False, rescale all gradients to fit the Frobenius-norm (L2) threshold.
+         with truncation (ie. hard clipping). If set to False, rescale all gradients accoridng to Frobenius-norm (L2)
+         to fit gradient_clipping_threshold_per_sample.
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
@@ -710,7 +713,8 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
-         with truncation (ie. hard clipping). If set to False, rescale all gradients to fit the Frobenius-norm (L2) threshold.
+         with truncation (ie. hard clipping). If set to False, rescale all gradients accoridng to Frobenius-norm (L2)
+         to fit gradient_clipping_threshold_per_sample.
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
@@ -767,7 +771,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
-         with truncation (ie. hard clipping). If set to False, rescale all gradients to fit the Frobenius-norm (L2) threshold.
+         with truncation (ie. hard clipping). If set to False, rescale all gradients accoridng to Frobenius-norm (L2)
+         to fit gradient_clipping_threshold_per_sample.
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
         epsilon (float, optional): numerical stability constant,
@@ -832,7 +837,8 @@ def rmsprop(parameters, lr,
         gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
-         with truncation (ie. hard clipping). If set to False, rescale all gradients to fit the Frobenius-norm (L2) threshold.n
+         with truncation (ie. hard clipping). If set to False, rescale all gradients accoridng to Frobenius-norm (L2)
+         to fit gradient_clipping_threshold_per_sample.
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
