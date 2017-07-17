@@ -6,6 +6,7 @@ import subprocess
 
 import pytest
 
+
 def test_deeprl():
     if platform.system() != 'Linux':
         pytest.skip('test only runs on Linux (Gym Atari dependency)')
@@ -14,7 +15,8 @@ def test_deeprl():
     script_dir = os.path.join(test_dir, '..', '..', '..', '..', 'Examples',
                               'ReinforcementLearning', 'deeprl', 'scripts')
     script_file = os.path.join(script_dir, 'run.py')
-    config_file = os.path.join(script_dir, 'config_examples', 'qlearning.cfg')
+    config_file = os.path.join(script_dir, 'config_examples',
+                               'qlearning.config')
 
     subprocess.call([
         'python', script_file, '--env=CartPole-v0', '--max_steps=6000',

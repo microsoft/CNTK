@@ -44,7 +44,7 @@ class PolicyGradientTest(unittest.TestCase):
         mock_parameters.return_value.policy_representation = 'nn'
         mock_parameters.return_value.policy_network_hidden_layers = '[2]'
         mock_parameters.return_value.initial_policy_network = \
-            'tests/data/initial_policy_network.bin'
+            'tests/data/initial_policy_network.dnn'
         mock_parameters.return_value.preprocessing = ''
 
         sut = ActorCritic('', observation_space, action_space)

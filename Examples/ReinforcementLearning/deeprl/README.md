@@ -10,13 +10,13 @@ The following commands assume Examples/ReinforcementLearning/deeprl/scripts as t
 
 To train an agent using
     - TabularQLearning
-    python run.py --env=CartPole-v0 --max_steps=100000 --agent_config=config_examples/tabular_qlearning.cfg --eval_period=1000 --eval_steps=20000
+    python run.py --env=CartPole-v0 --max_steps=100000 --agent_config=config_examples/tabular_qlearning.config --eval_period=1000 --eval_steps=20000
 
     - QLearning
-    python run.py --env=CartPole-v0 --max_steps=100000 --agent_config=config_examples/qlearning.cfg --eval_period=1000 --eval_steps=20000
+    python run.py --env=CartPole-v0 --max_steps=100000 --agent_config=config_examples/qlearning.config --eval_period=1000 --eval_steps=20000
 
     - ActorCritic
-    python run.py --env=CartPole-v0 --max_steps=100000 --agent_config=config_examples/policy_gradient.cfg --eval_period=1000 --eval_steps=20000
+    python run.py --env=CartPole-v0 --max_steps=100000 --agent_config=config_examples/policy_gradient.config --eval_period=1000 --eval_steps=20000
 
     - RandomAgent
     python run.py --env=CartPole-v0 --max_steps=100 --eval_period=1 --eval_steps=200000
