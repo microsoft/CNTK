@@ -182,7 +182,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 # Train and evaluate the network.
 def bn_inception_train_and_eval(train_data, test_data, mean_data, minibatch_size=32, epoch_size=1281167, max_epochs=300, 
                          restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, profiler_dir=None, testing_parameters=(5000,32)):
-    C.cntk_py.set_computation_network_trace_level(1)
+    cntk.cntk_py.set_computation_network_trace_level(1)
 
     progress_printer = ProgressPrinter(
         freq=num_mbs_per_log,
