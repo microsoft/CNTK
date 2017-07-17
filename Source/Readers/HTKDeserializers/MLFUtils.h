@@ -9,7 +9,7 @@
 #include <boost/noncopyable.hpp>
 #include "Indexer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     // Representation of a state list table.
     // The table is preserved in memory, the number of states is only expected to be a couple of thousands,
@@ -84,4 +84,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool Parse(const boost::iterator_range<char*>& utteranceData, std::vector<MLFFrameRange>& result, size_t sequenceOffset);
     };
 
-}}} // namespace
+}

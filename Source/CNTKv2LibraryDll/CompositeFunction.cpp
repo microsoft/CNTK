@@ -903,7 +903,7 @@ namespace CNTK
                     auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
                     NDShape outputMapCount, kernelShape;
                     std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape(), transpose);
-                    NDShape outputShape = NDShape::Unknown;
+                    NDShape outputShape = NDShape::Unknown();
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
                         outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                     auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();

@@ -526,8 +526,6 @@ namespace CNTK
         return s_traceLevel.load();
     }
 
-    /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);
-
     /*static*/ std::mutex DeviceDescriptor::s_mutex;
     /*static*/ bool DeviceDescriptor::s_defaultDeviceFrozen(false);
     /*static*/ std::unique_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice(nullptr);

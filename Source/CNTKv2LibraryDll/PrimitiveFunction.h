@@ -461,14 +461,14 @@ namespace CNTK
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
 
-            if (leftOperandShape == NDShape::Unknown)
+            if (leftOperandShape.IsUnknown())
                 leftOperandShape = rightOperandShape;
 
-            if (rightOperandShape == NDShape::Unknown)
+            if (rightOperandShape.IsUnknown())
                 rightOperandShape = leftOperandShape;
 
             // All operand shapes should be known
-            assert((leftOperandShape != NDShape::Unknown) && (rightOperandShape != NDShape::Unknown));
+            assert(!leftOperandShape.IsUnknown()&& !rightOperandShape.IsUnknown());
 
             const auto& shapeWithSmallerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? rightOperandShape : leftOperandShape;
             const auto& shapeWithLargerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? leftOperandShape : rightOperandShape;

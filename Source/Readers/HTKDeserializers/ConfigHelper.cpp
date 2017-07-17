@@ -8,9 +8,10 @@
 #include "DataReader.h"
 #include "StringUtil.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 using namespace std;
+using namespace Microsoft::MSR::CNTK;
 
 pair<size_t, size_t> ConfigHelper::GetContextWindow()
 {
@@ -107,17 +108,17 @@ void ConfigHelper::GetDataNamesFromConfig(
     }
 }
 
-ElementType ConfigHelper::GetElementType() const
+DataType ConfigHelper::GetDataType() const
 {
     string precision = m_config.Find("precision", "float");
     if (AreEqualIgnoreCase(precision, "float"))
     {
-        return ElementType::tfloat;
+        return DataType::Float;
     }
 
     if (AreEqualIgnoreCase(precision, "double"))
     {
-        return ElementType::tdouble;
+        return DataType::Double;
     }
 
     RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
@@ -422,4 +423,4 @@ void ConfigHelper::ExpandDotDotDot(string& featPath, const string& scpPath, stri
         featPath = featPath.substr(0, pos) + scpDirCached + featPath.substr(pos + 3);
 }
 
-}}}
+}

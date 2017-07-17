@@ -10,14 +10,14 @@
 #include "Config.h"
 #include "Descriptors.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // A helper class for text specific parameters.
 // A simple wrapper around CNTK ConfigParameters.
 class TextConfigHelper
 {
 public:
-    explicit TextConfigHelper(const ConfigParameters& config);
+    explicit TextConfigHelper(const Microsoft::MSR::CNTK::ConfigParameters& config);
 
     // Get all input streams that are specified in the configuration.
     const vector<StreamDescriptor>& GetStreams() const { return m_streams; }
@@ -41,7 +41,7 @@ public:
 
     bool IsInFrameMode() const { return m_frameMode; }
 
-    ElementType GetElementType() const { return m_elementType; }
+    DataType GetDataType() const { return m_elementType; }
 
     DISABLE_COPY_AND_MOVE(TextConfigHelper);
 
@@ -52,7 +52,7 @@ private:
     // Specifies how to interpret randomization window, if true randomization window == number of samples, else 
     // randomization window = number of chunks (default).
     bool m_sampleBasedRandomizationWindow; 
-    ElementType m_elementType;
+    DataType m_elementType;
     bool m_skipSequenceIds;
     unsigned int m_maxErrors;
     unsigned int m_traceLevel;
@@ -61,4 +61,4 @@ private:
     bool m_frameMode; // if true, the maximum expected sequence length in the dataset is one sample.
 };
 
-} } }
+}

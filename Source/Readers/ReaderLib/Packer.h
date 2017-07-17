@@ -8,7 +8,7 @@
 #include "Reader.h"
 #include "MemoryProvider.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // A packer interface.
 class Packer
@@ -21,9 +21,11 @@ public:
     virtual void Reset() {};
 
     virtual Minibatch ReadMinibatch() = 0;
+    virtual std::vector<StreamInformation> GetStreamDescriptions() = 0;
+
     virtual ~Packer() {}
 };
 
 typedef std::shared_ptr<Packer> PackerPtr;
 
-}}}
+}

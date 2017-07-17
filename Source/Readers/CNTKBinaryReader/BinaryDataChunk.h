@@ -11,7 +11,8 @@
 #include "BinaryChunkDeserializer.h"
 #include "BinaryDataDeserializer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
 class BinaryDataChunk : public Chunk, public std::enable_shared_from_this<Chunk>
 {
 public:
@@ -81,4 +82,4 @@ protected:
 
 typedef shared_ptr<BinaryDataChunk> BinaryChunkPtr;
 
-}}}
+}
