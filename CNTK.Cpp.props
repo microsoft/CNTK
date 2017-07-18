@@ -39,9 +39,11 @@
 
   <PropertyGroup Condition="$(IsUWP)">
     <MathLibrary>OpenBLAS</MathLibrary>
-    <MathIncludePath>$(OPENBLASPATH)</MathIncludePath>
-    <MathLibraryName>OpenBLAS library name</MathLibraryName>
-    <MathLibraryPath>$(OPENBLASPATH)\lib\x64\RELEASE</MathLibraryPath>
+    <CNTKCustomOpenBLASVersion>1</CNTKCustomOpenBLASVersion>
+    <MathLibraryName>OpenBLAS library (Version: $(CNTKCustomOpenBLASVersion))</MathLibraryName>
+    <CNTKCustomOpenBLASPath>$(CNTK_OPENBLAS_PATH)\$(CNTKCustomOpenBLASVersion)</CNTKCustomOpenBLASPath>    
+    <MathIncludePath>$(CNTKCustomOpenBLASPath)</MathIncludePath>
+    <MathLibraryPath>$(CNTKCustomOpenBLASPath)\lib\x64\RELEASE</MathLibraryPath>
     <MathDefine>USE_OPENBLAS;OS_WINNT;ARCH_X86_64;C_MSVC</MathDefine>
     <MathLinkLibrary>libopenblas.lib</MathLinkLibrary>
     <MathDelayLoad>libopenblas.dll</MathDelayLoad>
