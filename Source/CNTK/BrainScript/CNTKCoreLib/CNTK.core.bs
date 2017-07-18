@@ -1038,7 +1038,7 @@ RNNs =
     # Projection is enabled by passing different values for outputDim and cellDim.
     # This is the stateless version that takes the previous state as an input.
     # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
-    # This function also takes an optional auxiliary input, e.g. for suporting attention models.
+    # This function also takes an optional auxiliary input, e.g. for supporting attention models.
     LSTMBlock (outputDim, cellShape=None, usePeepholes=false, init='glorotUniform', initValueScale=1, enableSelfStabilization=false) =
     {
         cellDim = if Constants.IsNone (cellShape) then outputDim else cellShape
@@ -1110,7 +1110,7 @@ RNNs =
     # Projection is enabled by passing different values for outputDim and cellDim.
     # This is the stateless version that takes the previous state as an input.
     # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
-    # This function also takes an optional auxiliary input, e.g. for suporting attention models.
+    # This function also takes an optional auxiliary input, e.g. for supporting attention models.
     LSTMP (outputDim, cellDim=outputDim, x, aux=Constants.None, auxDim=aux.dim, prevState, enableSelfStabilization=false, inputDim=0) =
     [
         # TODO: Implement this in terms of the one above. Needs to be tested.
@@ -1254,7 +1254,7 @@ RNNs =
     # GRU -- GRU function with projection and self-stabilization
     # It returns a dictionary with three members: the hidden state h, the cell state c, and dim=h.dim.
     # While c isn't required, we return it for implementations like seq2seq that expect it so that this can be a proper drop-in replacement for LSTM
-    # Like the LSTM function, it also takes an optional auxiliary input, e.g. for suporting attention models.  
+    # Like the LSTM function, it also takes an optional auxiliary input, e.g. for supporting attention models.  
     GRU (outputDim, cellDim=outputDim, x, inputDim=x.dim, aux=Constants.None, auxDim=aux.dim, prevState, enableSelfStabilization=false) =
     [
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
