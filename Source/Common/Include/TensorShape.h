@@ -652,7 +652,7 @@ public:
         if (realStrides == 0)
             LogicError("NarrowTo: Narrow with stride 0 is not supported.");
         if (realStrides == 0 || realStrides > (end - begin))
-            LogicError("NarrowTo: stride %d is invalid for interval [%zd, %zd).", realStrides, begin, end);
+            LogicError("NarrowTo: stride %zd is invalid for interval [%zd, %zd).", realStrides, begin, end);
         size_t start = reverse ? (end - 1) : begin;
         auto dims = (end - begin) / realStrides;
         if ((end - begin) % realStrides > 0)
