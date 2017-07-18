@@ -3058,7 +3058,7 @@ namespace CNTK
                        std::unordered_map<Variable, ValuePtr>& gradients,
                        const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice())
         {
-            std::unordered_map<Variable, ValuePtr> outputsToEvaluate = {};
+            std::unordered_map<Variable, ValuePtr> outputsToEvaluate = std::unordered_map<Variable, ValuePtr>();
             return Gradients(arguments, gradients, outputsToEvaluate, computeDevice);
         }
 
@@ -5455,7 +5455,7 @@ namespace CNTK
             const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(64),
             size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max(),
             size_t maxSamples = std::numeric_limits<size_t>::max(),
-            const std::unordered_map<Variable, StreamInformation>& inputVarToStream = {});
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream = std::unordered_map<Variable, StreamInformation>());
 
     private:
         friend class TrainingSession;
@@ -5505,7 +5505,7 @@ namespace CNTK
         ///
         CNTK_API TestConfig(const MinibatchSourcePtr& source,
             const MinibatchSizeSchedule& schedule = MinibatchSizeSchedule(64),
-            const std::unordered_map<Variable, StreamInformation>& inputVarToStream = {});
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream = std::unordered_map<Variable, StreamInformation>());
 
     private:
         friend class TrainingSession;
