@@ -618,7 +618,7 @@ $(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB)
 EVAL_CLIENT:=$(BINDIR)/cppevalclient
 
 EVAL_CLIENT_SRC=\
-	$(SOURCEDIR)/../Examples/Evaluation/CPPEvalClient/CPPEvalClient.cpp 
+	$(SOURCEDIR)/../Examples/Evaluation/LegacyEvalDll/CPPEvalClient/CPPEvalClient.cpp
 
 EVAL_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_CLIENT_SRC))
 
@@ -634,7 +634,7 @@ $(EVAL_CLIENT): $(EVAL_CLIENT_OBJ) | $(EVAL_LIB) $(READER_LIBS)
 EVAL_EXTENDED_CLIENT:=$(BINDIR)/cppevalextendedclient
 
 EVAL_EXTENDED_CLIENT_SRC=\
-	$(SOURCEDIR)/../Examples/Evaluation/CPPEvalExtendedClient/CPPEvalExtendedClient.cpp 
+	$(SOURCEDIR)/../Examples/Evaluation/LegacyEvalDll/CPPEvalExtendedClient/CPPEvalExtendedClient.cpp
 
 EVAL_EXTENDED_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_EXTENDED_CLIENT_SRC))
 

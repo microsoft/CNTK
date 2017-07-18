@@ -61,8 +61,8 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\..\Examples\Evaluation\LegacyEvalDll\EvalClients\CSEvalClient\ModelEvaluator.cs" />
-    <Compile Include="..\..\..\..\Examples\Evaluation\LegacyEvalDll\EvalClients\CSEvalClient\Program.cs" />
+    <Compile Include="..\..\..\..\Examples\Evaluation\LegacyEvalDll\CSEvalClient\ModelEvaluator.cs" />
+    <Compile Include="..\..\..\..\Examples\Evaluation\LegacyEvalDll\CSEvalClient\Program.cs" />
     <Compile Include="..\..\..\..\Examples\Evaluation\ImageExtension\CNTKImageProcessing.cs">
       <Link>CNTKImageProcessing.cs</Link>
     </Compile>
