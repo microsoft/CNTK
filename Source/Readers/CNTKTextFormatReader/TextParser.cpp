@@ -7,9 +7,10 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <cfloat>
-#include "Indexer.h"
+#include "IndexBuilder.h"
 #include "TextParser.h"
 #include "TextReaderConstants.h"
+#include "File.h"
 
 #define isSign(c) ((c == '-' || c == '+'))
 #define isE(c) ((c == 'e' || c == 'E'))
@@ -68,6 +69,8 @@ TextParser(corpus, helper.GetFilePath(), helper.GetStreams(), primary)
     SetChunkSize(helper.GetChunkSize());
     SetSkipSequenceIds(helper.ShouldSkipSequenceIds());
 
+    SetCacheIndex(helper.ShouldCacheIndex());
+
     Initialize();
 }
 
@@ -79,7 +82,7 @@ TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring&
     m_filename(filename),
     m_file(nullptr),
     m_streamInfos(streams.size()),
-    m_indexer(nullptr),
+    m_index(nullptr),
     m_fileOffsetStart(0),
     m_fileOffsetEnd(0),
     m_buffer(new char[BUFFER_SIZE + 1]),
@@ -92,15 +95,21 @@ TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring&
     m_numAllowedErrors(0),
     m_skipSequenceIds(false),
     m_numRetries(5),
-    m_corpus(corpus)
+    m_corpus(corpus),
+    m_useMaximumAsSequenceLength(true),
+    m_cacheIndex(false)
 {
     assert(streams.size() > 0);
 
     m_maxAliasLength = 0;
+    size_t definesMbSizeCount = 0;
 
     for (size_t i = 0; i < streams.size(); ++i)
     {
         const StreamDescriptor& stream = streams[i];
+
+        definesMbSizeCount += stream.m_definesMbSize ? 1 : 0;
+
         const string& alias = stream.m_alias;
         if (m_maxAliasLength < alias.length())
         {
@@ -114,6 +123,24 @@ TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring&
 
         m_streamInfos[i].m_type = stream.m_storageFormat;
         m_streamInfos[i].m_sampleShape = streamDescription.m_sampleLayout;
+    }
+
+    m_useMaximumAsSequenceLength = definesMbSizeCount == 0;
+
+    if (definesMbSizeCount > 1)
+    {
+        wstring names;
+        for (const auto& stream : streams) 
+            if (stream.m_definesMbSize) 
+            {
+                if (!names.empty())
+                    names += L", ";
+                names += stream.m_name;
+            }
+        
+
+        RuntimeError("Only a single stream is allowed to define the minibatch size, but %zu found: %ls.", 
+            definesMbSizeCount, names.c_str());
     }
 
     assert(m_maxAliasLength > 0);
@@ -144,7 +171,7 @@ void TextParser<ElemType>::PrintWarningNotification()
 template <class ElemType>
 void TextParser<ElemType>::Initialize()
 {
-    if (m_indexer != nullptr)
+    if (m_index != nullptr)
     {
         return;
     }
@@ -169,25 +196,27 @@ void TextParser<ElemType>::Initialize()
                 "UTF-16 encoding is currently not supported.", m_filename.c_str());
         }
 
-        std::string mainStreamAlias = "";
-        auto mainStream = std::find_if(m_streamDescriptors.begin(), m_streamDescriptors.end(), [](const StreamDescriptor& s) { return s.m_definesMbSize; });
-        if (mainStream != m_streamDescriptors.end())
-        {
-            mainStreamAlias = mainStream->m_alias;
-            set<wstring> streams;
-            for (auto s : m_streamDescriptors)
-                if (s.m_definesMbSize)
-                    streams.insert(s.m_name);
+        TextInputIndexBuilder builder(FileWrapper(m_filename, m_file));
 
-            if (streams.size() > 1)
-                RuntimeError("Only a single stream is allowed to define the minibatch size, but %zu found.", streams.size());
+        builder.SetSkipSequenceIds(m_skipSequenceIds)
+            .SetStreamPrefix(NAME_PREFIX)
+            .SetCorpus(m_corpus)
+            .SetPrimary(m_primary)
+            .SetChunkSize(m_chunkSizeBytes)
+            .SetCachingEnabled(m_cacheIndex);
+           
+
+        if (!m_useMaximumAsSequenceLength) 
+        {
+            auto mainStream = std::find_if(m_streamDescriptors.begin(), m_streamDescriptors.end(), 
+                [](const StreamDescriptor& s) { return s.m_definesMbSize; });
+            builder.SetMainStream(mainStream->m_alias);
         }
 
-        m_indexer = make_unique<Indexer>(m_file, m_primary, m_skipSequenceIds, NAME_PREFIX, m_chunkSizeBytes, mainStreamAlias);
-        m_indexer->Build(m_corpus);
+        m_index = builder.Build();
     });
 
-    assert(m_indexer != nullptr);
+    assert(m_index != nullptr);
 
     int64_t position = _ftelli64(m_file);
     if (position < 0)
@@ -201,18 +230,16 @@ void TextParser<ElemType>::Initialize()
 template <class ElemType>
 std::vector<ChunkInfo> TextParser<ElemType>::ChunkInfos()
 {
-    assert(m_indexer != nullptr);
-
-    const auto& index = m_indexer->GetIndex();
+    assert(m_index != nullptr);
 
     std::vector<ChunkInfo> result;
-    result.reserve(index.Chunks().size());
-    for (ChunkIdType i = 0; i < index.Chunks().size(); ++i)
+    result.reserve(m_index->Chunks().size());
+    for (ChunkIdType i = 0; i < m_index->Chunks().size(); ++i)
     {
         result.push_back(ChunkInfo{
                 i,
-                index.Chunks()[i].NumSamples(),
-                index.Chunks()[i].Sequences().size()
+                m_index->Chunks()[i].NumberOfSamples(),
+                m_index->Chunks()[i].NumberOfSequences()
         });
     }
 
@@ -222,11 +249,10 @@ std::vector<ChunkInfo> TextParser<ElemType>::ChunkInfos()
 template <class ElemType>
 void TextParser<ElemType>::SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result)
 {
-    const auto& index = m_indexer->GetIndex();
-    const auto& chunk = index.Chunks()[chunkId];
-    result.reserve(chunk.Sequences().size());
+    const auto& chunk = m_index->Chunks()[chunkId];
+    result.reserve(chunk.NumberOfSequences());
 
-    for (size_t sequenceIndex = 0; sequenceIndex < chunk.Sequences().size(); ++sequenceIndex)
+    for (size_t sequenceIndex = 0; sequenceIndex < chunk.NumberOfSequences(); ++sequenceIndex)
     {
         auto const& s = chunk.Sequences()[sequenceIndex];
         result.push_back(
@@ -258,7 +284,7 @@ void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::ve
 template <class ElemType>
 ChunkPtr TextParser<ElemType>::GetChunk(ChunkIdType chunkId)
 {
-    const auto& chunkDescriptor = m_indexer->GetIndex().Chunks()[chunkId];
+    const auto& chunkDescriptor = m_index->Chunks()[chunkId];
     auto textChunk = make_shared<TextDataChunk>(this);
 
     attempt(m_numRetries, [this, &textChunk, &chunkDescriptor]()
@@ -277,11 +303,11 @@ ChunkPtr TextParser<ElemType>::GetChunk(ChunkIdType chunkId)
 template <class ElemType>
 void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor)
 {
-    chunk->m_sequenceMap.resize(descriptor.Sequences().size());
-    for (size_t sequenceIndex = 0; sequenceIndex < descriptor.Sequences().size(); ++sequenceIndex)
+    chunk->m_sequenceMap.resize(descriptor.NumberOfSequences());
+    for (size_t sequenceIndex = 0; sequenceIndex < descriptor.NumberOfSequences(); ++sequenceIndex)
     {
         const auto& sequenceDescriptor = descriptor.Sequences()[sequenceIndex];
-        chunk->m_sequenceMap[sequenceIndex] = LoadSequence(sequenceDescriptor, descriptor.m_offset);
+        chunk->m_sequenceMap[sequenceIndex] = LoadSequence(sequenceDescriptor, descriptor.StartOffset());
     }
 }
 
@@ -369,7 +395,6 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     }
 
     size_t numRowsRead = 0, expectedRowCount = sequenceDsc.m_numberOfSamples;
-    bool checkExpectedAsMax = m_indexer->MainStream().empty();
     size_t rowNumber = 1;
     while(bytesToRead)
     {
@@ -393,7 +418,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         rowNumber++;
     }
 
-    if (ShouldWarn() && checkExpectedAsMax && numRowsRead < expectedRowCount)
+    if (ShouldWarn() && numRowsRead < expectedRowCount)
     {
         fprintf(stderr,
             "WARNING: Exhausted all input"
@@ -407,7 +432,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     // Double check if there are empty input streams.
     // TODO this handling needs to be graceful, but currently CNTK complains when we return empty sequences.
     bool hasEmptyInputs = false, hasDuplicateInputs = false;
-    uint32_t maxInputLength = 0;
+    uint32_t overallSequenceLength = 0; // the resulting sequence length across all inputs.
     for (size_t i = 0; i < sequence.size(); ++i)
     {
         if (sequence[i]->m_numberOfSamples == 0)
@@ -418,7 +443,14 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             hasEmptyInputs = true;
         }
 
-        if (checkExpectedAsMax && sequence[i]->m_numberOfSamples > expectedRowCount)
+        bool definesSequenceLength = (m_useMaximumAsSequenceLength || m_streamDescriptors[i].m_definesMbSize);
+        
+        if (!definesSequenceLength)
+            continue;
+
+        overallSequenceLength = max(sequence[i]->m_numberOfSamples, overallSequenceLength);
+
+        if (sequence[i]->m_numberOfSamples > expectedRowCount)
         {
             hasDuplicateInputs = true;
             if (ShouldWarn())
@@ -426,11 +458,11 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
                 fprintf(stderr,
                     "WARNING: Input ('%ls') contains more samples than expected"
                     " (%u vs. %" PRIu64 ") for sequence (id = %" PRIu64 ") %ls.\n",
-                    m_streams[i].m_name.c_str(), sequence[i]->m_numberOfSamples, expectedRowCount,
-                    sequenceDsc.m_key, GetFileInfo().c_str());
+                    m_streams[i].m_name.c_str(), sequence[i]->m_numberOfSamples,
+                    expectedRowCount, sequenceDsc.m_key, GetFileInfo().c_str());
             }
         }
-        maxInputLength = max(sequence[i]->m_numberOfSamples, maxInputLength);
+        
     }
 
     if (hasEmptyInputs)
@@ -443,15 +475,15 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     {
         IncrementNumberOfErrorsOrDie();
     }
-    else if (checkExpectedAsMax && maxInputLength < expectedRowCount)
+    else if (overallSequenceLength < expectedRowCount)
     {
         if (ShouldWarn())
         {
             fprintf(stderr,
-                "WARNING: Maximum per-input number of samples for sequence (id = %" PRIu64 ") %ls"
+                "WARNING: Number of samples for sequence (id = %" PRIu64 ") %ls"
                 " is less than expected (%u vs. %" PRIu64 ").\n",
                 sequenceDsc.m_key,
-                GetFileInfo().c_str(), maxInputLength, expectedRowCount);
+                GetFileInfo().c_str(), overallSequenceLength, expectedRowCount);
         }
         IncrementNumberOfErrorsOrDie();
     }
@@ -1289,6 +1321,12 @@ void TextParser<ElemType>::SetNumRetries(unsigned int numRetries)
 }
 
 template <class ElemType>
+void TextParser<ElemType>::SetCacheIndex(bool value)
+{
+    m_cacheIndex = value;
+}
+
+template <class ElemType>
 std::wstring TextParser<ElemType>::GetFileInfo()
 {
     std::wstringstream info;
@@ -1299,7 +1337,7 @@ std::wstring TextParser<ElemType>::GetFileInfo()
 template <class ElemType>
 bool TextParser<ElemType>::GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo& r)
 {
-    return DataDeserializerBase::GetSequenceInfoByKey(m_indexer->GetIndex(), key, r);
+    return DataDeserializerBase::GetSequenceInfoByKey(*m_index, key, r);
 }
 
 template class TextParser<float>;

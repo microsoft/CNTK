@@ -7,7 +7,6 @@
 
 #include "DataDeserializerBase.h"
 #include "BinaryConfigHelper.h"
-#include "CorpusDescriptor.h"
 #include "BinaryDataChunk.h"
 #include "BinaryDataDeserializer.h"
 
@@ -78,6 +77,9 @@ private:
 };
 
 typedef unique_ptr<ChunkTable> ChunkTablePtr;
+
+class CorpusDescriptor;
+typedef std::shared_ptr<CorpusDescriptor> CorpusDescriptorPtr;
 
 // TODO: more details when tracing warnings 
 class BinaryChunkDeserializer : public DataDeserializerBase {

@@ -7,9 +7,10 @@
 
 #include "DataDeserializerBase.h"
 #include "BinaryConfigHelper.h"
-#include "CorpusDescriptor.h"
 #include "BinaryDataChunk.h"
 #include "FileHelper.h"
+#include "Reader.h"
+
 
 namespace CNTK {
 

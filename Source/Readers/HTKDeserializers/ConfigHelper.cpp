@@ -431,4 +431,9 @@ void ConfigHelper::ExpandDotDotDot(string& featPath, const string& scpPath, stri
         featPath = featPath.substr(0, pos) + scpDirCached + featPath.substr(pos + 3);
 }
 
+bool ConfigHelper::GetCacheIndex() const
+{
+    return m_config(L"cacheIndex", false);
+}
+
 }

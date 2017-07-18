@@ -146,9 +146,6 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
                     key.c_str(),
                     numberOfFrames);
 
-            if (!m_corpus->IsIncluded(key))
-                continue;
-
             totalNumberOfFrames += numberOfFrames;
             size_t id = m_corpus->KeyToId(key);
             description.SetId(id);

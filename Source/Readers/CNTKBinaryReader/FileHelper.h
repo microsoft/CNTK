@@ -4,8 +4,6 @@
 //
 
 #pragma once
-#ifndef _CNTKBINARYFILEHELPER_
-#define _CNTKBINARYFILEHELPER_
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
@@ -22,10 +20,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif
-#include <errno.h>
-#include <stdint.h>
-#include <assert.h>
-#include "Basics.h"
+#include "fileutil.h"
 
 namespace CNTK {
 
@@ -120,4 +115,3 @@ private:
 };
 
 }
-#endif

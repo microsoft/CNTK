@@ -1745,6 +1745,9 @@ Test module "ReaderTests" has passed with:
       16 assertions out of 16 passed
 
     Test case "ReaderLibTests/DefaultCorpusDescriptor" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "ReaderLibTests/CorpusDescriptorHashing" has passed with:
       2 assertions out of 2 passed
 
     Test case "ReaderLibTests/NumericCorpusDescriptor" has passed with:
@@ -1752,9 +1755,6 @@ Test module "ReaderTests" has passed with:
 
     Test case "ReaderLibTests/LiteralCorpusDescriptor" has passed with:
       2 assertions out of 2 passed
-
-    Test case "ReaderLibTests/CorpusDescriptorFromFile" has passed with:
-      6 assertions out of 6 passed
 
     Test case "ReaderLibTests/LiteralCorpusDescriptorWithHash" has passed with:
       2 assertions out of 2 passed
@@ -1767,18 +1767,6 @@ Test module "ReaderTests" has passed with:
 
     Test case "ReaderLibTests/CheckNoDegenerateMinibatches" has passed with:
       592 assertions out of 592 passed
-
-    Test case "ReaderLibTests/MemoryBufferWithoutCompleteLines" has passed with:
-      42 assertions out of 42 passed
-
-    Test case "ReaderLibTests/MemoryBufferWithCompleteLines" has passed with:
-      45 assertions out of 45 passed
-
-    Test case "ReaderLibTests/MemoryBufferWithoutLastCR" has passed with:
-      13 assertions out of 13 passed
-
-    Test case "ReaderLibTests/MemoryBufferFullLineWithoutLastCR" has passed with:
-      22 assertions out of 22 passed
 
   Test suite "PackerTests" has passed with:
     8 test cases out of 8 passed
@@ -1810,3 +1798,58 @@ Test module "ReaderTests" has passed with:
 
     Test case "PackerTests/TestTruncatedBpttPacker" has passed with:
       1 assertion out of 1 passed
+
+  Test suite "BufferedFileReaderTests" has passed with:
+    4 test cases out of 4 passed
+    37207 assertions out of 37207 passed
+
+    Test case "BufferedFileReaderTests/Test_peek_and_pop" has passed with:
+      16480 assertions out of 16480 passed
+
+    Test case "BufferedFileReaderTests/Test_get_next_char" has passed with:
+      16480 assertions out of 16480 passed
+
+    Test case "BufferedFileReaderTests/Test_line_skipping" has passed with:
+      2948 assertions out of 2948 passed
+
+    Test case "BufferedFileReaderTests/Test_line_reading" has passed with:
+      1299 assertions out of 1299 passed
+
+  Test suite "TextInputIndexBuilderTests" has passed with:
+    12 test cases out of 12 passed
+    4196443 assertions out of 4196443 passed
+
+    Test case "TextInputIndexBuilderTests/Index_exceptions" has passed with:
+      8 assertions out of 8 passed
+
+    Test case "TextInputIndexBuilderTests/Index_single_line_input" has passed with:
+      464 assertions out of 464 passed
+
+    Test case "TextInputIndexBuilderTests/Index_with_different_buffer_sizes" has passed with:
+      171 assertions out of 171 passed
+
+    Test case "TextInputIndexBuilderTests/Index_with_different_chunk_sizes" has passed with:
+      279 assertions out of 279 passed
+
+    Test case "TextInputIndexBuilderTests/Index_with_non_empty_main_stream_1" has passed with:
+      534 assertions out of 534 passed
+
+    Test case "TextInputIndexBuilderTests/Index_with_non_empty_main_stream_2" has passed with:
+      136 assertions out of 136 passed
+
+    Test case "TextInputIndexBuilderTests/Index_with_non_numeric_sequence_ids" has passed with:
+      55 assertions out of 55 passed
+
+    Test case "TextInputIndexBuilderTests/Index_with_multi_line_sequences" has passed with:
+      139 assertions out of 139 passed
+
+    Test case "TextInputIndexBuilderTests/Index_non_primary" has passed with:
+      28 assertions out of 28 passed
+
+    Test case "TextInputIndexBuilderTests/Index_with_caching" has passed with:
+      20 assertions out of 20 passed
+
+    Test case "TextInputIndexBuilderTests/Index_64MB_with_caching_check_perf" has passed with:
+      4194609 assertions out of 4194609 passed
+
+    Test case "TextInputIndexBuilderTests/Index_1GB_with_caching_check_perf" has passed

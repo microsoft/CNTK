@@ -1117,7 +1117,6 @@ stream_defs = [
 
 @pytest.mark.parametrize("input_pair", zip(input_files, stream_defs))
 def test_compare_cbf_and_ctf(input_pair, device_id, tmpdir):
-
     try:
         import ctf2bin
     except ImportError:
@@ -1325,3 +1324,43 @@ def test_user_deserializer_sequence_mode():
     # Randomized
     mbs = MinibatchSource([d], randomize=True, max_sweeps=3, randomization_window_in_chunks=5)
     run_minibatch_source(mbs, num_chunks=15, num_sequences_per_value=3)
+
+def test_index_caching(tmpdir):
+    import os, time, glob
+    MB = 1 << 20
+    data = MBDATA_DENSE_1
+    while(len(data) < 64 * MB):
+        data += data
+
+    tmpfile = _write_data(tmpdir, data)
+    streams = stream_defs[0]
+
+    cpu=C.device.cpu()
+
+    cache_files = glob.glob(str(tmpdir + '/*.cache'))
+    for cache_file in cache_files:
+        os.remove(cache_file)
+
+
+    config = CTFDeserializer(tmpfile, streams)
+    config['cacheIndex'] = C.cntk_py.DictionaryValue(True)
+
+    start = time.time()
+    MinibatchSource(config, randomize=False).next_minibatch(1, device=cpu)
+    end = time.time()
+
+    timeWithoutCache = end - start
+
+    time.sleep(5)
+    
+    cache_files = glob.glob(str(tmpdir + '/*.cache'))
+    assert len(cache_files) == 1
+
+
+    start = time.time()
+    MinibatchSource(config, randomize=False).next_minibatch(1, device=cpu)
+    end = time.time()
+
+    timeWithCache = end - start
+
+    assert timeWithCache < timeWithoutCache

@@ -9,7 +9,7 @@
 
 namespace CNTK {
 
-struct Index;
+class Index;
 
 // Base class for data deserializers.
 // Has a default implementation for a subset of methods.

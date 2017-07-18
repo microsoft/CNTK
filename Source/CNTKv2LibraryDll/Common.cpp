@@ -16,6 +16,7 @@
 #include "Globals.h"
 #include "PerformanceProfiler.h"
 #include "MPIWrapper.h"
+#include "EnvironmentUtil.h"
 #include "Basics.h"
 #include "ProgressTracing.h"
 #include "buildinfo.h"
@@ -94,7 +95,7 @@ namespace CNTK
 
             static size_t numWorkers = 1, rank = 0;
             static bool initialized = false;
-            if (MPIWrapper::GetTotalNumberOfMPINodes() > 1 && !initialized) 
+            if (EnvironmentUtil::GetTotalNumberOfMPINodes() > 1 && !initialized)
             {
                 DistributedCommunicatorPtr communicator = MPICommunicator();
                 numWorkers = communicator->Workers().size();

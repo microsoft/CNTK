@@ -85,16 +85,22 @@
     <ClInclude Include="TransformBase.h">
       <Filter>Transformers</Filter>
     </ClInclude>
-    <ClInclude Include="Indexer.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
     <ClInclude Include="ReaderUtil.h">
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="ReaderConstants.h">
       <Filter>Utils</Filter>
     </ClInclude>
-    <ClInclude Include="MemoryBuffer.h">
+    <ClInclude Include="Index.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="IndexBuilder.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="BufferedFileReader.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="FileWrapper.h">
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="LocalTimelineRandomizerBase.h">
@@ -144,16 +150,19 @@
     <ClCompile Include="ReaderBase.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
-    <ClCompile Include="Indexer.cpp">
-      <Filter>Utils</Filter>
-    </ClCompile>
     <ClCompile Include="ReaderUtil.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="DataDeserializerBase.cpp">
       <Filter>Deserializers</Filter>
     </ClCompile>
-    <ClCompile Include="MemoryBuffer.cpp">
+    <ClCompile Include="Index.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="IndexBuilder.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="BufferedFileReader.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="LocalTimelineRandomizerBase.cpp">

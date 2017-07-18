@@ -9,7 +9,6 @@
 #include <memory>
 #include <functional>
 #include "Sequences.h"
-#include "TensorShape.h"
 #include "ReaderConstants.h"
 #include "DataDeserializer.h"
 
@@ -22,7 +21,6 @@ typedef GPUSPARSE_INDEX_TYPE IndexType;
 using MSR_CNTK::MBLayout;
 using MSR_CNTK::MBLayoutPtr;
 
-typedef std::shared_ptr<MSR_CNTK::TensorShape> TensorShapePtr;
 
 // Configuration for the current epoch.
 // Each time the epoch is started CNTK should provide the configuration to the reader using StartEpoch method
