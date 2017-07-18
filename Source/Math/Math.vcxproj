@@ -98,6 +98,7 @@
       <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"
       if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."
       if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetPath)" "$(TargetDir).."
+      if "$(IsUWP)"=="true" xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(TargetDir).."
       </Command>
     </PostBuildEvent>
     <CudaCompile>
@@ -138,6 +139,7 @@
       <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"
         if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."
         if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetPath)" "$(TargetDir).."
+        if "$(IsUWP)"=="true" xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(TargetDir).."
       </Command>
     </PostBuildEvent>
     <CudaCompile>
