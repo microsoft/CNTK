@@ -336,7 +336,7 @@ namespace CNTK
 
     void CompositeFunction::CopyState(const CompositeFunction& source)
     {
-        // Collect a vector of stateful funciton uids using a pre-order traversal of a function graphs.
+        // Collect a vector of stateful function uids using a pre-order traversal of a function graphs.
         auto collectStatefulFunctionUIDs = [](const Function& function) -> vector<wstring> {
             vector<wstring> uids;
             PreorderTraverseFunctions(function.RootFunction(), [&uids](const FunctionPtr& funcPtr) {
@@ -795,8 +795,10 @@ namespace CNTK
                 }
                 case PrimitiveOpType::ROIPooling:
                 {
+                    PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
                     auto roiOutputShape = functionConfig[PrimitiveFunction::AttributeNameROIOutputShape].Value<NDShape>();
-                    computationNodePtr = New<ROIPoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(roiOutputShape));
+                    auto spatialScale = functionConfig[PrimitiveFunction::AttributeNameSpatialScale].Value<double>();
+                    computationNodePtr = New<ROIPoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(roiOutputShape), spatialScale);
                     break;
                 }
                 case PrimitiveOpType::Pooling:
@@ -901,7 +903,7 @@ namespace CNTK
                     auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
                     NDShape outputMapCount, kernelShape;
                     std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape(), transpose);
-                    NDShape outputShape = NDShape::Unknown;
+                    NDShape outputShape = NDShape::Unknown();
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
                         outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                     auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();

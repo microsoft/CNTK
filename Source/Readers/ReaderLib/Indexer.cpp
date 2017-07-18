@@ -12,7 +12,7 @@
 
 using std::string;
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 Indexer::Indexer(FILE* file, bool primary, bool skipSequenceIds, char streamPrefix, size_t chunkSize, const std::string& mainStream, size_t bufferSize) :
     m_streamPrefix(streamPrefix),
@@ -293,4 +293,4 @@ void Index::MapSequenceKeyToLocation()
     });
 }
 
-}}}
+}

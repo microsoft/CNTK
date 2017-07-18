@@ -677,3 +677,30 @@ def test_udf_input_values_no_sharing():
 
     grad_value, result = m4.grad({i : np.asarray([2], dtype=np.float32)}, outputs=[m4], wrt=[w, i])
     assert np.array_equal(result, [[8,  8,  8,  8,  8,  8,  8,  8]])
+    
+class FaultyUserFunc(UserFunction):
+    def __init__(self, arg, name='faulty'):
+        super(FaultyUserFunc, self).__init__([arg], name=name)
+
+    def forward(self, arguments, device=None, outputs_to_retain=None):
+        sigmoid_x = 1 / (1 + np.exp(-arguments[0]))
+        return sigmoid_x, sigmoid_x
+
+    def backward(self, state, root_gradients, variables):
+        sigmoid_x = state
+        return root_gradients * sigmoid_x * (1 - sigmoid_x)
+
+    def infer_outputs(self):
+        print(self.not_existing_attr) # this should cause exception instead of deadlock
+        return [output_variable(self.inputs[0].shape, self.inputs[0].dtype,
+            self.inputs[0].dynamic_axes)]
+
+    @staticmethod
+    def deserialize(inputs, name, state):
+        return MySigmoid(inputs[0], name)
+
+def test_no_deadlock_init_outputs():
+    x = C.input_variable((3, C.FreeDimension, 2), name='x')
+    from cntk import user_function
+    with pytest.raises(RuntimeError):
+        s = user_function(FaultyUserFunc(x))

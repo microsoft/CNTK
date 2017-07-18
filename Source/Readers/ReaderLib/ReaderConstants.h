@@ -5,7 +5,7 @@
 
 #pragma once
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     static size_t const g_infinity = SIZE_MAX;
 
@@ -19,4 +19,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     const static char g_rowDelimiter = '\n';
 
-}}}
+    const static wchar_t* g_minibatchSourcePosition = L"minibatchSourcePosition";
+}

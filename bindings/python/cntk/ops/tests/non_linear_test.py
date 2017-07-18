@@ -208,7 +208,7 @@ def test_changing_dropout_rate():
         resulted_non_zeros = np.count_nonzero(forward[dropout_node.output])
         if (dropout_rate == 0):
             assert resulted_non_zeros == value.size
-        
+
         assert np.isclose((1-dropout_rate), resulted_non_zeros* 1.0/ value.size, atol=0.01)
 
 def test_dropout_random_mask_is_recomputed_on_forward_pass():
@@ -254,7 +254,7 @@ def test_op_dropout_with_explicit_seed(device_id, precision):
     cloned_nodes = [x.clone('clone') for x in dropout_nodes]
 
     value.shape = (1, 1) + value.shape
-    
+
     results = []
     for node in dropout_nodes + cloned_nodes:
         forward_input = {node.inputs[0]: value}
@@ -265,7 +265,7 @@ def test_op_dropout_with_explicit_seed(device_id, precision):
                                       backward_pass=True)
 
         results.append(forward[node.output])
-    
+
     assert np.allclose(results[0], results[1])
     assert not np.allclose(results[0], results[2])
     assert not np.allclose(results[0], results[3])
@@ -393,6 +393,25 @@ def test_op_elu(operand, device_id, precision):
                    expected_forward, expected_backward)
 
 @pytest.mark.parametrize("operand", TENSORS)
+def test_op_selu(operand, device_id, precision):
+    scale = 1.0507009873554804934193349852946
+    scale_alpha = 1.7580993408473768599402175208123
+    selu_f  = np.vectorize(lambda x: scale_alpha * (np.exp(x) - 1.0) if x < 0 else scale * x)
+    selu_b  = np.vectorize(lambda x: scale_alpha * np.exp(x) if x < 0 else scale)
+
+    t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
+
+    expected_forward = [selu_f(t)]
+    expected_backward = {
+        'arg': [selu_b(t)]
+    }
+
+    from cntk import selu
+
+    _test_unary_op(precision, device_id, selu, operand,
+                   expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", TENSORS)
 def test_op_leaky_relu(operand, device_id, precision):
     leaky_relu_f  = np.vectorize(lambda x: 0.01 * x if x < 0 else x)
     leaky_relu_b  = np.vectorize(lambda x: 0.01 if x < 0 else 1.0)
@@ -448,10 +467,12 @@ def test_op_softplus(operand, device_id, precision):
     _test_unary_op(precision, device_id, softplus, operand,
                    expected_forward, expected_backward)
 
-SAMPLES = [  # 2 samples having 4 classes
+SAMPLES = [  # 5 samples having 4 classes
     [1, 1, 2, 3],
     [0, 0, 0, 0],
-    [3, 3, 4, 4]
+    [3, 3, 4, 4],
+    [1000, 1000, 1000, 1000],
+    [10000, 10000, 10000, 10000]
 ]
 
 
@@ -488,6 +509,30 @@ def test_op_softmax(sample, device_id, precision):
     _test_unary_op(precision, device_id, softmax, sample,
                    expected_forward, expected_backward)
 
+
+SAMPLES_AXIS = [  # 4 samples having 4 classes
+    [[1], [1], [1], [1]],
+    [[0], [0], [0], [0]],
+    [[1000], [1000], [1000], [1000]],
+    [[10000], [10000], [10000], [10000]]
+]
+
+
+@pytest.mark.parametrize("sample", SAMPLES_AXIS)
+def test_op_softmax_axis(sample, device_id, precision):
+    t = AA(sample, dtype=PRECISION_TO_TYPE[precision])
+    assert len(t.shape) == 2
+
+    x_max = t - t.max()
+    exp_x = np.exp(x_max)
+    forward = exp_x / np.sum(exp_x)
+
+    expected_forward = AA([forward])
+
+    from cntk import softmax
+    result = softmax(sample, axis=0).eval()
+
+    assert np.array_equal(result, expected_forward[0])
 
 @pytest.mark.parametrize("sample", SAMPLES)
 def test_op_hardmax(sample, device_id, precision):
@@ -541,7 +586,7 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
 
     with pytest.warns(Warning):
         op = batch_normalization(a, scale, bias, run_mean, run_variance, False,
-            #no running_count here, 
+            #no running_count here,
             epsilon=epsilon, use_cudnn_engine=use_cudnn)
 
     op_node = batch_normalization(a, scale, bias, run_mean, run_variance, running_count=run_count, spatial=False,
@@ -576,7 +621,7 @@ def test_op_pow(base, exponent, device_id, precision):
                     base, exponent,
                     AA([expected_forward]), expected_backward)
 
-NEGATIVE_TENSOR_PAIRS = [                    
+NEGATIVE_TENSOR_PAIRS = [
     ([-1., -2., -3., -4.], [2., -3., 3., -2.]),
 ]
 

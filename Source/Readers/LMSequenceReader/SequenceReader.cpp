@@ -182,7 +182,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                 // check for end of sequence marker
                 if (!bSentenceStart && (EqualCI(labelValue, m_labelInfo[labelInfoIn].endSequence) || ((label - 1) % m_mbSize == 0)))
                 {
-                    // ignore those cases where $</s> is put in the begining, because those are used for initialization purpose
+                    // ignore those cases where $</s> is put in the beginning, because those are used for initialization purpose
                     spos.flags |= seqFlagStopLabel;
                     sequencesRead++;
 
@@ -276,7 +276,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                 int jEnd = (int) m_labelIdData.size() - 1;
                 LabelIdType index;
                 if (CheckIdFromLabel(labelInfo.endSequence, labelInfo, index) == false)
-                    RuntimeError("cannot find sentence begining label");
+                    RuntimeError("cannot find sentence beginning label");
 
                 if (m_labelIdData[jEnd] != index)
                     // for language model, the first word/letter has to be <s>
@@ -966,7 +966,7 @@ bool SequenceReader<ElemType>::SentenceEnd()
     {
         LabelIdType index;
         if (CheckIdFromLabel(labelInfo.endSequence, labelInfo, index) == false)
-            RuntimeError("cannot find sentence begining label");
+            RuntimeError("cannot find sentence beginning label");
 
         if (m_labelIdData[jEnd] == index)
             return true;
@@ -979,7 +979,7 @@ bool SequenceReader<ElemType>::SentenceEnd()
 /// the output label is a [4 x T] matrix, where T is the number of words observed
 /// the first row is the word index
 /// the second row is the class id of this word
-/// the third row is begining index of the class for this word
+/// the third row is beginning index of the class for this word
 /// the fourth row is the ending index + 1 of the class for this word
 template <class ElemType>
 void SequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matrices,
@@ -1023,8 +1023,8 @@ void SequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matrices,
             if (m_classSize > 0)
             {
                 labels.SetValue(1, j, (ElemType) clsidx);
-                // save the [begining ending_indx) of the class
-                labels.SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
+                // save the [beginning ending_indx) of the class
+                labels.SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // beginning index of the class
                 labels.SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
             }
         }
@@ -2081,8 +2081,8 @@ bool BatchSequenceReader<ElemType>::DataEnd()
 // the following comments are obsolete now
 // 1st row is the word id
 // 2nd row is the class id of this word
-// 3rd and 4th rows are the begining and ending indices of this class
-// notice that indices are defined as follows [begining ending_indx) of the class
+// 3rd and 4th rows are the beginning and ending indices of this class
+// notice that indices are defined as follows [beginning ending_indx) of the class
 // i.e., the ending_index is 1 plus of the true ending index
 // This is a subroutine to GetMinibatch() and is only called from there.
 template <class ElemType>
@@ -2134,7 +2134,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matric
             {
                 labels.SetValue(1, j, (ElemType) clsidx);
 
-                // save the [begining ending_indx) of the class
+                // save the [beginning ending_indx) of the class
                 size_t lft = (size_t) (*m_classInfoLocal)(0, clsidx);
                 size_t rgt = (size_t) (*m_classInfoLocal)(1, clsidx);
                 if (wrd < lft || lft > rgt || wrd >= rgt)
@@ -2142,7 +2142,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matric
                     LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n",
                                (int) wrd, (int) lft, (int) rgt, (int) lft, (int) wrd, (int) rgt);
                 }
-                labels.SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // begining index of the class
+                labels.SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); // beginning index of the class
                 labels.SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); // end index of the class
             }
         }

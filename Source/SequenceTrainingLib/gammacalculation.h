@@ -290,7 +290,7 @@ public:
         size_t mbsize = numCols / numParallelSequences;
 
         // Prepare data structures from the reader
-        // the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+        // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
         std::vector<size_t> uttBeginFrame;
         // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
         std::vector<size_t> uttFrameNum;

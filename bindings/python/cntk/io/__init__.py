@@ -16,6 +16,7 @@ from cntk.internal import typemap, sanitize_dtype_cntk, is_string
 from cntk.device import use_default_device
 from cntk.logging import TraceLevel, get_trace_level
 from cntk.variables import Record
+from cntk.internal.utils import _py_dict_to_cntk_dict
 import cntk.io.transforms
 
 import numpy as np
@@ -127,7 +128,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
           **Important:**
           Click :cntkwiki:`here <BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`
           for a description of input and label samples.
-        max_sweeps (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of of sweeps over
+        max_sweeps (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of sweeps over
           the input dataset After this number has been reached, the reader returns empty minibatches on
           subsequent calls to func:`next_minibatch`. `max_samples` and `max_sweeps` are mutually exclusive,
           an exception will be raised if both have non-default values.
@@ -199,6 +200,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         # transplant into this class instance
         self.__dict__ = source.__dict__
         self._streams = None
+        self._last_mb_data = None
 
     def stream_infos(self):
         '''
@@ -281,6 +283,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
              be a mapping of :class:`~cntk.variables.Variable` to class:`MinibatchData`.
              When the maximum number of epochs/samples is exhausted, the return value is an empty dict.
         '''
+        if self._last_mb_data is not None:
+            self._last_mb_data.clear()
+
         if device is None:
             device = use_default_device()
 
@@ -302,16 +307,18 @@ class MinibatchSource(cntk_py.MinibatchSource):
         if not input_map:
             return mb
 
-        return {key: mb[value] for (key, value) in input_map.items()}
+        # We copy minibatch data here,
+        # we need to make sure it is cleaned when next_minibatch
+        # is called next time.       
+        self._last_mb_data = {key: mb[value] for (key, value) in input_map.items()}
+        return self._last_mb_data
 
     def get_checkpoint_state(self):
         '''
         Gets the checkpoint state of the MinibatchSource.
 
         Returns:
-            cntk.cntk_py.Dictionary:
-            A :class:`~cntk.cntk_py.Dictionary` that has the checkpoint state
-            of the MinibatchSource
+            A dict that has the checkpoint state of the MinibatchSource
         '''
         return super(MinibatchSource, self).get_checkpoint_state()
 
@@ -320,9 +327,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Restores the MinibatchSource state from the specified checkpoint.
 
         Args:
-            checkpoint (:class:`~cntk.cntk_py.Dictionary`): checkpoint to restore from
+            checkpoint (dict): checkpoint to restore from
         '''
-        super(MinibatchSource, self).restore_from_checkpoint(checkpoint)
+        super(MinibatchSource, self).restore_from_checkpoint(_py_dict_to_cntk_dict(checkpoint))
 
     @property
     def is_distributed(self):
@@ -419,6 +426,9 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
             num_samples (int): number of samples to return
             number_of_workers (int): number of workers in total
             worker_rank (int): worker for which the data is to be returned
+            device (`DeviceDescriptor`, defaults to `None`): the device
+             descriptor that contains the type and id of the device on which the
+             computation is performed. If `None`, the default device is used.
 
         Returns:
             mapping of :class:`StreamInformation` to :class:`MinibatchData`
@@ -564,7 +574,7 @@ class MinibatchSourceFromData(UserMinibatchSource):
         data_streams: name-value pairs
         max_samples (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of samples
           the reader can produce. If inputs are sequences, and the different streams have different
-          lengths, then each sequence counts with the the maximum length.
+          lengths, then each sequence counts with the maximum length.
           After this number has been reached, the reader
           returns empty minibatches on subsequent calls to :meth:`next_minibatch`.
           **Important:**

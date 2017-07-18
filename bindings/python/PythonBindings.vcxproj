@@ -145,7 +145,6 @@
     <None Include="cntk\tests\__init__.py" />
     <None Include="README.md" />
     <None Include="setup.py" />
-    <None Include="swig_install.sh" />
     <None Include="test.bat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -31,7 +31,7 @@ def test_cntk_202_language_understanding_trainerror(nb):
            pass
         except KeyError:
            pass
-    expectedMetrics = [0.4, 0.3, 0.4, 0.4]
+    expectedMetrics = [0.45, 0.45, 0.37, 0.3]
     # TODO tighten tolerances
     assert numpy.allclose(expectedMetrics, metrics, atol=0.15)
 

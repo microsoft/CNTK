@@ -11,7 +11,7 @@
 #include "MLFUtils.h"
 #include "MLFIndexer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Class represents an MLF deserializer.
 // Provides a set of chunks/sequences to the upper layers.
@@ -25,13 +25,13 @@ public:
     MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, const std::wstring& streamName);
 
     // Retrieves sequence description by its key. Used for deserializers that are not in "primary"/"driving" mode.
-    bool GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& s) override;
+    bool GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo& s) override;
 
     // Gets description of all chunks.
-    virtual ChunkDescriptions GetChunkDescriptions() override;
+    virtual std::vector<ChunkInfo> ChunkInfos() override;
 
     // Get sequence descriptions of a particular chunk.
-    virtual void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& s) override;
+    virtual void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& s) override;
 
     // Retrieves a chunk with data.
     virtual ChunkPtr GetChunk(ChunkIdType) override;
@@ -42,7 +42,7 @@ private:
     class FrameChunk;
 
     // Initializes chunk descriptions.
-    void InitializeChunkDescriptions(CorpusDescriptorPtr corpus, const ConfigHelper& config, const std::wstring& stateListPath);
+    void InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config, const std::wstring& stateListPath);
 
     // Initializes a single stream this deserializer exposes.
     void InitializeStream(const std::wstring& name);
@@ -51,11 +51,11 @@ private:
     // avoid memory copy.
     void InitializeReadOnlyArrayOfLabels();
 
-    // Sorted vector that maps KeyType.m_sequence into an utterance ID (or type max() if the key is not assigned).
+    // Sorted vector that maps SequenceKey.m_sequence into an utterance ID (or type max() if the key is not assigned).
     std::vector<std::tuple<size_t, ChunkIdType, uint32_t>> m_keyToChunkLocation;
 
     // Type of the data this serializer provides.
-    ElementType m_elementType;
+    DataType m_elementType;
 
     // Array of available categories.
     // We do no allocate data for all input sequences, only returning a pointer to existing category.
@@ -85,4 +85,4 @@ private:
     std::vector<std::wstring> m_mlfFiles;
 };
 
-}}}
+}

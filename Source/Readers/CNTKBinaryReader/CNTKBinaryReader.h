@@ -8,7 +8,7 @@
 #include "ReaderBase.h"
 #include "BinaryConfigHelper.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Implementation of the binary reader.
 // Effectively the class represents a factory for connecting the packer,
@@ -19,4 +19,4 @@ public:
     CNTKBinaryReader(const ConfigParameters& parameters);
 };
 
-}}}
+}

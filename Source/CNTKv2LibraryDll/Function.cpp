@@ -54,7 +54,13 @@ namespace CNTK
 
     std::vector<Variable>& Function::InitOutputs()
     {
+        if (std::this_thread::get_id() == m_outputInitializingByThreadId)
+        {
+            // std::call_once may deadlock when re-entering from the same thread that's running the lambda, early exit
+            RuntimeError("Re-enter Function::InitOutputs() from Function::InitOutputs(), outputs are not initialized yet");
+        }
         std::call_once(m_outputsInitFlag, [this]() {
+            m_outputInitializingByThreadId = std::this_thread::get_id();
             std::vector<Variable> outputs;
             outputs.reserve(Function::MaxNumOutputs);
             InferOutputs(outputs);
@@ -76,6 +82,7 @@ namespace CNTK
                     m_outputs.back().m_outputComposite = nullptr;
                 }
             }
+            m_outputInitializingByThreadId = std::thread::id();
         });
 
         return m_outputs;
@@ -679,10 +686,17 @@ namespace CNTK
                                 break;
                             case ParameterCloningMethod::Freeze:
                                 if (cloneeInput.IsParameter())
-                                    clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
+                                {
+                                    //parameter values can be updated so we need our own copy
+                                    const auto& ndav = Parameter(cloneeInput).Value();
+                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name());
+                                }
                                 else
-                                    clonedInput = Constant(Constant(cloneeInput).Value(), cloneeInput.Name());
-
+                                {
+                                    //constants can also be updated via non-sgd means
+                                    const auto& ndav = Constant(cloneeInput).Value();
+                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name());
+                                }
                                 leafVariablesCloneMap[cloneeInput] = clonedInput;
                                 break;
                             default:
@@ -1596,11 +1610,18 @@ namespace CNTK
             name);
     }
 
-    FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name/* = L""*/)
+    FunctionPtr ROIPooling(const Variable& operand, 
+                           const Variable& rois, 
+                           PoolingType poolingType, 
+                           const NDShape& roiOutputShape, 
+                           double spatialScale, 
+                           const std::wstring& name/* = L""*/)
     {
         auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)poolingType;
         additionalProperties[PrimitiveFunction::AttributeNameROIOutputShape] = roiOutputShape;
-        return BinaryOp(PrimitiveOpType::ROIPooling, convolutionMap, rois, std::move(additionalProperties), name);
+        additionalProperties[PrimitiveFunction::AttributeNameSpatialScale] = spatialScale;
+        return BinaryOp(PrimitiveOpType::ROIPooling, operand, rois, std::move(additionalProperties), name);
     }
 
     FunctionPtr Pooling(const Variable& operand,
@@ -1732,6 +1753,17 @@ namespace CNTK
     FunctionPtr ELU(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
+    }
+
+    FunctionPtr SELU(const Variable& operand, double scale, double alpha, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero,
+            ElementTimes(Constant::Scalar(operand.GetDataType(), alpha), ELU(operandPlaceholder)),
+            operandPlaceholder);
+        result = ElementTimes(Constant::Scalar(operand.GetDataType(), scale), result);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"SELU", name);
     }
 
     FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)

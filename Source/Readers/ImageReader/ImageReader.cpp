@@ -15,7 +15,9 @@
 #include <omp.h>
 #include "TransformController.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 // TODO: This class should go away eventually.
 // TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
@@ -58,7 +60,7 @@ ImageReader::ImageReader(const ConfigParameters& config)
     }
 
     // Create transformations for a single feature stream.
-    std::wstring featureName = m_streams[configHelper.GetFeatureStreamId()]->m_name;
+    std::wstring featureName = m_streams[configHelper.GetFeatureStreamId()].m_name;
     ConfigParameters featureStream = config(featureName);
 
     std::vector<Transformation> transformations;
@@ -86,10 +88,10 @@ ImageReader::ImageReader(const ConfigParameters& config)
         useLocalTimeline);
 }
 
-std::vector<StreamDescriptionPtr> ImageReader::GetStreamDescriptions()
+std::vector<StreamInformation> ImageReader::GetStreamDescriptions()
 {
     assert(!m_streams.empty());
     return m_streams;
 }
 
-} } }
+}

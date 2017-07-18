@@ -232,6 +232,7 @@ class Trainer(cntk_py.Trainer):
 
         Args:
             filename (str): filename to store the checkpoint.
+            external_state (dict): additional external state, default is empty.
         '''
 
         super(Trainer, self).save_checkpoint(filename, _py_dict_to_cntk_dict(external_state))

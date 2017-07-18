@@ -98,7 +98,7 @@ thinking out loud on how we may proceed (high level):
     - let's call them Pager for now (need to change because name has a problem with reading vs. writing)
  - class DataReader
     - outer layer of the new structure
-       - designed to support reading data streams that that have mismatching utterance lengths
+       - designed to support reading data streams that have mismatching utterance lengths
        - there is only one DataReader instance that handles all utterance-data streams (including mismatching lenths)
     - takes a reference to one user-specified sequencer
     - takes ownership of one or more user-supplied pagers

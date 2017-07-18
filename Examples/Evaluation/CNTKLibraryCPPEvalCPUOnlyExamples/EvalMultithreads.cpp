@@ -444,7 +444,7 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
         for (size_t i = 0; i < numSamples; i++)
         {
             fprintf(stderr, "Iteration:%lu, Sample %lu:\n", (unsigned long)t, (unsigned long)i);
-            fprintf(stderr, "Ouput:");
+            fprintf(stderr, "Output:");
             for (size_t j = 0; j < outputDim; j++)
             {
                 fprintf(stderr, "%f ", outputData[dataIndex++]);

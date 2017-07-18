@@ -58,7 +58,7 @@ ASGDHelper<ElemType>* NewASGDHelper(
     bool useAsyncBuffered = true,                                            // Using asynchonous buffer to hide communication cost
     bool isSimulatedModelAveragingSGD = false,                               // Using parameter server-based MA rather than ASGD
     AdjustLearningRateAtBeginning adjusttype =
-    AdjustLearningRateAtBeginning::None,                                     // Adjust learning per minibatches at very begining of training process
+    AdjustLearningRateAtBeginning::None,                                     // Adjust learning per minibatches at very beginning of training process
     double adjustCoef = 0.2,                                                 // see in DecayCoefficient()
     size_t adjustPerMinibatches = 600,                                       //
     int traceLevel = 0,                                                      // log level
