@@ -1305,7 +1305,7 @@ class Function(cntk_py.Function):
          >>> learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(0.1, cntk.UnitType.minibatch))
          >>> progress = criterion.train((X, Y), minibatch_size=25, max_epochs=2, epoch_size=125, parameter_learners=[learner])
          >>> print("%.2f" % progress.epoch_summaries[-1].loss) # get the final epoch's loss value
-         0.76
+         0.68
 
         Returns:
          An object `progress` with `progress.epoch_summaries` and `progress.updates` being the progressions of av loss, av metric, and number of labels
