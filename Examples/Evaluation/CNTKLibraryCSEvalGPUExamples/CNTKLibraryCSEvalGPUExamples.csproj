@@ -48,11 +48,11 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\CNTKLibraryCSEvalCPUOnlyExamples\CntkBitmapExtensions.cs">
-      <Link>CntkBitmapExtensions.cs</Link>
-    </Compile>
     <Compile Include="..\CNTKLibraryCSEvalCPUOnlyExamples\CNTKLibraryCSEvalExamples.cs">
       <Link>CNTKLibraryCSEvalExamples.cs</Link>
+    </Compile>
+    <Compile Include="..\ImageExtension\CNTKImageProcessing.cs">
+      <Link>CNTKImageProcessing.cs</Link>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
