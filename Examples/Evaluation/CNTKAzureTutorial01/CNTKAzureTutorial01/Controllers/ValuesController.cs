@@ -7,6 +7,7 @@ using System.Web.Http;
 using Swashbuckle.Swagger.Annotations;
 
 using CNTK;
+using CNTKImageProcessing;
 using System.Threading.Tasks;
 using System.IO;
 using System.Drawing;
@@ -62,8 +63,6 @@ namespace CNTKAzureTutorial01.Controllers
 
             try
             {
-                List<float> outputs;
-
                 // Load the model.
                 // This example requires the ResNet20_CIFAR10_Python.model model.
                 // The model can be downloaded from <see cref="https://www.cntk.ai/Models/CNTK_Pretrained/ResNet20_CIFAR10_Python.model"/>

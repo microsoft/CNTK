@@ -7,6 +7,7 @@ using System.Web.Http;
 using Swashbuckle.Swagger.Annotations;
 
 using Microsoft.MSR.CNTK.Extensibility.Managed;
+using CNTKImageProcessing;
 using System.Threading.Tasks;
 using System.IO;
 using System.Drawing;
