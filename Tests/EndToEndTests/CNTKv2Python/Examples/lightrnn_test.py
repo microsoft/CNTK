@@ -30,7 +30,7 @@ def run_command(**kwargs):
         command += ['-' + key, str(value)]
     return command
 
-def lightrnn_test(device_id):
+def test_lightrnn(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU')
     expected_valid_error = 7.251514

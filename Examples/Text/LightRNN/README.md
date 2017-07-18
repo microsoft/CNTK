@@ -15,7 +15,7 @@ Recurrent neural networks (RNNs) have achieved state-of-the-art performances in 
 - g++
 
 __For multi gpu version__
-- openmpi or other mpi program
+- mpi program
 - mpi4py
 
 ## Details
