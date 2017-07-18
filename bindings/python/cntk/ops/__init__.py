@@ -24,7 +24,7 @@ TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferre
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
 
 @typemap
-def combine(operands, name=''):
+def combine(*operands, name=''):
     '''
      Create a new Function instance which just combines the outputs of the specified list of
      'operands' Functions such that the 'Outputs' of the new 'Function' are union of the
@@ -49,6 +49,11 @@ def combine(operands, name=''):
         >>> list(forward.values()) # doctest: +SKIP
         [array([[[ 1., -3.,  6.,  2.]]], dtype=float32),
          array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)]
+        >>> x = C.input_variable((4,))
+        >>> _ = C.combine(x, x)
+        >>> _ = C.combine([x, x])
+        >>> _ = C.combine((x, x))
+        >>> _ = C.combine(C.combine(x, x), x)
 
     Args:
         operands (list): list of functions or their variables to combine
@@ -58,9 +63,17 @@ def combine(operands, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import combine
+    if len(operands) == 1 and isinstance(operands[0], (tuple, list)):
+        operands = operands[0]
     if isinstance(operands, tuple):
         operands = list(operands)
-    return combine(operands, name)
+    operands_unfold = []
+    for o in operands:
+        if hasattr(o, 'outputs') and len(o.outputs) > 1:
+            operands_unfold += o.outputs
+        else:
+            operands_unfold += [o]
+    return combine(operands_unfold, name)
 
 @typemap
 def as_block(composite, block_arguments_map, block_op_name, block_instance_name=''):
