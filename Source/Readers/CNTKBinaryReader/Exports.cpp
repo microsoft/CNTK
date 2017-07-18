@@ -13,6 +13,7 @@
 #include "HeapMemoryProvider.h"
 #include "CudaMemoryProvider.h"
 #include "V2Dependencies.h"
+#include "BinaryChunkDeserializer.h"
 
 namespace CNTK {
 
@@ -34,4 +35,25 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 {
     *preader = new ReaderShim<double>(factory);
 }
+
+extern "C" DATAREADER_API bool CreateDeserializer(DataDeserializerPtr& deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool primary)
+{
+    if (corpus && !corpus->IsNumericSequenceKeys())
+        InvalidArgument("Binary deserializer does not support non-numeric sequence keys.");
+
+    if (!primary)
+        // TODO: do we want to support non-primary binary deserializers?
+        InvalidArgument("Binary deserializer can only be used as a primary.");
+    
+    if (type == L"CNTKBinaryFormatDeserializer")
+    {
+        deserializer = make_shared<BinaryChunkDeserializer>(BinaryConfigHelper(deserializerConfig));
+    }
+    else
+        InvalidArgument("Unknown deserializer type '%ls'", type.c_str());
+
+    // Deserializer created.
+    return true;
+}
+
 }
