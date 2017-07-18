@@ -9,8 +9,13 @@ echo Assembling jar in post build step...
 echo The project directory is "%project_dir%"
 echo The test directory is "%test_dir%"
 echo The output directory is "%output_dir%"
-echo The version directory is "%version%"
-echo Whether the build is gpu is %is_gpu%
+echo The version is "%version%"
+if "%is_gpu%" == "true" (
+  echo "The GPU Build"
+) else (
+  echo "The CPU only Build"
+)
+
 
 cd "%project_dir%"
 rem: TODO: add check whether javac/jar exist.
@@ -18,11 +23,11 @@ echo Building java.
 
 if not exist "%project_dir%com\microsoft\CNTK\lib\windows" mkdir "%project_dir%com\microsoft\CNTK\lib\windows"
 
-if %is_gpu%==true (
-	for %%x in (cublas64_80.dll cudart64_80.dll cudnn64_5.dll curand64_80.dll cusparse64_80.dll nvml.dll) do (
-	  copy "%output_dir%/%%x" ".\com\microsoft\CNTK\lib\windows\%%x" 
-	  echo %%x>> .\com\microsoft\CNTK\lib\windows\NATIVE_MANIFEST
-	)
+if "%is_gpu%" == "true" (
+  for %%x in (cublas64_80.dll cudart64_80.dll cudnn64_5.dll curand64_80.dll cusparse64_80.dll nvml.dll) do (
+    copy "%output_dir%/%%x" ".\com\microsoft\CNTK\lib\windows\%%x" 
+    echo %%x>> .\com\microsoft\CNTK\lib\windows\NATIVE_MANIFEST
+  )
 )
 
 for %%x in (libiomp5md.dll mkl_cntk_p.dll Cntk.Math-%version%.dll Cntk.PerformanceProfiler-%version%.dll Cntk.Core-%version%.dll Cntk.Core.JavaBinding-%version%.dll) do (
