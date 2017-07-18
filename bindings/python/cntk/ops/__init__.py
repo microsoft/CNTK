@@ -58,6 +58,8 @@ def combine(operands, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import combine
+    if isinstance(operands, tuple):
+        operands = list(operands)
     return combine(operands, name)
 
 @typemap
