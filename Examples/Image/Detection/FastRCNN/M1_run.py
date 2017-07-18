@@ -518,7 +518,6 @@ if __name__ == '__main__':
         print("Loading existing model from %s" % model_path)
         trained_model = load_model(model_path)
     else:
-        import ipdb;ipdb.set_trace()
         trained_model = train_fast_rcnn()
         trained_model.save(model_path)
         print("Stored trained model at %s" % model_path)

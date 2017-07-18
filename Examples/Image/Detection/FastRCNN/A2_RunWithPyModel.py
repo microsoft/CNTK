@@ -162,12 +162,12 @@ def train_fast_rcnn(debug_output=False, model_path=model_file):
         frcn_output = frcn_predictor(image_input, roi_input, num_neurons, model_path)
         softmaxed = HCT.tree_map.tree_softmax(frcn_output, axis=1, offset=0)
 
-        import ipdb;ipdb.set_trace()
+        #import ipdb;ipdb.set_trace()
         ce = cross_entropy(softmaxed, target)
         error = softmaxed - target
         pe = reduce_sum( error*error)
         frcn_output=softmaxed
-        C.logging.plot(ce, "train_model.pdf");print("plotted!")
+        #C.logging.plot(ce, "train_model.pdf");print("plotted!")
     else:
         frcn_output = frcn_predictor(image_input, roi_input, num_classes, model_path)
         softmaxed = softmax(frcn_output, axis=1)
@@ -176,12 +176,13 @@ def train_fast_rcnn(debug_output=False, model_path=model_file):
         pe = classification_error(frcn_output, label_input, axis=1)
         frcn_output=softmaxed
     if debug_output:
-        plot(frcn_output, os.path.join(abs_path, "Output", "graph_frcn.png"))
+        print("debug_output")
+        #plot(frcn_output, os.path.join(abs_path, "Output", "graph_frcn.png"))
 
     # Set learning parameters
     l2_reg_weight = 0.0005
     lr_per_sample = [0.00001] * 10 + [0.000001] * 5 + [0.0000001]
-    lr_multiplier = .2
+    lr_multiplier = .5
     lr_per_sample = [0.00001*lr_multiplier] * 10 + [0.000001*lr_multiplier] * 5 + [0.0000001*lr_multiplier]
     lr_schedule = learning_rate_schedule(lr_per_sample, unit=UnitType.sample)
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)

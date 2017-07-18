@@ -162,7 +162,7 @@ RUN mkdir -p /usr/local/cudnn/cuda/include && \
     ln -s /usr/local/cuda/lib64/stubs/libnvidia-ml.so /usr/local/cuda/lib64/stubs/libnvidia-ml.so.1
 
 # Build CNTK
-RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
+RUN git clone --depth=1 -b t-makrei/hierClass https://github.com/Microsoft/CNTK.git . && \
     CONFIGURE_OPTS="\
       --with-cuda=/usr/local/cuda \
       --with-gdk-include=/usr/local/cuda/include \
@@ -182,12 +182,19 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
     make -j"$(nproc)" all
 
-RUN cd Examples/Image/DataSets/CIFAR-10 && \
-    python install_cifar10.py && \
-    cd ../../../..
+#RUN cd Examples/Image/DataSets/CIFAR-10 && \
+#    python install_cifar10.py && \
+#    cd ../../../..
 
-RUN cd Examples/Image/DataSets/MNIST && \
-    python install_mnist.py && \
-    cd ../../../..
+#RUN cd Examples/Image/DataSets/MNIST && \
+#    python install_mnist.py && \
+#    cd ../../../..
+
+RUN cd Examples/Image/Detection/FastRCNN && \
+    pip install -r requirements.txt && \
+    cd ../../../.. && \
+    pip install nltk && \
+    python -m nltk.downloader wordnet && \
+    conda install -n cntk-py35 -y opencv scikit-image
 
 ENV PATH=/cntk/build/gpu/release/bin:$PATH PYTHONPATH=/cntk/bindings/python LD_LIBRARY_PATH=/cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
