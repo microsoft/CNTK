@@ -104,7 +104,7 @@ class TensorOpsMixin(object):
                       'the fallback to select to output requires ' \
                       'that only one index is provided. arg: {}, self: {}'.format(
                     arg, self)
-                raise KeyError(msg) from e
+                raise KeyError(msg)
 
         # int or slice: normalize into a tuple of int or tuple of slice
         if not isinstance(arg, tuple): 

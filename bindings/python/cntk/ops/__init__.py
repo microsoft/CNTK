@@ -24,7 +24,7 @@ TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferre
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
 
 @typemap
-def combine(*operands, name=''):
+def combine(*operands, **kw_name):
     '''
      Create a new Function instance which just combines the outputs of the specified list of
      'operands' Functions such that the 'Outputs' of the new 'Function' are union of the
@@ -62,6 +62,8 @@ def combine(*operands, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    name = (lambda name='': (name))(**kw_name) # Python 2.7 does not allow (*inputs, name='')
+
     from cntk.cntk_py import combine
     if len(operands) == 1 and isinstance(operands[0], (tuple, list)):
         operands = operands[0]
