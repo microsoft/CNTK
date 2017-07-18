@@ -16,7 +16,7 @@ def test_cntk_106A_lstm_timeseries_with_simulated_data_noErrors(nb):
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
-expectedEvalErrorByDeviceId = { -1: 0.0001, 0: 0.0001 }
+expectedEvalErrorByDeviceId = { -1: 0.000049, 0: 0.000049 }
 
 def test_cntk_106A_lstm_timeseries_with_simulated_data_evalCorrect(nb, device_id):
     testCell = [cell for cell in nb.cells
