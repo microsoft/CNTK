@@ -1781,7 +1781,7 @@ public:
 
         size_t nS = InputRef(0).GetNumParallelSequences();
         if (nS != 1)
-            LogicError("CRFNode: >1 parallel sequences are curently not implemented correctly.");
+            LogicError("CRFNode: >1 parallel sequences are currently not implemented correctly.");
         for (size_t i = 0; i < nS; i++) // process parallel sequences one by one  --BUGBUG: We should loop over individual sequences.
         {
             FrameRange sequenceRange = fr.Sequence(i); // FrameRange to select one sequence
