@@ -1105,6 +1105,26 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Softmax, operand, Dictionary(), name);
     }
 
+    FunctionPtr Softmax(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        if (!axis.IsStaticAxis() && (axis != Axis::AllStaticAxes()))
+            LogicError("Softmax: support only static axes.");
+
+        if (((operand.Shape().Rank() == 1) && (axis.StaticAxisIndex() == 0)) || 
+            (axis == Axis::AllStaticAxes()))
+        {
+            return UnaryOp(PrimitiveOpType::Softmax, operand, Dictionary(), name);
+        }
+        else
+        {
+            auto operandPlaceholder = PlaceholderVariable();
+            auto operandDelta = operandPlaceholder - ReduceMax(operandPlaceholder, axis);
+            auto result = ElementDivide(Exp(operandDelta), ReduceSum(Exp(operandDelta), axis));
+
+            return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Softmax", name);
+        }
+    }
+
     FunctionPtr Hardmax(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Hardmax, operand, Dictionary(), name);

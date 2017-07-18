@@ -534,6 +534,23 @@ def test_op_softmax_axis(sample, device_id, precision):
 
     assert np.array_equal(result, expected_forward[0])
 
+@pytest.mark.parametrize("sample", SAMPLES_AXIS)
+def test_op_softmax_with_freedimension(sample, device_id, precision):
+    t = AA(sample, dtype=PRECISION_TO_TYPE[precision])
+    assert len(t.shape) == 2
+
+    x_max = t - t.max()
+    exp_x = np.exp(x_max)
+    forward = exp_x / np.sum(exp_x)
+
+    expected_forward = AA([forward])
+
+    from cntk import softmax, input_variable
+    x = input_variable((C.FreeDimension, t.shape[1]))
+    result = softmax(x, axis=0).eval({x:[sample]})[0]
+
+    assert np.array_equal(result, expected_forward[0])
+
 @pytest.mark.parametrize("sample", SAMPLES)
 def test_op_hardmax(sample, device_id, precision):
     t = AA(sample, dtype=PRECISION_TO_TYPE[precision])
