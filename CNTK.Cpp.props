@@ -33,7 +33,7 @@
     <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
 
     <IsUWP>false</IsUWP>
-    <IsUWP Condition="'$(Configuration)'=='Debug_UWP' Or '$(Configuration)'=='Release_UWP'">true</IsUWP>
+    <IsUWP Condition="'$(CNTK_ENABLE_UWP)'=='true' And ('$(Configuration)'=='Debug_UWP' Or '$(Configuration)'=='Release_UWP')">true</IsUWP>
 
   </PropertyGroup>
 

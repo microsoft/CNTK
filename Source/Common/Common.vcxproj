@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -109,4 +109,7 @@
   <ImportGroup Condition="$(GpuBuild)" Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).targets" />
   </ImportGroup>
+  <Target Name="CheckDependencies">
+    <Error Condition="'$(CNTK_ENABLE_UWP)'!='true' And ('$(Configuration)' == 'Release_UWP' Or '$(Configuration)' == 'Debug_UWP')" Text="Cannot build UWP configuration. Must set CNTK_ENABLE_UWP to true and install Windows SDK for UWP. See https://docs.microsoft.com/cognitive-toolkit/Setup-UWP-Build-on-Windows for details." />
+  </Target>
 </Project>
