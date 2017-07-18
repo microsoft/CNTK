@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-from A2_RunWithPyModel import create_mb_source, train_fast_rcnn, base_path
+from A2_RunWithPyModel import create_mb_source, train_fast_rcnn, base_path, p
 import os
 from cntk import *
 
@@ -57,7 +57,7 @@ def _scramble_list(to_sc, perm):
 #img_list = _scramble_list(img_list, [1, 3, 2, 4, 0])
 
 
-def prepare_ground_truth_boxes(gtbs, relative_coord=False, centered_coords=False, is_16_9=False, scale_input=None):
+def prepare_ground_truth_boxes(gtbs, img_dims=None, relative_coord=False, centered_coords=False, is_9_16=False, img_input_dims=None, padded=True, is_absolut = False):
     """
     Creates an object that can be passed as the parameter "all_gt_infos" to "evaluate_detections" in map_helpers
     Parameters
@@ -73,33 +73,39 @@ def prepare_ground_truth_boxes(gtbs, relative_coord=False, centered_coords=False
     all_gt_infos = {key: [] for key in classes}
     for image_i in range(num_test_images):
         image_gtbs = np.copy(gtbs[image_i])
+        curr_img_dims = img_dims[image_i] if img_dims is not None else None
         coords = image_gtbs[:, 0:4]
         original_labels = image_gtbs[:, -1:]
-        # mapped_labels = map_labels(original_labels)
 
-        # image_gtbs[:,0] = (image_gtbs[:,0] -7/32)*16/9 #*9/16+7/32
-        # image_gtbs[:, 0]-=6/32
-        # image_gtbs[:, 0]*=16/9
-        # image_gtbs[:,1]+=.1
-        # image_gtbs[:, 2] = image_gtbs[:, 2] * 16/9#9 / 16
+        # the img input is padded. The rois delivered by selective search are absolute positions on the padded (1000,1000) image.
 
-        # img = load_image(img_list[image_i])
-        # img =draw_bb_on_image(img, image_gtbs)
-        # plot_image(img)
-        # make absolute
-
-        # make coords bounding
+        # make centered coords bounding (if necessary)
         if centered_coords:
             xy = coords[:, :2]
             wh_half = coords[:, 2:] / 2
             coords = np.concatenate([xy - wh_half, xy + wh_half], axis=1)
 
-        if is_16_9:
+        if is_absolut:
+            coords /= (curr_img_dims[0], curr_img_dims[1], curr_img_dims[0], curr_img_dims[1])
+
+        # applies padding transformation if required - restricted to sqare sized image inputs
+        if padded and curr_img_dims is not None:
+            if curr_img_dims[0] > curr_img_dims[1]:
+                coords[:, [1, 3]] *= curr_img_dims[1] / curr_img_dims[0]
+                coords[:, [1, 3]] += (1 - curr_img_dims[1] / curr_img_dims[0]) / 2
+            elif curr_img_dims[0] < curr_img_dims[1]:
+                coords[:, [0, 2]] *= curr_img_dims[0] / curr_img_dims[1]
+                coords[:, [0, 2]] += (1 - curr_img_dims[0] / curr_img_dims[1]) / 2
+
+        # special case of padding if input images are all 9:16 formatted (as grocery dataset is)
+        if padded and is_9_16:
             coords[:, [0, 2]] *= 9 / 16
             coords[:, [0, 2]] += 7 / 32
 
+        #
         if relative_coord:
-            coords *= scale_input + scale_input
+            coords *= img_input_dims + img_input_dims
+        ############################
 
         all_gt_boxes = []
         for gtb_i in range(len(image_gtbs)):
@@ -303,6 +309,7 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
 
         # import ipdb;ipdb.set_trace()
 
+
         rois = mb_data[roi_input].asarray()
         rois.shape = (rois_per_image, 4)
 
@@ -356,8 +363,8 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
     all_gt_infos = prepare_ground_truth_boxes(gtbs=all_raw_gt_boxes,
                                               relative_coord=use_real_gt_not_sel_search_as_gt_info,
                                               centered_coords=False,  # use_real_gt_not_sel_search_as_gt_info,
-                                              is_16_9=use_real_gt_not_sel_search_as_gt_info,
-                                              scale_input=output_scale)
+                                              is_9_16=use_real_gt_not_sel_search_as_gt_info,
+                                              img_input_dims=output_scale)
     all_boxes = prepare_predictions(all_raw_outputs, all_raw_rois, num_classes)
 
     bb_img_gt_l = visualize_gt(all_gt_infos, False)
@@ -376,8 +383,7 @@ def eval_fast_rcnn_mAP(eval_model, img_map_file=None, roi_map_file=None):
         print('AP for {:>15} = {:.6f}'.format(class_name, aps[class_name]))
     print('Mean AP = {:.6f}'.format(np.nanmean(ap_list)))
 
-    import ipdb;
-    ipdb.set_trace()
+    import ipdb; ipdb.set_trace()
     return aps
 
 
@@ -511,7 +517,7 @@ def points_to_xywh(points):
 
 if __name__ == '__main__':
     os.chdir(base_path)
-    model_path = os.path.join(abs_path, "Output", "frcn_py.model")
+    model_path = os.path.join(abs_path, "Output", p.datasetName + "_frcn_py.model")
 
     # Train only is no model exists yet
     if os.path.exists(model_path):

@@ -18,6 +18,8 @@ import PARAMETERS
 import numpy as np
 import os, sys
 
+cntk_py.force_deterministic_algorithms()
+
 USE_HIERARCHICAL_CLASSIFIER = True
 if USE_HIERARCHICAL_CLASSIFIER:
     import hierarchical_classification_tool as HCT
@@ -69,6 +71,7 @@ def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, dat
     rois_dim = 4 * n_rois
     label_dim = n_classes * n_rois
     gt_dim=100
+    if data_set != "grocery": gt_dim = 250
 
     path = os.path.normpath(os.path.join(abs_path, data_path))
     if data_set == 'test':
@@ -183,13 +186,13 @@ def train_fast_rcnn(debug_output=False, model_path=model_file):
     l2_reg_weight = 0.0005
     lr_per_sample = [0.00001] * 10 + [0.000001] * 5 + [0.0000001]
     lr_multiplier = .5
-    lr_per_sample = [0.00001*lr_multiplier] * 10 + [0.000001*lr_multiplier] * 5 + [0.0000001*lr_multiplier]
+    lr_per_sample = [0.00001*lr_multiplier] * 20 + [0.000001*lr_multiplier] * 15 + [0.0000001*lr_multiplier]
     lr_schedule = learning_rate_schedule(lr_per_sample, unit=UnitType.sample)
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
 
     # Instantiate the trainer object
     learner = momentum_sgd(frcn_output.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
-    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
+    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs, gen_heartbeat=True, freq=50)
     trainer = Trainer(frcn_output, (ce, pe), learner, progress_printer)
 
     # Get minibatches of images and perform model training
@@ -246,7 +249,7 @@ def evaluate_fast_rcnn(model):
 # If a trained model is already available it is loaded an no training will be performed.
 if __name__ == '__main__':
     os.chdir(base_path)
-    model_path = os.path.join(abs_path, "Output", "frcn_py.model")
+    model_path = os.path.join(abs_path, "Output", p.datasetName + "_frcn_py.model")
 
     # Train only is no model exists yet
     if os.path.exists(model_path):

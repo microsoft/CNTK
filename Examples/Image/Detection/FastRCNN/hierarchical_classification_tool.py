@@ -59,10 +59,115 @@ tree_grocery_str = '[' \
     '   {"id": 21, "childrens": [16, 15, 14, 13, 10], "syn": null, "strings": ["loose"], "cls_maps": []} ' \
     ']'
 
+
+orig_tree_pascal_str =  '[' \
+                   '{"childrens": [2, 1], "id": 0, "strings": [], "cls_maps": [], "syn": "Synset(\'entity.n.01\')"}, ' \
+                   '{"childrens": [], "id": 1, "strings": ["table"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'table.n.01\')"}, ' \
+                   '{"childrens": [16, 3], "id": 2, "strings": [], "cls_maps": [], "syn": "Synset(\'whole.n.02\')"}, ' \
+                   '{"childrens": [5, 4], "id": 3, "strings": [], "cls_maps": [], "syn": "Synset(\'organism.n.01\')"}, ' \
+                   '{"childrens": [], "id": 4, "strings": ["person"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'person.n.01\')"}, ' \
+                   '{"childrens": [15, 6], "id": 5, "strings": [], "cls_maps": [], "syn": "Synset(\'vertebrate.n.01\')"}, ' \
+                   '{"childrens": [12, 7], "id": 6, "strings": [], "cls_maps": [], "syn": "Synset(\'placental.n.01\')"}, ' \
+                   '{"childrens": [9, 8], "id": 7, "strings": [], "cls_maps": [], "syn": "Synset(\'ungulate.n.01\')"}, ' \
+                   '{"childrens": [], "id": 8, "strings": ["horse"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'horse.n.01\')"}, ' \
+                   '{"childrens": [11, 10], "id": 9, "strings": [], "cls_maps": [], "syn": "Synset(\'bovid.n.01\')"}, ' \
+                   '{"childrens": [], "id": 10, "strings": ["sheep"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'sheep.n.01\')"}, ' \
+                   '{"childrens": [], "id": 11, "strings": ["cow"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'cow.n.01\')"}, ' \
+                   '{"childrens": [14, 13], "id": 12, "strings": [], "cls_maps": [], "syn": "Synset(\'carnivore.n.01\')"}, ' \
+                   '{"childrens": [], "id": 13, "strings": ["dog"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'dog.n.01\')"}, ' \
+                   '{"childrens": [], "id": 14, "strings": ["cat"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'cat.n.01\')"}, ' \
+                   '{"childrens": [], "id": 15, "strings": ["bird"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bird.n.01\')"}, ' \
+                   '{"childrens": [18, 17], "id": 16, "strings": [], "cls_maps": [], "syn": "Synset(\'artifact.n.01\')"}, ' \
+                   '{"childrens": [], "id": 17, "strings": ["plant"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'plant.n.01\')"}, ' \
+                   '{"childrens": [24, 23, 20, 19], "id": 18, "strings": [], "cls_maps": [], "syn": "Synset(\'instrumentality.n.03\')"}, ' \
+                   '{"childrens": [], "id": 19, "strings": ["tv"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'television.n.01\')"}, ' \
+                   '{"childrens": [22, 21], "id": 20, "strings": [], "cls_maps": [], "syn": "Synset(\'seat.n.03\')"}, ' \
+                   '{"childrens": [], "id": 21, "strings": ["sofa"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'sofa.n.01\')"}, ' \
+                   '{"childrens": [], "id": 22, "strings": ["chair"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'chair.n.01\')"},' \
+                   '{"childrens": [], "id": 23, "strings": ["bottle"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bottle.n.01\')"}, ' \
+                   '{"childrens": [28, 25], "id": 24, "strings": [], "cls_maps": [], "syn": "Synset(\'conveyance.n.03\')"}, ' \
+                   '{"childrens": [27, 26], "id": 25, "strings": [], "cls_maps": [], "syn": "Synset(\'public_transport.n.01\')"}, ' \
+                   '{"childrens": [], "id": 26, "strings": ["train"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'train.n.01\')"}, ' \
+                   '{"childrens": [], "id": 27, "strings": ["bus"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bus.n.01\')"}, ' \
+                   '{"childrens": [34, 29], "id": 28, "strings": [], "cls_maps": [], "syn": "Synset(\'vehicle.n.01\')"}, ' \
+                   '{"childrens": [33, 30], "id": 29, "strings": [], "cls_maps": [], "syn": "Synset(\'wheeled_vehicle.n.01\')"}, ' \
+                   '{"childrens": [32, 31], "id": 30, "strings": [], "cls_maps": [], "syn": "Synset(\'motor_vehicle.n.01\')"}, ' \
+                   '{"childrens": [], "id": 31, "strings": ["motorbike"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'minibike.n.01\')"}, ' \
+                   '{"childrens": [], "id": 32, "strings": ["car"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'car.n.01\')"}, ' \
+                   '{"childrens": [], "id": 33, "strings": ["bicycle"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bicycle.n.01\')"}, ' \
+                   '{"childrens": [36, 35], "id": 34, "strings": [], "cls_maps": [], "syn": "Synset(\'craft.n.02\')"}, ' \
+                   '{"childrens": [], "id": 35, "strings": ["boat"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'boat.n.01\')"}, ' \
+                   '{"childrens": [], "id": 36, "strings": ["aeroplane"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'airplane.n.01\')"}' \
+                   ']'
+
+flat_tree_pascal_str =  '[' \
+                   '{"childrens": [20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1], "id": 0, "strings": [], "cls_maps": [], "syn": "Synset(\'entity.n.01\')"}, ' \
+                   '{"childrens": [], "id": 1, "strings": ["table"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'table.n.01\')"}, ' \
+                   '{"childrens": [], "id": 2, "strings": ["person"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'person.n.01\')"}, ' \
+                   '{"childrens": [], "id": 3, "strings": ["horse"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'horse.n.01\')"}, ' \
+                   '{"childrens": [], "id": 4, "strings": ["sheep"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'sheep.n.01\')"}, ' \
+                   '{"childrens": [], "id": 5, "strings": ["cow"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'cow.n.01\')"}, ' \
+                   '{"childrens": [], "id": 6, "strings": ["dog"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'dog.n.01\')"}, ' \
+                   '{"childrens": [], "id": 7, "strings": ["cat"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'cat.n.01\')"}, ' \
+                   '{"childrens": [], "id": 8, "strings": ["bird"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bird.n.01\')"}, ' \
+                   '{"childrens": [], "id": 9, "strings": ["plant"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'plant.n.01\')"}, ' \
+                   '{"childrens": [], "id": 10, "strings": ["tv"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'television.n.01\')"}, ' \
+                   '{"childrens": [], "id": 11, "strings": ["sofa"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'sofa.n.01\')"}, ' \
+                   '{"childrens": [], "id": 12, "strings": ["chair"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'chair.n.01\')"},' \
+                   '{"childrens": [], "id": 13, "strings": ["bottle"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bottle.n.01\')"}, ' \
+                   '{"childrens": [], "id": 14, "strings": ["train"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'train.n.01\')"}, ' \
+                   '{"childrens": [], "id": 15, "strings": ["bus"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bus.n.01\')"}, ' \
+                   '{"childrens": [], "id": 16, "strings": ["motorbike"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'minibike.n.01\')"}, ' \
+                   '{"childrens": [], "id": 17, "strings": ["car"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'car.n.01\')"}, ' \
+                   '{"childrens": [], "id": 18, "strings": ["bicycle"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bicycle.n.01\')"}, ' \
+                   '{"childrens": [], "id": 19, "strings": ["boat"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'boat.n.01\')"}, ' \
+                   '{"childrens": [], "id": 20, "strings": ["aeroplane"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'airplane.n.01\')"}' \
+                   ']'
+
+tree_pascal_str =   '[\n' \
+                    '{"childrens": [29, 25, 21, 13, 10, 9], "id": 0, "strings": [], "cls_maps": [], "syn": "Synset(\'entity.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 1, "strings": ["table"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'table.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 2, "strings": ["person"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'person.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 3, "strings": ["horse"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'horse.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 4, "strings": ["sheep"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'sheep.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 5, "strings": ["cow"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'cow.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 6, "strings": ["dog"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'dog.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 7, "strings": ["cat"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'cat.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 8, "strings": ["bird"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bird.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 9, "strings": ["plant"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'plant.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 10, "strings": ["tv"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'television.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 11, "strings": ["sofa"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'sofa.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 12, "strings": ["chair"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'chair.n.01\')"},\n' \
+                    '{"childrens": [], "id": 13, "strings": ["bottle"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bottle.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 14, "strings": ["train"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'train.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 15, "strings": ["bus"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bus.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 16, "strings": ["motorbike"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'minibike.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 17, "strings": ["car"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'car.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 18, "strings": ["bicycle"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'bicycle.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 19, "strings": ["boat"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'boat.n.01\')"}, \n' \
+                    '{"childrens": [], "id": 20, "strings": ["aeroplane"], "cls_maps": ["' + my_path + '/../../DataSets/Pascal/class_map.txt"], "syn": "Synset(\'airplane.n.01\')"}, \n' \
+                    '{"id": 21, "childrens": [22, 20, 19], "syn": null, "strings": ["vehicle"], "cls_maps": []},\n' \
+                    '{"id": 22, "childrens": [24, 23, 14], "syn": null, "strings": ["land_vehicle"], "cls_maps": []},\n' \
+                    '{"id": 23, "childrens": [18, 16], "syn": null, "strings": ["two_wheeled"], "cls_maps": []},\n' \
+                    '{"id": 24, "childrens": [17, 15], "syn": null, "strings": ["four_wheeled"], "cls_maps": []},\n' \
+                    '{"id": 25, "childrens": [26, 8], "syn": null, "strings": ["animal"], "cls_maps": []},\n' \
+                    '{"id": 26, "childrens": [28, 27, 2], "syn": null, "strings": ["mammal"], "cls_maps": []},\n' \
+                    '{"id": 27, "childrens": [7, 6], "syn": null, "strings": ["domestic"], "cls_maps": []},\n' \
+                    '{"id": 28, "childrens": [5, 4, 3], "syn": null, "strings": ["farm"], "cls_maps": []},\n' \
+                    '{"id": 29, "childrens": [12, 11, 1], "syn": null, "strings": ["furniture"], "cls_maps": []}\n' \
+                                                                                                      ']'
+
+
+
     #    '   {"id": 17, "childrens": [], "syn": null, "strings": [], "cls_maps": []' \
 if True:
-    tree_map = TreeMap.tree_map_from_tree_str(flat_tree_grocery_str, use_background=True, use_multiply_with_parent=False)
-    #tree_map = TreeMap.tree_map_from_tree_str(tree_grocery_str, use_background=True, use_multiply_with_parent=False)
+    #tree_map = TreeMap.tree_map_from_tree_str(flat_tree_grocery_str, use_background=True, use_multiply_with_parent=False)
+    tree_map = TreeMap.tree_map_from_tree_str(tree_grocery_str, use_background=True, use_multiply_with_parent=False)
+    cls_maps = list(tree_map.meta_map.keys())
+
+if False:
+    # tree_map = TreeMap.tree_map_from_tree_str(flat_tree_grocery_str, use_background=True, use_multiply_with_parent=False)
+    tree_map = TreeMap.tree_map_from_tree_str(tree_pascal_str, use_background=True, use_multiply_with_parent=False)
     cls_maps = list(tree_map.meta_map.keys())
 
 output_mapper = tree_map.get_output_mapper()

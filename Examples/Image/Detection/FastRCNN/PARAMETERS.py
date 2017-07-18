@@ -110,7 +110,7 @@ class PascalParameters(Parameters):
         self.classifier = 'nn'
         self.cntk_num_train_images = 5011
         self.cntk_num_test_images = 4952
-        self.cntk_mb_size = 2
+        self.cntk_mb_size = 16#2
         self.cntk_max_epochs = 17
         self.cntk_momentum_time_constant = 20
 
