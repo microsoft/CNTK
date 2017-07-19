@@ -76,3 +76,12 @@ def test_op_combine_input_var():
     res = func.eval({x : value})
     
     assert np.allclose(res, [[1, 2]])
+
+def test_op_combine_subscript():
+    from .. import combine
+
+    x = C.input_variable(shape=(2))
+    assert x == combine([x,x])[0]
+    assert x == combine((x,x))[0]
+    assert x == combine(x,x,name='x2')[0]
+    assert x == combine(combine(x,x),combine(x,x))[0]
