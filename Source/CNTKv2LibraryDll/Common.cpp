@@ -39,6 +39,10 @@ namespace CNTK
 
     namespace Internal
     {
+
+        template <typename E>
+        using SparseCSCDataTuple = std::tuple<const E*, const SparseIndexType*, const SparseIndexType*, size_t, NDArrayViewPtr>;
+
         static std::atomic_ullong s_nextUniqueId = ATOMIC_VAR_INIT(0);
         size_t NewUniqueId()
         {
@@ -299,9 +303,48 @@ namespace CNTK
             {
                 auto firstValue = data1[i];
                 auto secondValue = data2[i];
-                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, std::abs(((ElementType)relativeTolerance) * firstValue));
+                ElementType allowedTolerance = (std::max<ElementType>)(std::abs((ElementType)absoluteTolerance), std::abs(((ElementType)relativeTolerance) * firstValue));
                 if (std::abs(firstValue - secondValue) > allowedTolerance)
                     return false;
+            }
+
+            return true;
+        }
+
+        template <typename ElementType>
+        bool AreEqual(const SparseCSCDataTuple<ElementType>& t1, const SparseCSCDataTuple<ElementType>& t2, double relativeTolerance, double absoluteTolerance)
+        {
+            if (std::get<3>(t1) != std::get<3>(t2))
+                return false;
+            
+            auto nnzCount = std::get<3>(t1);
+            auto values1 = std::get<0>(t1);
+            auto values2 = std::get<0>(t2);
+
+            for (size_t i = 0; i < nnzCount; ++i)
+            {
+                auto firstValue = values1[i];
+                auto secondValue = values2[i];
+                ElementType allowedTolerance = (std::max<ElementType>)(std::abs((ElementType)absoluteTolerance), std::abs(((ElementType)relativeTolerance) * firstValue));
+                if (std::abs(firstValue - secondValue) > allowedTolerance)
+                    return false;
+            }
+
+            auto rowIndices1 = std::get<2>(t1);
+            auto rowIndices2 = std::get<2>(t2);
+
+            if (memcmp(rowIndices1, rowIndices2, nnzCount * sizeof(SparseIndexType)) != 0)
+                return false;
+            
+            auto colIndices1 = std::get<1>(t1);
+            auto colIndices2 = std::get<1>(t2);
+
+            for (size_t i = 0; i < nnzCount; ++i)
+            {
+                if (colIndices1[i] != colIndices2[i])
+                    return false;
+                if (colIndices1[i] == nnzCount)
+                    break;
             }
 
             return true;
@@ -324,6 +367,26 @@ namespace CNTK
             LogicError("Invalid device type (%u).", (unsigned int)deviceType);
         }
 
+        template <typename ElementType>
+        SparseCSCDataTuple<ElementType> GetSparseCSCCPUDataPtr(const NDArrayView& view)
+        {
+            auto deviceType = view.Device().Type();
+
+            if (deviceType == DeviceKind::CPU)
+                return std::tuple_cat(view.SparseCSCDataBuffers<ElementType>(), std::make_tuple(nullptr));
+
+            if (deviceType == DeviceKind::GPU)
+            {
+                auto tempCPUDataView = view.DeepClone(view.Device());
+                tempCPUDataView->ChangeDevice(DeviceDescriptor::CPUDevice());
+                auto result = GetSparseCSCCPUDataPtr<ElementType>(*tempCPUDataView);
+                std::get<4>(result) = tempCPUDataView;
+                return result;
+            }
+
+            LogicError("Invalid device type (%u).", (unsigned int)deviceType);
+        }
+
         template <typename ElementType> 
         bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
         {
@@ -333,19 +396,29 @@ namespace CNTK
             }
 
             if (view1.GetDataType() != view2.GetDataType() ||
-                view1.Shape() != view2.Shape())
+                view1.Shape() != view2.Shape() ||
+                view1.IsSparse() != view2.IsSparse())
             {
                 return false;
             }
 
-            CNTK::NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
-            ElementType* data1;
-            ElementType* data2;
-            std::tie(data1, temp1CpuDataView) = GetCPUDataPtr<ElementType>(view1);
-            std::tie(data2, temp2CpuDataView) = GetCPUDataPtr<ElementType>(view2);
+            if (!view1.IsSparse()) 
+            {
+                CNTK::NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
+                ElementType* data1;
+                ElementType* data2;
+                std::tie(data1, temp1CpuDataView) = GetCPUDataPtr<ElementType>(view1);
+                std::tie(data2, temp2CpuDataView) = GetCPUDataPtr<ElementType>(view2);
 
-            size_t numElements = view1.Shape().TotalSize();
-            return AreEqual(data1, data2, numElements, relativeTolerance, absoluteTolerance);
+                size_t numElements = view1.Shape().TotalSize();
+                return AreEqual(data1, data2, numElements, relativeTolerance, absoluteTolerance);
+            }
+            else 
+            {
+                auto data1 = GetSparseCSCCPUDataPtr<ElementType>(view1);
+                auto data2 = GetSparseCSCCPUDataPtr<ElementType>(view2);
+                return AreEqual(data1, data2, relativeTolerance, absoluteTolerance);
+            }
         }
 
         bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
@@ -358,6 +431,7 @@ namespace CNTK
 
             LogicError("AreEqual(NDArrayView): Unknown DataType.");
         }
+
 
         std::pair<const MaskKind*, NDMaskPtr> GetCPUDataPtr(const NDMask& mask)
         {
@@ -525,8 +599,6 @@ namespace CNTK
     {
         return s_traceLevel.load();
     }
-
-    /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);
 
     /*static*/ std::mutex DeviceDescriptor::s_mutex;
     /*static*/ bool DeviceDescriptor::s_defaultDeviceFrozen(false);

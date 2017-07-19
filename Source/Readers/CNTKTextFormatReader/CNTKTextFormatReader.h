@@ -8,7 +8,7 @@
 #include "TextParser.h"
 #include "ReaderBase.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // TODO: Should be deprecated, use composite reader instead.
 // Implementation of the text reader.
@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class CNTKTextFormatReader : public ReaderBase
 {
 public:
-    CNTKTextFormatReader(const ConfigParameters& parameters);
+    CNTKTextFormatReader(const Microsoft::MSR::CNTK::ConfigParameters& parameters);
 };
 
-}}}
+}

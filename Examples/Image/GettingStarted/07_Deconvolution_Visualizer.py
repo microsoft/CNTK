@@ -5,14 +5,14 @@
 # ==============================================================================
 
 from __future__ import print_function
-import os
+import os, sys
 import numpy as np
+import argparse
 from cntk import load_model
 from cntk.ops import combine
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 from PIL import Image
 from cntk.logging import graph
-
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -104,9 +104,9 @@ def generate_visualization(use_brain_script_model, testing=False):
                 encoder_input = output_dict[input_node_name]
                 encoder_output = output_dict[enc_node_name]
                 decoder_output = output_dict[output_node_name]
-                in_values = (encoder_input[0,0].flatten())[np.newaxis]
-                enc_values = (encoder_output[0,0].flatten())[np.newaxis]
-                out_values = (decoder_output[0,0].flatten())[np.newaxis]
+                in_values = (encoder_input[0][0].flatten())[np.newaxis]
+                enc_values = (encoder_output[0][0].flatten())[np.newaxis]
+                out_values = (decoder_output[0][0].flatten())[np.newaxis]
 
                 if not testing:
                     # write results as text and png
@@ -123,5 +123,17 @@ def generate_visualization(use_brain_script_model, testing=False):
     print("Done. Wrote output to %s" % output_path)
 
 if __name__ == '__main__':
-    use_brain_script_model = True
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-type", metavar="string", help="Python | BrainScript. Specify if you trained your model with Python or BrainScript. Default Python.", default="Python")
+    args = parser.parse_args()
+
+    args.types = ["Python", "BrainScript"]
+    if not args.type.lower() in [t.lower() for t in args.types]:
+        print("-t argument must be one of", args.types, file=sys.stderr)
+        sys.exit(1)
+
+    use_brain_script_model = args.type.lower() == "brainscript"
+
+    print("Using %s model to generate the visualization" % (args.types[1] if use_brain_script_model else args.types[0]))
+
     generate_visualization(use_brain_script_model)

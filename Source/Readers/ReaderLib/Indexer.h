@@ -11,7 +11,7 @@
 #include "CorpusDescriptor.h"
 #include "MemoryBuffer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Sequence metadata that allows indexing a sequence in a binary file.
 struct SequenceDescriptor
@@ -247,4 +247,4 @@ private:
     DISABLE_COPY_AND_MOVE(Indexer);
 };
 
-}}}
+}

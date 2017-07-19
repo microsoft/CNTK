@@ -7,38 +7,38 @@
 
 #include "DataDeserializer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 struct Index;
 
 // Base class for data deserializers.
 // Has a default implementation for a subset of methods.
-class DataDeserializerBase : public IDataDeserializer
+class DataDeserializerBase : public DataDeserializer
 {
 public:
     DataDeserializerBase(bool primary) : m_primary(primary)
     {}
 
-    virtual bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& result) override
+    virtual bool GetSequenceInfo(const SequenceInfo& primary, SequenceInfo& result) override
     {
-        return GetSequenceDescriptionByKey(primary.m_key, result);
+        return GetSequenceInfoByKey(primary.m_key, result);
     }
 
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+    virtual std::vector<StreamInformation> StreamInfos() override
     {
         return m_streams;
     }
 
 protected:
-    virtual bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&)
+    virtual bool GetSequenceInfoByKey(const SequenceKey&, SequenceInfo&)
     {
         NOT_IMPLEMENTED;
     }
 
-    bool GetSequenceDescriptionByKey(const Index& index, const KeyType& key, SequenceDescription& r);
+    bool GetSequenceInfoByKey(const Index& index, const SequenceKey& key, SequenceInfo& r);
 
     // Streams this data deserializer can produce.
-    std::vector<StreamDescriptionPtr> m_streams;
+    std::vector<StreamInformation> m_streams;
 
     // Flag, indicating if the deserializer is primary.
     const bool m_primary;
@@ -47,4 +47,4 @@ private:
     DISABLE_COPY_AND_MOVE(DataDeserializerBase);
 };
 
-}}}
+}

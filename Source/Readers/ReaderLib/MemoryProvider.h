@@ -7,7 +7,7 @@
 
 #include <memory>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Interface used for allocating stream data returned by the reader.
@@ -28,4 +28,4 @@ public:
 };
 
 typedef std::shared_ptr<MemoryProvider> MemoryProviderPtr;
-} } }
+}

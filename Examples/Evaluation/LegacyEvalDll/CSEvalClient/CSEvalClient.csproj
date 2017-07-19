@@ -31,7 +31,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>$(SolutionDir)..\..\$(Platform)\CSEvalClient.$(Configuration)\</OutputPath>
+    <OutputPath>$(SolutionDir)..\..\..\$(Platform)\CSEvalClient.$(Configuration)\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DebugType>full</DebugType>
@@ -40,7 +40,7 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>$(SolutionDir)..\..\$(Platform)\CSEvalClient.$(Configuration)\</OutputPath>
+    <OutputPath>$(SolutionDir)..\..\..\$(Platform)\CSEvalClient.$(Configuration)\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
@@ -59,8 +59,8 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\CNTKLibraryCSEvalCPUOnlyExamples\CntkBitmapExtensions.cs">
-      <Link>CntkBitmapExtensions.cs</Link>
+    <Compile Include="..\..\ImageExtension\CNTKImageProcessing.cs">
+      <Link>CNTKImageProcessing.cs</Link>
     </Compile>
     <Compile Include="ModelEvaluator.cs" />
     <Compile Include="Program.cs" />

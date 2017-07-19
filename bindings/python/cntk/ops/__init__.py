@@ -24,7 +24,7 @@ TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferre
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
 
 @typemap
-def combine(operands, name=''):
+def combine(*operands, **kw_name):
     '''
      Create a new Function instance which just combines the outputs of the specified list of
      'operands' Functions such that the 'Outputs' of the new 'Function' are union of the
@@ -49,6 +49,11 @@ def combine(operands, name=''):
         >>> list(forward.values()) # doctest: +SKIP
         [array([[[ 1., -3.,  6.,  2.]]], dtype=float32),
          array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)]
+        >>> x = C.input_variable((4,))
+        >>> _ = C.combine(x, x)
+        >>> _ = C.combine([x, x])
+        >>> _ = C.combine((x, x))
+        >>> _ = C.combine(C.combine(x, x), x)
 
     Args:
         operands (list): list of functions or their variables to combine
@@ -57,8 +62,20 @@ def combine(operands, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    name = (lambda name='': (name))(**kw_name) # Python 2.7 does not allow (*inputs, name='')
+
     from cntk.cntk_py import combine
-    return combine(operands, name)
+    if len(operands) == 1 and isinstance(operands[0], (tuple, list)):
+        operands = operands[0]
+    if isinstance(operands, tuple):
+        operands = list(operands)
+    operands_unfold = []
+    for o in operands:
+        if hasattr(o, 'outputs') and len(o.outputs) > 1:
+            operands_unfold += o.outputs
+        else:
+            operands_unfold += [o]
+    return combine(operands_unfold, name)
 
 @typemap
 def as_block(composite, block_arguments_map, block_op_name, block_instance_name=''):
@@ -1251,6 +1268,30 @@ def elu(x, name=''):
     x = sanitize_input(x)
     return elu(x, name)
 
+@typemap
+def selu(x, scale=1.0507009873554804934193349852946, alpha=1.6732632423543772848170429916717, name=''):
+    '''
+    Scaled exponential linear unit operation. Computes the element-wise exponential linear
+    of ``x``: ``scale * x`` for ``x >= 0`` and ``x``: ``scale * alpha * (exp(x)-1)`` otherwise.
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.selu([[-1, -0.5, 0, 1, 2]]).eval()
+        array([[-1.111331, -0.691758,  0.      ,  1.050701,  2.101402]], dtype=float32)
+
+    Args:
+        x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
+        name (`str`, default to ''): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function:
+        An instance of :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import selu
+    x = sanitize_input(x)
+    return selu(x, scale, alpha, name)
+
 
 @typemap
 def leaky_relu(x, name=''):
@@ -1445,7 +1486,9 @@ def softmax(x, axis=None, name=''):
     therefore be interpreted as probabilities for mutually exclusive outcomes
     as in the case of multiclass classification.
 
-    If ``axis`` is given, the softmax will be computed along that axis.
+    If ``axis`` is given as integer, then the softmax will be computed along that axis. 
+    If the provided ``axis`` is -1, it will be computed along the last axis. Otherwise,
+    softmax will be applied to all axes.
 
     Example:
         >>> C.softmax([[1, 1, 2, 3]]).eval()
@@ -1458,6 +1501,10 @@ def softmax(x, axis=None, name=''):
         array([[[ 0.5     ,  0.5     ],
                 [ 0.119203,  0.880797]]], dtype=float32)
 
+        >>> C.softmax([[[1, 1], [3, 5]]], axis=1).eval()
+        array([[[ 0.119203,  0.017986],
+                [ 0.880797,  0.982014]]], dtype=float32)
+
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
         axis (int or :class:`~cntk.axis.Axis`): axis along which the softmax operation will be performed
@@ -1467,18 +1514,11 @@ def softmax(x, axis=None, name=''):
     '''
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
-    # softmax over a specific axis: implemented explicitly
-    # TODO: move this into the C++ API.
     if axis is not None:
-        from cntk.cntk_py import reduce_log_sum, exp, minus
         axis = sanitize_axis(axis)
-        Z = reduce_log_sum(x, axis)  # log denominator
-        # TODO: use as_block()
-        return exp(x - Z.output(), name) # this is the softmax
-        # (note: we need .output() here since the automatisms available outside are not available in here)
-    # softmax over all elements
-    return softmax(x, name)
-
+        return softmax(x, axis, name)
+    else:
+        return softmax(x, name)
 
 @typemap
 def hardmax(x, name=''):
@@ -2685,7 +2725,7 @@ def placeholder(shape=None, dynamic_axes=None, name=''):
     from cntk.cntk_py import placeholder_variable, NDShape, Axis
 
     if shape is None:
-        shape = NDShape.unknown.dimensions()
+        shape = NDShape.unknown().dimensions()
     else:
         shape = sanitize_shape(shape)
 

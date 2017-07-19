@@ -4465,8 +4465,11 @@ void CPUMatrix<ElemType>::MaxPoolingForward(const CPUMatrix<int>& mpRowCol, cons
 template <class ElemType>
 void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, const CPUMatrix<ElemType>& in,
                                              const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
-                                             CPUMatrix<ElemType>& grad) const
+                                             CPUMatrix<ElemType>& grad, bool accumulateGradient) const
 {
+    if (!accumulateGradient)
+        grad.SetValue((ElemType)0);
+
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
     {
@@ -4767,8 +4770,11 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad, const bool poolIncludePad) const
+void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const
 {
+    if (!accumulateGradient)
+        grad.SetValue((ElemType)0);
+
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
     {

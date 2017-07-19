@@ -588,7 +588,7 @@ namespace CNTK
     std::tuple<size_t, size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable)
     {
         auto varShape = outputVariable.Shape();
-        if (varShape == NDShape::Unknown || varShape.HasInferredDimension())
+        if (varShape.IsUnknown() || varShape.HasInferredDimension())
             InvalidArgument("The outputVariable '%S' shape '%S' is of unknown shape or has inferred dimension for at least one axis.",
                 outputVariable.AsString().c_str(), varShape.AsString().c_str());
 

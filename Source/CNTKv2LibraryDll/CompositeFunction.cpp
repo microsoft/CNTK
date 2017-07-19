@@ -903,7 +903,7 @@ namespace CNTK
                     auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
                     NDShape outputMapCount, kernelShape;
                     std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape(), transpose);
-                    NDShape outputShape = NDShape::Unknown;
+                    NDShape outputShape = NDShape::Unknown();
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
                         outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                     auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
@@ -1315,6 +1315,12 @@ namespace CNTK
         computationNetwork->SetTrackGapNans(GetCheckedMode());
         computationNetwork->SetIsV2Library(true);
         computationNetwork->CompileNetwork();
+        // Set EvalTimeStamp of all nodes in the network as "outdated" to make sure that all nodes will be evaluated at least once.
+        // During CompileNetwork(), nodes in the network might get different timestamp values because other threads could update the global timestamp value.
+        // (The global timestamp value is currently shared process-wide, i.e. among all nodes of all networks.) The nodes with a higher timestamp value are
+        // thus incorrectly treated as "updated", and their inputs are not further evaluated by ComputationNetwork::PARTraversalFlowControlNode::ForwardProp().
+        // This could lead to incorrect results or crash, because the matrix of the input nodes might never be initialized for ForwardProp().
+        computationNetwork->SetEvalTimeStampsOutdatedWithRegardToAll();
 
         // Verify that the shapes of the output Variables that we computed match the corresponding nodes in the ComputationNetwork
         for (auto varNodePair : variableToNodeMap)

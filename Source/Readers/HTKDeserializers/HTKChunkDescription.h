@@ -12,13 +12,13 @@
 #include "UtteranceDescription.h"
 #include "ssematrix.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Class represents a description of an HTK chunk.
 // It is only used internally by the HTK deserializer.
 // Can exist without associated data and provides methods for requiring/releasing chunk data.
 // TODO: We should consider splitting data load from the description in the future versions.
-class HTKChunkDescription
+class HTKChunkInfo
 {
     // All utterances in the chunk.
     std::vector<UtteranceDescription> m_utterances;
@@ -38,9 +38,9 @@ class HTKChunkDescription
 
 public:
 
-    HTKChunkDescription() : m_chunkId(CHUNKID_MAX) { };
+    HTKChunkInfo() : m_chunkId(ChunkIdMax) { };
 
-    HTKChunkDescription(ChunkIdType chunkId) : m_chunkId(chunkId) { };
+    HTKChunkInfo(ChunkIdType chunkId) : m_chunkId(chunkId) { };
 
     // Gets number of utterances in the chunk.
     uint32_t GetNumberOfUtterances() const
@@ -149,7 +149,7 @@ public:
 
             if (verbosity)
             {
-                fprintf(stderr, "HTKChunkDescription::RequireData: read physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
+                fprintf(stderr, "HTKChunkInfo::RequireData: read physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
                         m_chunkId,
                         m_utterances.size(),
                         m_totalFrames,
@@ -179,7 +179,7 @@ public:
 
         if (verbosity)
         {
-            fprintf(stderr, "HTKChunkDescription::ReleaseData: release physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
+            fprintf(stderr, "HTKChunkInfo::ReleaseData: release physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
                     m_chunkId,
                     m_utterances.size(),
                     m_totalFrames,
@@ -198,4 +198,4 @@ public:
         }
 };
 
-}}}
+}

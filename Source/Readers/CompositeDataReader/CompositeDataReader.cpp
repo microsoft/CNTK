@@ -22,8 +22,11 @@
 #include "ConfigUtil.h"
 #include "StringUtil.h"
 #include "ReaderConstants.h"
+#include "V2Dependencies.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 // The whole CompositeDataReader is meant as a stopgap to allow deserializers/transformers composition until SGD talkes 
 // directly to the new Reader API. 
@@ -35,9 +38,14 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     wstring action = config(L"action", L"");
     bool isActionWrite = AreEqualIgnoreCase(action, L"write");
 
-    // We currently by default using numeric keys for ctf and image deserializers.
-    bool useNumericSequenceKeys = ContainsDeserializer(config, L"CNTKTextFormatDeserializer") ||
-        ContainsDeserializer(config, L"ImageDeserializer") || ContainsDeserializer(config, L"Base64ImageDeserializer");
+    // By default, we use numeric sequence keys (i.e., for cbf, ctf, image and base64 readers).
+    // For MLF and HTK deserializers, we use non-numeric (string) sequence keys.
+    bool useNumericSequenceKeys = true;
+    if (ContainsDeserializer(config, L"HTKFeatureDeserializer") ||
+        ContainsDeserializer(config, L"HTKMLFDeserializer")) 
+    {
+        useNumericSequenceKeys = false;
+    }
 
     useNumericSequenceKeys = config(L"useNumericSequenceKeys", useNumericSequenceKeys);
 
@@ -85,7 +93,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         InvalidArgument("Could not find deserializers in the reader config.");
     }
 
-    IDataDeserializerPtr deserializer = m_deserializers.front();
+    DataDeserializerPtr deserializer = m_deserializers.front();
     if (m_deserializers.size() > 1)
     {
         // Bundling deserializers together.
@@ -152,19 +160,9 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         ? m_sequenceEnumerator
         : std::make_shared<TransformController>(m_transforms, m_sequenceEnumerator);
 
-    // TODO: Creating output stream descriptions - this should come from the network so that we can check 
+    // TODO: Output stream descriptions - this should come from the network so that we can check 
     // that input matches what the network expects (including tensor shape, etc.).
-    for (const auto& streamDescription : m_sequenceEnumerator->GetStreamDescriptions())
-    {
-        StreamDescriptionPtr stream = std::make_shared<StreamDescription>(*streamDescription);
-        if (m_packingMode == PackingMode::truncated)
-        {
-            // TODO: Currently BPTT does not support sparse format as output.
-            // We always require dense.
-            stream->m_storageType = StorageType::dense;
-        }
-        m_streams.push_back(stream);
-    }
+    std::vector<StreamInformation> outputStreams = m_sequenceEnumerator->GetStreamDescriptions();
 
     // Currently for prefetch we use two alternating buffers,
     // same is the default.
@@ -177,7 +175,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     case PackingMode::sample:
         m_packer = std::make_shared<FramePacker>(
             m_sequenceEnumerator,
-            m_streams,
+            outputStreams,
             numAlternatingBuffers,
             localTimeline,
             m_corpus);
@@ -185,16 +183,21 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     case PackingMode::sequence:
         m_packer = std::make_shared<SequencePacker>(
             m_sequenceEnumerator,
-            m_streams,
+            outputStreams,
             numAlternatingBuffers,
             localTimeline,
             m_corpus);
         break;
     case PackingMode::truncated:
     {
+        // Currently BPTT does not support sparse format as output.
+        // We always require dense from the packer.
+        for (auto& s : outputStreams)
+            s.m_storageFormat = StorageFormat::Dense;
+
         m_packer = std::make_shared<TruncatedBPTTPacker>(
             m_sequenceEnumerator,
-            m_streams,
+            outputStreams,
             numAlternatingBuffers,
             m_corpus);
         break;
@@ -204,9 +207,9 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     }
 }
 
-std::vector<StreamDescriptionPtr> CompositeDataReader::GetStreamDescriptions()
+std::vector<StreamInformation> CompositeDataReader::GetStreamDescriptions()
 {
-    return m_streams;
+    return m_packer->GetStreamDescriptions();
 }
 
 // Create deserializers based on the specified configuration. 
@@ -234,7 +237,7 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
             p.Insert("traceLevel", traceLevel);
         }
 
-        IDataDeserializerPtr d = CreateDeserializer(p, primary);
+        DataDeserializerPtr d = CreateDeserializer(p, primary);
         primary = false;
         m_deserializers.push_back(d);
     }
@@ -242,16 +245,16 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
 
 // Creates a particular deserializer based on the config: its loads the external module and calls CreateDeserializer
 // factory function for a particular deserializer type.
-IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParameters& deserializerConfig, bool primary)
+DataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParameters& deserializerConfig, bool primary)
 {
-    typedef bool(*CreateDeserializerFactory) (IDataDeserializer** d, const std::wstring& type, const ConfigParameters& cfg, CorpusDescriptorPtr corpus, bool primary);
+    typedef bool(*CreateDeserializerFactory) (DataDeserializerPtr& d, const std::wstring& type, const ConfigParameters& cfg, CorpusDescriptorPtr corpus, bool primary);
 
     std::string deserializerModule = deserializerConfig("module");
     CreateDeserializerFactory f = (CreateDeserializerFactory)Plugin::Load(deserializerModule, "CreateDeserializer");
 
     std::wstring deserializerType = deserializerConfig("type");
-    IDataDeserializer* d;
-    if (!f(&d, deserializerType, deserializerConfig, m_corpus, primary))
+    DataDeserializerPtr d;
+    if (!f(d, deserializerType, deserializerConfig, m_corpus, primary))
     {
         RuntimeError("Cannot create deserializer. Please check module and type in the configuration.");
     }
@@ -260,7 +263,7 @@ IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamet
     CreateTransforms(deserializerConfig);
 
     assert(d != nullptr);
-    return IDataDeserializerPtr(d);
+    return d;
 }
 
 // Create transformers based on the configuration, i.e.
@@ -360,4 +363,4 @@ bool CompositeDataReader::ContainsDeserializer(const ConfigParameters& readerCon
     return false;
 }
 
-}}}
+}

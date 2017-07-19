@@ -278,7 +278,7 @@ namespace CNTK
             std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
             bool needsGradient = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
 
-            NDShape outputShape = NDShape::Unknown;
+            NDShape outputShape = NDShape::Unknown();
             bool allInputShapesUnknown = (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return !input.Shape().IsUnknown(); }) == m_inputs.end());
             bool anyInputShapesUnknown = (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.Shape().IsUnknown(); }) != m_inputs.end());
             if (!anyInputShapesUnknown || (!allInputShapesUnknown && (outputDynamicAxes != Axis::UnknownDynamicAxes())))
@@ -601,7 +601,7 @@ namespace CNTK
                                 LogicError("Function '%S': Currently pooling does not support operands with free static axes dimensions.", AsString().c_str());
 
                             // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
-                            if ((poolingWindowsShape == NDShape::Unknown) && !inputShape.SubShape(0, inputShape.Rank() - 1).HasUnboundDimension())
+                            if (poolingWindowsShape.IsUnknown() && !inputShape.SubShape(0, inputShape.Rank() - 1).HasUnboundDimension())
                             {
                                 if ((std::find(autoPadding.begin(), autoPadding.end(), true) != autoPadding.end()) || (lowerPad.TotalSize() > 0) || (upperPad.TotalSize() > 0))
                                     RuntimeError("Padding isn't allowed for Unknown pooling window shape!");
@@ -721,7 +721,7 @@ namespace CNTK
                             auto& strides = m_attributes[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
                             auto& lowerPad = m_attributes[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
                             auto& upperPad = m_attributes[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
-                            NDShape tmpShape = NDShape::Unknown; 
+                            NDShape tmpShape = NDShape::Unknown();
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameOutputShape))
                                 tmpShape = m_attributes[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                             auto sharing = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
@@ -1193,7 +1193,7 @@ namespace CNTK
 
             // Unknown kernel shape valid only for pooling, however, the shape should have expanded before
             // this call.
-            if (kernelShape == NDShape::Unknown)
+            if (kernelShape.IsUnknown())
                 RuntimeError("Convolution: Kernel shape can't be Unknown.");
 
             // infer reduction dimensions if not given

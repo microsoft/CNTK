@@ -6,11 +6,9 @@
 #pragma once
 
 #include "DataDeserializer.h"
+#include "Reader.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
-
-class Transformer;
-typedef std::shared_ptr<Transformer> TransformerPtr;
+namespace CNTK {
 
 // Defines a data transformation interface.
 // Transformers are responsible for doing custom transformation of sequences.
@@ -24,7 +22,7 @@ public:
 
     // Transformers are applied on a particular input stream - this method should describe
     // how inputStream is transformed to the output stream (return value)
-    virtual StreamDescription Transform(const StreamDescription& inputStream) = 0;
+    virtual StreamInformation Transform(const StreamInformation& inputStream) = 0;
 
     // This method should describe how input sequences is transformed to the output sequence.
     virtual SequenceDataPtr Transform(SequenceDataPtr inputSequence) = 0;
@@ -34,4 +32,5 @@ public:
     }
 };
 
-}}}
+typedef std::shared_ptr<Transformer> TransformerPtr;
+}
