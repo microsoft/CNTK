@@ -775,6 +775,8 @@ Constants = [
     Zero = ConstantTensor (0, (1))
     One  = ConstantTensor (1, (1))
     OnesTensor (dims) = ConstantTensor (1, dims)
+    # A constant 1D tensor that contains an integer enumeration 0 .. (dims - 1).
+    Range (dim) = Splice( array [0..(dim-1)] ( i => Constant{i} ) )
     # BUGBUG: ZeroesLike() would recreate the full dimension of x. Well, no need if it considers broadcasting. But still wrong if we want to broadcast a vector of different tensor dim.
     #ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
     #OnesLike (x)   = CastAs (x, One)
