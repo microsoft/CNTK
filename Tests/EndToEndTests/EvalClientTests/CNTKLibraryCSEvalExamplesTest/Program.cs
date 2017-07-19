@@ -52,6 +52,9 @@ namespace CNTKLibraryCSEvalExamples
             {
                 var device = DeviceDescriptor.CPUDevice;
 
+                CNTKLibraryManagedExamples.ValueCopyToSparseCSCTest<float>(device);
+                CNTKLibraryManagedExamples.ValueCopyToSparseCSCTest<double>(device);
+
                 CNTKLibraryManagedExamples.EvaluationSingleImage(device);
                 // Run memory tests.
                 MemoryTests.ValidateObjectReferences(device);

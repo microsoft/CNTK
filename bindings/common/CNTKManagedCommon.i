@@ -48,6 +48,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::Axis)
 SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 #endif //SWIGCSHARP
 
+%template(IntVector) std::vector<int>;
 %template(SizeTVector) std::vector<size_t>;
 %template(DoubleVector) std::vector<double>;
 %template(FloatVector) std::vector<float>;
@@ -553,7 +554,9 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindByName);
 #endif  // SWIGJAVA
 
 // class Varaiable
+#ifndef SWIGCSHARP
 %ignore CNTK::Variable::Variable;
+#endif
 %ignore CNTK::Variable::operator FunctionPtr;
 %rename ("%s") CNTK::Variable::Variable(const FunctionPtr& function);
 
@@ -684,6 +687,8 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 %apply int INPUT[]  { int *rowIndices }
 %apply float INPUT[]  { float *nonZeroValues }
 %apply double INPUT[]  { double *nonZeroValues }
+%apply int OUTPUT[]  { int *sequenceLength }
+%apply int OUTPUT[]  { int *numNonZeroValues }
 #endif
 
 #ifdef SWIGJAVA
