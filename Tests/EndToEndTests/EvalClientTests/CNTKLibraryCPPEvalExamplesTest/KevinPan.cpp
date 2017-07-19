@@ -41,14 +41,23 @@ void RunKevinEvaluation(int thId, FunctionPtr model, const DeviceDescriptor& dev
 
     fprintf(stderr, "%d evaluate starts.\n", thId);
     evalFunc->Evaluate(inputs, outputs, device);
+    fprintf(stderr, "first minibatch done.\n");
+
+    outputs[evalFunc->Output()] = nullptr;
+    evalFunc->Evaluate(inputs, outputs, device);
+    fprintf(stderr, "second minibatch done.\n");
 
     fprintf(stderr,"%d evaluate complete.\n", thId);
 
 }
 
-void KevinPan()
+void KevinPan(bool isGPUAvailable)
 {
-    auto device = DeviceDescriptor::CPUDevice();
+    DeviceDescriptor device = DeviceDescriptor::CPUDevice();
+
+    if (isGPUAvailable)
+        device = DeviceDescriptor::GPUDevice(0);
+
     auto model = Function::Load(L"C:\\CNTKMisc\\KevinPan-Memory\\trained_model\\cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002.dnn", device);
 
     int threadCount = 20;
