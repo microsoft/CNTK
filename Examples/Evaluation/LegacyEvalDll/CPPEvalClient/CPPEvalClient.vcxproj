@@ -42,10 +42,10 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)..\..\$(Platform)\$(ProjectName).$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)..\..\..\$(Platform)\$(ProjectName).$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)..\..\$(Platform)\$(ProjectName).$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)..\..\..\$(Platform)\$(ProjectName).$(Configuration)\</OutDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

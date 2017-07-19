@@ -58,8 +58,8 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
-    <Folder Include="Models\" />
     <Folder Include="CNTK\Models\" />
+    <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="WebActivatorEx">
@@ -85,7 +85,7 @@
     <None Include="Project_Readme.html" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\ImageExtension\CNTKImageProcessing.cs">
+    <Compile Include="..\..\..\ImageExtension\CNTKImageProcessing.cs">
       <Link>CNTKImageProcessing.cs</Link>
     </Compile>
     <Compile Include="App_Start\SwaggerConfig.cs" />
