@@ -275,6 +275,7 @@ Examples/Image/PretrainedModels/*.model
 Examples/Image/FeatureExtraction/*.txt
 Examples/Image/GettingStarted/Output/
 Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
+Tests/EndToEndTests/CNTKv2Python/Keras/keras-*
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/
 Tutorials/.ipynb_checkpoints/
