@@ -266,6 +266,8 @@ namespace CNTK
         static const std::wstring AttributeNameRandomDistributionType;
         static const std::wstring AttributeNameRandomDistributionArgs;
         static const std::wstring AttributeNameSpatialScale;
+        static const std::wstring AttributeNameSliceStrides;
+        static const std::wstring AttributeNameSliceStridesVec;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
