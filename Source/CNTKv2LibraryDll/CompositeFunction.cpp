@@ -845,17 +845,14 @@ namespace CNTK
                 case PrimitiveOpType::Gather:
                     computationNodePtr = New<GatherNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
-                case PrimitiveOpType::AttachDynamicAxis:
+                case PrimitiveOpType::ToBatch:
                 {
-                    auto dynamicAxis = functionConfig[PrimitiveFunction::AttributeNameAttachDynamicAxis].Value<Axis>();
-                    std::wstring internalDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes({dynamicAxis});
-                    computationNodePtr = New<AttachDynamicAxisNode<ElementType>>(network->GetDeviceId(), internalNodeName, internalDynamicAxisName);
+                    computationNodePtr = New<ToBatchAxisNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
                 }
-                case PrimitiveOpType::DetachDynamicAxis:
+                case PrimitiveOpType::UnpackBatch:
                 {
-                    auto dynamicAxisSize = functionConfig[PrimitiveFunction::AttributeNameDynamicAxisSize].Value<size_t>();
-                    computationNodePtr = New<DetachDynamicAxisNode<ElementType>>(network->GetDeviceId(), internalNodeName, dynamicAxisSize);
+                    computationNodePtr = New<UnpackBatchAixsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
                 }
                 case PrimitiveOpType::Plus:

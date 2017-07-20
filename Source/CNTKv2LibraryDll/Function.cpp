@@ -1239,24 +1239,19 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr AttachDynamicAxis(const Variable& operand, Axis& axis, const std::wstring& name)
+    FunctionPtr ToBatch(const Variable& operand, const std::wstring& name)
     {
-        if (axis != Axis::DefaultBatchAxis())
-            LogicError("AttachDynamicAxis: only batch axis is supported now");
-
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAttachDynamicAxis] = axis;
-        return UnaryOp(PrimitiveOpType::AttachDynamicAxis, operand, std::move(additionalProperties), name);
+        return UnaryOp(PrimitiveOpType::ToBatch, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr DetachDynamicAxis(const Variable& operand, size_t size, const std::wstring& name)
+    FunctionPtr UnpackBatch(const Variable& operand, const std::wstring& name)
     {
         if (operand.DynamicAxes().size() > 1)
             LogicError("DetachDynamicAxis: only support input with batch axis itself.");
 
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameDynamicAxisSize] = size;
-        return UnaryOp(PrimitiveOpType::DetachDynamicAxis, operand, std::move(additionalProperties), name);
+        return UnaryOp(PrimitiveOpType::UnpackBatch, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr GumbelRandom(const NDShape& shape, DataType dataType, double loc, double scale, unsigned long seed, const std::wstring& name)

@@ -103,8 +103,6 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput = L"sequenceUnpackSuppressMaskOutput";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionType = L"randomDistributionType";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionArgs = L"randomDistributionArgs";
-    /*static*/ const std::wstring PrimitiveFunction::AttributeNameDynamicAxisSize = L"dynamicAxisSize";
-    /*static*/ const std::wstring PrimitiveFunction::AttributeNameAttachDynamicAxis = L"attachDynamicAxis";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -180,18 +178,13 @@ namespace CNTK
             (op == PrimitiveOpType::LambdaRank) ||
             (op == PrimitiveOpType::NDCG) || 
             (op == PrimitiveOpType::RandomDistribution && inputs.empty()) ||
-            (op == PrimitiveOpType::DetachDynamicAxis))
+            (op == PrimitiveOpType::UnpackBatch))
         {
             outputDynamicAxes = std::vector<Axis>({});
         }
-        else if (op == PrimitiveOpType::AttachDynamicAxis && functionConfig[PrimitiveFunction::AttributeNameAttachDynamicAxis].Value<Axis>().IsDynamicAxis())
+        else if (op == PrimitiveOpType::ToBatch)
         {
-            outputDynamicAxes = inputs[0].DynamicAxes();
-            auto attachedAxis = functionConfig[PrimitiveFunction::AttributeNameAttachDynamicAxis].Value<Axis>();
-            if (std::find(outputDynamicAxes.begin(), outputDynamicAxes.end(), attachedAxis) == outputDynamicAxes.end())
-            {
-                outputDynamicAxes.push_back(attachedAxis);
-            }
+            outputDynamicAxes = std::vector<Axis>({Axis::DefaultBatchAxis()});
         }
         else if ((op == PrimitiveOpType::ReduceElements) && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>().IsDynamicAxis() && (inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()))
         {
@@ -438,9 +431,12 @@ namespace CNTK
                                 InvalidArgument("AssignNode: None of the operands '%S' can have dynamic axes.", NamedListString(m_inputs).c_str());
                             if (!(m_inputs[0].IsConstant() || m_inputs[0].IsParameter()))
                                 InvalidArgument("AssignNode: Ref operand must be constant or parameter only.");
-                            if (m_inputs[0].Shape() != m_inputs[1].Shape())
+                            //delay the check for free dimension
+                            if (m_inputs[0].Shape() != m_inputs[1].Shape() && !m_inputs[0].Shape().HasFreeDimension() && !m_inputs[1].Shape().HasFreeDimension())
+                            {
                                 InvalidArgument("AssignNode: All inputs should have same sample layout.");
-
+                            }
+                                
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
                             break;
                         case PrimitiveOpType::ScatterPacked:
@@ -694,7 +690,7 @@ namespace CNTK
                             outputShape = outputShape.AppendShape(inputShape1);
                             break;
                         }
-                        case PrimitiveOpType::AttachDynamicAxis:
+                        case PrimitiveOpType::ToBatch:
                         {
                             assert(m_inputs.size() == 1);
                             auto inputShape = m_inputs[0].Shape();
@@ -703,13 +699,12 @@ namespace CNTK
                             outputShape = NDShape(inputDims);
                             break;
                         }
-                        case PrimitiveOpType::DetachDynamicAxis:
+                        case PrimitiveOpType::UnpackBatch:
                         {
                             assert(m_inputs.size() == 1);
-                            auto dynamic_axis_size = m_attributes[PrimitiveFunction::AttributeNameDynamicAxisSize].Value<size_t>();
                             auto inputShape = m_inputs[0].Shape();
                             outputShape = NDShape(inputShape.Dimensions());
-                            outputShape = outputShape.AppendShape({dynamic_axis_size});
+                            outputShape = outputShape.AppendShape({NDShape::FreeDimension});
                             break;
                         }
                         case PrimitiveOpType::Times:

@@ -102,8 +102,8 @@ namespace CNTK
         {PrimitiveOpType::Gather, L"Gather"},
         {PrimitiveOpType::StableSigmoid, L"StableSigmoid"},
         {PrimitiveOpType::RandomDistribution, L"RandomDistribution"},
-        {PrimitiveOpType::DetachDynamicAxis, L"DetachDynamicAxis"},
-        {PrimitiveOpType::AttachDynamicAxis, L"AttachDynamicAxis"},
+        {PrimitiveOpType::UnpackBatch, L"UnpackBatchAxis"},
+        {PrimitiveOpType::ToBatch, L"ToBatchAxis"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -267,8 +267,6 @@ namespace CNTK
         static const std::wstring AttributeNameSequenceUnpackSuppressMaskOutput;
         static const std::wstring AttributeNameRandomDistributionType;
         static const std::wstring AttributeNameRandomDistributionArgs;
-        static const std::wstring AttributeNameDynamicAxisSize;
-        static const std::wstring AttributeNameAttachDynamicAxis;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -772,7 +770,7 @@ namespace CNTK
         // Version 13: Add Gather op.
         // Version 14: Add StableSigmoid
         // Version 15: Add RandomDistribution
-        // Version 16: Add attach/detach dynamic axis node.
+        // Version 16: Add to_batch/unpack_batch.
         static const size_t s_serializationVersion = 16;
     };
 

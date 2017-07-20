@@ -609,8 +609,6 @@ void ComputationNetwork::ResetMBLayouts()
         node->LinkToMBLayout(make_shared<MBLayout>(1, 0, node->GetName()));
 
     auto inputNodes = InputNodes(nullptr);
-    auto attachDynamicAxisNodes = GetNodesWithType(L"AttachDynamicAxis");
-    inputNodes.merge(attachDynamicAxisNodes);
     // This is now initialized inside of the Input nodes, with the proper connections.
     for (auto node : inputNodes)
     {
@@ -698,7 +696,7 @@ void ComputationNetwork::ValidateNetwork()
     for (auto& node : nodes)
     {
         // nodes must output non-zero dimensional data, otherwise assume user error
-        if (node->GetSampleLayout().GetNumElements() == 0)
+        if (!node->m_needsDynamicValidation && node->GetSampleLayout().GetNumElements() == 0)
             RuntimeError("%ls operation has 0 elements", node->NodeName().c_str());
     }
     if (TraceLevel() > 0)

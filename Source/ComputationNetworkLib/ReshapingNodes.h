@@ -471,29 +471,19 @@ template class ReconcileDynamicAxisNode<float>;
 template class ReconcileDynamicAxisNode<double>;
 
 template <class ElemType>
-class AttachDynamicAxisNode : public ComputationNode<ElemType>, public NumInputs<1>, public ITakesDynamicAxis
+class ToBatchAxisNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() {
         return L"AttachDynamicAxis";
     }
 public:
-    AttachDynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& axisNodeName)
-        : Base(deviceId, name), m_dynamicAxisNodeName(axisNodeName)
+    ToBatchAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
     {
 
     }
-
-    virtual const std::wstring GetRequestedDynamicAxis() const 
-    {
-        return m_dynamicAxisNodeName;
-    }
-
-    AttachDynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : AttachDynamicAxisNode(deviceId, name, L"")
-    {
-    }
-
+    
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         auto& inputValue = InputRef(0).Value();
@@ -530,35 +520,44 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        //MBLayout should be set during ResetMBLayout
+        
+        if (!m_pMBLayout)
+        {
+            m_pMBLayout = make_shared<MBLayout>(1, 0, ComputationNodeBase::DefaultNoSequenceAxisName); // this generates a new layout
+        }
 
         auto sampleLayout = Input(0)->GetSampleLayout();
         const auto& inputDims = sampleLayout.GetDims();
         SmallVector<size_t> dims;
         dims.append(inputDims.begin(), inputDims.end() - 1);
+
+        if (isFinalValidationPass)
+        {
+            // we generate its own MBLayout
+            auto inputMBLayout = InputRef(0).GetMBLayout();
+            if (inputMBLayout)
+                InvalidArgument("%ls %ls operation can only operate on tensor without minibatch data (no layout).", NodeName().c_str(), OperationName().c_str());
+
+            m_pMBLayout->InitAsFrameMode(inputDims.back());
+        }
+
         SetDims(TensorShape(dims), HasMBLayout());
     }
-
-private:
-    std::wstring m_dynamicAxisNodeName;
 };
+template class ToBatchAxisNode<float>;
+template class ToBatchAxisNode<double>;
+
 
 template <class ElemType>
-class DetachDynamicAxisNode : public ComputationNode<ElemType>, public NumInputs<1>
+class UnpackBatchAixsNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() {
         return L"DetachDynamicAxis";
     }
 public:
-    DetachDynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name, size_t size)
-        : Base(deviceId, name), m_size(size)
-    {
-
-    }
-
-    DetachDynamicAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : DetachDynamicAxisNode(deviceId, name, 1)
+    UnpackBatchAixsNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
     {
     }
 
@@ -596,24 +595,39 @@ public:
         return false;
     }
 
+    bool ForceDynamicValidation() const override 
+    {
+        return true;
+    }
+
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;
 
-        auto sampleLayout = Input(0)->GetSampleLayout();
-        const auto& inputDims = sampleLayout.GetDims();
-        SmallVector<size_t> dims;
-        dims.append(inputDims.begin(), inputDims.end());
-        dims.push_back(m_size);
-        SetDims(TensorShape(dims), HasMBLayout());
+        TensorShape inputShape = Input(0)->GetSampleLayout();
+        SmallVector<size_t> outDims = inputShape.GetDims();
+        outDims.resize(inputShape.GetRank() + 1, 1);
+
+        if (isFinalValidationPass)
+        {
+            // we generate its own MBLayout
+            auto inputMBLayout = InputRef(0).GetMBLayout();
+            if (!inputMBLayout)
+                InvalidArgument("%ls %ls operation can only operate on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
+
+            if (inputMBLayout->GetNumParallelSequences() == 0)
+                LogicError("%ls %ls operation's final validation pass must not be invoked before the input MBLayout has been initialized and populated.", NodeName().c_str(), OperationName().c_str());
+
+            outDims[inputShape.GetRank()] = inputMBLayout->GetNumParallelSequences();
+        }
+
+        SetDims(TensorShape(outDims), HasMBLayout());
     }
-private:
-    size_t m_size;
 };
 
-template class DetachDynamicAxisNode<float>;
-template class DetachDynamicAxisNode<double>;
+template class UnpackBatchAixsNode<float>;
+template class UnpackBatchAixsNode<double>;
 
 // -----------------------------------------------------------------------
 // SliceNode (input)
