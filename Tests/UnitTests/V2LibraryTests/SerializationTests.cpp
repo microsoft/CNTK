@@ -339,8 +339,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::Gather) == 74 &&
                   static_cast<size_t>(PrimitiveOpType::StableSigmoid) == 75 && 
                   static_cast<size_t>(PrimitiveOpType::RandomDistribution) == 76 &&
-                  static_cast<size_t>(PrimitiveOpType::DetachDynamicAxis) == 77 &&
-                  static_cast<size_t>(PrimitiveOpType::AttachDynamicAxis) == 78,
+                  static_cast<size_t>(PrimitiveOpType::UnpackBatch) == 77 &&
+                  static_cast<size_t>(PrimitiveOpType::ToBatch) == 78,
                   "PrimitiveOpType enum value was modified.");
 }
 
