@@ -1970,7 +1970,7 @@ def slice(x, axis, begin_index, end_index, strides=None, name=''):
         begin_index (int): the index along axis where the slicing starts
         end_index (int): the index along axis where the slicing ends
         name (str, optional): the name of the Function instance in the network
-		strides(int): strides when apply slice, negative value means in reverse order
+        strides(int): step sizes when applying slice, negative value means in reverse order
 
     See also:
         Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
