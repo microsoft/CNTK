@@ -7,5 +7,6 @@
 StreamInformation(name, stream_id, storage_format, shape)
 }
 \description{
-StreamInformation
+Stream information container that is used to describe streams when
+implementing custom minibatch source through UserMinibatchSource.
 }

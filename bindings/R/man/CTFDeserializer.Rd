@@ -7,5 +7,8 @@
 CTFDeserializer(filename, streams)
 }
 \description{
-CTFDeserializer
+Configures the CNTK text-format reader that reads text-based files.
+}
+\details{
+Form: `[Sequence_Id] (Sample)+` where `Sample=|Input_Name (Value )*`
 }

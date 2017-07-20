@@ -25,10 +25,10 @@ should be named.
 }
 \examples{
 ```
-model <- dense(500) \%>\% activation(activation_relu)()
+model <- dense(500) \%>\% activation(op_relu)()
 # is the same as
-model <- dense(500) \%>\% actvation_relu
+model <- dense(500) \%>\% op_relu
 # and also the same as
-model <- dense(500, activation=activation_relu)
+model <- dense(500, activation=op_relu)
 ```
 }

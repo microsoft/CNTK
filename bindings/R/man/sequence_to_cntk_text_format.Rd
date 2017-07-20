@@ -2,13 +2,11 @@
 % Please edit documentation in R/io.R
 \name{sequence_to_cntk_text_format}
 \alias{sequence_to_cntk_text_format}
-\title{Base64ImageDeserializer}
+\title{sequence_to_cntk_text_format}
 \usage{
 sequence_to_cntk_text_format(seq_inx, alias_tensor_map)
 }
 \description{
-****** Attributes: ******
-}
-\details{
-filename
+Converts a list of NumPy arrays representing tensors of inputs into a format
+that is readable by CTFDeserializer.
 }

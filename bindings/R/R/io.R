@@ -1,11 +1,26 @@
 #' Base64ImageDeserializer
 #'
+#' Configures the image reader that reads base64 encoded images and
+#' corresponding labels from a file.
+#'
+#' Form: `[sequenceId <tab>] <numerical label (0-based class id)> <tab> <base64
+#' encoded image>`
+#'
+#' Similarly to the ImageDeserializer, the sequenceId prefix is optional and
+#' can be omitted.
+#'
+#' @param filename (str): file name of the input file dataset that contains
+#' images and corresponding labels
 #' @export
 Base64ImageDeserializer <- function(filename, streams) {
 	cntk$io$Base64ImageDeserializer(filename, streams)
 }
 
 #' CTFDeserializer
+#'
+#' Configures the CNTK text-format reader that reads text-based files.
+#'
+#' Form: `[Sequence_Id] (Sample)+` where `Sample=|Input_Name (Value )*`
 #'
 #' @export
 CTFDeserializer <- function(filename, streams) {
@@ -14,12 +29,17 @@ CTFDeserializer <- function(filename, streams) {
 
 #' HTKFeatureDeserializer
 #'
+#' Configures the HTK feature reader that reads speech data from scp files.
+#'
 #' @export
 HTKFeatureDeserializer <- function(streams) {
 	cntk$io$HTKFeatureDeserializer(streams)
 }
 
 #' Base64ImageDeserializer
+#'
+#' Configures an HTK label reader that reads speech HTK format MLF (Master
+#' Label File)
 #'
 #' @export
 HTKMLFDeserializer <- function(label_mapping_file, streams,
@@ -31,6 +51,11 @@ HTKMLFDeserializer <- function(label_mapping_file, streams,
 	)
 }
 
+#' IO_INFINITELY_REPEAT
+#'
+#' Constant used to specify a minibatch scheduling unit to equal the size of
+#' the full data sweep.
+#'
 #' @export
 IO_INFINITELY_REPEAT <- 18446744L
 
@@ -40,6 +65,12 @@ io <- reticulate::import("cntk.io")
 IO_DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS <- io$DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS
 
 #' ImageDeserializer
+#'
+#' Configures the image reader that reads images and corresponding labels from
+#' a file.
+#'
+#' Form: `<full path to image> <tab> <numerical label (0-based class id)>` or
+#' 'sequenceId <tab> path <tab> label`
 #'
 #' @export
 ImageDeserializer <- function(filename, streams) {
@@ -69,7 +100,7 @@ ImageDeserializer <- function(filename, streams) {
 #'
 #' ****** Associated Functions: ******
 #'
-#' as_sequences(variable = NULL)
+#' mb_as_sequences(variable = NULL)
 #'
 #' @export
 MinibatchData <- function(value, num_sequences, num_samples, sweep_end) {
@@ -81,8 +112,15 @@ MinibatchData <- function(value, num_sequences, num_samples, sweep_end) {
 	)
 }
 
+#' mb_as_sequences
+#'
+#' Convert the value of this minibatch instance to a sequence of NumPy arrays
+#' that have their masked entries removed.
+#'
+#' @return 	a list of matrices if dense, otherwise a SciPy CSR array
+#'
 #' @export
-md_as_sequences <- function(minibatch_data, variable = NULL) {
+mb_as_sequences <- function(minibatch_data, variable = NULL) {
 	minibatch_data$as_sequences(variable = variable)
 }
 
@@ -218,7 +256,7 @@ MinibatchSourceFromData <- function(data_streams,
 #'
 #' get_minibatch_checkpoint_state
 #'
-#' next_minibatch
+#' usermb_next_minibatch
 #'
 #' restore_mb_from_checkpoint
 #'
@@ -231,11 +269,19 @@ UserMinibatchSource <- function() {
 	cntk$io$UserMinibatchSource()
 }
 
+#' get_minibatch_checkpoint_state
+#'
+#' Returns a dictionary describing the current state of the minibatch source.
+#' Needs to be overwritten if the state of the minibatch source needs to be
+#' stored to and later restored from the checkpoint.
+#'
 #' @export
 get_minibatch_checkpoint_state <- function(mb_source) {
 	mb_source$get_checkpoint_state()
 }
 
+#' next_minibatch
+#'
 #' @export
 next_minibatch <- function(minibatch_source, minibatch_size_in_samples,
 						   input_map = NULL, device = NULL,
@@ -249,16 +295,45 @@ next_minibatch <- function(minibatch_source, minibatch_size_in_samples,
 	)
 }
 
+
+#' usermb_next_minibatch
+#'
+#' Function to be implemented by the user
+#'
+#' @export
+usermb_next_minibatch <- function(usermb_source, num_samples,
+								  num_workers, worker_rank, device = NULL) {
+	usermb_source$next_minibatch(
+		to_int(num_samples),
+		to_int(num_workers),
+		to_int(worker_rank),
+		device = device
+	)
+}
+
+#' restore_mb_from_checkpoint
+#'
+#' Sets the state of the checkpoint.
+#'
 #' @export
 restore_mb_from_checkpoint <- function(mb_source, checkpoint) {
 	mb_source$restore_from_checkpoint(checkpoint)
 }
 
+#' mb_stream_info
+#'
+#' Gets the description of the stream with given name. Throws an exception if
+#' there are none or multiple streams with this same name.
+#'
 #' @export
 mb_stream_info <- function(mb_source, name) {
 	mb_source$stream_info(name)
 }
 
+#' mb_stream_infos
+#'
+#' Function to be implemented by the user.
+#'
 #' @export
 mb_stream_infos <- function(mb_source) {
 	mb_source$stream_infos()
@@ -281,13 +356,20 @@ StreamConfiguration <- function(name, dim, is_sparse = FALSE, stream_alias = '',
 	)
 }
 
-
+#' StreamDefs
+#'
+#' Alias for Record
+#'
 #' @export
 StreamDefs <- function(...) {
 	cntk$variables$Record(...)
 }
 
 #' StreamDef
+#'
+#' Configuration of a stream for use with the builtin Deserializers. The
+#' meanings of some configuration keys have a mild dependency on the exact
+#' deserializer, and certain keys are meaningless for certain deserializers.
 #'
 #' @export
 StreamDef <- function(field = NULL, shape = NULL, is_sparse = FALSE,
@@ -308,6 +390,9 @@ StreamDef <- function(field = NULL, shape = NULL, is_sparse = FALSE,
 
 #' StreamInformation
 #'
+#' Stream information container that is used to describe streams when
+#' implementing custom minibatch source through UserMinibatchSource.
+#'
 #' @export
 StreamInformation <- function(name, stream_id, storage_format, shape) {
 	cntk$io$StreamInformation(
@@ -319,6 +404,11 @@ StreamInformation <- function(name, stream_id, storage_format, shape) {
 	)
 }
 
+#' sequence_to_cntk_text_format
+#'
+#' Converts a list of NumPy arrays representing tensors of inputs into a format
+#' that is readable by CTFDeserializer.
+#'
 #' @export
 sequence_to_cntk_text_format <- function(seq_inx, alias_tensor_map) {
 	cntk$io$sequence_to_cntk_text_format(seq_inx, alias_tensor_map)

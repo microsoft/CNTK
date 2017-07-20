@@ -7,5 +7,6 @@
 HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = FALSE)
 }
 \description{
-Base64ImageDeserializer
+Configures an HTK label reader that reads speech HTK format MLF (Master
+Label File)
 }

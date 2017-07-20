@@ -29,5 +29,5 @@ shape
 
 ****** Associated Functions: ******
 
-as_sequences(variable = NULL)
+mb_as_sequences(variable = NULL)
 }

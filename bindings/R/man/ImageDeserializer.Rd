@@ -7,5 +7,10 @@
 ImageDeserializer(filename, streams)
 }
 \description{
-ImageDeserializer
+Configures the image reader that reads images and corresponding labels from
+a file.
+}
+\details{
+Form: `<full path to image> <tab> <numerical label (0-based class id)>` or
+'sequenceId <tab> path <tab> label`
 }
