@@ -5,8 +5,8 @@ import fastRCNN, time, datetime
 from fastRCNN.pascal_voc import pascal_voc # as nmsPython
 print (datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
-dataset = "Grocery"
-#dataset = "pascalVoc"
+#dataset = "Grocery"
+dataset = "pascalVoc"
 #dataset = "pascalVoc_aeroplanesOnly"
 #dataset = "CustomDataset"
 
@@ -17,7 +17,7 @@ class Parameters():
     def __init__(self, datasetName):
         # cntk params
         self.datasetName = datasetName
-        self.cntk_nrRois = 100      # how many ROIs to zero-pad. Use 100 to get quick result. Use 2000 to get good results.
+        self.cntk_nrRois = 2000      # how many ROIs to zero-pad. Use 100 to get quick result. Use 2000 to get good results.
         self.cntk_padWidth = 1000
         self.cntk_padHeight = 1000
 

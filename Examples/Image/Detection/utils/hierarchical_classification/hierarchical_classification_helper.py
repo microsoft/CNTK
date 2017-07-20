@@ -1,5 +1,6 @@
 # ==============================================================================
 # Copyright (c) Microsoft. All rights reserved.
+#
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -21,13 +22,8 @@ class HierarchyHelper:
         self.tree_map = TreeMap.tree_map_from_tree_str(tree_str, use_background=True, use_multiply_with_parent=False)
         self.cls_maps = list(self.tree_map.meta_map.keys())
 
-
-        my_path = os.path.dirname(os.path.realpath(__file__))
-        my_path = my_path.replace('\\','/')
-
         self.output_mapper = self.tree_map.get_output_mapper()
-        self.tree_map.root_node.print()
-
+        
     def get_vectors_for_label_nr(self, label):
         """
         Creates target and scale vector for the given label. Requires that only one classmap is used!
@@ -48,7 +44,7 @@ class HierarchyHelper:
     def top_down_eval(self, vector):
         """
         Performs a top-down evaluation of the given predicted vector.
-        :param vector: prediction as by the networl
+        :param vector: prediction as by the network
         :return: Vector of the same shape as the input vector, where the predicted classes are assigned their likeliness and 0 for all other classes.
         """
         out_vec = np.zeros(vector.shape, dtype=np.float32)
@@ -57,15 +53,13 @@ class HierarchyHelper:
         multiplier = 1
 
         for region in self.tree_map.softmax_regions:
-            # todo: check: if start < region[0]: continue
             if start >= region[1]: continue
 
             if self.tree_map.use_background:
                 if vector[region[0]] < self.MINIMUM_BG_VALUE:
                     node_index = np.argmax(vector[region[0]+1:region[1]], axis=0) + region[0]+1
                 else:
-                    node_index=region[0] # TODO: switch to argmax (if thresh < .5 it is possible that it is not strongest)
-                    #node_index = np.argmax(vector[region[0]: region[1]], axis=0) + region[0]
+                    node_index = np.argmax(vector[region[0]: region[1]], axis=0) + region[0]
             else:
                 node_index = np.argmax(vector[region[0]:region[1]], axis=0) + region[0]
             #if np.add.reduce(out_vec)==0 and np.argmax(vector[0:3])!=0: import ipdb;ipdb.set_trace()

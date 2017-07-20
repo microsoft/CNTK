@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-
+#
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -82,7 +82,7 @@ def create_map_files(data_folder, class_dict, training_set):
                     img_line = "{}\t{}\t0\n".format(counter, abs_img_path)
                     img_file.write(img_line)
 
-                    roi_line = "{} |rois".format(counter)
+                    roi_line = "{} |roiAndLabel".format(counter)
                     for val in gt_annotations.flatten():
                         roi_line += " {}".format(val)
 
@@ -120,7 +120,7 @@ def create_class_dict(data_folder):
     class_list = [None]*len(class_dict)
     for k in class_dict:
         class_list[class_dict[k]]=k
-    class_map_file_path = os.path.join(data_folder, "Class_map.txt")
+    class_map_file_path = os.path.join(data_folder, "class_map.txt")
     with open(class_map_file_path, 'w') as class_map_file:
         for i in range(len(class_list)):
             class_map_file.write("{}\t{}\n".format(class_list[i], i))
@@ -129,7 +129,7 @@ def create_class_dict(data_folder):
 
 if __name__ == '__main__':
     abs_path = os.path.dirname(os.path.abspath(__file__))
-    data_set_path = os.path.join(abs_path, r"..\..\..\DataSets\Grocery")
+    data_set_path = os.path.join(abs_path,"..", "..", "..","DataSets","Grocery")
 
     class_dict = create_class_dict(data_set_path)
     create_map_files(data_set_path, class_dict, training_set=True)

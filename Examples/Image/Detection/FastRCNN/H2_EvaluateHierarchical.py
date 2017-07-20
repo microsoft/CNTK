@@ -1,5 +1,6 @@
 # ==============================================================================
 # Copyright (c) Microsoft. All rights reserved.
+#
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -20,7 +21,6 @@ from utils.hierarchical_classification.hierarchical_classification_helper import
 
 from H1_RunHierarchical import p, USE_HIERARCHICAL_CLASSIFICATION
 
-# cls_map_str = abs_path.replace("\\", "/") + "/../../DataSets/Grocery/class_map.txt"  # TODO resolve mapping problem
 HCH = HierarchyHelper(get_tree_str(p.datasetName, USE_HIERARCHICAL_CLASSIFICATION))
 
 output_scale = (p.cntk_padWidth, p.cntk_padHeight)
@@ -38,7 +38,7 @@ def prepare_ground_truth_boxes(gtbs):
     Object for parameter "all_gt_infos"
     """
     num_test_images = len(gtbs)
-    classes = HCH.output_mapper.get_all_classes()  # list of classes with new labels and indexing # todo: check if __background__ is present!!!
+    classes = HCH.output_mapper.get_all_classes()  # list of classes with new labels and indexing
     all_gt_infos = {key: [] for key in classes}
     for image_i in range(num_test_images):
         image_gtbs = np.copy(gtbs[image_i])
@@ -109,7 +109,7 @@ def prepare_predictions(outputs, roiss, num_classes):
                 prediciton.shape = (1,) + prediciton.shape
                 preds_for_img.append(prediciton)
 
-        preds_for_img = np.concatenate(preds_for_img, axis=0)  # (nr_of_rois x 6) --> coords_scor_label
+        preds_for_img = np.concatenate(preds_for_img, axis=0)  # (nr_of_rois x 6) --> coords_score_label
 
         for cls_j in range(1, num_classes):
             coords_score_label_for_cls = preds_for_img[np.where(preds_for_img[:, -1] == cls_j)]
@@ -121,9 +121,14 @@ def prepare_predictions(outputs, roiss, num_classes):
 def create_mb_source(img_height, img_width, img_channels, n_rois):
     gt_dim = 5 * n_rois
 
-    map_file = os.path.join(p.imgDir, "test_img_file.txt")
-    gt_file = os.path.join(p.imgDir, "test_roi_file.txt")
-    size_file = os.path.join(p.imgDir, "test_size_file.txt")
+    if p.datasetName!= "pascalVoc":
+        map_file = os.path.join(p.imgDir, "test_img_file.txt")
+        gt_file = os.path.join(p.imgDir, "test_roi_file.txt")
+        size_file = os.path.join(p.imgDir, "test_size_file.txt")
+    else:
+        map_file = os.path.join(p.imgDir, "mappings", "test2007.txt")
+        gt_file = os.path.join(p.imgDir, "mappings", "test2007_rois_abs-xyxy_noPad_skipDif.txt")
+        size_file = os.path.join(p.imgDir, "mappings", "test_size_file2007.txt")
 
     # read images
     transforms = [scale(width=img_width, height=img_height, channels=img_channels,
@@ -134,27 +139,27 @@ def create_mb_source(img_height, img_width, img_channels, n_rois):
 
     # read rois and labels
     roi_source = CTFDeserializer(gt_file, StreamDefs(
-        rois=StreamDef(field='rois', shape=gt_dim, is_sparse=False)))
+        rois=StreamDef(field='roiAndLabel', shape=gt_dim, is_sparse=False)))
 
     size_source = CTFDeserializer(size_file, StreamDefs(
         size=StreamDef(field='size', shape=2, is_sparse=False)))
 
     # define a composite reader
-    return MinibatchSource([image_source, roi_source, size_source], max_samples=sys.maxsize, randomize=False,
-                           trace_level=TraceLevel.Error)
+    return MinibatchSource([image_source, roi_source, size_source], max_samples=sys.maxsize, randomize=False,)
+                           #trace_level=TraceLevel.Error)
 
 
 def to_image_input_coordinates(coords, img_dims=None, relative_coord=False, centered_coords=False, img_input_dims=None,
-                               needs_padding_adaption=True, is_absolut=False):
+                               needs_padding_adaption=True, is_absolute=False):
     """
-    Converst the input coordinates to the coordinat type required for the prediction
-    :param coords: the coord to be transformed
+    Converts the input coordinates to the coordinates type required for the prediction
+    :param coords: the coordinates to be transformed
     :param img_dims: dimension of the image the coords are from. Not required if coordinates are not needing any adaption for the padding and are relative.
     :param relative_coord: whether the supplied coordinates are relative
-    :param centered_coords: whether the supplied coordinarts are True:(center_x, center_y, width, heigth) or False:(left_bound, top_bound, right_bound, bottom_vound)
+    :param centered_coords: whether the supplied coordinates are True:(center_x, center_y, width, heigth) or False:(left_bound, top_bound, right_bound, bottom_vound)
     :param img_input_dims: dimension of the detectors image input as tuple
     :param needs_padding_adaption: whether or not padding is used.
-    :param is_absolut: whether or not the coordinate are absolute coordinates on the original image
+    :param is_absolute: whether or not the coordinate are absolute coordinates on the original image
     :return: transformed coords
     """
     if centered_coords:
@@ -163,7 +168,7 @@ def to_image_input_coordinates(coords, img_dims=None, relative_coord=False, cent
         coords = np.concatenate([xy - wh_half, xy + wh_half], axis=1)
 
     # make coords relative
-    if is_absolut:
+    if is_absolute:
         coords /= (img_dims[0], img_dims[1], img_dims[0], img_dims[1])
         relative_coord = True
 
@@ -192,7 +197,7 @@ def eval_fast_rcnn_mAP(eval_model):
     rois_per_image = p.cntk_nrRois
 
     image_input = input_variable((num_channels, image_height, image_width),
-                                 dynamic_axes=[Axis.default_batch_axis()])  # , name=feature_node_name)
+                                 dynamic_axes=[Axis.default_batch_axis()])
     gt_input = input_variable((rois_per_image * 5,))
     roi_input = input_variable((rois_per_image, 4), dynamic_axes=[Axis.default_batch_axis()])
     size_input = input_variable((2,))
@@ -212,7 +217,7 @@ def eval_fast_rcnn_mAP(eval_model):
     all_raw_rois = []
     all_raw_img_dims = []
 
-    # evaluate test images and write netwrok output to file
+    # evaluate test images and write network output to file
     print("Evaluating Faster R-CNN model for %s images." % num_test_images)
     print(type(classes))
     for img_i in range(0, num_test_images):
@@ -228,7 +233,7 @@ def eval_fast_rcnn_mAP(eval_model):
         gt_data[:, 0:4] = to_image_input_coordinates(gt_data[:, 0:4],
                                                      img_dims=img_size,
                                                      relative_coord=False,
-                                                     is_absolut=True,
+                                                     is_absolute=True,
                                                      centered_coords=False,
                                                      needs_padding_adaption=True,
                                                      img_input_dims=output_scale)
@@ -248,7 +253,7 @@ def eval_fast_rcnn_mAP(eval_model):
 
     aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=True, use_07_metric=False)
     ap_list = []
-    for class_name in classes:  # sorted(aps):
+    for class_name in classes:
         if class_name == "__background__": continue
         ap_list += [aps[class_name]]
         print('AP for {:>15} = {:.6f}'.format(class_name, aps[class_name]))
@@ -260,13 +265,13 @@ def eval_fast_rcnn_mAP(eval_model):
 if __name__ == '__main__':
     """
     Evaluates the Classification of the model created by the H1 script. Since only the classification is to be tested
-    the roi_input is given the ground truth boxes. By this doing so it can be assured, that no issues due to bad region
+    the roi_input is given the ground truth boxes. This way it can be assured, that no issues due to bad region
     proposals is taken into account and the classification accurancy can be measured.
     """
     os.chdir(p.cntkFilesDir)
     model_path = os.path.join(abs_path, "Output", p.datasetName + "_hfrcn_py.model")
 
-    # Train only is no model exists yet
+    # Train only if no model exists yet
     if os.path.exists(model_path):
         print("Loading existing model from %s" % model_path)
         trained_model = load_model(model_path)
@@ -274,7 +279,7 @@ if __name__ == '__main__':
         print("No trained model found! Start training now ...")
         import H1_RunHierarchical as h1
 
-        trained_model = h1.create_and_safe_model(model_path)
+        trained_model = h1.create_and_save_model(model_path)
         print("Stored trained model at %s" % model_path)
 
     # Evaluate the test set

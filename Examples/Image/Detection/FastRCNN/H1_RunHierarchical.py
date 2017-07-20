@@ -1,18 +1,14 @@
 # Copyright (c) Microsoft. All rights reserved.
-
+#
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
-import os
-from cntk import *
 
 from A2_RunWithPyModel import *
 from htree_helper import get_tree_str
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, ".."))
-from utils.map.map_helpers import evaluate_detections
 from utils.hierarchical_classification.hierarchical_classification_helper import HierarchyHelper, Target_Creator
 
 cntk_py.force_deterministic_algorithms()
@@ -85,7 +81,7 @@ def train_fast_rcnn_h(debug_output=False, model_path=model_file):
     return frcn_output
 
 
-def create_and_safe_model(model_file):
+def create_and_save_model(model_file):
     trained_model = train_fast_rcnn_h()
     trained_model.save(model_file)
     return trained_model
@@ -95,9 +91,9 @@ if __name__ == '__main__':
     os.chdir(base_path)
     model_path = os.path.join(abs_path, "Output", p.datasetName + "_hfrcn_py.model")
 
-    # Train only is no model exists yet
+    # Train only if no model exists yet
     if os.path.exists(model_path):
         print("Model was already trained - model file: " + model_path)
     else:
-        create_and_safe_model(model_path)
+        create_and_save_model(model_path)
         print("Stored trained model at %s" % model_path)
