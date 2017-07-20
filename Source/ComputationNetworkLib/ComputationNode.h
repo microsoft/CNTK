@@ -56,7 +56,8 @@
 #define CNTK_MODEL_VERSION_24 24 // ReduceElements: add keepDimensions
 #define CNTK_MODEL_VERSION_25 25 // transpose: allow specifying a permutation
 #define CNTK_MODEL_VERSION_26 26 // Update ROI pooling format to match Caffe version.
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_26
+#define CNTK_MODEL_VERSION_27 27 // Slice: support stride_multiplier
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_27
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
