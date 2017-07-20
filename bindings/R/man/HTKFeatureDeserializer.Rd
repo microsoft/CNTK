@@ -7,5 +7,5 @@
 HTKFeatureDeserializer(streams)
 }
 \description{
-HTKFeatureDeserializer
+Configures the HTK feature reader that reads speech data from scp files.
 }

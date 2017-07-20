@@ -9,5 +9,7 @@ StreamDef(field = NULL, shape = NULL, is_sparse = FALSE,
   broadcast = NULL, defines_mb_size = FALSE)
 }
 \description{
-StreamDef
+Configuration of a stream for use with the builtin Deserializers. The
+meanings of some configuration keys have a mild dependency on the exact
+deserializer, and certain keys are meaningless for certain deserializers.
 }

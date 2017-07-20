@@ -19,11 +19,11 @@ activation_identity <- function(keep) {
 #'
 #' @examples
 #' ```
-#' model <- dense(500) %>% activation(activation_relu)()
+#' model <- dense(500) %>% activation(op_relu)()
 #' # is the same as
-#' model <- dense(500) %>% actvation_relu
+#' model <- dense(500) %>% op_relu
 #' # and also the same as
-#' model <- dense(500, activation=activation_relu)
+#' model <- dense(500, activation=op_relu)
 #' ```
 #' @export
 Activation <- function(activation = activation_identity, name = '') {
@@ -78,6 +78,19 @@ AveragePooling <- function(filter_shape, strides = 1, pad = FALSE, name = '') {
 	)
 }
 
+#' BatchNormalization
+#'
+#' Layer factory function to create an average-pooling layer.
+#'
+#' Like Convolution(), AveragePooling() processes items arranged on an
+#' N-dimensional grid, such as an image. Typically, each item is a vector. For
+#' each item, average-pooling computes the element-wise mean over a window
+#' (“receptive field”) of items surrounding the item’s position on the grid.
+#'
+#' The size (spatial extent) of the receptive field is given by filter_shape.
+#' E.g. for 2D pooling, filter_shape should be a tuple of two integers, such as
+#' (5,5).
+#'
 #' @export
 BatchNormalization <- function(map_rank = NULL, init_scale = 1,
 							   normalization_time_constant = 5000,
@@ -93,6 +106,23 @@ BatchNormalization <- function(map_rank = NULL, init_scale = 1,
 	)
 }
 
+#' Convolution
+#'
+#' Layer factory function to create a batch-normalization layer.
+#'
+#' Batch normalization applies this formula to every input element
+#' (element-wise): y = (x - batch_mean) / (batch_stddev + epsilon) * scale +
+#' bias where batch_mean and batch_stddev are estimated on the minibatch and
+#' scale and bias are learned parameters.
+#'
+#' During operation, this layer also estimates an aggregate running mean and
+#' standard deviation for use in inference.
+#'
+#' A BatchNormalization layer instance owns its learnable parameter tensors and
+#' exposes them as attributes .scale and .bias. The aggregate estimates are
+#' exposed as attributes aggregate_mean, aggregate_variance, and
+#' aggregate_count.
+#'
 #' @export
 Convolution <- function(filter_shape, num_filters = NULL, sequential = FALSE,
 						activation = activation_identity,

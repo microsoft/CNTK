@@ -14,7 +14,7 @@ Base class of all user minibatch sources.
 
 get_minibatch_checkpoint_state
 
-next_minibatch
+usermb_next_minibatch
 
 restore_mb_from_checkpoint
 
