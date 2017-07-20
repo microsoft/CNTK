@@ -19,8 +19,8 @@ cfg = __C
 
 __C.CNTK = edict()
 
-__C.CNTK.MAKE_MODE = False
-__C.CNTK.TRAIN_E2E = True
+__C.CNTK.MAKE_MODE = True
+__C.CNTK.TRAIN_E2E = True # E2E or 4-stage training
 __C.CNTK.TRAIN_CONV_LAYERS = True
 __C.CNTK.USE_MEAN_GRADIENT = True
 __C.CNTK.FORCE_DETERMINISTIC = True
@@ -70,10 +70,8 @@ __C.CNTK.DIMS_STREAM_NAME = 'dims'
 # Data sets
 #
 if __C.CNTK.DATASET == "Grocery":
-    __C.CNTK.CLASSES = ('__background__',  # always index 0
-                        'avocado', 'orange', 'butter', 'champagne', 'eggBox', 'gerkin', 'joghurt', 'ketchup',
-                        'orangeJuice', 'onion', 'pepper', 'tomato', 'water', 'milk', 'tabasco', 'mustard')
     __C.CNTK.MAP_FILE_PATH = "../../DataSets/Grocery"
+    __C.CNTK.CLASS_MAP_FILE = "class_map.txt"
     __C.CNTK.TRAIN_MAP_FILE = "train_img_file.txt"
     __C.CNTK.TEST_MAP_FILE = "test_img_file.txt"
     __C.CNTK.TRAIN_ROI_FILE = "train_roi_file.txt"
@@ -83,10 +81,8 @@ if __C.CNTK.DATASET == "Grocery":
     __C.CNTK.PROPOSAL_LAYER_PARAMS = "'feat_stride': 16\n'scales':\n - 4 \n - 8 \n - 12"
 
 if __C.CNTK.DATASET == "Pascal":
-    __C.CNTK.CLASSES = ('__background__',  # always index 0
-                        'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable',
-                        'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor')
     __C.CNTK.MAP_FILE_PATH = "../../DataSets/Pascal/mappings"
+    __C.CNTK.CLASS_MAP_FILE = "class_map.txt"
     __C.CNTK.TRAIN_MAP_FILE = "trainval2007.txt"
     __C.CNTK.TRAIN_ROI_FILE = "trainval2007_rois_abs-xyxy_noPad_skipDif.txt"
     __C.CNTK.TEST_MAP_FILE = "test2007.txt"

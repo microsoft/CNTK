@@ -11,7 +11,7 @@ dependencies:
 - numpy=1.11.2=py35_0
 - pandas=0.19.1=np111py35_0
 - pandas-datareader=0.2.1=py35_0
-- pillow=3.4.2=py35_0
+- pillow=3.2.0=py35_1
 - pip=8.1.2=py35_0
 - python=3.5.2=0
 - pyyaml=3.12=py35_0
@@ -20,6 +20,7 @@ dependencies:
 - setuptools=27.2.0=py35_1
 - six=1.10.0=py35_0
 - wheel=0.29.0=py35_0
+- opencv=3.1.0=np111py35_1
 - pip:
   - pytest==3.0.3
   - sphinx==1.5.4
@@ -27,3 +28,4 @@ dependencies:
   - twine==1.8.1
   - gym==0.5.2
   - pydot-ng==1.0.0
+  - easydict==1.6.0

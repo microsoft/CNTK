@@ -25,7 +25,7 @@ class ProposalLayer(UserFunction):
     transformations to a set of regular boxes (called "anchors").
     '''
 
-    def __init__(self, arg1, arg2, arg3, name='ProposalLayer', param_str=None, outDim=None):
+    def __init__(self, arg1, arg2, arg3, name='ProposalLayer', param_str=None):
         super(ProposalLayer, self).__init__([arg1, arg2, arg3], name=name)
         self.param_str_ = param_str if param_str is not None else "'feat_stride': 16\n'scales':\n - 8 \n - 16 \n - 32"
 
@@ -35,7 +35,6 @@ class ProposalLayer(UserFunction):
         anchor_scales = layer_params.get('scales', (8, 16, 32))
         self._anchors = generate_anchors(scales=np.array(anchor_scales))
         self._num_anchors = self._anchors.shape[0]
-        self._outDim = outDim
 
         if DEBUG:
             print ('feat_stride: {}'.format(self._feat_stride))
@@ -47,10 +46,7 @@ class ProposalLayer(UserFunction):
         # (n, x1, y1, x2, y2) specifying an image batch index n and a
         # rectangle (x1, y1, x2, y2)
         # for CNTK the proposal shape is [4 x roisPerImage], and mirrored in Python
-        if self._outDim is None:
-            proposalShape = (FreeDimension, 4)
-        else:
-            proposalShape = (self._outDim, 4)
+        proposalShape = (FreeDimension, 4)
 
         return [output_variable(proposalShape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
                             name="rpn_rois_raw", needs_gradient=False)]
@@ -192,21 +188,19 @@ class ProposalLayer(UserFunction):
         pass
 
     def clone(self, cloned_inputs):
-        return ProposalLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], param_str=self.param_str_, outDim=self._outDim)
+        return ProposalLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], param_str=self.param_str_)
 
     def serialize(self):
         internal_state = {}
         internal_state['param_str'] = self.param_str_
-        internal_state['outDim'] = self._outDim
 
         return internal_state
 
     @staticmethod
     def deserialize(inputs, name, state):
         param_str = state['param_str']
-        outDim = state['outDim']
 
-        return ProposalLayer(inputs[0], inputs[1], inputs[2], name=name, param_str=param_str, outDim=outDim)
+        return ProposalLayer(inputs[0], inputs[1], inputs[2], name=name, param_str=param_str)
 
 
 def _filter_boxes(boxes, min_size):

@@ -4,7 +4,6 @@
 # for full license information.
 # ==============================================================================
 
-import cv2
 import numpy as np
 import os
 
@@ -108,16 +107,31 @@ def create_class_dict(data_folder):
                 train_classes.append(label)
 
     class_dict = {k: v for v, k in enumerate(train_classes)}
-    class_map_file_path = os.path.join(data_folder, "Class_map.txt")
+    class_list = [None]*len(class_dict)
+    for k in class_dict:
+        class_list[class_dict[k]]=k
+    class_map_file_path = os.path.join(data_folder, "class_map.txt")
     with open(class_map_file_path, 'w') as class_map_file:
-        for k in class_dict:
-            class_map_file.write("{}\t{}\n".format(k, class_dict[k]))
+        for i in range(len(class_list)):
+            class_map_file.write("{}\t{}\n".format(class_list[i], i))
 
     return class_dict
 
+def parse_class_map_file(class_map_file):
+    with open(class_map_file, "r") as f:
+        lines = f.readlines()
+    class_list = [None]*len(lines)
+    for line in lines:
+        tab_pos = line.find('\t')
+        class_name = line[:tab_pos]
+        class_id = int(line[tab_pos+1:-1])
+        class_list[class_id] = class_name
+
+    return class_list
+
 if __name__ == '__main__':
     abs_path = os.path.dirname(os.path.abspath(__file__))
-    data_set_path = os.path.join(abs_path, r"..\..\..\DataSets\Grocery")
+    data_set_path = os.path.join(abs_path, "../../../DataSets/Grocery")
 
     class_dict = create_class_dict(data_set_path)
     create_map_files(data_set_path, class_dict, training_set=True)

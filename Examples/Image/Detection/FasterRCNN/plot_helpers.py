@@ -62,7 +62,7 @@ def visualizeResultsFaster(imgPath, roiLabels, roiScores, roiRelCoords, padWidth
         assert(len(roiLabels) == len(roiScores))
         minScore = min(roiScores)
         print("roiScores min: {}, max: {}, threshold: {}".format(minScore, max(roiScores), decisionThreshold))
-        if minScore < decisionThreshold:
+        if minScore > decisionThreshold:
             decisionThreshold = minScore * 0.5
             print("reset decision threshold to: {}".format(decisionThreshold))
 

@@ -41,6 +41,7 @@ sys.path.append(os.path.join(abs_path, ".."))
 from utils.rpn.rpn_helpers import create_rpn, create_proposal_target_layer
 from utils.rpn.cntk_smoothL1_loss import SmoothL1Loss
 from utils.map.map_helpers import evaluate_detections
+from utils.annotations.annotations_helper import parse_class_map_file
 from config import cfg
 from od_mb_source import ObjectDetectionMinibatchSource
 from cntk_helpers import regress_rois
@@ -64,9 +65,8 @@ globalvars = {}
 globalvars['output_path'] = os.path.join(abs_path, "Output")
 
 # dataset specific parameters
-classes = cfg["CNTK"].CLASSES
-num_classes = len(classes)
 map_file_path = os.path.join(abs_path, cfg["CNTK"].MAP_FILE_PATH)
+globalvars['class_map_file'] = cfg["CNTK"].CLASS_MAP_FILE
 globalvars['train_map_file'] = cfg["CNTK"].TRAIN_MAP_FILE
 globalvars['test_map_file'] = cfg["CNTK"].TEST_MAP_FILE
 globalvars['train_roi_file'] = cfg["CNTK"].TRAIN_ROI_FILE
@@ -86,41 +86,8 @@ roi_dim = cfg["CNTK"].ROI_DIM
 ###############################################################
 ###############################################################
 
-def parse_arguments():
-    parser = argparse.ArgumentParser()
-
+def set_global_vars(use_arg_parser = True):
     data_path = map_file_path
-    parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located',
-                        required=False, default=data_path)
-    parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models',
-                        required=False, default=None)
-    parser.add_argument('-logdir', '--logdir', help='Log file',
-                        required=False, default=None)
-    parser.add_argument('-n', '--num_epochs', help='Total number of epochs to train', type=int,
-                        required=False, default=cfg["CNTK"].E2E_MAX_EPOCHS)
-    parser.add_argument('-m', '--minibatch_size', help='Minibatch size', type=int,
-                        required=False, default=mb_size)
-    parser.add_argument('-e', '--epoch_size', help='Epoch size', type=int,
-                        required=False, default=epoch_size)
-    parser.add_argument('-q', '--quantized_bits', help='Number of quantized bits used for gradient aggregation', type=int,
-                        required=False, default='32')
-    parser.add_argument('-r', '--restart',
-                        help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)',
-                        action='store_true')
-    parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device",
-                        required=False, default=None)
-    parser.add_argument('-rpnLrFactor', '--rpnLrFactor', type=float, help="Scale factor for rpn lr schedule", required=False)
-    parser.add_argument('-frcnLrFactor', '--frcnLrFactor', type=float, help="Scale factor for frcn lr schedule", required=False)
-    parser.add_argument('-e2eLrFactor', '--e2eLrFactor', type=float, help="Scale factor for e2e lr schedule", required=False)
-    parser.add_argument('-momentumPerMb', '--momentumPerMb', type=float, help="momentum per minibatch", required=False)
-    parser.add_argument('-e2eEpochs', '--e2eEpochs', type=int, help="number of epochs for e2e training", required=False)
-    parser.add_argument('-rpnEpochs', '--rpnEpochs', type=int, help="number of epochs for rpn training", required=False)
-    parser.add_argument('-frcnEpochs', '--frcnEpochs', type=int, help="number of epochs for frcn training", required=False)
-    parser.add_argument('-rndSeed', '--rndSeed', type=int, help="the random seed", required=False)
-    parser.add_argument('-trainConv', '--trainConv', type=int, help="whether to train conv layers", required=False)
-    parser.add_argument('-trainE2E', '--trainE2E', type=int, help="whether to train e2e (otherwise 4 stage)", required=False)
-
-    args = vars(parser.parse_args())
 
     # set and overwrite learning parameters
     globalvars['rpn_lr_factor'] = cfg["CNTK"].RPN_LR_FACTOR
@@ -134,62 +101,105 @@ def parse_arguments():
     globalvars['train_conv'] = cfg["CNTK"].TRAIN_CONV_LAYERS
     globalvars['train_e2e'] = cfg["CNTK"].TRAIN_E2E
 
-    if args['rpnLrFactor'] is not None:
-        globalvars['rpn_lr_factor'] = args['rpnLrFactor']
-    if args['frcnLrFactor'] is not None:
-        globalvars['frcn_lr_factor'] = args['frcnLrFactor']
-    if args['e2eLrFactor'] is not None:
-        globalvars['e2e_lr_factor'] = args['e2eLrFactor']
-    if args['momentumPerMb'] is not None:
-        globalvars['momentum_per_mb'] = args['momentumPerMb']
-    if args['e2eEpochs'] is not None:
-        globalvars['e2e_epochs'] = args['e2eEpochs']
-    if args['rpnEpochs'] is not None:
-        globalvars['rpn_epochs'] = args['rpnEpochs']
-    if args['frcnEpochs'] is not None:
-        globalvars['frcn_epochs'] = args['frcnEpochs']
-    if args['rndSeed'] is not None:
-        globalvars['rnd_seed'] = args['rndSeed']
-    if args['trainConv'] is not None:
-        globalvars['train_conv'] = True if args['trainConv']==1 else False
-    if args['trainE2E'] is not None:
-        globalvars['train_e2e'] = True if args['trainE2E']==1 else False
 
-    if args['outputdir'] is not None:
-        globalvars['output_path'] = args['outputdir']
-    if args['logdir'] is not None:
-        log_dir = args['logdir']
-    if args['device'] is not None:
-        # Setting one worker on GPU and one worker on CPU. Otherwise memory consumption is too high for a single GPU.
-        if Communicator.rank() == 0:
-            cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
-        else:
-            cntk.device.try_set_default_device(cntk.device.cpu())
+    if use_arg_parser:
+        parser = argparse.ArgumentParser()
+        parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located',
+                            required=False, default=data_path)
+        parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models',
+                            required=False, default=None)
+        parser.add_argument('-logdir', '--logdir', help='Log file',
+                            required=False, default=None)
+        parser.add_argument('-n', '--num_epochs', help='Total number of epochs to train', type=int,
+                            required=False, default=cfg["CNTK"].E2E_MAX_EPOCHS)
+        parser.add_argument('-m', '--minibatch_size', help='Minibatch size', type=int,
+                            required=False, default=mb_size)
+        parser.add_argument('-e', '--epoch_size', help='Epoch size', type=int,
+                            required=False, default=epoch_size)
+        parser.add_argument('-q', '--quantized_bits', help='Number of quantized bits used for gradient aggregation', type=int,
+                            required=False, default='32')
+        parser.add_argument('-r', '--restart',
+                            help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)',
+                            action='store_true')
+        parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device",
+                            required=False, default=None)
+        parser.add_argument('-rpnLrFactor', '--rpnLrFactor', type=float, help="Scale factor for rpn lr schedule", required=False)
+        parser.add_argument('-frcnLrFactor', '--frcnLrFactor', type=float, help="Scale factor for frcn lr schedule", required=False)
+        parser.add_argument('-e2eLrFactor', '--e2eLrFactor', type=float, help="Scale factor for e2e lr schedule", required=False)
+        parser.add_argument('-momentumPerMb', '--momentumPerMb', type=float, help="momentum per minibatch", required=False)
+        parser.add_argument('-e2eEpochs', '--e2eEpochs', type=int, help="number of epochs for e2e training", required=False)
+        parser.add_argument('-rpnEpochs', '--rpnEpochs', type=int, help="number of epochs for rpn training", required=False)
+        parser.add_argument('-frcnEpochs', '--frcnEpochs', type=int, help="number of epochs for frcn training", required=False)
+        parser.add_argument('-rndSeed', '--rndSeed', type=int, help="the random seed", required=False)
+        parser.add_argument('-trainConv', '--trainConv', type=int, help="whether to train conv layers", required=False)
+        parser.add_argument('-trainE2E', '--trainE2E', type=int, help="whether to train e2e (otherwise 4 stage)", required=False)
 
-    if args['datadir'] is not None:
-        data_path = args['datadir']
+        args = vars(parser.parse_args())
+
+        if args['rpnLrFactor'] is not None:
+            globalvars['rpn_lr_factor'] = args['rpnLrFactor']
+        if args['frcnLrFactor'] is not None:
+            globalvars['frcn_lr_factor'] = args['frcnLrFactor']
+        if args['e2eLrFactor'] is not None:
+            globalvars['e2e_lr_factor'] = args['e2eLrFactor']
+        if args['momentumPerMb'] is not None:
+            globalvars['momentum_per_mb'] = args['momentumPerMb']
+        if args['e2eEpochs'] is not None:
+            globalvars['e2e_epochs'] = args['e2eEpochs']
+        if args['rpnEpochs'] is not None:
+            globalvars['rpn_epochs'] = args['rpnEpochs']
+        if args['frcnEpochs'] is not None:
+            globalvars['frcn_epochs'] = args['frcnEpochs']
+        if args['rndSeed'] is not None:
+            globalvars['rnd_seed'] = args['rndSeed']
+        if args['trainConv'] is not None:
+            globalvars['train_conv'] = True if args['trainConv']==1 else False
+        if args['trainE2E'] is not None:
+            globalvars['train_e2e'] = True if args['trainE2E']==1 else False
+
+        if args['outputdir'] is not None:
+            globalvars['output_path'] = args['outputdir']
+        if args['logdir'] is not None:
+            log_dir = args['logdir']
+        if args['device'] is not None:
+            # Setting one worker on GPU and one worker on CPU. Otherwise memory consumption is too high for a single GPU.
+            if Communicator.rank() == 0:
+                cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
+            else:
+                cntk.device.try_set_default_device(cntk.device.cpu())
+
+        if args['datadir'] is not None:
+            data_path = args['datadir']
 
     if not os.path.isdir(data_path):
         raise RuntimeError("Directory %s does not exist" % data_path)
 
+    globalvars['class_map_file'] = os.path.join(data_path, globalvars['class_map_file'])
     globalvars['train_map_file'] = os.path.join(data_path, globalvars['train_map_file'])
     globalvars['test_map_file'] = os.path.join(data_path, globalvars['test_map_file'])
     globalvars['train_roi_file'] = os.path.join(data_path, globalvars['train_roi_file'])
     globalvars['test_roi_file'] = os.path.join(data_path, globalvars['test_roi_file'])
 
-    # report args
-    print("Using the following parameters:")
-    print("Flip image       : {}".format(cfg["TRAIN"].USE_FLIPPED))
-    print("Train conv layers: {}".format(globalvars['train_conv']))
-    print("Random seed      : {}".format(globalvars['rnd_seed']))
-    print("Momentum per MB  : {}".format(globalvars['momentum_per_mb']))
-    if globalvars['train_e2e']:
-        print("E2E epochs       : {}".format(globalvars['e2e_epochs']))
-    else:
-        print("RPN lr factor    : {}".format(globalvars['rpn_lr_factor']))
-        print("RPN epochs       : {}".format(globalvars['rpn_epochs']))
-        print("FRCN lr factor   : {}".format(globalvars['frcn_lr_factor']))
-        print("FRCN epochs      : {}".format(globalvars['frcn_epochs']))
+    if cfg["CNTK"].FORCE_DETERMINISTIC:
+        force_deterministic_algorithms()
+    np.random.seed(seed=globalvars['rnd_seed'])
+    globalvars['classes'] = parse_class_map_file(globalvars['class_map_file'])
+    globalvars['num_classes'] = len(globalvars['classes'])
+
+    if cfg["CNTK"].DEBUG_OUTPUT:
+        # report args
+        print("Using the following parameters:")
+        print("Flip image       : {}".format(cfg["TRAIN"].USE_FLIPPED))
+        print("Train conv layers: {}".format(globalvars['train_conv']))
+        print("Random seed      : {}".format(globalvars['rnd_seed']))
+        print("Momentum per MB  : {}".format(globalvars['momentum_per_mb']))
+        if globalvars['train_e2e']:
+            print("E2E epochs       : {}".format(globalvars['e2e_epochs']))
+        else:
+            print("RPN lr factor    : {}".format(globalvars['rpn_lr_factor']))
+            print("RPN epochs       : {}".format(globalvars['rpn_epochs']))
+            print("FRCN lr factor   : {}".format(globalvars['frcn_lr_factor']))
+            print("FRCN epochs      : {}".format(globalvars['frcn_epochs']))
 
 ###############################################################
 ###############################################################
@@ -226,21 +236,21 @@ def create_fast_rcnn_predictor(conv_out, rois, fc_layers):
     fc_out = fc_layers(roi_out)
 
     # prediction head
-    W_pred = parameter(shape=(4096, num_classes), init=normal(scale=0.01), name="cls_score.W")
-    b_pred = parameter(shape=num_classes, init=0, name="cls_score.b")
+    W_pred = parameter(shape=(4096, globalvars['num_classes']), init=normal(scale=0.01), name="cls_score.W")
+    b_pred = parameter(shape=globalvars['num_classes'], init=0, name="cls_score.b")
     cls_score = plus(times(fc_out, W_pred), b_pred, name='cls_score')
 
     # regression head
-    W_regr = parameter(shape=(4096, num_classes*4), init=normal(scale=0.001), name="bbox_regr.W")
-    b_regr = parameter(shape=num_classes*4, init=0, name="bbox_regr.b")
+    W_regr = parameter(shape=(4096, globalvars['num_classes']*4), init=normal(scale=0.001), name="bbox_regr.W")
+    b_regr = parameter(shape=globalvars['num_classes']*4, init=0, name="bbox_regr.b")
     bbox_pred = plus(times(fc_out, W_regr), b_regr, name='bbox_regr')
 
     return cls_score, bbox_pred
 
 # Defines the Faster R-CNN network model for detecting objects in images
-def create_faster_rcnn_predictor(features, scaled_gt_boxes, dims_input):
+def create_faster_rcnn_predictor(base_model_file_name, features, scaled_gt_boxes, dims_input):
     # Load the pre-trained classification net and clone layers
-    base_model = load_model(base_model_file)
+    base_model = load_model(base_model_file_name)
     conv_layers = clone_conv_layers(base_model)
     fc_layers = clone_model(base_model, [pool_node_name], [last_hidden_node_name], clone_method=CloneMethod.clone)
 
@@ -252,7 +262,7 @@ def create_faster_rcnn_predictor(features, scaled_gt_boxes, dims_input):
     rpn_rois, rpn_losses = \
         create_rpn(conv_out, scaled_gt_boxes, dims_input, proposal_layer_param_string=cfg["CNTK"].PROPOSAL_LAYER_PARAMS)
     rois, label_targets, bbox_targets, bbox_inside_weights = \
-        create_proposal_target_layer(rpn_rois, scaled_gt_boxes, num_classes=num_classes)
+        create_proposal_target_layer(rpn_rois, scaled_gt_boxes, num_classes=globalvars['num_classes'])
 
     # Fast RCNN and losses
     cls_score, bbox_pred = create_fast_rcnn_predictor(conv_out, rois, fc_layers)
@@ -268,7 +278,7 @@ def create_detection_losses(cls_score, label_targets, rois, bbox_pred, bbox_targ
 
     p_cls_loss = placeholder()
     p_rois = placeholder()
-    # The terms that are accounted for in the cls loss are those that correspond to an actual roi proposal --> do not count padded rois
+    # The terms that are accounted for in the cls loss are those that correspond to an actual roi proposal --> do not count no-op (all-zero) rois
     roi_indicator = reduce_sum(p_rois, axis=1)
     cls_num_terms = reduce_sum(cntk.greater_equal(roi_indicator, 0.0))
     cls_normalization_factor = 1.0 / cls_num_terms
@@ -430,7 +440,7 @@ def compute_rpn_proposals(rpn_model, image_input, roi_input, dims_input):
     return buffered_proposals
 
 # Trains a Faster R-CNN model end-to-end
-def train_faster_rcnn_e2e(debug_output=False):
+def train_faster_rcnn_e2e(base_model_file_name, debug_output=False):
     # Input variables denoting features and labeled ground truth rois (as 5-tuples per roi)
     image_input = input_variable((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis()], name=feature_node_name)
     roi_input = input_variable((cfg["CNTK"].INPUT_ROIS_PER_IMAGE, 5), dynamic_axes=[Axis.default_batch_axis()])
@@ -438,7 +448,7 @@ def train_faster_rcnn_e2e(debug_output=False):
     dims_node = alias(dims_input, name='dims_input')
 
     # Instantiate the Faster R-CNN prediction model and loss function
-    loss, pred_error = create_faster_rcnn_predictor(image_input, roi_input, dims_node)
+    loss, pred_error = create_faster_rcnn_predictor(base_model_file_name, image_input, roi_input, dims_node)
 
     if debug_output:
         print("Storing graphs and models to %s." % globalvars['output_path'])
@@ -458,7 +468,7 @@ def train_faster_rcnn_e2e(debug_output=False):
     return create_eval_model(loss, image_input, dims_input)
 
 # Trains a Faster R-CNN model using 4-stage alternating training
-def train_faster_rcnn_alternating(debug_output=False):
+def train_faster_rcnn_alternating(base_model_file_name, debug_output=False):
     '''
         4-Step Alternating Training scheme from the Faster R-CNN paper:
         
@@ -503,7 +513,7 @@ def train_faster_rcnn_alternating(debug_output=False):
     rpn_rois_buf = alias(rpn_rois_input, name='rpn_rois')
 
     # base image classification model (e.g. VGG16 or AlexNet)
-    base_model = load_model(base_model_file)
+    base_model = load_model(base_model_file_name)
 
     print("stage 1a - rpn")
     if True:
@@ -543,7 +553,7 @@ def train_faster_rcnn_alternating(debug_output=False):
 
         # use buffered proposals in target layer
         rois, label_targets, bbox_targets, bbox_inside_weights = \
-            create_proposal_target_layer(rpn_rois_buf, scaled_gt_boxes, num_classes=num_classes)
+            create_proposal_target_layer(rpn_rois_buf, scaled_gt_boxes, num_classes=globalvars['num_classes'])
 
         # Fast RCNN and losses
         fc_layers = clone_model(base_model, [pool_node_name], [last_hidden_node_name], CloneMethod.clone)
@@ -614,7 +624,10 @@ def train_faster_rcnn_alternating(debug_output=False):
 
     return create_eval_model(stage2_frcn_network, image_input, dims_input, rpn_model=stage2_rpn_network)
 
-def eval_faster_rcnn_mAP(eval_model, img_map_file, roi_map_file):
+def eval_faster_rcnn_mAP(eval_model):
+    img_map_file = globalvars['test_map_file']
+    roi_map_file = globalvars['test_roi_file']
+    classes = globalvars['classes']
     image_input = input_variable((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis()], name=feature_node_name)
     roi_input = input_variable((cfg["CNTK"].INPUT_ROIS_PER_IMAGE, 5), dynamic_axes=[Axis.default_batch_axis()])
     dims_input = input_variable((6), dynamic_axes=[Axis.default_batch_axis()])
@@ -638,7 +651,7 @@ def eval_faster_rcnn_mAP(eval_model, img_map_file, roi_map_file):
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
-    all_boxes = [[[] for _ in range(num_test_images)] for _ in range(num_classes)]
+    all_boxes = [[[] for _ in range(num_test_images)] for _ in range(globalvars['num_classes'])]
 
     # evaluate test images and write netwrok output to file
     print("Evaluating Faster R-CNN model for %s images." % num_test_images)
@@ -672,7 +685,7 @@ def eval_faster_rcnn_mAP(eval_model, img_map_file, roi_map_file):
         coords_score_label = np.hstack((regressed_rois, scores, labels))
 
         #   shape of all_boxes: e.g. 21 classes x 4952 images x 58 rois x 5 coords+score
-        for cls_j in range(1, num_classes):
+        for cls_j in range(1, globalvars['num_classes']):
             coords_score_label_for_cls = coords_score_label[np.where(coords_score_label[:,-1] == cls_j)]
             all_boxes[cls_j][img_i] = coords_score_label_for_cls[:,:-1].astype(np.float32, copy=False)
 
@@ -687,7 +700,9 @@ def eval_faster_rcnn_mAP(eval_model, img_map_file, roi_map_file):
     for class_name in aps:
         ap_list += [aps[class_name]]
         print('AP for {:>15} = {:.4f}'.format(class_name, aps[class_name]))
-    print('Mean AP = {:.4f}'.format(np.nanmean(ap_list)))
+    meanAP = np.nanmean(ap_list)
+    print('Mean AP = {:.4f}'.format(meanAP))
+    return meanAP
 
 # The main method trains and evaluates a Fast R-CNN model.
 # If a trained model is already available it is loaded an no training will be performed (if MAKE_MODE=True).
@@ -704,10 +719,7 @@ if __name__ == '__main__':
         cfg["CNTK"].DEBUG_OUTPUT = False
         cfg["CNTK"].VISUALIZE_RESULTS = False
 
-    parse_arguments()
-    if cfg["CNTK"].FORCE_DETERMINISTIC:
-        force_deterministic_algorithms()
-    np.random.seed(seed=globalvars['rnd_seed'])
+    set_global_vars()
     model_path = os.path.join(globalvars['output_path'], "faster_rcnn_eval_{}_{}.model"
                               .format(cfg["CNTK"].BASE_MODEL, "e2e" if globalvars['train_e2e'] else "4stage"))
 
@@ -717,9 +729,9 @@ if __name__ == '__main__':
         eval_model = load_model(model_path)
     else:
         if globalvars['train_e2e']:
-            eval_model = train_faster_rcnn_e2e(debug_output=cfg["CNTK"].DEBUG_OUTPUT)
+            eval_model = train_faster_rcnn_e2e(base_model_file, debug_output=cfg["CNTK"].DEBUG_OUTPUT)
         else:
-            eval_model = train_faster_rcnn_alternating(debug_output=cfg["CNTK"].DEBUG_OUTPUT)
+            eval_model = train_faster_rcnn_alternating(base_model_file, debug_output=cfg["CNTK"].DEBUG_OUTPUT)
 
         eval_model.save(model_path)
         if cfg["CNTK"].DEBUG_OUTPUT:
@@ -729,7 +741,7 @@ if __name__ == '__main__':
         print("Stored eval model at %s" % model_path)
 
     # Compute mean average precision on test set
-    eval_faster_rcnn_mAP(eval_model, globalvars['test_map_file'], globalvars['test_roi_file'])
+    eval_faster_rcnn_mAP(eval_model)
 
     # Plot results on test set
     if cfg["CNTK"].VISUALIZE_RESULTS:
@@ -738,7 +750,7 @@ if __name__ == '__main__':
         img_shape = (num_channels, image_height, image_width)
         results_folder = os.path.join(globalvars['output_path'], cfg["CNTK"].DATASET)
         eval_and_plot_faster_rcnn(eval_model, num_eval, globalvars['test_map_file'], img_shape,
-                                  results_folder, feature_node_name, classes,
+                                  results_folder, feature_node_name, globalvars['classes'],
                                   drawUnregressedRois=cfg["CNTK"].DRAW_UNREGRESSED_ROIS,
                                   drawNegativeRois=cfg["CNTK"].DRAW_NEGATIVE_ROIS,
                                   nmsThreshold=cfg["CNTK"].RESULTS_NMS_THRESHOLD,

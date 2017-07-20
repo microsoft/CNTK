@@ -1,3 +1,10 @@
+# ==============================================================================
+# Copyright (c) Microsoft. All rights reserved.
+#
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
 import sys, os
 import numpy as np
 import xml.etree.ElementTree
@@ -9,10 +16,9 @@ from PIL import Image
 use_relative_coords_ctr_wh = False
 # else: top left and bottom right corner are used (i.e. xmin, ymin, xmax, ymax) in absolute coords
 
-skip_difficult_annotations = True
 use_pad_scale = False
-pad_width = 1000
-pad_height = 1000
+pad_width = 850
+pad_height = 850
 
 pascal_voc2007_jpgimg_rel_path = "../VOCdevkit/VOC2007/JPEGImages/"
 pascal_voc2007_imgsets_rel_path = "../VOCdevkit/VOC2007/ImageSets/Main/"
@@ -87,56 +93,78 @@ def create_mappings(train, skip_difficult):
         "rel-ctr-wh" if use_relative_coords_ctr_wh else "abs-xyxy",
         "pad" if use_pad_scale else "noPad",
         "_skipDif" if skip_difficult else "")
+    size_map_output = "{}_size_file2007.txt".format(file_prefix)
 
     in_map_file_path = os.path.join(abs_path, img_map_input)
     out_map_file_path = os.path.join(abs_path, img_map_output)
     roi_file_path = os.path.join(abs_path, roi_map_output)
+    size_file_path = os.path.join(abs_path, size_map_output)
+    class_map_file_path = os.path.join(abs_path, "class_map.txt")
 
+    # write class map file
+    class_list = [None]*len(class_dict)
+    for k in class_dict:
+        class_list[class_dict[k]]=k
+    with open(class_map_file_path, 'w') as class_map_file:
+        for i in range(len(class_list)):
+            class_map_file.write("{}\t{}\n".format(class_list[i], i))
+
+    # read input file
     with open(in_map_file_path) as input_file:
         input_lines = input_file.readlines()
 
     counter = 0
     with open(out_map_file_path, 'w') as img_file:
         with open(roi_file_path, 'w') as roi_file:
-            for in_line in input_lines:
-                img_number = in_line.strip()
-                img_file_path = "{}{}.jpg".format(pascal_voc2007_jpgimg_rel_path, img_number)
-                img_line = "{}\t{}\t0\n".format(counter, img_file_path)
-                img_file.write(img_line)
+            with open(size_file_path, 'w') as size_file:
+                for in_line in input_lines:
+                    img_number = in_line.strip()
+                    img_file_path = "{}{}.jpg".format(pascal_voc2007_jpgimg_rel_path, img_number)
+                    img_line = "{}\t{}\t0\n".format(counter, img_file_path)
+                    img_file.write(img_line)
 
-                annotation_file = os.path.join(pascal_voc2007_annotations_rel_path, "{}.xml".format(img_number))
-                annotations = ElementTree.parse(annotation_file).getroot()
+                    annotation_file = os.path.join(pascal_voc2007_annotations_rel_path, "{}.xml".format(img_number))
+                    annotations = ElementTree.parse(annotation_file).getroot()
 
-                roi_line = "{} |roiAndLabel ".format(counter)
-                for obj in annotations.findall('object'):
-                    if skip_difficult:
-                        difficult = int(obj.findall('difficult')[0].text)
-                        if difficult == 1:
-                            continue
+                    roi_line = "{} |roiAndLabel ".format(counter)
+                    for obj in annotations.findall('object'):
+                        if skip_difficult:
+                            difficult = int(obj.findall('difficult')[0].text)
+                            if difficult == 1:
+                                continue
 
-                    cls = obj.findall('name')[0].text
-                    cls_index = class_dict[cls]
+                        cls = obj.findall('name')[0].text
+                        cls_index = class_dict[cls]
 
-                    bbox = obj.findall('bndbox')[0]
-                    # subtracting 1 since matlab indexing is 1-based
-                    xmin = int(bbox.findall('xmin')[0].text) - 1
-                    ymin = int(bbox.findall('ymin')[0].text) - 1
-                    xmax = int(bbox.findall('xmax')[0].text) - 1
-                    ymax = int(bbox.findall('ymax')[0].text) - 1
+                        bbox = obj.findall('bndbox')[0]
+                        # subtracting 1 since matlab indexing is 1-based
+                        xmin = int(bbox.findall('xmin')[0].text) - 1
+                        ymin = int(bbox.findall('ymin')[0].text) - 1
+                        xmax = int(bbox.findall('xmax')[0].text) - 1
+                        ymax = int(bbox.findall('ymax')[0].text) - 1
 
-                    assert xmin >= 0 and ymin >= 0 and xmax >= 0 and ymax >=0
+                        assert xmin >= 0 and ymin >= 0 and xmax >= 0 and ymax >=0
 
-                    roi_line += format_roi(cls_index, xmin, ymin, xmax, ymax, img_file_path)
+                        roi_line += format_roi(cls_index, xmin, ymin, xmax, ymax, img_file_path)
 
-                roi_file.write(roi_line + "\n")
-                counter += 1
-                if counter % 500 == 0:
-                    print("Processed {} images".format(counter))
+                    roi_file.write(roi_line + "\n")
+
+                    size_line = "{} |size".format(counter)
+                    with Image.open(img_file_path) as img:
+                        width, height = img.size
+                    size_line += " {} {}\n".format(width, height)
+                    size_file.write(size_line)
+
+                    counter += 1
+                    if counter % 500 == 0:
+                        print("Processed {} images".format(counter))
 
     with open(cls_file_path, 'w') as cls_file:
         for cls in classes:
             cls_file.write("{}\t{}\n".format(cls, class_dict[cls]))
 
 if __name__ == '__main__':
-    create_mappings(True, skip_difficult=skip_difficult_annotations)
-    create_mappings(False, skip_difficult=skip_difficult_annotations)
+    create_mappings(True, skip_difficult=True)
+    create_mappings(False, skip_difficult=True)
+    create_mappings(True, skip_difficult=False)
+    create_mappings(False, skip_difficult=False)
