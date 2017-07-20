@@ -24,7 +24,7 @@ echo Building java.
 if not exist "%project_dir%com\microsoft\CNTK\lib\windows" mkdir "%project_dir%com\microsoft\CNTK\lib\windows"
 
 if "%is_gpu%" == "true" (
-  for %%x in (cublas64_80.dll cudart64_80.dll cudnn64_5.dll curand64_80.dll cusparse64_80.dll nvml.dll) do (
+  for %%x in (cublas64_80.dll cudart64_80.dll cudnn64_6.dll curand64_80.dll cusparse64_80.dll nvml.dll) do (
     copy "%output_dir%/%%x" ".\com\microsoft\CNTK\lib\windows\%%x" 
     echo %%x>> .\com\microsoft\CNTK\lib\windows\NATIVE_MANIFEST
   )
