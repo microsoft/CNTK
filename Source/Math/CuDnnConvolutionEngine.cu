@@ -53,7 +53,7 @@ public:
         // Set map count(aka K) dimension.
         dims[0] = (int)mapCount;
         dims[1] = (int)filt[filt_size - 1];
-        CUDNN_CALL(cudnnSetFilterNdDescriptor_v4(m_kernel, dataType, FILTER_FORMAT, (int)dim_size, dims.data()));
+        CUDNN_CALL(cudnnSetFilterNdDescriptor(m_kernel, dataType, FILTER_FORMAT, (int)dim_size, dims.data()));
     }
 
     ~CuDnnKernel()
@@ -437,13 +437,13 @@ protected:
         CUDNN_CALL(cudnnPoolingForward(*m_cudnn, *(m_pool), &C::One, m_inT, ptr(in), &C::Zero, m_outT, ptr(out)));
     }
 
-    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) override
     {
         size_t batchSize = in.GetNumCols();
         m_inT.UpdateBatchSize(batchSize);
         m_outT.UpdateBatchSize(batchSize);
         CUDNN_CALL(cudnnPoolingBackward(*m_cudnn, *(m_pool), &C::One, m_outT, ptr(out), m_outT, ptr(srcGrad),
-                                        m_inT, ptr(in), &C::One, m_inT, ptr(grad)));
+                                        m_inT, ptr(in), accumulateGradient ? &C::One : &C::Zero, m_inT, ptr(grad)));
     }
 
     void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) override
@@ -693,17 +693,19 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
 
     // cuDNN as of version 6.0 does not handle asymmetric padding for even size kernel convolution correctly. We need to detect asymmetric
     // padding due to auto-padding and choose the reference convolution implementation instead
+    // a special case is when stride >= input, this means we will have a single output, and thus asymmetric padding is not an issue 
     if (poolKind == PoolKind::None)     // only for convolution, pooling seems fine
     {
         for (int i = 0; i < kernelRank; i++)
         {
             auto lowerPad = geometry->GetLowerPad(i); 
             auto upperPad = geometry->GetUpperPad(i); 
-            if (kernel[i] % 2 == 0 && lowerPad < upperPad)
+            auto stride = geometry->GetStride(i); 
+            if (kernel[i] % 2 == 0 && lowerPad < upperPad && stride < input[i])
             {
                 fprintf(stderr, "WARNING: Detected asymmetric padding issue with even kernel size and lowerPad (%d) < higherPad (%d) (i=%d), cuDNN will not be able to produce correct result. Switch to reference engine (VERY SLOW). \n", lowerPad, upperPad, i);
-                retVal = false; 
-                break; 
+                retVal = false;
+                break;
             }
         }
     }

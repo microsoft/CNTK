@@ -40,6 +40,10 @@ def test_sanitize_input(data, dtype):
     inp = sanitize_input(data, dtype)
     assert np.allclose(inp.value, data)
     assert inp.dtype == dtype
+    if not isinstance(data, np.ndarray):
+        assert inp.shape == np.asarray(data).shape
+    else:
+        assert inp.shape == data.shape
 
 def test_axes():
     axes = [C.Axis.default_batch_axis(), C.Axis.default_dynamic_axis()]
@@ -70,6 +74,12 @@ def test_get_data_type():
     assert get_data_type(pa64, n64) == np.float64
     assert get_data_type(pa32, pl, n64) == np.float32
     assert get_data_type(pa64, pl, n64) == np.float64
+    
+    assert get_data_type(np.float64(1)) == np.float64
+    assert get_data_type(np.float32(1)) == np.float32
+    assert get_data_type(np.int64(1)) == np.float32  # special case for cntk
+    assert get_data_type(1) == np.float32
+    assert get_data_type(1.0) == np.float32
 
 def test_sanitize_batch_sparse():
     batch = [csr([[1,0,2],[2,3,0]]),
@@ -110,8 +120,6 @@ def test_mask(batch, seq_starts, expected):
 def test_one_hot_raises():
     with pytest.raises(ValueError):
         s = Value.one_hot([[1.0, 2.0], [3.]], 4)
-    with pytest.raises(ValueError):
-        s = Value.one_hot([1, 2], 4)
 
 
 @pytest.mark.parametrize("dtype", [

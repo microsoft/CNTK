@@ -2,7 +2,9 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
+"""
+CNTK operators that are specialized in sequences.  Calling these operators creates nodes in the CNTK computational graph.
+"""
 import numpy as np
 from cntk.internal import typemap, sanitize_input
 from cntk.internal.utils import get_data_type
@@ -28,7 +30,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
         dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
-        sequence_axis (:class:`~cntk.Axis`): a dynamic axis (e.g., default_dynamic_axis())
+        sequence_axis (:class:`~cntk.axis.Axis`): a dynamic axis (e.g., default_dynamic_axis())
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -54,7 +56,7 @@ def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=
         dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
-        sequence_axis (:class:`~cntk.Axis`): a dynamic axis (e.g., default_dynamic_axis())
+        sequence_axis (:class:`~cntk.axis.Axis`): a dynamic axis (e.g., default_dynamic_axis())
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -77,9 +79,6 @@ def unpack(x, padding_value, no_mask_output=False, name=''):
     viz. the unpacked non-sequence data and a mask denoting the gaps in the unpacked output
     due to differences across lengths of the sequences in the operand.
 
-    Example:
-        TBA.
-
     Args:
         x: the sequence tensor (or its name) which is unpacked
         padding_value (np.float32 or np.float64): The value to pad gaps in the unpacked tensor with.
@@ -89,6 +88,9 @@ def unpack(x, padding_value, no_mask_output=False, name=''):
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
 
     from cntk.cntk_py import unpack
@@ -146,7 +148,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
     from cntk.cntk_py import future_value
 
     if initial_state is None:
-        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+        initial_state = Constant.scalar(sanitize_dtype_cntk(x.dtype), 0.0)
 
     x = sanitize_input(x)
     return future_value(x, initial_state, time_step, name)
@@ -245,7 +247,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     from cntk.cntk_py import Constant, past_value
 
     if initial_state is None:
-        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+        initial_state = Constant.scalar(sanitize_dtype_cntk(x.dtype), 0.0)
     else:
         initial_state = sanitize_input(initial_state)
 
@@ -333,8 +335,6 @@ def slice(seq, begin_index, end_index, name=''):
     '''
     Slice the input sequence.
 
-    Examples:
-        TBA
     Args:
         seq: sequence input tensor
         begin_index (`int`): the index along sequence axis where the slicing starts
@@ -346,6 +346,9 @@ def slice(seq, begin_index, end_index, name=''):
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
     from cntk.cntk_py import sequence_slice
     seq = sanitize_input(seq, get_data_type(seq))
@@ -421,10 +424,7 @@ def where(condition, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0, dtype=np.float32), (1,4,3,2))
         >>> z.eval({x:x0})
-        [array([[ 0.],
-                [ 0.],
-                [ 1.],
-                [ 1.]], dtype=float32)]
+        [array([ 0.,  0.,  1.,  1.], dtype=float32)]
         >>> y = C.sequence.where(z)
         >>> y.eval({x:x0})
         [array([ 2.,  3.], dtype=float32)]
@@ -596,7 +596,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import broadcast_as
-    operand = sanitize_input(operand, get_data_type(operand))
+    operand = sanitize_input(operand, get_data_type(operand, broadcast_as_operand))
     broadcast_as_operand = sanitize_input(
         broadcast_as_operand, get_data_type(broadcast_as_operand))
     return broadcast_as(operand, broadcast_as_operand, name)

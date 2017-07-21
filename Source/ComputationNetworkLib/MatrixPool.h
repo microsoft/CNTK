@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <vector>
 #include <set>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <algorithm>
 #include <stdlib.h>
@@ -23,7 +25,7 @@ template <class ElemType>
 struct MemRequestInfo
 {
     DEVICEID_TYPE deviceId;                     // which device to allocate data 
-    shared_ptr<Matrix<ElemType>>*pMatrixPtr;    // memory pointer 
+    std::vector<shared_ptr<Matrix<ElemType>>*> pMatrixPtrs;    // memory pointers 
     size_t matrixSize;                          // memory size 
     bool mbScale;                               // whether the memory shall be scaled by minibatch size 
     bool isWorkSpace;                           // workspace memory or not, by workspace we indicate whether a memory space will be released very shortly after allocation 
@@ -31,8 +33,9 @@ struct MemRequestInfo
     int releaseStep;                            // at what step counter memory release is requested  
     int memoryId;                               // integer indexing the memory buffer ID 
     MemRequestInfo(DEVICEID_TYPE deviceId, shared_ptr<Matrix<ElemType>>*pMatrixPtr, size_t matrixSize, bool mbScale, bool isWorkSpace, int allocStep)
-        :deviceId(deviceId), pMatrixPtr(pMatrixPtr), matrixSize(matrixSize), mbScale(mbScale), isWorkSpace(isWorkSpace), allocStep(allocStep), releaseStep(INT_MAX), memoryId(-1)
+        :deviceId(deviceId), matrixSize(matrixSize), mbScale(mbScale), isWorkSpace(isWorkSpace), allocStep(allocStep), releaseStep(INT_MAX), memoryId(-1)
     {
+        pMatrixPtrs.push_back(pMatrixPtr);
     }
     void SetReleaseStep(int step) { releaseStep = step; }
     void SetMemoryId(int id) { memoryId = id;  }
@@ -63,29 +66,63 @@ struct MemAllocInfo
 // Note: see #define SUPRESS_MEMSHARING below as for how to temporarily disable memory sharing altogether, for debugging
 class MatrixPool
 {
+public:
+    typedef const void* AliasNodePtr; // use as an identifier in place of ComputationNodeBasePtr to avoid include order issue
+
+protected:
     vector<MemRequestInfo<float>> m_memRequestInfoFloatVec; 
     vector<MemRequestInfo<double>> m_memRequestInfoDoubleVec;
     set<DEVICEID_TYPE> m_deviceIDSet; 
     int m_stepCounter; 
 
     template <class ElemType>
-    vector<MemRequestInfo<ElemType>>& GetMemRequestInfoVec(); 
+    vector<MemRequestInfo<ElemType>>& GetMemRequestInfoVec();
+
+    // MatrixPool allows a bunch of node to share one matrix
+
+    struct AliasInfo
+    {
+        void* pMatrixPtr;
+        size_t totalCount;
+        size_t releaseCount;
+
+        AliasInfo(size_t total = 0)
+            : pMatrixPtr(nullptr), totalCount(total), releaseCount(0)
+        {
+        }
+    };
+    unordered_map<AliasNodePtr, AliasInfo> m_aliasGroups;
+    unordered_map<AliasNodePtr, AliasNodePtr> m_aliasLookup;
 
 public:
-    void ResetStepCounter() { m_stepCounter = 0; };
+
+    void Reset()
+    {
+        m_stepCounter = 0;
+        m_aliasGroups.clear();
+        m_aliasLookup.clear();
+    };
 
     template <class ElemType>
-    void RequestRelease(shared_ptr<Matrix<ElemType>> *pMatrixPtr)
+    MemRequestInfo<ElemType>* GetMemInfo(shared_ptr<Matrix<ElemType>> *pMatrixPtr)
     {
         vector<MemRequestInfo<ElemType>>& memInfoVec = GetMemRequestInfoVec<ElemType>();
         // iterate through the vector and find the pointer memInfo
         for (auto& memInfo : memInfoVec)
         {
-            if (memInfo.pMatrixPtr == pMatrixPtr)
-            {
-                memInfo.SetReleaseStep(m_stepCounter);
-                break; 
-            }
+            if (memInfo.pMatrixPtrs[0] == pMatrixPtr)
+                return &memInfo;
+        }
+        return nullptr;
+    }
+
+    template <class ElemType>
+    void RequestRelease(shared_ptr<Matrix<ElemType>> *pMatrixPtr)
+    {
+        auto memInfo = GetMemInfo(pMatrixPtr);
+        if (memInfo != nullptr)
+        {
+            memInfo->SetReleaseStep(m_stepCounter);
         }
         m_stepCounter++; 
     }
@@ -115,6 +152,77 @@ public:
         OptimizedMemoryAllocationFunc<float>(); 
         OptimizedMemoryAllocationFunc<double>();
         return; 
+    }
+
+    void SetAliasInfo(
+        const unordered_map<AliasNodePtr, unordered_set<AliasNodePtr>>& groupMap,
+        const unordered_map<AliasNodePtr, AliasNodePtr>& rootLookupMap)
+    {
+        m_aliasLookup.clear();
+        for (const auto& pair : groupMap)
+        {
+            m_aliasGroups.insert(std::make_pair(pair.first, AliasInfo(pair.second.size())));
+
+            for (const auto& child : pair.second)
+            {
+                if (rootLookupMap.find(child) == rootLookupMap.end())
+                    InvalidArgument("group nodes should be in lookupMap");
+            }
+        }
+
+        for (const auto& pair : rootLookupMap)
+        {
+            if (groupMap.find(pair.second) == groupMap.end())
+                InvalidArgument("lookup root should be group key");
+        }
+        m_aliasLookup = rootLookupMap;
+    }
+
+    template <class ElemType>
+    void RequestAliasedRelease(AliasNodePtr node)
+    {
+        const auto iter = m_aliasLookup.find(node);
+        if (iter == m_aliasLookup.end())
+            LogicError("node not aliased");
+
+        auto parent = iter->second;
+        auto& aliasInfo = m_aliasGroups[parent];
+        if (aliasInfo.pMatrixPtr == nullptr)
+            LogicError("double releasing aliased matrix, or releasing before any allocation for the matrix");
+
+        if (aliasInfo.releaseCount >= aliasInfo.totalCount)
+            LogicError("number of alias instances exceeded expectation");
+
+        aliasInfo.releaseCount++;
+
+        if (aliasInfo.releaseCount == aliasInfo.totalCount)
+        {
+            RequestRelease((shared_ptr<Matrix<ElemType>>*)aliasInfo.pMatrixPtr);
+            aliasInfo.pMatrixPtr = nullptr;
+        }
+    }
+
+    template <class ElemType>
+    void RequestAliasedAllocate(DEVICEID_TYPE deviceId, AliasNodePtr node, shared_ptr<Matrix<ElemType>>*pMatrixPtr, size_t matrixSize, bool mbScale)
+    {
+        const auto iter = m_aliasLookup.find(node);
+        if (iter == m_aliasLookup.end())
+            LogicError("node not aliased");
+
+        auto parent = iter->second;
+        auto& aliasInfo = m_aliasGroups[parent];
+        if (aliasInfo.pMatrixPtr == nullptr)
+        {
+            // first allocation for the group
+            aliasInfo.pMatrixPtr = pMatrixPtr;
+            RequestAllocate(deviceId, pMatrixPtr, matrixSize, mbScale, false);
+        }
+        else
+        {
+            auto aliasRootMatrixPtr = (shared_ptr<Matrix<ElemType>>*)aliasInfo.pMatrixPtr;
+            *pMatrixPtr = *aliasRootMatrixPtr;
+            GetMemInfo<ElemType>(aliasRootMatrixPtr)->pMatrixPtrs.push_back(pMatrixPtr);
+        }
     }
 
 private: 
@@ -147,7 +255,17 @@ private:
         // remove all requests that has been marked as sparse matrices, those will not participate in memory sharing 
         for (auto iter = memInfoVec.begin(); iter != memInfoVec.end(); )
         {
-            if ((*(iter->pMatrixPtr))->GetMatrixType() == SPARSE)
+            bool hasSparse = false;
+            for (auto matPtr : iter->pMatrixPtrs)
+            {
+                if ((*matPtr)->GetMatrixType() == SPARSE)
+                {
+                    hasSparse = true;
+                    break;
+                }
+            }
+
+            if (hasSparse)
                 memInfoVec.erase(iter);
             else
                 iter++; 
@@ -257,7 +375,12 @@ private:
                     for (auto& memInfo : memInfoVec)
                     {
                         if (memInfo.deviceId == devId && memInfo.isWorkSpace == wsFlag && memInfo.memoryId == i)
-                            *memInfo.pMatrixPtr = matrixPtr;
+                        {
+                            for (auto pOutMatrixPtr : memInfo.pMatrixPtrs)
+                            {
+                                *pOutMatrixPtr = matrixPtr;
+                            }
+                        }
                     }
                 }
             }

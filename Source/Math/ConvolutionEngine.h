@@ -53,7 +53,7 @@ public:
 
     void ForwardPooling(const Mat& in, Mat& out);
 
-    void BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad);
+    void BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient);
 
     void MaxUnpooling(const Mat& out, const Mat& poolIn, Mat& in);
 
@@ -95,7 +95,7 @@ protected:
 
     virtual void ForwardPoolingCore(const Mat& in, Mat& out) = 0;
 
-    virtual void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) = 0;
+    virtual void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) = 0;
 
     virtual void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) = 0;
 

@@ -10,6 +10,19 @@ from cntk.contrib import crosstalk as cstk
 DictParameterType = 'DictParameter'
 
 def find_func_param(func, name=None, shape=None, allow_not_found=False):
+    '''
+    Find a single parameter in a function by name or by shape when the function has multiple parameters.
+    If the function only has one parameter it's directly returned.
+    
+    Args:
+        func (:class:`~cntk.ops.functions.Function`): The function to search parameter for
+        name (string) : The name of the parameter
+        shape (tuple): The shape of the parameter
+        allow_not_found (bool): Set to True to avoid raise exception when not found
+    
+    Returns:
+        The :class:`~cntk.variables.Parameter` that is found
+    '''
     if len(func.parameters) == 1:
         return func.parameters[0]
     found = [p for p in func.parameters if (shape and p.shape == shape) or name == p.name]
@@ -22,50 +35,50 @@ def find_func_param(func, name=None, shape=None, allow_not_found=False):
         raise Exception('more than one found')
     return found[0]
     
-def parameter_setter(p, raw_value, attr=None):
+def _parameter_setter(p, raw_value, attr=None):
     if p.shape != raw_value.shape:
         raise Exception('different shape, expected {} actual {}'.format(p.shape, raw_value.shape))
     p.value = raw_value
     
-def parameter_getter(p, attr=None):
+def _parameter_getter(p, attr=None):
     return p.value
     
-def dict_parameter_setter(pd, raw_value, attr=None):
+def _dict_parameter_setter(pd, raw_value, attr=None):
     if len(pd) != len(raw_value):
         raise Exception('mismatch len')
     if pd.keys() != raw_value.keys():
         raise Exception('mismatch keys')
     for k in pd.keys():
-        parameter_setter(pd[k], raw_value[k])
+        _parameter_setter(pd[k], raw_value[k])
 
-def dict_parameter_getter(pd, attr=None):
+def _dict_parameter_getter(pd, attr=None):
     return {k:pd[k].value for k in pd.keys()}
 
-def function_getter(data):
+def _function_getter(data):
     def _get(f, attr=None):
         return f.eval(data)
     return _get
 
-def variable_getter(data):
+def _variable_getter(data):
     def _get(f, attr=None):
         return C.as_composite(f.owner).eval(data)[f]
     return _get
 
-def conv2d_getter(f, attr):
-    W = parameter_getter(find_func_param(f, shape=(attr.num_filters, 1,) + attr.filter_shape))
+def _conv2d_getter(f, attr):
+    W = _parameter_getter(find_func_param(f, shape=(attr.num_filters, 1,) + attr.filter_shape))
     bias_param = find_func_param(f, shape=(attr.num_filters, 1, 1,), allow_not_found=True)
     if bias_param:
-        b = parameter_getter(bias_param)
+        b = _parameter_getter(bias_param)
     else:
         b = None
     return cstk.Conv2DArgs(W=W[:,0,:,:], b=None if b is None else b.reshape(-1))
 
-def conv2d_setter(f, raw_value, attr):
+def _conv2d_setter(f, raw_value, attr):
     W = find_func_param(f, shape=(attr.num_filters, 1,) + attr.filter_shape)
-    parameter_setter(W, raw_value.W.reshape(W.shape))
+    _parameter_setter(W, raw_value.W.reshape(W.shape))
     if raw_value.b is not None:
         b = find_func_param(f, shape=(attr.num_filters, 1, 1,))
-        parameter_setter(b, raw_value.b.reshape(b.shape))
+        _parameter_setter(b, raw_value.b.reshape(b.shape))
 
 def _get_rnn_gates(op_type):
     num_gates = 1
@@ -107,11 +120,11 @@ def _get_birnn_param(f):
     fw = f.root_function.inputs[0].owner
     bw = f.root_function.inputs[1].owner
     return cstk.RnnArgs(fw_W=find_func_param(fw, name='W'),
-                             fw_H=find_func_param(fw, name='H'),
-                             fw_b=find_func_param(fw, name='b'),
-                             bw_W=find_func_param(bw, name='W'),
-                             bw_H=find_func_param(bw, name='H'),
-                             bw_b=find_func_param(bw, name='b'))
+                        fw_H=find_func_param(fw, name='H'),
+                        fw_b=find_func_param(fw, name='b'),
+                        bw_W=find_func_param(bw, name='W'),
+                        bw_H=find_func_param(bw, name='H'),
+                        bw_b=find_func_param(bw, name='b'))
 
 '''
 cudnn lstm gate is in order of input/forget/mem/output,
@@ -129,7 +142,7 @@ def _adjust_lstm_gate_order(W):
     else:
         raise Exception('invalid input')
     
-def rnn_getter(f, attr):
+def _rnn_getter(f, attr):
     if not attr.bidirectional:
         raise NotImplementedError()
     use_cudnn = (len(f.parameters) == 1) # CNTK has only 1 big fat parameter when using cudnn
@@ -137,27 +150,27 @@ def rnn_getter(f, attr):
         gates = _get_rnn_gates(attr.op_type)
         fw_Wt, fw_Ht, bw_Wt, bw_Ht, fw_b1, fw_b2, bw_b1, bw_b2 = np.split(f.parameters[0].value.reshape(-1), _get_cudnn_rnn_splitter(attr))
         return cstk.RnnArgs(fw_W=_adjust_lstm_gate_order(fw_Wt.reshape(gates*attr.hidden_dim, -1).transpose()),
-                                 fw_H=_adjust_lstm_gate_order(fw_Ht.reshape(gates*attr.hidden_dim, -1).transpose()),
-                                 fw_b=_adjust_lstm_gate_order(fw_b1 + fw_b2),
-                                 bw_W=_adjust_lstm_gate_order(bw_Wt.reshape(gates*attr.hidden_dim, -1).transpose()),
-                                 bw_H=_adjust_lstm_gate_order(bw_Ht.reshape(gates*attr.hidden_dim, -1).transpose()),
-                                 bw_b=_adjust_lstm_gate_order(bw_b1 + bw_b2))
+                            fw_H=_adjust_lstm_gate_order(fw_Ht.reshape(gates*attr.hidden_dim, -1).transpose()),
+                            fw_b=_adjust_lstm_gate_order(fw_b1 + fw_b2),
+                            bw_W=_adjust_lstm_gate_order(bw_Wt.reshape(gates*attr.hidden_dim, -1).transpose()),
+                            bw_H=_adjust_lstm_gate_order(bw_Ht.reshape(gates*attr.hidden_dim, -1).transpose()),
+                            bw_b=_adjust_lstm_gate_order(bw_b1 + bw_b2))
     else:
         param = _get_birnn_param(f)
-        return cstk.RnnArgs(fw_W=parameter_getter(param.fw_W),
-                                 fw_H=parameter_getter(param.fw_H),
-                                 fw_b=parameter_getter(param.fw_b),
-                                 bw_W=parameter_getter(param.bw_W),
-                                 bw_H=parameter_getter(param.bw_H),
-                                 bw_b=parameter_getter(param.bw_b))
+        return cstk.RnnArgs(fw_W=_parameter_getter(param.fw_W),
+                            fw_H=_parameter_getter(param.fw_H),
+                            fw_b=_parameter_getter(param.fw_b),
+                            bw_W=_parameter_getter(param.bw_W),
+                            bw_H=_parameter_getter(param.bw_H),
+                            bw_b=_parameter_getter(param.bw_b))
 
-def rnn_setter(f, raw_value, attr):
+def _rnn_setter(f, raw_value, attr):
     if not attr.bidirectional:
         raise NotImplementedError()
     use_cudnn = (len(f.parameters) == 1)
     if use_cudnn:
         gates = _get_rnn_gates(attr.op_type)
-        parameter_setter(f.parameters[0], 
+        _parameter_setter(f.parameters[0], 
                          np.concatenate((_adjust_lstm_gate_order(raw_value.fw_W).transpose().reshape(-1),
                                          _adjust_lstm_gate_order(raw_value.fw_H).transpose().reshape(-1),
                                          _adjust_lstm_gate_order(raw_value.bw_W).transpose().reshape(-1),
@@ -169,25 +182,25 @@ def rnn_setter(f, raw_value, attr):
                                         )).reshape(f.parameters[0].shape))
     else:
         param = _get_birnn_param(f)
-        parameter_setter(param.fw_W, raw_value.fw_W)
-        parameter_setter(param.fw_H, raw_value.fw_H)
-        parameter_setter(param.fw_b, raw_value.fw_b)
-        parameter_setter(param.bw_W, raw_value.bw_W)
-        parameter_setter(param.bw_H, raw_value.bw_H)
-        parameter_setter(param.bw_b, raw_value.bw_b)
+        _parameter_setter(param.fw_W, raw_value.fw_W)
+        _parameter_setter(param.fw_H, raw_value.fw_H)
+        _parameter_setter(param.fw_b, raw_value.fw_b)
+        _parameter_setter(param.bw_W, raw_value.bw_W)
+        _parameter_setter(param.bw_H, raw_value.bw_H)
+        _parameter_setter(param.bw_b, raw_value.bw_b)
 
-def embed_getter(p, attr):
+def _embed_getter(p, attr):
     map = {}
-    value = parameter_getter(p)
+    value =  _parameter_getter(p)
     for i in range(attr.input_dim):
         map[attr.dict[i]] = value[i,:]
     return map
     
-def embed_setter(p, raw_value, attr):
+def _embed_setter(p, raw_value, attr):
     out = [None]*attr.input_dim
     for w in raw_value.keys():
         out[attr.dict.index(w)] = raw_value[w] 
-    parameter_setter(p, np.asarray(out))
+    _parameter_setter(p, np.asarray(out))
 
 class CNTKCrosstalk(cstk.Crosstalk):
     '''
@@ -195,35 +208,41 @@ class CNTKCrosstalk(cstk.Crosstalk):
     '''
     def __init__(self):
         super(CNTKCrosstalk, self).__init__()
-        super(CNTKCrosstalk, self).register_funcs(C.variables.Parameter, setter=parameter_setter, getter=parameter_getter)
-        super(CNTKCrosstalk, self).register_funcs(DictParameterType, setter=dict_parameter_setter, getter=dict_parameter_getter)
-        super(CNTKCrosstalk, self).register_funcs(cstk.Conv2DAttr, setter=conv2d_setter, getter=conv2d_getter)
-        super(CNTKCrosstalk, self).register_funcs(cstk.RnnAttr, setter=rnn_setter, getter=rnn_getter)
-        super(CNTKCrosstalk, self).register_funcs(cstk.EmbedAttr, setter=embed_setter, getter=embed_getter)
+        super(CNTKCrosstalk, self).register_funcs(C.variables.Parameter, setter=_parameter_setter, getter= _parameter_getter)
+        super(CNTKCrosstalk, self).register_funcs(DictParameterType, setter=_dict_parameter_setter, getter=_dict_parameter_getter)
+        super(CNTKCrosstalk, self).register_funcs(cstk.Conv2DAttr, setter=_conv2d_setter, getter=_conv2d_getter)
+        super(CNTKCrosstalk, self).register_funcs(cstk.RnnAttr, setter=_rnn_setter, getter=_rnn_getter)
+        super(CNTKCrosstalk, self).register_funcs(cstk.EmbedAttr, setter=_embed_setter, getter=_embed_getter)
 
     def set_data(self, data):
         '''
         Set mapped data for variable evaluation
+        
+        Args:
+            data: The input data as arguments parameter in :func:`~cntk.ops.functions.Function.eval`
         '''
-        super(CNTKCrosstalk, self).register_funcs(C.ops.functions.Function, getter=function_getter(data))
-        super(CNTKCrosstalk, self).register_funcs(C.variables.Variable, getter=variable_getter(data))
+        super(CNTKCrosstalk, self).register_funcs(C.ops.functions.Function, getter=_function_getter(data))
+        super(CNTKCrosstalk, self).register_funcs(C.variables.Variable, getter=_variable_getter(data))
 
     def is_param(self, name):
         '''
         Check if var with name is a parameter
+        
+        Args:
+            name (`str`): Variable name to check
         '''
         var_type = self.vars[name].type
         return var_type not in [C.ops.functions.Function, C.variables.Variable]
 
     def load_all_params(self):
         '''
-        Load all parameters from files
+        Load all parameters from files in working directory
         '''
         super(CNTKCrosstalk, self).load([n for n in self.vars.keys() if self.is_param(n)])
         
     def save_all_params(self):
         '''
-        Save all parameters to files
+        Save all parameters to files in working directory
         '''
         super(CNTKCrosstalk, self).save([n for n in self.vars.keys() if self.is_param(n)])
 

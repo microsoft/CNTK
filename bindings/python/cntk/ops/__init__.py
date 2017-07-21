@@ -2,13 +2,17 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+"""
+CNTK core operators. Calling these operators creates nodes in the CNTK computational graph.
+"""
+
 
 from __future__ import division
 from __future__ import print_function
 import numpy as np
 import numbers
 from . import sequence
-from .functions import CloneMethod, Function, load_model, register_native_user_function, native_user_function
+from .functions import CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
@@ -20,7 +24,7 @@ TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferre
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
 
 @typemap
-def combine(operands, name=''):
+def combine(*operands, **kw_name):
     '''
      Create a new Function instance which just combines the outputs of the specified list of
      'operands' Functions such that the 'Outputs' of the new 'Function' are union of the
@@ -45,6 +49,11 @@ def combine(operands, name=''):
         >>> list(forward.values()) # doctest: +SKIP
         [array([[[ 1., -3.,  6.,  2.]]], dtype=float32),
          array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)]
+        >>> x = C.input_variable((4,))
+        >>> _ = C.combine(x, x)
+        >>> _ = C.combine([x, x])
+        >>> _ = C.combine((x, x))
+        >>> _ = C.combine(C.combine(x, x), x)
 
     Args:
         operands (list): list of functions or their variables to combine
@@ -53,8 +62,20 @@ def combine(operands, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    name = (lambda name='': (name))(**kw_name) # Python 2.7 does not allow (*inputs, name='')
+
     from cntk.cntk_py import combine
-    return combine(operands, name)
+    if len(operands) == 1 and isinstance(operands[0], (tuple, list)):
+        operands = operands[0]
+    if isinstance(operands, tuple):
+        operands = list(operands)
+    operands_unfold = []
+    for o in operands:
+        if hasattr(o, 'outputs') and len(o.outputs) > 1:
+            operands_unfold += o.outputs
+        else:
+            operands_unfold += [o]
+    return combine(operands_unfold, name)
 
 @typemap
 def as_block(composite, block_arguments_map, block_op_name, block_instance_name=''):
@@ -267,11 +288,11 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     :math:`[3 \\times W \\times H]`, i.e. a :math:`[W \\times H]`-sized structure, where each entry (pixel) consists of a 3-tuple.
 
     `convolution_transpose` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
-    ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
-    The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
-    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input.
+    ``convolution_map`` of shape :math:`[I \\times O \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
+    The first dimension, :math:`I`, must match the number of channels in the input. The second dimension, :math:`O`, is the number of convolution filters (i.e. the number of
+    channels in the output).
     The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
-    dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
+    dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`I \\times O \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
 
 
     Example:
@@ -286,7 +307,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
                   [ -6.,   5.,   6.,  16.]]]], dtype=float32)
 
     Args:
-        convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
+        convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[I \\times O \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
          where :math:`[m_1 \\times m_2 \\times \\ldots \\times m_n]` must be the kernel dimensions (spatial extent of the filter).
         operand: convolution input. A tensor with dimensions :math:`[I \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`.
         strides (tuple, optional): stride dimensions. If strides[i] > 1 then only pixel positions that are multiples of strides[i] are computed.
@@ -316,8 +337,15 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
                                  output_shape, max_temp_mem_size_in_samples, name)
 
+from cntk.cntk_py import PoolingType_Max, PoolingType_Average
+MAX_POOLING = PoolingType_Max
+'''int: constant used to specify maximum pooling'''
+
+AVG_POOLING = PoolingType_Average
+'''int: constant used to specify average pooling'''
+
 @typemap
-def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
+def roipooling(operand, rois, pooling_type, roi_output_shape, spatial_scale, name=''):
     '''
     The ROI (Region of Interest) pooling operation pools over sub-regions of an input volume and produces
     a fixed sized output volume regardless of the ROI size. It is used for example for object detection.
@@ -327,26 +355,23 @@ def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
     pooling layer of an image classification network (as presented in Fast R-CNN and others).
 
     Args:
-        conv_feature_map: a convolutional feature map as the input volume ([W x H x C x N]).
-        rois: the coordinates of the ROIs per image ([4 x roisPerImage x N]), each ROI is (x, y, w, h) relative to original image size.
+        operand: a convolutional feature map as the input volume ([W x H x C x N]).
+        pooling_type: only :const:`~cntk.ops.MAX_POOLING`
+        rois: the coordinates of the ROIs per image ([4 x roisPerImage x N]), each ROI is (x1, y1, x2, y2) absolute to original image size.
         roi_output_shape: dimensions (width x height) of the ROI pooling output shape
+        spatial_scale: the scale of operand from the original image size.
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import roipooling
-    conv_feature_map = sanitize_input(conv_feature_map)
+    if pooling_type != MAX_POOLING:
+        raise ValueError('Unsupported pooling type, ROIPooling support only MAX pooling.')
+
+    operand = sanitize_input(operand)
     rois = sanitize_input(rois)
     roi_output_shape = sanitize_shape(roi_output_shape)
-    return roipooling(conv_feature_map, rois, roi_output_shape, name)
-
-
-from cntk.cntk_py import PoolingType_Max, PoolingType_Average
-MAX_POOLING = PoolingType_Max
-'''int: constant used to specify maximum pooling'''
-
-AVG_POOLING = PoolingType_Average
-'''int: constant used to specify average pooling'''
+    return roipooling(operand, rois, pooling_type, roi_output_shape, spatial_scale, name)
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
@@ -748,13 +773,18 @@ def minus(left, right, name=''):
 @typemap
 def pow(base, exponent, name=''):
     '''
-    The output of this operation is base raised to the power of exponent. It supports broadcasting.
+    Computes `base` raised to the power of `exponent`. It supports broadcasting.
+    This is well defined if `base` is non-negative or `exponent` is an integer.
+    Otherwise the result is NaN. The gradient with respect to the base is  well
+    defined if the forward operation is well defined. The gradient with respect
+    to the exponent is well defined if the base is non-negative, and it is set
+    to 0 otherwise.
 
     Example:
-        >>> C.pow([1, 2, 3], [3, 2, 1]).eval()
-        array([ 1.,  4.,  3.], dtype=float32)
+        >>> C.pow([1, 2, -2], [3, -2, 3]).eval()
+        array([ 1.  ,  0.25, -8.  ], dtype=float32)
 
-        >>> C.pow([[0.5,2],[4,1]], -2).eval()
+        >>> C.pow([[0.5, 2],[4, 1]], -2).eval()
         array([[ 4.    ,  0.25  ],
                [ 0.0625,  1.    ]], dtype=float32)
 
@@ -1238,6 +1268,30 @@ def elu(x, name=''):
     x = sanitize_input(x)
     return elu(x, name)
 
+@typemap
+def selu(x, scale=1.0507009873554804934193349852946, alpha=1.6732632423543772848170429916717, name=''):
+    '''
+    Scaled exponential linear unit operation. Computes the element-wise exponential linear
+    of ``x``: ``scale * x`` for ``x >= 0`` and ``x``: ``scale * alpha * (exp(x)-1)`` otherwise.
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.selu([[-1, -0.5, 0, 1, 2]]).eval()
+        array([[-1.111331, -0.691758,  0.      ,  1.050701,  2.101402]], dtype=float32)
+
+    Args:
+        x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
+        name (`str`, default to ''): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function:
+        An instance of :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import selu
+    x = sanitize_input(x)
+    return selu(x, scale, alpha, name)
+
 
 @typemap
 def leaky_relu(x, name=''):
@@ -1432,7 +1486,9 @@ def softmax(x, axis=None, name=''):
     therefore be interpreted as probabilities for mutually exclusive outcomes
     as in the case of multiclass classification.
 
-    If ``axis`` is given, the softmax will be computed along that axis.
+    If ``axis`` is given as integer, then the softmax will be computed along that axis. 
+    If the provided ``axis`` is -1, it will be computed along the last axis. Otherwise,
+    softmax will be applied to all axes.
 
     Example:
         >>> C.softmax([[1, 1, 2, 3]]).eval()
@@ -1445,6 +1501,10 @@ def softmax(x, axis=None, name=''):
         array([[[ 0.5     ,  0.5     ],
                 [ 0.119203,  0.880797]]], dtype=float32)
 
+        >>> C.softmax([[[1, 1], [3, 5]]], axis=1).eval()
+        array([[[ 0.119203,  0.017986],
+                [ 0.880797,  0.982014]]], dtype=float32)
+
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
         axis (int or :class:`~cntk.axis.Axis`): axis along which the softmax operation will be performed
@@ -1454,18 +1514,11 @@ def softmax(x, axis=None, name=''):
     '''
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
-    # softmax over a specific axis: implemented explicitly
-    # TODO: move this into the C++ API.
     if axis is not None:
-        from cntk.cntk_py import reduce_log_sum, exp, minus
         axis = sanitize_axis(axis)
-        Z = reduce_log_sum(x, axis)  # log denominator
-        # TODO: use as_block()
-        return exp(x - Z.output(), name) # this is the softmax
-        # (note: we need .output() here since the automatisms available outside are not available in here)
-    # softmax over all elements
-    return softmax(x, name)
-
+        return softmax(x, axis, name)
+    else:
+        return softmax(x, name)
 
 @typemap
 def hardmax(x, name=''):
@@ -1675,151 +1728,14 @@ def element_select(flag, value_if_true, value_if_false, name=''):
     return element_select(flag, value_if_true, value_if_false, name)
 
 
-##########################################################################
-# recurrent ops
-# TODO: do these belong into .sequence?
-##########################################################################
-
-@typemap
-def future_value(x, initial_state=None, time_step=1, name=''):
-    '''
-    DEPRECATED.
-
-    This function returns the future value w.r.t. ``x``. It is most often used when
-    creating RNNs. The resulting tensor has the same shape as the input but is
-    the next logical sample. The ``time_step`` parameter is the number of steps
-    to look into the future and is 1 by default. If there is no future value (i.e.
-    the current sample is the last one in the tensor) then the ``initial_state``
-    value is returned.
-
-    The initial state can be a constant (scalar or tensor), a learnable tensor
-    or input data (which has a batch dimension, as needed for sequence-to-sequence models).
-
-    Example:
-        >>> x = C.sequence.input_variable(shape=(3,2))
-        >>> # Create one sequence with 4 tensors of shape (3, 2)
-        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
-        >>> y = C.future_value(x) # using initial state of 0 by default
-        >>> y.eval({x:x0})
-        [array([[[  6.,   7.],
-                 [  8.,   9.],
-                 [ 10.,  11.]],
-        <BLANKLINE>
-                [[ 12.,  13.],
-                 [ 14.,  15.],
-                 [ 16.,  17.]],
-        <BLANKLINE>
-                [[ 18.,  19.],
-                 [ 20.,  21.],
-                 [ 22.,  23.]],
-        <BLANKLINE>
-                [[  0.,   0.],
-                 [  0.,   0.],
-                 [  0.,   0.]]], dtype=float32)]
-
-    Args:
-        x: the tensor (or its name) from which the future value is obtained.
-        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
-        time_step (int): the number of time steps to look into the future (default 1)
-        name (str, optional): the name of the Function instance in the network
-    Returns:
-        :class:`~cntk.ops.functions.Function`
-    '''
-
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'sequence.future_value() instead.', DeprecationWarning)
-
-    return sequence.future_value(x, initial_state, time_step, name)
-
-
-@typemap
-def past_value(x, initial_state=None, time_step=1, name=''):
-    '''
-    DEPRECATED.
-
-    This function returns the past value w.r.t. ``x``. It is most often used when
-    creating RNNs. The resulting tensor has the same shape as the input but is
-    the previous logical sample. The ``time_step`` parameter is the number of steps
-    to look into the past and is 1 by default. If there is no past value (i.e.
-    the current sample is the first one in the tensor)  then the ``initial_state``
-    value is returned.
-
-    The initial state can be a constant (scalar or tensor), a learnable tensor
-    or input data (which has a batch dimension, as needed for sequence-to-sequence models).
-
-    Example:
-        >>> x = C.sequence.input_variable(shape=(3,2))
-        >>> # Create one sequence with 4 tensors of shape (3, 2)
-        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
-        >>> # this demonstrates how past_value shifts the sequence by one, padding with initial_state
-        >>> y = C.past_value(x) # initial_state is 0 by default
-        >>> y.eval({x:x0})
-        [array([[[  0.,   0.],
-                 [  0.,   0.],
-                 [  0.,   0.]],
-        <BLANKLINE>
-                [[  0.,   1.],
-                 [  2.,   3.],
-                 [  4.,   5.]],
-        <BLANKLINE>
-                [[  6.,   7.],
-                 [  8.,   9.],
-                 [ 10.,  11.]],
-        <BLANKLINE>
-                [[ 12.,  13.],
-                 [ 14.,  15.],
-                 [ 16.,  17.]]], dtype=float32)]
-
-        >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
-        >>> s = C.input_variable(shape=(3,2))  # not a sequence, e.g. a final encoder hidden state
-        >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,1,3,2))
-        >>> s0
-        array([[[[ 0. ,  0.5],
-                 [ 1. ,  1.5],
-                 [ 2. ,  2.5]]]], dtype=float32)
-        >>> y = C.past_value(x, initial_state=s)
-        >>> y.eval({x:x0, s:s0}) # same as the previous example except for the first time step
-        [array([[[  0. ,   0.5],
-                 [  1. ,   1.5],
-                 [  2. ,   2.5]],
-        <BLANKLINE>
-                [[  0. ,   1. ],
-                 [  2. ,   3. ],
-                 [  4. ,   5. ]],
-        <BLANKLINE>
-                [[  6. ,   7. ],
-                 [  8. ,   9. ],
-                 [ 10. ,  11. ]],
-        <BLANKLINE>
-                [[ 12. ,  13. ],
-                 [ 14. ,  15. ],
-                 [ 16. ,  17. ]]], dtype=float32)]
-
-    Args:
-        x: the tensor (or its name) from which the past value is obtained
-        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
-        time_step (int): the number of time steps to look into the past (default 1)
-        name (str, optional): the name of the Function instance in the network
-
-    Returns:
-        :class:`~cntk.ops.functions.Function`
-    '''
-
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'sequence.past_value() instead.', DeprecationWarning)
-
-    return sequence.past_value(x, initial_state, time_step, name)
-
-
 # TODO: does this belong into .sequence?
 @typemap
 def optimized_rnnstack(operand, weights, hidden_size, num_layers,
                        bidirectional=False, recurrent_op='lstm', name=''):
     '''
     An RNN implementation that uses the primitives in cuDNN.
-    If cuDNN is not available it fails.
+    If cuDNN is not available it fails. You can use :class:`~cntk.misc.optimized_rnnstack_converter.convert_optimized_rnnstack`
+    to convert a model to GEMM-based implementation when no cuDNN.
 
     Args:
         operand: input of the optimized RNN stack.
@@ -1889,12 +1805,12 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
     Args:
         x: tensor to be reshaped
         shape (tuple): a tuple defining the resulting shape. The specified shape tuple
-         may contain -1 for at most one axis, which is automatically inferred to the 
-         correct dimension size by dividing the total size of the sub-shape being reshaped 
+         may contain -1 for at most one axis, which is automatically inferred to the
+         correct dimension size by dividing the total size of the sub-shape being reshaped
          with the product of the dimensions of all the non-inferred axes of the replacement
          shape.
         begin_axis (int or None): shape replacement begins at this axis. Negative values
-         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple, 
+         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple,
          pass `Axis.new_leading_axis()`.
         end_axis (int or None): shape replacement ends at this axis (excluding this axis).
          Negative values are counting from the end. `None` refers to the end of the shape tuple.
@@ -1986,7 +1902,7 @@ def swapaxes(x, axis1=0, axis2=1, name=''):
     return transpose_axes(x, axis1, axis2, name)
 
 @typemap
-def slice(x, axis, begin_index, end_index, name=''):
+def slice(x, axis, begin_index, end_index, strides=None, name=''):
     '''
     Slice the input along one or multiple axes.
 
@@ -2004,6 +1920,17 @@ def slice(x, axis, begin_index, end_index, name=''):
         ...                                             [4, 5, 6]]],dtype=np.float32)})
         array([[[ 1.],
                 [ 4.]]], dtype=float32)
+        >>> # slice with strides
+        >>> C.slice(x1, 0, 0, 2, 2).eval({x1: np.asarray([[[1,2,-3],
+        ...                                                [4, 5, 6]]],dtype=np.float32)})
+        array([[[ 1.,  2., -3.]]], dtype=float32)
+        <BLANKLINE>
+        >>> # reverse
+        >>> C.slice(x1, 0, 0, 2, -1).eval({x1: np.asarray([[[1,2,-3],
+        ...                                                 [4, 5, 6]]],dtype=np.float32)})
+        array([[[ 4.,  5.,  6.],
+        [ 1.,  2., -3.]]], dtype=float32)
+        <BLANKLINE>
         >>> # slice along multiple axes
         >>> C.slice(x1, [0,1], [1,0], [2,1]).eval({x1: np.asarray([[[1, 2, -3],
         ...                                                         [4, 5, 6]]],dtype=np.float32)})
@@ -2043,6 +1970,7 @@ def slice(x, axis, begin_index, end_index, name=''):
         begin_index (int): the index along axis where the slicing starts
         end_index (int): the index along axis where the slicing ends
         name (str, optional): the name of the Function instance in the network
+        strides(int): step sizes when applying slice, negative value means in reverse order
 
     See also:
         Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
@@ -2055,7 +1983,11 @@ def slice(x, axis, begin_index, end_index, name=''):
     axis = sanitize_axis_list(axis)
     begin_index = sanitize_shape(begin_index)
     end_index = sanitize_shape(end_index)
-    return slice(x, axis, begin_index, end_index, name)
+    if strides is None:
+        strides = [1 for _ in axis]
+    elif not type(strides) in (list, tuple):
+        strides = [strides]
+    return slice(x, axis, begin_index, end_index, strides, name)
 
 # TODO: enable when it is exposed in c++
 
@@ -2486,9 +2418,6 @@ def to_sequence(x, sequence_lengths=None, sequence_axis_name_prefix='toSequence_
     assumed to be of the same length; i.e. dimensionality of the most significant
     static axis
 
-    Example:
-        TBA.
-
     Args:
         x: the tensor (or its name) which is converted to a sequence
         sequence_lengths: Optional tensor operand representing the sequence lengths.
@@ -2499,6 +2428,9 @@ def to_sequence(x, sequence_lengths=None, sequence_axis_name_prefix='toSequence_
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
 
     from cntk.cntk_py import to_sequence
@@ -2518,9 +2450,6 @@ def to_sequence_like(x, dynamic_axes_like, name=''):
     static axis [0] as the sequence axis. The length of the sequences are
     obtained from the 'dynamic_axes_like' operand.
 
-    Example:
-        TBA.
-
     Args:
         x: the tensor (or its name) which is converted to a sequence
         dynamic_axes_like: Tensor operand used to obtain the lengths of
@@ -2530,6 +2459,9 @@ def to_sequence_like(x, dynamic_axes_like, name=''):
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
 
     from cntk.cntk_py import to_sequence_like
@@ -2591,8 +2523,8 @@ def random_sample_inclusion_frequency(
     name=''):
     '''
     For weighted sampling with the specifed sample size (`num_samples`)
-    this operation computes the expected number of occurences of each class
-    in the the sampled set. In case of sampling without replacement
+    this operation computes the expected number of occurrences of each class
+    in the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the
     case of small sample sizes.
     Intended uses are e.g. sampled softmax, noise contrastive
@@ -2809,7 +2741,7 @@ def placeholder(shape=None, dynamic_axes=None, name=''):
     from cntk.cntk_py import placeholder_variable, NDShape, Axis
 
     if shape is None:
-        shape = NDShape.unknown.dimensions()
+        shape = NDShape.unknown().dimensions()
     else:
         shape = sanitize_shape(shape)
 
@@ -2818,27 +2750,6 @@ def placeholder(shape=None, dynamic_axes=None, name=''):
 
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
-
-@typemap
-def placeholder_variable(shape=None, dynamic_axes=None, name=''):
-    '''
-    DEPRECATED.
-
-    It creates a placeholder variable for recurrence networks, when the network's dynamic axes
-    are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
-
-    Args:
-        shape (tuple or int): the shape of the variable tensor
-        dynamic_axes (list): the list of dynamic axes that the actual variable uses
-        name (str, optional): the name of the placeholder variable in the network
-
-    Returns:
-        :class:`~cntk.variables.Variable`
-    '''
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'placeholder() instead.', DeprecationWarning)
-    return placeholder(shape, dynamic_axes, name)
 
 @typemap
 def parameter(shape=None, init=None, dtype=None, device=None, name=''):

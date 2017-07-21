@@ -46,7 +46,7 @@ class Evaluator(cntk_py.Evaluator):
                * `dict`: keys are input variable or names, and values are the input data.
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
 
-               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+               * any other type: if node has a unique input, ``arguments`` is mapped to this input.
                  For nodes with more than one input, only `dict` is allowed.
 
              In both cases, every sample in the data will be interpreted

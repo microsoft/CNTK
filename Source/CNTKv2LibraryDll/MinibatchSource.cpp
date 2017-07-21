@@ -8,8 +8,8 @@
 #include "Utils.h"
 #include "Config.h"
 #include "MinibatchSource.h"
-#include "HeapMemoryProvider.h"
 #include "ReaderShim.h"
+#include "Reader.h"
 #include "ReaderConstants.h"
 #include <tuple>
 #include "Value.h"
@@ -33,6 +33,14 @@ namespace CNTK
     const std::unordered_map<StreamInformation, MinibatchData>& MinibatchSource::GetNextMinibatch(size_t minibatchSizeInSequences, size_t minibatchSizeInSamples, const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         return GetNextMinibatch(minibatchSizeInSequences, minibatchSizeInSamples, 1, 0, device);
+    }
+
+    template<typename DataType>
+    std::wstring pair_to_colon_format(const pair<DataType, DataType>& pair)
+    {
+        std::wostringstream str;
+        str << pair.first << L":" << pair.second;
+        return str.str();
     }
 
     MinibatchSourceConfig::MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize/* = true*/) 
@@ -89,7 +97,17 @@ namespace CNTK
         return MinibatchSourcePtr(new CompositeMinibatchSource(configuration));
     }
 
-    /*static*/ const std::wstring CompositeMinibatchSource::PositionAttributeName = L"minibatchSourcePosition";
+    inline std::map<std::wstring, size_t> ToMap(const Dictionary& d)
+    {
+        std::map<std::wstring, size_t> result;
+        for (auto i = d.begin(); i != d.end(); ++i)
+        {
+            result[i->first] = (i->second.ValueType() == DictionaryValue::Type::Int) ?
+                (size_t)i->second.Value<int>() :
+                i->second.Value<size_t>();
+        }
+        return result;
+    }
 
     CompositeMinibatchSource::CompositeMinibatchSource(const MinibatchSourceConfig& configuration)
         : m_epochEndReached(false),
@@ -98,8 +116,7 @@ namespace CNTK
           m_maxNumSweepsToRead(configuration.maxSweeps),
           m_truncationLength(0),
           m_numWorkers(1),
-          m_workerRank(0),
-          m_restorePosition(0)
+          m_workerRank(0)
     {
         m_truncationLength = configuration.truncationLength;
 
@@ -114,11 +131,10 @@ namespace CNTK
 
         typedef Reader*(*CreateCompositeDataReaderProc)(const ConfigParameters* parameters);
         CreateCompositeDataReaderProc createReaderProc = (CreateCompositeDataReaderProc)Plugin().Load(L"CompositeDataReader", "CreateCompositeDataReader");
-        std::shared_ptr<Microsoft::MSR::CNTK::Reader> compositeDataReader(createReaderProc(&config));
+        std::shared_ptr<Reader> compositeDataReader(createReaderProc(&config));
 
-        m_compositeDataReaderStreamDescs = compositeDataReader->GetStreamDescriptions();
-        for (auto streamDesc : m_compositeDataReaderStreamDescs)
-            m_streamInfos.insert({ streamDesc->m_name, streamDesc->m_id, AsStorageFormat(streamDesc->m_storageType), AsDataType(streamDesc->m_elementType), AsNDShape(*(streamDesc->m_sampleLayout)) });
+        auto compositeDataReaderStreamDescs = compositeDataReader->GetStreamDescriptions();
+        m_streamInfos.insert(compositeDataReaderStreamDescs.begin(), compositeDataReaderStreamDescs.end());
 
         m_shim = std::shared_ptr<ReaderShim<float>>(new ReaderShim<float>(compositeDataReader), [](ReaderShim<float>* x) { x->Destroy(); });
         m_shim->Init(config);
@@ -180,16 +196,11 @@ namespace CNTK
 
                     if (s.m_elementType == DataType::Float)
                     {
-                        auto iter = std::find_if(m_compositeDataReaderStreamDescs.begin(), m_compositeDataReaderStreamDescs.end(), [s](StreamDescriptionPtr& streamInfo) {
-                            return streamInfo->m_id == s.m_id;
-                        });
-                        assert(iter != m_compositeDataReaderStreamDescs.end());
-
                         m_matrices.AddInput(
                             s.m_name,
                             std::make_shared<Matrix<float>>(0, 0, inputStreamDescription.GetDeviceId(), inputStreamDescription.GetMatrixType(), inputStreamDescription.GetMatrixFormat()),
                             std::make_shared<MBLayout>(),
-                            *(*iter)->m_sampleLayout);
+                            AsTensorShape(s.m_sampleLayout));
                     }
                     else
                         LogicError("GetNextMinibatch: Input of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
@@ -202,7 +213,7 @@ namespace CNTK
                 m_numWorkers = numberOfWorkers;
             }
 
-            if (minibatchSizeInSamples != m_prevMinibatchSize || m_workerRank != workerRank || m_numWorkers != numberOfWorkers || m_restorePosition != 0)
+            if (minibatchSizeInSamples != m_prevMinibatchSize || m_workerRank != workerRank || m_numWorkers != numberOfWorkers || m_state.IsInitialized())
             {
                 std::map<std::wstring, int> inputDescriptions;
                 for (const auto& s : m_streamInfos)
@@ -215,10 +226,10 @@ namespace CNTK
                 newConfig.m_truncationSize = m_truncationLength;
                 newConfig.m_allowMinibatchesToCrossSweepBoundaries = true;
 
-                if (m_restorePosition != 0)
+                if (m_state.IsInitialized())
                 {
-                    m_shim->SetCurrentSamplePosition(m_restorePosition);
-                    m_restorePosition = 0;
+                    m_shim->SetState(ToMap(m_state.Get()));
+                    m_state.Reset();
                 }
 
                 m_shim->SetConfiguration(newConfig, inputDescriptions);
@@ -271,35 +282,47 @@ namespace CNTK
 
     /*virtual*/ Dictionary CompositeMinibatchSource::GetCheckpointState() const /*override*/
     {
-        Dictionary checkpointState;
-        checkpointState[PositionAttributeName] = m_shim->GetCurrentSamplePosition();
-        return checkpointState;
+        auto state = m_shim->GetState();
+        Dictionary result;
+        for (const auto& p : state)
+        {
+            result[p.first] = p.second;
+        }
+
+        return result;
     }
 
     /*virtual*/ void CompositeMinibatchSource::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
     {
-        auto checkpointedMinibatchSourcePosition = checkpoint[PositionAttributeName].Value<size_t>();
-        m_shim->SetCurrentSamplePosition(checkpointedMinibatchSourcePosition);
+        m_shim->SetState(ToMap(checkpoint));
 
         // Need to reinitialize, we also have to remember the current position because StartEpoch
         // effectively resets it.
         // TODO: Remove call to StartEpoch - this API is legacy.
-        m_restorePosition = checkpointedMinibatchSourcePosition;
+        m_state = checkpoint;
         m_epochEndReached = false;
         m_prevMinibatchSize = 0;
     }
 
     /* static */ ImageTransform ReaderCrop(const wchar_t* cropType,
-            int cropSize, float sideRatio, float areaRatio,
-            float aspectRatio, const wchar_t* jitterType)
+            std::pair<int, int> cropSize, std::pair<float, float> sideRatio, std::pair<float, float> areaRatio,
+            std::pair<float, float> aspectRatio, const wchar_t* jitterType)
     {
         ImageTransform crop;
+
+        if (sideRatio.first > sideRatio.second)
+            RuntimeError("For sideRatio values: the first number must be smaller than or equal to the second number.");
+        if (areaRatio.first > areaRatio.second)
+            RuntimeError("For areaRatio values: the first number must be smaller than or equal to the second number.");
+        if (aspectRatio.first > aspectRatio.second)
+            RuntimeError("For aspectRatio values: the first number must be smaller than or equal to the second number.");
+
         crop.Add(L"type", L"Crop",
             L"cropType", cropType,
-            L"cropSize", cropSize,
-            L"sideRatio", sideRatio,
-            L"areaRatio", areaRatio,
-            L"aspectRatio", aspectRatio,
+            L"cropSize", pair_to_colon_format(cropSize),
+            L"sideRatio", pair_to_colon_format(sideRatio),
+            L"areaRatio", pair_to_colon_format(areaRatio),
+            L"aspectRatio", pair_to_colon_format(aspectRatio),
             L"jitterType", jitterType);
         return crop;
     }
@@ -344,8 +367,15 @@ namespace CNTK
         Deserializer img;
         std::vector<DictionaryValue> actualTransforms;
         std::transform(transforms.begin(), transforms.end(), std::back_inserter(actualTransforms), [](ImageTransform t) { return static_cast<DictionaryValue>(t); });
+
+        // Add the transpose transform by default.
+        Dictionary transposeTransform;
+        transposeTransform[L"type"] = L"Transpose";
+        actualTransforms.push_back(DictionaryValue(transposeTransform));
+
         Dictionary labeldim;
         labeldim[L"labelDim"] = numLabels;
+
         Dictionary xforms;
         xforms[L"transforms"] = actualTransforms;
         Dictionary input;
@@ -376,12 +406,30 @@ namespace CNTK
             Dictionary stream;
             stream[L"dim"] = s.m_dim;
             stream[L"format"] = s.m_isSparse ? L"sparse" : L"dense";
+            stream[L"definesMBSize"] = s.m_definesMbSize;
             if (!s.m_streamAlias.empty())
                 stream[L"alias"] = s.m_streamAlias;
             input[key] = stream;
         }
         ctf.Add(L"type", L"CNTKTextFormatDeserializer", L"file", fileName, L"input", input);
         return ctf;
+    }
+
+    Deserializer CBFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams)
+    {
+        Deserializer config;
+        Dictionary input;
+        for (const auto& s : streams)
+        {
+            if (s.m_streamAlias != s.m_streamName) 
+            {
+                Dictionary stream;
+                stream[L"alias"] = s.m_streamAlias;
+                input[s.m_streamName] = stream;
+            }
+        }
+        config.Add(L"type", L"CNTKBinaryFormatDeserializer", L"file", fileName, L"input", input);
+        return config;
     }
 
     Deserializer HTKFeatureDeserializer(const std::vector<HTKFeatureConfiguration>& streams)
@@ -394,6 +442,7 @@ namespace CNTK
             Dictionary stream;
             std::vector<DictionaryValue> ctxWindow = { DictionaryValue(s.m_left), DictionaryValue(s.m_right) };
             stream.Add(L"scpFile", s.m_scp, L"dim", s.m_dim, L"contextWindow", ctxWindow, L"expandToUtterance", s.m_broadcast);
+            stream[L"definesMBSize"] = s.m_definesMbSize;
             input[key] = stream;
         }
         htk.Add(L"type", L"HTKFeatureDeserializer", L"input", input);
@@ -472,50 +521,42 @@ namespace CNTK
             }
 
             augmentedConfiguration[L"frameMode"] = configuration.isFrameModeEnabled;
-            augmentedConfiguration[L"multiThreadedDeserialization"] = configuration.isMultithreaded;
             augmentedConfiguration[L"traceLevel"] = static_cast<size_t>(configuration.traceLevel);
 
+            bool defaultMultithreaded = false;
             // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
             // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
             // TODO: This should be done in the same manner for CNTK exe as well.
             vector<DictionaryValue> deserializers;
             for (auto deserializerConfig : configuration.deserializers)
             {
-                static const std::unordered_map<std::wstring, std::wstring> deserializerTypeNameToModuleNameMap = {
-                    { L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader" },
-                    { L"ImageDeserializer",          L"ImageReader" },
-                    { L"Base64ImageDeserializer",    L"ImageReader" },
-                    { L"HTKFeatureDeserializer",     L"HTKDeserializers" },
-                    { L"HTKMLFDeserializer",         L"HTKDeserializers" },
+                static const std::unordered_map<std::wstring, std::wstring> deserializerTypeToModule = {
+                    { L"CNTKTextFormatDeserializer",   L"CNTKTextFormatReader" },
+                    { L"CNTKBinaryFormatDeserializer", L"CNTKBinaryReader" },
+                    { L"ImageDeserializer",            L"ImageReader" },
+                    { L"Base64ImageDeserializer",      L"ImageReader" },
+                    { L"HTKFeatureDeserializer",       L"HTKDeserializers" },
+                    { L"HTKMLFDeserializer",           L"HTKDeserializers" },
                 };
 
                 auto deserializerTypeName = deserializerConfig[L"type"].Value<std::wstring>();
-                if (deserializerTypeName == L"ImageDeserializer")
+                if (deserializerTypeName == L"ImageDeserializer" || deserializerTypeName == L"Base64ImageDeserializer")
                 {
-                    // Add a transpose transform since the image data in read in HWC (CWH in column major format) form while 
-                    // the CNTK convolution engive supports WHC (in column-major format)
-                    auto& inputStreamsConfig = deserializerConfig[L"input"].Value<Dictionary>();
-                    for (auto& inputStreamEntry : inputStreamsConfig)
-                    {
-                        auto& inputStreamConfig = inputStreamEntry.second.Value<Dictionary>();
-                        if (inputStreamConfig.Contains(L"transforms"))
-                        {
-                            auto& transforms = inputStreamConfig[L"transforms"].Value<std::vector<DictionaryValue>>();
-
-                            // Add the transpose transform
-                            Dictionary transposeTransform;
-                            transposeTransform[L"type"] = L"Transpose";
-                            transforms.push_back(DictionaryValue(transposeTransform));
-                        }
-                    }
+                    defaultMultithreaded = true;
                 }
 
-                if (deserializerTypeNameToModuleNameMap.find(deserializerTypeName) == deserializerTypeNameToModuleNameMap.end())
-                    InvalidArgument("Unknown deserializer type '%S' specified for CNTK built-in composite MinibatchSource construction.", deserializerTypeName.c_str());
-
-                deserializerConfig[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
+                if (deserializerTypeToModule.find(deserializerTypeName) == deserializerTypeToModule.end())
+                {
+                    if (!deserializerConfig.Contains(L"module"))
+                        InvalidArgument("Unknown deserializer type '%S' specified for CNTK built-in composite MinibatchSource construction.", deserializerTypeName.c_str());
+                }
+                else
+                    deserializerConfig[L"module"] = deserializerTypeToModule.at(deserializerTypeName);
                 deserializers.push_back(deserializerConfig);
             }
+
+            augmentedConfiguration[L"multiThreadedDeserialization"] = 
+                (configuration.isMultithreaded.IsInitialized()) ? configuration.isMultithreaded.Get() : defaultMultithreaded;
 
             augmentedConfiguration[L"deserializers"] = deserializers;
 

@@ -5,8 +5,8 @@
 #pragma once
 
 #if HAS_MPI
-// Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#ms-mpi or
-// https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi for setup instructions
+// Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#ms-mpi or
+// https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Linux#open-mpi for setup instructions
 // of an MPI implementation on your platform.
 
 #ifdef _MSC_VER

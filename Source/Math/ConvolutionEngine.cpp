@@ -86,7 +86,7 @@ void ConvolutionEngine<ElemType>::ForwardPooling(const Mat& in, Mat& out)
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad)
+void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == grad.GetNumRows());
@@ -104,7 +104,7 @@ void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& src
 
     EnsureCompatible();
     EnsurePoolingInitialized();
-    BackwardPoolingCore(out, srcGrad, in, grad);
+    BackwardPoolingCore(out, srcGrad, in, grad, accumulateGradient);
 }
 
 template <class ElemType>
@@ -217,15 +217,15 @@ protected:
 
     }
 
-    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) override
     {
         if (m_poolKind == PoolKind::Max)
         {
-            srcGrad.MaxPoolingBackward(out, in, m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
+            srcGrad.MaxPoolingBackward(out, in, m_mpRowCol, *m_mpRowIndices, *m_indices, grad, accumulateGradient);
         }
         else if (m_poolKind == PoolKind::Average)
         {
-            srcGrad.AveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad, m_poolIncludePad);
+            srcGrad.AveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad, m_poolIncludePad, accumulateGradient);
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
@@ -508,8 +508,11 @@ protected:
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
     }
 
-    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) override
     {
+        if (!accumulateGradient)
+            grad.SetValue(0);
+
         if (m_poolKind == PoolKind::Max)
         {
             grad.AddMaxPoolingGradient(srcGrad, in, out,

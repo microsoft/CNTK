@@ -106,7 +106,7 @@
     <CustomBuild Include="cntk_java.i">
       <FileType>Document</FileType>
       <Command>$(SolutionDir)bindings\java\Swig\generate-java-bindings.cmd $(ProjectDir) $(SolutionDir)\Tests\EndToEndTests\EvalClientTests\ $(OutDir)</Command>
-      <Outputs>cntk_java_wrap.cxx; cntk_java_warp.h; $(SolutionDir)bindings\java\SwigProxyClasses\cntk.jar</Outputs>
+      <Outputs>cntk_java_wrap.cxx; cntk_java_warp.h; $(SolutionDir)bindings\java\Swig\cntk.jar</Outputs>
       <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h;$(SolutionDir)Source\Common\Include\ExceptionWithCallStack.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;$(SolutionDir)bindings\common\CNTKExceptionHandling.i;$(SolutionDir)bindings\common\CNTKManagedCommon.i;std_unordered_map.i;$(SolutionDir)bindings\java\Swig\generate-java-bindings.cmd;$(SolutionDir)\Tests\EndToEndTests\EvalClientTests\JavaEvalTest\src\Main.java</AdditionalInputs>
     </CustomBuild>
   </ItemGroup>
@@ -128,8 +128,8 @@
     <None Include="std_unordered_map.i" />
   </ItemGroup>
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#swig for installation instructions." />
-    <Warning Condition="!$(HasJava)" Text="The project requires the Java JDK to be installed. Please see http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html for installation instructions." />
+    <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#optional-swig for installation instructions." />
+    <Warning Condition="!$(HasJava)" Text="The project requires the Java JDK to be installed. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#optional-java for installation instructions." />
   </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasSwig) And $(HasJava)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />

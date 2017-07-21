@@ -117,7 +117,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         model_inputs_to_streams = input_map,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
         progress_frequency=epoch_size,
-        test_config = TestConfig(source=test_source, mb_size=16)
+        test_config = TestConfig(test_source, minibatch_size=16)
     ).train()
     
     if profiling:
@@ -147,7 +147,7 @@ def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, n
     trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up, progress_printer)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, profiling)
+    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling)
 
 
 if __name__=='__main__':

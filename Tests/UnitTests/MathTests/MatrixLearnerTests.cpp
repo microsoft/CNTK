@@ -80,11 +80,10 @@ BOOST_AUTO_TEST_SUITE(MatrixLearnerSuite)
 BOOST_FIXTURE_TEST_CASE(FSAdagradSparse, MatrixLearnerFixture)
 {
     // run learner
-    double smoothedCount = 1000;
-    matSG.FSAdagradUpdate(dim2, matG, matM, smoothedCount, 0.0001, 1.0, 0.9, 0.9);
+    double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = 0.5;
+    matSG.FSAdagradUpdate(matG, matM, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, 0.0001, 1.0, 0.9, false);
 
-    smoothedCount = 1000;
-    matSGsparse.FSAdagradUpdate(dim2, matGsparseBSC, matMsparse, smoothedCount, 0.0001, 1.0, 0.9, 0.9);
+    matSGsparse.FSAdagradUpdate(matGsparseBSC, matMsparse, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, 0.0001, 1.0, 0.9, false);
 
     BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE5));
     BOOST_CHECK(matM.IsEqualTo(matMsparse, c_epsilonFloatE5));
@@ -94,8 +93,8 @@ BOOST_FIXTURE_TEST_CASE(FSAdagradSparse, MatrixLearnerFixture)
 BOOST_FIXTURE_TEST_CASE(RmsPropSparse, MatrixLearnerFixture)
 {
     // run learner
-    float avg = matSG.RmsProp(matG, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true);
-    float avgSparse = matSGsparse.RmsProp(matGsparseBSC, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true);
+    float avg = matSG.RmsProp(matG, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true, false);
+    float avgSparse = matSGsparse.RmsProp(matGsparseBSC, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true, false);
 
     BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE4));
     BOOST_CHECK(fabsf(avg - avgSparse) < c_epsilonFloatE5);

@@ -13,7 +13,7 @@
 #include <deque>
 #include <random>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Randomized sequence description.
 struct RandomizedSequenceDescription
@@ -34,7 +34,7 @@ class SequenceRandomizer
 public:
     SequenceRandomizer(
         int verbosity,
-        IDataDeserializerPtr deserializer,
+        DataDeserializerPtr deserializer,
         ChunkRandomizerPtr chunkRandomizer);
 
     // Resets the current sweep according to the randomization seed provided.
@@ -76,10 +76,10 @@ private:
     // Release chunks from the chunk window that are not needed anymore.
     void ReleaseChunks();
 
-    IDataDeserializerPtr m_deserializer;
+    DataDeserializerPtr m_deserializer;
 
     // Used only as a buffer to get sequence descriptions without memory reallocation.
-    std::vector<SequenceDescription> m_bufferOriginalSequences;
+    std::vector<SequenceInfo> m_bufferOriginalSequences;
 
     // Randomized chunks.
     const std::vector<RandomizedChunk>& m_randomizedChunks;
@@ -160,4 +160,4 @@ private:
 };
 
 typedef std::shared_ptr<SequenceRandomizer> SequenceRandomizerPtr;
-}}}
+}

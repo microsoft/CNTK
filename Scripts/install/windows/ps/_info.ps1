@@ -21,7 +21,7 @@ function DisplayStartMessage {
 
 This script will setup CNTK, the CNTK prerequisites and the CNTK Python environment onto the system.
 More help can be found at: 
-  https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script
+  https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-Windows-Binary-Script
 
 The script will analyse your machine and will determine which components are required. 
 The required components will be downloaded in [$localCache]
