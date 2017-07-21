@@ -76,7 +76,6 @@
   <div class="col-md-9">
     <div class="page-header toc-ignore">
       <h1>CIFAR-10 Image Classification with Convolutional Neural Networks and CNTK</h1>
-                        <h4 class="author">Ali Zaidi</h4>
             
             <h4 class="date">2017-07-21</h4>
           </div>
@@ -161,11 +160,11 @@ normalized_input &lt;-<span class="st"> </span><span class="kw">op_element_times
             <span class="kw"><a href="../reference/MaxPooling.html">MaxPooling</a></span>(<span class="kw">c</span>(<span class="dv">3</span>, <span class="dv">3</span>), <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">pad =</span> <span class="ot">TRUE</span>)
         )
     }),
-    <span class="kw">Dense</span>(<span class="dv">256</span>, op_relu),
-    <span class="kw">Dropout</span>(<span class="fl">0.5</span>),
-    <span class="kw">Dense</span>(<span class="dv">128</span>, op_relu),
-    <span class="kw">Dropout</span>(<span class="fl">0.5</span>),
-    <span class="kw">Dense</span>(num_output_classes, <span class="dt">activation =</span> <span class="ot">NULL</span>)
+    <span class="kw"><a href="../reference/Dense.html">Dense</a></span>(<span class="dv">256</span>, op_relu),
+    <span class="kw"><a href="../reference/Dropout.html">Dropout</a></span>(<span class="fl">0.5</span>),
+    <span class="kw"><a href="../reference/Dense.html">Dense</a></span>(<span class="dv">128</span>, op_relu),
+    <span class="kw"><a href="../reference/Dropout.html">Dropout</a></span>(<span class="fl">0.5</span>),
+    <span class="kw"><a href="../reference/Dense.html">Dense</a></span>(num_output_classes, <span class="dt">activation =</span> <span class="ot">NULL</span>)
 )(normalized_input)</code></pre></div>
 <div id="visualize-network" class="section level3">
 <h3 class="hasAnchor">

@@ -11,19 +11,43 @@ Convolution(filter_shape, num_filters = NULL, sequential = FALSE,
   max_temp_mem_size_in_samples = 0, op_name = "Convolution", name = "")
 }
 \description{
-Layer factory function to create a batch-normalization layer.
+Layer factory function to create a convolution layer.
 }
 \details{
-Batch normalization applies this formula to every input element
-(element-wise): y = (x - batch_mean) / (batch_stddev + epsilon) * scale +
-bias where batch_mean and batch_stddev are estimated on the minibatch and
-scale and bias are learned parameters.
+This implements a convolution operation over items arranged on an
+N-dimensional grid, such as pixels in an image. Typically, each item is a
+vector (e.g. pixel: R,G,B), and the result is, in turn, a vector. The
+item-grid dimensions are referred to as the spatial dimensions (e.g.
+dimensions of an image), while the vector dimension of the individual items
+is often called feature-map depth.
 
-During operation, this layer also estimates an aggregate running mean and
-standard deviation for use in inference.
+For each item, convolution gathers a window (“receptive field”) of items
+surrounding the item’s position on the grid, and applies a little
+fully-connected network to it (the same little network is applied to all
+item positions). The size (spatial extent) of the receptive field is given
+by filter_shape. E.g. to specify a 2D convolution, filter_shape should be a
+tuple of two integers, such as (5,5); an example for a 3D convolution (e.g.
+video or an MRI scan) would be filter_shape=(3,3,3); while for a 1D
+convolution (e.g. audio or text), filter_shape has one element, such as (3,)
+or just 3.
 
-A BatchNormalization layer instance owns its learnable parameter tensors and
-exposes them as attributes .scale and .bias. The aggregate estimates are
-exposed as attributes aggregate_mean, aggregate_variance, and
-aggregate_count.
+The dimension of the input items (input feature-map depth) is not to be
+specified. It is known from the input. The dimension of the output items
+(output feature-map depth) generated for each item position is given by
+num_filters.
+
+If the input is a sequence, the sequence elements are by default treated
+independently. To convolve along the sequence dimension as well, pass
+sequential=True. This is useful for variable-length inputs, such as video or
+natural-language processing (word n-grams). Note, however, that convolution
+does not support sparse inputs.
+
+Both input and output items can be scalars intead of vectors. For
+scalar-valued input items, such as pixels on a black-and-white image, or
+samples of an audio clip, specify reduction_rank=0. If the output items are
+scalar, pass num_filters=() or None.
+
+A Convolution instance owns its weight parameter tensors W and b, and
+exposes them as an attributes .W and .b. The weights will have the shape
+(num_filters, input_feature_map_depth, *filter_shape)
 }

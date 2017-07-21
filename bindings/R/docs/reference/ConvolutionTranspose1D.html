@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Convolution — Convolution • cntk</title>
+<title>ConvolutionTranspose1D — ConvolutionTranspose1D • cntk</title>
 
 <!-- jquery -->
 <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha384-nrOSfDHtoPMzJHjVTdCopGqIqeYETSXhZDFyniQ8ZHcVy08QesyHcnOUpMpqnmWq" crossorigin="anonymous"></script>
@@ -98,61 +98,27 @@
       <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Convolution</h1>
+    <h1>ConvolutionTranspose1D</h1>
     </div>
 
     
-    <p>Layer factory function to create a convolution layer.</p>
+    <p>Layer factory function to create a 1D convolution transpose layer with
+optional non-linearity. Same as ConvolutionTranspose() except that
+filter_shape is verified to be 1-dimensional. See ConvolutionTranspose() for
+extensive documentation.</p>
     
 
-    <pre class="usage"><span class='fu'>Convolution</span>(<span class='no'>filter_shape</span>, <span class='kw'>num_filters</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>sequential</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
+    <pre class="usage"><span class='fu'>ConvolutionTranspose1D</span>(<span class='no'>filter_shape</span>, <span class='kw'>num_filters</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
   <span class='kw'>activation</span> <span class='kw'>=</span> <span class='no'>activation_identity</span>, <span class='kw'>init</span> <span class='kw'>=</span> <span class='fu'>init_glorot_uniform</span>(),
-  <span class='kw'>pad</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>, <span class='kw'>strides</span> <span class='kw'>=</span> <span class='fl'>1</span>, <span class='kw'>sharing</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>bias</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>init_bias</span> <span class='kw'>=</span> <span class='fl'>0</span>, <span class='kw'>reduction_rank</span> <span class='kw'>=</span> <span class='fl'>1</span>, <span class='kw'>transpose_weight</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>max_temp_mem_size_in_samples</span> <span class='kw'>=</span> <span class='fl'>0</span>, <span class='kw'>op_name</span> <span class='kw'>=</span> <span class='st'>"Convolution"</span>, <span class='kw'>name</span> <span class='kw'>=</span> <span class='st'>""</span>)</pre>
+  <span class='kw'>pad</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>, <span class='kw'>strides</span> <span class='kw'>=</span> <span class='fl'>1</span>, <span class='kw'>bias</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>init_bias</span> <span class='kw'>=</span> <span class='fl'>0</span>,
+  <span class='kw'>output_shape</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>name</span> <span class='kw'>=</span> <span class='st'>""</span>)</pre>
         
-    <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
-
-    <p>This implements a convolution operation over items arranged on an
-N-dimensional grid, such as pixels in an image. Typically, each item is a
-vector (e.g. pixel: R,G,B), and the result is, in turn, a vector. The
-item-grid dimensions are referred to as the spatial dimensions (e.g.
-dimensions of an image), while the vector dimension of the individual items
-is often called feature-map depth.</p>
-<p>For each item, convolution gathers a window (“receptive field”) of items
-surrounding the item’s position on the grid, and applies a little
-fully-connected network to it (the same little network is applied to all
-item positions). The size (spatial extent) of the receptive field is given
-by filter_shape. E.g. to specify a 2D convolution, filter_shape should be a
-tuple of two integers, such as (5,5); an example for a 3D convolution (e.g.
-video or an MRI scan) would be filter_shape=(3,3,3); while for a 1D
-convolution (e.g. audio or text), filter_shape has one element, such as (3,)
-or just 3.</p>
-<p>The dimension of the input items (input feature-map depth) is not to be
-specified. It is known from the input. The dimension of the output items
-(output feature-map depth) generated for each item position is given by
-num_filters.</p>
-<p>If the input is a sequence, the sequence elements are by default treated
-independently. To convolve along the sequence dimension as well, pass
-sequential=True. This is useful for variable-length inputs, such as video or
-natural-language processing (word n-grams). Note, however, that convolution
-does not support sparse inputs.</p>
-<p>Both input and output items can be scalars intead of vectors. For
-scalar-valued input items, such as pixels on a black-and-white image, or
-samples of an audio clip, specify reduction_rank=0. If the output items are
-scalar, pass num_filters=() or None.</p>
-<p>A Convolution instance owns its weight parameter tensors W and b, and
-exposes them as an attributes .W and .b. The weights will have the shape
-(num_filters, input_feature_map_depth, *filter_shape)</p>
-    
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
-      
-      <li><a href="#details">Details</a></li>
-          </ul>
+                </ul>
 
   </div>
 </div>

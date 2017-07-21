@@ -1,7 +1,6 @@
 ---
 title: "Installing CNTK and the CNTK Package on Your System"
 date: "`r Sys.Date()`"
-author: "Ali Zaidi"
 output:
   rmarkdown::html_vignette:
     fig_caption: yes

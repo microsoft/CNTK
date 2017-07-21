@@ -1,6 +1,5 @@
 ---
 title: "Convolutional Neural Netowrks with MNIST"
-author: "Ali Zaidi"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
