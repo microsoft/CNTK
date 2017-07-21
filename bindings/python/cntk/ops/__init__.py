@@ -1462,7 +1462,7 @@ def sinh(x, name=''):
     The output tensor has the same shape as ``x``.
 
     Example:
-        >>> np.round(np.sinh([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        >>> np.round(C.sinh([[1,0.5],[-0.25,-0.75]]).eval(),5)
         array([[ 1.1752 ,  0.5211 ],
                [-0.25261, -0.82232]], dtype=float32)
 
@@ -1472,7 +1472,7 @@ def sinh(x, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import sin
+    from cntk.cntk_py import sinh
     x = sanitize_input(x)
     return sinh(x, name)
 
@@ -1484,7 +1484,7 @@ def cosh(x, name=''):
     The output tensor has the same shape as ``x``.
 
     Example:
-        >>> np.round(np.cosh([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        >>> np.round(C.cosh([[1,0.5],[-0.25,-0.75]]).eval(),5)
         array([[ 1.54308,  1.12763],
                [ 1.03141,  1.29468]], dtype=float32)
 
@@ -1494,7 +1494,7 @@ def cosh(x, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import sin
+    from cntk.cntk_py import cosh
     x = sanitize_input(x)
     return cosh(x, name)
 
