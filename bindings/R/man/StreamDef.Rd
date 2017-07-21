@@ -8,8 +8,33 @@ StreamDef(field = NULL, shape = NULL, is_sparse = FALSE,
   transforms = NULL, context = NULL, scp = NULL, mlf = NULL,
   broadcast = NULL, defines_mb_size = FALSE)
 }
+\arguments{
+\item{field}{string defining the name of the stream}
+
+\item{shape}{integer defining the dimensions of the stream}
+
+\item{is_sparse}{logical for whether the data is sparse (FALSE by default)}
+
+\item{transforms}{list of transforms to be applied to the Deserializer}
+
+\item{context}{vector of length two defining whther reading in HTK data, (only supported by `HTKFeatureDeserializer`)}
+
+\item{scp}{list of `scp` files for HTK data}
+
+\item{mlf}{list `mlf` files for HTK data}
+
+\item{broadcast}{logical for whether the streams should be broadcast to the whole sequence}
+
+\item{defines_mb_size}{logical for whether this stream defines minibatch size}
+}
+\value{
+A StreamDef object containing the stream dictionary
+}
 \description{
 Configuration of a stream for use with the builtin Deserializers. The
 meanings of some configuration keys have a mild dependency on the exact
 deserializer, and certain keys are meaningless for certain deserializers.
+}
+\references{
+\url{https://www.cntk.ai/pythondocs/cntk.io.html#cntk.io.StreamDef}
 }

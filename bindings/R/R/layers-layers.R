@@ -169,6 +169,24 @@ Convolution1D <- function(filter_shape, num_filters = NULL,
 	)
 }
 
+#' Two Dimensional Convolutional Layer
+#'
+#' Layer factory function to create a 2D convolution layer with optional non-linearity.
+#' Same as \code{Convolution()} except that \code{filter_shape} is verified to be 2-dimensional.
+#' See \code{Convolution()} for extensive documentation.
+#'
+#' @param filter_shape integer vector of shape (spatial extent) of the receptive field, not including the input feature-map depth
+#' @param num_filters integer of number of filters
+#' @param activation optional function to apply at end
+#' @param init vector array or cntk$initializer, defaults to \code{init_glorot_uniform())} – initial value of weights W
+#' @param pad logical if FALSE the filter will be shifted over the valid area of input, that is, no value outside the area is used. If TRUE the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero. Use a tuple to specify a per-axis value.
+#' @param strides integer of stride for convolution
+#' @param bias logical if the layer should have a bias term
+#' @param init_bias double or cntk$initializer for initialization of bias term
+#' @param reduction_rank integer whether input items have or do not have a depth axis
+#' @param name string for the name of the function instance in the network
+#' @references \url{https://www.cntk.ai/pythondocs/cntk.layers.layers.html?highlight=convolution2d#cntk.layers.layers.Convolution2D})
+#' @return A cntk$ops$functions$Function class for defining tensor operations in network architecture.
 #' @export
 Convolution2D <- function(filter_shape, num_filters = NULL,
 						  activation = activation_identity,
@@ -365,6 +383,18 @@ LayerNormalization <- function(initial_scale = 1, initial_bias = 0,
 	)
 }
 
+
+#' Max-Pooling Layer Factory
+#'
+#' Layer factory function to create a max-pooling layer.
+#' Like \code{Convolution()}, \code{MaxPooling()} processes items arranged on an N-dimensional grid, such as an image.
+#' Typically, each item is a vector. For each item, max-pooling computes the element-wise maximum over a window ("receptive field") of items surrounding the item’s position on the grid.
+#' The size (spatial extent) of the receptive field is given by \code{filter_shape.} E.g. for 2D pooling, filter_shape should be a tuple of two integers, such as (5,5).
+#' @param filter_shape integer vector defining receptive field
+#' @param strides integer defining length of stride
+#' @param pad logical for whether or not the pooling operation should be shifted over the "valid" area of input
+#' @param name string for name of the function instance in the network
+#'
 #' @export
 MaxPooling <- function(filter_shape, strides = 1, pad = FALSE, name = '') {
 	cntk$layers$MaxPooling(
