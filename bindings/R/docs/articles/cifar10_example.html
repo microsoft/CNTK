@@ -50,10 +50,20 @@
     <li>
       <a href="../articles/installation.html">Installing CNTK and the CNTK Package on Your System</a>
     </li>
+    <li>
+      <a href="../articles/mnist_example.html">Convolutional Neural Netowrks with MNIST</a>
+    </li>
   </ul>
 </li>
       </ul>
-<ul class="nav navbar-nav navbar-right"></ul>
+<ul class="nav navbar-nav navbar-right">
+<li>
+  <a href="https://github.com/Microsoft/CNTK">
+    <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
 </div>
 <!--/.nav-collapse -->
   </div>
@@ -66,6 +76,7 @@
   <div class="col-md-9">
     <div class="page-header toc-ignore">
       <h1>CIFAR-10 Image Classification with Convolutional Neural Networks and CNTK</h1>
+                        <h4 class="author">Ali Zaidi</h4>
             
             <h4 class="date">2017-07-21</h4>
           </div>
@@ -142,7 +153,7 @@ label_var &lt;-<span class="st"> </span><span class="kw"><a href="../reference/o
 normalized_input &lt;-<span class="st"> </span><span class="kw">op_element_times</span>(<span class="kw">op_constant</span>(<span class="fl">0.00390625</span>), input_remove_mean)</code></pre></div>
 <p>Now we are ready to define our network architecture. The functions we use are all part of the CNTK <a href="https://www.cntk.ai/pythondocs/layerref.html">Layers</a> library. Please refer to those Python docs for a complete reference about these functions.</p>
 <p>In our case, we are going to define a convolutional neural network with four convolutional layers and two max-pooling layers.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">z &lt;-<span class="st"> </span><span class="kw">Sequential</span>(
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">z &lt;-<span class="st"> </span><span class="kw"><a href="../reference/Sequential.html">Sequential</a></span>(
     <span class="kw">For</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">2</span>, <span class="cf">function</span>() { 
         <span class="kw">c</span>(
             <span class="kw"><a href="../reference/Convolution2D.html">Convolution2D</a></span>(<span class="kw">c</span>(<span class="dv">3</span>, <span class="dv">3</span>), <span class="dv">64</span>, op_relu, <span class="dt">pad =</span> <span class="ot">TRUE</span>),
@@ -266,7 +277,7 @@ minibatch_index &lt;-<span class="st"> </span><span class="dv">0</span></code></
 
 
       <footer><div class="copyright">
-  <p>Developed by Joe Davison.</p>
+  <p>Developed by Joe Davison, Ali Zaidi, Microsoft.</p>
 </div>
 
 <div class="pkgdown">

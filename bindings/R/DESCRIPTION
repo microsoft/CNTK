@@ -1,9 +1,15 @@
 Package: cntk
 Type: Package
-Title: Microsoft Cognitive Toolkit for R
+Title: R Interface to the Microsoft Cognitive Toolkit (CNTK)
 Version: 0.0.0.9000
-Authors@R: person("Joe", "Davison", email = "t-jodavi@microsoft.com", role = c("aut", "cre"))
-Description: Provides R interface to CNTK library
+Authors@R: c(
+    person("Joe", "Davison", email = "t-jodavi@microsoft.com", role = c("aut", "cre")),
+    person("Ali", "Zaidi", email = "alizaidi@microsoft.com", role = c("aut")),
+    person("Microsoft", role = c("cph", "fnd"))
+    )
+URL: https://github.com/Microsoft/CNTK, https://akzaidi.github.io/CNTK//index.html
+BugReports: https://github.com/Microsoft/CNTK/issues
+Description: Provides an R interface to the CNTK deep-learning toolkit. 
 Depends: R (>= 3.2.3)
 License: MIT
 Encoding: UTF-8
@@ -12,5 +18,7 @@ Imports:
 	reticulate,
 	magrittr
 Suggests: knitr,
-    rmarkdown
+    rmarkdown,
+    testthat
 VignetteBuilder: knitr
+SystemRequirements: CNTK >= 2.0 (https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-your-machine)

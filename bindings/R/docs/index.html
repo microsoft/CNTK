@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Microsoft Cognitive Toolkit for R • cntk</title>
+<title>R Interface to the Microsoft Cognitive Toolkit (CNTK) • cntk</title>
 <!-- jquery --><script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha384-nrOSfDHtoPMzJHjVTdCopGqIqeYETSXhZDFyniQ8ZHcVy08QesyHcnOUpMpqnmWq" crossorigin="anonymous"></script><!-- Bootstrap --><link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script><!-- Font Awesome icons --><link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
 <!-- pkgdown --><link href="pkgdown.css" rel="stylesheet">
@@ -50,10 +50,20 @@
     <li>
       <a href="articles/installation.html">Installing CNTK and the CNTK Package on Your System</a>
     </li>
+    <li>
+      <a href="articles/mnist_example.html">Convolutional Neural Netowrks with MNIST</a>
+    </li>
   </ul>
 </li>
       </ul>
-<ul class="nav navbar-nav navbar-right"></ul>
+<ul class="nav navbar-nav navbar-right">
+<li>
+  <a href="https://github.com/Microsoft/CNTK">
+    <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
 </div>
 <!--/.nav-collapse -->
   </div>
@@ -102,11 +112,20 @@ learner <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">
   </div>
 
   <div class="col-md-3" id="sidebar">
-    <h2>License</h2>
+    <h2>Links</h2>
+<ul class="list-unstyled">
+<li>Browse source code at <br><a href="https://github.com/Microsoft/CNTK">https://​github.com/​Microsoft/​CNTK</a>
+</li>
+<li>Report a bug at <br><a href="https://github.com/Microsoft/CNTK/issues">https://​github.com/​Microsoft/​CNTK/​issues</a>
+</li>
+</ul>
+<h2>License</h2>
 <p><a href="https://opensource.org/licenses/mit-license.php">MIT</a></p>
 <h2>Developers</h2>
 <ul class="list-unstyled">
 <li>Joe Davison <br><small class="roles"> Author, maintainer </small> </li>
+<li>Ali Zaidi <br><small class="roles"> Author </small> </li>
+<li>Microsoft <br><small class="roles"> Copyright holder, funder </small> </li>
 </ul>
 <h2>Dev status</h2>
 <ul class="list-unstyled">
@@ -117,7 +136,7 @@ learner <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">
 
 
       <footer><div class="copyright">
-  <p>Developed by Joe Davison.</p>
+  <p>Developed by Joe Davison, Ali Zaidi, Microsoft.</p>
 </div>
 
 <div class="pkgdown">

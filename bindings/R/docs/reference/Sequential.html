@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>mb_stream_info — mb_stream_info • cntk</title>
+<title>Higher-Order Wrapper for Layer Definitions — Sequential • cntk</title>
 
 <!-- jquery -->
 <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha384-nrOSfDHtoPMzJHjVTdCopGqIqeYETSXhZDFyniQ8ZHcVy08QesyHcnOUpMpqnmWq" crossorigin="anonymous"></script>
@@ -98,22 +98,38 @@
       <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>mb_stream_info</h1>
+    <h1>Higher-Order Wrapper for Layer Definitions</h1>
     </div>
 
     
-    <p>Gets the description of the stream with given name. Throws an exception if
-there are none or multiple streams with this same name.</p>
+    <p>Layer factory function to create a composite that applies a sequence of layers (or any functions) onto an input.
+Sequential `([F, G, H])(x)` means the same as `H(G(F(x)))`.</p>
     
 
-    <pre class="usage"><span class='fu'>mb_stream_info</span>(<span class='no'>mb_source</span>, <span class='no'>name</span>)</pre>
-        
+    <pre class="usage"><span class='fu'>Sequential</span>(<span class='no'>...</span>)</pre>
+    
+    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a> Arguments</h2>
+    <table class="ref-arguments">
+    <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>...</th>
+      <td><p>list of layer functions to apply in sequence</p></td>
+    </tr>
+    </table>
+    
+    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+
+    <p>A function that accepts one argument and applies the given functions one after another.</p>
+    
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
-                </ul>
+      <li><a href="#arguments">Arguments</a></li>
+      
+      <li><a href="#value">Value</a></li>
+          </ul>
 
   </div>
 </div>

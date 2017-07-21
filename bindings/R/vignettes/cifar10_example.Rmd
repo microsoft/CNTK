@@ -1,5 +1,6 @@
 ---
 title: "CIFAR-10 Image Classification with Convolutional Neural Networks and CNTK"
+author: "Ali Zaidi"
 date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
