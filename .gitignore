@@ -302,3 +302,6 @@ Manual/.ipynb_checkpoints
 /CNTK.VC.db
 /CNTK.VC.VC.opendb
 /Local
+.Rproj.user
+.Rhistory
+.ipynb_checkpoints/
