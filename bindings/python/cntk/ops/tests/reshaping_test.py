@@ -492,7 +492,7 @@ def test_convert_dynamic_axis():
 
     const_a = C.unpack_batch(y)
     assert len(const_a.dynamic_axes) == 0
-    assert const_a.shape == (-3, 2, 3)
+    assert const_a.shape == (C.FreeDimension, 2, 3)
 
     f = C.assign(a, const_a)
     z = x + 1
@@ -505,10 +505,10 @@ def test_convert_dynamic_axis():
     x = C.input_variable((2,3))
     const_x = C.unpack_batch(x)
     assert len(const_x.dynamic_axes) == 0
-    assert const_x.shape == (-3, 2, 3)
+    assert const_x.shape == (C.FreeDimension, 2, 3)
 
     const_y = C.reshape(const_x, (-1, 3))
-    assert const_y.shape == (-3, 3)
+    assert const_y.shape == (C.FreeDimension, 3)
     y = C.to_batch(const_y)
     assert len(y.dynamic_axes) == 1
     assert y.shape == (3,)

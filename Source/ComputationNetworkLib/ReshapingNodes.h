@@ -500,7 +500,7 @@ class ToBatchAxisNode : public ComputationNodeNonLooping<ElemType>, public NumIn
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() {
-        return L"AttachDynamicAxis";
+        return L"ToBatchAxisNode";
     }
 public:
     ToBatchAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
@@ -567,7 +567,8 @@ public:
         
         if (!m_pMBLayout)
         {
-            m_pMBLayout = make_shared<MBLayout>(1, 0, ComputationNodeBase::DefaultNoSequenceAxisName); // this generates a new layout
+            m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
+            m_pMBLayout->SetUniqueAxisName(ComputationNodeBase::DefaultNoSequenceAxisName);
         }
 
         auto sampleLayout = Input(0)->GetSampleLayout();
@@ -600,7 +601,7 @@ class UnpackBatchAixsNode : public ComputationNodeNonLooping<ElemType>, public N
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() {
-        return L"DetachDynamicAxis";
+        return L"UnpackBatchAixs";
     }
 public:
     UnpackBatchAixsNode(DEVICEID_TYPE deviceId, const wstring& name)
