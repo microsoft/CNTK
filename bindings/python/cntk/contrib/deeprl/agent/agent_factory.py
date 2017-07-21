@@ -14,7 +14,20 @@ from .tabular_qlearning import TabularQLearning
 
 
 def make_agent(agent_config, o_space, a_space):
-    """Choose appropriate method to create an agent."""
+    """
+    Choose appropriate method to create an agent.
+
+    Args:
+        agent_config: configure file specifying the agent type as well as
+            training details.
+        o_space: observation space, gym.spaces.tuple_space.Tuple is not
+            supported.
+        a_space: action space, limits to gym.spaces.discrete.Discrete.
+
+    Returns:
+        agent (object): QLearning, ActorCritic, TabularQLearning, or
+            RandomAgent.
+    """
     config = configparser.ConfigParser()
     config.read(agent_config)
 

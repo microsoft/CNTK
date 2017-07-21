@@ -20,13 +20,27 @@ from .shared.replay_memory import ReplayMemory
 
 
 class QLearning(AgentBaseClass):
-    """Q-learning agent."""
+    """
+    Q-learning agent.
+
+    Including:
+    - DQN https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
+    - Prioritized Experience Replay https://arxiv.org/pdf/1511.05952.pdf
+    - Dueling Network https://arxiv.org/pdf/1511.06581.pdf
+    - Double Q Learning https://arxiv.org/pdf/1509.06461.pdf
+    """
 
     def __init__(self, config_filename, o_space, a_space):
         """Constructor for Q learning algorithm.
 
         Widely known as DQN. Use either predefined neural network structure
         (see models.py) or customized network (see customized_models.py).
+
+        Args:
+            config_filename: configure file specifying training details.
+            o_space: observation space, gym.spaces.tuple_space.Tuple is not
+                supported.
+            a_space: action space, limits to gym.spaces.discrete.Discrete.
         """
         super(QLearning, self).__init__(o_space, a_space)
 
@@ -117,9 +131,15 @@ class QLearning(AgentBaseClass):
         self.step_count = 0
 
     def start(self, state):
-        """Start a new episode.
+        """
+        Start a new episode.
 
-        Return (action, debug_info) tuple where debug_info is a dictionary.
+        Args:
+            state (object): observation provided by the environment.
+
+        Returns:
+            action (int): action choosen by agent.
+            debug_info (dict): auxiliary diagnostic information.
         """
         if self._preprocessor is not None:
             self._preprocessor.reset()
@@ -134,9 +154,16 @@ class QLearning(AgentBaseClass):
             'epsilon': self._epsilon}
 
     def step(self, reward, next_state):
-        """Observe one transition and choose an action.
+        """
+        Observe one transition and choose an action.
 
-        Return (action, debug_info) tuple where debug_info is a dictionary.
+        Args:
+            reward (float) : amount of reward returned after previous action.
+            next_state (object): observation provided by the environment.
+
+        Returns:
+            action (int): action choosen by agent.
+            debug_info (dict): auxiliary diagnostic information.
         """
         next_encoded_state = self._preprocess_state(next_state)
         priority = self._compute_priority(
@@ -161,7 +188,13 @@ class QLearning(AgentBaseClass):
             'epsilon': self._epsilon}
 
     def end(self, reward, next_state):
-        """Last observed reward/state of the episode (which then terminates)."""
+        """
+        Last observed reward/state of the episode (which then terminates).
+
+        Args:
+            reward (float) : amount of reward returned after previous action.
+            next_state (object): observation provided by the environment.
+        """
         priority = self._compute_priority(
             self._last_state, self._last_action, reward, None)
         self._replay_memory.store(
@@ -201,7 +234,18 @@ class QLearning(AgentBaseClass):
             (1 - float(self.step_count)/self._parameters.epsilon_decay_step_count))
 
     def _choose_action(self, state):
-        """Epsilon greedy policy."""
+        """
+        Epsilon greedy policy.
+
+        Args:
+            state (object): observation seen by agent, which can be different
+                from what is provided by the environment. The difference comes
+                from preprcessing.
+
+        Returns:
+            action (int): action choosen by agent.
+            debug_info (str): auxiliary diagnostic information.
+        """
         if self.step_count < self._parameters.replay_start_size or \
                 np.random.uniform(0, 1) < self._epsilon:
             return np.random.randint(self._num_actions), 'RANDOM'
@@ -217,12 +261,15 @@ class QLearning(AgentBaseClass):
         self._parameters.save(filename)
 
     def _evaluate_q(self, model, state, action=None):
-        """Evaluate Q[state, action].
+        """
+        Evaluate Q[state, action].
 
-        if action is None, return values for all actions.
+        If action is None, return values for all actions.
         Args:
-            state: index of state
-            action: index of action
+            state (object): observation seen by agent, which can be different
+                from what is provided by the environment. The difference comes
+                from preprcessing.
+            action (int): action choosen by agent.
         """
         q = np.squeeze(model.eval({model.arguments[0]: [state]}))
         if action is None:

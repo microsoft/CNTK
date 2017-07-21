@@ -20,7 +20,14 @@ class AgentBaseClass(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, o_space, a_space):
-        """Constructor for AgentBaseClass."""
+        """
+        Constructor for AgentBaseClass.
+
+        Args:
+            o_space: observation space, gym.spaces.tuple_space.Tuple is not
+                supported.
+            a_space: action space, limits to gym.spaces.discrete.Discrete.
+        """
         if self._classname(a_space) != 'gym.spaces.discrete.Discrete':
             raise ValueError(
                 'Action space {0} incompatible with {1}. (Only supports '
@@ -75,23 +82,42 @@ class AgentBaseClass(object):
 
     @abstractmethod
     def start(self, state):
-        """Start a new episode.
+        """
+        Start a new episode.
 
-        Return (action, debug_info) tuple where debug_info is a dictionary.
+        Args:
+            state (object): observation provided by the environment.
+
+        Returns:
+            action (int): action choosen by agent.
+            debug_info (dict): auxiliary diagnostic information.
         """
         pass
 
     @abstractmethod
     def step(self, reward, next_state):
-        """Observe one transition and choose an action.
+        """
+        Observe one transition and choose an action.
 
-        Return (action, debug_info) tuple where debug_info is a dictionary.
+        Args:
+            reward (float) : amount of reward returned after previous action.
+            next_state (object): observation provided by the environment.
+
+        Returns:
+            action (int): action choosen by agent.
+            debug_info (dict): auxiliary diagnostic information.
         """
         pass
 
     @abstractmethod
     def end(self, reward, next_state):
-        """Last observed reward/state of the episode (which then terminates)."""
+        """
+        Last observed reward/state of the episode (which then terminates).
+
+        Args:
+            reward (float) : amount of reward returned after previous action.
+            next_state (object): observation provided by the environment.
+        """
         pass
 
     @abstractmethod
@@ -118,15 +144,31 @@ class AgentBaseClass(object):
         pass
 
     def evaluate(self, o):
-        """Choose action for given observation without updating agent's status."""
+        """
+        Choose action for given observation without updating agent's status.
+
+        Args:
+            o (object): observation provided by the environment.
+
+        Returns:
+            action (int): action choosen by agent.
+        """
         a, _ = self._choose_action(self._preprocess_state(o))
         return a
 
     @abstractmethod
     def _choose_action(self, state):
-        """Choose an action according to the policy.
+        """
+        Choose an action according to the policy.
 
-        Return (action, debug_info) tuple where debug_info is a string.
+        Args:
+            state (object): observation seen by agent, which can be different
+                from what is provided by the environment. The difference comes
+                from preprcessing.
+
+        Returns:
+            action (int): action choosen by agent.
+            debug_info (str): auxiliary diagnostic information.
         """
         pass
 

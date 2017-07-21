@@ -21,8 +21,15 @@ To train an agent using
     - RandomAgent
     python run.py --env=CartPole-v0 --max_steps=100 --eval_period=1 --eval_steps=200000
 
-The agent configs, best model and evaluation results are written to --output_dir, which defaults to 'output'
-To view the evaluation results, type the following command in python:
+Use QLearning as an example, the command
+    python run.py --env=CartPole-v0 --max_steps=100000 --agent_config=config_examples/qlearning.config --eval_period=1000 --eval_steps=20000
+tells QLearning agent to interact with environment CartPole-v0 for a maximum of
+100000 steps, while evaluation is done every 1000 steps. Each evaluation reports
+average reward per episode by interacting with the environment 20000 steps.
+
+The agent configs, best model and evaluation results are written to --output_dir,
+which defaults to 'output' in the working directory. To view the evaluation
+results, type the following command in python:
 
 import shelve
 d = shelve.open('output/output.wks')

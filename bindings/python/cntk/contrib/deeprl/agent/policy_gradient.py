@@ -17,10 +17,22 @@ from .shared.policy_gradient_parameters import PolicyGradientParameters
 
 
 class ActorCritic(AgentBaseClass):
-    """Actor-Critic Policy Gradient."""
+    """
+    Actor-Critic Policy Gradient.
+
+    See https://arxiv.org/pdf/1602.01783.pdf for a description of algorithm.
+    """
 
     def __init__(self, config_filename, o_space, a_space):
-        """Constructor for policy gradient."""
+        """
+        Constructor for policy gradient.
+
+        Args:
+            config_filename: configure file specifying training details.
+            o_space: observation space, gym.spaces.tuple_space.Tuple is not
+                supported.
+            a_space: action space, limits to gym.spaces.discrete.Discrete.
+        """
         super(ActorCritic, self).__init__(o_space, a_space)
 
         self._parameters = PolicyGradientParameters(config_filename)
@@ -49,7 +61,16 @@ class ActorCritic(AgentBaseClass):
         self.step_count = 0
 
     def start(self, state):
-        """Start a new episode."""
+        """
+        Start a new episode.
+
+        Args:
+            state (object): observation provided by the environment.
+
+        Returns:
+            action (int): action choosen by agent.
+            debug_info (dict): auxiliary diagnostic information.
+        """
         # Call _process_accumulated_trajectory() to process unused trajectory
         # data from previous episode.
         self._process_accumulated_trajectory(False)
@@ -69,7 +90,17 @@ class ActorCritic(AgentBaseClass):
         return action, {}
 
     def step(self, reward, next_state):
-        """Observe one transition and choose an action."""
+        """
+        Observe one transition and choose an action.
+
+        Args:
+            reward (float) : amount of reward returned after previous action.
+            next_state (object): observation provided by the environment.
+
+        Returns:
+            action (int): action choosen by agent.
+            debug_info (dict): auxiliary diagnostic information.
+        """
         o = self._preprocess_state(next_state)
         self._trajectory_rewards.append(reward)
         self._trajectory_states.append(o)
@@ -85,7 +116,13 @@ class ActorCritic(AgentBaseClass):
         return action, {}
 
     def end(self, reward, next_state):
-        """Last observed reward/state of the episode (which then terminates)."""
+        """
+        Last observed reward/state of the episode (which then terminates).
+
+        Args:
+            reward (float) : amount of reward returned after previous action.
+            next_state (object): observation provided by the environment.
+        """
         self._trajectory_rewards.append(reward)
         self.step_count += 1
 
@@ -222,7 +259,18 @@ class ActorCritic(AgentBaseClass):
                     eta, C.learners.UnitType.sample))
 
     def _choose_action(self, state):
-        """Choose an action according to policy."""
+        """
+        Choose an action according to policy.
+
+        Args:
+            state (object): observation seen by agent, which can be different
+                from what is provided by the environment. The difference comes
+                from preprcessing.
+
+        Returns:
+            action (int): action choosen by agent.
+            debug_info (object): probability vector the action is sampled from.
+        """
         action_probs = \
             C.ops.softmax(self._evaluate_model(self._policy_network, state)).eval()
         return np.random.choice(self._num_actions, p=action_probs), action_probs
@@ -242,7 +290,9 @@ class ActorCritic(AgentBaseClass):
     def _process_accumulated_trajectory(self, keep_last):
         """Process accumulated trajectory to generate training data.
 
-        Last state without action and reward will be kept if keep_last is True.
+        Args:
+            keep_last (bool): last state without action and reward will be kept
+                if True.
         """
         if not self._trajectory_states:
             return
