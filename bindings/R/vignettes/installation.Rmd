@@ -1,0 +1,95 @@
+---
+title: "Installing CNTK and the CNTK Package on Your System"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    fig_caption: yes
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Installing CNTK Python Binaries in an Anaconda Virtual Environment
+
+The R bindings for CNTK rely on the [`reticulate`](https://rstudio.github.io/reticulate/) package to connect to CNTK and run operations. In order to make sure that your environment is set up correctly, you'll need to first install CNTK in a Python environment locally, and then set that Python environment as your default reticulate environment. CNTK is available in a variety of [precompiled binaries](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-your-machine), which you can install using the `pip` installer. Please view the link with the precompiled binaries to ensure you have all the necessary prerequisites installed prior to installing CNTK. It is recommended you use the [Anaconda Python distribution](https://www.continuum.io/downloads) as this will install all the necessary core math libraries for you automatically. For macOS users, you are recommended to use CNTK docker images available [here](https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Docker-Containers).
+
+### Create Conda Virtual Environment 
+
+In this vignette, we will assume you are using the [`conda` virtual environment mechanism](https://conda.io/docs/using/envs.html) to create and modify Python virtual environments. You can create a Python 3.5 environment with `conda` by using the `conda create` command:
+
+
+```bash
+conda create -n cntk-py35 python=3.5 anaconda
+```
+
+The environment will be named `cntk-py35` and the additional flag `anaconda` ensures that the distribution will contain over a 100 prebuilt Python packages for scientific computing (list [here](https://docs.continuum.io/anaconda/packages/pkg-docs)).
+
+### Install CNTK Using `pip` Binary Wheels
+
+We can activate that environment by running
+
+```bash
+source activate cntk-py35
+```
+
+Now that we are in our virutla environment for CNTK, let's install the appropriate Python binary using a Python "wheel". For example, here are the installation instructions for CNTK on a Python 3.5 environment with Ubuntu 16.04 system with GPU support:
+
+```bash
+pip install https://cntk.ai/PythonWheel/GPU/cntk-2.0-cp35-cp35m-linux_x86_64.whl
+```
+
+
+## Installing the CNTK R Package
+
+Now we can install the CNTK R package. Let's open an R session, and set `cntk-py35` as our `RETICULATE_PYTHON` environment:
+
+```R
+Sys.setenv(RETICULATE_PYTHON="/home/alizaidi/anaconda3/envs/cntk-py35/bin/python")
+```
+
+You can check your environment:
+
+```bash
+reticulate::py_config()
+python:         /home/alizaidi/anaconda3/envs/cntk-py35/bin/python
+libpython:      /home/alizaidi/anaconda3/envs/cntk-py35/lib/libpython3.5m.so
+pythonhome:     /home/alizaidi/anaconda3/envs/cntk-py35:/home/alizaidi/anaconda3/envs/cntk-py35
+version:        3.5.2 |Continuum Analytics, Inc.| (default, Jul  2 2016, 17:53:06)  [GCC 4.4.7 20120313 (Red Hat 4.4.7-1)]
+numpy:          /home/alizaidi/anaconda3/envs/cntk-py35/lib/python3.5/site-packages/numpy
+numpy_version:  1.11.2
+
+python versions found: 
+ /home/alizaidi/anaconda3/envs/cntk-py35/bin/python
+ /usr/bin/python
+ /usr/bin/python3
+ /home/alizaidi/anaconda3/bin/python
+ /home/alizaidi/anaconda3/envs/chainer3/bin/python
+ /home/alizaidi/anaconda3/envs/cntkkeraspy35/bin/python
+ /home/alizaidi/anaconda3/envs/cs231n36/bin/python
+ /home/alizaidi/anaconda3/envs/jupyterlab/bin/python
+ /home/alizaidi/anaconda3/envs/magenta/bin/python
+ /home/alizaidi/anaconda3/envs/mxnet/bin/python
+ /home/alizaidi/anaconda3/envs/pydcn/bin/python
+ /home/alizaidi/anaconda3/envs/pytorch/bin/python
+ /home/alizaidi/anaconda3/envs/snorkel/bin/python
+ /home/alizaidi/anaconda3/envs/stackgan/bin/python
+ /home/alizaidi/anaconda3/envs/tensorflow/bin/python
+ /home/alizaidi/anaconda3/envs/tensorflow-py35/bin/python
+
+```
+
+and ensure you have the Python CNTK module in this environment:
+
+```R
+reticulate::py_module_available("cntk")
+[1] TRUE
+```
+
+### Install CNTK R Package
+
+Now we are ready to install the R bindings. To do so, we'll rely on the github package installer from the [`devtools`](https://github.com/hadley/devtools) package. In order to use `devtools`, Windows users also need to install [Rtools](https://cran.r-project.org/bin/windows/Rtools/) (and make sure you select "yes" to append the Rtools compilers to your system `PATH` variable).
+
+```R
+devtools::install_github("Microsoft/CNTK", subdir = "bindings/R")
+```
