@@ -153,7 +153,7 @@ integers, such as (5,5).</p>
     
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='no'>f</span> <span class='kw'>&lt;-</span> <span class='fu'>avg_pooling</span>(<span class='fu'>c</span>(<span class='fl'>3</span>, <span class='fl'>3</span>), <span class='kw'>strides</span> <span class='kw'>=</span> <span class='fl'>2</span>)</div><div class='output co'>#&gt; <span class='error'>Error in eval(expr, envir, enclos): could not find function "avg_pooling"</span></div><div class='input'><span class='no'>h</span> <span class='kw'>&lt;-</span> <span class='fu'>ops_input_variable</span>(<span class='fu'>c</span>(<span class='no'>num_classes</span>))</div><div class='output co'>#&gt; <span class='error'>Error in eval(expr, envir, enclos): could not find function "ops_input_variable"</span></div><div class='input'>
+    <pre class="examples"><div class='input'>(<span class='no'>f</span> <span class='kw'>&lt;-</span> <span class='fu'>AveragePooling</span>(<span class='fu'>c</span>(<span class='fl'>3</span>, <span class='fl'>3</span>), <span class='kw'>strides</span> <span class='kw'>=</span> <span class='fl'>2</span>))</div><div class='output co'>#&gt; AveragePooling(x: Sequence[tensor]) -&gt; Sequence[tensor]</div><div class='input'>(<span class='no'>h</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='op_input_variable.html'>op_input_variable</a></span>(<span class='fu'>c</span>(<span class='kw'>shape</span> <span class='kw'>=</span> <span class='fl'>4</span>)))</div><div class='output co'>#&gt; Input('Input219', [#], [4])</div><div class='input'>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">

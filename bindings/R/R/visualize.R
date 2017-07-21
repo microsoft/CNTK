@@ -1,6 +1,9 @@
 
 #' Visualize Network Architecture
 #'
+#' Visualize the network architecture as a dataflow graph
+#' Describes the operations and how they interact with each other
+#'
 #' @param model CNTK network
 #'
 #' @return PNG plot

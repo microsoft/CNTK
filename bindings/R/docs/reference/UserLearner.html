@@ -103,7 +103,7 @@
 
     
     <p>Base class of all user-defined learners. To implement your own learning
-algorithm, derive from this class and override the `update()`.</p>
+algorithm, derive from this class and override the <code>update()</code>.</p>
     
 
     <pre class="usage"><span class='fu'>UserLearner</span>(<span class='no'>parameters</span>, <span class='no'>lr_schedule</span>, <span class='kw'>as_matrix</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)</pre>
@@ -112,9 +112,10 @@ algorithm, derive from this class and override the `update()`.</p>
 
     <p>Certain optimizers (such as AdaGrad) require additional storage. This can be
 allocated and initialized during construction.</p>
-<p>****** Associated Functions: ******</p>
-<p>update_user_learner(learner, gradient_values, training_sample_count,
-sweep_end)</p>
+    
+    <h2 class="hasAnchor" id="see-also"><a class="anchor" href="#see-also"></a>See also</h2>
+
+    <p><code>update_user_learner</code></p>
     
 
   </div>
@@ -123,6 +124,8 @@ sweep_end)</p>
     <ul class="nav nav-pills nav-stacked">
       
       <li><a href="#details">Details</a></li>
+
+      <li><a href="#see-also">See also</a></li>
           </ul>
 
   </div>

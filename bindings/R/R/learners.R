@@ -6,18 +6,12 @@
 #' parameter values using first order gradients. To instantiate a concrete
 #' learner, use the factory methods in this module.
 #'
-#' ****** Attributes: ******
-#'
-#' parameters - The set of parameter associated with this learner
-#'
-#' ****** Associated Functions: ******
-#'
-#' get_learning_rate(learner)
-#'
+#' @param parameters list of parameter associated with this learner
+#' @param learningRateSchedule get_learning_rate(learner)
+#' @example \dontrun{
 #' reset_learning_rate(learner, learning_rate)
-#'
 #' update_learner(learner, gradient_values, training_sample_count)
-#'
+#' }
 #'
 #' @export
 Learner <- function(parameters, learningRateSchedule) {
@@ -51,15 +45,12 @@ UnitType <- function(value) {
 #' UserLearner
 #'
 #' Base class of all user-defined learners. To implement your own learning
-#' algorithm, derive from this class and override the `update()`.
+#' algorithm, derive from this class and override the \code{update()}.
 #'
 #' Certain optimizers (such as AdaGrad) require additional storage. This can be
 #' allocated and initialized during construction.
 #'
-#' ****** Associated Functions: ******
-#'
-#' update_user_learner(learner, gradient_values, training_sample_count,
-#' sweep_end)
+#' @seealso \code{\link{update_user_learner}}
 #'
 #' @export
 UserLearner <- function(parameters, lr_schedule, as_matrix = TRUE) {

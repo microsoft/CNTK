@@ -6,25 +6,24 @@ activation_identity <- function(keep) {
 #' Activation Layer
 #'
 #' Layer factory function to create an activation layer. Activation functions
-#' can be used directly in CNTK, so there is no difference between `y = relu(x)`
-#' and `y = Activation(relu)(x)`. This layer is useful if one wants to configure
-#' the activation function with default <- options, or when its invocation
+#' can be used directly in CNTK, so there is no difference between \code{y = relu(x)}
+#' and \code{y = Activation(relu)(x)}. This layer is useful if one wants to configure
+#' the activation function with \code{default <- options}, or when its invocation
 #' should be named.
 #'
-#' @param activation (defaults to `activation_identity`) – function to apply
-#' at the end, e.g. `relu`
+#' @param activation (defaults to \code{activation_identity}) – function to apply
+#' at the end, e.g. \code{op_relu}
 #' @param name (str, defaults to '') – the name of the function instance in
 #' the network
 #' @return A function that accepts one argument and applies the operation to it
 #'
 #' @examples
-#' ```
-#' model <- dense(500) %>% activation(op_relu)()
+#'
+#' (model <- Dense(500) %>% Activation(op_relu)())
 #' # is the same as
-#' model <- dense(500) %>% op_relu
+#' (model <- Dense(500) %>% op_relu)
 #' # and also the same as
-#' model <- dense(500, activation=op_relu)
-#' ```
+#' (model <- Dense(500, activation=op_relu))
 #' @export
 Activation <- function(activation = activation_identity, name = '') {
 	cntk$layers$Activation(
@@ -65,8 +64,8 @@ Activation <- function(activation = activation_identity, name = '') {
 #' operation to it
 #'
 #' @examples
-#' f <- avg_pooling(c(3, 3), strides = 2)
-#' h <- ops_input_variable(c(num_classes))
+#' (f <- AveragePooling(c(3, 3), strides = 2))
+#' (h <- op_input_variable(c(shape = 4)))
 #'
 #' @export
 AveragePooling <- function(filter_shape, strides = 1, pad = FALSE, name = '') {

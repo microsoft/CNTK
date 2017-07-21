@@ -40,7 +40,7 @@ shape. E.g. for 2D pooling, filter <- shape should be a tuple of two
 integers, such as (5,5).
 }
 \examples{
-f <- avg_pooling(c(3, 3), strides = 2)
-h <- ops_input_variable(c(num_classes))
+(f <- AveragePooling(c(3, 3), strides = 2))
+(h <- op_input_variable(c(shape = 4)))
 
 }

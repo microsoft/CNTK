@@ -103,9 +103,9 @@
 
     
     <p>Layer factory function to create an activation layer. Activation functions
-can be used directly in CNTK, so there is no difference between `y = relu(x)`
-and `y = Activation(relu)(x)`. This layer is useful if one wants to configure
-the activation function with default &lt;- options, or when its invocation
+can be used directly in CNTK, so there is no difference between <code>y = relu(x)</code>
+and <code>y = Activation(relu)(x)</code>. This layer is useful if one wants to configure
+the activation function with <code>default &lt;- options</code>, or when its invocation
 should be named.</p>
     
 
@@ -116,8 +116,8 @@ should be named.</p>
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
       <th>activation</th>
-      <td><p>(defaults to `activation_identity`) – function to apply
-at the end, e.g. `relu`</p></td>
+      <td><p>(defaults to <code>activation_identity</code>) – function to apply
+at the end, e.g. <code>op_relu</code></p></td>
     </tr>
     <tr>
       <th>name</th>
@@ -132,14 +132,10 @@ the network</p></td>
     
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'>```
-model <- dense(500) %>% activation(op_relu)()
-# is the same as
-model <- dense(500) %>% op_relu
-# and also the same as
-model <- dense(500, activation=op_relu)
-```
-</div><div class='output co'>#&gt; <span class='error'>Error: attempt to use zero-length variable name</span></div></pre>
+    <pre class="examples"><div class='input'>
+(<span class='no'>model</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='Dense.html'>Dense</a></span>(<span class='fl'>500</span>) <span class='kw'>%&gt;%</span> <span class='fu'>Activation</span>(<span class='no'>op_relu</span>)())</div><div class='output co'>#&gt; Composite(x: Sequence[tensor]) -&gt; Sequence[tensor]</div><div class='input'><span class='co'># is the same as</span>
+(<span class='no'>model</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='Dense.html'>Dense</a></span>(<span class='fl'>500</span>) <span class='kw'>%&gt;%</span> <span class='no'>op_relu</span>)</div><div class='output co'>#&gt; Composite(x: Sequence[tensor]) -&gt; Sequence[tensor]</div><div class='input'><span class='co'># and also the same as</span>
+(<span class='no'>model</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='Dense.html'>Dense</a></span>(<span class='fl'>500</span>, <span class='kw'>activation</span><span class='kw'>=</span><span class='no'>op_relu</span>))</div><div class='output co'>#&gt; Dense(x: Sequence[tensor]) -&gt; Sequence[tensor]</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>

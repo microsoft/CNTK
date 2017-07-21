@@ -13,5 +13,6 @@ visualize_network(model)
 PNG plot
 }
 \description{
-Visualize Network Architecture
+Visualize the network architecture as a dataflow graph
+Describes the operations and how they interact with each other
 }
