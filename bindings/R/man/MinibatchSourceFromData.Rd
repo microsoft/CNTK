@@ -25,14 +25,7 @@ through the data provided by the caller as numpy arrays or
 scipy.sparse.csr_matrix objects, without randomization. The data is not
 copied, so if you want to modify the data while being read through a
 MinibatchSourceFromData, please pass a copy.
-
-****** Associated Functions: ******
-
-get_minibatch_checkpoint_state
-
-next_minibatch
-
-restore_mb_from_checkpoint
-
-mb_stream_infos
+}
+\seealso{
+\code{get_minibatch_checkpoint_state} \code{next_minibatch} \code{restore_mb_from_checkpoint} \code{mb_stream_infos}
 }

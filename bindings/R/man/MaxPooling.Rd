@@ -2,20 +2,22 @@
 % Please edit documentation in R/layers-layers.R
 \name{MaxPooling}
 \alias{MaxPooling}
-\title{MaxPooling}
+\title{Max-Pooling Layer Factory}
 \usage{
 MaxPooling(filter_shape, strides = 1, pad = FALSE, name = "")
 }
+\arguments{
+\item{filter_shape}{integer vector defining receptive field}
+
+\item{strides}{integer defining length of stride}
+
+\item{pad}{logical for whether or not the pooling operation should be shifted over the "valid" area of input}
+
+\item{name}{string for name of the function instance in the network}
+}
 \description{
 Layer factory function to create a max-pooling layer.
-}
-\details{
-Like Convolution(), MaxPooling() processes items arranged on an
-N-dimensional grid, such as an image. Typically, each item is a vector. For
-each item, max-pooling computes the element-wise maximum over a window
-(“receptive field”) of items surrounding the item’s position on the grid.
-
-The size (spatial extent) of the receptive field is given by filter_shape.
-E.g. for 2D pooling, filter_shape should be a tuple of two integers, such as
-(5,5).
+Like \code{Convolution()}, \code{MaxPooling()} processes items arranged on an N-dimensional grid, such as an image.
+Typically, each item is a vector. For each item, max-pooling computes the element-wise maximum over a window ("receptive field") of items surrounding the item’s position on the grid.
+The size (spatial extent) of the receptive field is given by \code{filter_shape.} E.g. for 2D pooling, filter_shape should be a tuple of two integers, such as (5,5).
 }

@@ -290,6 +290,18 @@ op_hardmax <- function(x, name = '') {
 	cntk$ops$hardmax(x, name = name)
 }
 
+
+
+#' Create input for network
+#'
+#' It creates an input in the network: a place where data, such as features and labels, should be provided.
+#'
+#' @param shape integer vector for dimensions of input tensor
+#' @param needs_gradient logical whether to conduct backprop on the tensor
+#' @param is_sparse logical whether variable is sparse
+#' @param dynamic_axes list of dynamic axis (only a single axis can be dynamic, i.e., either batch axis or time axis)
+#' @return Variable \url{https://www.cntk.ai/pythondocs/cntk.variables.html#cntk.variables.Variable}
+#' @references \url{https://www.cntk.ai/pythondocs/cntk.ops.html#cntk.ops.input_variable}
 #' @export
 op_input_variable <- function(shape, needs_gradient = FALSE, is_sparse = FALSE,
 						   	  dynamic_axes = c(get_default_batch_axis()),
