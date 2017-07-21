@@ -11,13 +11,13 @@ e.g. a fully connected layer with non-linearity.
 
 from __future__ import division
 import numpy as np
-from ..ops.functions import Function
+from ..ops.functions import Function, BlockFunction
 from ..variables import Parameter, Record, Constant
 import cntk as C
 from ..ops import times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, reduce_mean, sqrt
 from cntk.internal import _as_tuple
 from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as SentinelValueForAutoSelectRandomSeed
-from .blocks import _initializer_for, _INFERRED, identity, BlockFunction, UntestedBranchError  # helpers
+from .blocks import _initializer_for, _INFERRED, identity, UntestedBranchError  # helpers
 from cntk.default_options import is_default_override, get_default_override, default_override_or
 
 
@@ -95,7 +95,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
      input_rank (int, defaults to `None`): number of inferred axes to add to W (`map_rank` must not be given)
      map_rank (int, defaults to `None`): expand W to leave exactly `map_rank` axes (`input_rank` must not be given)
      bias (bool, optional, defaults to `True`): the layer will have no bias if `False` is passed here
-     init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defualts to 0): initial value of weights `b`
+     init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
@@ -119,7 +119,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     #  - by default, equal to the dimensions of the input passed to Dense()
     #  - if input_rank is given, then the last 'input_rank' dimensions of the input (all others are not reduced over)
     #  - if map_rank is given, then the all but the first 'map_rank' dimensions of the input (those are not reduced over)
-    # where input_rank and map_rank are mutuallly exclusive.
+    # where input_rank and map_rank are mutually exclusive.
 
     output_rank = len(output_shape)   # support outputs with tensor layouts
 
@@ -158,7 +158,7 @@ def Embedding(shape=None, init=default_override_or(C.glorot_uniform()), weights=
     Layer factory function to create a embedding layer.
 
     An embedding is conceptually a lookup table. For every input token (e.g. a word or any category label), the corresponding
-    entry in in the lookup table is returned.
+    entry in the lookup table is returned.
 
     In CNTK, discrete items such as words are represented as one-hot vectors.
     The table lookup is realized as a matrix product, with a matrix
@@ -410,10 +410,10 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     emulating_output_depth = num_filters == ()
     emulating_input_depth  = reduction_rank == 0
     # 1D convolution is not supported by cudnn, so we also add a fake dimension.
-    emulating_1D = len(filter_shape) < 2
+    emulating_1D = False   # len(filter_shape) < 2 # TODO: 1D no longer needs emulation. Remove all related code once it passes Jenkins.
 
     actual_output_channels_shape = num_filters                if not emulating_output_depth else (1,)
-    actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # TODO: C++ suport for 1D
+    actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # TODO: C++ support for 1D
     actual_filter_shape          = (1,) * emulating_1D + filter_shape
 
     # add the dimension to the options as well
@@ -700,7 +700,7 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
      filter_shape (`int` or tuple of `int`\ s): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
      num_filters (int): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
      activation (:class:`~cntk.ops.functions.Function`, optional): optional function to apply at the end, e.g. `relu`
-     init (scalar or NumPy array or :mod:`cntk.initializer`, default :func:`~cntk.initializer.glorot_uniform`): initial value of weights `W`
+     init (scalar or :mod:`cntk.initializer`, default :func:`~cntk.initializer.glorot_uniform`): initial value of weights `W`
      pad (`bool` or tuple of `bool`\ s, default `False`): if `False`, then the filter will be shifted over the "valid"
       area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
       the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.
@@ -1012,7 +1012,7 @@ def GlobalMaxPooling(name=''):
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
     '''
-    return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False, op_name='GlobalMaxPooling', name=name)
+    return _Pooling(PoolingType_Max, NDShape.unknown().dimensions(), pad=False, op_name='GlobalMaxPooling', name=name)
 
 
 def GlobalAveragePooling(name=''):
@@ -1042,7 +1042,7 @@ def GlobalAveragePooling(name=''):
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
     '''
-    return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False, op_name='GlobalAveragePooling', name=name)
+    return _Pooling(PoolingType_Average, NDShape.unknown().dimensions(), pad=False, op_name='GlobalAveragePooling', name=name)
 
 
 # Create a max unpooling layer
@@ -1070,8 +1070,12 @@ def Dropout(dropout_rate=None,
     Layer factory function to create a drop-out layer.
 
     The dropout rate can be specified as the probability of *dropping* a value (``dropout_rate``).
-    E.g. ``Dropout(0.3)`` means "drop 30% o the activation values."
+    E.g. ``Dropout(0.3)`` means "drop 30% of the activation values."
     Alternatively, it can also be specified as the probability of *keeping* a value (``keep_prob``).
+
+    The dropout operation is only applied during training. During testing, this is a no-op.
+    To make sure that this leads to correct results, the dropout operation in training
+    multiplies the result by (1/(1-``dropout_rate``)).
 
     Example:
      >>> f = Dropout(0.2)   # "drop 20% of activations"

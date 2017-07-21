@@ -22,7 +22,7 @@ There are four files under `data` sub-folder
 |ATIS.labels            |all semantic labels extracted from training data. Total labels: 127 
 
 We preprocess ATIS data by converting words into word indexes, and labels into label IDs in order to use 
-[CNTKTextFormatReader](https://github.com/Microsoft/CNTK/wiki/BrainScript-CNTKTextFormat-Reader). You can use any 
+[CNTKTextFormatReader](https://docs.microsoft.com/en-us/cognitive-toolkit/BrainScript-CNTKTextFormat-Reader). You can use any 
 script/tool to preprocess your text data files. In this example, data is already preprocessed.
 
 The last two files ATIS.vocab and ATIS.labels are not really required to run the example. They are included for evaluation and debugging purpose. 

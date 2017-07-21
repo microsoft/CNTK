@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using CNTK;
+using CNTKImageProcessing;
 
 namespace CNTKLibraryCSEvalExamples
 {

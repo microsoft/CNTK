@@ -5,6 +5,8 @@
 # ==============================================================================
 
 from __future__ import print_function
+from __future__ import division
+
 import os
 import math
 import argparse
@@ -48,7 +50,7 @@ def create_image_mb_source(map_file, mean_file, is_training, total_number_of_sam
     transforms = []
     if is_training:
         transforms += [
-            xforms.crop(crop_type='randomside', side_ratio=0.875, jitter_type='uniratio') # train uses jitter
+            xforms.crop(crop_type='randomside', side_ratio=(0.46666, 0.875), jitter_type='uniratio') # train uses jitter
         ]
     else: 
         transforms += [
@@ -221,7 +223,7 @@ if __name__=='__main__':
     if args['profilerdir'] is not None:
         profiler_dir = args['profilerdir']
     if args['device'] is not None:
-        cntk.device.set_default_device(cntk.device.gpu(args['device']))
+        cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
 
     data_path = args['datadir']
 

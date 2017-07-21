@@ -106,7 +106,7 @@ def test_debug_1():
 
     v_p = "Parameter('p', "
     v_i = "Input('features'"
-    v_t = 'Times: '
+    v_t = 'z: Times('
 
     assert outs.written[0].startswith('=') and 'forward' in outs.written[0]
     line_1, line_2, line_3 = outs.written[1:4]
@@ -156,7 +156,7 @@ def test_debug_multi_output():
 
     v_p = "Parameter('p', "
     v_i = "Input('features'"
-    v_t = 'Times: '
+    v_t = 'z: Times('
 
     assert outs.written[0].startswith('=') and 'forward' in outs.written[0]
     line_1, line_2, line_3 = outs.written[1:4]

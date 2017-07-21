@@ -6,10 +6,10 @@
 
 import numpy as np
 import cntk as C
-from cntk import Axis, reshape, sigmoid, element_max, Function, Constant, greater, default_options, default_options_for, \
+from cntk import Axis, reshape, sigmoid, element_max, Function, BlockFunction, Constant, greater, default_options, default_options_for, \
                  get_default_override, default_override_or
-from cntk.layers import BlockFunction, Convolution, Convolution1D, Convolution2D, Convolution3D, Dense, Embedding, Fold, For, \
-                        MaxPooling, MaxUnpooling, LSTM, GRU, RNNUnit, Sequential, Stabilizer, Dropout, Recurrence, \
+from cntk.layers import Convolution, Convolution1D, Convolution2D, Convolution3D, Dense, Embedding, Fold, For, \
+                        MaxPooling, MaxUnpooling, LSTM, GRU, RNNStep, Sequential, Stabilizer, Dropout, Recurrence, \
                         RecurrenceFrom, LayerNormalization, ConvolutionTranspose
 from cntk.layers.typing import Sequence, Signature, Tensor, SequenceOver
 
@@ -94,6 +94,17 @@ def test_Function():
     r = g([[[2, 1], [5, 2], [1, 3]]])
     e = [np.array([[2, 1], [5, 2], [1, 3]]) ** 2]
     assert_list_of_arrays_equal(r, e, err_msg='@Function test failed')
+
+    ####################################################
+    # Test 3: Function() with shapes and type; short-cut
+    ####################################################
+    @Function.with_signature(Tensor[3,2])
+    def g(x):
+        return x * x
+    assert g.shape == (3,2)
+    r = g([[[2, 1], [5, 2], [1, 3]]])
+    e = [np.array([[2, 1], [5, 2], [1, 3]]) ** 2]
+    assert_list_of_arrays_equal(r, e, err_msg='@Function.with_signature test failed')
 
 ####################################
 # . syntax for name lookup
@@ -201,8 +212,8 @@ def test_unfold():
     def FU(x):
         return UF(Constant(1), x)
     r = FU(x)
-    exp = [[[ 2 ], [ 4 ], [ 8 ]],
-           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]]]
+    exp = [[ 2. , 4. , 8.],
+	       [ 2. , 4. , 8. , 16. , 32. ]]
     assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom() forward')
 
     ####################################################
@@ -214,8 +225,8 @@ def test_unfold():
     def FU(x):
         return UF(Constant(1), x)
     r = FU(x)
-    exp = [[[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]],         # tests length_increase
-           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ], [ 64 ]]] # tests early cut-off due to until_predicate
+    exp = [[ 2 , 4 , 8 , 16 , 32 ],         # tests length_increase
+           [ 2 , 4 , 8 , 16 , 32 , 64 ]] # tests early cut-off due to until_predicate
 
     assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom(..., until_predicate, length_increase, ...) forward')
 
@@ -236,7 +247,7 @@ RECURRENT_BLOCK_DATA = [ # block_type, block_outputs_count, block_size, W_mult, 
                     [ 0.262537, 0.262537, 0.262537, 0.262537, 0.262537],
                     [ 0.276712, 0.276712, 0.276712, 0.276712, 0.276712],
                     [ 0.279545, 0.279545, 0.279545, 0.279545, 0.279545]]),
-                  (RNNUnit, 1, 5, 1, 1,
+                  (RNNStep, 1, 5, 1, 1,
                    [[ 0.645656, 0.645656, 0.645656, 0.645656, 0.645656],
                     [ 0.925727, 0.925727, 0.925727, 0.925727, 0.925727],
                     [ 0.986114, 0.986114, 0.986114, 0.986114, 0.986114],
@@ -936,3 +947,42 @@ def test_layers_batch_normalization():
 #    expected_res = scale * (x/(std + 0.00001)) + bias
 #    np.testing.assert_array_almost_equal(res[0], expected_res, decimal=5, \
 #         err_msg="Error in BN computation")
+
+
+def test_cloned_parameters_are_identical():
+    inputs = 2
+    outputs = 4
+    hidden_dimension = 2
+
+    features = C.input_variable((inputs), np.float32)
+    label = C.input_variable((outputs), np.float32)
+
+    def z():
+        return Sequential([
+            Dense(hidden_dimension, activation=C.relu),
+            Dense(outputs)])
+
+    def compare(f1, f2):
+        for x, y in zip(f1.parameters, f2.parameters):
+            assert np.all(x.value == y.value)
+
+    def clone_and_compare(z):
+            compare(z, z.clone('clone'))
+
+    # first, verify that when cloning un-initialized parameters, 
+    # the seed value is properly copied, so that after the
+    # initialization cloned and original value are the same.
+    z1 = z()(features)
+    clone_and_compare(z1)
+
+    # now, do the same, but first force parameter initialization.
+    z2 = z()(features)
+    ignored = 0
+    for x in z2.parameters:
+        ignored += np.sum(x.value)
+    clone_and_compare(z2)
+
+    # now, test the layer's lib clone() method.
+    z3 = z()
+    z4 = z3.clone('clone')
+    compare(z3(features), z4(features))

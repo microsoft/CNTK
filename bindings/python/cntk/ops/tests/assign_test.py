@@ -87,3 +87,29 @@ def test_assign_gradient(input_data, device_id, precision):
 
     # check the gradient.
     assert np.array_equal(grad[dest], np.zeros_like(result))
+
+@pytest.mark.parametrize("input_data", ASSIGN_TEST_OPERANDS)
+def test_assign_timestamp_bump(input_data, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    data = AA(input_data, dtype=dt)
+
+    x = C.parameter(shape=data.shape, dtype=dt)
+    w = C.constant(np.ones_like(data))
+    y = w + 1
+    z = C.assign(x, y)
+
+    f = x + 1
+    result = f.eval()
+    assert np.array_equal(x.asarray(), 0*np.ones_like(data))
+    assert np.array_equal(result, 1*np.ones_like(data))
+
+    result = z.eval()
+    assert np.array_equal(x.asarray(), 2*np.ones_like(data))
+    assert np.array_equal(result, 2*np.ones_like(data))
+
+    result = f.eval()
+    assert np.array_equal(x.asarray(), 2*np.ones_like(data))
+    assert np.array_equal(result, 3*np.ones_like(data))
+
+
+

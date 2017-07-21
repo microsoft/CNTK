@@ -15,7 +15,9 @@
 #include "ImageTransformers.h"
 #include "ImageUtil.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 // For image, chunks correspond to a single image.
 class ImageDataDeserializer::ImageChunk : public Chunk
@@ -42,14 +44,14 @@ public:
     }
 
 private:
-    ElementType ConvertImageToSupportedDataType(cv::Mat& image)
+    DataType ConvertImageToSupportedDataType(cv::Mat& image)
     {
-        ElementType resultType;
-        if (!IdentifyElementTypeFromOpenCVType(image.depth(), resultType))
+        DataType resultType;
+        if (!IdentifyDataTypeFromOpenCVType(image.depth(), resultType))
         {
             // Could not identify element type.
             // Natively unsupported image type. Let's convert it to required precision.
-            int requiredType = m_deserializer.m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+            int requiredType = m_deserializer.m_precision == DataType::Float ? CV_32F : CV_64F;
             image.convertTo(image, requiredType);
             resultType = m_deserializer.m_precision;
         }
@@ -72,60 +74,62 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     m_streams = configHelper.GetStreams();
     assert(m_streams.size() == 2);
     m_grayscale = configHelper.UseGrayscale();
-    const auto& label = m_streams[configHelper.GetLabelStreamId()];
-    const auto& feature = m_streams[configHelper.GetFeatureStreamId()];
+    auto& label = m_streams[configHelper.GetLabelStreamId()];
+    auto& feature = m_streams[configHelper.GetFeatureStreamId()];
 
     m_verbosity = config(L"verbosity", 0);
 
     string precision = (ConfigValue)config("precision", "float");
-    m_precision = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+    m_precision = AreEqualIgnoreCase(precision, "float") ? DataType::Float : DataType::Double;
 
     // Expect data in HWC.
-    ImageDimensions dimensions(*feature->m_sampleLayout, configHelper.GetDataFormat());
-    feature->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
+    ImageDimensions dimensions(TensorShape(feature.m_sampleLayout.Dimensions()), configHelper.GetDataFormat());
+    auto dims = dimensions.AsTensorShape(HWC).GetDims();
+    feature.m_sampleLayout = NDShape(std::vector<size_t>(dims.begin(), dims.end()));
 
-    label->m_storageType = StorageType::sparse_csc;
-    feature->m_storageType = StorageType::dense;
+    label.m_storageFormat = StorageFormat::SparseCSC;
+    feature.m_storageFormat = StorageFormat::Dense;
 
     // Due to performance, now we support images of different types.
-    feature->m_elementType = ElementType::tvariant;
+    feature.m_elementType = DataType::Unknown;
+    label.m_elementType = m_precision;
 
-    size_t labelDimension = label->m_sampleLayout->GetDim(0);
+    size_t labelDimension = label.m_sampleLayout.Dimensions()[0];
 
-    if (label->m_elementType == ElementType::tfloat)
+    if (label.m_elementType == DataType::Float)
     {
         m_labelGenerator = std::make_shared<TypedLabelGenerator<float>>(labelDimension);
     }
-    else if (label->m_elementType == ElementType::tdouble)
+    else if (label.m_elementType == DataType::Double)
     {
         m_labelGenerator = std::make_shared<TypedLabelGenerator<double>>(labelDimension);
     }
     else
     {
-        RuntimeError("Unsupported label element type '%d'.", (int)label->m_elementType);
+        RuntimeError("Unsupported label element type '%d'.", (int)label.m_elementType);
     }
 
     CreateSequenceDescriptions(std::make_shared<CorpusDescriptor>(false), configHelper.GetMapPath(), labelDimension, configHelper.IsMultiViewCrop());
 }
 
 // Descriptions of chunks exposed by the image reader.
-ChunkDescriptions ImageDataDeserializer::GetChunkDescriptions()
+std::vector<ChunkInfo> ImageDataDeserializer::ChunkInfos()
 {
-    ChunkDescriptions result;
+    std::vector<ChunkInfo> result;
     result.reserve(m_imageSequences.size());
     for (auto const& s : m_imageSequences)
     {
-        auto chunk = std::make_shared<ChunkDescription>();
-        chunk->m_id = s.m_chunkId;
-        chunk->m_numberOfSamples = 1;
-        chunk->m_numberOfSequences = 1;
+        ChunkInfo chunk;
+        chunk.m_id = s.m_chunkId;
+        chunk.m_numberOfSamples = 1;
+        chunk.m_numberOfSequences = 1;
         result.push_back(chunk);
     }
 
     return result;
 }
 
-void ImageDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result)
+void ImageDataDeserializer::SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result)
 {
     // Currently a single sequence per chunk.
     result.push_back(m_imageSequences[chunkId]);
@@ -192,7 +196,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
                 imagePath.c_str(), cid, labelDimension, lineIndex, mapPath.c_str());
         }
 
-        if (CHUNKID_MAX < curId + numberOfCopies)
+        if (ChunkIdMax < curId + numberOfCopies)
         {
             RuntimeError("Maximum number of chunks exceeded.");
         }
@@ -300,7 +304,7 @@ cv::Mat FileByteReader::Read(size_t, const std::string& seqPath, bool grayscale)
     return cv::imread(path, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
 }
 
-bool ImageDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
+bool ImageDataDeserializer::GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo& result)
 {
     auto index = m_keyToSequence.find(key.m_sequence);
     // Checks whether it is a known sequence for us.
@@ -313,4 +317,4 @@ bool ImageDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequ
     return true;
 }
 
-}}}
+}

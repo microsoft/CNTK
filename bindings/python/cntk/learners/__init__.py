@@ -3,6 +3,23 @@
 # for full license information.
 # ==============================================================================
 
+'''
+A learner tunes a set of parameters during the training process. One can use
+different learners for different sets of parameters. Currently, CNTK supports
+the following learning algorithms:
+
+- :func:`AdaDelta <adadelta>`
+- :func:`AdaGrad <adagrad>`
+- :func:`FSAdaGrad <fsadagrad>`
+- :func:`Adam <adam>`
+- :func:`MomentumSGD <momentum_sgd>`
+- :func:`Nesterov <nesterov>`
+- :func:`RMSProp <rmsprop>`
+- :func:`SGD <sgd>`
+- :func:`Learner with a customized update function <universal>`
+'''
+
+
 from enum import Enum, unique
 import warnings
 import numpy as np
@@ -33,31 +50,7 @@ class UnitType(Enum):
     '''
 
 
-__doc__ = '''
-Learner tunes a set of parameters during the training process. One can use
-different learners for different sets of parameters. Currently, CNTK supports
-the following learning algorithms:
 
-+------------------------+
-| Learning algorithms    |
-+========================+
-| AdaDelta               |
-+------------------------+
-| AdaGrad                |
-+------------------------+
-| FSAdaGrad              |
-+------------------------+
-| Adam                   |
-+------------------------+
-| MomentumSGD            |
-+------------------------+
-| Nesterov               |
-+------------------------+
-| RMSProp                |
-+------------------------+
-| SGD                    |
-+------------------------+
-'''
 
 
 def default_unit_gain_value():
@@ -138,7 +131,7 @@ class Learner(cntk_py.Learner):
             training_sample_count (int): number of samples in the minibatch
 
         Returns:
-            `False` to indicate that learning has stopped for all of the parameters associated with this learner
+            bool: `False` to indicate that learning has stopped for all of the parameters associated with this learner
         '''
         var_nd_map = {var: NDArrayView.from_data(val) for var, val in
                       gradient_values.items()}
@@ -169,7 +162,7 @@ class Learner(cntk_py.Learner):
 
     def learning_rate(self):
         '''
-        Current learning rate.
+        Current learning rate schedule.
         '''
         return super(Learner, self).learning_rate()
 
@@ -199,10 +192,10 @@ class UserLearner(cntk_py.Learner):
              the training objective.
             training_sample_count (int): number of samples in the minibatch
             sweep_end (bool): if the data is fed by a conforming reader, this
-             indicates whether a full pass over the dataset has just occured.
+             indicates whether a full pass over the dataset has just occurred.
 
         Returns:
-            `False` to indicate that learning has stopped for all of the
+            bool: `False` to indicate that learning has stopped for all of the
             parameters associated with this learner
         '''
         map_if_possible(gradient_values)
@@ -225,10 +218,10 @@ class UserLearner(cntk_py.Learner):
              Parameter w.r.t. the training objective.
             training_sample_count (int): number of samples in the minibatch
             sweep_end (bool): if the data is fed by a conforming reader, this indicates
-             whether a full pass over the dataset has just occured.
+             whether a full pass over the dataset has just occurred.
 
         Returns:
-            `False` to indicate that learning has stopped for all of the
+            bool: `False` to indicate that learning has stopped for all of the
             parameters associated with this learner
         '''
         raise NotImplementedError('UserLearner.update must be overriden')
@@ -445,7 +438,8 @@ def sgd(parameters, lr,
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
-        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
+        :class:`~cntk.learners.Learner`: learner instance that can be passed to
+        the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1] L. Bottou. `Stochastic Gradient Descent Tricks
@@ -498,8 +492,8 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
-        Instance of a :class:`~cntk.learners.Learner` that can be passed to the
-        :class:`~cntk.train.trainer.Trainer`
+        :class:`~cntk.learners.Learner`: learner instance that can be passed to
+        the :class:`~cntk.train.trainer.Trainer`
     '''
     _verify_learning_rate_type(lr)
     _verify_momentum_type(momentum)
@@ -551,8 +545,8 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
-        Instance of a :class:`~cntk.learners.Learner` that can be passed to the
-        :class:`~cntk.train.trainer.Trainer`.
+        :class:`~cntk.learners.Learner`: learner instance that can be passed to
+        the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1] Y. Nesterov. A Method of Solving a Convex Programming Problem with Convergence Rate O(1/ sqrt(k)). Soviet Mathematics Doklady, 1983.
@@ -609,10 +603,11 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
-        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
+        :class:`~cntk.learners.Learner`: learner instance that can be passed to
+        the :class:`~cntk.train.trainer.Trainer`
 
     See also:
-        [1]  Matthew D. Zeiler1, `ADADELTA: AN ADAPTIVE LEARNING RATE METHOD
+        [1]  Matthew D. Zeiler, `ADADELTA: An Adaptive Learning Rate Method
         <https://arxiv.org/pdf/1212.5701.pdf>`_.
     '''
     gaussian_noise_injection_std_dev = \
@@ -659,7 +654,8 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
-        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
+        :class:`~cntk.learners.Learner`: learner instance that can be passed to
+        the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1]  J. Duchi, E. Hazan, and Y. Singer. `Adaptive Subgradient Methods
@@ -717,7 +713,8 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
-        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
+        :class:`~cntk.learners.Learner`: learner instance that can be passed to
+        the :class:`~cntk.train.trainer.Trainer`
 
     '''
     _verify_learning_rate_type(lr)
@@ -777,7 +774,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          to False
 
     Returns:
-        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
+        :class:`~cntk.learners.Learner`: learner instance that can be passed to
+        the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1] D. Kingma, J. Ba. `Adam: A Method for Stochastic Optimization
@@ -817,11 +815,11 @@ def rmsprop(parameters, lr,
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
-        gamma (float): Trade-off factor for current and previous gradients. Common value is 0.95
-        inc (float): Increasing factor when trying to adjust current learning_rate
-        dec (float): Decreasing factor when trying to adjust current learning_rate
-        max (float): Maximum scale allowed for the initial learning_rate
-        min (float): Minimum scale allowed for the initial learning_rate
+        gamma (float): Trade-off factor for current and previous gradients. Common value is 0.95. Should be in range (0.0, 1.0)
+        inc (float): Increasing factor when trying to adjust current learning_rate. Should be greater than 1
+        dec (float): Decreasing factor when trying to adjust current learning_rate. Should be in range (0.0, 1.0)
+        max (float): Maximum scale allowed for the initial learning_rate. Should be greater than zero and min
+        min (float): Minimum scale allowed for the initial learning_rate. Should be greater than zero
         need_ave_multiplier (bool, default ``True``):
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
@@ -837,7 +835,8 @@ def rmsprop(parameters, lr,
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
-        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
+        :class:`~cntk.learners.Learner`: learner instance that can be passed to
+        the :class:`~cntk.train.trainer.Trainer`
     '''
     _verify_learning_rate_type(lr)
     gaussian_noise_injection_std_dev = \
@@ -862,7 +861,7 @@ def universal(update_func, parameters):
     Creates a learner which uses a CNTK function to update the parameters.
 
     Args:
-        update_func: function that takes a parameter and a gradient as arguments and
+        update_func: function that takes parameters and gradients as arguments and
          returns a :class:`~cntk.ops.functions.Function` that performs the
          desired updates. The returned function updates the parameters by
          means of containing :func:`~cntk.ops.assign` operations.
@@ -872,13 +871,17 @@ def universal(update_func, parameters):
          These can be obtained by the root operator's `parameters`.
 
     Returns:
-        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
+        :class:`~cntk.learners.Learner`: learner instance that can be passed to
+        the :class:`~cntk.train.trainer.Trainer`
 
     Examples:
-        >>> def my_adagrad(p,g):
-        ...     accumulator = C.constant(0, shape=p.shape, dtype=p.dtype, name='accum')
-        ...     accum_new = C.assign(accumulator, g * g)
-        ...     return C.assign(p, p - 0.01 * g / C.sqrt(accum_new + 1e-6))
+        >>> def my_adagrad(parameters, gradients):
+        ...     accumulators = [C.constant(0, shape=p.shape, dtype=p.dtype, name='accum') for p in parameters]
+        ...     update_funcs = []
+        ...     for p, g, a in zip(parameters, gradients, accumulators):
+        ...         accum_new = C.assign(a, g * g)
+        ...         update_funcs.append(C.assign(p, p - 0.01 * g / C.sqrt(accum_new + 1e-6)))
+        ...     return C.combine(update_funcs)
         ...
         >>> x = C.input_variable((10,))
         >>> y = C.input_variable((2,))
@@ -893,13 +896,13 @@ def universal(update_func, parameters):
     from .. import constant
     args, _ = utils.get_python_function_arguments(update_func)
     if len(args) != 2:
-        raise ValueError('update_func must be a function that accepts two arguments (parameter, gradient)')
-    updates = []
+        raise ValueError('update_func must be a function that accepts two arguments (parameters, gradients)')
+    gradients = []
     for p in parameters:
         if any(dim<0 for dim in p.shape):
             raise ValueError('parameter %s has inferred dimensions. Please create the learner after all parameter shapes have been determined'%str(p))
-        g = constant(0, shape=p.shape, dtype=p.dtype, name='grad')
-        result = update_func(p, g)
-        updates.append((g, result))
+        gradients.append(constant(0, shape=p.shape, dtype=p.dtype, name='grad'))
 
-    return cntk_py.universal_learner(parameters, updates)
+    result = update_func(parameters, gradients)
+
+    return cntk_py.universal_learner(parameters, gradients, result)

@@ -58,8 +58,8 @@ def test_lstm_over_lstm_thought_vectors(device_id):
     loss_result = loss_result.as_sequences()
 
     absolute_tolerance = 0.02
-    assert np.allclose(loss_result[0], [[0.63504], [0.673343], [0.698446]], atol=absolute_tolerance)
-    assert np.allclose(loss_result[1], [[0.772344], [0.64295]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[0], [[0.67126], [0.676331], [0.765814]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[1], [[0.685199], [0.681736]], atol=absolute_tolerance)
 
 
 # This user-defined Function takes a batch of utterances thought-vectors and reshapes into a batch
@@ -134,9 +134,9 @@ def test_lstm_over_lstm_thought_vectors_2(device_id):
     loss_result = loss_result.as_sequences()
 
     absolute_tolerance = 0.01
-    assert np.allclose(loss_result[0], [[0.6311], [0.657143], [0.715372]], atol=absolute_tolerance)
-    assert np.allclose(loss_result[1], [[0.769184]], atol=absolute_tolerance)
-    assert np.allclose(loss_result[2], [[0.752919], [0.651915]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[0], [[0.678914], [0.668076], [0.728129]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[1], [[0.679029]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[2], [[0.705393], [0.674243]], atol=absolute_tolerance)
 
 def test_sequence_max():
   np.random.seed(0)
@@ -492,3 +492,13 @@ def test_op_sequence_reduce_sum(device_id, precision):
     assert np.array_equal(res[0], np.asarray([2.]))
     assert np.array_equal(res[1], np.asarray([5.]))
     assert np.array_equal(res[2], np.asarray([9.]))
+
+def test_sequence_unpack_with_convolution(device_id, precision): 
+    x = C.sequence.input((20, 20))
+    y = C.sequence.unpack(x, 0, no_mask_output=True)
+    z = C.reshape(y, (3, 20, 20))
+    kernel = C.constant(1.0, (4, 3, 3, 3))
+    t = C.convolution(kernel, z, auto_padding=[False, True, True])
+    val = np.random.random((2, 3, 20, 20)).astype(np.float32)
+    result = t.eval({x: val})
+    assert np.array_equal(result.shape, (2, 4, 20, 20))

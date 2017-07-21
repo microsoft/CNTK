@@ -46,7 +46,7 @@ def tf_baseline_conv2d():
 
     ci.watch(cstk.Conv2DArgs(W=crtf.find_trainable('char_filter_bank'), b=crtf.find_trainable('char_filter_biases')), 'conv2d', var_type=cstk.Conv2DAttr,
                attr=cstk.Conv2DAttr(filter_shape=(filter_width, char_emb_dim,), num_filters=num_filters))
-    ci.watch(char_conv, 'conv2d_out', var_type=crtf.VariableType)
+    ci.watch(char_conv, 'conv2d_out', var_type=crtf.VariableType) # note the output is transposed to NCHW
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -91,5 +91,9 @@ def test_cntk_conv2d():
     # load parameters from crosstalk and verify results are the same
     ci.assign('conv2d', load=True)
     assert ci.compare('conv2d_out', rtol=1e-4, atol=1e-6)
+    
+    # test assign with value
+    ci.assign('conv2d', value=cstk.Conv2DArgs(W=np.random.random((num_filters,) + filter_shape).astype(np.float32),
+                                              b=np.random.random((num_filters,)).astype(np.float32)))
 
     ci.reset()

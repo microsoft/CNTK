@@ -130,11 +130,12 @@ template <class ElemType>
 {
     assert(inputIndex == 0), inputIndex;
 
+    bool accumulateGradient = !InputRef(inputIndex).IsGradientInitializedBy(this);
     if (ReduceSequenceAxis())
     {
         // Broadcast along the sequence
         auto result = ValueFor(fr);
-        ComputationNode<ElemType>::BroadcastToPacked(Gradient(), GetMBLayout(), /*beta =*/ 1, InputRef(0).Gradient(), FrameRange(InputRef(0).GetMBLayout()), m_tempGatherIndices);
+        ComputationNode<ElemType>::BroadcastToPacked(Gradient(), GetMBLayout(), /*beta =*/ accumulateGradient ? (ElemType)1 : (ElemType)0, InputRef(0).Gradient(), FrameRange(InputRef(0).GetMBLayout()), m_tempGatherIndices);
     }
     else
     {
@@ -150,7 +151,10 @@ template <class ElemType>
         case ElementWiseOperator::opSum:
             // "Sum":  broadcast the gradient
             // "Mean": same as "Sum" with scaling by 1/#dims
-            sliceInputGrad.AddCopyOf(sliceOutputGrad, m_scale);
+            if (accumulateGradient)
+                sliceInputGrad.AddCopyOf(sliceOutputGrad, m_scale);
+            else
+                sliceInputGrad.AssignCopyOf(sliceOutputGrad, m_scale);
             break;
 
         case ElementWiseOperator::opLogSum:
@@ -161,7 +165,10 @@ template <class ElemType>
             // For the derivative we get:
             // df / dx = exp(x)/exp(f)
             //         = exp(x - f)
-            sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
+            if (accumulateGradient)
+                sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
+            else
+                sliceInputGrad.AssignElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
         }
         break;
 
@@ -184,14 +191,20 @@ template <class ElemType>
             //
             // So as we don't have a better solution yet and it probably doesn't have impact let's stay with the current solution.
             // Also note that for Clip , Min, Max and ReLU we have the same kind of problem.
-            sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
+            if (accumulateGradient)
+                sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
+            else
+                sliceInputGrad.AssignCopyIfEqualOf(input, output, sliceOutputGrad);
         }
         break;
         case ElementWiseOperator::opElementwiseProduct:
         {
             auto input  = InputRef(inputIndex).ValueTensorFor(rank, frInput);
             auto output =                      ValueTensorFor(rank, fr.AllowBroadcast());
-            sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
+            if (accumulateGradient)
+                sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
+            else
+                sliceInputGrad.AssignElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
             break;
         }
         case ElementWiseOperator::opArgmin:

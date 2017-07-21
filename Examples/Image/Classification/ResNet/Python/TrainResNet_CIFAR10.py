@@ -54,7 +54,7 @@ def create_reader(map_file, mean_file, train):
 
 # Train and evaluate the network.
 def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_epochs, profiler_dir=None,
-                       model_dir=None, tensorboard_logdir=None):
+                       model_dir=None, log_dir=None, tensorboard_logdir=None, gen_heartbeat=False):
 
     set_computation_network_trace_level(0)
 
@@ -87,7 +87,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
 
     # progress writers
-    progress_writers = [ProgressPrinter(tag='Training', num_epochs=max_epochs)]
+    progress_writers = [ProgressPrinter(tag='Training', log_to_file=log_dir, num_epochs=max_epochs, gen_heartbeat=gen_heartbeat)]
     tensorboard_writer = None
     if tensorboard_logdir is not None:
         tensorboard_writer = TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z)
@@ -161,20 +161,25 @@ if __name__=='__main__':
     parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
     parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='160')
     parser.add_argument('-p', '--profiler_dir', help='directory for saving profiler output', required=False, default=None)
-    parser.add_argument('-m', '--model_dir', help='directory for saving model', required=False, default=None)
     parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir', help='Directory where TensorBoard logs should be created', required=False, default=None)
+    parser.add_argument('-datadir', '--datadir', help='Data directory where the CIFAR dataset is located', required=False, default=data_path)
+    parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
+    parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
+    parser.add_argument('-genheartbeat', '--genheartbeat', help="Turn on heart-beat for philly", action='store_true', default=False)
 
     args = vars(parser.parse_args())
     epochs = int(args['epochs'])
     network_name = args['network']
 
-    model_dir = args['model_dir']
+    model_dir = args['outputdir']
     if not model_dir:
         model_dir = os.path.join(abs_path, "Models")
+
+    data_path = args['datadir']
 
     reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 
     epoch_size = 50000
     train_and_evaluate(reader_train, reader_test, network_name, epoch_size, epochs, args['profiler_dir'], model_dir,
-                       args['tensorboard_logdir'])
+                       args['logdir'], args['tensorboard_logdir'], gen_heartbeat = args['genheartbeat'])

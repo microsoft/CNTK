@@ -4,4 +4,9 @@
 # for full license information.
 # ==============================================================================
 
+"""
+Utilities for model evaluation.
+"""
+
+
 from .evaluator import *

@@ -14,7 +14,7 @@ PARSED_ARGS=$(getopt -o '' --long py-version:,anaconda-basepath:,wheel-base-url:
 function die {
   set +x
   echo -e $1
-  echo Go to https://github.com/Microsoft/CNTK/wiki/Setup-Linux-Binary-Script for help.
+  echo Go to https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-Linux-Binary-Script for help.
   exit 1
 }
 

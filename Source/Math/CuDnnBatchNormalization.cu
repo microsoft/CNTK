@@ -76,13 +76,13 @@ protected:
     }
 
     void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& savedMean, const Mat& savedInvStdDev,
-                      Mat& scaleGrad, Mat& biasGrad) override
+                      Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad) override
     {
         UNUSED(blendFactor);  // BUGBUG: It should be used.
         m_inOutCuDnnT.UpdateBatchSize(srcGrad.GetNumCols());
         cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
         // REVIEW alexeyk: change betaParamDiff to 1 and update CNTK BN engine.
-        CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, &C::One, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
+        CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, accumulateDataGrad ? &C::One : &C::Zero, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
                                                    m_scaleBiasCuDnnT, ptr(scale), ptr(scaleGrad), ptr(biasGrad), m_cudnnEpsilon, ptr(savedMean), ptr(savedInvStdDev)));
     }
 
@@ -102,9 +102,12 @@ private:
         // even for non-spatial inputs so expand the tensor if needed.
         if (inOutT.GetRank() > 2)
             return inOutT;
-        SmallVector<size_t> v(std::max(inOutT.GetRank(), (size_t)3), 1);
-        for (size_t i = 0; i < inOutT.GetRank(); i++)
-            v[i] = inOutT[i];
+
+        const size_t outRank = 3;
+        SmallVector<size_t> v(std::max(inOutT.GetRank(), outRank), 1);
+        for (size_t i = outRank - inOutT.GetRank(), j = 0; i < outRank; i++, j++)
+            v[i] = inOutT[j];
+
         return TensorShape(v);
     }
 

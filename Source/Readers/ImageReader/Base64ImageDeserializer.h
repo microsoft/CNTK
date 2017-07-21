@@ -10,30 +10,27 @@
 #include "CorpusDescriptor.h"
 #include "Indexer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     // Base 64 Image deserializer.
-    class Base64ImageDeserializer : public ImageDeserializerBase
+    class Base64ImageDeserializerImpl : public ImageDeserializerBase
     {
     public:
-        Base64ImageDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
+        Base64ImageDeserializerImpl(CorpusDescriptorPtr corpus, const Microsoft::MSR::CNTK::ConfigParameters& config, bool primary);
 
         // Get a chunk by id.
         ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
         // Get chunk descriptions.
-        ChunkDescriptions GetChunkDescriptions() override;
+        std::vector<ChunkInfo> ChunkInfos() override;
 
         // Gets sequence descriptions for the chunk.
-        void GetSequencesForChunk(ChunkIdType, std::vector<SequenceDescription>&) override;
+        void SequenceInfosForChunk(ChunkIdType, std::vector<SequenceInfo>&) override;
 
         // Gets sequence description by key.
-        bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+        bool GetSequenceInfoByKey(const SequenceKey&, SequenceInfo&) override;
 
     private:
-        // Creates a set of sequence descriptions.
-        void CreateSequenceDescriptions(CorpusDescriptorPtr corpus, std::string mapPath);
-
         class ImageChunk;
 
         std::unique_ptr<Indexer> m_indexer;
@@ -41,4 +38,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::wstring m_fileName;
     };
 
-}}}
+}

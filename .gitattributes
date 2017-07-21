@@ -144,6 +144,12 @@ Examples/Text/LightRNN/test/word-0.location text
 *.dnn binary
 Examples/Image/Detection/FastRCNN/fastRCNN/*/*.pyd binary
 Examples/Image/Detection/FastRCNN/fastRCNN/*/*.so binary
+Examples/Image/Detection/utils/cython_modules/*.pyd binary
+Examples/Image/Detection/utils/cython_modules/*.so binary
 Tests/UnitTests/V2LibraryTests/data/*.bin binary
 Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/*.bin binary
 Tests/EndToEndTests/ParallelTraining/AsynchronousSGD/ASGD_Resnet.model.1 binary
+Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve.a binary
+Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve.lib binary
+Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.a binary
+Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.lib binary

@@ -374,7 +374,9 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(ROIPoolingNode))
                 {
                     auto roiPoolingNode = node->As<ROIPoolingNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingType] = (size_t)(AsPoolingType(roiPoolingNode->PoolingKind()));
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameROIOutputShape] = AsNDShape(roiPoolingNode->ROIOutputShape());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSpatialScale] = roiPoolingNode->SpatialScale();
 
                     opType = PrimitiveOpType::ROIPooling;
                 }
