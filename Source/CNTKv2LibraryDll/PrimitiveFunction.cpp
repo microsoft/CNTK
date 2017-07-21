@@ -178,9 +178,14 @@ namespace CNTK
             (op == PrimitiveOpType::Logistic) ||
             (op == PrimitiveOpType::LambdaRank) ||
             (op == PrimitiveOpType::NDCG) || 
-            (op == PrimitiveOpType::RandomDistribution && inputs.empty()))
+            (op == PrimitiveOpType::RandomDistribution && inputs.empty()) ||
+            (op == PrimitiveOpType::UnpackBatch))
         {
             outputDynamicAxes = std::vector<Axis>({});
+        }
+        else if (op == PrimitiveOpType::ToBatch)
+        {
+            outputDynamicAxes = std::vector<Axis>({Axis::DefaultBatchAxis()});
         }
         else if ((op == PrimitiveOpType::ReduceElements) && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>().IsDynamicAxis() && (inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()))
         {
@@ -427,9 +432,12 @@ namespace CNTK
                                 InvalidArgument("AssignNode: None of the operands '%S' can have dynamic axes.", NamedListString(m_inputs).c_str());
                             if (!(m_inputs[0].IsConstant() || m_inputs[0].IsParameter()))
                                 InvalidArgument("AssignNode: Ref operand must be constant or parameter only.");
-                            if (m_inputs[0].Shape() != m_inputs[1].Shape())
+                            //delay the check for free dimension
+                            if (m_inputs[0].Shape() != m_inputs[1].Shape() && !m_inputs[0].Shape().HasFreeDimension() && !m_inputs[1].Shape().HasFreeDimension())
+                            {
                                 InvalidArgument("AssignNode: All inputs should have same sample layout.");
-
+                            }
+                                
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
                             break;
                         case PrimitiveOpType::ScatterPacked:
@@ -681,6 +689,23 @@ namespace CNTK
                             inputDim2.pop_back();
                             outputShape = NDShape(inputDim2);
                             outputShape = outputShape.AppendShape(inputShape1);
+                            break;
+                        }
+                        case PrimitiveOpType::ToBatch:
+                        {
+                            assert(m_inputs.size() == 1);
+                            auto inputShape = m_inputs[0].Shape();
+                            auto inputDims = inputShape.Dimensions();
+                            inputDims.pop_back();
+                            outputShape = NDShape(inputDims);
+                            break;
+                        }
+                        case PrimitiveOpType::UnpackBatch:
+                        {
+                            assert(m_inputs.size() == 1);
+                            auto inputShape = m_inputs[0].Shape();
+                            outputShape = NDShape(inputShape.Dimensions());
+                            outputShape = outputShape.AppendShape({NDShape::FreeDimension});
                             break;
                         }
                         case PrimitiveOpType::Times:

@@ -3669,6 +3669,18 @@ namespace CNTK
     CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of attach dynamic axis operation that convert the input's first static axis to dynamic axis.
+    /// Only batch axis is supported now.
+    ///
+    CNTK_API FunctionPtr ToBatch(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of detach dynamic axis operation that convert the input's last dynamic axis to static axis.
+    /// Only batch axis is supported now.
+    ///
+    CNTK_API FunctionPtr UnpackBatch(const Variable& operand, const std::wstring& name);
+
+    ///
     /// Create an instance of the random_sample operation on specified sampling weights input vector
     ///
     CNTK_API FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");

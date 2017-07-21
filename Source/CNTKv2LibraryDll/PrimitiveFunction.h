@@ -102,6 +102,8 @@ namespace CNTK
         {PrimitiveOpType::Gather, L"Gather"},
         {PrimitiveOpType::StableSigmoid, L"StableSigmoid"},
         {PrimitiveOpType::RandomDistribution, L"RandomDistribution"},
+        {PrimitiveOpType::UnpackBatch, L"UnpackBatchAxis"},
+        {PrimitiveOpType::ToBatch, L"ToBatchAxis"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -769,7 +771,8 @@ namespace CNTK
         // Version 13: Add Gather op.
         // Version 14: Add StableSigmoid
         // Version 15: Add RandomDistribution
-        static const size_t s_serializationVersion = 15;
+        // Version 16: Add to_batch/unpack_batch.
+        static const size_t s_serializationVersion = 16;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

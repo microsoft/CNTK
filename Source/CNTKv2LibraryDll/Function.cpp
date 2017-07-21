@@ -1273,6 +1273,21 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ToBatch(const Variable& operand, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        return UnaryOp(PrimitiveOpType::ToBatch, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr UnpackBatch(const Variable& operand, const std::wstring& name)
+    {
+        if (operand.DynamicAxes().size() > 1)
+            LogicError("DetachDynamicAxis: only support input with batch axis itself.");
+
+        auto additionalProperties = Dictionary();
+        return UnaryOp(PrimitiveOpType::UnpackBatch, operand, std::move(additionalProperties), name);
+    }
+
     FunctionPtr GumbelRandom(const NDShape& shape, DataType dataType, double loc, double scale, unsigned long seed, const std::wstring& name)
     {
         if (scale < 0)
