@@ -16,8 +16,12 @@ def find_trainable(name, scope=None):
     Find a single trainable variable in a function by name when the function has multiple parameters.
     
     Args:
-        func: the function to search
-        name: the name of the parameter
+        func: The function to search
+        name (`str`): The name of the parameter
+        scope (`str`): The scope of the search
+
+    Returns:
+        The trainable variable that is found
     '''
     found = [tp for tp in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope) if name in tp.name]
     if len(found)==0:
@@ -148,6 +152,10 @@ class TensorFlowCrosstalk(cstk.Crosstalk):
     def set_data(self, sess, data):
         '''
         Set session and mapped data for setter/getters
+        
+        Args:
+            sess : The tensorflow session
+            data : The input data feed dict for eval
         '''
         super(TensorFlowCrosstalk, self).register_funcs(TrainableType, setter=_trainable_setter(sess), getter=_trainable_getter(sess))
         super(TensorFlowCrosstalk, self).register_funcs(DictTrainableType, setter=_dict_trainable_setter(sess), getter=_dict_trainable_getter(sess))
@@ -159,19 +167,22 @@ class TensorFlowCrosstalk(cstk.Crosstalk):
     def is_trainable(self, name):
         '''
         Check if variable with name is a trainable
+        
+        Args:
+            name (`str`): Variable name to check
         '''
         var_type = self.vars[name].type
         return var_type != VariableType
         
     def load_all_trainables(self):
         '''
-        Load all trainables from files
+        Load all trainables from files in working directory
         '''
         self.load([n for n in self.vars.keys() if self.is_trainable(n)])
 
     def save_all_trainables(self):
         '''
-        Save all trainables to files
+        Save all trainables to files in working directory
         '''
         self.save([n for n in self.vars.keys() if self.is_trainable(n)])
 

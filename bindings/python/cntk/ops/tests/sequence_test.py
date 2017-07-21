@@ -58,8 +58,8 @@ def test_lstm_over_lstm_thought_vectors(device_id):
     loss_result = loss_result.as_sequences()
 
     absolute_tolerance = 0.02
-    assert np.allclose(loss_result[0], [[0.63504], [0.673343], [0.698446]], atol=absolute_tolerance)
-    assert np.allclose(loss_result[1], [[0.772344], [0.64295]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[0], [[0.67126], [0.676331], [0.765814]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[1], [[0.685199], [0.681736]], atol=absolute_tolerance)
 
 
 # This user-defined Function takes a batch of utterances thought-vectors and reshapes into a batch
@@ -134,9 +134,9 @@ def test_lstm_over_lstm_thought_vectors_2(device_id):
     loss_result = loss_result.as_sequences()
 
     absolute_tolerance = 0.01
-    assert np.allclose(loss_result[0], [[0.6311], [0.657143], [0.715372]], atol=absolute_tolerance)
-    assert np.allclose(loss_result[1], [[0.769184]], atol=absolute_tolerance)
-    assert np.allclose(loss_result[2], [[0.752919], [0.651915]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[0], [[0.678914], [0.668076], [0.728129]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[1], [[0.679029]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[2], [[0.705393], [0.674243]], atol=absolute_tolerance)
 
 def test_sequence_max():
   np.random.seed(0)

@@ -354,3 +354,9 @@ def test_per_dim_mean_var_norm():
     result = func.eval({x : np.asarray([[3.], [1.]], dtype=np.float32)})
     assert np.array_equal(result, [[.5], [-.5]])
 
+def test_times_const_broadcast():
+    x = C.input_variable((3,))
+    a = C.constant(np.ones((3,), dtype=np.float32))
+    y = C.times_transpose(a, x)
+    result = y.eval({x:np.asarray([[1,2,3],[1,2,3]], dtype=np.float32)})
+    assert np.array_equal(result, [[6], [6]])

@@ -4,6 +4,11 @@
 # for full license information.
 # ==============================================================================
 
+"""
+CNTK IO utilities.
+"""
+
+
 import warnings
 from cntk import cntk_py, Value
 from cntk.tensor import ArrayMixin
@@ -11,6 +16,7 @@ from cntk.internal import typemap, sanitize_dtype_cntk, is_string
 from cntk.device import use_default_device
 from cntk.logging import TraceLevel, get_trace_level
 from cntk.variables import Record
+from cntk.internal.utils import _py_dict_to_cntk_dict
 import cntk.io.transforms
 
 import numpy as np
@@ -59,13 +65,6 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         return self.data.as_sequences(variable)
 
     @property
-    def data(self):
-        '''
-        The Value representation of the minibatch.
-        '''
-        return super(MinibatchData, self).data()
-
-    @property
     def shape(self):
         '''
         The shape of the data in this minibatch as tuple.
@@ -87,7 +86,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         sequence, `1` marks a sequence element as valid, and `0` marks it as
         invalid.
         '''
-        return self.data.mask().to_ndarray()
+        return self.data.mask
 
     @property
     def end_of_sweep(self):
@@ -122,7 +121,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
           **Important:**
           Click :cntkwiki:`here <BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`
           for a description of input and label samples.
-        max_sweeps (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of of sweeps over
+        max_sweeps (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of sweeps over
           the input dataset After this number has been reached, the reader returns empty minibatches on
           subsequent calls to func:`next_minibatch`. `max_samples` and `max_sweeps` are mutually exclusive,
           an exception will be raised if both have non-default values.
@@ -194,6 +193,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         # transplant into this class instance
         self.__dict__ = source.__dict__
         self._streams = None
+        self._last_mb_data = None
 
     def stream_infos(self):
         '''
@@ -276,6 +276,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
              be a mapping of :class:`~cntk.variables.Variable` to class:`MinibatchData`.
              When the maximum number of epochs/samples is exhausted, the return value is an empty dict.
         '''
+        if self._last_mb_data is not None:
+            self._last_mb_data.clear()
+
         if device is None:
             device = use_default_device()
 
@@ -297,16 +300,18 @@ class MinibatchSource(cntk_py.MinibatchSource):
         if not input_map:
             return mb
 
-        return {key: mb[value] for (key, value) in input_map.items()}
+        # We copy minibatch data here,
+        # we need to make sure it is cleaned when next_minibatch
+        # is called next time.       
+        self._last_mb_data = {key: mb[value] for (key, value) in input_map.items()}
+        return self._last_mb_data
 
     def get_checkpoint_state(self):
         '''
         Gets the checkpoint state of the MinibatchSource.
 
         Returns:
-            cntk.cntk_py.Dictionary:
-            A :class:`~cntk.cntk_py.Dictionary` that has the checkpoint state
-            of the MinibatchSource
+            A dict that has the checkpoint state of the MinibatchSource
         '''
         return super(MinibatchSource, self).get_checkpoint_state()
 
@@ -315,9 +320,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Restores the MinibatchSource state from the specified checkpoint.
 
         Args:
-            checkpoint (:class:`~cntk.cntk_py.Dictionary`): checkpoint to restore from
+            checkpoint (dict): checkpoint to restore from
         '''
-        super(MinibatchSource, self).restore_from_checkpoint(checkpoint)
+        super(MinibatchSource, self).restore_from_checkpoint(_py_dict_to_cntk_dict(checkpoint))
 
     @property
     def is_distributed(self):
@@ -414,6 +419,9 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
             num_samples (int): number of samples to return
             number_of_workers (int): number of workers in total
             worker_rank (int): worker for which the data is to be returned
+            device (`DeviceDescriptor`, defaults to `None`): the device
+             descriptor that contains the type and id of the device on which the
+             computation is performed. If `None`, the default device is used.
 
         Returns:
             mapping of :class:`StreamInformation` to :class:`MinibatchData`
@@ -482,8 +490,8 @@ class MinibatchSourceFromData(UserMinibatchSource):
     the data is already sufficiently randomized.
 
     While CNTK allows user code to iterate through minibatches by itself and feed data minibatch
-    by minibatch through :func:`~cntk.trainer.Trainer.train_minibatch`, the standard way is to iterate
-    through data using a MinibatchSource object. For example, the high-level :class:`~cntk.training_session.training_session`
+    by minibatch through :func:`~cntk.train.trainer.Trainer.train_minibatch`, the standard way is to iterate
+    through data using a MinibatchSource object. For example, the high-level :class:`~cntk.train.training_session.TrainingSession`
     interface, which manages a full training including checkpointing and cross validation, operates on this level.
 
     A MinibatchSource created as a `MinibatchSourceFromData` linearly iterates through the data provided by
@@ -559,7 +567,7 @@ class MinibatchSourceFromData(UserMinibatchSource):
         data_streams: name-value pairs
         max_samples (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of samples
           the reader can produce. If inputs are sequences, and the different streams have different
-          lengths, then each sequence counts with the the maximum length.
+          lengths, then each sequence counts with the maximum length.
           After this number has been reached, the reader
           returns empty minibatches on subsequent calls to :meth:`next_minibatch`.
           **Important:**
@@ -870,6 +878,23 @@ def CTFDeserializer(filename, streams):
     sc = [cntk_py.StreamConfiguration(
         k, s.dim, s.is_sparse, s.stream_alias, s['defines_mb_size']) for k, s in streams.items()]
     return cntk_py.ctf_deserializer(filename, sc)
+
+def CBFDeserializer(filename, streams = {}):
+    '''
+    Configures the CNTK binary-format deserializer.
+
+    Args:
+        filename (str): file name containing the binary data
+        streams: any dictionary-like object that contains a mapping from stream
+          names to :class:`StreamDef` objects. Each StreamDef object configures
+          an input stream.
+
+    See also:
+        :cntkwiki:`CNTKBinaryReader format <BrainScript-CNTKBinary-Reader>`
+    '''
+    sc = [cntk_py.StreamConfiguration(
+        k, s.dim, s.is_sparse, s.stream_alias) for k, s in streams.items()]
+    return cntk_py.cbf_deserializer(filename, sc)
 
 # TODO: this should be a private class; use StreamDef instead
 

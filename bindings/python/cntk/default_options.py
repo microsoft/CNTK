@@ -5,7 +5,13 @@
 # ==============================================================================
 
 '''
-default_options: ``with default_options():`` and ``with default_options_for():`` patterns
+Default options of CNTK functions. 
+
+
+Usage: 
+
+* ``with default_options():``, and
+* ``with default_options_for():``
 '''
 
 # context manager for overriding defaults, use through default_options() or default_options_for() below

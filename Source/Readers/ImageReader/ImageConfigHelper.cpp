@@ -8,7 +8,9 @@
 #include "StringUtil.h"
 #include "ConfigUtil.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
     : m_dataFormat(CHW)
@@ -40,21 +42,40 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
         RuntimeError("ImageReader does not support the sample format '%s', only 'nchw' and 'nhwc' are supported.", mbFmt.c_str());
     }
 
-    auto features = std::make_shared<StreamDescription>();
-    features->m_id = 0;
-    features->m_name = msra::strfun::utf16(featureSection.ConfigName());
-    features->m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions(w, h, c).AsTensorShape(m_dataFormat));
-    features->m_storageType = StorageType::dense;
-    m_streams.push_back(features);
+    StreamInformation features;
+    features.m_id = 0;
+    features.m_name = msra::strfun::utf16(featureSection.ConfigName());
+    auto dims = ImageDimensions(w, h, c).AsTensorShape(m_dataFormat).GetDims();
+    features.m_sampleLayout = NDShape(std::vector<size_t>(dims.begin(), dims.end()));
+    features.m_storageFormat = StorageFormat::Dense;
 
     ConfigParameters label = config(labelNames[0]);
     size_t labelDimension = label("labelDim");
 
-    auto labelSection = std::make_shared<StreamDescription>();
-    labelSection->m_id = 1;
-    labelSection->m_name = msra::strfun::utf16(label.ConfigName());
-    labelSection->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
-    labelSection->m_storageType = StorageType::dense;
+    StreamInformation labelSection;
+    labelSection.m_id = 1;
+    labelSection.m_name = msra::strfun::utf16(label.ConfigName());
+    labelSection.m_sampleLayout = NDShape({ labelDimension });
+    labelSection.m_storageFormat = StorageFormat::Dense;
+
+    // Identify precision
+    string precision = config.Find("precision", "float");
+    if (AreEqualIgnoreCase(precision, "float"))
+    {
+        features.m_elementType = DataType::Float;
+        labelSection.m_elementType = DataType::Float;
+    }
+    else if (AreEqualIgnoreCase(precision, "double"))
+    {
+        features.m_elementType = DataType::Double;
+        labelSection.m_elementType = DataType::Double;
+    }
+    else
+    {
+        RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
+    }
+
+    m_streams.push_back(features);
     m_streams.push_back(labelSection);
 
     m_mapPath = config(L"file");
@@ -75,29 +96,14 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
         RuntimeError("'randomize' parameter must be set to 'auto' or 'none'");
     }
 
-    // Identify precision
-    string precision = config.Find("precision", "float");
-    if (AreEqualIgnoreCase(precision, "float"))
-    {
-        features->m_elementType = ElementType::tfloat;
-        labelSection->m_elementType = ElementType::tfloat;
-    }
-    else if (AreEqualIgnoreCase(precision, "double"))
-    {
-        features->m_elementType = ElementType::tdouble;
-        labelSection->m_elementType = ElementType::tdouble;
-    }
-    else
-    {
-        RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
-    }
+    
 
     m_cpuThreadCount = config(L"numCPUThreads", 0);
 
     m_cropType = ParseCropType(featureSection(L"cropType", ""));
 }
 
-std::vector<StreamDescriptionPtr> ImageConfigHelper::GetStreams() const
+std::vector<StreamInformation> ImageConfigHelper::GetStreams() const
 {
     return m_streams;
 }
@@ -144,4 +150,4 @@ CropType ImageConfigHelper::ParseCropType(const std::string &src)
     RuntimeError("Invalid crop type: %s.", src.c_str());
 }
 
-}}}
+}

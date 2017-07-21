@@ -17,7 +17,7 @@ This example use the UCF11 dataset to demonstrate 3D convolution. UCF11 dataset 
 ### Setup
 
 You need to install the latest version of CNTK, please follow the instruction in:
-  https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine  
+  https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-your-machine  
 
 All video examples use CNTK Python API, so make sure that you can call CNTK API from your python environment by following the instruction in the above link.
 

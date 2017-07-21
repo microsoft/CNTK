@@ -3,6 +3,23 @@
 # for full license information.
 # ==============================================================================
 
+'''
+A learner tunes a set of parameters during the training process. One can use
+different learners for different sets of parameters. Currently, CNTK supports
+the following learning algorithms:
+
+- :func:`AdaDelta <adadelta>`
+- :func:`AdaGrad <adagrad>`
+- :func:`FSAdaGrad <fsadagrad>`
+- :func:`Adam <adam>`
+- :func:`MomentumSGD <momentum_sgd>`
+- :func:`Nesterov <nesterov>`
+- :func:`RMSProp <rmsprop>`
+- :func:`SGD <sgd>`
+- :func:`Learner with a customized update function <universal>`
+'''
+
+
 from enum import Enum, unique
 import warnings
 import numpy as np
@@ -33,20 +50,7 @@ class UnitType(Enum):
     '''
 
 
-__doc__ = '''
-Learner tunes a set of parameters during the training process. One can use
-different learners for different sets of parameters. Currently, CNTK supports
-the following learning algorithms:
 
-- AdaDelta
-- AdaGrad
-- FSAdaGrad
-- Adam
-- MomentumSGD
-- Nesterov
-- RMSProp
-- SGD
-'''
 
 
 def default_unit_gain_value():
@@ -811,11 +815,11 @@ def rmsprop(parameters, lr,
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
-        gamma (float): Trade-off factor for current and previous gradients. Common value is 0.95
-        inc (float): Increasing factor when trying to adjust current learning_rate
-        dec (float): Decreasing factor when trying to adjust current learning_rate
-        max (float): Maximum scale allowed for the initial learning_rate
-        min (float): Minimum scale allowed for the initial learning_rate
+        gamma (float): Trade-off factor for current and previous gradients. Common value is 0.95. Should be in range (0.0, 1.0)
+        inc (float): Increasing factor when trying to adjust current learning_rate. Should be greater than 1
+        dec (float): Decreasing factor when trying to adjust current learning_rate. Should be in range (0.0, 1.0)
+        max (float): Maximum scale allowed for the initial learning_rate. Should be greater than zero and min
+        min (float): Minimum scale allowed for the initial learning_rate. Should be greater than zero
         need_ave_multiplier (bool, default ``True``):
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0

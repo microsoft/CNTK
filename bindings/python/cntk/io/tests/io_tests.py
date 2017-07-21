@@ -9,12 +9,14 @@ import numpy as np
 import cntk as C
 import pytest
 
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDefs, StreamDef, \
+from cntk.io import MinibatchSource, CTFDeserializer, CBFDeserializer, \
+    StreamDefs, StreamDef, \
     ImageDeserializer, Base64ImageDeserializer, \
     FULL_DATA_SWEEP, INFINITELY_REPEAT, \
     DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS, \
     sequence_to_cntk_text_format, UserMinibatchSource, StreamInformation, \
     MinibatchData
+from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.logging import TraceLevel
 import cntk.io.transforms as xforms
 from cntk.cntk_py import to_dictionary, MinibatchSourceConfig
@@ -700,6 +702,8 @@ def test_base64_image_deserializer(tmpdir):
             # original images are RBG, openCV produces BGR images,
             # reverse the last dimension of the original images
             bgrImage = images[int(index[i])][:,:,::-1]
+            # transposing to get CHW representation
+            bgrImage = np.transpose(bgrImage, (2, 0, 1))
             assert (bgrImage == results[i][0]).all()
 
 class MyDataSource(UserMinibatchSource):
@@ -984,3 +988,190 @@ def test_minibatch_defined_by_labels(tmpdir):
         ))], randomize=False)
 
     assert_data(combined_mb_source)
+
+
+# Create base64 and usual image deserializers
+# and check that they give equal minibatch data on
+# the same input images
+def test_base64_is_equal_image(tmpdir):
+    import io, base64; from PIL import Image
+    np.random.seed(1)
+
+    file_mapping_path = str(tmpdir / 'file_mapping.txt')
+    base64_mapping_path = str(tmpdir / 'base64_mapping.txt')
+
+    with open(file_mapping_path, 'w') as file_mapping:
+        with open(base64_mapping_path, 'w') as base64_mapping:
+            for i in range(10):
+                data = np.random.randint(0, 2**8, (5,7,3))
+                image = Image.fromarray(data.astype('uint8'), "RGB")
+                buf = io.BytesIO()
+                image.save(buf, format='PNG')
+                assert image.width == 7 and image.height == 5
+                
+                label = str(i) 
+                # save to base 64 mapping file
+                encoded = base64.b64encode(buf.getvalue()).decode('ascii')
+                base64_mapping.write('%s\t%s\n' % (label, encoded))
+         
+                # save to mapping + png file
+                file_name = label + '.png'
+                with open(str(tmpdir/file_name), 'wb') as f:
+                    f.write(buf.getvalue())
+                file_mapping.write('.../%s\t%s\n' % (file_name, label))
+
+    transforms = [xforms.scale(width=7, height=5, channels=3)]
+    b64_deserializer = Base64ImageDeserializer(base64_mapping_path,
+        StreamDefs(
+            images1=StreamDef(field='image', transforms=transforms),
+            labels1=StreamDef(field='label', shape=10)))
+
+    file_image_deserializer = ImageDeserializer(file_mapping_path,
+        StreamDefs(
+            images2=StreamDef(field='image', transforms=transforms),
+            labels2=StreamDef(field='label', shape=10)))
+
+    mb_source = MinibatchSource([b64_deserializer, file_image_deserializer])
+    for j in range(20):
+        mb = mb_source.next_minibatch(1)
+
+        images1_stream = mb_source.streams['images1']
+        images1 = mb[images1_stream].asarray()
+        images2_stream = mb_source.streams['images2']
+        images2 = mb[images2_stream].asarray()
+        assert(images1 == images2).all()
+
+def test_prefetch_with_unpacking(tmpdir):
+    data = r'''0  |S0 1 1 1 1   |S1 1000
+1   |S0 2 2 2 2  |S1 100
+2   |S0 3 3 3 3  |S1 100
+3   |S0 1 1 1 1  |S1 10
+4   |S0 2 2 2 2  |S1 1
+5   |S0 3 3 3 3  |S1 2000
+6   |S0 1 1 1 1  |S1 200
+7   |S0 2 2 2 2  |S1 200
+8   |S0 3 3 3 3  |S1 20
+9   |S0 1 1 1 1  |S1 2
+'''
+    import time
+    tmpfile = _write_data(tmpdir, data)
+
+    input_dim = 4
+    num_output_classes = 1
+
+    mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
+        features=StreamDef(field='S0', shape=input_dim, is_sparse=False),
+        labels=StreamDef(field='S1', shape=num_output_classes, is_sparse=False)
+    )), randomize=False, max_samples=FULL_DATA_SWEEP)
+
+    input_map = { 'S0' : mb_source.streams.features, 'S1' : mb_source.streams.labels }
+    empty = False
+    mb_size = 3
+    # On the last minibatch there will be resize called, 
+    # due to 10%3 = 1 sample  in the minibatch
+    while not empty:
+        mb = mb_source.next_minibatch(mb_size, input_map=input_map)
+        time.sleep(1) # make sure the prefetch kicks in
+        if mb:
+            # Force unpacking to check that we do 
+            # not break prefetch 
+            actual_size = mb['S0'].shape[0]
+            assert (mb['S0'].asarray() == np.array([[[1, 1, 1, 1]],
+                                                    [[2, 2, 2, 2]],
+                                                    [[3, 3, 3, 3]]], dtype=np.float32)[0:actual_size]).all()
+        else:
+            empty = True
+
+def get_cbf_header(streams):
+    get_header_line = lambda x,y: \
+        [x, y.stream_alias, 'sparse' if y.is_sparse else 'dense', str(y.dim)]
+    return [' '.join(get_header_line(k,v)) for k,v in streams.items()]
+
+input_files =  [
+        MBDATA_DENSE_1, 
+        MBDATA_DENSE_2, 
+        MBDATA_SPARSE, 
+        MBDATA_SPARSE1, 
+        MBDATA_SPARSE2
+    ]
+stream_defs = [
+        StreamDefs(
+            features=StreamDef(field='S0', shape=1),
+            labels=StreamDef(field='S1', shape=1)
+        ),
+        StreamDefs(
+            features=StreamDef(field='S0', shape=1),
+            labels=StreamDef(field='S1', shape=1)
+        ),
+        StreamDefs(
+            features=StreamDef(field='x', shape=1000, is_sparse=True),
+            labels=StreamDef(field='y', shape=5, is_sparse=False)
+        ),
+        StreamDefs(
+            features=StreamDef(field='x', shape=1000, is_sparse=True),
+        ),
+        StreamDefs(
+            labels=StreamDef(field='y', shape=5, is_sparse=False)
+        ),
+    ]
+
+@pytest.mark.parametrize("input_pair", zip(input_files, stream_defs))
+def test_compare_cbf_and_ctf(input_pair, device_id, tmpdir):
+
+    try:
+        import ctf2bin
+    except ImportError:
+        pytest.skip("ctf2bin not found")
+
+    device = cntk_device(device_id)
+
+    tmpfile = _write_data(tmpdir, input_pair[0])
+    streams = input_pair[1]
+
+    ctf2bin.process(tmpfile, tmpfile+'.bin', get_cbf_header(streams), ctf2bin.ElementType.FLOAT)
+
+    def compare_cbf_and_ctf(num_mbs, mb_size, randomize):
+        ctf = MinibatchSource(CTFDeserializer(tmpfile, streams), randomize=randomize)
+        cbf = MinibatchSource(CBFDeserializer(tmpfile+'.bin', streams), randomize=randomize)
+
+        ctf_stream_names = sorted([x.m_name for x in ctf.stream_infos()])
+        cbf_stream_names = sorted([x.m_name for x in cbf.stream_infos()])
+
+        assert(ctf_stream_names == cbf_stream_names)
+        for _ in range(num_mbs):
+            ctf_mb = ctf.next_minibatch(mb_size, device=device)
+            cbf_mb = cbf.next_minibatch(mb_size, device=device)
+
+            for name in cbf_stream_names:
+                ctf_data = ctf_mb[ctf[name]]
+                cbf_data = cbf_mb[cbf[name]]
+
+                
+                assert ctf_data.num_samples == cbf_data.num_samples
+                assert ctf_data.num_sequences == cbf_data.num_sequences
+                assert ctf_data.shape == cbf_data.shape
+                assert ctf_data.end_of_sweep == cbf_data.end_of_sweep
+                assert ctf_data.is_sparse == cbf_data.is_sparse
+                assert ctf_data.data.masked_count() == cbf_data.data.masked_count()
+
+                # XXX:
+                # assert(ctf_data.asarray() == cbf_data.asarray()).all()
+                # not using asarray because for sparse values it fails with
+                # some strange exception "sum of the rank of the mask and Variable 
+                #rank does not equal the Value's rank".
+
+                assert C.cntk_py.are_equal(ctf_data.data.data, cbf_data.data.data)
+
+                if (ctf_data.data.masked_count() > 0):
+                    assert (ctf_data.data.mask == cbf_data.data.mask).all()
+                # XXX: if mask_count is zero, mb_data.data.mask fails with 
+                # "AttributeError: 'Value' object has no attribute 'mask'"!
+
+                # XXX: without invoking erase, next_minibatch will fail with:
+                # "Resize: Cannot resize the matrix because it is a view."
+                ctf_data.data.erase()
+                cbf_data.data.erase()
+
+    for randomize in [False, True]:
+        for (num_mbs, mb_size) in zip([1, 1, 3, 10], [1, 10, 100, 2]):
+            compare_cbf_and_ctf(num_mbs, mb_size, randomize)

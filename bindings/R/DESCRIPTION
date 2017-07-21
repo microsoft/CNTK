@@ -1,0 +1,13 @@
+Package: cntk
+Type: Package
+Title: Microsoft Cognitive Toolkit for R
+Version: 0.0.0.9000
+Authors@R: person("Joe", "Davison", email = "t-jodavi@microsoft.com", role = c("aut", "cre"))
+Description: Provides R interface to CNTK library
+Depends: R (>= 3.2.3)
+License: MIT
+Encoding: UTF-8
+RoxygenNote: 6.0.1.9000
+Imports:
+	reticulate,
+	magrittr

@@ -9,7 +9,7 @@
 #include "MLFUtils.h"
 #include "ReaderUtil.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     using namespace std;
 
@@ -231,4 +231,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         id = keyToId(key);
         return true;
     }
-}}}
+}

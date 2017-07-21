@@ -11,10 +11,10 @@
 #include "BinaryDataChunk.h"
 #include "BinaryDataDeserializer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Chunk meta-info: byte offset in the inputfile, number of sequences and samples in the chunk.
-struct ChunkInfo 
+struct BinaryChunkInfo 
 {
     int64_t offset;
     uint32_t numSequences;
@@ -25,7 +25,7 @@ struct ChunkInfo
 class ChunkTable {
 public:
 
-    ChunkTable(uint32_t numChunks, ChunkInfo* offsetsTable) :
+    ChunkTable(uint32_t numChunks, BinaryChunkInfo * offsetsTable) :
         m_numChunks(numChunks),
         m_diskOffsetsTable(offsetsTable),
         m_startIndex(numChunks)
@@ -73,7 +73,7 @@ public:
 
 private:
     uint32_t m_numChunks;
-    unique_ptr<ChunkInfo[]> m_diskOffsetsTable;
+    unique_ptr<BinaryChunkInfo[]> m_diskOffsetsTable;
     vector<uint64_t> m_startIndex;
 };
 
@@ -92,14 +92,14 @@ public:
     ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
     // Get information about chunks.
-    ChunkDescriptions GetChunkDescriptions() override;
+    std::vector<ChunkInfo> ChunkInfos() override;
 
     // Get information about particular chunk.
-    void GetSequencesForChunk(ChunkIdType chunkId, vector<SequenceDescription>& result) override;
+    void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result) override;
 
 private:
     // Builds an index of the input data.
-    void Initialize(const std::map<std::wstring, std::wstring>& rename, ElementType precision);
+    void Initialize(const std::map<std::wstring, std::wstring>& rename, DataType precision);
 
     // Reads the chunk table from disk into memory
     void ReadChunkTable(FILE* infile, uint32_t firstChunkIdx, uint32_t numChunks);
@@ -135,4 +135,4 @@ private:
 
     DISABLE_COPY_AND_MOVE(BinaryChunkDeserializer);
 };
-}}}
+}

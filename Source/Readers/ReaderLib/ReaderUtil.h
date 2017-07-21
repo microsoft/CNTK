@@ -10,29 +10,13 @@
 #include "Config.h"
 #include <boost/algorithm/string.hpp>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
-class ConfigParameters;
+size_t GetRandomizationWindowFromConfig(const Microsoft::MSR::CNTK::ConfigParameters& config);
 
-size_t GetRandomizationWindowFromConfig(const ConfigParameters& config);
-
-inline size_t GetRandomSeed(const ConfigParameters& config)
+inline size_t GetRandomSeed(const Microsoft::MSR::CNTK::ConfigParameters& config)
 {
     return config(L"randomizationSeed", size_t(0));
-}
-
-// Returns the size of the type.
-inline size_t GetSizeByType(ElementType type)
-{
-    switch (type)
-    {
-    case ElementType::tfloat:
-        return sizeof(float);
-    case ElementType::tdouble:
-        return sizeof(double);
-    default:
-        RuntimeError("Unsupported type '%d'", static_cast<int>(type));
-    }
 }
 
 static std::vector<unsigned char> FillIndexTable()
@@ -208,4 +192,4 @@ inline T* ReadTillDelimiter(T* begin, T* end, const std::vector<bool>& delimiter
     return end;
 }
 
-}}}
+}

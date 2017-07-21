@@ -2,6 +2,10 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+"""
+Utilities for fetching CNTK samples data.
+"""
+
 
 from __future__ import print_function
 import sys

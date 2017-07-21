@@ -138,6 +138,6 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <Target Name="CheckDependencies">
-    <Error Condition="!$(HasBoost)" Text="LMSequenceReader requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
+    <Error Condition="!$(HasBoost)" Text="LMSequenceReader requires the Boost library to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
 </Project>

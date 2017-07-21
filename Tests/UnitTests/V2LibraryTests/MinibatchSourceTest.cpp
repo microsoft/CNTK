@@ -271,6 +271,64 @@ void TestMaxSweeps(size_t maxSweeps, size_t mbSize, bool randomize)
 }
 
 
+void TestCBFDeserializers()
+{
+    auto cbf = CreateCompositeMinibatchSource(
+        MinibatchSourceConfig({ CBFDeserializer(L"Simple_dense.bin") }, false));
+
+    std::unordered_set<std::wstring> names{ L"features", L"labels" };
+    for (const auto& info : cbf->StreamInfos())
+    {
+       BOOST_TEST(!(names.find(info.m_name) == names.end()));
+       names.erase(info.m_name);
+    }
+
+    BOOST_TEST(names.size() == 0);
+
+    for (const auto& name : { L"features", L"labels" })
+    {
+        BOOST_TEST((cbf->StreamInfo(name).m_storageFormat == StorageFormat::Dense));
+        BOOST_TEST((cbf->StreamInfo(name).m_elementType == DataType::Float));
+        BOOST_TEST((cbf->StreamInfo(name).m_sampleLayout.TotalSize() == 2));
+    }
+}
+
+
+void CompareCBFAndCTFDeserializers(size_t maxSamples, size_t mbSize, bool randomize)
+{
+    // Simple_dense.bin was created by transcoding SimpleDataTrain_cntk_text.txt into CBF.
+    auto cbf = CreateCompositeMinibatchSource(
+        MinibatchSourceConfig({ CBFDeserializer(L"Simple_dense.bin") }, randomize));
+
+    std::vector<StreamConfiguration> streamConfig{ { L"features", 2 },{ L"labels", 2 } };
+
+    auto ctf = CreateCompositeMinibatchSource(
+        MinibatchSourceConfig({ CTFDeserializer(L"SimpleDataTrain_cntk_text.txt", streamConfig) }, randomize));
+
+    
+    size_t sampleCount = 0;
+    auto cpuDevice = DeviceDescriptor::CPUDevice();
+
+    while (sampleCount < 2*maxSamples)
+    {
+        const auto& ctf_dataMap = ctf->GetNextMinibatch(mbSize, cpuDevice);
+        const auto& cbf_dataMap = cbf->GetNextMinibatch(mbSize, cpuDevice);
+
+        for (const auto& name : { L"features", L"labels" })
+        {
+            const auto& ctf_data = ctf_dataMap.at(ctf->StreamInfo(name));
+            const auto& cbf_data = cbf_dataMap.at(cbf->StreamInfo(name));
+
+            BOOST_TEST(ctf_data.numberOfSamples == cbf_data.numberOfSamples);
+            BOOST_TEST(ctf_data.numberOfSequences == cbf_data.numberOfSequences);
+            BOOST_TEST(ctf_data.sweepEnd == cbf_data.sweepEnd);
+
+            BOOST_TEST(Internal::AreEqual(*ctf_data.data, *cbf_data.data));
+            
+            sampleCount += ctf_data.numberOfSamples;
+        }
+    }
+}
 
 BOOST_AUTO_TEST_SUITE(MinibatchSourceSuite)
 
@@ -330,6 +388,26 @@ BOOST_AUTO_TEST_CASE(RandomizedMinibatchSourceWithNoData)
     TestMinibatchSourceWarmStart(64, 0, true, chunk32MB, expectNoData);
     TestMinibatchSourceWarmStart(64, 128, true, chunk32MB, expectNoData);
 }
+
+
+BOOST_AUTO_TEST_CASE(CBFDeserializer)
+{
+    TestCBFDeserializers();
+}
+
+
+BOOST_AUTO_TEST_CASE(CompareDeserializers)
+{
+    for (auto randomize : { true, false }) 
+    {
+        CompareCBFAndCTFDeserializers(10, 10, randomize);
+        CompareCBFAndCTFDeserializers(100, 10, randomize);
+        CompareCBFAndCTFDeserializers(1000, 10, randomize);
+        CompareCBFAndCTFDeserializers(1000, 100, randomize);
+        CompareCBFAndCTFDeserializers(2000, 500, randomize);
+    }
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 

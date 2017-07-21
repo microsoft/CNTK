@@ -110,7 +110,7 @@ def frcn_predictor(features, rois, n_classes, model_path):
     # Create the Fast R-CNN model
     feat_norm = features - Constant(114)
     conv_out  = conv_layers(feat_norm)
-    roi_out   = roipooling(conv_out, rois, (roi_dim, roi_dim))
+    roi_out   = roipooling(conv_out, rois, C.MAX_POOLING, (roi_dim, roi_dim), 0.0625)
     fc_out    = fc_layers(roi_out)
 
     # z = Dense(rois[0], num_classes, map_rank=1)(fc_out)  # --> map_rank=1 is not yet supported

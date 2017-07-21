@@ -448,7 +448,7 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
     '''
     RNNUnit(shape, cell_shape=None, activation=sigmoid, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
 
-    This is a deprecated name for :func:`~cnkt.layers.RNNStep`. Use that name instead.
+    This is a deprecated name for :func:`~cntk.layers.blocks.RNNStep`. Use that name instead.
     '''
 
     activation                = get_default_override(RNNUnit, activation=activation)

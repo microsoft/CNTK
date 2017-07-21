@@ -10,7 +10,7 @@
 #include "DataDeserializer.h"
 #include "ReaderUtil.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // The class represents a randomizer that does not randomize input (identity function over the original timeline).
 // Used training where the training data has already been pre - randomized.
@@ -20,19 +20,19 @@ class NoRandomizer : public SequenceEnumerator
 {
 public:
     NoRandomizer(
-        IDataDeserializerPtr deserializer, 
+        DataDeserializerPtr deserializer, 
         bool multithreadedGetNextSequences = false,
         size_t maxNumberOfInvalidSequences = 0); // per worker
 
     virtual void StartEpoch(const EpochConfiguration& config) override;
     virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) override;
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+    virtual std::vector<StreamInformation> GetStreamDescriptions() const override
     {
-        return m_deserializer->GetStreamDescriptions();
+        return m_deserializer->StreamInfos();
     }
 
-    size_t GetCurrentSamplePosition() override;
-    void SetCurrentSamplePosition(size_t currentSamplePosition) override;
+    std::map<std::wstring, size_t> GetState() override;
+    void SetState(const std::map<std::wstring, size_t>& state) override;
 
     void SetConfiguration(const ReaderConfiguration& config) override;
 
@@ -51,20 +51,20 @@ private:
         return m_config.m_totalEpochSizeInSamples * (m_config.m_epochIndex + 1);
     }
 
-    IDataDeserializerPtr m_deserializer;
+    DataDeserializerPtr m_deserializer;
 
     // Whether to get sequences using multiple thread.
     // Useful in case deserializer performs CPU intensive deserialization (e.g. decompression)
     bool m_multithreadedGetNextSequences;
 
     // Stream descriptions
-    std::vector<StreamDescriptionPtr> m_streams;
+    std::vector<StreamInformation> m_streams;
 
     // Epoch configuration
     EpochConfiguration m_config;
 
     // Chunk descriptions.
-    ChunkDescriptions m_chunkDescriptions;
+    std::vector<ChunkInfo> m_chunkDescriptions;
 
     // m_chunkDescription defines the complete sweep of samples: [0 .. N]
     // m_chunkSampleOffset for each chunk contains the sample offset in the sweep where the chunk begins.
@@ -77,7 +77,7 @@ private:
     ChunkIdType m_currentChunkId;
 
     // Current window of sequence descriptions.
-    std::vector<SequenceDescription> m_sequenceWindow;
+    std::vector<SequenceInfo> m_sequenceWindow;
 
     // Current sequence position the randomizer works with.
     size_t m_currentSequencePositionInChunk;
@@ -96,10 +96,10 @@ private:
     size_t m_sweepSizeInSamples;
 
     // Temp buffer to avoid allocations.
-    std::vector<SequenceDescription> m_sequenceBuffer;
+    std::vector<SequenceInfo> m_sequenceBuffer;
 
     // Helper class for removing invalid sequences.
     SequenceCleaner m_cleaner;
 };
 
-}}}
+}

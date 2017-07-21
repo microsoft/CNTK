@@ -522,9 +522,9 @@ class TensorBoardProgressWriter(cntk_py.ProgressWriter):
 class TrainingSummaryProgressCallback(cntk_py.ProgressWriter):
     '''
     Helper to pass a callback function to be called after each training epoch
-    to :class:`~cntk.train.Trainer`,
-    :class:`~cntk.eval.Evaluator`, and :class:`~cntk.training_session.TrainingSession`,
-    as well a :func:`cntk.Function.train`, :func:`cntk.Function.test`.
+    to :class:`~cntk.train.trainer.Trainer`,
+    :class:`~cntk.eval.evaluator.Evaluator`, and :class:`~cntk.train.training_session.TrainingSession`,
+    as well a :func:`cntk.ops.functions.Function.train`, :func:`cntk.ops.functions.Function.test`.
 
     This allows the user to add additional logging after each training epoch.
 
