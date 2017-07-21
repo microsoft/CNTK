@@ -696,6 +696,8 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
                             auto inputShape = m_inputs[0].Shape();
                             auto inputDims = inputShape.Dimensions();
+                            if (inputDims.size() == 0)
+                                LogicError("Function '%S': Input can't be scalar", AsString().c_str());
                             inputDims.pop_back();
                             outputShape = NDShape(inputDims);
                             break;

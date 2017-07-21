@@ -1275,6 +1275,12 @@ namespace CNTK
 
     FunctionPtr ToBatch(const Variable& operand, const std::wstring& name)
     {
+        if (operand.DynamicAxes().size() > 0)
+            LogicError("ToBatch: the input should not have dynamic axis.");
+
+        if (operand.Shape().Dimensions().size() == 0)
+            LogicError("ToBatch: the input can not be scalar.");
+
         auto additionalProperties = Dictionary();
         return UnaryOp(PrimitiveOpType::ToBatch, operand, std::move(additionalProperties), name);
     }
@@ -1282,7 +1288,7 @@ namespace CNTK
     FunctionPtr UnpackBatch(const Variable& operand, const std::wstring& name)
     {
         if (operand.DynamicAxes().size() > 1)
-            LogicError("DetachDynamicAxis: only support input with batch axis itself.");
+            LogicError("UnpackBatch: only support input with batch axis itself.");
 
         auto additionalProperties = Dictionary();
         return UnaryOp(PrimitiveOpType::UnpackBatch, operand, std::move(additionalProperties), name);

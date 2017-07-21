@@ -496,9 +496,9 @@ template class ReconcileDynamicAxisNode<float>;
 template class ReconcileDynamicAxisNode<double>;
 
 template <class ElemType>
-class ToBatchAxisNode : public ComputationNode<ElemType>, public NumInputs<1>
+class ToBatchAxisNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() {
         return L"AttachDynamicAxis";
     }
@@ -509,7 +509,7 @@ public:
 
     }
     
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         auto& inputValue = InputRef(0).Value();
         auto& outputValue = Value();
@@ -520,16 +520,25 @@ public:
         outputValue.Resize(origin_rows, origin_cols);
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
     {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto gradient = GradientTensorFor(rank, fr);
-        auto inputGradient = Input(0)->GradientTensorFor(rank, fr.AllowBroadcast());
+        auto& gradient = Gradient();
+        auto& inputGradient = Input(0)->Gradient();
 
-        if (Input(0)->ParentOverwritesGradient())
-            inputGradient.AssignCopyOf(gradient);
+        if (Input(0)->IsGradientOptimized(this))
+        {
+            if (Input(0)->ParentGradientReused())
+            {
+                if (gradient.Data() != inputGradient.Data() ||
+                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
+                    gradient.GetNumCols() != inputGradient.GetNumCols())
+                    LogicError("Gradient should be reused");
+            }
+            else
+                inputGradient.AssignValuesOf(gradient);
+        }
         else
-            inputGradient.AddCopyOf(gradient);
+            inputGradient += gradient;
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -540,6 +549,16 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
         return false;
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override 
+    {
+        return ParentGradientOptimization::Reuse;
+    }
+
+    bool ForceDynamicValidation() const override
+    {
+        return true;
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -553,6 +572,9 @@ public:
 
         auto sampleLayout = Input(0)->GetSampleLayout();
         const auto& inputDims = sampleLayout.GetDims();
+        if (inputDims.size() == 0)
+            InvalidArgument("%ls %ls operation's input can't be scalar.", NodeName().c_str(), OperationName().c_str());
+
         SmallVector<size_t> dims;
         dims.append(inputDims.begin(), inputDims.end() - 1);
 
@@ -574,9 +596,9 @@ template class ToBatchAxisNode<double>;
 
 
 template <class ElemType>
-class UnpackBatchAixsNode : public ComputationNode<ElemType>, public NumInputs<1>
+class UnpackBatchAixsNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() {
         return L"DetachDynamicAxis";
     }
@@ -586,7 +608,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         auto& inputValue = InputRef(0).Value();
         auto& outputValue = Value();
@@ -598,16 +620,25 @@ public:
         outputValue.Resize(origin_rows, origin_cols);
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
     {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto gradient = GradientTensorFor(rank, fr);
-        auto inputGradient = Input(0)->GradientTensorFor(rank, fr.AllowBroadcast());
+        auto& gradient = Gradient();
+        auto& inputGradient = Input(0)->Gradient();
 
-        if (Input(0)->ParentOverwritesGradient())
-            inputGradient.AssignCopyOf(gradient);
+        if (Input(0)->IsGradientOptimized(this))
+        {
+            if (Input(0)->ParentGradientReused())
+            {
+                if (gradient.Data() != inputGradient.Data() ||
+                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
+                    gradient.GetNumCols() != inputGradient.GetNumCols())
+                    LogicError("Gradient should be reused");
+            }
+            else
+                inputGradient.AssignValuesOf(gradient);
+        }
         else
-            inputGradient.AddCopyOf(gradient);
+            inputGradient += gradient;
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override 
@@ -618,6 +649,11 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override 
     {
         return false;
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
+    {
+        return ParentGradientOptimization::Reuse;
     }
 
     bool ForceDynamicValidation() const override 
@@ -644,7 +680,10 @@ public:
             if (inputMBLayout->GetNumParallelSequences() == 0)
                 LogicError("%ls %ls operation's final validation pass must not be invoked before the input MBLayout has been initialized and populated.", NodeName().c_str(), OperationName().c_str());
 
-            outDims[inputShape.GetRank()] = inputMBLayout->GetNumParallelSequences();
+            if (!inputMBLayout->IsInFrameMode())
+                LogicError("%ls %ls operation's input must with MBLayout in frame mode (no sequence).", NodeName().c_str(), OperationName().c_str());
+
+            outDims[inputShape.GetRank()] = inputMBLayout->GetActualNumSamples();
         }
 
         SetDims(TensorShape(outDims), HasMBLayout());
