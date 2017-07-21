@@ -1,3 +1,8 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
 """A set of predefined models used by Q learning or Actor-Critic."""
 
 import cntk as C

@@ -1,7 +1,13 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
 import gym
+import numpy as np
 from gym import spaces
 from gym.utils import seeding
-import numpy as np
 
 
 class PuddleWorld(gym.Env):
@@ -25,21 +31,24 @@ class PuddleWorld(gym.Env):
         return [seed]
 
     def _step(self, action):
-        assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
+        assert self.action_space.contains(action), "%r (%s) invalid" % (
+            action, type(action))
 
         if (np.random.uniform(0., 1.) > self.motion_noise):
             state0 = self.state[0]
             state1 = self.state[1]
             # Motion length is a truncated normal random variable.
-            motion_length = np.maximum(0., np.minimum(
-                self.motion_max,
-                np.random.normal(self.motion_mean, self.motion_std)))
+            motion_length = np.maximum(
+                0.,
+                np.minimum(
+                    self.motion_max,
+                    np.random.normal(self.motion_mean, self.motion_std)))
             if action == 0:  # north
-                state1 = np.minimum(
-                    self.room_lengths[1], state1 + motion_length)
+                state1 = np.minimum(self.room_lengths[1],
+                                    state1 + motion_length)
             elif action == 1:  # east
-                state0 = np.minimum(
-                    self.room_lengths[0], state0 + motion_length)
+                state0 = np.minimum(self.room_lengths[0],
+                                    state0 + motion_length)
             elif action == 2:  # south
                 state1 = np.maximum(0., state1 - motion_length)
             else:  # west

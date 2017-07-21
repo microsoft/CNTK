@@ -1,3 +1,8 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
 """Customized Q function or (unnormalized) log of policy function.
 
 If models from cntk.contrib.deeprl.agent.shared.models are not adequate, write
