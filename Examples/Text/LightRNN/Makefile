@@ -11,12 +11,10 @@ all : $(LIB)
 	$(CC) $(CFLAGS) -fpic -c $< -o $@
 
 $(LIB) : $(OBJS)
-	rm -f $@
 	g++ -shared -o $@ $(OBJS)
-	rm -f $(OBJS)
 
 tags:
 	ctags -R *
 
 clean:
-	rm -f $(OBJS) $(TARGET) $(LIB)
+	rm -f $(OBJS) $(LIB)

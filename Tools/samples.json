@@ -492,7 +492,7 @@
         "description": "LightRNN: Memory and Computation-Efficient Recurrent Neural Networks",
         "language": ["Python"],
         "type": ["Recipe"],
-    "dateadded": "07/14/2017"
+        "dateadded": "07/14/2017"
     },
     {
         "category": ["Reinforcement Learning"],

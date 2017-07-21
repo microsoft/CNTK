@@ -1,22 +1,21 @@
-  LightRNN
+# LightRNN
 
 This is the official implementation for [LightRNN: Memory and Computation-Efficient Recurrent Neural Networks](https://arxiv.org/abs/1610.09893) in CNTK.
 
 ## LightRNN: Memory and Computation-Efficient Recurrent Neural Networks
-Recurrent neural networks (RNNs) have achieved state-of-the-art performances in many natural language processing tasks, such as language modeling and machine translation. However, when the vocabulary is large, the RNN model will become very big (e.g., possibly beyond the memory capacity of a GPU device) and its training/inference will become very inefficient. LightRNN addesses this challenge using 2-Component (2C) shared embedding for word representations. It allocates every word in the vocabulary into a table, each row of which is associated with a vector, and each column associated with another vector. Depending on its position in the table, a word is jointly represented by two components: a row vector and a column vector. Since the words in the same row share the row vector and the words in the same column share the column vector, we only need $2 \sqrt{|V|}$ vectors to represent a vocabulary of $|V|$ unique words, which are far less than the $|V|$ vectors required by existing approaches. The LightRNN algorithm significantly reduces the model size and speeds up the training/inference process for corpora with large vocabularies.
+Recurrent neural networks (RNNs) have achieved state-of-the-art performances in many natural language processing tasks, such as language modeling and machine translation. However, when the vocabulary is large, the RNN model will become very big (e.g., possibly beyond the memory capacity of a GPU device) and its training/inference will become very inefficient. LightRNN addresses this challenge using 2-Component (2C) shared embedding for word representations. It allocates every word in the vocabulary into a table, each row of which is associated with a vector, and each column associated with another vector. Depending on its position in the table, a word is jointly represented by two components: a row vector and a column vector. Since the words in the same row share the row vector and the words in the same column share the column vector, we only need $2 \sqrt{|V|}$ vectors to represent a vocabulary of $|V|$ unique words, which are far less than the $|V|$ vectors required by existing approaches. The LightRNN algorithm significantly reduces the model size and speeds up the training/inference process for corpora with large vocabularies.
 
-#### More details please refer to the NIPS 2016 paper (https://arxiv.org/abs/1610.09893)
+> For more details please refer to the NIPS 2016 paper (https://arxiv.org/abs/1610.09893)
 
 
 ## Requirements
 
 - CNTK
 - Python 2.7 or later. 
-- g++
 
 __For multi gpu version__
 - mpi program
-- mpi4py
+- mpi4py (It is recommended to build mpi4py from source to avoid multiply-version conflicts of mpi.)
 
 ## Details
 
@@ -30,7 +29,7 @@ The folder [LightRNN](LightRNN/) contains main structure of LightRNN.
  - __[lightrnn.py](LightRNN/lightrnn.py)__
     The computation graph of LightRNN
  - __[reallocate.py](LightRNN/reallocate.py)__
-    Word reallocation implemented by Python.
+    Word reallocation implemented in Python.
  - __[preprocess.py](LightRNN/preprocess.py)__
     The preprocess procedure of LightRNN
     - Options
@@ -91,20 +90,17 @@ This command will train a LightRNN model on two GPUs, you can specify the GPU nu
 ### [PTB/](PTB/)
 This folder contains an example of PTB dataset. You can use [download_data.py](PTB/Data/download_data.py) under [Data/](PTB/Data) to download the data and [generate.py](PTB/Allocation/generate.py) under [Allocation/](PTB/Allocation) to generate a vocabulary file and random table.
 
-### [Test/](Test/)
-Include a test program. Run this file as follow:
+### Generate C++ dynamic library
 
-`python test_train.py`
-
-### Generate CPP dynamic library
+We provide two implementations of word allocation using Python and C++ separately. If you don't use a C++ dynamic library, the Python implementation will be used. The Python version will be 5 times or more slower than C++ version. Therefore, C++ version is preferred.
 
 __For Linux User__
 
-run the [Makefile](Makefile) under the root directory by `make`.
+Run the [Makefile](Makefile) in this directory by `make`.
 
 __For Windows User__
 
-Use the Visual Studio to open the project under the [DLL](https://github.com/Microsoft/LightRNN/tree/master/DLL) and build, put the dll file under the [LightRNN](LightRNN/).
+Use the Visual Studio to open the project under the [DLL](https://github.com/Microsoft/LightRNN/tree/master/DLL) folder and build, put the dll file under the [LightRNN](LightRNN/).
 
 ## Experiment
 
@@ -183,7 +179,3 @@ If you find LightRNN useful in your work, you can cite the paper as below:
         Booktitle = {Advances in Neural Information Processing Systems ({NIPS})},
         Year = {2016}
     }
-
-### Notes
-1. It is recommended to build mpi4py from source to avoid mulitply-version conflicts of mpi.
-2. We provide two implemenations of word allocation using Python and C++ separately. If you don't use a C++ dynamic library, the Python implementation will be used. The Python version will be 5 times or more slower than C++ version. Therefore, C++ version is preferred.
