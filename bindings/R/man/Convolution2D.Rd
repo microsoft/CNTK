@@ -2,15 +2,42 @@
 % Please edit documentation in R/layers-layers.R
 \name{Convolution2D}
 \alias{Convolution2D}
-\title{Convoluion2D}
+\title{Two Dimensional Convolutional Layer}
 \usage{
 Convolution2D(filter_shape, num_filters = NULL,
   activation = activation_identity, init = init_glorot_uniform(),
   pad = FALSE, strides = 1, bias = TRUE, init_bias = 0,
   reduction_rank = 1, name = "")
 }
+\arguments{
+\item{filter_shape}{integer vector of shape (spatial extent) of the receptive field, not including the input feature-map depth}
+
+\item{num_filters}{integer of number of filters}
+
+\item{activation}{optional function to apply at end}
+
+\item{init}{vector array or cntk$initializer, defaults to \code{init_glorot_uniform())} – initial value of weights W}
+
+\item{pad}{logical if FALSE the filter will be shifted over the valid area of input, that is, no value outside the area is used. If TRUE the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero. Use a tuple to specify a per-axis value.}
+
+\item{strides}{integer of stride for convolution}
+
+\item{bias}{logical if the layer should have a bias term}
+
+\item{init_bias}{double or cntk$initializer for initialization of bias term}
+
+\item{reduction_rank}{integer whether input items have or do not have a depth axis}
+
+\item{name}{string for the name of the function instance in the network}
+}
+\value{
+A cntk$ops$functions$Function class for defining tensor operations in network architecture.
+}
 \description{
-Layer factory function to create a 2D convolution layer with optional
-non-linearity. Same as Convolution() except that filter_shape is verified to
-be 2-dimensional. See Convolution() for extensive documentation.
+Layer factory function to create a 2D convolution layer with optional non-linearity.
+Same as \code{Convolution()} except that \code{filter_shape} is verified to be 2-dimensional.
+See \code{Convolution()} for extensive documentation.
+}
+\references{
+\url{https://www.cntk.ai/pythondocs/cntk.layers.layers.html?highlight=convolution2d#cntk.layers.layers.Convolution2D})
 }

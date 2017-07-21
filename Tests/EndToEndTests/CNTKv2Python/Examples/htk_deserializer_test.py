@@ -6,7 +6,6 @@ import os
 abs_path = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Speech", "AN4", "Data")
 
-
 def test_htk_deserializers():
     mbsize = 640
     epoch_size = 1000 * mbsize
@@ -55,4 +54,28 @@ def test_htk_deserializers():
     assert True
     os.chdir(abs_path)
 
-#test_htk_deserializers()
+
+def test_multiple_mlf_files():
+    os.chdir(data_path)
+
+    feature_dim = 33
+    num_classes = 132
+    context = 2
+
+    test_mlf_path = "../../../../Tests/EndToEndTests/Speech/Data/glob_00001.mlf"
+
+    features_file = "glob_0000.scp"
+    label_files = [ "glob_0000.mlf", test_mlf_path]
+    label_mapping_file = "state.list"
+
+    fd = HTKFeatureDeserializer(StreamDefs(
+        amazing_features = StreamDef(shape=feature_dim, context=(context,context), scp=features_file)))
+
+    ld = HTKMLFDeserializer(label_mapping_file, StreamDefs(
+        awesome_labels = StreamDef(shape=num_classes, mlf=label_files)))
+
+    # Make sure we can read at least one minibatch.
+    mbsource = MinibatchSource([fd,ld])
+    mbsource.next_minibatch(1)
+
+    os.chdir(abs_path)

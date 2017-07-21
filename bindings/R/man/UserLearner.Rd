@@ -8,14 +8,12 @@ UserLearner(parameters, lr_schedule, as_matrix = TRUE)
 }
 \description{
 Base class of all user-defined learners. To implement your own learning
-algorithm, derive from this class and override the `update()`.
+algorithm, derive from this class and override the \code{update()}.
 }
 \details{
 Certain optimizers (such as AdaGrad) require additional storage. This can be
 allocated and initialized during construction.
-
-****** Associated Functions: ******
-
-update_user_learner(learner, gradient_values, training_sample_count,
-sweep_end)
+}
+\seealso{
+\code{\link{update_user_learner}}
 }

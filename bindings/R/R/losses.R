@@ -29,6 +29,20 @@ loss_cosine_distance_negative_samples <- function(x, y, shift,
 	)
 }
 
+
+#' Cross Entropy Loss with Softmax for Multiclass Classification
+#'
+#' This operation computes the cross entropy between the \code{target_vector} and the softmax of the \code{output_vector}.
+#' The elements of \code{target_vector} have to be non-negative and should sum to 1.
+#' The \code{output_vector} can contain any values.
+#' The function will internally compute the softmax of the \code{output_vector}.
+#'
+#' @param output_vector unscaled computed output values from the network
+#' @param target_vector one-hot encoded vector of target values
+#' @param axis integer (optional) for axis to compute cross-entropy
+#' @param name string (optional) - the name of the Function instance in the network
+#'
+#' @references \url{https://www.cntk.ai/pythondocs/cntk.losses.html#cntk.losses.cross_entropy_with_softmax}
 #' @export
 loss_cross_entropy_with_softmax <- function(output_vector, target_vector,
 											axis = -1, name = '') {

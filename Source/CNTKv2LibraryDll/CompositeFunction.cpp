@@ -707,7 +707,7 @@ namespace CNTK
                 case PrimitiveOpType::Slice:
                 {
                     std::vector<Axis> axis;
-                    std::vector<int> beginIndex, endIndex;
+                    std::vector<int> beginIndex, endIndex, strides;
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
                         functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
                         functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
@@ -715,6 +715,10 @@ namespace CNTK
                         axis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
                         beginIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
                         endIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
+                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
+                            strides = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
+                        else
+                            strides.resize(axis.size(), 1);
                     }
                     else if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis) &&
                         functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
@@ -723,13 +727,17 @@ namespace CNTK
                         axis.push_back(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
                         beginIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
                         endIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
+                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStrides))
+                            strides.push_back(functionConfig[PrimitiveFunction::AttributeNameSliceStrides].Value<int>());
+                        else
+                            strides.push_back(1);
                     }
                     else
                     {
                         RuntimeError("Failed to create computation node: Slice operation with inconsistent attributes");
                     }
                     // Internal CNTK SliceNode takes 1 based axis indices instead of 0 based
-                    computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis));
+                    computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis), strides);
                     break;
                 }
                 case PrimitiveOpType::RandomSample:

@@ -127,15 +127,10 @@ class TensorOpsMixin(object):
                 s = slice(s, s+1)
 
             if isinstance(s, slice):
-                if s.step is not None and s.step != 1:
-                    # TODO: This is not hard to implement in SliceNode.
-                    raise ValueError("slicing with a step other than 1 is "
-                                     "currently not supported")
-                # implement as a CNTK slice() operation
                 begin = s.start or 0
                 end   = s.stop  or 0
                 if begin != 0 or end != 0:
-                    r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
+                    r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end, strides=s.step)
             elif isinstance(s, (tuple, list)):
                 # Select multiple elements from the same dimension. This is
                 # different from NumPy's advanced indexing, since we just go

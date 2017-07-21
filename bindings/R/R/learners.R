@@ -6,18 +6,12 @@
 #' parameter values using first order gradients. To instantiate a concrete
 #' learner, use the factory methods in this module.
 #'
-#' ****** Attributes: ******
-#'
-#' parameters - The set of parameter associated with this learner
-#'
-#' ****** Associated Functions: ******
-#'
-#' get_learning_rate(learner)
-#'
+#' @param parameters list of parameter associated with this learner
+#' @param learningRateSchedule get_learning_rate(learner)
+#' @example \dontrun{
 #' reset_learning_rate(learner, learning_rate)
-#'
 #' update_learner(learner, gradient_values, training_sample_count)
-#'
+#' }
 #'
 #' @export
 Learner <- function(parameters, learningRateSchedule) {
@@ -51,15 +45,12 @@ UnitType <- function(value) {
 #' UserLearner
 #'
 #' Base class of all user-defined learners. To implement your own learning
-#' algorithm, derive from this class and override the `update()`.
+#' algorithm, derive from this class and override the \code{update()}.
 #'
 #' Certain optimizers (such as AdaGrad) require additional storage. This can be
 #' allocated and initialized during construction.
 #'
-#' ****** Associated Functions: ******
-#'
-#' update_user_learner(learner, gradient_values, training_sample_count,
-#' sweep_end)
+#' @seealso \code{\link{update_user_learner}}
 #'
 #' @export
 UserLearner <- function(parameters, lr_schedule, as_matrix = TRUE) {
@@ -195,14 +186,30 @@ momentum_schedule <- function(momentum, epoch_size = NULL) {
 	)
 }
 
+#' Creates a Momentum SGD learner instance to learn the parameters.
+#'
+#' @param parameters list of network parameters to tune.
+#' @param lr output of \code{learning_rate_schedule}
+#' @param momentum output of \code{momentum_schdule} or \code{momentum_as_time_constant_schedule}
+#' @param unit_gain logical whether to interpret momentum as a unit-gain filter
+#' @param l1_regularization_weight double of l1 regularization
+#' @param l2_regularization_weight double of l2 regularization
+#' @param gaussian_noise_injection_std_dev double of noise injection
+#' @param gradient_clipping_threshold_per_sample double of gradient clipping threshold per sample
+#' @param gradient_clipping_with_truncation logical for gradient clipping with truncation
+#' @param use_mean_gradient logical use averaged gradient as input to learner.
+#'
+#' @references \url{https://www.cntk.ai/pythondocs/cntk.learners.html#cntk.learners.momentum_sgd}
 #' @export
 learner_momentum_sgd <- function(parameters, lr, momentum,
-						 unit_gain = cntk$default_unit_gain_value(),
-					     l1_regularization_weight = 0,
-					     l2_regularization_weight = 0,
-					     gaussian_noise_injection_std_dev = 0,
-					     gradient_clipping_threshold_per_sample = np$inf,
-					     gradient_clipping_with_truncation = TRUE) {
+                                 unit_gain = cntk$default_unit_gain_value(),
+                                 l1_regularization_weight = 0,
+                                 l2_regularization_weight = 0,
+                                 gaussian_noise_injection_std_dev = 0,
+                                 gradient_clipping_threshold_per_sample = np$inf,
+                                 gradient_clipping_with_truncation = TRUE,
+                                 use_mean_gradient = FALSE)
+{
 	cntk$learners$momentum_sgd(
 		parameters,
 		lr,
@@ -212,7 +219,8 @@ learner_momentum_sgd <- function(parameters, lr, momentum,
 		l2_regularization_weight = l2_regularization_weight,
 		gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev,
 		gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample,
-		gradient_clipping_with_truncation = gradient_clipping_with_truncation
+		gradient_clipping_with_truncation = gradient_clipping_with_truncation,
+		use_mean_gradient = use_mean_gradient
 	)
 }
 

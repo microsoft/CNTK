@@ -22,6 +22,10 @@ Base64ImageDeserializer <- function(filename, streams) {
 #'
 #' Form: `[Sequence_Id] (Sample)+` where `Sample=|Input_Name (Value )*`
 #'
+#' @param filename A string containing the path to the data location
+#' @param streams A python dictionary-like object that contains a mapping from stream names to StreamDef objects. Each StreamDef object configures an input stream.
+#' @return NULL
+#' @references See also \url{https://www.cntk.ai/pythondocs/cntk.io.html?highlight=ctfdeserializer#cntk.io.CTFDeserializer}
 #' @export
 CTFDeserializer <- function(filename, streams) {
 	cntk$io$CTFDeserializer(filename, streams)
@@ -223,15 +227,8 @@ MinibatchSource <- function(deserializers, max_samples = IO_INFINITELY_REPEAT,
 #' copied, so if you want to modify the data while being read through a
 #' MinibatchSourceFromData, please pass a copy.
 #'
-#' ****** Associated Functions: ******
 #'
-#' get_minibatch_checkpoint_state
-#'
-#' next_minibatch
-#'
-#' restore_mb_from_checkpoint
-#'
-#' mb_stream_infos
+#' @seealso \code{get_minibatch_checkpoint_state} \code{next_minibatch} \code{restore_mb_from_checkpoint} \code{mb_stream_infos}
 #'
 #' @export
 MinibatchSourceFromData <- function(data_streams,
@@ -371,6 +368,17 @@ StreamDefs <- function(...) {
 #' meanings of some configuration keys have a mild dependency on the exact
 #' deserializer, and certain keys are meaningless for certain deserializers.
 #'
+#' @param field string defining the name of the stream
+#' @param shape integer defining the dimensions of the stream
+#' @param is_sparse logical for whether the data is sparse (FALSE by default)
+#' @param transforms list of transforms to be applied to the Deserializer
+#' @param context vector of length two defining whther reading in HTK data, (only supported by `HTKFeatureDeserializer`)
+#' @param scp list of `scp` files for HTK data
+#' @param mlf list `mlf` files for HTK data
+#' @param broadcast logical for whether the streams should be broadcast to the whole sequence
+#' @param defines_mb_size logical for whether this stream defines minibatch size
+#' @return A StreamDef object containing the stream dictionary
+#' @references \url{https://www.cntk.ai/pythondocs/cntk.io.html#cntk.io.StreamDef}
 #' @export
 StreamDef <- function(field = NULL, shape = NULL, is_sparse = FALSE,
 					  transforms = NULL, context = NULL, scp = NULL, mlf = NULL,

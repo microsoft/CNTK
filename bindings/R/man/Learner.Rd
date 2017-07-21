@@ -6,23 +6,15 @@
 \usage{
 Learner(parameters, learningRateSchedule)
 }
+\arguments{
+\item{parameters}{list of parameter associated with this learner}
+
+\item{learningRateSchedule}{get_learning_rate(learner)}
+}
 \description{
 Abstraction for learning a subset of parameters of a learnable function
 using first order gradient values. For example momentum, AdaGrad, RMSProp,
 etc. are different types of learners with their own algorithms for learning
 parameter values using first order gradients. To instantiate a concrete
 learner, use the factory methods in this module.
-}
-\details{
-****** Attributes: ******
-
-parameters - The set of parameter associated with this learner
-
-****** Associated Functions: ******
-
-get_learning_rate(learner)
-
-reset_learning_rate(learner, learning_rate)
-
-update_learner(learner, gradient_values, training_sample_count)
 }

@@ -6,9 +6,17 @@
 \usage{
 CTFDeserializer(filename, streams)
 }
+\arguments{
+\item{filename}{A string containing the path to the data location}
+
+\item{streams}{A python dictionary-like object that contains a mapping from stream names to StreamDef objects. Each StreamDef object configures an input stream.}
+}
 \description{
 Configures the CNTK text-format reader that reads text-based files.
 }
 \details{
 Form: `[Sequence_Id] (Sample)+` where `Sample=|Input_Name (Value )*`
+}
+\references{
+See also \url{https://www.cntk.ai/pythondocs/cntk.io.html?highlight=ctfdeserializer#cntk.io.CTFDeserializer}
 }
