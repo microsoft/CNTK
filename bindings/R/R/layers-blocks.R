@@ -46,7 +46,7 @@ LSTM <- function(shape, cell_shape = NULL, activation = op_tanh,
 		cell_shape = to_int(cell_shape),
 		activation = activation,
 		use_peepholes = use_peepholes,
-		init = init_glorot_uniform(),
+		init = init,
 		init_bias = init_bias,
 		enable_self_stabilization = enable_self_stabilization,
 		name = name

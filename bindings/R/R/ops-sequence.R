@@ -49,12 +49,13 @@ seq_gather <- function(seq, condition, new_sequence_axis_typeinfo, name = '') {
 }
 
 #' @export
-seq_input_variable <- function(shape, needs_gradient = FALSE, is_sparse = FALSE,
+seq_input_variable <- function(shape, dtype = 'float32',
+							   needs_gradient = FALSE, is_sparse = FALSE,
 							   sequence_axis = CNTKAxis$default_dynamic_axis(),
 							   name = '') {
 	cntk$ops$sequence$input_variable(
 		to_int(shape),
-		dtype = np$float32,
+		dtype = type_map(dtype),
 		needs_gradient = needs_gradient,
 		is_sparse = is_sparse,
 		sequence_axis = sequence_axis,
@@ -142,10 +143,11 @@ seq_softmax <- function(seq, name = '') {
 }
 
 #' @export
-seq_unpack <- function(x, no_mask_output = FALSE, name = '') {
+seq_unpack <- function(x, padding_value, no_mask_output = FALSE,
+					   name = '') {
 	cntk$ops$sequence$unpack(
 		x,
-		padding_value = np$float32,
+		type_map(padding_value),
 		no_mask_output = no_mask_output,
 		name = name
 	)

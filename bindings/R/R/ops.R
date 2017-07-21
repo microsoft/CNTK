@@ -115,11 +115,11 @@ op_combine <- function(operands, name = '') {
 }
 
 #' @export
-op_constant <- function(value = NULL, shape = NULL, name = '') {
+op_constant <- function(value = NULL, shape = NULL, dtype = 'auto', name = '') {
 	cntk$ops$constant(
 		value = value,
 		shape = to_int(shape),
-		dtype = np$float32,
+		dtype = type_map(dtype),
 		name = name
 	)
 }
@@ -303,12 +303,13 @@ op_hardmax <- function(x, name = '') {
 #' @return Variable \url{https://www.cntk.ai/pythondocs/cntk.variables.html#cntk.variables.Variable}
 #' @references \url{https://www.cntk.ai/pythondocs/cntk.ops.html#cntk.ops.input_variable}
 #' @export
-op_input_variable <- function(shape, needs_gradient = FALSE, is_sparse = FALSE,
-						   	  dynamic_axes = c(get_default_batch_axis()),
-						   	  name = '') {
+op_input_variable <- function(shape, dtype = 'float32', needs_gradient = FALSE,
+							  is_sparse = FALSE,
+							  dynamic_axes = c(get_default_batch_axis()),
+							  name = '') {
 	cntk$ops$input_variable(
 		to_int(shape),
-		dtype = np$float32,
+		dtype = type_map(dtype),
 		needs_gradient = needs_gradient,
 		is_sparse = is_sparse,
 		dynamic_axes = dynamic_axes,
@@ -409,11 +410,11 @@ op_optimized_rnnstack <- function(operand, weights, hidden_size, num_layers,
 }
 
 #' @export
-op_output_variable <- function(shape, dynamic_axes, needs_gradient = TRUE,
-							   name = '') {
+op_output_variable <- function(shape, dtype, dynamic_axes,
+							   needs_gradient = TRUE, name = '') {
 	cntk$ops$output_variable(
 		to_int(shape),
-		np$float32,
+		type_map(dtype),
 		dynamic_axes,
 		needs_gradient = needs_gradient,
 		name = name
@@ -430,11 +431,12 @@ op_param_relu <- function(alpha, x, name = '') {
 }
 
 #' @export
-op_parameter <- function(shape = NULL, init = NULL, device = NULL, name = '') {
+op_parameter <- function(shape = NULL, init = NULL, dtype = "auto",
+						 device = NULL, name = '') {
 	cntk$ops$parameter(
 		shape = to_int(shape),
 		init = init,
-		dtype = np$float32,
+		dtype = type_map(dtype),
 		device = device,
 		name = name
 	)

@@ -1,8 +1,8 @@
 #' @export
-NDArrayView <- function(shape, device = NULL) {
+NDArrayView <- function(shape, dtype, device = NULL) {
 	cntk$core$NDArrayView(
 		to_int(shape),
-		data_type = np$float32,
+		type_map(dtype),
 		device = device
 	)
 }
@@ -78,20 +78,20 @@ value_create <- function(var, data, seq_starts = NULL, device = NULL,
 }
 
 #' @export
-value_one_hot <- function(batch, num_classes, device = NULL) {
+value_one_hot <- function(batch, num_classes, dtype = 'auto', device = NULL) {
 	cntk$core$Value$one_hot(
 		to_int(batch),
 		to_int(num_classes),
-		dtype = np$float32,
+		dtype = type_map(dtype),
 		device = device
 	)
 }
 
 #' @export
-value_asarray <- function(value) {
+value_asarray <- function(value, dtype = 'auto') {
 	cntk$core$asarray(
 		value,
-		dtype = np$float32
+		dtype = type_map(dtype)
 	)
 }
 

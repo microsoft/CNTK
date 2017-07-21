@@ -4,8 +4,9 @@
 \alias{op_input_variable}
 \title{Create input for network}
 \usage{
-op_input_variable(shape, needs_gradient = FALSE, is_sparse = FALSE,
-  dynamic_axes = c(get_default_batch_axis()), name = "")
+op_input_variable(shape, dtype = "float32", needs_gradient = FALSE,
+  is_sparse = FALSE, dynamic_axes = c(get_default_batch_axis()),
+  name = "")
 }
 \arguments{
 \item{shape}{integer vector for dimensions of input tensor}

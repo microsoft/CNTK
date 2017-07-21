@@ -4,7 +4,7 @@
 \alias{MinibatchSourceFromData}
 \title{MinibatchSourceFromData}
 \usage{
-MinibatchSourceFromData(data_streams, max_samples = 1844674407379551488)
+MinibatchSourceFromData(data_streams, max_samples = IO_INFINITELY_REPEAT)
 }
 \description{
 This wraps in-memory data as a CNTK MinibatchSource object (aka “reader”),

@@ -2,19 +2,19 @@
 AUTO_SELECT_SEED <- 184467440L
 
 #' @export
-rand_bernoulli <- function(shape, mean = 0.5, seed = AUTO_SELECT_SEED,
-						   name = '') {
+rand_bernoulli <- function(shape, dtype = default_override_or(np$float32),
+						   mean = 0.5, seed = AUTO_SELECT_SEED, name = '') {
 	if (seed == AUTO_SELECT_SEED) {
 		return(cntk$random$bernoulli(
 			to_int(shape),
-			dtype = np$float32,
+			dtype = type_map(dtype),
 			mean = mean,
 			name = name
 		))
 	}
 	cntk$random$bernoulli(
 		to_int(shape),
-		dtype = np$float32,
+		dtype = type_map(dtype),
 		mean = mean,
 		seed = to_int(seed),
 		name = name
@@ -45,7 +45,7 @@ rand_gumbel <- function(shape, dtype = default_override_or(np$float32), loc = 0,
 	if (seed == AUTO_SELECT_SEED) {
 		return(cntk$random$gumbel(
 			to_int(shape),
-			dtype = dtype,
+			dtype = type_map(dtype),
 			loc = loc,
 			scale = scale,
 			name = name
@@ -53,7 +53,7 @@ rand_gumbel <- function(shape, dtype = default_override_or(np$float32), loc = 0,
 	}
 	cntk$random$gumbel(
 		to_int(shape),
-		dtype = dtype,
+		dtype = type_map(dtype),
 		loc = loc,
 		scale = scale,
 		seed = to_int(seed),
@@ -88,7 +88,7 @@ rand_normal <- function(shape, dtype = default_override_or(np$float32),
 	if (seed == AUTO_SELECT_SEED) {
 		return(cntk$random$normal(
 			to_int(shape),
-			dtype = dtype,
+			dtype = type_map(dtype),
 			mean = mean,
 			scale = scale,
 			name = name
@@ -96,7 +96,7 @@ rand_normal <- function(shape, dtype = default_override_or(np$float32),
 	}
 	cntk$random$normal(
 		to_int(shape),
-		dtype = dtype,
+		dtype = type_map(dtype),
 		mean = mean,
 		scale = scale,
 		seed = to_int(seed),
@@ -131,7 +131,7 @@ rand_uniform <- function(shape, dtype = default_override_or(np$float32),
 	if (seed == AUTO_SELECT_SEED) {
 		return(cntk$random$uniform(
 			to_int(shape),
-			dtype = dtype,
+			dtype = type_map(dtype),
 			mean = mean,
 			scale = scale,
 			name = name
@@ -139,7 +139,7 @@ rand_uniform <- function(shape, dtype = default_override_or(np$float32),
 	}
 	cntk$random$uniform(
 		to_int(shape),
-		dtype = dtype,
+		dtype = type_map(dtype),
 		mean = mean,
 		scale = scale,
 		seed = to_int(seed),

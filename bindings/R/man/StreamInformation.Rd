@@ -4,7 +4,7 @@
 \alias{StreamInformation}
 \title{StreamInformation}
 \usage{
-StreamInformation(name, stream_id, storage_format, shape)
+StreamInformation(name, stream_id, storage_format, dtype, shape)
 }
 \description{
 Stream information container that is used to describe streams when

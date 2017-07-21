@@ -232,7 +232,7 @@ MinibatchSource <- function(deserializers, max_samples = IO_INFINITELY_REPEAT,
 #'
 #' @export
 MinibatchSourceFromData <- function(data_streams,
-									max_samples = 1844674407379551615) {
+									max_samples = IO_INFINITELY_REPEAT) {
 	# use default if not provided (R cannot store as int)
 	if (max_samples == max_samples) {
 		return(cntk$io$MinibatchSourceFromData(
@@ -402,12 +402,12 @@ StreamDef <- function(field = NULL, shape = NULL, is_sparse = FALSE,
 #' implementing custom minibatch source through UserMinibatchSource.
 #'
 #' @export
-StreamInformation <- function(name, stream_id, storage_format, shape) {
+StreamInformation <- function(name, stream_id, storage_format, dtype, shape) {
 	cntk$io$StreamInformation(
 		name,
 		to_int(stream_id),
 		storage_format,
-		np$float32,
+		type_map(dtype),
 		to_int(shape)
 	)
 }
