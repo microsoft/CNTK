@@ -37,6 +37,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             randomizedChunkIndices.push_back(i);
         }
 
+#define RandomSeed
+#ifdef RandomSeed
+        fprintf(stderr, "Overlap reader.\n");
+        seed = std::random_device()();
+#endif
+
         m_rng.seed(seed);
         RandomShuffleMT(randomizedChunkIndices, m_rng);
 
