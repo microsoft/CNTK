@@ -25,8 +25,8 @@ def make_agent(agent_config, o_space, a_space):
         a_space: action space, limits to gym.spaces.discrete.Discrete.
 
     Returns:
-        agent (object): QLearning, ActorCritic, TabularQLearning, or
-            RandomAgent.
+        subclass inherited from :class:`.agent.AgentBaseClass`: QLearning,
+            ActorCritic, TabularQLearning, or RandomAgent.
     """
     config = configparser.ConfigParser()
     config.read(agent_config)
