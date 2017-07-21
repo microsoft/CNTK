@@ -104,6 +104,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionType = L"randomDistributionType";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionArgs = L"randomDistributionArgs";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSpatialScale = L"spatialScale";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStrides = L"sliceStrides";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStridesVec = L"sliceStridesVec";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -476,7 +478,7 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
 
                             std::vector<Axis> axis;
-                            std::vector<int> beginIndex, endIndex; 
+                            std::vector<int> beginIndex, endIndex, strides; 
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
@@ -487,6 +489,10 @@ namespace CNTK
 
                                 beginIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
                                 endIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
+                                if (m_attributes.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
+                                    strides = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
+                                else
+                                    strides.resize(axis.size(), 1);
                             }
                             else if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxis) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
@@ -495,6 +501,10 @@ namespace CNTK
                                 axis.push_back(NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape()));
                                 beginIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
                                 endIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
+                                if (m_attributes.Contains(PrimitiveFunction::AttributeNameSliceStrides))
+                                    strides.push_back(m_attributes[PrimitiveFunction::AttributeNameSliceStrides].Value<int>());
+                                else
+                                    strides.push_back(1);
                             }
                             else
                             {
@@ -527,7 +537,7 @@ namespace CNTK
                                 if ((((sliceAxisDim != NDShape::FreeDimension) && (sliceAxisDim != NDShape::InferredDimension)) || (((beginIndex[i] >= 0) && (endIndex[i] > 0)) || ((beginIndex[i] < 0) && (endIndex[i] <= 0)))) &&
                                     ((ax.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim)))
                                 {
-                                    outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex);
+                                    outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex, strides[i]);
                                 }
                             }
                             outputShape = AsNDShape(outputTensorShape, /*allowNonFlattenableTensorShapes = */ true);
