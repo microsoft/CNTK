@@ -6,6 +6,9 @@
 \usage{
 restore_mb_from_checkpoint(mb_source, checkpoint)
 }
+\arguments{
+\item{checkpoint}{}
+}
 \description{
 Sets the state of the checkpoint.
 }

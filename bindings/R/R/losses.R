@@ -1,3 +1,8 @@
+#' @param output
+#'
+#' @param target
+#' @param name
+#'
 #' @export
 loss_binary_cross_entropy <- function(output, target, name = '') {
 	cntk$losses$binary_cross_entropy(
@@ -7,6 +12,11 @@ loss_binary_cross_entropy <- function(output, target, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param y
+#' @param name
+#'
 #' @export
 loss_cosine_distance <- function(x, y, name = '') {
 	cntk$losses$cosine_distance(
@@ -16,6 +26,13 @@ loss_cosine_distance <- function(x, y, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param y
+#' @param shift
+#' @param num_negative_samples
+#' @param name
+#'
 #' @export
 loss_cosine_distance_negative_samples <- function(x, y, shift,
 												  num_negative_samples,
@@ -54,6 +71,12 @@ loss_cross_entropy_with_softmax <- function(output_vector, target_vector,
 	)
 }
 
+#' @param output
+#'
+#' @param gain
+#' @param group
+#' @param name
+#'
 #' @export
 loss_lambda_rank <- function(output, gain, group, name = '') {
 	cntk$losses$lambda_rank(
@@ -64,6 +87,11 @@ loss_lambda_rank <- function(output, gain, group, name = '') {
 	)
 }
 
+#' @param output
+#'
+#' @param target
+#' @param name
+#'
 #' @export
 loss_squared_error <- function(output, target, name = '') {
 	cntk$losses$squared_error(
@@ -73,6 +101,12 @@ loss_squared_error <- function(output, target, name = '') {
 	)
 }
 
+#' @param output
+#'
+#' @param target
+#' @param weight
+#' @param name
+#'
 #' @export
 loss_weighted_binary_cross_entropy <- function(output, target, weight,
 											   name = '') {

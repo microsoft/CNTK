@@ -9,6 +9,9 @@ ConvolutionTranspose2D(filter_shape, num_filters = NULL,
   pad = FALSE, strides = 1, bias = TRUE, init_bias = 0,
   output_shape = NULL, name = "")
 }
+\arguments{
+\item{name}{string for the name of the function instance in the network}
+}
 \description{
 Layer factory function to create a 2D convolution transpose layer with
 optional non-linearity. Same as ConvolutionTranspose() except that

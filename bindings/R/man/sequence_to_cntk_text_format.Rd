@@ -6,6 +6,9 @@
 \usage{
 sequence_to_cntk_text_format(seq_inx, alias_tensor_map)
 }
+\arguments{
+\item{alias_tensor_map}{}
+}
 \description{
 Converts a list of NumPy arrays representing tensors of inputs into a format
 that is readable by CTFDeserializer.

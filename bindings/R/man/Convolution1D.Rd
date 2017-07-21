@@ -9,6 +9,9 @@ Convolution1D(filter_shape, num_filters = NULL,
   pad = FALSE, strides = 1, bias = TRUE, init_bias = 0,
   reduction_rank = 1, name = "")
 }
+\arguments{
+\item{name}{string for the name of the function instance in the network}
+}
 \description{
 Layer factory function to create a 1D convolution layer with optional
 non-linearity. Same as Convolution() except that filter_shape is verified to

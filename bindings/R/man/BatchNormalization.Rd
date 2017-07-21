@@ -8,6 +8,9 @@ BatchNormalization(map_rank = NULL, init_scale = 1,
   normalization_time_constant = 5000, blend_time_constant = 0,
   epsilon = 1e-05, use_cntk_engine = FALSE, name = "")
 }
+\arguments{
+\item{name}{string for the name of the function instance in the network}
+}
 \description{
 Layer factory function to create an average-pooling layer.
 }

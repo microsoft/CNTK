@@ -13,7 +13,7 @@ MaxPooling(filter_shape, strides = 1, pad = FALSE, name = "")
 
 \item{pad}{logical for whether or not the pooling operation should be shifted over the "valid" area of input}
 
-\item{name}{string for name of the function instance in the network}
+\item{name}{string for the name of the function instance in the network}
 }
 \description{
 Layer factory function to create a max-pooling layer.

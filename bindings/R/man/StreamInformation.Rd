@@ -6,6 +6,9 @@
 \usage{
 StreamInformation(name, stream_id, storage_format, dtype, shape)
 }
+\arguments{
+\item{shape}{}
+}
 \description{
 Stream information container that is used to describe streams when
 implementing custom minibatch source through UserMinibatchSource.

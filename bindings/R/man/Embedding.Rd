@@ -7,6 +7,9 @@
 Embedding(shape = NULL, init = init_glorot_uniform(), weights = NULL,
   name = "")
 }
+\arguments{
+\item{name}{string for the name of the function instance in the network}
+}
 \description{
 Layer factory function to create a embedding layer.
 }

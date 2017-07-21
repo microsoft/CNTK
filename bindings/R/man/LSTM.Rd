@@ -8,6 +8,9 @@ LSTM(shape, cell_shape = NULL, activation = op_tanh,
   use_peepholes = FALSE, init = init_glorot_uniform(), init_bias = 0,
   enable_self_stabilization = FALSE, name = "")
 }
+\arguments{
+\item{name}{}
+}
 \description{
 Layer factory function to create an LSTM block for use inside a recurrence.
 The LSTM block implements one step of the recurrence and is stateless. It

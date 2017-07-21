@@ -6,6 +6,9 @@
 \usage{
 mb_stream_infos(mb_source)
 }
+\arguments{
+\item{mb_source}{}
+}
 \description{
 Function to be implemented by the user.
 }

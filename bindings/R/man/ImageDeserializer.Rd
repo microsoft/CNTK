@@ -6,6 +6,9 @@
 \usage{
 ImageDeserializer(filename, streams)
 }
+\arguments{
+\item{streams}{}
+}
 \description{
 Configures the image reader that reads images and corresponding labels from
 a file.

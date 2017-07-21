@@ -10,6 +10,9 @@ Convolution(filter_shape, num_filters = NULL, sequential = FALSE,
   init_bias = 0, reduction_rank = 1, transpose_weight = FALSE,
   max_temp_mem_size_in_samples = 0, op_name = "Convolution", name = "")
 }
+\arguments{
+\item{name}{string for the name of the function instance in the network}
+}
 \description{
 Layer factory function to create a convolution layer.
 }

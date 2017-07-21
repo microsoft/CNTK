@@ -6,6 +6,9 @@
 \usage{
 GlobalAveragePooling(name = "")
 }
+\arguments{
+\item{name}{string for the name of the function instance in the network}
+}
 \description{
 Layer factory function to create a global average-pooling layer.
 }

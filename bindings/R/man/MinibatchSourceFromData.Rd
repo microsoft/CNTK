@@ -6,6 +6,9 @@
 \usage{
 MinibatchSourceFromData(data_streams, max_samples = IO_INFINITELY_REPEAT)
 }
+\arguments{
+\item{max_samples}{}
+}
 \description{
 This wraps in-memory data as a CNTK MinibatchSource object (aka “reader”),
 used to feed the data into a TrainingSession.

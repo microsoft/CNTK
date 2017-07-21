@@ -6,6 +6,9 @@
 \usage{
 mb_stream_info(mb_source, name)
 }
+\arguments{
+\item{name}{}
+}
 \description{
 Gets the description of the stream with given name. Throws an exception if
 there are none or multiple streams with this same name.

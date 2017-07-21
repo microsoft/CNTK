@@ -8,6 +8,9 @@ GRU(shape, cell_shape = NULL, activation = op_tanh,
   init = init_glorot_uniform(), init_bias = 0,
   enable_self_stabilization = FALSE, name = "")
 }
+\arguments{
+\item{name}{}
+}
 \description{
 Layer factory function to create a GRU block for use inside a recurrence.
 The GRU block implements one step of the recurrence and is stateless. It

@@ -7,6 +7,9 @@
 LayerNormalization(initial_scale = 1, initial_bias = 0, epsilon = 1e-05,
   name = "")
 }
+\arguments{
+\item{name}{string for the name of the function instance in the network}
+}
 \description{
 Layer factory function to create a function that implements layer
 normalization.

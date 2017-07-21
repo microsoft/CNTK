@@ -6,6 +6,9 @@
 \usage{
 Stabilizer(steepness = 4, enable_self_stabilization = TRUE, name = "")
 }
+\arguments{
+\item{name}{}
+}
 \description{
 Layer factory function to create a Droppo self-stabilizer. It multiplies its
 input with a scalar that is learned.  This takes enable_self_stabilization

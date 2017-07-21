@@ -1,15 +1,21 @@
 train <- reticulate::import("cntk.train.distributed")
 
+#' @param ...
+#'
 #' @export
 Communicator <- function(...) {
 	cntk$train$distributed$Communicator(...)
 }
 
+#' @param communicator
+#'
 #' @export
 comm_barrier <- function(communicator) {
 	communicator$barrier()
 }
 
+#' @param communicator
+#'
 #' @export
 comm_current_worker <- function(communicator) {
 	communicator$current_worker()
@@ -20,6 +26,8 @@ comm_finalize <- function() {
 	cntk$train$distributed$Communicator$finalize()
 }
 
+#' @param communicator
+#'
 #' @export
 comm_is_main <- function(communicator) {
 	communicator$is_main()
@@ -35,16 +43,22 @@ comm_rank <- function() {
 	cntk$train$distributed$Communicator$rank()
 }
 
+#' @param communicator
+#'
 #' @export
 comm_workers <- function(communicator) {
 	communicator$workers()
 }
 
+#' @param ...
+#'
 #' @export
 DistributedLearner <- function(...) {
 	cntk$train$distributed$DistributedLearner(...)
 }
 
+#' @param distributed_learner
+#'
 #' @export
 get_communicator <- function(distributed_learner) {
 	distributed_learner$communicator()
@@ -55,6 +69,15 @@ WorkerDescriptor <- function() {
 	cntk$train$distributed$WorkerDescriptor()
 }
 
+#' @param learner
+#'
+#' @param block_size
+#' @param block_momentum_as_time_constant
+#' @param use_nestrov_momentum
+#' @param reset_sgd_momentum_after_aggregation
+#' @param block_learning_rate
+#' @param distributed_after
+#'
 #' @export
 block_momentum_distributed_learner <- function(learner, block_size,
 											   block_momentum_as_time_constant = NULL,
@@ -73,6 +96,12 @@ block_momentum_distributed_learner <- function(learner, block_size,
 	)
 }
 
+#' @param learner
+#'
+#' @param distributed_after
+#' @param num_quantization_bits
+#' @param async_parameter_update
+#'
 #' @export
 data_parallel_distributed_learner <- function(learner, distributed_after = 0,
 											  num_quantization_bits = 32,

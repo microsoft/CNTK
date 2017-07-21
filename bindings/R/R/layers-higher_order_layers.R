@@ -1,8 +1,17 @@
+#' @param range
+#'
+#' @param constructor
+#' @param name
+#'
 #' @export
 For <- function(range, constructor, name = '') {
 	cntk$layers$For(range, constructor, name = name)
 }
 
+#' @param f
+#'
+#' @param name
+#'
 #' @export
 ResNetBlock <- function(f, name = '') {
 	cntk$layers$ResNetBlock(f, name = name)
@@ -20,6 +29,10 @@ Sequential <- function(...) {
 	cntk$layers$Sequential(c(...))
 }
 
+#' @param ...
+#'
+#' @param name
+#'
 #' @export
 SequentialClique <- function(..., name="") {
 	cntk$layers$SequentialClique(c(...), name = name)

@@ -1,3 +1,12 @@
+#' @param attention_dim
+#'
+#' @param attention_span
+#' @param attention_axis
+#' @param init
+#' @param go_backwards
+#' @param enable_self_stabilization
+#' @param name
+#'
 #' @export
 AttentionModel <- function(attention_dim, attention_span = NULL,
 						   attention_axis = NULL, init = init_glorot_uniform(),

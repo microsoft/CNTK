@@ -6,6 +6,9 @@
 \usage{
 mb_as_sequences(minibatch_data, variable = NULL)
 }
+\arguments{
+\item{variable}{}
+}
 \value{
 a list of matrices if dense, otherwise a SciPy CSR array
 }

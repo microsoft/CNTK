@@ -21,7 +21,7 @@ pooling will be #' applied to all input positions, and positions outside the
 valid region will #' be excluded from the averaging. Use a tuple to specify
 a per-axis value.}
 
-\item{name}{(str, defaults to '') – the name of the function instance in the
+\item{name}{string for the name of the function instance in the network
 network}
 }
 \value{

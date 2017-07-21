@@ -1,3 +1,5 @@
+#' @param keep
+#'
 #' @export
 activation_identity <- function(keep) {
     cntk$layers$identity(keep)
@@ -13,7 +15,7 @@ activation_identity <- function(keep) {
 #'
 #' @param activation (defaults to \code{activation_identity}) – function to apply
 #' at the end, e.g. \code{op_relu}
-#' @param name (str, defaults to '') – the name of the function instance in
+#' @param name string for the name of the function instance in the network
 #' the network
 #' @return A function that accepts one argument and applies the operation to it
 #'
@@ -58,7 +60,7 @@ Activation <- function(activation = activation_identity, name = '') {
 #' pooling will be #' applied to all input positions, and positions outside the
 #' valid region will #' be excluded from the averaging. Use a tuple to specify
 #' a per-axis value.
-#' @param name (str, defaults to '') – the name of the function instance in the
+#' @param name string for the name of the function instance in the network
 #' network
 #' @return A function that accepts one argument and applies the average-pooling
 #' operation to it
@@ -89,6 +91,14 @@ AveragePooling <- function(filter_shape, strides = 1, pad = FALSE, name = '') {
 #' The size (spatial extent) of the receptive field is given by filter_shape.
 #' E.g. for 2D pooling, filter_shape should be a tuple of two integers, such as
 #' (5,5).
+#'
+#' @param map_rank
+#' @param init_scale
+#' @param normalization_time_constant
+#' @param blend_time_constant
+#' @param epsilon
+#' @param use_cntk_engine
+#' @param name string for the name of the function instance in the network
 #'
 #' @export
 BatchNormalization <- function(map_rank = NULL, init_scale = 1,
@@ -146,6 +156,22 @@ BatchNormalization <- function(map_rank = NULL, init_scale = 1,
 #' exposes them as an attributes .W and .b. The weights will have the shape
 #' (num_filters, input_feature_map_depth, *filter_shape)
 #'
+#' @param filter_shape
+#' @param num_filters
+#' @param sequential
+#' @param activation
+#' @param init
+#' @param pad
+#' @param strides
+#' @param sharing
+#' @param bias
+#' @param init_bias
+#' @param reduction_rank
+#' @param transpose_weight
+#' @param max_temp_mem_size_in_samples
+#' @param op_name
+#' @param name string for the name of the function instance in the network
+#'
 #' @export
 Convolution <- function(filter_shape, num_filters = NULL, sequential = FALSE,
 						activation = activation_identity,
@@ -177,6 +203,17 @@ Convolution <- function(filter_shape, num_filters = NULL, sequential = FALSE,
 #' Layer factory function to create a 1D convolution layer with optional
 #' non-linearity. Same as Convolution() except that filter_shape is verified to
 #' be 1-dimensional. See Convolution() for extensive documentation.
+#'
+#' @param filter_shape
+#' @param num_filters
+#' @param activation
+#' @param init
+#' @param pad
+#' @param strides
+#' @param bias
+#' @param init_bias
+#' @param reduction_rank
+#' @param name string for the name of the function instance in the network
 #'
 #' @export
 Convolution1D <- function(filter_shape, num_filters = NULL,
@@ -242,6 +279,17 @@ Convolution2D <- function(filter_shape, num_filters = NULL,
 #' non-linearity. Same as Convolution() except that filter_shape is verified to
 #' be 3-dimensional. See Convolution() for extensive documentation.
 #'
+#' @param filter_shape
+#' @param num_filters
+#' @param activation
+#' @param init
+#' @param pad
+#' @param strides
+#' @param bias
+#' @param init_bias
+#' @param reduction_rank
+#' @param name string for the name of the function instance in the network
+#'
 #' @export
 Convolution3D <- function(filter_shape, num_filters = NULL,
 						  activation = activation_identity,
@@ -299,6 +347,20 @@ Convolution3D <- function(filter_shape, num_filters = NULL,
 #' and exposes them as an attributes .W and .b. The weights will have the shape
 #' (input_feature_map_depth, num_filters, *filter_shape).
 #'
+#' @param filter_shape
+#' @param num_filters
+#' @param activation
+#' @param init
+#' @param pad
+#' @param strides
+#' @param sharing
+#' @param bias
+#' @param init_bias
+#' @param output_shape
+#' @param max_temp_mem_size_in_samples
+#' @param reduction_rank
+#' @param name string for the name of the function instance in the network
+#'
 #' @export
 ConvolutionTranspose <- function(filter_shape, num_filters = NULL,
 							     activation = activation_identity,
@@ -331,6 +393,17 @@ ConvolutionTranspose <- function(filter_shape, num_filters = NULL,
 #' filter_shape is verified to be 1-dimensional. See ConvolutionTranspose() for
 #' extensive documentation.
 #'
+#' @param filter_shape
+#' @param num_filters
+#' @param activation
+#' @param init
+#' @param pad
+#' @param strides
+#' @param bias
+#' @param init_bias
+#' @param output_shape
+#' @param name string for the name of the function instance in the network
+#'
 #' @export
 ConvolutionTranspose1D <- function(filter_shape, num_filters = NULL,
 							       activation = activation_identity,
@@ -358,6 +431,17 @@ ConvolutionTranspose1D <- function(filter_shape, num_filters = NULL,
 #' filter_shape is verified to be 2-dimensional. See ConvolutionTranspose() for
 #' extensive documentation.
 #'
+#' @param filter_shape
+#' @param num_filters
+#' @param activation
+#' @param init
+#' @param pad
+#' @param strides
+#' @param bias
+#' @param init_bias
+#' @param output_shape
+#' @param name string for the name of the function instance in the network
+#'
 #' @export
 ConvolutionTranspose2D <- function(filter_shape, num_filters = NULL,
 							       activation = activation_identity,
@@ -384,6 +468,17 @@ ConvolutionTranspose2D <- function(filter_shape, num_filters = NULL,
 #' optional non-linearity. Same as ConvolutionTranspose() except that
 #' filter_shape is verified to be 3-dimensional. See ConvolutionTranspose() for
 #' extensive documentation.
+#'
+#' @param filter_shape
+#' @param num_filters
+#' @param activation
+#' @param init
+#' @param pad
+#' @param strides
+#' @param bias
+#' @param init_bias
+#' @param output_shape
+#' @param name string for the name of the function instance in the network
 #'
 #' @export
 ConvolutionTranspose3D <- function(filter_shape, num_filters = NULL,
@@ -427,6 +522,15 @@ ConvolutionTranspose3D <- function(filter_shape, num_filters = NULL,
 #' neither is specified, all input dimensions are projected, as in the example
 #' above.
 #'
+#' @param shape
+#' @param activation
+#' @param init
+#' @param input_rank
+#' @param map_rank
+#' @param bias
+#' @param init_bias
+#' @param name string for the name of the function instance in the network
+#'
 #' @export
 Dense <- function(shape, activation = activation_identity,
 				  init = init_glorot_uniform(), input_rank = NULL,
@@ -455,6 +559,11 @@ Dense <- function(shape, activation = activation_identity,
 #' The dropout operation is only applied during training. During testing, this
 #' is a no-op. To make sure that this leads to correct results, the dropout
 #' operation in training multiplies the result by (1/(1-dropout_rate)).
+#'
+#' @param dropout_rate
+#' @param keep_prob
+#' @param seed
+#' @param name string for the name of the function instance in the network
 #'
 #' @export
 Dropout <- function(dropout_rate = NULL, keep_prob = NULL, seed = NULL,
@@ -500,6 +609,11 @@ Dropout <- function(dropout_rate = NULL, keep_prob = NULL, seed = NULL,
 #' An Embedding instance owns its weight parameter tensor E, and exposes it as
 #' an attribute .E.
 #'
+#' @param shape
+#' @param init
+#' @param weights
+#' @param name string for the name of the function instance in the network
+#'
 #' @export
 Embedding <- function(shape = NULL,
 					  init = init_glorot_uniform(), weights = NULL, name = '') {
@@ -520,6 +634,8 @@ Embedding <- function(shape = NULL,
 #'
 #' This operation is the same as applying reduce_mean() to all grid dimensions.
 #'
+#' @param name string for the name of the function instance in the network
+#'
 #' @export
 GlobalAveragePooling <- function(name = '') {
 	cntk$layers$GlobalAveragePooling(name = name)
@@ -534,6 +650,8 @@ GlobalAveragePooling <- function(name = '') {
 #'
 #' This operation is the same as applying reduce_max() to all grid dimensions.
 #'
+#' @param name string for the name of the function instance in the network
+#'
 #' @export
 GlobalMaxPooling <- function(name = '') {
 	cntk$layers$GlobalMaxPooling(name = name)
@@ -543,6 +661,8 @@ GlobalMaxPooling <- function(name = '') {
 #'
 #' Layer factory function to create a dummy layer with a given name. This can be
 #' used to access an intermediate value flowing through computation.
+#'
+#' @param name string for the name of the function instance in the network
 #'
 #' @export
 Label <- function(name) {
@@ -557,6 +677,11 @@ Label <- function(name) {
 #' Layer normalization applies this formula to every input element
 #' (element-wise): y = (x - mean(x)) / (stddev(x) + epsilon) * scale + bias
 #' where scale and bias are learned scalar parameters.
+#'
+#' @param initial_scale
+#' @param initial_bias
+#' @param epsilon
+#' @param name string for the name of the function instance in the network
 #'
 #' @export
 LayerNormalization <- function(initial_scale = 1, initial_bias = 0,
@@ -576,10 +701,11 @@ LayerNormalization <- function(initial_scale = 1, initial_bias = 0,
 #' Like \code{Convolution()}, \code{MaxPooling()} processes items arranged on an N-dimensional grid, such as an image.
 #' Typically, each item is a vector. For each item, max-pooling computes the element-wise maximum over a window ("receptive field") of items surrounding the item’s position on the grid.
 #' The size (spatial extent) of the receptive field is given by \code{filter_shape.} E.g. for 2D pooling, filter_shape should be a tuple of two integers, such as (5,5).
+#'
 #' @param filter_shape integer vector defining receptive field
 #' @param strides integer defining length of stride
 #' @param pad logical for whether or not the pooling operation should be shifted over the "valid" area of input
-#' @param name string for name of the function instance in the network
+#' @param name string for the name of the function instance in the network
 #'
 #' @export
 MaxPooling <- function(filter_shape, strides = 1, pad = FALSE, name = '') {
@@ -591,6 +717,12 @@ MaxPooling <- function(filter_shape, strides = 1, pad = FALSE, name = '') {
 	)
 }
 
+#' @param filter_shape
+#'
+#' @param strides
+#' @param pad
+#' @param name string for the name of the function instance in the network
+#'
 #' @export
 MaxUnpooling <- function(filter_shape, strides = 1, pad = FALSE, name = '') {
 	cntk$layers$MaxUnpooling(

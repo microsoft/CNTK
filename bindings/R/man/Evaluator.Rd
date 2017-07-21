@@ -6,6 +6,9 @@
 \usage{
 Evaluator(eval_function, progress_writers = NULL)
 }
+\arguments{
+\item{progress_writers}{}
+}
 \description{
 Class for evaluation of minibatches against the specified evaluation
 function.

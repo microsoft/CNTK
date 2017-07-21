@@ -7,6 +7,9 @@
 printer_on_write_training_summary(printer, samples, updates, summaries,
   aggregate_loss, aggregate_metric, elapsed_milliseconds)
 }
+\arguments{
+\item{elapsed_milliseconds}{}
+}
 \description{
 any writer
 }

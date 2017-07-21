@@ -7,16 +7,29 @@ IO_MAX_POOLING <- 0L
 #' @export
 IO_MAX_UNPOOLING <- 0L
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_abs <- function(x, name = '') {
 	cntk$ops$abs(x, name = name)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_alias <- function(x, name = '') {
 	cntk$ops$alias(x, name = name)
 }
 
+#' @param x
+#'
+#' @param axis
+#' @param name
+#'
 #' @export
 op_argmax <- function(x, axis = NULL, name = '') {
 	cntk$ops$argmax(
@@ -26,6 +39,11 @@ op_argmax <- function(x, axis = NULL, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param axis
+#' @param name
+#'
 #' @export
 op_argmin <- function(x, axis = NULL, name = '') {
 	cntk$ops$argmin(
@@ -35,6 +53,12 @@ op_argmin <- function(x, axis = NULL, name = '') {
 	)
 }
 
+#' @param composite
+#'
+#' @param block_arguments_map
+#' @param block_op_name
+#' @param block_instance_name
+#'
 #' @export
 as_block <- function(composite, block_arguments_map, block_op_name,
 					 block_instance_name = '') {
@@ -46,6 +70,10 @@ as_block <- function(composite, block_arguments_map, block_op_name,
 	)
 }
 
+#' @param root_function
+#'
+#' @param name
+#'
 #' @export
 as_composite <- function(root_function, name = '') {
 	cntk$ops$as_composite(
@@ -54,6 +82,11 @@ as_composite <- function(root_function, name = '') {
 	)
 }
 
+#' @param ref
+#'
+#' @param input
+#' @param name
+#'
 #' @export
 op_assign <- function(ref, input, name = '') {
 	cntk$ops$assign(
@@ -63,11 +96,27 @@ op_assign <- function(ref, input, name = '') {
 	)
 }
 
+#' @param f
+#'
 #' @export
 op_associative_multi_arg <- function(f) {
 	cntk$ops$associative_multi_arg(f)
 }
 
+#' @param operand
+#'
+#' @param scale
+#' @param bias
+#' @param running_mean
+#' @param running_inv_std
+#' @param spatial
+#' @param normalization_time_constant
+#' @param blent_time_constant
+#' @param epsilon
+#' @param use_cudnn_engine
+#' @param name
+#' @param running_count
+#'
 #' @export
 op_batch_normalization <- function(operand, scale, bias, running_mean,
 								   running_inv_std, spatial,
@@ -91,11 +140,21 @@ op_batch_normalization <- function(operand, scale, bias, running_mean,
 	)
 }
 
+#' @param arg
+#'
+#' @param name
+#'
 #' @export
 op_ceil <- function(arg, name = '') {
 	cntk$ops$ceil(arg, name = name)
 }
 
+#' @param x
+#'
+#' @param min_value
+#' @param max_value
+#' @param name
+#'
 #' @export
 op_clip <- function(x, min_value, max_value, name = '') {
 	cntk$ops$clip(
@@ -106,6 +165,10 @@ op_clip <- function(x, min_value, max_value, name = '') {
 	)
 }
 
+#' @param operands
+#'
+#' @param name
+#'
 #' @export
 op_combine <- function(operands, name = '') {
 	cntk$ops$combine(
@@ -114,6 +177,12 @@ op_combine <- function(operands, name = '') {
 	)
 }
 
+#' @param value
+#'
+#' @param shape
+#' @param dtype
+#' @param name
+#'
 #' @export
 op_constant <- function(value = NULL, shape = NULL, dtype = 'auto', name = '') {
 	cntk$ops$constant(
@@ -124,6 +193,15 @@ op_constant <- function(value = NULL, shape = NULL, dtype = 'auto', name = '') {
 	)
 }
 
+#' @param convolution_map
+#'
+#' @param operand
+#' @param strides
+#' @param sharing
+#' @param auto_padding
+#' @param max_temp_mem_size_in_samples
+#' @param name
+#'
 #' @export
 op_convolution <- function(convolution_map, operand, strides = c(1),
 						   sharing = c(TRUE), auto_padding = c(TRUE),
@@ -139,6 +217,16 @@ op_convolution <- function(convolution_map, operand, strides = c(1),
 	)
 }
 
+#' @param convolution_map
+#'
+#' @param operand
+#' @param strides
+#' @param sharing
+#' @param auto_padding
+#' @param output_shape
+#' @param max_temp_mem_size_in_samples
+#' @param name
+#'
 #' @export
 op_convolution_transpose <- function(convolution_map, operand, strides = c(1),
 						             sharing = c(TRUE), auto_padding = c(TRUE),
@@ -157,11 +245,21 @@ op_convolution_transpose <- function(convolution_map, operand, strides = c(1),
 	)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_cos <- function(x, name = '') {
 	cntk$ops$cos(x, name = name)
 }
 
+#' @param x
+#'
+#' @param dropout_rate
+#' @param seed
+#' @param name
+#'
 #' @export
 op_dropout <- function(x, dropout_rate = 0, seed = 4294967293, name = '') {
 	cntk$ops$dropout(
@@ -172,6 +270,11 @@ op_dropout <- function(x, dropout_rate = 0, seed = 4294967293, name = '') {
 	)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_element_divide <- function(left, right, name = '') {
 	cntk$ops$element_divide(
@@ -181,6 +284,11 @@ op_element_divide <- function(left, right, name = '') {
 	)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_element_max <- function(left, right, name = '') {
 	cntk$ops$element_max(
@@ -190,6 +298,11 @@ op_element_max <- function(left, right, name = '') {
 	)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_element_min <- function(left, right, name = '') {
 	cntk$ops$element_min(
@@ -199,6 +312,12 @@ op_element_min <- function(left, right, name = '') {
 	)
 }
 
+#' @param flag
+#'
+#' @param value_if_true
+#' @param value_if_false
+#' @param name
+#'
 #' @export
 op_element_select <- function(flag, value_if_true, value_if_false, name = '') {
 	cntk$ops$element_select(
@@ -209,6 +328,11 @@ op_element_select <- function(flag, value_if_true, value_if_false, name = '') {
 	)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_element_times <- function(left, right, name = '') {
 	cntk$ops$element_times(
@@ -218,6 +342,11 @@ op_element_times <- function(left, right, name = '') {
 	)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_elu <- function(left, right, name = '') {
 	cntk$ops$elu(
@@ -227,6 +356,11 @@ op_elu <- function(left, right, name = '') {
 	)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_equal <- function(left, right, name = '') {
 	cntk$ops$equal(
@@ -236,16 +370,31 @@ op_equal <- function(left, right, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_exp <- function(x, name = '') {
 	cntk$ops$exp(x, name = name)
 }
 
+#' @param arg
+#'
+#' @param name
+#'
 #' @export
 op_floor <- function(arg, name = '') {
 	cntk$ops$floor(arg, name = name)
 }
 
+#' @param graph
+#'
+#' @param features
+#' @param blank_token_id
+#' @param delay_constraint
+#' @param name
+#'
 #' @export
 op_forward_backward <- function(graph, features, blank_token_id,
 								delay_constraint = -1, name = '') {
@@ -258,6 +407,10 @@ op_forward_backward <- function(graph, features, blank_token_id,
 	)
 }
 
+#' @param reference
+#'
+#' @param indices
+#'
 #' @export
 op_gather <- function(reference, indices) {
 	cntk$ops$gather(
@@ -266,6 +419,11 @@ op_gather <- function(reference, indices) {
 	)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_greater <- function(left, right, name = '') {
 	cntk$ops$greater(
@@ -276,6 +434,11 @@ op_greater <- function(left, right, name = '') {
 }
 
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_greater_equal <- function(left, right, name = '') {
 	cntk$ops$greater_equal(
@@ -285,6 +448,10 @@ op_greater_equal <- function(left, right, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_hardmax <- function(x, name = '') {
 	cntk$ops$hardmax(x, name = name)
@@ -317,16 +484,29 @@ op_input_variable <- function(shape, dtype = 'float32', needs_gradient = FALSE,
 	)
 }
 
+#' @param labels
+#'
+#' @param name
+#'
 #' @export
 op_labels_to_graph <- function(labels, name = '') {
 	cntk$ops$labels_to_graph(labels, name = name)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_leaky_relu <- function(x, name = '') {
 	cntk$ops$leaky_relu(x, name = name)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_less <- function(left, right, name = '') {
 	cntk$ops$less(
@@ -336,6 +516,11 @@ op_less <- function(left, right, name = '') {
 	)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_less_equal <- function(left, right, name = '') {
 	cntk$ops$less_equal(
@@ -345,11 +530,20 @@ op_less_equal <- function(left, right, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_log <- function(x, name = '') {
 	cntk$ops$log(x, name = name)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_log_add_exp <- function(left, right, name = '') {
 	cntk$ops$log_add_exp(
@@ -359,6 +553,11 @@ op_log_add_exp <- function(left, right, name = '') {
 	)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_minus <- function(left, right, name = '') {
 	cntk$ops$minus(
@@ -368,11 +567,20 @@ op_minus <- function(left, right, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_negate <- function(x, name = '') {
 	cntk$ops$negate(x, name = name)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_not_equal <- function(left, right, name = '') {
 	cntk$ops$not_equal(
@@ -382,6 +590,13 @@ op_not_equal <- function(left, right, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param num_classes
+#' @param sparse_output
+#' @param axis
+#' @param name
+#'
 #' @export
 op_one_hot <- function(x, num_classes, sparse_output = FALSE, axis = -1,
 					   name = '') {
@@ -394,6 +609,15 @@ op_one_hot <- function(x, num_classes, sparse_output = FALSE, axis = -1,
 	)
 }
 
+#' @param operand
+#'
+#' @param weights
+#' @param hidden_size
+#' @param num_layers
+#' @param bidirectional
+#' @param recurrent_op
+#' @param name
+#'
 #' @export
 op_optimized_rnnstack <- function(operand, weights, hidden_size, num_layers,
 								  bidirectional = FALSE, recurrent_op = 'lstm',
@@ -409,6 +633,13 @@ op_optimized_rnnstack <- function(operand, weights, hidden_size, num_layers,
 	)
 }
 
+#' @param shape
+#'
+#' @param dtype
+#' @param dynamic_axes
+#' @param needs_gradient
+#' @param name
+#'
 #' @export
 op_output_variable <- function(shape, dtype, dynamic_axes,
 							   needs_gradient = TRUE, name = '') {
@@ -421,6 +652,11 @@ op_output_variable <- function(shape, dtype, dynamic_axes,
 	)
 }
 
+#' @param alpha
+#'
+#' @param x
+#' @param name
+#'
 #' @export
 op_param_relu <- function(alpha, x, name = '') {
 	cntk$ops$param_relu(
@@ -430,6 +666,13 @@ op_param_relu <- function(alpha, x, name = '') {
 	)
 }
 
+#' @param shape
+#'
+#' @param init
+#' @param dtype
+#' @param device
+#' @param name
+#'
 #' @export
 op_parameter <- function(shape = NULL, init = NULL, dtype = "auto",
 						 device = NULL, name = '') {
@@ -442,6 +685,12 @@ op_parameter <- function(shape = NULL, init = NULL, dtype = "auto",
 	)
 }
 
+#' @param operand
+#'
+#' @param mean
+#' @param inv_stddev
+#' @param name
+#'
 #' @export
 op_dim_mean_variance_normalize <- function(operand, mean, inv_stddev,
 										   name = '') {
@@ -453,6 +702,11 @@ op_dim_mean_variance_normalize <- function(operand, mean, inv_stddev,
 	)
 }
 
+#' @param shape
+#'
+#' @param dynamic_axes
+#' @param name
+#'
 #' @export
 op_placeholder <- function(shape = NULL, dynamic_axes = NULL, name = '') {
 	cntk$ops$placeholder(
@@ -462,11 +716,26 @@ op_placeholder <- function(shape = NULL, dynamic_axes = NULL, name = '') {
 	)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_plus <- function(left, right, name = '') {
 	cntk$ops$plus(left, right, name = name)
 }
 
+#' @param operand
+#'
+#' @param pooling_type
+#' @param pooling_window_shape
+#' @param strides
+#' @param auto_padding
+#' @param ceil_out_dim
+#' @param include_pad
+#' @param name
+#'
 #' @export
 op_pooling <- function(operand, pooling_type, pooling_window_shape,
 					   strides = c(1), auto_padding = c(FALSE),
@@ -483,6 +752,11 @@ op_pooling <- function(operand, pooling_type, pooling_window_shape,
 	)
 }
 
+#' @param base
+#'
+#' @param exponent
+#' @param name
+#'
 #' @export
 op_pow <- function(base, exponent, name = '') {
 	cntk$ops$pow(
@@ -492,6 +766,13 @@ op_pow <- function(base, exponent, name = '') {
 	)
 }
 
+#' @param weights
+#'
+#' @param num_samples
+#' @param allow_duplicates
+#' @param seed
+#' @param name
+#'
 #' @export
 op_random_sample <- function(weights, num_samples, allow_duplicates,
 							 seed = 4294967293, name = '') {
@@ -504,6 +785,13 @@ op_random_sample <- function(weights, num_samples, allow_duplicates,
 	)
 }
 
+#' @param weights
+#'
+#' @param num_samples
+#' @param allow_duplicates
+#' @param seed
+#' @param name
+#'
 #' @export
 op_random_sample_inclusion_frequency <- function(weights, num_samples,
 												 allow_duplicates,
@@ -517,11 +805,20 @@ op_random_sample_inclusion_frequency <- function(weights, num_samples,
 	)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_reciprocal <- function(x, name = '') {
 	cntk$ops$reciprocal(x, name = name)
 }
 
+#' @param x
+#'
+#' @param dynamic_axes_as
+#' @param name
+#'
 #' @export
 op_reconcile_dynamic_axes <- function(x, dynamic_axes_as, name = '') {
 	cntk$ops$reconcile_dynamic_axes(
@@ -531,6 +828,11 @@ op_reconcile_dynamic_axes <- function(x, dynamic_axes_as, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param axis
+#' @param name
+#'
 #' @export
 op_reduce_log_sum_exp <- function(x, axis = NULL, name = '') {
 	cntk$ops$reduce_log_sum_exp(
@@ -540,6 +842,11 @@ op_reduce_log_sum_exp <- function(x, axis = NULL, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param axis
+#' @param name
+#'
 #' @export
 op_reduce_max <- function(x, axis = NULL, name = '') {
 	cntk$ops$reduce_max(
@@ -549,6 +856,11 @@ op_reduce_max <- function(x, axis = NULL, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param axis
+#' @param name
+#'
 #' @export
 op_reduce_mean <- function(x, axis = NULL, name = '') {
 	cntk$ops$reduce_mean(
@@ -558,6 +870,11 @@ op_reduce_mean <- function(x, axis = NULL, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param axis
+#' @param name
+#'
 #' @export
 op_reduce_min <- function(x, axis = NULL, name = '') {
 	cntk$ops$reduce_min(
@@ -567,6 +884,11 @@ op_reduce_min <- function(x, axis = NULL, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param axis
+#' @param name
+#'
 #' @export
 op_reduce_prod <- function(x, axis = NULL, name = '') {
 	cntk$ops$reduce_prod(
@@ -576,6 +898,11 @@ op_reduce_prod <- function(x, axis = NULL, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param axis
+#' @param name
+#'
 #' @export
 op_reduce_sum <- function(x, axis = NULL, name = '') {
 	cntk$ops$reduce_sum(
@@ -585,11 +912,22 @@ op_reduce_sum <- function(x, axis = NULL, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_relu <- function(x, name = '') {
 	cntk$ops$relu(x, name = name)
 }
 
+#' @param x
+#'
+#' @param shape
+#' @param begin_axis
+#' @param end_axis
+#' @param name
+#'
 #' @export
 op_reshape <- function(x, shape, begin_axis = NULL, end_axis = NULL,
 					   name = name) {
@@ -602,6 +940,12 @@ op_reshape <- function(x, shape, begin_axis = NULL, end_axis = NULL,
 	)
 }
 
+#' @param conv_feature_map
+#'
+#' @param rois
+#' @param roi_output_shape
+#' @param name
+#'
 #' @export
 op_roipooling <- function(conv_feature_map, rois, roi_output_shape, name='') {
 	cntk$ops$roipooling(
@@ -612,21 +956,40 @@ op_roipooling <- function(conv_feature_map, rois, roi_output_shape, name='') {
 	)
 }
 
+#' @param arg
+#'
+#' @param name
+#'
 #' @export
 op_round <- function(arg, name = '') {
 	cntk$ops$round(arg, name = name)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_sigmoid <- function(x, name = '') {
 	cntk$ops$sigmoid(x, name = name)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_sin <- function(x, name = '') {
 	cntk$ops$sin(x, name = name)
 }
 
+#' @param x
+#'
+#' @param axis
+#' @param begin_index
+#' @param end_index
+#' @param name
+#'
 #' @export
 op_slice <- function(x, axis, begin_index, end_index, name = '') {
 	cntk$ops$slice(
@@ -638,6 +1001,11 @@ op_slice <- function(x, axis, begin_index, end_index, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param axis
+#' @param name
+#'
 #' @export
 op_softmax <- function(x, axis = NULL, name = '') {
 	cntk$ops$softmax(
@@ -647,6 +1015,11 @@ op_softmax <- function(x, axis = NULL, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param steepness
+#' @param name
+#'
 #' @export
 op_softplus <- function(x, steepness = 1, name = '') {
 	cntk$ops$softplus(
@@ -656,6 +1029,10 @@ op_softplus <- function(x, steepness = 1, name = '') {
 	)
 }
 
+#' @param ...
+#'
+#' @param axis
+#'
 #' @export
 op_splice <- function(..., axis) {
 	cntk$ops$splice(
@@ -664,22 +1041,40 @@ op_splice <- function(..., axis) {
 	)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_sqrt <- function(x, name = '') {
 	cntk$ops$sqrt(x, name = name)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_square <- function(x, name = '') {
 	cntk$ops$square(x, name = name)
 }
 
+#' @param input
+#'
+#' @param name
+#'
 #' @export
 op_stop_gradient <- function(input, name = '') {
 	cntk$ops$stop_gradient(input, name = name)
 }
 
 
+#' @param x
+#'
+#' @param axis1
+#' @param axis2
+#' @param name
+#'
 #' @export
 op_swap_axes <- function(x, axis1 = 0, axis2 = 1, name = '') {
 	cntk$ops$swap_axes(
@@ -690,11 +1085,22 @@ op_swap_axes <- function(x, axis1 = 0, axis2 = 1, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param name
+#'
 #' @export
 op_tanh <- function(x, name = '') {
 	cntk$ops$tanh(x, name = name)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param output_rank
+#' @param infer_input_rank_to_map
+#' @param name
+#'
 #' @export
 op_times <- function(left, right, output_rank = 1, infer_input_rank_to_map = -1,
 					 name = '') {
@@ -707,6 +1113,11 @@ op_times <- function(left, right, output_rank = 1, infer_input_rank_to_map = -1,
 	)
 }
 
+#' @param left
+#'
+#' @param right
+#' @param name
+#'
 #' @export
 op_times_transpose <- function(left, right, name = '') {
 	cntk$ops$times_transpose(
@@ -716,6 +1127,12 @@ op_times_transpose <- function(left, right, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param sequence_lengths
+#' @param sequence_axis_name_prefix
+#' @param name
+#'
 #' @export
 op_to_sequence <- function(x, sequence_lengths = NULL,
 						   sequence_axis_name_prefix = 'toSequence_',
@@ -728,6 +1145,11 @@ op_to_sequence <- function(x, sequence_lengths = NULL,
 	)
 }
 
+#' @param x
+#'
+#' @param dynamic_axes_like
+#' @param name
+#'
 #' @export
 op_to_sequence_like <- function(x, dynamic_axes_like, name = '') {
 	cntk$ops$to_sequence_like(
@@ -738,6 +1160,11 @@ op_to_sequence_like <- function(x, dynamic_axes_like, name = '') {
 }
 
 # TODO: check out if perm arg should be cast to int
+#' @param x
+#'
+#' @param perm
+#' @param name
+#'
 #' @export
 op_transpose <- function(x, perm, name = '') {
 	cntk$ops$transpose(
@@ -747,6 +1174,14 @@ op_transpose <- function(x, perm, name = '') {
 	)
 }
 
+#' @param operand
+#'
+#' @param pooling_input
+#' @param unpooling_window_shape
+#' @param strides
+#' @param auto_padding
+#' @param name
+#'
 #' @export
 op_unpooling <- function(operand, pooling_input, unpooling_window_shape,
 						 strides = c(1), auto_padding = c(FALSE), name = '') {

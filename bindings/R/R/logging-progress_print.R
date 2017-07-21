@@ -1,3 +1,17 @@
+#' @param freq
+#'
+#' @param first
+#' @param tag
+#' @param log_to_file
+#' @param rank
+#' @param gen_heartbeat
+#' @param num_epochs
+#' @param test_freq
+#' @param test_first
+#' @param metric_is_pct
+#' @param distributed_freq
+#' @param distributed_first
+#'
 #' @export
 ProgressPrinter <- function(freq = NULL, first = 0, tag = '',
 							log_to_file = NULL, rank = NULL,
@@ -21,21 +35,37 @@ ProgressPrinter <- function(freq = NULL, first = 0, tag = '',
 	)
 }
 
+#' @param printer
+#'
+#' @param msg
+#'
 #' @export
 printer_end_progress_print <- function(printer, msg = '') {
 	printer$end_progress_print(msg = msg)
 }
 
+#' @param printer
+#'
+#' @param message
+#'
 #' @export
 printer_log <- function(printer, message) {
 	printer$log(message)
 }
 
+#' @param printer
+#'
 #' @export
 printer_on_training_update_end <- function(printer) {
 	printer$on_training_update_end()
 }
 
+#' @param printer
+#'
+#' @param samples
+#' @param updates
+#' @param aggregate_metric
+#'
 #' @export
 printer_on_write_distributed_sync_update <- function(printer, samples,
 													 updates,
@@ -48,6 +78,14 @@ printer_on_write_distributed_sync_update <- function(printer, samples,
 }
 
 #' any writer
+#'
+#' @param printer
+#' @param samples
+#' @param updates
+#' @param summaries
+#' @param aggregate_metric
+#' @param elapsed_milliseconds
+#'
 #' @export
 printer_on_write_test_summary <- function(printer, samples, updates,
 										  summaries, aggregate_metric,
@@ -62,6 +100,12 @@ printer_on_write_test_summary <- function(printer, samples, updates,
 }
 
 #' any writer
+#'
+#' @param printer
+#' @param samples
+#' @param updates
+#' @param aggregate_metric
+#'
 #' @export
 printer_on_write_test_update <- function(printer, samples, updates,
 										 aggregate_metric) {
@@ -73,6 +117,15 @@ printer_on_write_test_update <- function(printer, samples, updates,
 }
 
 #' any writer
+#'
+#' @param printer
+#' @param samples
+#' @param updates
+#' @param summaries
+#' @param aggregate_loss
+#' @param aggregate_metric
+#' @param elapsed_milliseconds
+#'
 #' @export
 printer_on_write_training_summary <- function(printer, samples, updates,
 											  summaries, aggregate_loss,
@@ -89,6 +142,13 @@ printer_on_write_training_summary <- function(printer, samples, updates,
 }
 
 #' any writer
+#'
+#' @param printer
+#' @param samples
+#' @param updates
+#' @param aggregate_loss
+#' @param aggregate_metric
+#'
 #' @export
 printer_on_write_training_update <- function(printer, samples, updates,
 											 aggregate_loss, aggregate_metric) {
@@ -100,6 +160,11 @@ printer_on_write_training_update <- function(printer, samples, updates,
 	)
 }
 
+#' @param printer
+#'
+#' @param key
+#' @param value
+#'
 #' @export
 printer_write <- function(printer, key, value) {
 	printer$write(
@@ -109,6 +174,12 @@ printer_write <- function(printer, key, value) {
 }
 
 
+#' @param freq
+#'
+#' @param log_dir
+#' @param rank
+#' @param model
+#'
 #' @export
 TensorBoardProgressWriter <- function(freq = NULL, log_dir = '.', rank = NULL,
 									  model = NULL) {
@@ -120,16 +191,26 @@ TensorBoardProgressWriter <- function(freq = NULL, log_dir = '.', rank = NULL,
 	)
 }
 
+#' @param tensorboard_writer
+#'
 #' @export
 tensorboard_close <- function(tensorboard_writer) {
 	tensorboard_writer$close()
 }
 
+#' @param tensorboard_writer
+#'
 #' @export
 tensorboard_flush <- function(tensorboard_writer) {
 	tensorboard_writer$flush()
 }
 
+#' @param tensorboard_writer
+#'
+#' @param name
+#' @param value
+#' @param step
+#'
 #' @export
 tensorboard_write_value <- function(tensorboard_writer, name, value, step) {
 	tensorboard_writer$write_value(
@@ -140,6 +221,10 @@ tensorboard_write_value <- function(tensorboard_writer, name, value, step) {
 }
 
 
+#' @param epoch_size
+#'
+#' @param callback
+#'
 #' @export
 TrainingSummaryProgressCallback <- function(epoch_size, callback) {
 	cntk$logging$TrainingSummaryProgressCallback(
@@ -149,6 +234,10 @@ TrainingSummaryProgressCallback <- function(epoch_size, callback) {
 }
 
 
+#' @param model
+#'
+#' @param trace_level
+#'
 #' @export
 log_number_of_parameters <- function(model, trace_level = 0) {
 	cntk$logging$log_number_of_parameters(

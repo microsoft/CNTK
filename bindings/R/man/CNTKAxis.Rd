@@ -6,6 +6,9 @@
 \usage{
 CNTKAxis(...)
 }
+\arguments{
+\item{...}{}
+}
 \description{
 An axis object describes the axis of a variable and is used for specifying
 the axes parameters of certain functions such as reductions. Besides the

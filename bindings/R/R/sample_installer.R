@@ -8,6 +8,11 @@ default_sample_url <- function() {
 	cntk$sample_installer$default_sample_url()
 }
 
+#' @param url
+#'
+#' @param directory
+#' @param quiet
+#'
 #' @export
 install_samples <- function(url = NULL, directory = NULL, quiet = FALSE) {
 	cntk$sample_installer$install_samples(

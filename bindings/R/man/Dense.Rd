@@ -8,6 +8,9 @@ Dense(shape, activation = activation_identity, init = init_glorot_uniform(),
   input_rank = NULL, map_rank = NULL, bias = TRUE, init_bias = 0,
   name = "")
 }
+\arguments{
+\item{name}{string for the name of the function instance in the network}
+}
 \description{
 Layer factory function to create an instance of a fully-connected linear
 layer of the form activation(input @ W + b) with weights W and bias b, and

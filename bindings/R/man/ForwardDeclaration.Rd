@@ -6,6 +6,9 @@
 \usage{
 ForwardDeclaration(name = "forward_declaration")
 }
+\arguments{
+\item{name}{}
+}
 \description{
 Helper for recurrent network declarations. Returns a placeholder variable
 with an added method resolve_to() to be called at the end to close the loop.

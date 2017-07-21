@@ -6,6 +6,9 @@
 \usage{
 UserLearner(parameters, lr_schedule, as_matrix = TRUE)
 }
+\arguments{
+\item{as_matrix}{}
+}
 \description{
 Base class of all user-defined learners. To implement your own learning
 algorithm, derive from this class and override the \code{update()}.

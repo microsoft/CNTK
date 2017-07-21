@@ -4,6 +4,8 @@
 #' with an added method resolve_to() to be called at the end to close the loop.
 #' This is used for explicit graph building with recurrent connections.
 #'
+#' @param name
+#'
 #' @export
 ForwardDeclaration <- function(name = 'forward_declaration') {
 	cntk$layers$blocks$ForwardDeclaration(name = name)
@@ -14,6 +16,14 @@ ForwardDeclaration <- function(name = 'forward_declaration') {
 #' Layer factory function to create a GRU block for use inside a recurrence.
 #' The GRU block implements one step of the recurrence and is stateless. It
 #' accepts the previous state as its first argument, and outputs its new state.
+#'
+#' @param shape
+#' @param cell_shape
+#' @param activation
+#' @param init
+#' @param init_bias
+#' @param enable_self_stabilization
+#' @param name
 #'
 #' @export
 GRU <- function(shape, cell_shape = NULL, activation = op_tanh,
@@ -36,6 +46,15 @@ GRU <- function(shape, cell_shape = NULL, activation = op_tanh,
 #' The LSTM block implements one step of the recurrence and is stateless. It
 #' accepts the previous state as its first two arguments, and outputs its new
 #' state as a two-valued tuple (h,c).
+#'
+#' @param shape
+#' @param cell_shape
+#' @param activation
+#' @param use_peepholes
+#' @param init
+#' @param init_bias
+#' @param enable_self_stabilization
+#' @param name
 #'
 #' @export
 LSTM <- function(shape, cell_shape = NULL, activation = op_tanh,
@@ -60,6 +79,14 @@ LSTM <- function(shape, cell_shape = NULL, activation = op_tanh,
 #' stateless. It accepts the previous state as its first argument, and outputs
 #' its new state.
 #'
+#' @param shape
+#' @param cell_shape
+#' @param activation
+#' @param init
+#' @param init_bias
+#' @param enable_self_stabilization
+#' @param name
+#'
 #' @export
 RRNStep <- function(shape, cell_shape = NULL, activation = op_sigmoid,
 					init = init_glorot_uniform(), init_bias = 0,
@@ -81,6 +108,10 @@ RRNStep <- function(shape, cell_shape = NULL, activation = op_sigmoid,
 #' input with a scalar that is learned.  This takes enable_self_stabilization
 #' as a flag that allows to disable itself. Useful if this is a global default.
 #'
+#' @param steepness
+#' @param enable_self_stabilization
+#' @param name
+#'
 #' @export
 Stabilizer <- function(steepness = 4, enable_self_stabilization = TRUE,
 					   name = '') {
@@ -91,6 +122,8 @@ Stabilizer <- function(steepness = 4, enable_self_stabilization = TRUE,
 	)
 }
 
+#' @param name
+#'
 #' @export
 UntestedBranchError <- function(name) {
 	cntk$layers$blocks$UntestedBranchError(name)

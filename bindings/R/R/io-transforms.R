@@ -1,5 +1,8 @@
-io <- reticulate::import("cntk.io.transforms")
-
+#' @param brightness_radius
+#'
+#' @param contrast_radius
+#' @param saturation_radius
+#'
 #' @export
 transform_color <- function(brightness_radius = 0, contrast_radius = 0,
 							saturation_radius = 0) {
@@ -10,6 +13,14 @@ transform_color <- function(brightness_radius = 0, contrast_radius = 0,
 	)
 }
 
+#' @param crop_type
+#'
+#' @param crop_size
+#' @param side_ratio
+#' @param area_ratio
+#' @param aspect_ratio
+#' @param jitter_type
+#'
 #' @export
 transform_crop <- function(crop_type = 'center', crop_size = 0, side_ratio = 0,
 						   area_ratio = 0, aspect_ratio = 1,
@@ -24,11 +35,21 @@ transform_crop <- function(crop_type = 'center', crop_size = 0, side_ratio = 0,
 	)
 }
 
+#' @param filename
+#'
 #' @export
 transform_mean <- function(filename) {
 	cntk$io$transforms$mean(filename)
 }
 
+#' @param width
+#'
+#' @param height
+#' @param channels
+#' @param interpolations
+#' @param scale_mode
+#' @param pad_value
+#'
 #' @export
 transform_scale <- function(width, height, channels, interpolations, scale_mode,
 							pad_value) {

@@ -6,6 +6,9 @@
 \usage{
 HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = FALSE)
 }
+\arguments{
+\item{phoneBoundaries}{}
+}
 \description{
 Configures an HTK label reader that reads speech HTK format MLF (Master
 Label File)

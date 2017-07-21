@@ -1,5 +1,8 @@
-ops <- reticulate::import("cntk.ops.sequence")
-
+#' @param operand
+#'
+#' @param broadcast_as_operand
+#' @param name
+#'
 #' @export
 seq_broadcast_as <- function(operand, broadcast_as_operand, name = '') {
 	cntk$ops$sequence$broadcast_as(
@@ -9,6 +12,12 @@ seq_broadcast_as <- function(operand, broadcast_as_operand, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param initial_state
+#' @param time_step
+#' @param name
+#'
 #' @export
 seq_delay <- function(x, initial_state = NULL, time_step = 1, name = '') {
 	cntk$ops$sequence$delay(
@@ -19,6 +28,10 @@ seq_delay <- function(x, initial_state = NULL, time_step = 1, name = '') {
 	)
 }
 
+#' @param seq
+#'
+#' @param name
+#'
 #' @export
 seq_first <- function(seq, name = '') {
 	cntk$ops$sequence$first(
@@ -27,6 +40,12 @@ seq_first <- function(seq, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param initial_state
+#' @param time_step
+#' @param name
+#'
 #' @export
 seq_future_value <- function(x, initial_state = NULL, time_step = 1,
 							 name = '') {
@@ -38,6 +57,12 @@ seq_future_value <- function(x, initial_state = NULL, time_step = 1,
 	)
 }
 
+#' @param seq
+#'
+#' @param condition
+#' @param new_sequence_axis_typeinfo
+#' @param name
+#'
 #' @export
 seq_gather <- function(seq, condition, new_sequence_axis_typeinfo, name = '') {
 	cntk$ops$sequence$gather(
@@ -48,6 +73,14 @@ seq_gather <- function(seq, condition, new_sequence_axis_typeinfo, name = '') {
 	)
 }
 
+#' @param shape
+#'
+#' @param dtype
+#' @param needs_gradient
+#' @param is_sparse
+#' @param sequence_axis
+#' @param name
+#'
 #' @export
 seq_input_variable <- function(shape, dtype = 'float32',
 							   needs_gradient = FALSE, is_sparse = FALSE,
@@ -63,6 +96,10 @@ seq_input_variable <- function(shape, dtype = 'float32',
 	)
 }
 
+#' @param seq
+#'
+#' @param name
+#'
 #' @export
 seq_is_first <- function(seq, name = '') {
 	cntk$ops$sequence$is_first(
@@ -71,6 +108,10 @@ seq_is_first <- function(seq, name = '') {
 	)
 }
 
+#' @param seq
+#'
+#' @param name
+#'
 #' @export
 seq_is_last <- function(seq, name = '') {
 	cntk$ops$sequence$is_last(
@@ -79,6 +120,10 @@ seq_is_last <- function(seq, name = '') {
 	)
 }
 
+#' @param seq
+#'
+#' @param name
+#'
 #' @export
 seq_last <- function(seq, name = '') {
 	cntk$ops$sequence$last(
@@ -87,6 +132,12 @@ seq_last <- function(seq, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param initial_state
+#' @param time_step
+#' @param name
+#'
 #' @export
 seq_past_value <- function(x, initial_state = NULL, time_step = 1, name = '') {
 	cntk$ops$sequence$past_value(
@@ -97,6 +148,10 @@ seq_past_value <- function(x, initial_state = NULL, time_step = 1, name = '') {
 	)
 }
 
+#' @param seq
+#'
+#' @param name
+#'
 #' @export
 seq_reduce_max <- function(seq, name = '') {
 	cntk$ops$sequence$reduce_max(
@@ -105,6 +160,10 @@ seq_reduce_max <- function(seq, name = '') {
 	)
 }
 
+#' @param seq
+#'
+#' @param name
+#'
 #' @export
 seq_reduce_sum <- function(seq, name = '') {
 	cntk$ops$sequence$reduce_sum(
@@ -113,6 +172,12 @@ seq_reduce_sum <- function(seq, name = '') {
 	)
 }
 
+#' @param seq
+#'
+#' @param condition
+#' @param new_sequence_axis_typeinfo
+#' @param name
+#'
 #' @export
 seq_scatter <- function(seq, condition, new_sequence_axis_typeinfo = NULL,
 						name = '') {
@@ -124,6 +189,12 @@ seq_scatter <- function(seq, condition, new_sequence_axis_typeinfo = NULL,
 	)
 }
 
+#' @param seq
+#'
+#' @param begin_index
+#' @param end_index
+#' @param name
+#'
 #' @export
 seq_slice <- function(seq, begin_index, end_index, name = '') {
 	cntk$ops$sequence$slice(
@@ -134,6 +205,10 @@ seq_slice <- function(seq, begin_index, end_index, name = '') {
 	)
 }
 
+#' @param seq
+#'
+#' @param name
+#'
 #' @export
 seq_softmax <- function(seq, name = '') {
 	cntk$ops$sequence$softmax(
@@ -142,6 +217,12 @@ seq_softmax <- function(seq, name = '') {
 	)
 }
 
+#' @param x
+#'
+#' @param padding_value
+#' @param no_mask_output
+#' @param name
+#'
 #' @export
 seq_unpack <- function(x, padding_value, no_mask_output = FALSE,
 					   name = '') {
@@ -153,6 +234,10 @@ seq_unpack <- function(x, padding_value, no_mask_output = FALSE,
 	)
 }
 
+#' @param seq
+#'
+#' @param name
+#'
 #' @export
 seq_where <- function(seq, name = '') {
 	cntk$ops$sequence$where(

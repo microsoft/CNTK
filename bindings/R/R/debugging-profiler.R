@@ -8,6 +8,11 @@ enable_profiler <- function() {
 	cntk$debugging$profiler$enable_profiler()
 }
 
+#' @param dir
+#'
+#' @param sync_gpu
+#' @param reserve_mem
+#'
 #' @export
 start_profiler <- function(dir = 'profiler', sync_gpu = TRUE,
 						   reserve_mem = 33554432) {

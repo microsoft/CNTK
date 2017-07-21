@@ -7,6 +7,9 @@
 printer_on_write_training_update(printer, samples, updates, aggregate_loss,
   aggregate_metric)
 }
+\arguments{
+\item{aggregate_metric}{}
+}
 \description{
 any writer
 }

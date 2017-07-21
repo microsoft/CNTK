@@ -7,6 +7,9 @@
 StreamConfiguration(name, dim, is_sparse = FALSE, stream_alias = "",
   defines_mb_size = FALSE)
 }
+\arguments{
+\item{defines_mb_size}{}
+}
 \description{
 Configuration of a stream in a text format reader.
 }

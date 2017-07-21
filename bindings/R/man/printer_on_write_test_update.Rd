@@ -6,6 +6,9 @@
 \usage{
 printer_on_write_test_update(printer, samples, updates, aggregate_metric)
 }
+\arguments{
+\item{aggregate_metric}{}
+}
 \description{
 any writer
 }

@@ -1,3 +1,10 @@
+#' @param value
+#'
+#' @param shape
+#' @param dtype
+#' @param device
+#' @param name
+#'
 #' @export
 Constant <- function(value = NULL, shape = NULL, dtype = 'float32',
 					 device = NULL, name = '') {
@@ -10,6 +17,13 @@ Constant <- function(value = NULL, shape = NULL, dtype = 'float32',
 	)
 }
 
+#' @param value
+#'
+#' @param shape
+#' @param dtype
+#' @param device
+#' @param name
+#'
 #' @export
 Parameter <- function(value = NULL, shape = NULL, dtype = 'float32',
 					  device = NULL, name = '') {
@@ -22,16 +36,30 @@ Parameter <- function(value = NULL, shape = NULL, dtype = 'float32',
 	)
 }
 
+#' @param ...
+#'
 #' @export
 Record <- function(...) {
 	cntk$variables$Record(...)
 }
 
+#' @param record
+#'
+#' @param ...
+#'
 #' @export
 updated_record_with <- function(record, ...) {
 	record$updated_with(record, ...)
 }
 
+#' @param shape
+#'
+#' @param dtype
+#' @param needs_gradient
+#' @param is_sparse
+#' @param dynamic_axes
+#' @param name
+#'
 #' @export
 Variable <- function(shape = NULL, dtype = 'auto', needs_gradient = FALSE,
 					 is_sparse = FALSE,

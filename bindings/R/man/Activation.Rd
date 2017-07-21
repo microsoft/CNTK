@@ -10,7 +10,7 @@ Activation(activation = activation_identity, name = "")
 \item{activation}{(defaults to \code{activation_identity}) – function to apply
 at the end, e.g. \code{op_relu}}
 
-\item{name}{(str, defaults to '') – the name of the function instance in
+\item{name}{string for the name of the function instance in the network
 the network}
 }
 \value{

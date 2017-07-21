@@ -6,6 +6,9 @@
 \usage{
 get_static_axis_index(ax, checked = TRUE)
 }
+\arguments{
+\item{checked}{}
+}
 \description{
 Returns the integer with which the static axis is defined. For example, 0 =
 first axis, 1 = second axis, etc.

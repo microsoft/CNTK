@@ -7,6 +7,9 @@
 next_minibatch(minibatch_source, minibatch_size_in_samples, input_map = NULL,
   device = NULL, num_data_partitions = NULL, partition_index = NULL)
 }
+\arguments{
+\item{partition_index}{}
+}
 \description{
 next_minibatch
 }

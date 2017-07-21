@@ -1,3 +1,8 @@
+#' @param root
+#'
+#' @param visitor
+#' @param depth
+#'
 #' @export
 graph_depth_first_search <- function(root, visitor, depth = 0) {
 	cntk$logging$graph$depth_first_search(
@@ -7,6 +12,11 @@ graph_depth_first_search <- function(root, visitor, depth = 0) {
 	)
 }
 
+#' @param node
+#'
+#' @param node_name
+#' @param depth
+#'
 #' @export
 graph_find_all_with_name <- function(node, node_name, depth = 0) {
 	cntk$logging$graph$find_all_with_name(
@@ -16,6 +26,11 @@ graph_find_all_with_name <- function(node, node_name, depth = 0) {
 	)
 }
 
+#' @param node
+#'
+#' @param node_name
+#' @param depth
+#'
 #' @export
 graph_find_by_name <- function(node, node_name, depth = 0) {
 	cntk$logging$graph$find_by_name(
@@ -25,6 +40,10 @@ graph_find_by_name <- function(node, node_name, depth = 0) {
 	)
 }
 
+#' @param node
+#'
+#' @param depth
+#'
 #' @export
 graph_get_node_outputs <- function(node, depth = 0) {
 	cntk$logging$graph$get_node_outputs(
@@ -33,6 +52,10 @@ graph_get_node_outputs <- function(node, depth = 0) {
 	)
 }
 
+#' @param root
+#'
+#' @param filename
+#'
 #' @export
 graph_plot <- function(root, filename = NULL) {
 	cntk$logging$graph$plot(

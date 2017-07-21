@@ -6,6 +6,9 @@
 \usage{
 MinibatchData(value, num_sequences, num_samples, sweep_end)
 }
+\arguments{
+\item{sweep_end}{}
+}
 \description{
 Holds a minibatch of input data. This is never directly created, but only
 returned by `MinibatchSource` instances.

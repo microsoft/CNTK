@@ -37,6 +37,8 @@
 #'
 #' unknown_dynamic_axes()
 #'
+#' @param ...
+#'
 #' @export
 CNTKAxis <- function(...) {
 	cntk$axis$Axis(...)
@@ -91,6 +93,9 @@ create_new_leading_axis <- function() {
 #'
 #' Returns the integer with which the static axis is defined. For example, 0 =
 #' first axis, 1 = second axis, etc.
+#'
+#' @param ax
+#' @param checked
 #'
 #' @export
 get_static_axis_index <- function(ax, checked = TRUE) {

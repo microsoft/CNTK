@@ -6,6 +6,9 @@
 \usage{
 HTKFeatureDeserializer(streams)
 }
+\arguments{
+\item{streams}{}
+}
 \description{
 Configures the HTK feature reader that reads speech data from scp files.
 }

@@ -8,6 +8,9 @@ RRNStep(shape, cell_shape = NULL, activation = op_sigmoid,
   init = init_glorot_uniform(), init_bias = 0,
   enable_self_stabilization = FALSE, name = "")
 }
+\arguments{
+\item{name}{}
+}
 \description{
 Layer factory function to create a plain RNN block for use inside a
 recurrence. The RNN block implements one step of the recurrence and is

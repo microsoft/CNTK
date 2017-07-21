@@ -1,3 +1,7 @@
+#' @param kernel_width
+#'
+#' @param kernel_height
+#'
 #' @export
 init_bilinear <- function(kernel_width, kernel_height) {
 	cntk$initializer$bilinear(
@@ -6,6 +10,12 @@ init_bilinear <- function(kernel_width, kernel_height) {
 	)
 }
 
+#' @param scale
+#'
+#' @param output_rank
+#' @param filter_rank
+#' @param seed
+#'
 #' @export
 init_glorot_normal <- function(scale = 1, output_rank = 2147483647,
 						  filter_rank = 2147483647, seed = NULL) {
@@ -17,6 +27,12 @@ init_glorot_normal <- function(scale = 1, output_rank = 2147483647,
 	)
 }
 
+#' @param scale
+#'
+#' @param output_rank
+#' @param filter_rank
+#' @param seed
+#'
 #' @export
 init_glorot_uniform <- function(scale = 1, output_rank = 2147483647,
 						  filter_rank = 2147483647, seed = NULL) {
@@ -28,6 +44,12 @@ init_glorot_uniform <- function(scale = 1, output_rank = 2147483647,
 	)
 }
 
+#' @param scale
+#'
+#' @param output_rank
+#' @param filter_rank
+#' @param seed
+#'
 #' @export
 init_he_normal <- function(scale = 1, output_rank = 2147483647,
 						  filter_rank = 2147483647, seed = NULL) {
@@ -39,6 +61,12 @@ init_he_normal <- function(scale = 1, output_rank = 2147483647,
 	)
 }
 
+#' @param scale
+#'
+#' @param output_rank
+#' @param filter_rank
+#' @param seed
+#'
 #' @export
 init_he_uniform <- function(scale = 1, output_rank = 2147483647,
 						  filter_rank = 2147483647, seed = NULL) {
@@ -50,6 +78,11 @@ init_he_uniform <- function(scale = 1, output_rank = 2147483647,
 	)
 }
 
+#' @param initializer
+#'
+#' @param output_rank
+#' @param filter_rank
+#'
 #' @export
 init_with_rank <- function(initializer, output_rank = NULL,
 								  filter_rank = NULL) {
@@ -60,6 +93,12 @@ init_with_rank <- function(initializer, output_rank = NULL,
 	)
 }
 
+#' @param scale
+#'
+#' @param output_rank
+#' @param filter_rank
+#' @param seed
+#'
 #' @export
 init_normal <- function(scale = 1, output_rank = 2147483647,
 						  filter_rank = 2147483647, seed = NULL) {
@@ -71,6 +110,10 @@ init_normal <- function(scale = 1, output_rank = 2147483647,
 	)
 }
 
+#' @param stdev
+#'
+#' @param seed
+#'
 #' @export
 init_truncated_normal <- function(stdev, seed = NULL) {
 	cntk$initializer$truncated_normal(
@@ -79,6 +122,10 @@ init_truncated_normal <- function(stdev, seed = NULL) {
 	)
 }
 
+#' @param scale
+#'
+#' @param seed
+#'
 #' @export
 init_uniform <- function(scale, seed = NULL) {
 	cntk$initializer$uniform(
@@ -87,6 +134,12 @@ init_uniform <- function(scale, seed = NULL) {
 	)
 }
 
+#' @param scale
+#'
+#' @param output_rank
+#' @param filter_rank
+#' @param seed
+#'
 #' @export
 init_xavier <- function(scale = 1, output_rank = 2147483647,
 						  filter_rank = 2147483647, seed = NULL) {

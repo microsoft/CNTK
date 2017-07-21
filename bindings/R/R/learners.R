@@ -21,22 +21,35 @@ Learner <- function(parameters, learningRateSchedule) {
 	)
 }
 
+#' @param learner
+#'
 #' @export
 get_learning_rate <- function(learner) {
 	learner$get_learning_rate()
 }
 
+#' @param learner
+#'
+#' @param learning_rate
+#'
 #' @export
 reset_learning_rate <- function(learner, learning_rate) {
 	learner$reset_learning_rate(learning_rate)
 }
 
+#' @param learner
+#'
+#' @param gradient_values
+#' @param training_sample_count
+#'
 #' @export
 update_learner <- function(learner, gradient_values, training_sample_count) {
 	learner$update_learner(gradient_values, training_sample_count)
 }
 
 
+#' @param value
+#'
 #' @export
 UnitType <- function(value) {
 	reticulate::py_get_attr(cntk$learners$UnitType, value)
@@ -50,6 +63,10 @@ UnitType <- function(value) {
 #' Certain optimizers (such as AdaGrad) require additional storage. This can be
 #' allocated and initialized during construction.
 #'
+#' @param parameters
+#' @param lr_schedule
+#' @param as_matrix
+#'
 #' @seealso \code{\link{update_user_learner}}
 #'
 #' @export
@@ -61,6 +78,12 @@ UserLearner <- function(parameters, lr_schedule, as_matrix = TRUE) {
 	)
 }
 
+#' @param learner
+#'
+#' @param gradient_values
+#' @param training_sample_count
+#' @param sweep_end
+#'
 #' @export
 update_user_learner <- function(learner, gradient_values, training_sample_count,
 								sweep_end) {
@@ -71,6 +94,18 @@ update_user_learner <- function(learner, gradient_values, training_sample_count,
 	)
 }
 
+#' @param parameters
+#'
+#' @param lr
+#' @param rho
+#' @param epsilon
+#' @param l1_regularization_weight
+#' @param l2_regularization_weight
+#' @param gaussian_noise_injection_std_dev
+#' @param gradient_clipping_threshold_per_sample
+#' @param gradient_clipping_with_truncation
+#' @param use_mean_gradient
+#'
 #' @export
 learner_adadelta <- function(parameters, lr, rho, epsilon,
 						     l1_regularization_weight = 0,
@@ -93,6 +128,16 @@ learner_adadelta <- function(parameters, lr, rho, epsilon,
 	)
 }
 
+#' @param parameters
+#'
+#' @param lr
+#' @param need_ave_multiplier
+#' @param l1_regularization_weight
+#' @param l2_regularization_weight
+#' @param gaussian_noise_injection_std_dev
+#' @param gradient_clipping_threshold_per_sample
+#' @param gradient_clipping_with_truncation
+#'
 #' @export
 learner_adagrad <- function(parameters, lr, need_ave_multiplier = TRUE,
 						    l1_regularization_weight = 0,
@@ -112,6 +157,20 @@ learner_adagrad <- function(parameters, lr, need_ave_multiplier = TRUE,
 	)
 }
 
+#' @param parameters
+#'
+#' @param lr
+#' @param momentum
+#' @param unit_gain
+#' @param variance_momentum
+#' @param l1_regularization_weight
+#' @param l2_regularization_weight
+#' @param gaussian_noise_injection_std_dev
+#' @param gradient_clipping_threshold_per_sample
+#' @param gradient_clipping_with_truncation
+#' @param epsilon
+#' @param adamax
+#'
 #' @export
 learner_adam <- function(parameters, lr, momentum,
 						 unit_gain = cntk$default_unit_gain_value(),
@@ -138,6 +197,18 @@ learner_adam <- function(parameters, lr, momentum,
 	)
 }
 
+#' @param parameters
+#'
+#' @param lr
+#' @param momentum
+#' @param unit_gain
+#' @param variance_momentum
+#' @param l1_regularization_weight
+#' @param l2_regularization_weight
+#' @param gaussian_noise_injection_std_dev
+#' @param gradient_clipping_threshold_per_sample
+#' @param gradient_clipping_with_truncation
+#'
 #' @export
 learner_fsadagrad <- function(parameters, lr, momentum,
 						 unit_gain = cntk$default_unit_gain_value(),
@@ -157,10 +228,15 @@ learner_fsadagrad <- function(parameters, lr, momentum,
 		l2_regularization_weight = l2_regularization_weight,
 		gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev,
 		gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample,
-		gradient_clipping_with_truncation = gradient_clipping_with_truncation,
+		gradient_clipping_with_truncation = gradient_clipping_with_truncation
 	)
 }
 
+#' @param lr
+#'
+#' @param unit
+#' @param epoch_size
+#'
 #' @export
 learning_rate_schedule <- function(lr, unit, epoch_size = NULL) {
 	cntk$learners$learning_rate_schedule(
@@ -170,6 +246,10 @@ learning_rate_schedule <- function(lr, unit, epoch_size = NULL) {
 	)
 }
 
+#' @param momentum
+#'
+#' @param epoch_size
+#'
 #' @export
 momentum_as_time_constant_schedule <- function(momentum, epoch_size = NULL) {
 	cntk$learners$momentum_as_time_constant_schedule(
@@ -178,6 +258,10 @@ momentum_as_time_constant_schedule <- function(momentum, epoch_size = NULL) {
 	)
 }
 
+#' @param momentum
+#'
+#' @param epoch_size
+#'
 #' @export
 momentum_schedule <- function(momentum, epoch_size = NULL) {
 	cntk$learners$momentum_schedule(
@@ -224,6 +308,17 @@ learner_momentum_sgd <- function(parameters, lr, momentum,
 	)
 }
 
+#' @param parameters
+#'
+#' @param lr
+#' @param momentum
+#' @param unit_gain
+#' @param l1_regularization_weight
+#' @param l2_regularization_weight
+#' @param gaussian_noise_injection_std_dev
+#' @param gradient_clipping_threshold_per_sample
+#' @param gradient_clipping_with_truncation
+#'
 #' @export
 learner_nesterov <- function(parameters, lr, momentum,
 							 unit_gain = cntk$default_unit_gain_value(),
@@ -245,6 +340,21 @@ learner_nesterov <- function(parameters, lr, momentum,
 	)
 }
 
+#' @param parameters
+#'
+#' @param lr
+#' @param gamma
+#' @param inc
+#' @param dec
+#' @param max
+#' @param min
+#' @param need_ave_multiplier
+#' @param l1_regularization_weight
+#' @param l2_regularization_weight
+#' @param gaussian_noise_injection_std_dev
+#' @param gradient_clipping_threshold_per_sample
+#' @param gradient_clipping_with_truncation
+#'
 #' @export
 learner_rmsprop <- function(parameters, lr, gamma, inc, dec, max, min,
 							need_ave_multiplier = TRUE,
@@ -269,6 +379,15 @@ learner_rmsprop <- function(parameters, lr, gamma, inc, dec, max, min,
 	)
 }
 
+#' @param parameters
+#'
+#' @param lr
+#' @param l1_regularization_weight
+#' @param l2_regularization_weight
+#' @param gaussian_noise_injection_std_dev
+#' @param gradient_clipping_threshold_per_sample
+#' @param gradient_clipping_with_truncation
+#'
 #' @export
 learner_sgd <- function(parameters, lr,
 						l1_regularization_weight = 0,
@@ -287,6 +406,11 @@ learner_sgd <- function(parameters, lr,
 	)
 }
 
+#' @param schedule
+#'
+#' @param unit
+#' @param epoch_size
+#'
 #' @export
 training_parameter_schedule <- function(schedule, unit, epoch_size = NULL) {
 	cntk$learners$training_parameter_schedule(
@@ -296,6 +420,10 @@ training_parameter_schedule <- function(schedule, unit, epoch_size = NULL) {
 	)
 }
 
+#' @param update_func
+#'
+#' @param parameters
+#'
 #' @export
 universal_learner <- function(update_func, parameters) {
 	cntk$learners$universal(update_func, parameters)

@@ -12,6 +12,9 @@ MinibatchSource(deserializers, max_samples = IO_INFINITELY_REPEAT,
   multithreaded_deserializer = NULL, frame_mode = FALSE,
   truncation_length = 0, randomize = TRUE)
 }
+\arguments{
+\item{randomize}{}
+}
 \description{
 Source of minibatch data
 }

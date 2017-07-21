@@ -1,6 +1,13 @@
 #' @export
 AUTO_SELECT_SEED <- 184467440L
 
+#' @param shape
+#'
+#' @param dtype
+#' @param mean
+#' @param seed
+#' @param name
+#'
 #' @export
 rand_bernoulli <- function(shape, dtype = default_override_or(np$float32),
 						   mean = 0.5, seed = AUTO_SELECT_SEED, name = '') {
@@ -21,6 +28,12 @@ rand_bernoulli <- function(shape, dtype = default_override_or(np$float32),
 	)
 }
 
+#' @param x
+#'
+#' @param mean
+#' @param seed
+#' @param name
+#'
 #' @export
 rand_bernoulli_like <- function(x, mean = 0.5, seed = AUTO_SELECT_SEED,
 								name = '') {
@@ -39,6 +52,14 @@ rand_bernoulli_like <- function(x, mean = 0.5, seed = AUTO_SELECT_SEED,
 	)
 }
 
+#' @param shape
+#'
+#' @param dtype
+#' @param loc
+#' @param scale
+#' @param seed
+#' @param name
+#'
 #' @export
 rand_gumbel <- function(shape, dtype = default_override_or(np$float32), loc = 0,
 						scale = 1, seed = AUTO_SELECT_SEED, name = name) {
@@ -61,6 +82,13 @@ rand_gumbel <- function(shape, dtype = default_override_or(np$float32), loc = 0,
 	)
 }
 
+#' @param x
+#'
+#' @param mean
+#' @param scale
+#' @param seed
+#' @param name
+#'
 #' @export
 rand_gumbel_like <- function(x, mean = 0, scale = 1, seed = AUTO_SELECT_SEED,
 							 name = '') {
@@ -81,6 +109,14 @@ rand_gumbel_like <- function(x, mean = 0, scale = 1, seed = AUTO_SELECT_SEED,
 	)
 }
 
+#' @param shape
+#'
+#' @param dtype
+#' @param mean
+#' @param scale
+#' @param seed
+#' @param name
+#'
 #' @export
 rand_normal <- function(shape, dtype = default_override_or(np$float32),
 						mean = 0, scale = 1, seed = AUTO_SELECT_SEED,
@@ -104,6 +140,13 @@ rand_normal <- function(shape, dtype = default_override_or(np$float32),
 	)
 }
 
+#' @param x
+#'
+#' @param mean
+#' @param scale
+#' @param seed
+#' @param name
+#'
 #' @export
 rand_normal_like <- function(x, mean = 0, scale = 1, seed = AUTO_SELECT_SEED,
 							 name = '') {
@@ -124,6 +167,14 @@ rand_normal_like <- function(x, mean = 0, scale = 1, seed = AUTO_SELECT_SEED,
 	)
 }
 
+#' @param shape
+#'
+#' @param dtype
+#' @param low
+#' @param high
+#' @param seed
+#' @param name
+#'
 #' @export
 rand_uniform <- function(shape, dtype = default_override_or(np$float32),
 						 low = 0, high = 1, seed = AUTO_SELECT_SEED,
@@ -147,6 +198,13 @@ rand_uniform <- function(shape, dtype = default_override_or(np$float32),
 	)
 }
 
+#' @param x
+#'
+#' @param low
+#' @param high
+#' @param seed
+#' @param name
+#'
 #' @export
 rand_uniform_like <- function(x, low = 0, high = 1, seed = AUTO_SELECT_SEED,
 							 name = '') {

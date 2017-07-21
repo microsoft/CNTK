@@ -24,6 +24,15 @@ classification_error <- function(output_vector, target_vector, axis = -1,
 	)
 }
 
+#' @param input_a
+#'
+#' @param input_b
+#' @param subPen
+#' @param delPen
+#' @param squashInputs
+#' @param tokensToIgnore
+#' @param name
+#'
 #' @export
 edit_distance_error <- function(input_a, input_b, subPen = 1, delPen = 1,
 								squashInputs = FALSE, tokensToIgnore = c(),
@@ -39,6 +48,12 @@ edit_distance_error <- function(input_a, input_b, subPen = 1, delPen = 1,
 	)
 }
 
+#' @param output
+#'
+#' @param gain
+#' @param group
+#' @param name
+#'
 #' @export
 ndcg_at_1 <- function(output, gain, group, name = '') {
 	cntk$metrics$ndcg_at_1(

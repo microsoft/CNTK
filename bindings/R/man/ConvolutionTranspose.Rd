@@ -10,6 +10,9 @@ ConvolutionTranspose(filter_shape, num_filters = NULL,
   init_bias = 0, output_shape = NULL, max_temp_mem_size_in_samples = 0,
   reduction_rank = 1, name = "")
 }
+\arguments{
+\item{name}{string for the name of the function instance in the network}
+}
 \description{
 Layer factory function to create a convolution transpose layer.
 }

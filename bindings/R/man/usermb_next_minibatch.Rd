@@ -7,6 +7,9 @@
 usermb_next_minibatch(usermb_source, num_samples, num_workers, worker_rank,
   device = NULL)
 }
+\arguments{
+\item{device}{}
+}
 \description{
 Function to be implemented by the user
 }
