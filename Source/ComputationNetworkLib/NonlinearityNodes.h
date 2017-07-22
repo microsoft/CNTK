@@ -114,6 +114,8 @@ public:
 // FloorNode (input)
 // CosineNode (input)
 // SinNode (input)
+// CoshNode (input)
+// SinhNode (input)
 // Abs(input)
 // Negate (input)
 // Sqrt (input)
@@ -145,6 +147,7 @@ public:
 
 //                                    Name                   Forward and            Backward opcodes                                                 Gradient optype
 DeclareUnaryElementWiseWithOpCodeNode(Abs,                   Abs,                   ElementwiseProductWithAbsDerivative,                             binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Cosh,                  Cosh,                  ElementwiseProductWithCoshDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Cosine,                Cosine,                ElementwiseProductWithCosDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Exp,                   Exp,                   ElementwiseProduct,                                              binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Floor,                 Floor,                 None,                                                            noGradient);
@@ -156,6 +159,7 @@ DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,            Reciprocal,        
 DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear,       LinearRectifier,       ElementwiseProductWithLinearRectifierDerivativeFromOutput,       binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,               Sigmoid,               ElementwiseProductWithSigmoidDerivativeFromOutput,               binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sin,                   Sin,                   ElementwiseProductWithSinDerivative,                             binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sinh,                  Sinh,                  ElementwiseProductWithSinhDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sqrt,                  Sqrt,                  ElementwiseProductWithSqrtDerivative,                            binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Tanh,                  Tanh,                  ElementwiseProductWithTanhDerivativeFromOutput,                  binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(ExponentialLinearUnit, ExponentialLinearUnit, ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, binaryWithOutputGradient);

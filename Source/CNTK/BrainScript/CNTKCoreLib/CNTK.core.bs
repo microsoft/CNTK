@@ -645,6 +645,7 @@ ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new Computa
 // TODO: ColumnElementTimes = ElementTimes
 CosDistance(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'CosDistance' ; inputs = _AsNodes (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
 CosDistanceWithNegativeSamples(aVectorSequence, anotherVectorSequence, numShifts, numNegSamples, tag='') = new ComputationNode [ operation = 'CosDistanceWithNegativeSamples' ; inputs = _AsNodes (aVectorSequence : anotherVectorSequence : numShifts : numNegSamples) /*plus the function args*/ ]
+Cosh(x, tag='') = new ComputationNode [ operation = 'Cosh' ; inputs = _AsNodes (x) /*plus the function args*/ ]
 Cosine(x, tag='') = new ComputationNode [ operation = 'Cosine' ; inputs = _AsNodes (x) /*plus the function args*/ ]
 CrossEntropy(refProbVectorSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropy' ; inputs = _AsNodes (refProbVectorSequence : outProbVectorSequence) /*plus the function args*/ ]
 DiagTimes(diagonalMatrixAsColumnVector, matrix, tag='') = new ComputationNode [ operation = 'DiagTimes' ; inputs = _AsNodes (diagonalMatrixAsColumnVector : matrix) /*plus the function args*/ ]
@@ -674,6 +675,7 @@ Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = '
 # TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = _AsNodes (cond : indexSequence : sourceData) /*plus the function args*/ ]
 Sin(z, tag='') = new ComputationNode [ operation = 'Sin' ; inputs = _AsNodes (z) /*plus the function args*/ ]
+Sinh(x, tag='') = new ComputationNode [ operation = 'Sinh' ; inputs = _AsNodes (x) /*plus the function args*/ ]
 Softmax (z, axis=0, tag='') =  # TODO: replace this with more efficient version below once we have ReduceLogSum
     if axis == 0 then new ComputationNode [ operation = 'Softmax' ; inputs = _AsNodes (z) /*plus the function args*/ ]
     else

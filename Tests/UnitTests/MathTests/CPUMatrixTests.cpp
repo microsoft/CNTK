@@ -431,6 +431,26 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixElementOperations, RandomSeedFixture)
     m_NegSine.SetValue(m_Trig);
     m_NegSine.AssignNegativeSineOf(m_Trig);
     BOOST_CHECK(m_NegSine.IsEqualTo(m_NegSine_expected, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceCosh();
+    m2(0, 0) = 1.54308063;
+    m2(0, 1) = 3.76219569;
+    m2(0, 2) = 10.067662;
+    m2(1, 0) = 27.30823284;
+    m2(1, 1) = 74.20994852;
+    m2(1, 2) = 201.71563612;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceSinh();
+    m2(0, 0) = 1.17520119;
+    m2(0, 1) = 3.62686041;
+    m2(0, 2) = 10.01787493;
+    m2(1, 0) = 27.2899172;
+    m2(1, 1) = 74.20321058;
+    m2(1, 2) = 201.71315737;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 }
 
 BOOST_FIXTURE_TEST_CASE(CPUMatrixNorms, RandomSeedFixture)

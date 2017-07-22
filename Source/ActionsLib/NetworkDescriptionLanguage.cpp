@@ -176,6 +176,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(PoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceNode), L"CosDist")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceWithNegativeSamplesNode), L"CosWithNegSamples")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(CoshNode), L"Cosh")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosineNode), L"Cos")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyWithSoftmaxNode), L"CEWithSM")) ret = true;
@@ -224,6 +225,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SinhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SinNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput")) ret = true;

@@ -84,6 +84,8 @@ namespace CNTK
         {PrimitiveOpType::CosDistance, L"CosDistance"},
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
+        {PrimitiveOpType::Cosh, L"Cosh"},
+        {PrimitiveOpType::Sinh, L"Sinh"},
         {PrimitiveOpType::Pass, L"Pass"},
         {PrimitiveOpType::Block, L"Block"},
         {PrimitiveOpType::Unpooling, L"Unpooling"},
