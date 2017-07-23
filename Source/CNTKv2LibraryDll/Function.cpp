@@ -1287,7 +1287,7 @@ namespace CNTK
     FunctionPtr UnpackBatch(const Variable& operand, const std::wstring& name)
     {
         if (operand.DynamicAxes().size() > 1)
-            LogicError("UnpackBatch: only support input with batch axis itself.");
+            LogicError("UnpackBatch: only support input with batch axis and n sequence axis.");
 
         return UnaryOp(PrimitiveOpType::UnpackBatch, operand, Dictionary(), name);
     }

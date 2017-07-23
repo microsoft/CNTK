@@ -516,3 +516,14 @@ def test_convert_dynamic_axis():
     z = y * 2
     expected = data.reshape((8, 3)) * 2
     assert np.array_equal(z.eval({x:data}), expected)
+
+    #test inferred dimension
+    x = C.input_variable((C.InferredDimension, 3))
+    const_x = C.unpack_batch(x)
+    assert len(const_x.dynamic_axes) == 0
+    assert const_x.shape == (C.FreeDimension, C.InferredDimension, 3)
+
+    const_y = const_x * 2
+    y = C.to_batch(const_y)
+    assert len(y.dynamic_axes) == 1
+    assert y.shape == (C.InferredDimension, 3)

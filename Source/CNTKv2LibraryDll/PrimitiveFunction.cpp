@@ -434,10 +434,8 @@ namespace CNTK
                                 InvalidArgument("AssignNode: Ref operand must be constant or parameter only.");
                             //delay the check for free dimension
                             if (m_inputs[0].Shape() != m_inputs[1].Shape() && 
-                                !m_inputs[0].Shape().HasFreeDimension() && 
-                                !m_inputs[1].Shape().HasFreeDimension() &&
-                                !m_inputs[0].Shape().HasInferredDimension() &&
-                                !m_inputs[1].Shape().HasInferredDimension())
+                                !m_inputs[0].Shape().HasUnboundDimension() && 
+                                !m_inputs[1].Shape().HasUnboundDimension())
                             {
                                 InvalidArgument("AssignNode: All inputs should have same sample layout.");
                             }
