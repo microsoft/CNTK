@@ -15,7 +15,7 @@ Recurrent neural networks (RNNs) have achieved state-of-the-art performances in 
 
 __For multi gpu version__
 - mpi program
-- mpi4py (It is recommended to build mpi4py from source to avoid multiply-version conflicts of mpi.)
+- mpi4py (It is recommended to build mpi4py from source so it's compatible with your MPI program.)
 
 ## Details
 
