@@ -363,6 +363,8 @@ namespace CNTK
                         case PrimitiveOpType::LogSoftmax:
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
+                        case PrimitiveOpType::Cosh:
+                        case PrimitiveOpType::Sinh:
                         case PrimitiveOpType::Pass:
                         case PrimitiveOpType::LabelsToGraph:
                         case PrimitiveOpType::StopGradient:
