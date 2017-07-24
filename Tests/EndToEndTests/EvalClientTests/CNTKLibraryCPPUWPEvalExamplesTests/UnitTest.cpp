@@ -53,13 +53,13 @@ namespace UWPEvalTests
         }
 
     public:
-        TEST_METHOD(TestSanity)
+        TEST_METHOD(UWPTestSanity)
         {
             // Failure in this test indicates a problem with infrastructure
             Assert::IsTrue(true);
         }
 
-        TEST_METHOD(TestModelLoad)
+        TEST_METHOD(UWPTestModelLoad)
         {
             RunTestWithModel(L"01_OneHidden.model", [](auto path) {
                 auto device = DeviceDescriptor::CPUDevice();
@@ -67,7 +67,7 @@ namespace UWPEvalTests
             });
         }
 
-        TEST_METHOD(TestEval)
+        TEST_METHOD(UWPTestEval)
         {
             RunTestWithModel(L"01_OneHidden.model", [](auto path) {
                 MultiThreadsEvaluation(path, false);

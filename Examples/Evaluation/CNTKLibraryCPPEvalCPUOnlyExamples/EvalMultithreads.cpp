@@ -130,7 +130,7 @@ void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int t
 /// All cloned functions share the same parameters.
 /// Note: It uses the model trained by Examples\Image\GettingStarted\01_OneHidden.cntk as example. Instructions
 /// to train the model is described in Examples\Image\GettingStarted\README.md. 
-/// The pre-trained model file 01_OneHidden needs to be in the current directory.  
+/// The pre-trained model file 01_OneHidden.model needs to be in the current directory.  
 /// </description>
 void MultiThreadsEvaluationWithLoadModel(const DeviceDescriptor& device, const wchar_t* modelFileName, const int threadCount)
 {

@@ -34,12 +34,13 @@
 
     <IsUWP>false</IsUWP>
     <IsUWP Condition="'$(Configuration)'=='Debug_UWP' Or '$(Configuration)'=='Release_UWP'">true</IsUWP>
+    <OutputSuffix Condition="!$(IsUWP)"/>
 
   </PropertyGroup>
 
   <PropertyGroup Condition="$(IsUWP)">
     <MathLibrary>OpenBLAS</MathLibrary>
-    <CNTKCustomOpenBLASVersion>1</CNTKCustomOpenBLASVersion>
+    <CNTKCustomOpenBLASVersion>2</CNTKCustomOpenBLASVersion>
     <MathLibraryName>OpenBLAS library (Version: $(CNTKCustomOpenBLASVersion))</MathLibraryName>
     <CNTKCustomOpenBLASPath>$(CNTK_OPENBLAS_PATH)\$(CNTKCustomOpenBLASVersion)</CNTKCustomOpenBLASPath>    
     <MathIncludePath>$(CNTKCustomOpenBLASPath)</MathIncludePath>
@@ -87,7 +88,7 @@
     <MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
     <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
     <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>
-  </PropertyGroup> 
+  </PropertyGroup>
 
   <PropertyGroup Condition="$(UseZip)">
     <ZipInclude>$(ZLIB_PATH)\include;$(ZLIB_PATH)\lib\libzip\include;</ZipInclude>

@@ -11,7 +11,7 @@ void MultiThreadsEvaluation(const wchar_t*, bool);
 
 int main()
 {
-    const wchar_t* modelFileName = L"01_OneHidden";
+    const wchar_t* modelFileName = L"01_OneHidden.model";
     fprintf(stderr, "\n##### Run CNTKLibraryCPPEvalCPUOnlyExamples on CPU. #####\n");
     MultiThreadsEvaluation(modelFileName, false);
 

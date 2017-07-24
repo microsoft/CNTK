@@ -29,12 +29,12 @@ using namespace Windows::UI::Xaml::Navigation;
 /// </summary>
 App::App()
 {
-	InitializeComponent();
-	Suspending += ref new SuspendingEventHandler(this, &App::OnSuspending);
+    InitializeComponent();
+    Suspending += ref new SuspendingEventHandler(this, &App::OnSuspending);
 }
 
 /// <summary>
-/// Invoked when the application is launched normally by the end user.	Other entry points
+/// Invoked when the application is launched normally by the end user.    Other entry points
 /// will be used such as when the application is launched to open a specific file.
 /// </summary>
 /// <param name="e">Details about the launch request and process.</param>
@@ -42,46 +42,46 @@ void App::OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEvent
 {
 
 #if _DEBUG
-		// Show graphics profiling information while debugging.
-		if (IsDebuggerPresent())
-		{
-			// Display the current frame rate counters
-			 DebugSettings->EnableFrameRateCounter = true;
-		}
+        // Show graphics profiling information while debugging.
+        if (IsDebuggerPresent())
+        {
+            // Display the current frame rate counters
+             DebugSettings->EnableFrameRateCounter = true;
+        }
 #endif
 
-	auto rootFrame = dynamic_cast<Frame^>(Window::Current->Content);
+    auto rootFrame = dynamic_cast<Frame^>(Window::Current->Content);
 
-	// Do not repeat app initialization when the Window already has content,
-	// just ensure that the window is active
-	if (rootFrame == nullptr)
-	{
-		// Create a Frame to act as the navigation context and associate it with
-		// a SuspensionManager key
-		rootFrame = ref new Frame();
+    // Do not repeat app initialization when the Window already has content,
+    // just ensure that the window is active
+    if (rootFrame == nullptr)
+    {
+        // Create a Frame to act as the navigation context and associate it with
+        // a SuspensionManager key
+        rootFrame = ref new Frame();
 
-		rootFrame->NavigationFailed += ref new Windows::UI::Xaml::Navigation::NavigationFailedEventHandler(this, &App::OnNavigationFailed);
+        rootFrame->NavigationFailed += ref new Windows::UI::Xaml::Navigation::NavigationFailedEventHandler(this, &App::OnNavigationFailed);
 
-		if (e->PreviousExecutionState == ApplicationExecutionState::Terminated)
-		{
-			// TODO: Restore the saved session state only when appropriate, scheduling the
-			// final launch steps after the restore is complete
+        if (e->PreviousExecutionState == ApplicationExecutionState::Terminated)
+        {
+            // TODO: Restore the saved session state only when appropriate, scheduling the
+            // final launch steps after the restore is complete
 
-		}
+        }
 
-		// Place the frame in the current Window
-		Window::Current->Content = rootFrame;
-	}
-		
-	Microsoft::VisualStudio::TestPlatform::TestExecutor::WinRTCore::UnitTestClient::CreateDefaultUI();
+        // Place the frame in the current Window
+        Window::Current->Content = rootFrame;
+    }
 
-	Window::Current->Activate();
+    Microsoft::VisualStudio::TestPlatform::TestExecutor::WinRTCore::UnitTestClient::CreateDefaultUI();
 
-	Microsoft::VisualStudio::TestPlatform::TestExecutor::WinRTCore::UnitTestClient::Run(e->Arguments);
+    Window::Current->Activate();
+
+    Microsoft::VisualStudio::TestPlatform::TestExecutor::WinRTCore::UnitTestClient::Run(e->Arguments);
 }
 
 /// <summary>
-/// Invoked when application execution is being suspended.	Application state is saved
+/// Invoked when application execution is being suspended.    Application state is saved
 /// without knowing whether the application will be terminated or resumed with the contents
 /// of memory still intact.
 /// </summary>
@@ -89,10 +89,10 @@ void App::OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEvent
 /// <param name="e">Details about the suspend request.</param>
 void App::OnSuspending(Object^ sender, SuspendingEventArgs^ e)
 {
-	(void) sender;	// Unused parameter
-	(void) e;	// Unused parameter
+    (void) sender;    // Unused parameter
+    (void) e;    // Unused parameter
 
-	//TODO: Save application state and stop any background activity
+    //TODO: Save application state and stop any background activity
 }
 
 /// <summary>
@@ -102,5 +102,5 @@ void App::OnSuspending(Object^ sender, SuspendingEventArgs^ e)
 /// <param name="e">Details about the navigation failure</param>
 void App::OnNavigationFailed(Platform::Object ^sender, Windows::UI::Xaml::Navigation::NavigationFailedEventArgs ^e)
 {
-	throw ref new FailureException("Failed to load Page " + e->SourcePageType.Name);
+    throw ref new FailureException("Failed to load Page " + e->SourcePageType.Name);
 }

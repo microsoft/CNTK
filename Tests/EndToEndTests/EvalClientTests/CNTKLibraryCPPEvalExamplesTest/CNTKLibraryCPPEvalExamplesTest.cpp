@@ -13,7 +13,7 @@ bool ShouldRunOnGpu();
 
 int main()
 {
-    const wchar_t* modelFileName = L"01_OneHidden";
+    const wchar_t* modelFileName = L"01_OneHidden.model";
     if (ShouldRunOnGpu())
     {
         fprintf(stderr, "\n##### Test CNTKLibraryCPPEvalExamples on GPU device. #####\n");

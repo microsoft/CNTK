@@ -1019,7 +1019,7 @@ FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc
 {
 #ifdef CNTK_UWP // UWP-TODO
     RuntimeError("Not supported for UWP");
-#endif
+#else
 
     m_dllName = plugin;
 
@@ -1047,6 +1047,7 @@ FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc
     if (entryPoint == nullptr)
         RuntimeError("Symbol '%s' not found in plugin '%ls'", proc.c_str(), m_dllName.c_str());
     return entryPoint;
+#endif
 }
 
 #else
