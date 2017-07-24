@@ -743,10 +743,11 @@ namespace CNTK
         return str;
     }
 
-    /*static*/ void DeviceDescriptor::EnableSynchronousGPUKernelExecution()
-    {
-        Internal::EnableSynchronousGPUKernelExecution();
-    }
+    // TODO: This no longer compiled after merging from master. Still needed?
+    ///*static*/ void DeviceDescriptor::EnableSynchronousGPUKernelExecution()
+    //{
+    //    Internal::EnableSynchronousGPUKernelExecution();
+    //}
 
     /*static*/ DeviceDescriptor DeviceDescriptor::GPUDevice(unsigned int deviceId) 
     {       

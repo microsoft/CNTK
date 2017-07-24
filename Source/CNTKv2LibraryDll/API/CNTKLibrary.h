@@ -1744,7 +1744,7 @@ namespace CNTK
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
         CNTK_API const std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData() const;
         CNTK_API std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData();
-        static const size_t s_version;// TODO: check this: latest master does not initialize this = 1;
+        static const size_t s_version = 1;// TODO: check this: latest master does not initialize this
     };
 
     ///

@@ -283,7 +283,7 @@ namespace CNTK
             // BUGBUG: This vv is a stop gap and needs to be done right (that is, use operation-specific propagation rules).
             bool isSparse = std::all_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.IsSparse(); });
 
-            NDShape outputShape = NDShape::Unknown;
+            NDShape outputShape = NDShape::Unknown();
             bool anyInputShapesUnknown =                          (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return  input.Shape().IsUnknown(); }) != m_inputs.end());
             bool allInputShapesUnknown = anyInputShapesUnknown && (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return !input.Shape().IsUnknown(); }) == m_inputs.end());
             if (!anyInputShapesUnknown || (!allInputShapesUnknown && (outputDynamicAxes != Axis::UnknownDynamicAxes())))
