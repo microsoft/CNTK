@@ -522,6 +522,15 @@
 	"dateadded": "4/14/2017"
     },
     {
+        "category": ["Text"],
+        "name": "LightRNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/LightRNN",
+        "description": "LightRNN: Memory and Computation-Efficient Recurrent Neural Networks",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dateadded": "07/14/2017"
+    },
+    {
         "category": ["Reinforcement Learning"],
         "name": "Deep Q Neural Network",
         "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning",
