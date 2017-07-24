@@ -56,7 +56,7 @@
 #define CNTK_MODEL_VERSION_24 24 // ReduceElements: add keepDimensions
 #define CNTK_MODEL_VERSION_25 25 // transpose: allow specifying a permutation
 #define CNTK_MODEL_VERSION_26 26 // Update ROI pooling format to match Caffe version.
-#define CNTK_MODEL_VERSION_27 27 // Slice: support stride_multiplier
+#define CNTK_MODEL_VERSION_27 27 // Slice: support stride_multiplier, and to_batch / unpack_bach axis ops
 #define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_27
 
 // helper mode for debugging

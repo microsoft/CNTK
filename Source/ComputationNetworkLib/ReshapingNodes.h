@@ -495,6 +495,205 @@ private:
 template class ReconcileDynamicAxisNode<float>;
 template class ReconcileDynamicAxisNode<double>;
 
+template <class ElemType>
+class ToBatchAxisNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() {
+        return L"ToBatchAxisNode";
+    }
+public:
+    ToBatchAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+
+    }
+    
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        auto& inputValue = InputRef(0).Value();
+        auto& outputValue = Value();
+
+        auto origin_rows = outputValue.GetNumRows();
+        auto origin_cols = outputValue.GetNumCols();
+        outputValue.AssignValuesOf(inputValue);
+        outputValue.Resize(origin_rows, origin_cols);
+    }
+
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
+    {
+        auto& gradient = Gradient();
+        auto& inputGradient = Input(0)->Gradient();
+
+        if (Input(0)->IsGradientOptimized(this))
+        {
+            if (Input(0)->ParentGradientReused())
+            {
+                if (gradient.Data() != inputGradient.Data() ||
+                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
+                    gradient.GetNumCols() != inputGradient.GetNumCols())
+                    LogicError("Gradient should be reused");
+            }
+            else
+                inputGradient.AssignValuesOf(gradient);
+        }
+        else
+            inputGradient += gradient;
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override 
+    {
+        return ParentGradientOptimization::Reuse;
+    }
+
+    bool ForceDynamicValidation() const override
+    {
+        return true;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        
+        if (!m_pMBLayout)
+        {
+            m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
+            m_pMBLayout->SetUniqueAxisName(ComputationNodeBase::DefaultNoSequenceAxisName);
+        }
+
+        auto sampleLayout = Input(0)->GetSampleLayout();
+        const auto& inputDims = sampleLayout.GetDims();
+        if (inputDims.size() == 0)
+            InvalidArgument("%ls %ls operation's input can't be scalar.", NodeName().c_str(), OperationName().c_str());
+
+        SmallVector<size_t> dims;
+        dims.append(inputDims.begin(), inputDims.end() - 1);
+
+        if (isFinalValidationPass)
+        {
+            // we generate its own MBLayout
+            auto inputMBLayout = InputRef(0).GetMBLayout();
+            if (inputMBLayout)
+                InvalidArgument("%ls %ls operation can only operate on tensor without minibatch data (no layout).", NodeName().c_str(), OperationName().c_str());
+
+            m_pMBLayout->InitAsFrameMode(inputDims.back());
+        }
+
+        SetDims(TensorShape(dims), HasMBLayout());
+    }
+};
+template class ToBatchAxisNode<float>;
+template class ToBatchAxisNode<double>;
+
+
+template <class ElemType>
+class UnpackBatchAixsNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() {
+        return L"UnpackBatchAixs";
+    }
+public:
+    UnpackBatchAixsNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        auto& inputValue = InputRef(0).Value();
+        auto& outputValue = Value();
+
+        auto origin_rows = outputValue.GetNumRows();
+        auto origin_cols = outputValue.GetNumCols();
+
+        outputValue.AssignValuesOf(inputValue);
+        outputValue.Resize(origin_rows, origin_cols);
+    }
+
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
+    {
+        auto& gradient = Gradient();
+        auto& inputGradient = Input(0)->Gradient();
+
+        if (Input(0)->IsGradientOptimized(this))
+        {
+            if (Input(0)->ParentGradientReused())
+            {
+                if (gradient.Data() != inputGradient.Data() ||
+                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
+                    gradient.GetNumCols() != inputGradient.GetNumCols())
+                    LogicError("Gradient should be reused");
+            }
+            else
+                inputGradient.AssignValuesOf(gradient);
+        }
+        else
+            inputGradient += gradient;
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override 
+    {
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override 
+    {
+        return false;
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
+    {
+        return ParentGradientOptimization::Reuse;
+    }
+
+    bool ForceDynamicValidation() const override 
+    {
+        return true;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr;
+
+        TensorShape inputShape = Input(0)->GetSampleLayout();
+        SmallVector<size_t> outDims = inputShape.GetDims();
+        outDims.resize(inputShape.GetRank() + 1, 1);
+
+        if (isFinalValidationPass)
+        {
+            // we generate its own MBLayout
+            auto inputMBLayout = InputRef(0).GetMBLayout();
+            if (!inputMBLayout)
+                InvalidArgument("%ls %ls operation can only operate on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
+
+            if (inputMBLayout->GetNumParallelSequences() == 0)
+                LogicError("%ls %ls operation's final validation pass must not be invoked before the input MBLayout has been initialized and populated.", NodeName().c_str(), OperationName().c_str());
+
+            if (!inputMBLayout->IsInFrameMode())
+                LogicError("%ls %ls operation's input must with MBLayout in frame mode (no sequence).", NodeName().c_str(), OperationName().c_str());
+
+            outDims[inputShape.GetRank()] = inputMBLayout->GetActualNumSamples();
+        }
+
+        SetDims(TensorShape(outDims), HasMBLayout());
+    }
+};
+
+template class UnpackBatchAixsNode<float>;
+template class UnpackBatchAixsNode<double>;
+
 // -----------------------------------------------------------------------
 // SliceNode (input)
 // This node extracts a slice of the first tensor dimension (row).

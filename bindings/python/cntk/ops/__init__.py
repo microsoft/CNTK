@@ -2082,6 +2082,59 @@ def splice(*inputs, **kw_axis_name):
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
 
 @typemap
+def unpack_batch(x, name=''):
+    '''
+    Concatenate the input tensor's last dynamic axis to static axis.
+    Only tensors with batch axis are supported now.
+
+    Example:
+        >>> data = np.arange(12).reshape((3,2,2))
+        >>> x = C.input((2,2))
+        >>> C.unpack_batch(x).eval({x:data})
+        array([[[  0.,   1.],
+                [  2.,   3.]],
+        <BLANKLINE>
+               [[  4.,   5.],
+                [  6.,   7.]],
+        <BLANKLINE>
+               [[  8.,   9.],
+                [ 10.,  11.]]], dtype=float32)
+
+    Args:
+        x: a tensor with dynamic axis
+        name: (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import unpack_batch
+    x = sanitize_input(x)
+    return unpack_batch(x, name)
+
+@typemap
+def to_batch(x, name=''):
+    '''
+    Concatenate the input tensor's first axis to batch axis.
+
+    Example:
+        >>> data = np.arange(12).reshape((3,2,2))
+        >>> x = C.constant(value=data)
+        >>> y = C.to_batch(x)
+        >>> y.shape
+        (2, 2)
+
+    Args:
+        x: a tensor with dynamic axis
+        name: (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import to_batch
+    x = sanitize_input(x)
+    return to_batch(x, name)
+
+@typemap
 def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
     '''
     Create one hot tensor based on the input tensor
