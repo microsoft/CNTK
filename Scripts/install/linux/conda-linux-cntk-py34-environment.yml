@@ -31,3 +31,4 @@ dependencies:
   - future==0.16.0
   - easydict==1.6.0
   - scikit-image==0.12.3
+  - protobuf==3.2.0

@@ -88,6 +88,7 @@ Makefile text
 *.list text
 
 *.log text
+*.prototxt text
 
 Dockerfile* text
 .dockerignore text

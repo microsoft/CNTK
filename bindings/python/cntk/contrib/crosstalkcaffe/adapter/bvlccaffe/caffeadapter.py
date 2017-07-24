@@ -12,8 +12,11 @@ import math
 from cntk.contrib.crosstalkcaffe.unimodel import cntkmodel
 from cntk.contrib.crosstalkcaffe.adapter import baseadapter
 from . import caffeimpl
-from . import caffe_pb2
-from google.protobuf import text_format
+
+try:
+    from google.protobuf import text_format
+except ImportError:
+    sys.stderr.write('Parsing the weights needs Protobuf\n')
 
 def _format_to_list(target, rank, default_pad=0):
     if isinstance(target, int):
@@ -343,6 +346,7 @@ class CaffeAdapter(baseadapter.Adapter):
         self._raw_solver = None
         self._uni_model = None
         self._source_solver = None
+        self._caffe_pb2 = None
         return
 
     def load_model(self, global_conf):
@@ -367,6 +371,7 @@ class CaffeAdapter(baseadapter.Adapter):
         self._uni_model = cntkmodel.CntkModelDescription()
         self._raw_solver = caffe_impl.solver()
         self._raw_net = caffe_impl.net()
+        self._caffe_pb2 = caffe_impl.caffepb
         with open(self._source_solver.model_path, 'r') as net_file:
             text_format.Merge(net_file.read(), self._raw_net)        
         self._uni_model.model_name = os.path.splitext(self._source_solver.model_path)[0]
@@ -545,7 +550,7 @@ class CaffeAdapter(baseadapter.Adapter):
         layer_parameter = self._get_layer_parameters(raw_layer)
         cntk_layer_type = None
         if raw_layer.type == 'Eltwise':
-            operate_name = caffe_pb2.EltwiseParameter.EltwiseOp.DESCRIPTOR.values_by_number[layer_parameter.operation].name
+            operate_name = self._caffe_pb2.EltwiseParameter.EltwiseOp.DESCRIPTOR.values_by_number[layer_parameter.operation].name
             layer_type = '_'.join((raw_layer.type, operate_name))
             cntk_layer_type = caffeimpl.CAFFE_LAYER_WRAPPER[layer_type]
         return cntk_layer_type
