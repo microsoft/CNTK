@@ -79,7 +79,7 @@ class DataSource(UserMinibatchSource):
         self.label1 = StreamInformation("label1", 2, 'sparse', np.float32, (self.vocab_base,))
         self.label2 = StreamInformation("label2", 3, 'sparse', np.float32, (self.vocab_base,))
         self.word1 = StreamInformation("word1", 4, 'dense', np.float32, (1,))
-        self.word2 = StreamInformation("word1", 5, 'dense', np.float32, (1,))
+        self.word2 = StreamInformation("word2", 5, 'dense', np.float32, (1,))
 
         super(DataSource, self).__init__()
 

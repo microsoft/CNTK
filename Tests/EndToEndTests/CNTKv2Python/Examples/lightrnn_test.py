@@ -22,7 +22,7 @@ sys.path.append(example_dir)
 script_under_test = os.path.join(example_dir, 'train.py')
 
 TIMEOUT_SECONDS = 300
-TOLERANCE_ABSOLUTE = 1E-2
+TOLERANCE_ABSOLUTE = 1E-1
 
 def run_command(**kwargs):
     command = ['mpiexec', '-n', '1', 'python', script_under_test]
