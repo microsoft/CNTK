@@ -6038,7 +6038,7 @@ void CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const CPUMatrix<Ele
     if (m != 1 || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
-    c.RequireSize(k, l); // c must the the same size of b
+    c.RequireSize(k, l); // c must the same size of b
 
     if (bFirstmatrixfixed)
     {
