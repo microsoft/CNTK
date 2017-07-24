@@ -2726,6 +2726,60 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNegativeSineOf(const CPUMatrix<E
     return *this;
 }
 
+//[this]=cosh([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceCosh()
+{
+    return AssignCoshOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCoshOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignCoshOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord (i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = cosh(v);
+    }
+
+    return *this;
+}
+
+//[this]=sinh([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceSinh()
+{
+    return AssignSinhOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSinhOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignSinhOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord (i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = sinh(v);
+    }
+
+    return *this;
+}
+
 //Threshold truncating: this[i] = max( this[i], threshold )
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)

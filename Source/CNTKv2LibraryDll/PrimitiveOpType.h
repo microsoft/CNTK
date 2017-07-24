@@ -86,6 +86,8 @@ namespace CNTK
         Gather = 74,
         StableSigmoid = 75,
         RandomDistribution = 76,
+        Sinh = 77,
+        Cosh = 78,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

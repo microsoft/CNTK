@@ -146,6 +146,10 @@ namespace CNTK
                     opType = PrimitiveOpType::Cos;
                 else if (node->OperationName() == OperationNameOf(SinNode))
                     opType = PrimitiveOpType::Sin;
+                else if (node->OperationName() == OperationNameOf(CoshNode))
+                    opType = PrimitiveOpType::Cosh;
+                else if (node->OperationName() == OperationNameOf(SinhNode))
+                    opType = PrimitiveOpType::Sinh;
                 else if (node->OperationName() == OperationNameOf(PassNode))
                     opType = PrimitiveOpType::Pass;
                 else if (node->OperationName() == OperationNameOf(LabelsToGraphNode))
