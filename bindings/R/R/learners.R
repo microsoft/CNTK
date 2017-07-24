@@ -6,7 +6,7 @@
 #' parameter values using first order gradients. To instantiate a concrete
 #' learner, use the factory methods in this module.
 #'
-#' @param parameters list of parameter associated with this learner
+#' @param parameters – list of network parameters list of parameter associated with this learner
 #' @param learningRateSchedule get_learning_rate(learner)
 #' @example \dontrun{
 #' reset_learning_rate(learner, learning_rate)
@@ -21,6 +21,8 @@ Learner <- function(parameters, learningRateSchedule) {
 	)
 }
 
+#' Get Learner Learning Rate
+#'
 #' @param learner
 #'
 #' @export
@@ -28,8 +30,9 @@ get_learning_rate <- function(learner) {
 	learner$get_learning_rate()
 }
 
-#' @param learner
+#' Reset Learner Learning Rate
 #'
+#' @param learner
 #' @param learning_rate
 #'
 #' @export
@@ -63,8 +66,8 @@ UnitType <- function(value) {
 #' Certain optimizers (such as AdaGrad) require additional storage. This can be
 #' allocated and initialized during construction.
 #'
-#' @param parameters
-#' @param lr_schedule
+#' @param parameters – list of network parameters
+#' @param lr (output of learning_rate_schedule()) – learning rate schedule_schedule
 #' @param as_matrix
 #'
 #' @seealso \code{\link{update_user_learner}}
@@ -94,17 +97,17 @@ update_user_learner <- function(learner, gradient_values, training_sample_count,
 	)
 }
 
-#' @param parameters
+#' @param parameters – list of network parameters
 #'
-#' @param lr
-#' @param rho
-#' @param epsilon
-#' @param l1_regularization_weight
-#' @param l2_regularization_weight
-#' @param gaussian_noise_injection_std_dev
-#' @param gradient_clipping_threshold_per_sample
-#' @param gradient_clipping_with_truncation
-#' @param use_mean_gradient
+#' @param lr (output of learning_rate_schedule()) – learning rate schedule
+#' @param rho (float) – exponential smooth factor for each minibatch.
+#' @param epsilon (float, default 0.00001) - added to avoid division by 0
+#' @param l1_regularization_weight (float, optional) – the L1 regularization weight per sample, defaults to 0.0(float, optional)
+#' @param l2_regularization_weight (float, optional) – the L2 regularization weight per sample, defaults to 0.0
+#' @param gaussian_noise_injection_std_dev (float, optional) – the standard deviation of the Gaussian noise added to parameters post update, defaults to 0.0
+#' @param gradient_clipping_threshold_per_sample (float, optional) – clipping threshold per sample, defaults to infinity.
+#' @param gradient_clipping_with_truncation (bool, default True) – use gradient clipping with truncation
+#' @param use_mean_gradient (bool, default False) – use averaged gradient as input to learner. Defaults to the value returned by default_use_mean_gradient_value().
 #'
 #' @export
 learner_adadelta <- function(parameters, lr, rho, epsilon,
@@ -128,15 +131,15 @@ learner_adadelta <- function(parameters, lr, rho, epsilon,
 	)
 }
 
-#' @param parameters
+#' @param parameters – list of network parameters
 #'
-#' @param lr
+#' @param lr (output of learning_rate_schedule()) – learning rate schedule
 #' @param need_ave_multiplier
-#' @param l1_regularization_weight
-#' @param l2_regularization_weight
-#' @param gaussian_noise_injection_std_dev
-#' @param gradient_clipping_threshold_per_sample
-#' @param gradient_clipping_with_truncation
+#' @param l1_regularization_weight (float, optional) – the L1 regularization weight per sample, defaults to 0.0(float, optional)
+#' @param l2_regularization_weight (float, optional) – the L2 regularization weight per sample, defaults to 0.0
+#' @param gaussian_noise_injection_std_dev (float, optional) – the standard deviation of the Gaussian noise added to parameters post update, defaults to 0.0
+#' @param gradient_clipping_threshold_per_sample (float, optional) – clipping threshold per sample, defaults to infinity.
+#' @param gradient_clipping_with_truncation (bool, default True) – use gradient clipping with truncation
 #'
 #' @export
 learner_adagrad <- function(parameters, lr, need_ave_multiplier = TRUE,
@@ -157,18 +160,18 @@ learner_adagrad <- function(parameters, lr, need_ave_multiplier = TRUE,
 	)
 }
 
-#' @param parameters
+#' @param parameters – list of network parameters
 #'
-#' @param lr
+#' @param lr (output of learning_rate_schedule()) – learning rate schedule
 #' @param momentum
 #' @param unit_gain
 #' @param variance_momentum
-#' @param l1_regularization_weight
-#' @param l2_regularization_weight
-#' @param gaussian_noise_injection_std_dev
-#' @param gradient_clipping_threshold_per_sample
-#' @param gradient_clipping_with_truncation
-#' @param epsilon
+#' @param l1_regularization_weight (float, optional) – the L1 regularization weight per sample, defaults to 0.0(float, optional)
+#' @param l2_regularization_weight (float, optional) – the L2 regularization weight per sample, defaults to 0.0
+#' @param gaussian_noise_injection_std_dev (float, optional) – the standard deviation of the Gaussian noise added to parameters post update, defaults to 0.0
+#' @param gradient_clipping_threshold_per_sample (float, optional) – clipping threshold per sample, defaults to infinity.
+#' @param gradient_clipping_with_truncation (bool, default True) – use gradient clipping with truncation
+#' @param epsilon (float, default 0.00001) - added to avoid division by 0
 #' @param adamax
 #'
 #' @export
@@ -197,17 +200,17 @@ learner_adam <- function(parameters, lr, momentum,
 	)
 }
 
-#' @param parameters
+#' @param parameters – list of network parameters
 #'
-#' @param lr
+#' @param lr (output of learning_rate_schedule()) – learning rate schedule
 #' @param momentum
 #' @param unit_gain
 #' @param variance_momentum
-#' @param l1_regularization_weight
-#' @param l2_regularization_weight
-#' @param gaussian_noise_injection_std_dev
-#' @param gradient_clipping_threshold_per_sample
-#' @param gradient_clipping_with_truncation
+#' @param l1_regularization_weight (float, optional) – the L1 regularization weight per sample, defaults to 0.0(float, optional)
+#' @param l2_regularization_weight (float, optional) – the L2 regularization weight per sample, defaults to 0.0
+#' @param gaussian_noise_injection_std_dev (float, optional) – the standard deviation of the Gaussian noise added to parameters post update, defaults to 0.0
+#' @param gradient_clipping_threshold_per_sample (float, optional) – clipping threshold per sample, defaults to infinity.
+#' @param gradient_clipping_with_truncation (bool, default True) – use gradient clipping with truncation
 #'
 #' @export
 learner_fsadagrad <- function(parameters, lr, momentum,
@@ -232,7 +235,7 @@ learner_fsadagrad <- function(parameters, lr, momentum,
 	)
 }
 
-#' @param lr
+#' @param lr (output of learning_rate_schedule()) – learning rate schedule
 #'
 #' @param unit
 #' @param epoch_size
@@ -272,16 +275,16 @@ momentum_schedule <- function(momentum, epoch_size = NULL) {
 
 #' Creates a Momentum SGD learner instance to learn the parameters.
 #'
-#' @param parameters list of network parameters to tune.
-#' @param lr output of \code{learning_rate_schedule}
+#' @param parameters – list of network parameters list of network parameters to tune.
+#' @param lr (output of learning_rate_schedule()) – learning rate schedule output of \code{learning_rate_schedule}
 #' @param momentum output of \code{momentum_schdule} or \code{momentum_as_time_constant_schedule}
 #' @param unit_gain logical whether to interpret momentum as a unit-gain filter
-#' @param l1_regularization_weight double of l1 regularization
-#' @param l2_regularization_weight double of l2 regularization
-#' @param gaussian_noise_injection_std_dev double of noise injection
-#' @param gradient_clipping_threshold_per_sample double of gradient clipping threshold per sample
-#' @param gradient_clipping_with_truncation logical for gradient clipping with truncation
-#' @param use_mean_gradient logical use averaged gradient as input to learner.
+#' @param l1_regularization_weight (float, optional) – the L1 regularization weight per sample, defaults to 0.0(float, optional) double of l1 regularization
+#' @param l2_regularization_weight (float, optional) – the L2 regularization weight per sample, defaults to 0.0 double of l2 regularization
+#' @param gaussian_noise_injection_std_dev (float, optional) – the standard deviation of the Gaussian noise added to parameters post update, defaults to 0.0 double of noise injection
+#' @param gradient_clipping_threshold_per_sample (float, optional) – clipping threshold per sample, defaults to infinity. double of gradient clipping threshold per sample
+#' @param gradient_clipping_with_truncation (bool, default True) – use gradient clipping with truncation logical for gradient clipping with truncation
+#' @param use_mean_gradient (bool, default False) – use averaged gradient as input to learner. Defaults to the value returned by default_use_mean_gradient_value(). logical use averaged gradient as input to learner.
 #'
 #' @references \url{https://www.cntk.ai/pythondocs/cntk.learners.html#cntk.learners.momentum_sgd}
 #' @export
@@ -308,16 +311,16 @@ learner_momentum_sgd <- function(parameters, lr, momentum,
 	)
 }
 
-#' @param parameters
+#' @param parameters – list of network parameters
 #'
-#' @param lr
+#' @param lr (output of learning_rate_schedule()) – learning rate schedule
 #' @param momentum
 #' @param unit_gain
-#' @param l1_regularization_weight
-#' @param l2_regularization_weight
-#' @param gaussian_noise_injection_std_dev
-#' @param gradient_clipping_threshold_per_sample
-#' @param gradient_clipping_with_truncation
+#' @param l1_regularization_weight (float, optional) – the L1 regularization weight per sample, defaults to 0.0(float, optional)
+#' @param l2_regularization_weight (float, optional) – the L2 regularization weight per sample, defaults to 0.0
+#' @param gaussian_noise_injection_std_dev (float, optional) – the standard deviation of the Gaussian noise added to parameters post update, defaults to 0.0
+#' @param gradient_clipping_threshold_per_sample (float, optional) – clipping threshold per sample, defaults to infinity.
+#' @param gradient_clipping_with_truncation (bool, default True) – use gradient clipping with truncation
 #'
 #' @export
 learner_nesterov <- function(parameters, lr, momentum,
@@ -340,20 +343,20 @@ learner_nesterov <- function(parameters, lr, momentum,
 	)
 }
 
-#' @param parameters
+#' @param parameters – list of network parameters
 #'
-#' @param lr
+#' @param lr (output of learning_rate_schedule()) – learning rate schedule
 #' @param gamma
 #' @param inc
 #' @param dec
 #' @param max
 #' @param min
 #' @param need_ave_multiplier
-#' @param l1_regularization_weight
-#' @param l2_regularization_weight
-#' @param gaussian_noise_injection_std_dev
-#' @param gradient_clipping_threshold_per_sample
-#' @param gradient_clipping_with_truncation
+#' @param l1_regularization_weight (float, optional) – the L1 regularization weight per sample, defaults to 0.0(float, optional)
+#' @param l2_regularization_weight (float, optional) – the L2 regularization weight per sample, defaults to 0.0
+#' @param gaussian_noise_injection_std_dev (float, optional) – the standard deviation of the Gaussian noise added to parameters post update, defaults to 0.0
+#' @param gradient_clipping_threshold_per_sample (float, optional) – clipping threshold per sample, defaults to infinity.
+#' @param gradient_clipping_with_truncation (bool, default True) – use gradient clipping with truncation
 #'
 #' @export
 learner_rmsprop <- function(parameters, lr, gamma, inc, dec, max, min,
@@ -379,14 +382,14 @@ learner_rmsprop <- function(parameters, lr, gamma, inc, dec, max, min,
 	)
 }
 
-#' @param parameters
+#' @param parameters – list of network parameters
 #'
-#' @param lr
-#' @param l1_regularization_weight
-#' @param l2_regularization_weight
-#' @param gaussian_noise_injection_std_dev
-#' @param gradient_clipping_threshold_per_sample
-#' @param gradient_clipping_with_truncation
+#' @param lr (output of learning_rate_schedule()) – learning rate schedule
+#' @param l1_regularization_weight (float, optional) – the L1 regularization weight per sample, defaults to 0.0(float, optional)
+#' @param l2_regularization_weight (float, optional) – the L2 regularization weight per sample, defaults to 0.0
+#' @param gaussian_noise_injection_std_dev (float, optional) – the standard deviation of the Gaussian noise added to parameters post update, defaults to 0.0
+#' @param gradient_clipping_threshold_per_sample (float, optional) – clipping threshold per sample, defaults to infinity.
+#' @param gradient_clipping_with_truncation (bool, default True) – use gradient clipping with truncation
 #'
 #' @export
 learner_sgd <- function(parameters, lr,
@@ -422,7 +425,7 @@ training_parameter_schedule <- function(schedule, unit, epoch_size = NULL) {
 
 #' @param update_func
 #'
-#' @param parameters
+#' @param parameters – list of network parameters
 #'
 #' @export
 universal_learner <- function(update_func, parameters) {

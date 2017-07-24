@@ -2,7 +2,7 @@
 % Please edit documentation in R/layers-higher_order_layers.R
 \name{Sequential}
 \alias{Sequential}
-\title{Higher-Order Wrapper for Layer Definitions}
+\title{Sequential Higher-Order Wrapper for Layer Definitions}
 \usage{
 Sequential(...)
 }
@@ -10,9 +10,11 @@ Sequential(...)
 \item{...}{list of layer functions to apply in sequence}
 }
 \value{
-A function that accepts one argument and applies the given functions one after another.
+A function that accepts one argument and applies the given
+functions one after another.
 }
 \description{
-Layer factory function to create a composite that applies a sequence of layers (or any functions) onto an input.
+Layer factory function to create a composite that applies a sequence of
+layers (or any functions) onto an input.
 Sequential `([F, G, H])(x)` means the same as `H(G(F(x)))`.
 }

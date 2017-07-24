@@ -9,7 +9,19 @@ Dense(shape, activation = activation_identity, init = init_glorot_uniform(),
   name = "")
 }
 \arguments{
-\item{name}{string for the name of the function instance in the network}
+\item{shape}{- list of ints representing tensor shape}
+
+\item{activation}{(Function) - optional activation Function}
+
+\item{init}{(scalar or matrix or initializer, defaults to
+init_glorot_uniform()) – initial value of weights W}
+
+\item{bias}{(bool) – whether to include bias}
+
+\item{init_bias}{(scalar or matrix or initializer, defaults to 0) – initial
+value of weights b}
+
+\item{name}{string (optional) the name of the Function instance in the network}
 }
 \description{
 Layer factory function to create an instance of a fully-connected linear

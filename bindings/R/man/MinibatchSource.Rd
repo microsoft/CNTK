@@ -2,7 +2,7 @@
 % Please edit documentation in R/io.R
 \name{MinibatchSource}
 \alias{MinibatchSource}
-\title{MinibatchSource}
+\title{Minibatch Source}
 \usage{
 MinibatchSource(deserializers, max_samples = IO_INFINITELY_REPEAT,
   max_sweeps = IO_INFINITELY_REPEAT,

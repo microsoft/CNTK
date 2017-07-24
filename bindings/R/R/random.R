@@ -1,12 +1,16 @@
 #' @export
 AUTO_SELECT_SEED <- 184467440L
 
-#' @param shape
+#' Random Bernoulli Distribution
 #'
-#' @param dtype
-#' @param mean
-#' @param seed
-#' @param name
+#' Generates samples from the Bernoulli distribution with success probability
+#' mean.
+#'
+#' @param shape - list of ints representing tensor shape
+#' @param dtype - data type to be used ("float32", "float64", or "auto")
+#' @param mean - success probability
+#' @param seed - pseudo random number generator seed
+#' @param name - name of the Function instance in the network
 #'
 #' @export
 rand_bernoulli <- function(shape, dtype = default_override_or(np$float32),
@@ -28,11 +32,15 @@ rand_bernoulli <- function(shape, dtype = default_override_or(np$float32),
 	)
 }
 
-#' @param x
+#' Random Bernoulli Like
 #'
-#' @param mean
-#' @param seed
-#' @param name
+#' Generates samples from the Bernoulli distribution with success probability
+#' mean.
+#'
+#' @param x - CNTK variable from which to copy the shape, dtype, and dynamic axes
+#' @param mean - success probability
+#' @param seed - pseudo random number generator seed
+#' @param name - name of the Function instance in the network
 #'
 #' @export
 rand_bernoulli_like <- function(x, mean = 0.5, seed = AUTO_SELECT_SEED,
@@ -52,13 +60,15 @@ rand_bernoulli_like <- function(x, mean = 0.5, seed = AUTO_SELECT_SEED,
 	)
 }
 
-#' @param shape
+#' Random Gumbel Distribution
 #'
-#' @param dtype
+#' @param shape - list of ints representing tensor shape
+#'
+#' @param dtype - data type to be used ("float32", "float64", or "auto")
 #' @param loc
-#' @param scale
-#' @param seed
-#' @param name
+#' @param scale - scale of the distribution
+#' @param seed - pseudo random number generator seed
+#' @param name - name of the Function instance in the network
 #'
 #' @export
 rand_gumbel <- function(shape, dtype = default_override_or(np$float32), loc = 0,
@@ -82,12 +92,13 @@ rand_gumbel <- function(shape, dtype = default_override_or(np$float32), loc = 0,
 	)
 }
 
-#' @param x
+#' Random Gumbel Like Distribution
 #'
-#' @param mean
-#' @param scale
-#' @param seed
-#' @param name
+#' @param x - CNTK variable from which to copy the shape, dtype, and dynamic axes
+#' @param mean - success probability
+#' @param scale - scale of the distribution
+#' @param seed - pseudo random number generator seed
+#' @param name - name of the Function instance in the network
 #'
 #' @export
 rand_gumbel_like <- function(x, mean = 0, scale = 1, seed = AUTO_SELECT_SEED,
@@ -109,13 +120,14 @@ rand_gumbel_like <- function(x, mean = 0, scale = 1, seed = AUTO_SELECT_SEED,
 	)
 }
 
-#' @param shape
+#' Random Normal Distribution
 #'
-#' @param dtype
-#' @param mean
-#' @param scale
-#' @param seed
-#' @param name
+#' @param shape - list of ints representing tensor shape
+#' @param dtype - data type to be used ("float32", "float64", or "auto")
+#' @param mean - success probability
+#' @param scale - scale of the distribution
+#' @param seed - pseudo random number generator seed
+#' @param name - name of the Function instance in the network
 #'
 #' @export
 rand_normal <- function(shape, dtype = default_override_or(np$float32),
@@ -140,12 +152,13 @@ rand_normal <- function(shape, dtype = default_override_or(np$float32),
 	)
 }
 
-#' @param x
+#' Random Normal Like Distribution
 #'
-#' @param mean
-#' @param scale
-#' @param seed
-#' @param name
+#' @param x - CNTK variable from which to copy the shape, dtype, and dynamic axes
+#' @param mean - success probability
+#' @param scale - scale of the distribution
+#' @param seed - pseudo random number generator seed
+#' @param name - name of the Function instance in the network
 #'
 #' @export
 rand_normal_like <- function(x, mean = 0, scale = 1, seed = AUTO_SELECT_SEED,
@@ -167,13 +180,14 @@ rand_normal_like <- function(x, mean = 0, scale = 1, seed = AUTO_SELECT_SEED,
 	)
 }
 
-#' @param shape
+#' Random Uniform Distribution
 #'
-#' @param dtype
-#' @param low
-#' @param high
-#' @param seed
-#' @param name
+#' @param shape - list of ints representing tensor shape
+#' @param dtype - data type to be used ("float32", "float64", or "auto")
+#' @param low - bottom of distribution range
+#' @param high - top of distribution range
+#' @param seed - pseudo random number generator seed
+#' @param name - name of the Function instance in the network
 #'
 #' @export
 rand_uniform <- function(shape, dtype = default_override_or(np$float32),
@@ -198,12 +212,13 @@ rand_uniform <- function(shape, dtype = default_override_or(np$float32),
 	)
 }
 
-#' @param x
+#' Random Uniform Like Distribution
 #'
-#' @param low
-#' @param high
-#' @param seed
-#' @param name
+#' @param x - CNTK variable from which to copy the shape, dtype, and dynamic axes
+#' @param low - bottom of distribution range
+#' @param high - top of distribution range
+#' @param seed - pseudo random number generator seed
+#' @param name - name of the Function instance in the network
 #'
 #' @export
 rand_uniform_like <- function(x, low = 0, high = 1, seed = AUTO_SELECT_SEED,

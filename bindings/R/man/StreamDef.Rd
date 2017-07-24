@@ -11,19 +11,21 @@ StreamDef(field = NULL, shape = NULL, is_sparse = FALSE,
 \arguments{
 \item{field}{string defining the name of the stream}
 
-\item{shape}{integer defining the dimensions of the stream}
+\item{shape}{- list of ints representing tensor shape integer defining the dimensions of the stream}
 
 \item{is_sparse}{logical for whether the data is sparse (FALSE by default)}
 
 \item{transforms}{list of transforms to be applied to the Deserializer}
 
-\item{context}{vector of length two defining whther reading in HTK data, (only supported by `HTKFeatureDeserializer`)}
+\item{context}{vector of length two defining whther reading in HTK data,
+(only supported by `HTKFeatureDeserializer`)}
 
 \item{scp}{list of `scp` files for HTK data}
 
 \item{mlf}{list `mlf` files for HTK data}
 
-\item{broadcast}{logical for whether the streams should be broadcast to the whole sequence}
+\item{broadcast}{logical for whether the streams should be broadcast to the
+whole sequence}
 
 \item{defines_mb_size}{logical for whether this stream defines minibatch size}
 }

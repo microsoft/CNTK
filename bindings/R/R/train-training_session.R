@@ -1,5 +1,6 @@
-#' @param filename
+#' New Checkpoint Config
 #'
+#' @param filename
 #' @param frequency
 #' @param restore
 #' @param preserve_all
@@ -15,8 +16,9 @@ CheckpointConfig <- function(filename, frequency = NULL, restore = TRUE,
 	)
 }
 
-#' @param minibatch_source
+#' New Cross Validation Configuration
 #'
+#' @param minibatch_source
 #' @param frequency
 #' @param minibatch_size
 #' @param callback
@@ -45,8 +47,9 @@ CrossValidationConfig <- function(minibatch_source = NULL, frequency = NULL,
 	)
 }
 
-#' @param minibatch_source
+#' New Test Configuration
 #'
+#' @param minibatch_source
 #' @param minibatch_size
 #' @param model_inputs_to_streams
 #' @param criterion
@@ -67,8 +70,21 @@ TestConfig <- function(minibatch_source = NULL, minibatch_size = 32,
 	)
 }
 
-#' @param trainer
+#' New Training Configuration
 #'
+#' The instance of the class should be created by using training_session()
+#' function.  A training session trains a model using the specified trainer and
+#' configs. Different aspects of training such as data sources, checkpointing,
+#' cross validation, progress printing can be configured using the
+#' corresponding config classes.
+#'
+#' ****** Associated Functions: ******
+#'
+#' on_train_cross_validation_end
+#'
+#' train_on_session
+#'
+#' @param trainer
 #' @param mb_source
 #' @param mb_size
 #' @param model_inputs_to_streams
@@ -96,8 +112,9 @@ TrainingSession <- function(trainer, mb_source, mb_size,
 	)
 }
 
-#' @param sess
+#' On Training Cross Validation End
 #'
+#' @param sess - session instance on which to perform the operation
 #' @param index
 #' @param average_error
 #' @param num_samples
@@ -114,17 +131,19 @@ on_train_cross_validation_end <- function(sess, index, average_error,
 	)
 }
 
-#' @param sess
+#' Train On TrainingSession
 #'
-#' @param device
+#' @param sess - session instance on which to perform the operation
+#' @param device - instance of DeviceDescriptor
 #'
 #' @export
 train_on_session <- function(sess, device = NULL) {
 	sess$train(device = device)
 }
 
-#' @param schedule
+#' Create a Minibatch Size Schedule
 #'
+#' @param schedule
 #' @param epoch_size
 #'
 #' @export
@@ -135,8 +154,9 @@ sess_minibatch_size_schedule <- function(schedule, epoch_size = 1) {
 	)
 }
 
-#' @param trainer
+#' Create Training Session Object
 #'
+#' @param trainer
 #' @param mb_source
 #' @param mb_size
 #' @param model_inputs_to_streams

@@ -7,7 +7,7 @@
 Stabilizer(steepness = 4, enable_self_stabilization = TRUE, name = "")
 }
 \arguments{
-\item{name}{}
+\item{name}{string (optional) the name of the Function instance in the network}
 }
 \description{
 Layer factory function to create a Droppo self-stabilizer. It multiplies its

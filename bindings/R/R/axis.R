@@ -44,7 +44,7 @@ CNTKAxis <- function(...) {
 	cntk$axis$Axis(...)
 }
 
-#' get_all_axes
+#' Get All Axes
 #'
 #' Axis object representing all the axes–static and dynamic–of an operand.
 #'
@@ -53,7 +53,7 @@ get_all_axes <- function() {
 	cntk$axis$Axis$all_axes()
 }
 
-#' get_all_static_axes
+#' Get All Static Axes
 #'
 #' Axis object representing all the static axes of an operand.
 #'
@@ -62,7 +62,7 @@ get_all_static_axes <- function() {
 	cntk$axis$Axis$all_static_axes()
 }
 
-#' get_default_batch_axis
+#' Get Default Batch Axis
 #'
 #' Returns an Axis object representing the batch axis
 #'
@@ -71,7 +71,7 @@ get_default_batch_axis <- function() {
 	cntk$axis$Axis$default_batch_axis()
 }
 
-#' get_default_dynamic_axis
+#' Get Default Dynamic Axis
 #'
 #' Returns an Axis object representing the default dynamic axis
 #'
@@ -80,7 +80,7 @@ get_default_dynamic_axis <- function() {
 	cntk$axis$Axis$default_dynamic_axis()
 }
 
-#' create_new_leading_axis
+#' Create New Leading Axis
 #'
 #' Creates an Axis object representing a new leading static axis.
 #'
@@ -89,7 +89,7 @@ create_new_leading_axis <- function() {
 	cntk$axis$Axis$new_leading_axis()
 }
 
-#' get_static_axis_index
+#' Get Static Axis Index
 #'
 #' Returns the integer with which the static axis is defined. For example, 0 =
 #' first axis, 1 = second axis, etc.
@@ -102,7 +102,7 @@ get_static_axis_index <- function(ax, checked = TRUE) {
 	ax$static_axis_index(checked = checked)
 }
 
-#' unknown_dynamic_axes
+#' Unknown Dynamic Axes
 #'
 #' Unknown dynamic axes
 #'

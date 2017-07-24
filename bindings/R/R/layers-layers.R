@@ -1,3 +1,5 @@
+#' Identity Function For CNTK Operations
+#'
 #' @param keep
 #'
 #' @export
@@ -13,9 +15,10 @@ activation_identity <- function(keep) {
 #' the activation function with \code{default <- options}, or when its invocation
 #' should be named.
 #'
-#' @param activation (defaults to \code{activation_identity}) – function to apply
+#' @param activation (Function) - optional activation Function (defaults to
+#' \code{activation_identity}) – function to apply
 #' at the end, e.g. \code{op_relu}
-#' @param name string for the name of the function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #' the network
 #' @return A function that accepts one argument and applies the operation to it
 #'
@@ -34,10 +37,6 @@ Activation <- function(activation = activation_identity, name = '') {
 	)
 }
 
-# activation <- function(activation = activation_identity, name = '') {
-#     cntk$layers$Activation(activation = activation, name = name)
-# }
-
 #' Average Pooling Layer
 #'
 #' Like Convolution(), AveragePooling() processes items arranged on an
@@ -49,19 +48,22 @@ Activation <- function(activation = activation_identity, name = '') {
 #' shape. E.g. for 2D pooling, filter <- shape should be a tuple of two
 #' integers, such as (5,5).
 #'
-#' @param filter_shape (int or tuple of ints) – shape (spatial extent) of the
+#' @param filter_shape int or list of int - shape (spatial extent) of the
 #' receptive field, not including the input feature-map depth. E.g. (3,3) for a
 #' 2D convolution.
-#' @param strides (int or tuple of ints, defaults to 1) – stride (increment when
+#' receptive field, not including the input feature-map depth. E.g. (3,3) for a
+#' 2D convolution.
+#' @param strides (int or tuple of ints, defaults to 1) – stride of the
+#' operation. Use a list of ints to specify a per-axis value. (int or tuple of
+#' ints, defaults to 1) – stride (increment when
 #' sliding over the input). Use a tuple to specify a per-axis value.
-#' @param pad (bool or tuple of bools, defaults to False) – if False, then the
-#' pooling #' operation will be shifted over the “valid” area of input, that
-#' is, no value #' outside the area is used. If pad=True on the other hand,
-#' pooling will be #' applied to all input positions, and positions outside the
-#' valid region will #' be excluded from the averaging. Use a tuple to specify
-#' a per-axis value.
-#' @param name string for the name of the function instance in the network
-#' network
+#' @param pad (bool or list of bools) – if False, then the operation will be
+#' shifted over the “valid” area of input, that is, no value outside the area
+#' is used. If pad=True on the other hand, the operation will be applied to all
+#' input positions, and positions outside the valid region will be considered
+#' containing zero. Use a list to specify a per-axis value. (bool or tuple of
+#' bools, defaults to False) – if False, then the
+#' @param name string (optional) the name of the Function instance in the network
 #' @return A function that accepts one argument and applies the average-pooling
 #' operation to it
 #'
@@ -93,12 +95,13 @@ AveragePooling <- function(filter_shape, strides = 1, pad = FALSE, name = '') {
 #' (5,5).
 #'
 #' @param map_rank
-#' @param init_scale
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W_scale
 #' @param normalization_time_constant
 #' @param blend_time_constant
-#' @param epsilon
+#' @param epsilon (float, default 0.00001) - added to avoid division by 0
 #' @param use_cntk_engine
-#' @param name string for the name of the function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 BatchNormalization <- function(map_rank = NULL, init_scale = 1,
@@ -156,21 +159,32 @@ BatchNormalization <- function(map_rank = NULL, init_scale = 1,
 #' exposes them as an attributes .W and .b. The weights will have the shape
 #' (num_filters, input_feature_map_depth, *filter_shape)
 #'
-#' @param filter_shape
-#' @param num_filters
+#' @param filter_shape int or list of int - shape (spatial extent) of the
+#' receptive field, not including the input feature-map depth. E.g. (3,3) for a
+#' 2D convolution.
+#' @param num_filters (int, defaults to None) – number of filters (output
+#' feature-map depth), or () to denote scalar output items (output shape will
+#' have no depth axis).
 #' @param sequential
-#' @param activation
-#' @param init
-#' @param pad
-#' @param strides
+#' @param activation (Function) - optional activation Function
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W
+#' @param pad (bool or list of bools) – if False, then the operation will be
+#' shifted over the “valid” area of input, that is, no value outside the area
+#' is used. If pad=True on the other hand, the operation will be applied to all
+#' input positions, and positions outside the valid region will be considered
+#' containing zero. Use a list to specify a per-axis value.
+#' @param strides (int or tuple of ints, defaults to 1) – stride of the
+#' operation. Use a list of ints to specify a per-axis value.
 #' @param sharing
-#' @param bias
-#' @param init_bias
+#' @param bias (bool) – whether to include bias
+#' @param init_bias (scalar or matrix or initializer, defaults to 0) – initial
+#' value of weights b
 #' @param reduction_rank
 #' @param transpose_weight
 #' @param max_temp_mem_size_in_samples
 #' @param op_name
-#' @param name string for the name of the function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 Convolution <- function(filter_shape, num_filters = NULL, sequential = FALSE,
@@ -204,16 +218,27 @@ Convolution <- function(filter_shape, num_filters = NULL, sequential = FALSE,
 #' non-linearity. Same as Convolution() except that filter_shape is verified to
 #' be 1-dimensional. See Convolution() for extensive documentation.
 #'
-#' @param filter_shape
-#' @param num_filters
-#' @param activation
-#' @param init
-#' @param pad
-#' @param strides
-#' @param bias
-#' @param init_bias
+#' @param filter_shape int or list of int - shape (spatial extent) of the
+#' receptive field, not including the input feature-map depth. E.g. (3,3) for a
+#' 2D convolution.
+#' @param num_filters (int, defaults to None) – number of filters (output
+#' feature-map depth), or () to denote scalar output items (output shape will
+#' have no depth axis).
+#' @param activation (Function) - optional activation Function
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W
+#' @param pad (bool or list of bools) – if False, then the operation will be
+#' shifted over the “valid” area of input, that is, no value outside the area
+#' is used. If pad=True on the other hand, the operation will be applied to all
+#' input positions, and positions outside the valid region will be considered
+#' containing zero. Use a list to specify a per-axis value.
+#' @param strides (int or tuple of ints, defaults to 1) – stride of the
+#' operation. Use a list of ints to specify a per-axis value.
+#' @param bias (bool) – whether to include bias
+#' @param init_bias (scalar or matrix or initializer, defaults to 0) – initial
+#' value of weights b
 #' @param reduction_rank
-#' @param name string for the name of the function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 Convolution1D <- function(filter_shape, num_filters = NULL,
@@ -237,20 +262,38 @@ Convolution1D <- function(filter_shape, num_filters = NULL,
 
 #' Two Dimensional Convolutional Layer
 #'
-#' Layer factory function to create a 2D convolution layer with optional non-linearity.
-#' Same as \code{Convolution()} except that \code{filter_shape} is verified to be 2-dimensional.
-#' See \code{Convolution()} for extensive documentation.
+#' Layer factory function to create a 2D convolution layer with optional
+#' non-linearity.  Same as \code{Convolution()} except that \code{filter_shape}
+#' is verified to be 2-dimensional.  See \code{Convolution()} for extensive
+#' documentation.
 #'
-#' @param filter_shape integer vector of shape (spatial extent) of the receptive field, not including the input feature-map depth
-#' @param num_filters integer of number of filters
-#' @param activation optional function to apply at end
-#' @param init vector array or cntk$initializer, defaults to \code{init_glorot_uniform())} – initial value of weights W
-#' @param pad logical if FALSE the filter will be shifted over the valid area of input, that is, no value outside the area is used. If TRUE the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero. Use a tuple to specify a per-axis value.
-#' @param strides integer of stride for convolution
-#' @param bias logical if the layer should have a bias term
-#' @param init_bias double or cntk$initializer for initialization of bias term
-#' @param reduction_rank integer whether input items have or do not have a depth axis
-#' @param name string for the name of the function instance in the network
+#' @param filter_shape int or list of int - shape (spatial extent) of the
+#' receptive field, not including the input feature-map depth. E.g. (3,3) for a
+#' 2D convolution.
+#' @param num_filters (int, defaults to None) – number of filters (output
+#' feature-map depth), or () to denote scalar output items (output shape will
+#' have no depth axis). integer of number of filters
+#' @param activation (Function) - optional activation Function optional
+#' function to apply at end
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W vector array or
+#' cntk$initializer, defaults to \code{init_glorot_uniform())} – initial value
+#' of weights W
+#' @param pad (bool or list of bools) – if False, then the operation will be
+#' shifted over the “valid” area of input, that is, no value outside the area
+#' is used. If pad=True on the other hand, the operation will be applied to all
+#' input positions, and positions outside the valid region will be considered
+#' containing zero. Use a list to specify a per-axis value.
+#' @param strides (int or tuple of ints, defaults to 1) – stride of the
+#' operation. Use a list of ints to specify a per-axis value. integer of stride
+#' for convolution
+#' @param bias (bool) – whether to include bias logical if the layer should
+#' have a bias term
+#' @param init_bias (scalar or matrix or initializer, defaults to 0) – initial
+#' value of weights b
+#' @param reduction_rank integer whether input items have or do not have a
+#' depth axis
+#' @param name string (optional) the name of the Function instance in the network
 #' @references \url{https://www.cntk.ai/pythondocs/cntk.layers.layers.html?highlight=convolution2d#cntk.layers.layers.Convolution2D})
 #' @return A cntk$ops$functions$Function class for defining tensor operations in network architecture.
 #' @export
@@ -279,16 +322,27 @@ Convolution2D <- function(filter_shape, num_filters = NULL,
 #' non-linearity. Same as Convolution() except that filter_shape is verified to
 #' be 3-dimensional. See Convolution() for extensive documentation.
 #'
-#' @param filter_shape
-#' @param num_filters
-#' @param activation
-#' @param init
-#' @param pad
-#' @param strides
-#' @param bias
-#' @param init_bias
+#' @param filter_shape int or list of int - shape (spatial extent) of the
+#' receptive field, not including the input feature-map depth. E.g. (3,3) for a
+#' 2D convolution.
+#' @param num_filters (int, defaults to None) – number of filters (output
+#' feature-map depth), or () to denote scalar output items (output shape will
+#' have no depth axis).
+#' @param activation (Function) - optional activation Function
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W
+#' @param pad (bool or list of bools) – if False, then the operation will be
+#' shifted over the “valid” area of input, that is, no value outside the area
+#' is used. If pad=True on the other hand, the operation will be applied to all
+#' input positions, and positions outside the valid region will be considered
+#' containing zero. Use a list to specify a per-axis value.
+#' @param strides (int or tuple of ints, defaults to 1) – stride of the
+#' operation. Use a list of ints to specify a per-axis value.
+#' @param bias (bool) – whether to include bias
+#' @param init_bias (scalar or matrix or initializer, defaults to 0) – initial
+#' value of weights b
 #' @param reduction_rank
-#' @param name string for the name of the function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 Convolution3D <- function(filter_shape, num_filters = NULL,
@@ -347,19 +401,34 @@ Convolution3D <- function(filter_shape, num_filters = NULL,
 #' and exposes them as an attributes .W and .b. The weights will have the shape
 #' (input_feature_map_depth, num_filters, *filter_shape).
 #'
-#' @param filter_shape
-#' @param num_filters
-#' @param activation
-#' @param init
-#' @param pad
-#' @param strides
+#' @param filter_shape int or list of int - shape (spatial extent) of the
+#' receptive field, not including the input feature-map depth. E.g. (3,3) for a
+#' 2D convolution.
+#' @param num_filters (int, defaults to None) – number of filters (output
+#' feature-map depth), or () to denote scalar output items (output shape will
+#' have no depth axis).
+#' @param activation (Function) - optional activation Function
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W
+#' @param pad (bool or list of bools) – if False, then the operation will be
+#' shifted over the “valid” area of input, that is, no value outside the area
+#' is used. If pad=True on the other hand, the operation will be applied to all
+#' input positions, and positions outside the valid region will be considered
+#' containing zero. Use a list to specify a per-axis value.
+#' @param strides (int or tuple of ints, defaults to 1) – stride of the
+#' operation. Use a list of ints to specify a per-axis value.
 #' @param sharing
-#' @param bias
-#' @param init_bias
-#' @param output_shape
+#' @param bias (bool) – whether to include bias
+#' @param init_bias (scalar or matrix or initializer, defaults to 0) – initial
+#' value of weights b
+#' @param output_shape (int or tuple of ints) – output shape. When strides > 2,
+#' the output shape is non-deterministic. User can specify the wanted output
+#' shape. Note the specified shape must satisify the condition that if a
+#' convolution is perform from the output with the same setting, the result
+#' must have same shape as the input.
 #' @param max_temp_mem_size_in_samples
 #' @param reduction_rank
-#' @param name string for the name of the function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 ConvolutionTranspose <- function(filter_shape, num_filters = NULL,
@@ -393,16 +462,31 @@ ConvolutionTranspose <- function(filter_shape, num_filters = NULL,
 #' filter_shape is verified to be 1-dimensional. See ConvolutionTranspose() for
 #' extensive documentation.
 #'
-#' @param filter_shape
-#' @param num_filters
-#' @param activation
-#' @param init
-#' @param pad
-#' @param strides
-#' @param bias
-#' @param init_bias
-#' @param output_shape
-#' @param name string for the name of the function instance in the network
+#' @param filter_shape int or list of int - shape (spatial extent) of the
+#' receptive field, not including the input feature-map depth. E.g. (3,3) for a
+#' 2D convolution.
+#' @param num_filters (int, defaults to None) – number of filters (output
+#' feature-map depth), or () to denote scalar output items (output shape will
+#' have no depth axis).
+#' @param activation (Function) - optional activation Function
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W
+#' @param pad (bool or list of bools) – if False, then the operation will be
+#' shifted over the “valid” area of input, that is, no value outside the area
+#' is used. If pad=True on the other hand, the operation will be applied to all
+#' input positions, and positions outside the valid region will be considered
+#' containing zero. Use a list to specify a per-axis value.
+#' @param strides (int or tuple of ints, defaults to 1) – stride of the
+#' operation. Use a list of ints to specify a per-axis value.
+#' @param bias (bool) – whether to include bias
+#' @param init_bias (scalar or matrix or initializer, defaults to 0) – initial
+#' value of weights b
+#' @param output_shape (int or tuple of ints) – output shape. When strides > 2,
+#' the output shape is non-deterministic. User can specify the wanted output
+#' shape. Note the specified shape must satisify the condition that if a
+#' convolution is perform from the output with the same setting, the result
+#' must have same shape as the input.
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 ConvolutionTranspose1D <- function(filter_shape, num_filters = NULL,
@@ -431,16 +515,31 @@ ConvolutionTranspose1D <- function(filter_shape, num_filters = NULL,
 #' filter_shape is verified to be 2-dimensional. See ConvolutionTranspose() for
 #' extensive documentation.
 #'
-#' @param filter_shape
-#' @param num_filters
-#' @param activation
-#' @param init
-#' @param pad
-#' @param strides
-#' @param bias
-#' @param init_bias
-#' @param output_shape
-#' @param name string for the name of the function instance in the network
+#' @param filter_shape int or list of int - shape (spatial extent) of the
+#' receptive field, not including the input feature-map depth. E.g. (3,3) for a
+#' 2D convolution.
+#' @param num_filters (int, defaults to None) – number of filters (output
+#' feature-map depth), or () to denote scalar output items (output shape will
+#' have no depth axis).
+#' @param activation (Function) - optional activation Function
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W
+#' @param pad (bool or list of bools) – if False, then the operation will be
+#' shifted over the “valid” area of input, that is, no value outside the area
+#' is used. If pad=True on the other hand, the operation will be applied to all
+#' input positions, and positions outside the valid region will be considered
+#' containing zero. Use a list to specify a per-axis value.
+#' @param strides (int or tuple of ints, defaults to 1) – stride of the
+#' operation. Use a list of ints to specify a per-axis value.
+#' @param bias (bool) – whether to include bias
+#' @param init_bias (scalar or matrix or initializer, defaults to 0) – initial
+#' value of weights b
+#' @param output_shape (int or tuple of ints) – output shape. When strides > 2,
+#' the output shape is non-deterministic. User can specify the wanted output
+#' shape. Note the specified shape must satisify the condition that if a
+#' convolution is perform from the output with the same setting, the result
+#' must have same shape as the input.
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 ConvolutionTranspose2D <- function(filter_shape, num_filters = NULL,
@@ -469,16 +568,31 @@ ConvolutionTranspose2D <- function(filter_shape, num_filters = NULL,
 #' filter_shape is verified to be 3-dimensional. See ConvolutionTranspose() for
 #' extensive documentation.
 #'
-#' @param filter_shape
-#' @param num_filters
-#' @param activation
-#' @param init
-#' @param pad
-#' @param strides
-#' @param bias
-#' @param init_bias
-#' @param output_shape
-#' @param name string for the name of the function instance in the network
+#' @param filter_shape int or list of int - shape (spatial extent) of the
+#' receptive field, not including the input feature-map depth. E.g. (3,3) for a
+#' 2D convolution.
+#' @param num_filters (int, defaults to None) – number of filters (output
+#' feature-map depth), or () to denote scalar output items (output shape will
+#' have no depth axis).
+#' @param activation (Function) - optional activation Function
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W
+#' @param pad (bool or list of bools) – if False, then the operation will be
+#' shifted over the “valid” area of input, that is, no value outside the area
+#' is used. If pad=True on the other hand, the operation will be applied to all
+#' input positions, and positions outside the valid region will be considered
+#' containing zero. Use a list to specify a per-axis value.
+#' @param strides (int or tuple of ints, defaults to 1) – stride of the
+#' operation. Use a list of ints to specify a per-axis value.
+#' @param bias (bool) – whether to include bias
+#' @param init_bias (scalar or matrix or initializer, defaults to 0) – initial
+#' value of weights b
+#' @param output_shape (int or tuple of ints) – output shape. When strides > 2,
+#' the output shape is non-deterministic. User can specify the wanted output
+#' shape. Note the specified shape must satisify the condition that if a
+#' convolution is perform from the output with the same setting, the result
+#' must have same shape as the input.
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 ConvolutionTranspose3D <- function(filter_shape, num_filters = NULL,
@@ -522,14 +636,16 @@ ConvolutionTranspose3D <- function(filter_shape, num_filters = NULL,
 #' neither is specified, all input dimensions are projected, as in the example
 #' above.
 #'
-#' @param shape
-#' @param activation
-#' @param init
+#' @param shape - list of ints representing tensor shape
+#' @param activation (Function) - optional activation Function
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W
 #' @param input_rank
 #' @param map_rank
-#' @param bias
-#' @param init_bias
-#' @param name string for the name of the function instance in the network
+#' @param bias (bool) – whether to include bias
+#' @param init_bias (scalar or matrix or initializer, defaults to 0) – initial
+#' value of weights b
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 Dense <- function(shape, activation = activation_identity,
@@ -563,7 +679,7 @@ Dense <- function(shape, activation = activation_identity,
 #' @param dropout_rate
 #' @param keep_prob
 #' @param seed
-#' @param name string for the name of the function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 Dropout <- function(dropout_rate = NULL, keep_prob = NULL, seed = NULL,
@@ -609,10 +725,11 @@ Dropout <- function(dropout_rate = NULL, keep_prob = NULL, seed = NULL,
 #' An Embedding instance owns its weight parameter tensor E, and exposes it as
 #' an attribute .E.
 #'
-#' @param shape
-#' @param init
+#' @param shape - list of ints representing tensor shape
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W
 #' @param weights
-#' @param name string for the name of the function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 Embedding <- function(shape = NULL,
@@ -634,7 +751,7 @@ Embedding <- function(shape = NULL,
 #'
 #' This operation is the same as applying reduce_mean() to all grid dimensions.
 #'
-#' @param name string for the name of the function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 GlobalAveragePooling <- function(name = '') {
@@ -650,7 +767,7 @@ GlobalAveragePooling <- function(name = '') {
 #'
 #' This operation is the same as applying reduce_max() to all grid dimensions.
 #'
-#' @param name string for the name of the function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 GlobalMaxPooling <- function(name = '') {
@@ -662,7 +779,7 @@ GlobalMaxPooling <- function(name = '') {
 #' Layer factory function to create a dummy layer with a given name. This can be
 #' used to access an intermediate value flowing through computation.
 #'
-#' @param name string for the name of the function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 Label <- function(name) {
@@ -678,10 +795,12 @@ Label <- function(name) {
 #' (element-wise): y = (x - mean(x)) / (stddev(x) + epsilon) * scale + bias
 #' where scale and bias are learned scalar parameters.
 #'
-#' @param initial_scale
-#' @param initial_bias
-#' @param epsilon
-#' @param name string for the name of the function instance in the network
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights Wial_scale
+#' @param init_bias (scalar or matrix or initializer, defaults to 0) – initial
+#' value of weights b
+#' @param epsilon (float, default 0.00001) - added to avoid division by 0
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 LayerNormalization <- function(initial_scale = 1, initial_bias = 0,
@@ -702,10 +821,10 @@ LayerNormalization <- function(initial_scale = 1, initial_bias = 0,
 #' Typically, each item is a vector. For each item, max-pooling computes the element-wise maximum over a window ("receptive field") of items surrounding the item’s position on the grid.
 #' The size (spatial extent) of the receptive field is given by \code{filter_shape.} E.g. for 2D pooling, filter_shape should be a tuple of two integers, such as (5,5).
 #'
-#' @param filter_shape integer vector defining receptive field
-#' @param strides integer defining length of stride
-#' @param pad logical for whether or not the pooling operation should be shifted over the "valid" area of input
-#' @param name string for the name of the function instance in the network
+#' @param filter_shape int or list of int - shape (spatial extent) of the receptive field, not including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+#' @param strides (int or tuple of ints, defaults to 1) – stride of the operation. Use a list of ints to specify a per-axis value. integer defining length of stride
+#' @param pad (bool or list of bools) – if False, then the operation will be shifted over the “valid” area of input, that is, no value outside the area is used. If pad=True on the other hand, the operation will be applied to all input positions, and positions outside the valid region will be considered containing zero. Use a list to specify a per-axis value. logical for whether or not the pooling operation should be shifted over the "valid" area of input
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 MaxPooling <- function(filter_shape, strides = 1, pad = FALSE, name = '') {
@@ -717,11 +836,13 @@ MaxPooling <- function(filter_shape, strides = 1, pad = FALSE, name = '') {
 	)
 }
 
-#' @param filter_shape
 #'
-#' @param strides
-#' @param pad
-#' @param name string for the name of the function instance in the network
+#'
+#' @param filter_shape int or list of int - shape (spatial extent) of the receptive field, not including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+#'
+#' @param strides (int or tuple of ints, defaults to 1) – stride of the operation. Use a list of ints to specify a per-axis value.
+#' @param pad (bool or list of bools) – if False, then the operation will be shifted over the “valid” area of input, that is, no value outside the area is used. If pad=True on the other hand, the operation will be applied to all input positions, and positions outside the valid region will be considered containing zero. Use a list to specify a per-axis value.
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 MaxUnpooling <- function(filter_shape, strides = 1, pad = FALSE, name = '') {

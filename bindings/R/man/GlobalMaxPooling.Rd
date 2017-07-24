@@ -7,7 +7,7 @@
 GlobalMaxPooling(name = "")
 }
 \arguments{
-\item{name}{string for the name of the function instance in the network}
+\item{name}{string (optional) the name of the Function instance in the network}
 }
 \description{
 Layer factory function to create a global max-pooling layer.

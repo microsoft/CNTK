@@ -1,7 +1,6 @@
-debugging <- reticulate::import("cntk.debugging")
-
-#' @param root
+#' Dump Function
 #'
+#' @param root
 #' @param tag
 #'
 #' @export
@@ -12,8 +11,9 @@ dump_function <- function(root, tag = NULL) {
 	)
 }
 
-#' @param root
+#' Dump Signature
 #'
+#' @param root
 #' @param tag
 #'
 #' @export

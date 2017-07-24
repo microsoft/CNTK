@@ -1,5 +1,6 @@
-#' @param freq
+#' Create Progress Printer
 #'
+#' @param freq
 #' @param first
 #' @param tag
 #' @param log_to_file
@@ -35,8 +36,9 @@ ProgressPrinter <- function(freq = NULL, first = 0, tag = '',
 	)
 }
 
-#' @param printer
+#' Printer - End Progress Pring
 #'
+#' @param printer
 #' @param msg
 #'
 #' @export
@@ -44,8 +46,9 @@ printer_end_progress_print <- function(printer, msg = '') {
 	printer$end_progress_print(msg = msg)
 }
 
-#' @param printer
+#' Printer - Log
 #'
+#' @param printer
 #' @param message
 #'
 #' @export
@@ -53,6 +56,8 @@ printer_log <- function(printer, message) {
 	printer$log(message)
 }
 
+#' Printer - On Training Update End
+#'
 #' @param printer
 #'
 #' @export
@@ -60,8 +65,9 @@ printer_on_training_update_end <- function(printer) {
 	printer$on_training_update_end()
 }
 
-#' @param printer
+#' Printer - On Write Distributed Sync Update
 #'
+#' @param printer
 #' @param samples
 #' @param updates
 #' @param aggregate_metric
@@ -77,7 +83,7 @@ printer_on_write_distributed_sync_update <- function(printer, samples,
 	)
 }
 
-#' any writer
+#' Printer - On Write Test Summary
 #'
 #' @param printer
 #' @param samples
@@ -160,6 +166,8 @@ printer_on_write_training_update <- function(printer, samples, updates,
 	)
 }
 
+#'
+#'
 #' @param printer
 #'
 #' @param key
@@ -174,6 +182,8 @@ printer_write <- function(printer, key, value) {
 }
 
 
+#'
+#'
 #' @param freq
 #'
 #' @param log_dir
@@ -191,6 +201,8 @@ TensorBoardProgressWriter <- function(freq = NULL, log_dir = '.', rank = NULL,
 	)
 }
 
+#'
+#'
 #' @param tensorboard_writer
 #'
 #' @export
@@ -198,6 +210,8 @@ tensorboard_close <- function(tensorboard_writer) {
 	tensorboard_writer$close()
 }
 
+#'
+#'
 #' @param tensorboard_writer
 #'
 #' @export
@@ -205,9 +219,11 @@ tensorboard_flush <- function(tensorboard_writer) {
 	tensorboard_writer$flush()
 }
 
+#'
+#'
 #' @param tensorboard_writer
 #'
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #' @param value
 #' @param step
 #'
@@ -221,6 +237,8 @@ tensorboard_write_value <- function(tensorboard_writer, name, value, step) {
 }
 
 
+#'
+#'
 #' @param epoch_size
 #'
 #' @param callback
@@ -234,6 +252,8 @@ TrainingSummaryProgressCallback <- function(epoch_size, callback) {
 }
 
 
+#'
+#'
 #' @param model
 #'
 #' @param trace_level

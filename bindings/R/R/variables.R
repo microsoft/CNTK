@@ -1,8 +1,17 @@
-#' @param value
+#' Constant
 #'
-#' @param shape
-#' @param dtype
-#' @param device
+#' A constant value. It can be a scalar, vector, matrix, or tensor of floating
+#' point numbers that cannot be modified.  A Constant is a Variable and
+#' therefore inherits all its methods.
+#'
+#' ****** Properties: ******
+#'
+#' value
+#'
+#' @param value
+#' @param shape - list of ints representing tensor shape
+#' @param dtype - data type to be used ("float32", "float64", or "auto")
+#' @param device - instance of DeviceDescriptor
 #' @param name
 #'
 #' @export
@@ -17,11 +26,19 @@ Constant <- function(value = NULL, shape = NULL, dtype = 'float32',
 	)
 }
 
-#' @param value
+#' Parameter
 #'
-#' @param shape
-#' @param dtype
-#' @param device
+#' A trainable parameter. It can be a scalar, vector, matrix, or tensor of
+#' floating point numbers that can be modified by a training procedure.
+#'
+#' ****** Properties: ******
+#'
+#' value
+#'
+#' @param value
+#' @param shape - list of ints representing tensor shape
+#' @param dtype - data type to be used ("float32", "float64", or "auto")
+#' @param device - instance of DeviceDescriptor
 #' @param name
 #'
 #' @export
@@ -36,25 +53,41 @@ Parameter <- function(value = NULL, shape = NULL, dtype = 'float32',
 	)
 }
 
-#' @param ...
+#' Record
+#'
+#' Easy construction of a record (=immutable singleton class) from keyword
+#' arguments.
+#'
+#' ****** Associated Functions: ******
+#'
+#' updated_record_with
+#'
+#' @param ... named arguments to turn into record numbers
 #'
 #' @export
 Record <- function(...) {
 	cntk$variables$Record(...)
 }
 
-#' @param record
+#' Updated Record With
 #'
-#' @param ...
+#' Create a new Record from an existing one with members modified or added.
+#'
+#' @param record - the Record instance to be updated
+#' @param ... named arguments to turn into record numbers
 #'
 #' @export
 updated_record_with <- function(record, ...) {
 	record$updated_with(record, ...)
 }
 
-#' @param shape
+#' Variable
 #'
-#' @param dtype
+#' Denotes a symbolic entity corresponding to the inputs and outputs of a
+#' Function.
+#'
+#' @param shape - list of ints representing tensor shape
+#' @param dtype - data type to be used ("float32", "float64", or "auto")
 #' @param needs_gradient
 #' @param is_sparse
 #' @param dynamic_axes
@@ -75,6 +108,39 @@ Variable <- function(shape = NULL, dtype = 'auto', needs_gradient = FALSE,
 	)
 }
 
+#' Variable Mixin
+#'
+#' Standard properties for Variable and its derived classes Parameter and
+#' Constant.
+#'
+#' ****** Properties: ******
+#'
+#' dtype
+#'
+#' dynamic_axes
+#'
+#' is_constant
+#'
+#' is_input
+#'
+#' is_output
+#'
+#' is_parameter
+#'
+#' is_placeholder
+#'
+#' is_sparse
+#'
+#' name
+#'
+#' needs_gradient
+#'
+#' owner
+#'
+#' shape
+#'
+#' uid
+#'
 #' @export
 VariableMixin <- function() {
 	cntk$variables$VariableMixin()

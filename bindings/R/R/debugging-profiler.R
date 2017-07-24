@@ -1,15 +1,20 @@
+#' Disable Profiler
+#'
 #' @export
 disable_profiler <- function() {
 	cntk$debugging$profiler$disable_profiler()
 }
 
+#' Enable Profiler
+#'
 #' @export
 enable_profiler <- function() {
 	cntk$debugging$profiler$enable_profiler()
 }
 
-#' @param dir
+#' Start Profiler
 #'
+#' @param dir
 #' @param sync_gpu
 #' @param reserve_mem
 #'
@@ -23,6 +28,8 @@ start_profiler <- function(dir = 'profiler', sync_gpu = TRUE,
 	)
 }
 
+#' Stop Profiler
+#'
 #' @export
 stop_profiler <- function() {
 	cntk$debugging$profiler$stop_profiler()

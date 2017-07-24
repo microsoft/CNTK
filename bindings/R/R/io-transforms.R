@@ -1,5 +1,6 @@
-#' @param brightness_radius
+#' Color Transform
 #'
+#' @param brightness_radius
 #' @param contrast_radius
 #' @param saturation_radius
 #'
@@ -13,6 +14,8 @@ transform_color <- function(brightness_radius = 0, contrast_radius = 0,
 	)
 }
 
+#' Crop Transform
+#'
 #' @param crop_type
 #'
 #' @param crop_size
@@ -35,6 +38,8 @@ transform_crop <- function(crop_type = 'center', crop_size = 0, side_ratio = 0,
 	)
 }
 
+#' Mean Transform
+#'
 #' @param filename
 #'
 #' @export
@@ -42,6 +47,8 @@ transform_mean <- function(filename) {
 	cntk$io$transforms$mean(filename)
 }
 
+#' Scale Transform
+#'
 #' @param width
 #'
 #' @param height

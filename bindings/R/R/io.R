@@ -23,7 +23,9 @@ Base64ImageDeserializer <- function(filename, streams) {
 #' Form: `[Sequence_Id] (Sample)+` where `Sample=|Input_Name (Value )*`
 #'
 #' @param filename A string containing the path to the data location
-#' @param streams A python dictionary-like object that contains a mapping from stream names to StreamDef objects. Each StreamDef object configures an input stream.
+#' @param streams A python dictionary-like object that contains a mapping from
+#' stream names to StreamDef objects. Each StreamDef object configures an input
+#' stream.
 #' @return NULL
 #' @references See also \url{https://www.cntk.ai/pythondocs/cntk.io.html?highlight=ctfdeserializer#cntk.io.CTFDeserializer}
 #' @export
@@ -130,7 +132,7 @@ MinibatchData <- function(value, num_sequences, num_samples, sweep_end) {
 	)
 }
 
-#' mb_as_sequences
+#' Minibatch Data As Sequences
 #'
 #' Convert the value of this minibatch instance to a sequence of NumPy arrays
 #' that have their masked entries removed.
@@ -146,7 +148,7 @@ mb_as_sequences <- function(minibatch_data, variable = NULL) {
 }
 
 
-#' MinibatchSource
+#' Minibatch Source
 #'
 #' Source of minibatch data
 #'
@@ -298,7 +300,7 @@ UserMinibatchSource <- function() {
 	cntk$io$UserMinibatchSource()
 }
 
-#' get_minibatch_checkpoint_state
+#' Get Minibatch Checkpoint State
 #'
 #' Returns a dictionary describing the current state of the minibatch source.
 #' Needs to be overwritten if the state of the minibatch source needs to be
@@ -309,12 +311,12 @@ get_minibatch_checkpoint_state <- function(mb_source) {
 	mb_source$get_checkpoint_state()
 }
 
-#' next_minibatch
+#' Next Minibatch
 #'
 #' @param minibatch_source
 #' @param minibatch_size_in_samples
 #' @param input_map
-#' @param device
+#' @param device - instance of DeviceDescriptor
 #' @param num_data_partitions
 #' @param partition_index
 #'
@@ -332,7 +334,7 @@ next_minibatch <- function(minibatch_source, minibatch_size_in_samples,
 }
 
 
-#' usermb_next_minibatch
+#' UserMinibatch Next Minibatch
 #'
 #' Function to be implemented by the user
 #'
@@ -340,7 +342,7 @@ next_minibatch <- function(minibatch_source, minibatch_size_in_samples,
 #' @param num_samples
 #' @param num_workers
 #' @param worker_rank
-#' @param device
+#' @param device - instance of DeviceDescriptor
 #'
 #' @export
 usermb_next_minibatch <- function(usermb_source, num_samples,
@@ -353,7 +355,7 @@ usermb_next_minibatch <- function(usermb_source, num_samples,
 	)
 }
 
-#' restore_mb_from_checkpoint
+#' Restore Minibatch From Checkpoint
 #'
 #' Sets the state of the checkpoint.
 #'
@@ -365,20 +367,20 @@ restore_mb_from_checkpoint <- function(mb_source, checkpoint) {
 	mb_source$restore_from_checkpoint(checkpoint)
 }
 
-#' mb_stream_info
+#' Minibatch Stream Info
 #'
 #' Gets the description of the stream with given name. Throws an exception if
 #' there are none or multiple streams with this same name.
 #'
 #' @param mb_source
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 mb_stream_info <- function(mb_source, name) {
 	mb_source$stream_info(name)
 }
 
-#' mb_stream_infos
+#' Minibatch Stream Infos
 #'
 #' Function to be implemented by the user.
 #'
@@ -390,11 +392,11 @@ mb_stream_infos <- function(mb_source) {
 }
 
 
-#' StreamConfiguration
+#' Stream Configuration
 #'
 #' Configuration of a stream in a text format reader.
 #'
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #' @param dim
 #' @param is_sparse
 #' @param stream_alias
@@ -430,13 +432,15 @@ StreamDefs <- function(...) {
 #' deserializer, and certain keys are meaningless for certain deserializers.
 #'
 #' @param field string defining the name of the stream
-#' @param shape integer defining the dimensions of the stream
+#' @param shape - list of ints representing tensor shape integer defining the dimensions of the stream
 #' @param is_sparse logical for whether the data is sparse (FALSE by default)
 #' @param transforms list of transforms to be applied to the Deserializer
-#' @param context vector of length two defining whther reading in HTK data, (only supported by `HTKFeatureDeserializer`)
+#' @param context vector of length two defining whther reading in HTK data,
+#' (only supported by `HTKFeatureDeserializer`)
 #' @param scp list of `scp` files for HTK data
 #' @param mlf list `mlf` files for HTK data
-#' @param broadcast logical for whether the streams should be broadcast to the whole sequence
+#' @param broadcast logical for whether the streams should be broadcast to the
+#' whole sequence
 #' @param defines_mb_size logical for whether this stream defines minibatch size
 #' @return A StreamDef object containing the stream dictionary
 #' @references \url{https://www.cntk.ai/pythondocs/cntk.io.html#cntk.io.StreamDef}
@@ -462,11 +466,11 @@ StreamDef <- function(field = NULL, shape = NULL, is_sparse = FALSE,
 #' Stream information container that is used to describe streams when
 #' implementing custom minibatch source through UserMinibatchSource.
 #'
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #' @param stream_id
 #' @param storage_format
-#' @param dtype
-#' @param shape
+#' @param dtype - data type to be used ("float32", "float64", or "auto")
+#' @param shape - list of ints representing tensor shape
 #'
 #' @export
 StreamInformation <- function(name, stream_id, storage_format, dtype, shape) {
@@ -479,7 +483,7 @@ StreamInformation <- function(name, stream_id, storage_format, dtype, shape) {
 	)
 }
 
-#' sequence_to_cntk_text_format
+#' Convert Sequence to CNTK Text Format
 #'
 #' Converts a list of NumPy arrays representing tensors of inputs into a format
 #' that is readable by CTFDeserializer.

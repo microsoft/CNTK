@@ -1,5 +1,6 @@
-#' @param kernel_width
+#' Bilinear Initializer
 #'
+#' @param kernel_width
 #' @param kernel_height
 #'
 #' @export
@@ -10,8 +11,9 @@ init_bilinear <- function(kernel_width, kernel_height) {
 	)
 }
 
-#' @param scale
+#' Glorot Normal Initializer
 #'
+#' @param scale
 #' @param output_rank
 #' @param filter_rank
 #' @param seed
@@ -27,8 +29,9 @@ init_glorot_normal <- function(scale = 1, output_rank = 2147483647,
 	)
 }
 
-#' @param scale
+#' Glorot Uniform Initializer
 #'
+#' @param scale
 #' @param output_rank
 #' @param filter_rank
 #' @param seed
@@ -44,8 +47,9 @@ init_glorot_uniform <- function(scale = 1, output_rank = 2147483647,
 	)
 }
 
-#' @param scale
+#' He Normal Initializer
 #'
+#' @param scale
 #' @param output_rank
 #' @param filter_rank
 #' @param seed
@@ -61,8 +65,9 @@ init_he_normal <- function(scale = 1, output_rank = 2147483647,
 	)
 }
 
-#' @param scale
+#' He Uniform Initializer
 #'
+#' @param scale
 #' @param output_rank
 #' @param filter_rank
 #' @param seed
@@ -78,8 +83,12 @@ init_he_uniform <- function(scale = 1, output_rank = 2147483647,
 	)
 }
 
-#' @param initializer
+#' Initializer With Rank
 #'
+#' override output_rank and filter_rank specification in a random initializer
+#' constructed without an explicit output_rank and filter_rank specification
+#'
+#' @param init - Initializer to be overriden
 #' @param output_rank
 #' @param filter_rank
 #'
@@ -93,8 +102,9 @@ init_with_rank <- function(initializer, output_rank = NULL,
 	)
 }
 
-#' @param scale
+#' Normal Initializer
 #'
+#' @param scale
 #' @param output_rank
 #' @param filter_rank
 #' @param seed
@@ -110,8 +120,9 @@ init_normal <- function(scale = 1, output_rank = 2147483647,
 	)
 }
 
-#' @param stdev
+#' Truncated Normal Initializer
 #'
+#' @param stdev
 #' @param seed
 #'
 #' @export
@@ -122,8 +133,9 @@ init_truncated_normal <- function(stdev, seed = NULL) {
 	)
 }
 
-#' @param scale
+#' Uniform Initializer
 #'
+#' @param scale
 #' @param seed
 #'
 #' @export
@@ -134,8 +146,9 @@ init_uniform <- function(scale, seed = NULL) {
 	)
 }
 
-#' @param scale
+#' Xavier Initializer
 #'
+#' @param scale
 #' @param output_rank
 #' @param filter_rank
 #' @param seed

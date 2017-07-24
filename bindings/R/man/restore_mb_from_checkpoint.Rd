@@ -2,7 +2,7 @@
 % Please edit documentation in R/io.R
 \name{restore_mb_from_checkpoint}
 \alias{restore_mb_from_checkpoint}
-\title{restore_mb_from_checkpoint}
+\title{Restore Minibatch From Checkpoint}
 \usage{
 restore_mb_from_checkpoint(mb_source, checkpoint)
 }

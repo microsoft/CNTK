@@ -7,22 +7,25 @@
 AveragePooling(filter_shape, strides = 1, pad = FALSE, name = "")
 }
 \arguments{
-\item{filter_shape}{(int or tuple of ints) – shape (spatial extent) of the
+\item{filter_shape}{int or list of int - shape (spatial extent) of the
+receptive field, not including the input feature-map depth. E.g. (3,3) for a
+2D convolution.
 receptive field, not including the input feature-map depth. E.g. (3,3) for a
 2D convolution.}
 
-\item{strides}{(int or tuple of ints, defaults to 1) – stride (increment when
+\item{strides}{(int or tuple of ints, defaults to 1) – stride of the
+operation. Use a list of ints to specify a per-axis value. (int or tuple of
+ints, defaults to 1) – stride (increment when
 sliding over the input). Use a tuple to specify a per-axis value.}
 
-\item{pad}{(bool or tuple of bools, defaults to False) – if False, then the
-pooling #' operation will be shifted over the “valid” area of input, that
-is, no value #' outside the area is used. If pad=True on the other hand,
-pooling will be #' applied to all input positions, and positions outside the
-valid region will #' be excluded from the averaging. Use a tuple to specify
-a per-axis value.}
+\item{pad}{(bool or list of bools) – if False, then the operation will be
+shifted over the “valid” area of input, that is, no value outside the area
+is used. If pad=True on the other hand, the operation will be applied to all
+input positions, and positions outside the valid region will be considered
+containing zero. Use a list to specify a per-axis value. (bool or tuple of
+bools, defaults to False) – if False, then the}
 
-\item{name}{string for the name of the function instance in the network
-network}
+\item{name}{string (optional) the name of the Function instance in the network}
 }
 \value{
 A function that accepts one argument and applies the average-pooling

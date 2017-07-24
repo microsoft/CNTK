@@ -14,11 +14,13 @@ loss_cross_entropy_with_softmax(output_vector, target_vector, axis = -1,
 
 \item{axis}{integer (optional) for axis to compute cross-entropy}
 
-\item{name}{string (optional) - the name of the Function instance in the network}
+\item{name}{string (optional) the name of the Function instance in the network}
 }
 \description{
-This operation computes the cross entropy between the \code{target_vector} and the softmax of the \code{output_vector}.
-The elements of \code{target_vector} have to be non-negative and should sum to 1.
+This operation computes the cross entropy between the \code{target_vector}
+and the softmax of the \code{output_vector}.
+The elements of \code{target_vector} have to be non-negative and should sum
+to 1.
 The \code{output_vector} can contain any values.
 The function will internally compute the softmax of the \code{output_vector}.
 }

@@ -20,9 +20,17 @@ classification_error(output_vector, target_vector, axis = -1, topN = 1,
 }
 \description{
 This operation computes the classification error.
-It finds the index of the highest value in the output_vector and compares it to the actual ground truth label (the index of the hot bit in the target vector).
-The result is a scalar (i.e., one by one matrix). This is often used as an evaluation criterion.
-It cannot be used as a training criterion though since the gradient is not defined for it.
+}
+\details{
+It finds the index of the highest value in the output_vector and compares it
+to the actual ground truth label (the index of the hot bit in the target
+vector).
+
+The result is a scalar (i.e., one by one matrix). This is often used as an
+evaluation criterion.
+
+It cannot be used as a training criterion though since the gradient is not
+defined for it.
 }
 \references{
 \url{https://www.cntk.ai/pythondocs/cntk.metrics.html#cntk.metrics.classification_error}

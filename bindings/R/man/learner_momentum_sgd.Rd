@@ -11,25 +11,25 @@ learner_momentum_sgd(parameters, lr, momentum,
   gradient_clipping_with_truncation = TRUE, use_mean_gradient = FALSE)
 }
 \arguments{
-\item{parameters}{list of network parameters to tune.}
+\item{parameters}{– list of network parameters list of network parameters to tune.}
 
-\item{lr}{output of \code{learning_rate_schedule}}
+\item{lr}{(output of learning_rate_schedule()) – learning rate schedule output of \code{learning_rate_schedule}}
 
 \item{momentum}{output of \code{momentum_schdule} or \code{momentum_as_time_constant_schedule}}
 
 \item{unit_gain}{logical whether to interpret momentum as a unit-gain filter}
 
-\item{l1_regularization_weight}{double of l1 regularization}
+\item{l1_regularization_weight}{(float, optional) – the L1 regularization weight per sample, defaults to 0.0(float, optional) double of l1 regularization}
 
-\item{l2_regularization_weight}{double of l2 regularization}
+\item{l2_regularization_weight}{(float, optional) – the L2 regularization weight per sample, defaults to 0.0 double of l2 regularization}
 
-\item{gaussian_noise_injection_std_dev}{double of noise injection}
+\item{gaussian_noise_injection_std_dev}{(float, optional) – the standard deviation of the Gaussian noise added to parameters post update, defaults to 0.0 double of noise injection}
 
-\item{gradient_clipping_threshold_per_sample}{double of gradient clipping threshold per sample}
+\item{gradient_clipping_threshold_per_sample}{(float, optional) – clipping threshold per sample, defaults to infinity. double of gradient clipping threshold per sample}
 
-\item{gradient_clipping_with_truncation}{logical for gradient clipping with truncation}
+\item{gradient_clipping_with_truncation}{(bool, default True) – use gradient clipping with truncation logical for gradient clipping with truncation}
 
-\item{use_mean_gradient}{logical use averaged gradient as input to learner.}
+\item{use_mean_gradient}{(bool, default False) – use averaged gradient as input to learner. Defaults to the value returned by default_use_mean_gradient_value(). logical use averaged gradient as input to learner.}
 }
 \description{
 Creates a Momentum SGD learner instance to learn the parameters.

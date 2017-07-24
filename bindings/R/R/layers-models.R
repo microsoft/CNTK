@@ -1,11 +1,13 @@
-#' @param attention_dim
+#' Attention Model
 #'
+#' @param attention_dim
 #' @param attention_span
 #' @param attention_axis
-#' @param init
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights W
 #' @param go_backwards
 #' @param enable_self_stabilization
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 AttentionModel <- function(attention_dim, attention_span = NULL,

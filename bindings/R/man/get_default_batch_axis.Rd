@@ -2,7 +2,7 @@
 % Please edit documentation in R/axis.R
 \name{get_default_batch_axis}
 \alias{get_default_batch_axis}
-\title{get_default_batch_axis}
+\title{Get Default Batch Axis}
 \usage{
 get_default_batch_axis()
 }

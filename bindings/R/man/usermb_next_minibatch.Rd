@@ -2,13 +2,13 @@
 % Please edit documentation in R/io.R
 \name{usermb_next_minibatch}
 \alias{usermb_next_minibatch}
-\title{usermb_next_minibatch}
+\title{UserMinibatch Next Minibatch}
 \usage{
 usermb_next_minibatch(usermb_source, num_samples, num_workers, worker_rank,
   device = NULL)
 }
 \arguments{
-\item{device}{}
+\item{device}{- instance of DeviceDescriptor}
 }
 \description{
 Function to be implemented by the user

@@ -2,7 +2,7 @@
 % Please edit documentation in R/axis.R
 \name{get_all_static_axes}
 \alias{get_all_static_axes}
-\title{get_all_static_axes}
+\title{Get All Static Axes}
 \usage{
 get_all_static_axes()
 }

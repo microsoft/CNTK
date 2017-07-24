@@ -7,10 +7,11 @@
 Activation(activation = activation_identity, name = "")
 }
 \arguments{
-\item{activation}{(defaults to \code{activation_identity}) – function to apply
+\item{activation}{(Function) - optional activation Function (defaults to
+\code{activation_identity}) – function to apply
 at the end, e.g. \code{op_relu}}
 
-\item{name}{string for the name of the function instance in the network
+\item{name}{string (optional) the name of the Function instance in the network
 the network}
 }
 \value{

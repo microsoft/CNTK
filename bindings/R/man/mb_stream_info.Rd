@@ -2,12 +2,12 @@
 % Please edit documentation in R/io.R
 \name{mb_stream_info}
 \alias{mb_stream_info}
-\title{mb_stream_info}
+\title{Minibatch Stream Info}
 \usage{
 mb_stream_info(mb_source, name)
 }
 \arguments{
-\item{name}{}
+\item{name}{string (optional) the name of the Function instance in the network}
 }
 \description{
 Gets the description of the stream with given name. Throws an exception if

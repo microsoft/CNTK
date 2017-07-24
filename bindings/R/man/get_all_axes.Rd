@@ -2,7 +2,7 @@
 % Please edit documentation in R/axis.R
 \name{get_all_axes}
 \alias{get_all_axes}
-\title{get_all_axes}
+\title{Get All Axes}
 \usage{
 get_all_axes()
 }

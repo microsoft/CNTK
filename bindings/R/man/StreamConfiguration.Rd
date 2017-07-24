@@ -2,12 +2,14 @@
 % Please edit documentation in R/io.R
 \name{StreamConfiguration}
 \alias{StreamConfiguration}
-\title{StreamConfiguration}
+\title{Stream Configuration}
 \usage{
 StreamConfiguration(name, dim, is_sparse = FALSE, stream_alias = "",
   defines_mb_size = FALSE)
 }
 \arguments{
+\item{name}{string (optional) the name of the Function instance in the network}
+
 \item{defines_mb_size}{}
 }
 \description{

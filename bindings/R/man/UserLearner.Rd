@@ -7,7 +7,11 @@
 UserLearner(parameters, lr_schedule, as_matrix = TRUE)
 }
 \arguments{
+\item{parameters}{– list of network parameters}
+
 \item{as_matrix}{}
+
+\item{lr}{(output of learning_rate_schedule()) – learning rate schedule_schedule}
 }
 \description{
 Base class of all user-defined learners. To implement your own learning

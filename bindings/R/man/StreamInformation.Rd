@@ -7,7 +7,11 @@
 StreamInformation(name, stream_id, storage_format, dtype, shape)
 }
 \arguments{
-\item{shape}{}
+\item{name}{string (optional) the name of the Function instance in the network}
+
+\item{dtype}{- data type to be used ("float32", "float64", or "auto")}
+
+\item{shape}{- list of ints representing tensor shape}
 }
 \description{
 Stream information container that is used to describe streams when

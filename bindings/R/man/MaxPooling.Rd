@@ -7,13 +7,13 @@
 MaxPooling(filter_shape, strides = 1, pad = FALSE, name = "")
 }
 \arguments{
-\item{filter_shape}{integer vector defining receptive field}
+\item{filter_shape}{int or list of int - shape (spatial extent) of the receptive field, not including the input feature-map depth. E.g. (3,3) for a 2D convolution.}
 
-\item{strides}{integer defining length of stride}
+\item{strides}{(int or tuple of ints, defaults to 1) – stride of the operation. Use a list of ints to specify a per-axis value. integer defining length of stride}
 
-\item{pad}{logical for whether or not the pooling operation should be shifted over the "valid" area of input}
+\item{pad}{(bool or list of bools) – if False, then the operation will be shifted over the “valid” area of input, that is, no value outside the area is used. If pad=True on the other hand, the operation will be applied to all input positions, and positions outside the valid region will be considered containing zero. Use a list to specify a per-axis value. logical for whether or not the pooling operation should be shifted over the "valid" area of input}
 
-\item{name}{string for the name of the function instance in the network}
+\item{name}{string (optional) the name of the Function instance in the network}
 }
 \description{
 Layer factory function to create a max-pooling layer.

@@ -1,4 +1,3 @@
-
 #' Visualize Network Architecture
 #'
 #' Visualize the network architecture as a dataflow graph
@@ -10,10 +9,8 @@
 #' @export
 #'
 visualize_network <- function(model) {
-
-  png_file <- tempfile(fileext = ".png")
-  cntk$logging$graph$plot(model, png_file)
-  img <- png::readPNG(png_file)
-  grid::grid.raster(img)
-
+	png_file <- tempfile(fileext = ".png")
+	cntk$logging$graph$plot(model, png_file)
+	img <- png::readPNG(png_file)
+	grid::grid.raster(img)
 }

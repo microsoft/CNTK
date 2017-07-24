@@ -9,7 +9,7 @@ op_input_variable(shape, dtype = "float32", needs_gradient = FALSE,
   name = "")
 }
 \arguments{
-\item{shape}{integer vector for dimensions of input tensor}
+\item{shape}{- list of ints representing tensor shape integer vector for dimensions of input tensor}
 
 \item{needs_gradient}{logical whether to conduct backprop on the tensor}
 

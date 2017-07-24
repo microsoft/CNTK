@@ -2,7 +2,7 @@
 % Please edit documentation in R/axis.R
 \name{get_static_axis_index}
 \alias{get_static_axis_index}
-\title{get_static_axis_index}
+\title{Get Static Axis Index}
 \usage{
 get_static_axis_index(ax, checked = TRUE)
 }

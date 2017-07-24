@@ -1,7 +1,8 @@
-#' @param output
+#' Binary Cross Entropy Loss
 #'
+#' @param output
 #' @param target
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 loss_binary_cross_entropy <- function(output, target, name = '') {
@@ -12,10 +13,12 @@ loss_binary_cross_entropy <- function(output, target, name = '') {
 	)
 }
 
+#' Cosine Distance Loss
+#'
 #' @param x
 #'
 #' @param y
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 loss_cosine_distance <- function(x, y, name = '') {
@@ -26,12 +29,14 @@ loss_cosine_distance <- function(x, y, name = '') {
 	)
 }
 
+#' Cosine Distance NEgative Samples Loss
+#'
 #' @param x
 #'
 #' @param y
 #' @param shift
 #' @param num_negative_samples
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 loss_cosine_distance_negative_samples <- function(x, y, shift,
@@ -49,15 +54,17 @@ loss_cosine_distance_negative_samples <- function(x, y, shift,
 
 #' Cross Entropy Loss with Softmax for Multiclass Classification
 #'
-#' This operation computes the cross entropy between the \code{target_vector} and the softmax of the \code{output_vector}.
-#' The elements of \code{target_vector} have to be non-negative and should sum to 1.
+#' This operation computes the cross entropy between the \code{target_vector}
+#' and the softmax of the \code{output_vector}.
+#' The elements of \code{target_vector} have to be non-negative and should sum
+#' to 1.
 #' The \code{output_vector} can contain any values.
 #' The function will internally compute the softmax of the \code{output_vector}.
 #'
 #' @param output_vector unscaled computed output values from the network
 #' @param target_vector one-hot encoded vector of target values
 #' @param axis integer (optional) for axis to compute cross-entropy
-#' @param name string (optional) - the name of the Function instance in the network
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @references \url{https://www.cntk.ai/pythondocs/cntk.losses.html#cntk.losses.cross_entropy_with_softmax}
 #' @export
@@ -71,11 +78,13 @@ loss_cross_entropy_with_softmax <- function(output_vector, target_vector,
 	)
 }
 
+#' Lambda Rank Loss
+#'
 #' @param output
 #'
 #' @param gain
 #' @param group
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 loss_lambda_rank <- function(output, gain, group, name = '') {
@@ -87,10 +96,12 @@ loss_lambda_rank <- function(output, gain, group, name = '') {
 	)
 }
 
+#' Squared Error Loss
+#'
 #' @param output
 #'
 #' @param target
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 loss_squared_error <- function(output, target, name = '') {
@@ -101,11 +112,13 @@ loss_squared_error <- function(output, target, name = '') {
 	)
 }
 
+#' Weighted Binary Cross Entropy Loss
+#'
 #' @param output
 #'
 #' @param target
 #' @param weight
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 loss_weighted_binary_cross_entropy <- function(output, target, weight,

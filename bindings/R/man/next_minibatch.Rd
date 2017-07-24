@@ -2,14 +2,16 @@
 % Please edit documentation in R/io.R
 \name{next_minibatch}
 \alias{next_minibatch}
-\title{next_minibatch}
+\title{Next Minibatch}
 \usage{
 next_minibatch(minibatch_source, minibatch_size_in_samples, input_map = NULL,
   device = NULL, num_data_partitions = NULL, partition_index = NULL)
 }
 \arguments{
+\item{device}{- instance of DeviceDescriptor}
+
 \item{partition_index}{}
 }
 \description{
-next_minibatch
+Next Minibatch
 }

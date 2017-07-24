@@ -1,5 +1,6 @@
-#' @param root
+#' Graph - Depth First Search
 #'
+#' @param root
 #' @param visitor
 #' @param depth
 #'
@@ -12,6 +13,8 @@ graph_depth_first_search <- function(root, visitor, depth = 0) {
 	)
 }
 
+#' Graph - Find All With Name
+#'
 #' @param node
 #'
 #' @param node_name
@@ -26,6 +29,8 @@ graph_find_all_with_name <- function(node, node_name, depth = 0) {
 	)
 }
 
+#' Graph - Find By Name
+#'
 #' @param node
 #'
 #' @param node_name
@@ -40,6 +45,8 @@ graph_find_by_name <- function(node, node_name, depth = 0) {
 	)
 }
 
+#'
+#'
 #' @param node
 #'
 #' @param depth
@@ -52,6 +59,8 @@ graph_get_node_outputs <- function(node, depth = 0) {
 	)
 }
 
+#'
+#'
 #' @param root
 #'
 #' @param filename

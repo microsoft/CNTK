@@ -2,7 +2,7 @@
 % Please edit documentation in R/axis.R
 \name{get_default_dynamic_axis}
 \alias{get_default_dynamic_axis}
-\title{get_default_dynamic_axis}
+\title{Get Default Dynamic Axis}
 \usage{
 get_default_dynamic_axis()
 }

@@ -4,7 +4,7 @@
 #' with an added method resolve_to() to be called at the end to close the loop.
 #' This is used for explicit graph building with recurrent connections.
 #'
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 ForwardDeclaration <- function(name = 'forward_declaration') {
@@ -17,13 +17,13 @@ ForwardDeclaration <- function(name = 'forward_declaration') {
 #' The GRU block implements one step of the recurrence and is stateless. It
 #' accepts the previous state as its first argument, and outputs its new state.
 #'
-#' @param shape
+#' @param shape - list of ints representing tensor shape
 #' @param cell_shape
-#' @param activation
-#' @param init
-#' @param init_bias
+#' @param activation (Function) - optional activation Function
+#' @param init (scalar or matrix or initializer, defaults to init_glorot_uniform()) – initial value of weights W
+#' @param init (scalar or matrix or initializer, defaults to init_glorot_uniform()) – initial value of weights W_bias
 #' @param enable_self_stabilization
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 GRU <- function(shape, cell_shape = NULL, activation = op_tanh,
@@ -47,14 +47,14 @@ GRU <- function(shape, cell_shape = NULL, activation = op_tanh,
 #' accepts the previous state as its first two arguments, and outputs its new
 #' state as a two-valued tuple (h,c).
 #'
-#' @param shape
+#' @param shape - list of ints representing tensor shape
 #' @param cell_shape
-#' @param activation
+#' @param activation (Function) - optional activation Function
 #' @param use_peepholes
-#' @param init
-#' @param init_bias
+#' @param init (scalar or matrix or initializer, defaults to init_glorot_uniform()) – initial value of weights W
+#' @param init (scalar or matrix or initializer, defaults to init_glorot_uniform()) – initial value of weights W_bias
 #' @param enable_self_stabilization
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 LSTM <- function(shape, cell_shape = NULL, activation = op_tanh,
@@ -79,13 +79,13 @@ LSTM <- function(shape, cell_shape = NULL, activation = op_tanh,
 #' stateless. It accepts the previous state as its first argument, and outputs
 #' its new state.
 #'
-#' @param shape
+#' @param shape - list of ints representing tensor shape
 #' @param cell_shape
-#' @param activation
-#' @param init
-#' @param init_bias
+#' @param activation (Function) - optional activation Function
+#' @param init (scalar or matrix or initializer, defaults to init_glorot_uniform()) – initial value of weights W
+#' @param init (scalar or matrix or initializer, defaults to init_glorot_uniform()) – initial value of weights W_bias
 #' @param enable_self_stabilization
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 RRNStep <- function(shape, cell_shape = NULL, activation = op_sigmoid,
@@ -110,7 +110,7 @@ RRNStep <- function(shape, cell_shape = NULL, activation = op_sigmoid,
 #'
 #' @param steepness
 #' @param enable_self_stabilization
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 Stabilizer <- function(steepness = 4, enable_self_stabilization = TRUE,
@@ -122,7 +122,9 @@ Stabilizer <- function(steepness = 4, enable_self_stabilization = TRUE,
 	)
 }
 
-#' @param name
+#' Untested Branch Error
+#'
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 UntestedBranchError <- function(name) {

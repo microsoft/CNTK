@@ -10,33 +10,51 @@ Convolution2D(filter_shape, num_filters = NULL,
   reduction_rank = 1, name = "")
 }
 \arguments{
-\item{filter_shape}{integer vector of shape (spatial extent) of the receptive field, not including the input feature-map depth}
+\item{filter_shape}{int or list of int - shape (spatial extent) of the
+receptive field, not including the input feature-map depth. E.g. (3,3) for a
+2D convolution.}
 
-\item{num_filters}{integer of number of filters}
+\item{num_filters}{(int, defaults to None) – number of filters (output
+feature-map depth), or () to denote scalar output items (output shape will
+have no depth axis). integer of number of filters}
 
-\item{activation}{optional function to apply at end}
+\item{activation}{(Function) - optional activation Function optional
+function to apply at end}
 
-\item{init}{vector array or cntk$initializer, defaults to \code{init_glorot_uniform())} – initial value of weights W}
+\item{init}{(scalar or matrix or initializer, defaults to
+init_glorot_uniform()) – initial value of weights W vector array or
+cntk$initializer, defaults to \code{init_glorot_uniform())} – initial value
+of weights W}
 
-\item{pad}{logical if FALSE the filter will be shifted over the valid area of input, that is, no value outside the area is used. If TRUE the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero. Use a tuple to specify a per-axis value.}
+\item{pad}{(bool or list of bools) – if False, then the operation will be
+shifted over the “valid” area of input, that is, no value outside the area
+is used. If pad=True on the other hand, the operation will be applied to all
+input positions, and positions outside the valid region will be considered
+containing zero. Use a list to specify a per-axis value.}
 
-\item{strides}{integer of stride for convolution}
+\item{strides}{(int or tuple of ints, defaults to 1) – stride of the
+operation. Use a list of ints to specify a per-axis value. integer of stride
+for convolution}
 
-\item{bias}{logical if the layer should have a bias term}
+\item{bias}{(bool) – whether to include bias logical if the layer should
+have a bias term}
 
-\item{init_bias}{double or cntk$initializer for initialization of bias term}
+\item{init_bias}{(scalar or matrix or initializer, defaults to 0) – initial
+value of weights b}
 
-\item{reduction_rank}{integer whether input items have or do not have a depth axis}
+\item{reduction_rank}{integer whether input items have or do not have a
+depth axis}
 
-\item{name}{string for the name of the function instance in the network}
+\item{name}{string (optional) the name of the Function instance in the network}
 }
 \value{
 A cntk$ops$functions$Function class for defining tensor operations in network architecture.
 }
 \description{
-Layer factory function to create a 2D convolution layer with optional non-linearity.
-Same as \code{Convolution()} except that \code{filter_shape} is verified to be 2-dimensional.
-See \code{Convolution()} for extensive documentation.
+Layer factory function to create a 2D convolution layer with optional
+non-linearity.  Same as \code{Convolution()} except that \code{filter_shape}
+is verified to be 2-dimensional.  See \code{Convolution()} for extensive
+documentation.
 }
 \references{
 \url{https://www.cntk.ai/pythondocs/cntk.layers.layers.html?highlight=convolution2d#cntk.layers.layers.Convolution2D})

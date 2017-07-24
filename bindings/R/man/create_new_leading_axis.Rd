@@ -2,7 +2,7 @@
 % Please edit documentation in R/axis.R
 \name{create_new_leading_axis}
 \alias{create_new_leading_axis}
-\title{create_new_leading_axis}
+\title{Create New Leading Axis}
 \usage{
 create_new_leading_axis()
 }

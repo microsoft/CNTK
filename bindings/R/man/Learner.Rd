@@ -7,7 +7,7 @@
 Learner(parameters, learningRateSchedule)
 }
 \arguments{
-\item{parameters}{list of parameter associated with this learner}
+\item{parameters}{– list of network parameters list of parameter associated with this learner}
 
 \item{learningRateSchedule}{get_learning_rate(learner)}
 }

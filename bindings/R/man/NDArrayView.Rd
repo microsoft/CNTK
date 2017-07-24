@@ -7,11 +7,11 @@
 NDArrayView(shape, dtype, device = NULL)
 }
 \arguments{
-\item{shape}{list - shape of the data}
+\item{shape}{- list of ints representing tensor shape list - shape of the data}
 
-\item{dtype}{"float32" or "float64" - data type}
+\item{dtype}{- data type to be used ("float32", "float64", or "auto") "float32" or "float64" - data type}
 
-\item{device}{DeviceDescriptor - device this value should be put on}
+\item{device}{- instance of DeviceDescriptor DeviceDescriptor - device this value should be put on}
 }
 \description{
 Creates an empty dense internal data representation of a Value object. To create an NDArrayView from a NumPy array, use from_dense(). To create an NDArrayView from a sparse array, use from_csr().

@@ -9,16 +9,15 @@ Authors@R: c(
     )
 URL: https://github.com/Microsoft/CNTK, https://akzaidi.github.io/CNTK//index.html
 BugReports: https://github.com/Microsoft/CNTK/issues
-Description: Provides an R interface to the CNTK deep-learning toolkit. 
+Description: Provides an R interface to the CNTK deep-learning toolkit.
 Depends: R (>= 3.2.3)
 License: MIT
 Encoding: UTF-8
 RoxygenNote: 6.0.1.9000
-Imports:
-	reticulate,
-	magrittr
+Imports: reticulate
 Suggests: knitr,
     rmarkdown,
-    testthat
+    testthat,
+	magrittr
 VignetteBuilder: knitr
-SystemRequirements: CNTK >= 2.0 (https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-your-machine)
+SystemRequirements: CNTK for Python >= 2.0 (https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-your-machine)

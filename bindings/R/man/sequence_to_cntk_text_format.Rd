@@ -2,7 +2,7 @@
 % Please edit documentation in R/io.R
 \name{sequence_to_cntk_text_format}
 \alias{sequence_to_cntk_text_format}
-\title{sequence_to_cntk_text_format}
+\title{Convert Sequence to CNTK Text Format}
 \usage{
 sequence_to_cntk_text_format(seq_inx, alias_tensor_map)
 }

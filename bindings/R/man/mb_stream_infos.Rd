@@ -2,7 +2,7 @@
 % Please edit documentation in R/io.R
 \name{mb_stream_infos}
 \alias{mb_stream_infos}
-\title{mb_stream_infos}
+\title{Minibatch Stream Infos}
 \usage{
 mb_stream_infos(mb_source)
 }

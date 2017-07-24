@@ -2,7 +2,7 @@
 % Please edit documentation in R/io.R
 \name{mb_as_sequences}
 \alias{mb_as_sequences}
-\title{mb_as_sequences}
+\title{Minibatch Data As Sequences}
 \usage{
 mb_as_sequences(minibatch_data, variable = NULL)
 }

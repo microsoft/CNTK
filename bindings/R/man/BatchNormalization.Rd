@@ -9,7 +9,12 @@ BatchNormalization(map_rank = NULL, init_scale = 1,
   epsilon = 1e-05, use_cntk_engine = FALSE, name = "")
 }
 \arguments{
-\item{name}{string for the name of the function instance in the network}
+\item{epsilon}{(float, default 0.00001) - added to avoid division by 0}
+
+\item{name}{string (optional) the name of the Function instance in the network}
+
+\item{init}{(scalar or matrix or initializer, defaults to
+init_glorot_uniform()) – initial value of weights W_scale}
 }
 \description{
 Layer factory function to create an average-pooling layer.

@@ -2,7 +2,7 @@
 % Please edit documentation in R/io.R
 \name{get_minibatch_checkpoint_state}
 \alias{get_minibatch_checkpoint_state}
-\title{get_minibatch_checkpoint_state}
+\title{Get Minibatch Checkpoint State}
 \usage{
 get_minibatch_checkpoint_state(mb_source)
 }

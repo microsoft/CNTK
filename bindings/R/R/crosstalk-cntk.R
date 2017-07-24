@@ -15,7 +15,7 @@ Crosstalk <- function() {
 
 #' @param ct
 #'
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #' @param value
 #' @param load
 #' @param load_name
@@ -32,7 +32,7 @@ ct_assign <- function(ct, name, value = NULL, load = FALSE, load_name = NULL) {
 
 #' @param ct
 #'
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #' @param compare_name
 #' @param rtol
 #' @param atol
@@ -52,7 +52,7 @@ ct_compare <- function(ct, name, compare_name = NULL, rtol = 1e-05, atol=1e-08,
 
 #' @param ct
 #'
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #' @param save
 #'
 #' @export
@@ -62,7 +62,7 @@ ct_fetch <- function(ct, name, save = FALSE) {
 
 #' @param ct
 #'
-#' @param names
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 ct_load <- function(ct, names) {
@@ -71,7 +71,7 @@ ct_load <- function(ct, names) {
 
 #' @param ct
 #'
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 ct_load_raw_value <- function(ct, name) {
@@ -109,7 +109,7 @@ ct_reset <- function(ct) {
 
 #' @param ct
 #'
-#' @param names
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 ct_save <- function(ct, names) {
@@ -135,7 +135,7 @@ ct_set_workdir <- function(ct, dir) {
 #' @param ct
 #'
 #' @param var
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #' @param var_type
 #' @param attr
 #'
@@ -182,7 +182,7 @@ CNTKCrosstalk <- function() {
 
 #' @param cct
 #'
-#' @param name
+#' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
 ct_is_param <- function(cct, name) {
@@ -214,8 +214,8 @@ ct_set_data <- function(cct, data) {
 
 #' @param func
 #'
-#' @param name
-#' @param shape
+#' @param name string (optional) the name of the Function instance in the network
+#' @param shape - list of ints representing tensor shape
 #' @param allow_not_found
 #'
 #' @export

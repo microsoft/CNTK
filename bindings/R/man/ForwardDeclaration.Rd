@@ -7,7 +7,7 @@
 ForwardDeclaration(name = "forward_declaration")
 }
 \arguments{
-\item{name}{}
+\item{name}{string (optional) the name of the Function instance in the network}
 }
 \description{
 Helper for recurrent network declarations. Returns a placeholder variable

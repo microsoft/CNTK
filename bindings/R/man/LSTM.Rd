@@ -9,7 +9,15 @@ LSTM(shape, cell_shape = NULL, activation = op_tanh,
   enable_self_stabilization = FALSE, name = "")
 }
 \arguments{
-\item{name}{}
+\item{shape}{- list of ints representing tensor shape}
+
+\item{activation}{(Function) - optional activation Function}
+
+\item{init}{(scalar or matrix or initializer, defaults to init_glorot_uniform()) – initial value of weights W}
+
+\item{name}{string (optional) the name of the Function instance in the network}
+
+\item{init}{(scalar or matrix or initializer, defaults to init_glorot_uniform()) – initial value of weights W_bias}
 }
 \description{
 Layer factory function to create an LSTM block for use inside a recurrence.

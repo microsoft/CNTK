@@ -1,5 +1,6 @@
-#' @param operand
+#' Broadcast Sequence As
 #'
+#' @param operand
 #' @param broadcast_as_operand
 #' @param name
 #'
@@ -12,9 +13,11 @@ seq_broadcast_as <- function(operand, broadcast_as_operand, name = '') {
 	)
 }
 
-#' @param x
+#' Delay Sequence
 #'
-#' @param initial_state
+#' @param x
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights Wial_state
 #' @param time_step
 #' @param name
 #'
@@ -28,8 +31,9 @@ seq_delay <- function(x, initial_state = NULL, time_step = 1, name = '') {
 	)
 }
 
-#' @param seq
+#' First Element of Sequence
 #'
+#' @param seq
 #' @param name
 #'
 #' @export
@@ -40,9 +44,11 @@ seq_first <- function(seq, name = '') {
 	)
 }
 
-#' @param x
+#' Sequence Future Value
 #'
-#' @param initial_state
+#' @param x
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights Wial_state
 #' @param time_step
 #' @param name
 #'
@@ -57,8 +63,9 @@ seq_future_value <- function(x, initial_state = NULL, time_step = 1,
 	)
 }
 
-#' @param seq
+#' Sequence Gather
 #'
+#' @param seq
 #' @param condition
 #' @param new_sequence_axis_typeinfo
 #' @param name
@@ -73,9 +80,10 @@ seq_gather <- function(seq, condition, new_sequence_axis_typeinfo, name = '') {
 	)
 }
 
-#' @param shape
+#' Sequence Network Input Variable
 #'
-#' @param dtype
+#' @param shape - list of ints representing tensor shape
+#' @param dtype - data type to be used ("float32", "float64", or "auto")
 #' @param needs_gradient
 #' @param is_sparse
 #' @param sequence_axis
@@ -96,8 +104,9 @@ seq_input_variable <- function(shape, dtype = 'float32',
 	)
 }
 
-#' @param seq
+#' Sequence Is First
 #'
+#' @param seq
 #' @param name
 #'
 #' @export
@@ -108,6 +117,8 @@ seq_is_first <- function(seq, name = '') {
 	)
 }
 
+#' Sequence Is Last
+#'
 #' @param seq
 #'
 #' @param name
@@ -120,8 +131,9 @@ seq_is_last <- function(seq, name = '') {
 	)
 }
 
-#' @param seq
+#' Get Last Sequence Element
 #'
+#' @param seq
 #' @param name
 #'
 #' @export
@@ -132,9 +144,11 @@ seq_last <- function(seq, name = '') {
 	)
 }
 
-#' @param x
+#' Get Past Sequence Value
 #'
-#' @param initial_state
+#' @param x
+#' @param init (scalar or matrix or initializer, defaults to
+#' init_glorot_uniform()) – initial value of weights Wial_state
 #' @param time_step
 #' @param name
 #'
@@ -148,8 +162,9 @@ seq_past_value <- function(x, initial_state = NULL, time_step = 1, name = '') {
 	)
 }
 
-#' @param seq
+#' Reduce Sequence Max
 #'
+#' @param seq
 #' @param name
 #'
 #' @export
@@ -160,8 +175,9 @@ seq_reduce_max <- function(seq, name = '') {
 	)
 }
 
-#' @param seq
+#' Reduce Sequence Element Sum
 #'
+#' @param seq
 #' @param name
 #'
 #' @export
@@ -172,8 +188,9 @@ seq_reduce_sum <- function(seq, name = '') {
 	)
 }
 
-#' @param seq
+#' Sequence Scatter
 #'
+#' @param seq
 #' @param condition
 #' @param new_sequence_axis_typeinfo
 #' @param name
@@ -189,8 +206,9 @@ seq_scatter <- function(seq, condition, new_sequence_axis_typeinfo = NULL,
 	)
 }
 
-#' @param seq
+#' Sequence Slice
 #'
+#' @param seq
 #' @param begin_index
 #' @param end_index
 #' @param name
@@ -205,8 +223,9 @@ seq_slice <- function(seq, begin_index, end_index, name = '') {
 	)
 }
 
-#' @param seq
+#' Sequence Softmax
 #'
+#' @param seq
 #' @param name
 #'
 #' @export
@@ -217,9 +236,10 @@ seq_softmax <- function(seq, name = '') {
 	)
 }
 
-#' @param x
+#' Sequence Unpack
 #'
-#' @param padding_value
+#' @param x
+#' @param pad_value
 #' @param no_mask_output
 #' @param name
 #'
@@ -234,8 +254,9 @@ seq_unpack <- function(x, padding_value, no_mask_output = FALSE,
 	)
 }
 
-#' @param seq
+#' Sequence Where
 #'
+#' @param seq
 #' @param name
 #'
 #' @export
