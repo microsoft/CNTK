@@ -632,7 +632,7 @@ namespace CNTK
                 fprintf(stderr, "Auto-selecting process wide default device.\n");
             }
 
-            // This will both initialize the list of available devices and log the the device stats
+            // This will both initialize the list of available devices and log the device stats
             // (including the info on which devices are compatible and eligible for selection).
             const auto& allDevices = AllDevices();
             UNUSED(allDevices);

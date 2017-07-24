@@ -260,7 +260,7 @@ public:
     ElemType Get00Element() const;
 
     void SetValue(const ElemType v);
-    void SetValue(const ElemType* d_v); // d_v is pointer to the the value in GPU memory
+    void SetValue(const ElemType* d_v); // d_v is pointer to the value in GPU memory
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd);
 

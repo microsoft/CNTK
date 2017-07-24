@@ -579,7 +579,7 @@ template class ClipNode<double>;
 // CompareNode(a,b)
 // -----------------------------------------------------------------------
 // Template parameters compType (-1, 0, 1) and polarity (0, 1) are used selecting one of the six basic comparison operations. 
-// Note: parametrizing the 6 comparison operations with the the two parameters 'compType' an 'polarity' is motivated by:
+// Note: parametrizing the 6 comparison operations with the two parameters 'compType' an 'polarity' is motivated by:
 //
 // comp(a, b, compType, polarity) <==> sign(a-b) == compType, if polarity == 0
 //                                     sign(a-b) != compType, if polarity == 1
