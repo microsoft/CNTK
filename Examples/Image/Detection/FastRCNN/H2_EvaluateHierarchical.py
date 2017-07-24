@@ -25,6 +25,7 @@ HCH = HierarchyHelper(get_tree_str(p.datasetName, USE_HIERARCHICAL_CLASSIFICATIO
 
 output_scale = (p.cntk_padWidth, p.cntk_padHeight)
 
+use_gt_as_rois = False
 
 def prepare_ground_truth_boxes(gtbs):
     """
@@ -120,15 +121,18 @@ def prepare_predictions(outputs, roiss, num_classes):
 
 def create_mb_source(img_height, img_width, img_channels, n_rois):
     gt_dim = 5 * n_rois
+    rois_dim = 4* n_rois
 
     if p.datasetName!= "pascalVoc":
         map_file = os.path.join(p.imgDir, "test_img_file.txt")
         gt_file = os.path.join(p.imgDir, "test_roi_file.txt")
         size_file = os.path.join(p.imgDir, "test_size_file.txt")
+        rois_file = os.path.join(p.cntkFilesDir, "test.rois.ds.txt")
     else:
         map_file = os.path.join(p.imgDir, "mappings", "test2007.txt")
         gt_file = os.path.join(p.imgDir, "mappings", "test2007_rois_abs-xyxy_noPad_skipDif.txt")
         size_file = os.path.join(p.imgDir, "mappings", "test_size_file2007.txt")
+        rois_file = os.path.join(p.cntkFilesDir, "test.rois.ds.txt")
 
     # read images
     transforms = [scale(width=img_width, height=img_height, channels=img_channels,
@@ -138,15 +142,18 @@ def create_mb_source(img_height, img_width, img_channels, n_rois):
         features=StreamDef(field='image', transforms=transforms)))
 
     # read rois and labels
-    roi_source = CTFDeserializer(gt_file, StreamDefs(
-        rois=StreamDef(field='roiAndLabel', shape=gt_dim, is_sparse=False)))
+    gt_source = CTFDeserializer(gt_file, StreamDefs(
+        gts=StreamDef(field='roiAndLabel', shape=gt_dim, is_sparse=False)))
 
     size_source = CTFDeserializer(size_file, StreamDefs(
         size=StreamDef(field='size', shape=2, is_sparse=False)))
 
+    rois_source = CTFDeserializer(rois_file, StreamDefs(
+        rois = StreamDef(field='rois', shape = rois_dim, is_sparse=False)))
+
     # define a composite reader
-    return MinibatchSource([image_source, roi_source, size_source], max_samples=sys.maxsize, randomize=False,)
-                           #trace_level=TraceLevel.Error)
+    return MinibatchSource([image_source, gt_source, size_source, rois_source], max_samples=sys.maxsize, randomize=False,
+                           trace_level=TraceLevel.Error)
 
 
 def to_image_input_coordinates(coords, img_dims=None, relative_coord=False, centered_coords=False, img_input_dims=None,
@@ -189,7 +196,7 @@ def to_image_input_coordinates(coords, img_dims=None, relative_coord=False, cent
 
 def eval_fast_rcnn_mAP(eval_model):
     classes = HCH.output_mapper.get_all_classes()
-    num_test_images = 5
+    num_test_images = 500
     num_classes = len(classes)
     num_channels = 3
     image_height = p.cntk_padHeight
@@ -208,14 +215,16 @@ def eval_fast_rcnn_mAP(eval_model):
 
     input_map = {  # add real gtb
         image_input: minibatch_source.streams.features,
-        gt_input: minibatch_source.streams.rois,
-        size_input: minibatch_source.streams.size
+        gt_input: minibatch_source.streams.gts,
+        size_input: minibatch_source.streams.size,
+        roi_input: minibatch_source.streams.rois
     }
 
     all_raw_gt_boxes = []
     all_raw_outputs = []
     all_raw_rois = []
     all_raw_img_dims = []
+    all_raw_imgs = []
 
     # evaluate test images and write network output to file
     print("Evaluating Faster R-CNN model for %s images." % num_test_images)
@@ -241,7 +250,15 @@ def eval_fast_rcnn_mAP(eval_model):
         all_gt_boxes = gt_data[np.where(gt_data[:, 4] != 0)]  # remove padded boxes!
         all_raw_gt_boxes.append(all_gt_boxes.copy())
 
-        rois = np.copy(gt_data[:, :4])
+        img = mb_data[image_input].asarray()
+
+        all_raw_imgs.append(img)
+
+        if use_gt_as_rois:
+            rois = np.copy(gt_data[:, :4])
+        else:
+            rois = mb_data[roi_input].asarray()
+            rois.shape = (rois_per_image, 4)
         all_raw_rois.append(rois)
 
         output = frcn_eval.eval(
@@ -251,7 +268,16 @@ def eval_fast_rcnn_mAP(eval_model):
     all_gt_infos = prepare_ground_truth_boxes(gtbs=all_raw_gt_boxes)
     all_boxes = prepare_predictions(all_raw_outputs, all_raw_rois, num_classes)
 
-    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=True, use_07_metric=False)
+    if False:
+        bb_img_gt_l = visualize_gt(all_gt_infos, all_raw_imgs, False)
+        bb_img_rois_l = visualize_rois(all_boxes, all_raw_imgs, False)
+
+        for img_i in range(len(bb_img_gt_l)):
+            save_image(bb_img_gt_l[img_i], ".", "test_gt_" + str(img_i) + ".png")
+        for img_i in range(len(bb_img_rois_l)):
+            save_image(bb_img_rois_l[img_i], ".", "test_rois_" + str(img_i) + ".png")
+
+    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=True, use_07_metric=True)
     ap_list = []
     for class_name in classes:
         if class_name == "__background__": continue
@@ -260,6 +286,163 @@ def eval_fast_rcnn_mAP(eval_model):
     print('Mean AP = {:.6f}'.format(np.nanmean(ap_list)))
 
     return aps
+
+
+img_list = [os.path.join(abs_path, r"../../DataSets/Grocery/testImages/WIN_20160803_11_28_42_Pro.jpg"),
+            os.path.join(abs_path, r"../../DataSets/Grocery/testImages/WIN_20160803_11_42_36_Pro.jpg"),
+            os.path.join(abs_path, r"../../DataSets/Grocery/testImages/WIN_20160803_11_46_03_Pro.jpg"),
+            os.path.join(abs_path, r"../../DataSets/Grocery/testImages/WIN_20160803_11_48_26_Pro.jpg"),
+            os.path.join(abs_path, r"../../DataSets/Grocery/testImages/WIN_20160803_12_37_07_Pro.jpg")]
+
+
+# scramble to
+def _scramble_list(to_sc, perm):
+    out = []
+    for i in perm:
+        out.append(to_sc[i])
+    return out
+
+
+img_list = _scramble_list(img_list, [1, 3, 2, 4, 0])
+
+def to_cv2_img(img):
+    #import ipdb;ipdb.set_trace()
+    img.shape = (3,1000,1000)
+
+    # CHW to HWC
+    img = np.transpose(img, (1,2,0))
+    img = np.asarray(img, dtype=np.uint8)
+
+    #import ipdb;ipdb.set_trace()
+    return img
+
+def visualize_gt(all_gt_infos, imgs=None, plot=True):
+    if imgs is None:
+        imgs = []
+        for img_path in img_list:
+            imgs.append(load_image(img_path))
+        remove_padding = True
+    else:
+        # deep_copy
+        imgs = [to_cv2_img(img.copy()) for img in imgs]
+        remove_padding = False
+
+    for cls_name in all_gt_infos:
+        if cls_name == '__background__': continue
+        pred_list = all_gt_infos[cls_name]
+        if not len(pred_list) == len(imgs): import ipdb;ipdb.set_trace()
+        for img_i in range(len(imgs)):
+            image = imgs[img_i]
+            pred = np.copy(pred_list[img_i]["bbox"])
+            if image is None: import ipdb;ipdb.set_trace()
+            add_rois_to_img(image, pred, cls_name, remove_padding)
+
+    if plot:
+        for img in imgs:
+            plot_image(img)
+
+    return imgs
+
+
+def visualize_rois(all_boxes, imgs=None, plot=True):
+    classes = HCH.output_mapper.get_all_classes()
+    if imgs is None:
+        imgs = []
+        for img_path in img_list:
+            imgs.append(load_image(img_path))
+        remove_padding = True
+    else:
+        # deep_copy
+        imgs = [img.copy() for img in imgs]
+        remove_padding = False
+
+    for cls_i in range(len(all_boxes)):
+
+        cls_name = classes[cls_i]
+        for img_i in range(len(imgs)):
+            image = imgs[img_i]
+            rois = np.copy(all_boxes[cls_i][img_i])
+
+            add_rois_to_img(image, rois, cls_name, remove_padding)
+
+    if plot:
+        for img in imgs:
+            plot_image(img)
+
+    return imgs
+
+
+def add_rois_to_img(img, rois, cls_name, remove_padding=True):
+    if rois.size == 0: return
+    if img is None: import ipdb;ipdb.set_trace()
+
+    rois[:, 0:4] /= output_scale + output_scale
+    if(remove_padding):
+        rois[:, [0, 2]] -= 7 / 32
+        rois[:, [0, 2]] *= 16 / 9
+
+    # import ipdb;ipdb.set_trace()
+    draw_bb_on_image(img, points_to_xywh(rois), cls_name)
+
+
+def draw_bb_on_image(image, bb_list, name=None):
+    import cv2
+    image_width = len(image[1])
+    image_height = len(image)
+
+    LIMIT_TO_FIRST = None
+    box_list_len = min(len(bb_list), LIMIT_TO_FIRST) if LIMIT_TO_FIRST is not None else len(bb_list)
+    for j in range(box_list_len):
+        box = bb_list[j]
+        xmin = int(image_width * (box[0] - box[2] / 2))
+        xmax = int(image_width * (box[0] + box[2] / 2))
+        ymin = int(image_height * (box[1] - box[3] / 2))
+        ymax = int(image_height * (box[1] + box[3] / 2))
+        if (xmax >= image_width or ymax >= image_height or xmin < 0 or ymin < 0):
+            print("Box out of bounds: (" + str(xmin) + "," + str(ymin) + ") (" + str(xmax) + "," + str(ymax) + ")")
+            # print(box[5:])
+        xmax = image_width - 1 if xmax >= image_width else xmax
+        ymax = image_height - 1 if ymax >= image_height else ymax
+        xmin = 0 if xmin < 0 else xmin
+        ymin = 0 if ymin < 0 else ymin
+
+        color = (255, 255 - int(j * 255 / box_list_len), int(j * 255 / box_list_len))
+        cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 1)
+
+        if name is not None:
+            cv2.putText(image, name, (xmin, ymax), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 1)
+
+    return image
+
+
+def plot_image(image):
+    import matplotlib.pyplot as mp
+    mp.imshow(image)
+    mp.plot()
+    mp.show()
+
+
+def load_image(img_path):
+    import cv2
+    return cv2.imread(img_path)
+
+
+def save_image(img, dir, name):
+    import cv2
+    cv2.imwrite(os.path.join(dir, name), img)
+
+
+def points_to_xywh(points):
+    xywh = np.zeros(points.shape)
+
+    xywh[:, 0] = (points[:, 0] + points[:, 2]) / 2
+    xywh[:, 1] = (points[:, 1] + points[:, 3]) / 2
+    xywh[:, 2] = np.abs(points[:, 2] - points[:, 0])
+    xywh[:, 3] = np.abs(points[:, 3] - points[:, 1])
+    xywh[:, 4:] = points[:, 4:]
+
+    return xywh
+
 
 
 if __name__ == '__main__':

@@ -62,9 +62,10 @@ class Parameters():
 class GroceryParameters(Parameters):
     def __init__(self, datasetName):
         super(GroceryParameters,self).__init__(datasetName)
-        self.classes = ('__background__',  # always index 0
-                   'avocado', 'orange', 'butter', 'champagne', 'eggBox', 'gerkin', 'joghurt', 'ketchup',
-                   'orangeJuice', 'onion', 'pepper', 'tomato', 'water', 'milk', 'tabasco', 'mustard')
+        #self.classes = ('__background__',  # always index 0
+        #           'avocado', 'orange', 'butter', 'champagne', 'eggBox', 'gerkin', 'joghurt', 'ketchup',
+        #           'orangeJuice', 'onion', 'pepper', 'tomato', 'water', 'milk', 'tabasco', 'mustard')
+        self.classes = '__background__', 'mustard', 'butter', 'orangeJuice', 'joghurt', 'ketchup', 'pepper', 'champagne', 'water', 'onion', 'eggBox', 'avocado', 'gerkin', 'tabasco', 'tomato', 'milk', 'orange'
 
         # roi generation
         self.roi_minDimRel = 0.04
@@ -111,7 +112,7 @@ class PascalParameters(Parameters):
         self.cntk_num_train_images = 5011
         self.cntk_num_test_images = 4952
         self.cntk_mb_size = 2
-        self.cntk_max_epochs = 17
+        self.cntk_max_epochs = 1
         self.cntk_momentum_time_constant = 20
 
         self.pascalDataDir = os.path.join(self.rootDir, "..", "..", "DataSets", "Pascal")

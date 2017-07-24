@@ -18,7 +18,7 @@ class HierarchyHelper:
 
     def __init__(self, tree_str):
         # Constants
-        self.MINIMUM_BG_VALUE = .65 # Constant which determines the minimum background value for a Detection to be background
+        self.MINIMUM_BG_VALUE = .1 # Constant which determines the minimum background value for a Detection to be background
         self.tree_map = TreeMap.tree_map_from_tree_str(tree_str, use_background=True, use_multiply_with_parent=False)
         self.cls_maps = list(self.tree_map.meta_map.keys())
 
