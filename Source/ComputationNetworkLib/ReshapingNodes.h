@@ -217,9 +217,14 @@ class ReduceElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
 
     void ValidateOp();
 
+    static inline bool Contains(const std::vector<int>& axes, int axis) { return std::find(axes.begin(), axes.end(), axis) != axes.end(); }
     static bool DefaultKeepDimensionsSetting(int axis)
     {
         return !((axis == CNTKInternalIdxValueForAllStaticAxes) || (axis == CNTKInternalIdxValueForAllAxes));
+    }
+    static bool DefaultKeepDimensionsSetting(const std::vector<int>& axis)
+    {
+        return !(Contains(axis, CNTKInternalIdxValueForAllStaticAxes) || Contains(axis, CNTKInternalIdxValueForAllAxes));
     }
 
 public:
@@ -259,19 +264,31 @@ public:
 
 public:
     ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, int axis, bool keepDimensions) :
-        Base(deviceId, name), m_operation(operation), m_axis(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/), m_keepDimensions(keepDimensions)
+        Base(deviceId, name), m_operation(operation), m_axes({ axis }), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/), m_keepDimensions(keepDimensions)
     {
         if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
             ValidateOp();
     }
 
     ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = CNTKInternalIdxValueForAllStaticAxes) :
+        ReduceElementsNode(deviceId, name, operation, { axis }, DefaultKeepDimensionsSetting(axis))
+    {
+    }
+
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, const std::vector<int>& axis, bool keepDimensions) :
+        Base(deviceId, name), m_operation(operation), m_axes(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/), m_keepDimensions(keepDimensions)
+    {
+        if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
+            ValidateOp();
+    }
+
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, const std::vector<int>& axis) :
         ReduceElementsNode(deviceId, name, operation, axis, DefaultKeepDimensionsSetting(axis))
     {
     }
 
     ReduceElementsNode(const ScriptableObjects::IConfigRecordPtr configp) :
-        ReduceElementsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"reductionOp"), configp->Get(L"axis"))
+        ReduceElementsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"reductionOp"), (int) configp->Get(L"axis"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -318,7 +335,7 @@ public:
     }
 
     std::wstring ReductionOpName() const { return m_operation; }
-    int ReductionAxis() const { return m_axis; }
+    const std::vector<int>& ReductionAxis() const { return m_axes; }
 
     static const int  CNTKInternalIdxValueForAllStaticAxes = 0;
     static const int  CNTKInternalIdxValueForAllAxes = -1;
@@ -327,14 +344,14 @@ public:
 
 private:
     bool IsMean() const { return (m_operation == L"Mean"); }
-    bool ReduceAllStaticAxes() const { return m_axis == CNTKInternalIdxValueForAllStaticAxes; }
-    bool ReduceAllAxes() const { return m_axis == CNTKInternalIdxValueForAllAxes; }
-    bool ReduceSequenceAxis() const { return m_axis == CNTKInternalIdxValueForSequenceAxis; }
-    bool ReduceBatchAxis() const { return m_axis == CNTKInternalIdxValueForBatchAxis; }
+    bool ReduceAllStaticAxes() const { return Contains(m_axes, CNTKInternalIdxValueForAllStaticAxes); }
+    bool ReduceAllAxes() const { return Contains(m_axes, CNTKInternalIdxValueForAllAxes); }
+    bool ReduceSequenceAxis() const { return Contains(m_axes, CNTKInternalIdxValueForSequenceAxis); }
+    bool ReduceBatchAxis() const { return Contains(m_axes, CNTKInternalIdxValueForBatchAxis); }
 
 private:
     // operation attributes
-    int m_axis;
+    std::vector<int> m_axes;
     std::wstring m_operation;          // the operation as a string, e.g. "Sum", see ValidateOp()
     bool m_keepDimensions;
 

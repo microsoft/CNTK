@@ -48,6 +48,26 @@ class Axis(cntk_py.Axis):
         return super(Axis, self).is_static_axis()
 
     @property
+    def is_sequence_axis(self):
+        '''
+        Returns True if the axis is a sequence axis and False otherwise
+
+        Returns:
+            bool: True if this axis is a sequence axis and False otherwise
+        '''
+        return super(Axis, self).is_sequence_axis()
+
+    @property
+    def is_batch_axis(self):
+        '''
+        Returns True if the axis is a batch axis and False otherwise
+
+        Returns:
+            bool: True if this axis is a batch axis and False otherwise
+        '''
+        return super(Axis, self).is_batch_axis()
+
+    @property
     def name(self):
         '''
         Returns the name of this axis.
