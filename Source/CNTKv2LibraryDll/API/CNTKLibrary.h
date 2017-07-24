@@ -34,16 +34,6 @@
 namespace CNTK
 {
     ///
-    /// Checked mode enables additional runtime verification such as:
-    /// - Tracking NaN occurences in sequence gaps.
-    /// - Function graph verification after binding of free static axes to actual values at runtime
-    /// 
-    /// Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
-    ///
-    CNTK_API void SetCheckedMode(bool enable);
-    bool GetCheckedMode();
-
-    ///
     /// Enumeration type denoting data type of symbolic data entities or actual data.
     ///
     enum class DataType : unsigned int
@@ -51,11 +41,11 @@ namespace CNTK
         Unknown = 0,
         Float = 1,
         Double = 2,
+        UChar = 3, // So far only used internally in deserializers.
 
         /* TODO:
         Bit,
         Char,
-        UChar,
         Short,
         UShort,
         Int,
@@ -152,185 +142,6 @@ namespace CNTK
     };
 
     ///
-    /// Specifies global logging verbosity level.
-    ///
-    CNTK_API void SetTraceLevel(TraceLevel value);
-
-    ///
-    /// Returns current logging verbosity level.
-    ///
-    CNTK_API TraceLevel GetTraceLevel();
-
-    /// A collection of additional information needed for the distributed trainer to aggregate the gradients
-    struct MinibatchInfo
-    {
-        bool atEndOfData;
-        bool atEndOfSweep;
-        size_t numberOfSamples;
-        NDArrayViewPtr trainingLossValue;
-        NDArrayViewPtr evalCriterionValue;
-
-        bool IsEmpty() const { return numberOfSamples == 0; }
-    };
-
-    ///
-    /// Additional GPU-specific device information.
-    ///
-    struct GPUProperties final
-    {
-        unsigned int deviceId;
-        int versionMajor;
-        int versionMinor;
-        int cudaCores;
-        std::string name;
-        size_t totalMemory;
-    };
-
-    ///
-    /// Denotes a compute device instance.
-    ///
-    class DeviceDescriptor final
-    {
-        friend bool operator==(const DeviceDescriptor& first, const DeviceDescriptor& second);
-
-        friend struct Test::DeviceSelectionTestFixture;
-
-        static std::mutex s_mutex;
-        static bool s_defaultDeviceFrozen;
-        static std::unique_ptr<DeviceDescriptor> s_defaultDevice;
-        static std::vector<DeviceDescriptor> s_excludedDevices;
-        static std::vector<DeviceDescriptor> s_allDevices;
-        static std::vector<GPUProperties> s_gpuProperties;
-    public:
-        ///
-        /// Returns the Id of 'this' device.
-        ///
-        unsigned int Id() const { return m_deviceId; }
-
-        ///
-        /// Returns the DeviceKind of 'this' device.
-        ///
-        DeviceKind Type() const { return m_deviceType; }
-
-        ///
-        /// Returns true if another CNTK process already holds an exclusive lock on this device.
-        ///
-        CNTK_API bool IsLocked() const;
-
-        ///
-        /// Static method to get the descriptor of the CPU device on the local system.
-        ///
-        static DeviceDescriptor CPUDevice() { return{ 0, DeviceKind::CPU }; }
-
-        ///
-        /// Static method to get the descriptor of the GPU device on the local system with the specified CUDA device ID.
-        ///
-        CNTK_API static DeviceDescriptor GPUDevice(unsigned int deviceId);
-
-        /// 
-        /// This static method freezes the default device of the current CNTK process disallowing further changes
-        /// through calls to TrySetDefaultDevice. This default device will used for all CNTK operations 
-        /// where a device needs to be specified and where none was explicitly provided. If no default device has been specified
-        /// with a call to TrySetDefaultDevice, on the first invocation, this methods will auto-select one 
-        /// of the available (non-locked) devices as the default. Returns a descriptor of the globally default device.
-        ///
-        CNTK_API static DeviceDescriptor UseDefaultDevice();
-
-        ///
-        /// This static method tries to set the specified device as the globally default, optionally acquiring an exclusive 
-        /// (cooperative) lock on the device (GPU). The default device can only be changed if it has not yet been frozen by being 
-        /// implicitly used in any previous CNTK operation.
-        ///
-        /// CNTK uses cooperative locking for the device access, whereby only a single process can acquire 
-        /// a device lock. This locking mechanism allows CNTK processes to avoid device oversubscription only if they collectively
-        /// choose so. In other words, the device locked by one CNTK process, can still be accessed by another CNTK process without
-        /// acquiring any locks (i.e, the existing device lock can be ignored by other CNTK processes). This cooperative 
-        /// locking mechanism does not guarantee any kind of exclusive access to the device. The proper way to ensure exclusivity 
-        /// is to use tools provided by NVIDIA (nvidia smi).
-        ///
-        /// This methods returns false if  
-        /// * the specified device appears in the list of excluded devices;
-        /// * 'acquireDeviceLock' is true and another process already holds a lock on the device;
-        /// * 'acquireDeviceLock' is true and 'newDefaultDevice' corresponds to a CPU device (which cannot be locked).
-        ///
-        CNTK_API static bool TrySetDefaultDevice(const DeviceDescriptor& newDefaultDevice, bool acquireDeviceLock = false);
-
-        ///
-        /// Static method to retrieve additional properties (total memory, number of CUDA cores, etc.) for the specified GPU 
-        /// device. This method will raise an exception if a CPU device is specified as an argument.
-        ///
-        CNTK_API static const GPUProperties& GetGPUProperties(const DeviceDescriptor& device);
-
-        ///
-        /// Static method to specify a list of excluded devices that cannot be used as globally default (neither auto-selected
-        /// nor explicitly specified by 'TrySetDefaultDevice'). For example, to avoid auto-selecting the CPU, invoke 
-        /// 'SetExcludedDevices({DeviceDescriptor::CPUDevice()})'. However, after the default device has been selected and 
-        /// frozen (by a call to UseDefaultDevice()), invoking this methods has no effect, it becomes essentially a no-op.
-        ///
-        CNTK_API static void SetExcludedDevices(const std::vector<DeviceDescriptor>& excluded);
-
-        ///
-        /// Static method to get a list of descriptors of all available/supported devices.
-        ///
-        CNTK_API static const std::vector<DeviceDescriptor>& AllDevices();
-
-        ///
-        /// Return a string summary of this device
-        ///
-        CNTK_API std::wstring AsString() const;
-
-        ///
-        /// Static method to switch GPUs to sync mode (useful for profiling).
-        ///
-        CNTK_API static void EnableSynchronousGPUKernelExecution();
-
-    private:
-        DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
-            : m_deviceId(deviceId), m_deviceType(deviceType)
-        {}
-        
-        /// Resets static properties, needed for unit-tests.
-        CNTK_API static void Reset();
-
-    private:
-        unsigned int m_deviceId;
-        DeviceKind m_deviceType;
-    };
-
-    inline bool operator==(const DeviceDescriptor& left, const DeviceDescriptor& right)
-    {
-        return ((left.Type() == right.Type()) && (left.Id() == right.Id()));
-    }
-
-    inline bool operator!=(const DeviceDescriptor& left, const DeviceDescriptor& right)
-    {
-        return !(left == right);
-    }
-
-    ///
-    /// An interface denoting an entity that can serialize its state into a Dictionary.
-    ///
-    class IDictionarySerializable
-    {
-    public:
-        ///
-        /// Save the state of 'this' object into a dictionary.
-        ///
-        CNTK_API virtual Dictionary Serialize() const = 0;
-
-        ///
-        /// Returns the current version (e.g. model, checkpoint version) of the class 
-        /// implementing this interface. The version number must be incremented each time
-        /// when Serialize() implementation is modified (for instance, when a new field is added to 
-        /// the class that needs to be captured in the dictionary generated by the Serialize method).
-        ///
-        CNTK_API virtual size_t CurrentVersion() const = 0;
-
-    protected:
-        virtual ~IDictionarySerializable() {}
-    };
-
-    ///
     /// Denotes a multi-dimensional rectangular shape.
     ///
     class NDShape final
@@ -356,7 +167,11 @@ namespace CNTK
         ///
         /// A placeholder shape to use to denote an unknown shape
         ///
-        CNTK_API static const NDShape Unknown;
+        inline static const NDShape& Unknown()
+        {
+            const static NDShape unknown(1, SentinelDimValueForUnknownShape);
+            return unknown;
+        }
 
     public:
         ///
@@ -393,7 +208,7 @@ namespace CNTK
         ///
         /// Returns a boolean indicating if 'this' shape is the special Unknown shape
         ///
-        bool IsUnknown() const { return (*this == NDShape::Unknown); }
+        bool IsUnknown() const { return (*this == NDShape::Unknown()); }
 
         ///
         /// Returns the rank of 'this' shape.
@@ -403,17 +218,17 @@ namespace CNTK
         ///
         /// Returns a reference to dimension size for the specified axis.
         ///
-        size_t& operator[](size_t axisId) 
+        size_t& operator[](size_t axisId)
         {
-            return m_shapeDims.at(axisId); 
+            return m_shapeDims.at(axisId);
         }
 
         ///
         /// Returns the dimension size for the specified axis.
         ///
-        size_t operator[](size_t axisId) const 
+        size_t operator[](size_t axisId) const
         {
-            return m_shapeDims.at(axisId); 
+            return m_shapeDims.at(axisId);
         }
 
         ///
@@ -552,6 +367,225 @@ namespace CNTK
     static const unsigned long SentinelValueForAutoSelectRandomSeed = std::numeric_limits<unsigned long>::max() - 2; // An arbitrary choice of sentinel value
 
     ///
+    /// Describes an input stream: its name, element type, storage, etc.
+    ///
+    struct StreamInformation
+    {
+        StreamInformation() : m_id(0), m_storageFormat(StorageFormat::Dense), m_elementType(DataType::Unknown),
+            m_sampleLayout(NDShape::Unknown())
+        {}
+
+        std::wstring m_name;           // Unique name of the stream
+        size_t m_id;                   // Unique identifier of the stream
+        StorageFormat m_storageFormat; // Storage format of the stream
+        DataType m_elementType;        // Element type of the stream
+        NDShape m_sampleLayout;        // Layout of the sample for the stream
+        bool m_definesMbSize = false;  // Flag indicating whether this stream defines minibatch size.
+
+        std::wstring AsString() const
+        {
+            return m_name + L"(" + m_sampleLayout.AsString() + L")";
+        }
+    };
+
+    inline bool operator==(const StreamInformation& left, const StreamInformation& right)
+    {
+        return ((left.m_id == right.m_id) &&
+            (left.m_name == right.m_name) &&
+            (left.m_storageFormat == right.m_storageFormat) &&
+            (left.m_elementType == right.m_elementType) &&
+            (left.m_sampleLayout == right.m_sampleLayout));
+    }
+
+    // Some projects require only some generic data types/interfaces from this file, and do not want to link explicitely to CNTKv2Library.
+    // In this case they have to define CNTK_HEADERONLY_DEFINITIONS before including CNTKLibrary.h
+#ifndef CNTK_HEADERONLY_DEFINITIONS
+    ///
+    /// Checked mode enables additional runtime verification such as:
+    /// - Tracking NaN occurrences in sequence gaps.
+    /// - Function graph verification after binding of free static axes to actual values at runtime
+    /// 
+    /// Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
+    ///
+    CNTK_API void SetCheckedMode(bool enable);
+    bool GetCheckedMode();
+
+
+    ///
+    /// Specifies global logging verbosity level.
+    ///
+    CNTK_API void SetTraceLevel(TraceLevel value);
+
+    ///
+    /// Returns current logging verbosity level.
+    ///
+    CNTK_API TraceLevel GetTraceLevel();
+
+    /// A collection of additional information needed for the distributed trainer to aggregate the gradients
+    struct MinibatchInfo
+    {
+        bool atEndOfData;
+        bool atEndOfSweep;
+        size_t numberOfSamples;
+        NDArrayViewPtr trainingLossValue;
+        NDArrayViewPtr evalCriterionValue;
+
+        bool IsEmpty() const { return numberOfSamples == 0; }
+    };
+
+    ///
+    /// Additional GPU-specific device information.
+    ///
+    struct GPUProperties final
+    {
+        unsigned int deviceId;
+        int versionMajor;
+        int versionMinor;
+        int cudaCores;
+        std::string name;
+        size_t totalMemory;
+    };
+
+    ///
+    /// Denotes a compute device instance.
+    ///
+    class DeviceDescriptor final
+    {
+        friend bool operator==(const DeviceDescriptor& first, const DeviceDescriptor& second);
+
+        friend struct Test::DeviceSelectionTestFixture;
+
+        static std::mutex s_mutex;
+        static bool s_defaultDeviceFrozen;
+        static std::unique_ptr<DeviceDescriptor> s_defaultDevice;
+        static std::vector<DeviceDescriptor> s_excludedDevices;
+        static std::vector<DeviceDescriptor> s_allDevices;
+        static std::vector<GPUProperties> s_gpuProperties;
+    public:
+        ///
+        /// Returns the Id of 'this' device.
+        ///
+        unsigned int Id() const { return m_deviceId; }
+
+        ///
+        /// Returns the DeviceKind of 'this' device.
+        ///
+        DeviceKind Type() const { return m_deviceType; }
+
+        ///
+        /// Returns true if another CNTK process already holds an exclusive lock on this device.
+        ///
+        CNTK_API bool IsLocked() const;
+
+        ///
+        /// Static method to get the descriptor of the CPU device on the local system.
+        ///
+        static DeviceDescriptor CPUDevice() { return{ 0, DeviceKind::CPU }; }
+
+        ///
+        /// Static method to get the descriptor of the GPU device on the local system with the specified CUDA device ID.
+        ///
+        CNTK_API static DeviceDescriptor GPUDevice(unsigned int deviceId);
+
+        /// 
+        /// This static method freezes the default device of the current CNTK process disallowing further changes
+        /// through calls to TrySetDefaultDevice. This default device will used for all CNTK operations 
+        /// where a device needs to be specified and where none was explicitly provided. If no default device has been specified
+        /// with a call to TrySetDefaultDevice, on the first invocation, this methods will auto-select one 
+        /// of the available (non-locked) devices as the default. Returns a descriptor of the globally default device.
+        ///
+        CNTK_API static DeviceDescriptor UseDefaultDevice();
+
+        ///
+        /// This static method tries to set the specified device as the globally default, optionally acquiring an exclusive 
+        /// (cooperative) lock on the device (GPU). The default device can only be changed if it has not yet been frozen by being 
+        /// implicitly used in any previous CNTK operation.
+        ///
+        /// CNTK uses cooperative locking for the device access, whereby only a single process can acquire 
+        /// a device lock. This locking mechanism allows CNTK processes to avoid device oversubscription only if they collectively
+        /// choose so. In other words, the device locked by one CNTK process, can still be accessed by another CNTK process without
+        /// acquiring any locks (i.e, the existing device lock can be ignored by other CNTK processes). This cooperative 
+        /// locking mechanism does not guarantee any kind of exclusive access to the device. The proper way to ensure exclusivity 
+        /// is to use tools provided by NVIDIA (nvidia smi).
+        ///
+        /// This methods returns false if  
+        /// * the specified device appears in the list of excluded devices;
+        /// * 'acquireDeviceLock' is true and another process already holds a lock on the device;
+        /// * 'acquireDeviceLock' is true and 'newDefaultDevice' corresponds to a CPU device (which cannot be locked).
+        ///
+        CNTK_API static bool TrySetDefaultDevice(const DeviceDescriptor& newDefaultDevice, bool acquireDeviceLock = false);
+
+        ///
+        /// Static method to retrieve additional properties (total memory, number of CUDA cores, etc.) for the specified GPU 
+        /// device. This method will raise an exception if a CPU device is specified as an argument.
+        ///
+        CNTK_API static const GPUProperties& GetGPUProperties(const DeviceDescriptor& device);
+
+        ///
+        /// Static method to specify a list of excluded devices that cannot be used as globally default (neither auto-selected
+        /// nor explicitly specified by 'TrySetDefaultDevice'). For example, to avoid auto-selecting the CPU, invoke 
+        /// 'SetExcludedDevices({DeviceDescriptor::CPUDevice()})'. However, after the default device has been selected and 
+        /// frozen (by a call to UseDefaultDevice()), invoking this methods has no effect, it becomes essentially a no-op.
+        ///
+        CNTK_API static void SetExcludedDevices(const std::vector<DeviceDescriptor>& excluded);
+
+        ///
+        /// Static method to get a list of descriptors of all available/supported devices.
+        ///
+        CNTK_API static const std::vector<DeviceDescriptor>& AllDevices();
+
+        ///
+        /// Return a string summary of this device
+        ///
+        CNTK_API std::wstring AsString() const;
+
+    private:
+        DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
+            : m_deviceId(deviceId), m_deviceType(deviceType)
+        {}
+        
+        /// Resets static properties, needed for unit-tests.
+        CNTK_API static void Reset();
+
+    private:
+        unsigned int m_deviceId;
+        DeviceKind m_deviceType;
+    };
+
+    inline bool operator==(const DeviceDescriptor& left, const DeviceDescriptor& right)
+    {
+        return ((left.Type() == right.Type()) && (left.Id() == right.Id()));
+    }
+
+    inline bool operator!=(const DeviceDescriptor& left, const DeviceDescriptor& right)
+    {
+        return !(left == right);
+    }
+
+    ///
+    /// An interface denoting an entity that can serialize its state into a Dictionary.
+    ///
+    class IDictionarySerializable
+    {
+    public:
+        ///
+        /// Save the state of 'this' object into a dictionary.
+        ///
+        CNTK_API virtual Dictionary Serialize() const = 0;
+
+        ///
+        /// Returns the current version (e.g. model, checkpoint version) of the class 
+        /// implementing this interface. The version number must be incremented each time
+        /// when Serialize() implementation is modified (for instance, when a new field is added to 
+        /// the class that needs to be captured in the dictionary generated by the Serialize method).
+        ///
+        CNTK_API virtual size_t CurrentVersion() const = 0;
+
+    protected:
+        virtual ~IDictionarySerializable() {}
+    };
+
+    ///
     /// Denotes a multi-dimensional writable or read-only array of elemental values.
     /// This type denotes a view and there may be multiple simultaneous views of the data underlying a NDArrayView instance.
     /// The underlying data is stored in sparse or dense format, and is located on a specific device.
@@ -582,6 +616,7 @@ namespace CNTK
         ///
         CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
 
+        ///
         /// Construct a read-only NDArrayView with the specified 'dataBuffer' as the backing storage.
         /// The 'dataBuffer' must have been allocated on the specified 'device', must be at least
         /// as large as the total size of the specified 'viewShape' and must outlive the created NDArrayView object.
@@ -592,7 +627,7 @@ namespace CNTK
 
         ///
         /// Construct a NDArrayView with newly allocated sparse storage in SparseCSC format on the specified 'device' and initialize its contents
-        // with the specified Sparse CSC format data.
+        /// with the specified Sparse CSC format data.
         ///
         template <typename ElementType>
         CNTK_API NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false);
@@ -705,6 +740,12 @@ namespace CNTK
         /// 
         template <typename ElementType>
         CNTK_API const ElementType* DataBuffer() const;
+
+        ///
+        /// Returns a read-only pointer to the data buffer in sparse CSC format underlying 'this' view
+        /// 
+        template <typename ElementType>
+        CNTK_API std::tuple<const ElementType *, const SparseIndexType*, const SparseIndexType*, size_t> SparseCSCDataBuffers() const;
 
         ///
         /// Returns the descriptor of the device that 'this' view resides on
@@ -1071,6 +1112,7 @@ namespace CNTK
         ///
         CNTK_API static const std::vector<Axis>& UnknownDynamicAxes();
 
+        // TODO: This is missing in later master. Not sure if this is still needed.
         ///
         /// Check whether Axis vector represents the unknown dynamic axes
         ///
@@ -1702,7 +1744,7 @@ namespace CNTK
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
         CNTK_API const std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData() const;
         CNTK_API std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData();
-        static const size_t s_version = 1;
+        static const size_t s_version;// TODO: check this: latest master does not initialize this = 1;
     };
 
     ///
@@ -2032,7 +2074,7 @@ private:
     ///
     inline Variable PlaceholderVariable(const std::wstring& name = std::wstring())
     {
-        return PlaceholderVariable(NDShape::Unknown, name, Axis::UnknownDynamicAxes());
+        return PlaceholderVariable(NDShape::Unknown(), name, Axis::UnknownDynamicAxes());
     }
 
     ///
@@ -2328,7 +2370,7 @@ private:
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
     // However we have a couple of derivatives of the type to extend the base interface and thus we ensure that the derived types do not have additional fields.
     // This check is weak in that the derives types may sneak in some additional fields if the base type had some padding at the end, without changing the object size
-    // but it should be good enough for catching any accidental addiiton of fields.
+    // but it should be good enough for catching any accidental addition of fields.
     static_assert(sizeof(Constant) == sizeof(Variable), "The Constant type should not have any data fields beyond what its base type 'Variable' has.");
 }
 
@@ -2825,9 +2867,6 @@ namespace CNTK
         template <typename ElementType>
         void CopyVariableValueTo(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
-            if (outputVariable.GetDataType() != GetDataType())
-                InvalidArgument("The outputVariable '%S' has a different data type than the Value object.", outputVariable.AsString().c_str());
-
             ResizeOutputBuffer(outputVariable, sequences);
             CopyVariableValueToVector<ElementType>(outputVariable, sequences);
         }
@@ -2841,8 +2880,6 @@ namespace CNTK
         void CopyVariableValueTo(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences)
         {
             auto dataType = GetDataType();
-            if (outputVariable.GetDataType() != dataType)
-                InvalidArgument("The outputVariable '%S' has a different data type than the Value object.", outputVariable.AsString().c_str());
 
             ResizeOutputBuffer(outputVariable, sequences);
             if (dataType == DataType::Float)
@@ -2853,6 +2890,28 @@ namespace CNTK
             {
                 CopyVariableValueToVector<double>(outputVariable, sequences);
             }
+        }
+
+        ///
+        /// Copy the data stored in 'this' Value object to the buffers representing a sequence in CSC sparse format.
+        /// The sequence buffer will be resized if necessary.
+        /// The Value should have the same tensor shape as outputVariable.
+        /// On return, the sequenceLength is set to the length of the sequence stored in 'this' Value,
+        /// and the colStarts, rowIndices and nonZeroValues contain the data of column indexes, row indexes and non-zero values,
+        /// and the numNonZeroValues is set to number of non-zero values contained in 'this' Value.
+        ///
+        template <typename ElementType>
+        void CopyVariableValueTo(const Variable& outputVariable, size_t& sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<ElementType>& nonZeroValues, size_t& numNonZeroValues)
+        {
+            size_t numColsInMatrix;
+            std::tie(sequenceLength, numColsInMatrix, numNonZeroValues) = ValidateSparseCSCAndGetIndexBufferSizes<ElementType>(outputVariable);
+
+            // resize output vectors.
+            colStarts.resize(numColsInMatrix);
+            rowIndices.resize(numNonZeroValues);
+            nonZeroValues.resize(numNonZeroValues);
+
+            CopyVariableValueToCSCSparse(sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues);
         }
 
         ///
@@ -2900,6 +2959,12 @@ namespace CNTK
     private:
         CNTK_API std::pair<size_t, size_t> GetSequenceAndBatchLength(const Variable& outputVariable);
 
+        template <typename ElementType>
+        CNTK_API std::tuple<size_t, size_t, size_t> ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable);
+
+        template <typename ElementType>
+        CNTK_API void CopyVariableValueToCSCSparse(size_t sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<ElementType>& nonZeroValues, size_t& numNonZeroValues);
+
         CNTK_API static void GetSequenceStartsAndLengths(const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes);
 
         ///
@@ -2913,7 +2978,7 @@ namespace CNTK
         void ResizeOutputBuffer(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
             auto shape = outputVariable.Shape();
-            if (shape == NDShape::Unknown || shape.HasUnboundDimension())
+            if (shape.IsUnknown() || shape.HasUnboundDimension())
                 RuntimeError("The outputVariable '%S' shape '%S' is unknown shape, has inferred dimension or free dimension for at least one axis.",
                               outputVariable.AsString().c_str(), shape.AsString().c_str());
 
@@ -3443,12 +3508,6 @@ namespace CNTK
         ///
         CNTK_API std::wstring AsString(bool doNotInferOutputs = true) const;
 
-        ///
-        /// Prints the entire graph underlying this Function to stderr
-        ///
-        //CNTK_API void PrintGraph() const;
-        // (was in my old version but no longer after merge--make sure it's not a merge error)
-
         /// 
         /// Allows to change a function attribute. Currently supported:
         ///
@@ -3614,6 +3673,7 @@ namespace CNTK
 
         std::vector<Variable> m_inputs; // primitives: direct input variables; composites: overall input variables, computed lazily (?)
         size_t/*std::once_flag*/ m_outputsInitFlag = 0;
+        std::thread::id m_outputInitializingByThreadId;
         std::vector<Variable> m_outputs;
 
         FunctionPtr m_rootFunction; // This is a PrimitiveFunctionPtr for composites, or a nullptr for PrimitiveFunction instances
@@ -3724,9 +3784,14 @@ namespace CNTK
 
     ///
     /// Create an instance of the CNTK built-in softmax operation on specified tensor input operand
-    /// TODO: this Softmax() needs to support specifying the axis
     ///
     CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = std::wstring());
+
+    ///
+    /// Create an instance of the CNTK built-in softmax operation on specified axis on a
+    /// specified tensor input operand
+    ///
+    CNTK_API FunctionPtr Softmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in hardmax operation on specified tensor input operand
@@ -3752,6 +3817,11 @@ namespace CNTK
     /// Create an instance of the slice operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name = std::wstring());
+
+    ///
+    /// Create an instance of the slice operation on specified tensor input operand
+    ///
+    CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the random_sample operation on specified sampling weights input vector
@@ -4154,11 +4224,6 @@ namespace CNTK
         const std::wstring& name = std::wstring());
 
     ///
-    /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
-    ///
-    CNTK_API FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name = std::wstring());
-
-    ///
     /// TODO:
     ///
     enum class PoolingType
@@ -4166,6 +4231,16 @@ namespace CNTK
         Max,
         Average,
     };
+
+    ///
+    /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
+    ///
+    CNTK_API FunctionPtr ROIPooling(const Variable& operand, 
+                                    const Variable& rois, 
+                                    PoolingType poolingType, 
+                                    const NDShape& roiOutputShape, 
+                                    double spatialScale, 
+                                    const std::wstring& name/* = L""*/);
 
     ///
     /// TODO:
@@ -4272,6 +4347,11 @@ namespace CNTK
     /// Create an instance of the CNTK built-in elementwise exponential linear unit operation with the specified input operand.
     ///
     CNTK_API FunctionPtr ELU(const Variable& operand, const std::wstring& name = std::wstring());
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise scaled exponential linear unit operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr SELU(const Variable& operand, double scale = 1.0507009873554804934193349852946, double alpha = 1.6732632423543772848170429916717, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise leaky linear rectifier operation with the specified input operand.
@@ -4833,6 +4913,17 @@ namespace CNTK
         //
         CNTK_API virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatch) = 0;
 
+        //
+        // In distributed mode all built-in minibatch sources return a minibatch decimated by the number of workers.
+        // Some distributed methods (i.e. BlockMomentum) require each worker to run with original/not decimated minibatch size.
+        // This method is used by the training session to adapt minibatch size before asking the minibatch source for data.
+        // The function returns the scale factor for the minibatch size.
+        //
+        virtual size_t MinibatchSizeScaleFactor()
+        {
+            return 1;
+        }
+
     protected:
         DistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
             : Learner(learner? learner->Parameters() : std::vector<Parameter>(),
@@ -4878,32 +4969,6 @@ namespace CNTK
         bool useNestrovMomentum = true,
         bool resetSGDMomentumAfterAggregation = true,
         double blockLearningRate = 1.0);
-
-    ///
-    /// Describes an input stream: its name, element type, storage, etc.
-    ///
-    struct StreamInformation
-    {
-        std::wstring m_name;           // Unique name of the stream
-        size_t m_id;                   // Unique identifier of the stream
-        StorageFormat m_storageFormat; // Storage format of the stream
-        DataType m_elementType;        // Element type of the stream
-        NDShape m_sampleLayout;        // Layout of the sample for the stream
-
-        std::wstring AsString() const
-        {
-            return m_name + L"(" + m_sampleLayout.AsString() + L")";
-        }
-    };
-
-    inline bool operator==(const StreamInformation& left, const StreamInformation& right)
-    {
-        return ((left.m_id == right.m_id) &&
-            (left.m_name == right.m_name) &&
-            (left.m_storageFormat == right.m_storageFormat) &&
-            (left.m_elementType == right.m_elementType) &&
-            (left.m_sampleLayout == right.m_sampleLayout));
-    }
 
     ///
     /// Evaluator is a top-level abstraction for evaluating a model's performance with specified error criterion.
@@ -5077,7 +5142,7 @@ namespace CNTK
         CNTK_API const std::vector<LearnerPtr>& ParameterLearners() const;
 
         ///
-        /// Total number of samples seen from the begining of the training.
+        /// Total number of samples seen from the beginning of the training.
         ///
         CNTK_API size_t TotalNumberOfSamplesSeen() const;
 
@@ -5177,12 +5242,12 @@ namespace CNTK
         MinibatchData(ValuePtr value) : MinibatchData(value, 0)
         {}
 
-        MinibatchData(ValuePtr value, size_t numSamples, bool sweepEnd = false) 
+        MinibatchData(ValuePtr value, size_t numSamples, bool sweepEnd = false)
             : MinibatchData(value, numSamples, numSamples, sweepEnd)
         {}
 
-        MinibatchData(ValuePtr value, size_t numSequences, size_t numSamples, bool sweepEnd) 
-            : data(value), numberOfSequences(numSequences), numberOfSamples(numSamples), sweepEnd(sweepEnd) 
+        MinibatchData(ValuePtr value, size_t numSequences, size_t numSamples, bool sweepEnd)
+            : data(value), numberOfSequences(numSequences), numberOfSamples(numSamples), sweepEnd(sweepEnd)
         {}
 
         std::wstring AsString() const
@@ -5195,7 +5260,7 @@ namespace CNTK
         ValuePtr data;
         size_t numberOfSequences;
         size_t numberOfSamples;
-        bool sweepEnd; 
+        bool sweepEnd;
     };
 
     ///
@@ -5283,7 +5348,7 @@ namespace CNTK
     };
 
     typedef Dictionary Deserializer;
-    
+
     ///
     /// A configuration required to instantiate the CNTK built-in composite minibatch source.
     /// 
@@ -5302,7 +5367,7 @@ namespace CNTK
         /// returns empty minibatches on subsequent calls to GetNextMinibatch(). 'maxSweeps' and 'maxSamples' 
         /// are mutually exclusive, an exception will be raised if both have non-default values.
         /// 
-        size_t maxSamples { MinibatchSource::InfinitelyRepeat };
+        size_t maxSamples{ MinibatchSource::InfinitelyRepeat };
 
         ///
         /// The maximum allowed number of sweeps over the input dataset. After this number has been reached, 
@@ -5310,26 +5375,26 @@ namespace CNTK
         /// 'maxSweeps' and 'maxSamples' are mutually exclusive, an exception will be raised if both have 
         /// non-default values.
         /// 
-        size_t maxSweeps { MinibatchSource::InfinitelyRepeat };
+        size_t maxSweeps{ MinibatchSource::InfinitelyRepeat };
 
         ///
         /// Size of the randomization window in chunks, non-zero value enables randomization. 
         /// 'randomizationWindowInChunks' and 'randomizationWindowInSamples' are mutually exclusive,
         /// an exception will be raised if both have non-zero values.
         ///
-        size_t randomizationWindowInChunks { MinibatchSource::DefaultRandomizationWindowInChunks };
+        size_t randomizationWindowInChunks{ MinibatchSource::DefaultRandomizationWindowInChunks };
 
         ///
         /// Size of the randomization window in samples, non-zero value enables randomization. 
         /// 'randomizationWindowInChunks' and 'randomizationWindowInSamples' are mutually exclusive,
         /// an exception will be raised if both have non-zero values.
         ///
-        size_t randomizationWindowInSamples { 0 };
+        size_t randomizationWindowInSamples{ 0 };
 
         ///
         /// Initial randomization seed value (incremented every sweep when the input data is re-randomized).
         ///
-        size_t randomizationSeed { 0 };
+        size_t randomizationSeed{ 0 };
 
         ///
         /// Output verbosity level.
@@ -5341,14 +5406,14 @@ namespace CNTK
         /// cannot be used in frame mode, an exception will be raised if frame mode is enabled and the 
         /// truncation length is non-zero).
         ///
-        size_t truncationLength { 0 };
+        size_t truncationLength{ 0 };
 
         ///
         /// Switches the frame mode on and off. If the frame mode is enabled the input data will be processed
         /// as individual frames ignoring all sequence information (this option cannot be used for BPTT,
         /// an exception will be raised if frame mode is enabled and the truncation length is non-zero).
         ///
-        bool isFrameModeEnabled { false };
+        bool isFrameModeEnabled{ false };
 
         ///
         /// Specifies if the deserialization should be done on a single or multiple threads. 
@@ -5442,6 +5507,11 @@ namespace CNTK
     CNTK_API  Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams);
 
     /// 
+    /// Create a CBFDeserializer with the specified options
+    /// 
+    CNTK_API  Deserializer CBFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams = {});
+
+    /// 
     /// Create an HTKFeatureDeserializer with the specified options
     /// 
     CNTK_API  Deserializer HTKFeatureDeserializer(const std::vector<HTKFeatureConfiguration>& streams);
@@ -5509,7 +5579,21 @@ namespace CNTK
     {
         return ((left.m_globalRank == right.m_globalRank) && (left.m_hostId == right.m_hostId));
     }
+}
 
+namespace std
+{
+    template <> struct hash<::CNTK::DistributedWorkerDescriptor>
+    {
+        size_t operator()(const ::CNTK::DistributedWorkerDescriptor& x) const
+        {
+            return std::hash<size_t>()(x.m_globalRank);
+        }
+    };
+}
+
+namespace CNTK
+{
     ///
     /// A communicator interface exposing communication primitives that serve as building blocks 
     /// for distributed training.
@@ -5797,6 +5881,9 @@ namespace CNTK
         size_t m_workerRank;
         size_t m_numberOfWorkers;
 
+        // Scaler for the minibatch size in distributed mode.
+        size_t m_mbSizeScaleFactor;
+
         std::vector<PeriodicAction> m_actions;
 
         // Training.
@@ -5942,16 +6029,6 @@ namespace CNTK
         const CheckpointConfig& checkpointing = { L"" },
         const CrossValidationConfig& crossValidation = { nullptr },
         const TestConfig& test = { nullptr });
-}
 
-
-namespace std 
-{
-    template <> struct hash<::CNTK::DistributedWorkerDescriptor>
-    {
-        size_t operator()(const ::CNTK::DistributedWorkerDescriptor& x) const
-        {
-             return std::hash<size_t>()(x.m_globalRank);
-        }
-    };
+#endif // !CNTK_HEADERONLY_DEFINITIONS
 }

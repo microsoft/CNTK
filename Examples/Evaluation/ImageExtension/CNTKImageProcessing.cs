@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace CNTKAzureTutorial01
+namespace CNTKImageProcessing
 {
     static class ImageProcessing
     {

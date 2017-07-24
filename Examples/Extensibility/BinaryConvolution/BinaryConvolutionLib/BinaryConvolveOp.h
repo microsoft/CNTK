@@ -31,7 +31,7 @@ public:
 
 private:
     // simple convolve function that pulls out raw data buffers and passes them into our halide function
-    static void Convolve(const NDArrayViewPtr& weights, const NDArrayViewPtr& input, const int size, const int stride, const int pad, const int w, const int h, const int channels, const int num_filters, NDArrayViewPtr& output)
+    static void Convolve(const NDArrayViewPtr& weights, const NDArrayViewPtr& input, const int size, const int stride, const bool pad, const int w, const int h, const int channels, const int num_filters, NDArrayViewPtr& output)
     {
         auto weightBuffer = weights->DataBuffer<float>();
         auto inputBuffer = input->DataBuffer<float>();
@@ -71,16 +71,15 @@ private:
         auto& outputValue = outputs[this->Output()];
         if (outputValue == nullptr)
         {
-            auto numOutCols = pad == 0 ? (w - size)/stride + 1 : (w - 1)/stride + 1;
-            auto numOutRows = pad == 0 ? (h - size)/stride + 1 : (h - 1)/stride + 1;
+            auto numOutCols = !pad ? (w - size)/stride + 1 : (w - 1)/stride + 1;
+            auto numOutRows = !pad ? (h - size)/stride + 1 : (h - 1)/stride + 1;
             outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ numOutRows , numOutCols, num_filters }), computeDevice));
         }
         
         // extract the output data
         auto outputData = outputValue->Data();
         // pass everything to Halide to compute the result, outputs are directly stored in the outputData buffer
-        // TODO: fix 'pad' int vs. bool
-        Convolve(leftOperandData, rightOperandData, size, stride, (int)pad, (int)w, (int)h, (int)channels, (int)num_filters, outputData);
+        Convolve(leftOperandData, rightOperandData, size, stride, pad, (int)w, (int)h, (int)channels, (int)num_filters, outputData);
 
         // Let's save the right input's Value in the BackPropSate to be used in the backward pass for computing gradients
         return MakeSharedObject<BackPropState>(this->shared_from_this(), computeDevice, std::unordered_map<Variable, ValuePtr>({ {Inputs()[1], inputValues[1] } }));
@@ -91,7 +90,7 @@ private:
                   const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                   std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override
     {
-        state; rootGradientValues; backPropagatedGradientValuesForInputs;
+        state; rootGradientValues; backPropagatedGradientValuesForInputs; 
         std::runtime_error("Binary Convolution does not currently support backprop");
     }
 

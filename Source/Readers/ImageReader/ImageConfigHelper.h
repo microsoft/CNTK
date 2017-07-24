@@ -10,7 +10,7 @@
 #include "Config.h"
 #include "Reader.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 enum class CropType
 {
@@ -25,10 +25,10 @@ enum class CropType
 class ImageConfigHelper
 {
 public:
-    explicit ImageConfigHelper(const ConfigParameters& config);
+    explicit ImageConfigHelper(const Microsoft::MSR::CNTK::ConfigParameters& config);
 
     // Get all streams that are specified in the configuration.
-    std::vector<StreamDescriptionPtr> GetStreams() const;
+    std::vector<StreamInformation> GetStreams() const;
 
     // Get index of the feature stream.
     size_t GetFeatureStreamId() const;
@@ -39,7 +39,7 @@ public:
     // Get the map file path that describes mapping of images into their labels.
     std::string GetMapPath() const;
 
-    ImageLayoutKind GetDataFormat() const
+    Microsoft::MSR::CNTK::ImageLayoutKind GetDataFormat() const
     {
         return m_dataFormat;
     }
@@ -76,8 +76,8 @@ private:
     ImageConfigHelper& operator=(const ImageConfigHelper&) = delete;
 
     std::string m_mapPath;
-    std::vector<StreamDescriptionPtr> m_streams;
-    ImageLayoutKind m_dataFormat;
+    std::vector<StreamInformation> m_streams;
+    Microsoft::MSR::CNTK::ImageLayoutKind m_dataFormat;
     int m_cpuThreadCount;
     bool m_randomize;
     bool m_grayscale;
@@ -85,4 +85,4 @@ private:
 };
 
 typedef std::shared_ptr<ImageConfigHelper> ImageConfigHelperPtr;
-} } }
+}

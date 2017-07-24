@@ -8,7 +8,7 @@
 #include <boost/utility/string_ref.hpp>
 #include <boost/algorithm/string.hpp>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     using namespace std;
 
@@ -100,4 +100,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-}}}
+}

@@ -27,7 +27,7 @@
 #include <assert.h>
 #include "Basics.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Implementation of a helper class for reading/writing to binary files
 // on Windows and Linux
@@ -119,5 +119,5 @@ private:
     CNTKBinaryFileHelper();
 };
 
-}}}
+}
 #endif

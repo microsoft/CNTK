@@ -13,11 +13,11 @@
 #include <deque>
 #include "RandomOrdering.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     SequenceRandomizer::SequenceRandomizer(
         int verbosity,
-        IDataDeserializerPtr deserializer,
+        DataDeserializerPtr deserializer,
         ChunkRandomizerPtr chunkRandomizer)
         : m_verbosity(verbosity),
         m_randomizedChunks(chunkRandomizer->GetRandomizedChunks()),
@@ -198,7 +198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (;;)
             {
                 // Pick a sequence position from [posBegin, posEnd)
-                const size_t j = RandMT(posBegin, posEnd, m_rng);
+                const size_t j = Microsoft::MSR::CNTK::RandMT(posBegin, posEnd, m_rng);
 
                 // Pick up j sequence.
                 ChunkIdType jChunkIndex = GetChunkIndexForSequencePosition(j);
@@ -351,7 +351,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<RandomizedSequenceDescription> chunkSequences;
 
         m_bufferOriginalSequences.clear();
-        m_deserializer->GetSequencesForChunk(chunk.m_original->m_id, m_bufferOriginalSequences);
+        m_deserializer->SequenceInfosForChunk(chunk.m_original->m_id, m_bufferOriginalSequences);
         chunkSequences.reserve(m_bufferOriginalSequences.size());
         for (size_t k = 0; k < m_bufferOriginalSequences.size(); k++)
         {
@@ -372,4 +372,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t sequenceOffsetInsideChunk = sequenceSweepPosition - m_randomizedChunks[chunkIndex].m_sequencePositionStart;
         return m_sequenceWindow[chunkIndex - m_chunkWindowBegin][sequenceOffsetInsideChunk];
     }
-}}}
+}

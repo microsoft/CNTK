@@ -161,11 +161,27 @@ public:
     {
         auto gradient      =                      GradientFor(fr);
         auto inputGradient = InputRef(inputIndex).GradientFor(fr);
-        inputGradient += gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols());
+
+        if (Input(inputIndex)->IsGradientOptimized(this))
+        {
+            if (Input(inputIndex)->ParentGradientReused())
+            {
+                if (gradient.Data() != inputGradient.Data() ||
+                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
+                    gradient.GetNumCols() != inputGradient.GetNumCols())
+                    LogicError("Gradient should be reused");
+            }
+            else
+                inputGradient.AssignValuesOf(gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols()));
+        }
+        else
+            inputGradient += gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override { return ParentGradientOptimization::Reuse; }
 
 private:
     TensorShape m_replacementSampleLayout; // user-specified dimensions to replace dimensions [beginAxis, endAxis]
@@ -268,6 +284,11 @@ public:
     virtual bool /*ComputationNodeBase::*/ OutputUsedInComputingInputNodesGradients() const override;
     virtual bool /*ComputationNodeBase::*/ InputUsedInComputingInputNodesGradients(size_t childIndex) const override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        return ParentGradientOptimization::Overwrite;
+    }
 
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
@@ -412,7 +433,7 @@ public:
                 inputGradient = Input(inputIndex)->GradientTensorFor(rank, FrameRange(InputRef(inputIndex).GetMBLayout(), 0));
             }
 
-            if (InputRef(inputIndex).ParentOverwritesGradient())
+            if (InputRef(inputIndex).IsGradientInitializedBy(this))
                 inputGradient.AssignCopyOf(gradient);
             else
                 inputGradient.AddCopyOf(gradient);
@@ -423,6 +444,10 @@ public:
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
+    {
+        return (Input(0).get() == input) ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None; // no gradient propagation to input1
+    }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -483,8 +508,8 @@ class SliceNode : public ComputationNode<ElemType>, public NumInputs<1>
     static const std::wstring TypeName() { return L"Slice"; }
 
 public:
-    SliceNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<int> beginIndex = { 0 }, std::vector<int> endIndex = { 0 }, std::vector<int> axis = { 1 })
-        : Base(deviceId, name), m_beginIndex(beginIndex), m_endIndex(endIndex), m_axis(axis)
+    SliceNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<int> beginIndex = {0}, std::vector<int> endIndex = {0}, std::vector<int> axis = {1}, std::vector<int> stride_multiplier = {1})
+        : Base(deviceId, name), m_beginIndex(beginIndex), m_endIndex(endIndex), m_axis(axis), m_stride_multiplier(stride_multiplier)
     {
         if (m_beginIndex.size() != m_endIndex.size() || m_beginIndex.size() != m_axis.size())
             InvalidArgument("%ls %ls operation: invalid size of beginIndex (%d), endIndx (%d) and axis (%d). They must agree.", NodeName().c_str(), OperationName().c_str(), (int)m_beginIndex.size(), (int)m_endIndex.size(), (int)m_axis.size());
@@ -511,12 +536,13 @@ public:
         node->m_beginIndex = m_beginIndex;
         node->m_endIndex   = m_endIndex;
         node->m_axis       = m_axis;
+        node->m_stride_multiplier = m_stride_multiplier;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        int num = 1, axis = 1;  // axis = 1 to emulate old RowSliceNode 
+        int num = 1, axis = 1, stride_multiplier = 1;  // axis = 1 to emulate old RowSliceNode 
         ptrdiff_t beginIndex, height;
         if (modelVersion >= CNTK_MODEL_VERSION_22)
             fstream >> num; 
@@ -526,6 +552,7 @@ public:
         m_beginIndex.clear(); 
         m_endIndex.clear();
         m_axis.clear(); 
+        m_stride_multiplier.clear();
         for (int i = 0; i < num; i++)
         {
             fstream >> beginIndex >> height; // legacy format stored (end-begin)
@@ -533,7 +560,10 @@ public:
             m_endIndex.push_back((int)(beginIndex + height));
             if (modelVersion >= CNTK_MODEL_VERSION_3)
                 fstream >> axis;
+            if (modelVersion >= CNTK_MODEL_VERSION_27)
+                fstream >> stride_multiplier;
             m_axis.push_back(axis); 
+            m_stride_multiplier.push_back(stride_multiplier);
         }
     }
 
@@ -546,6 +576,7 @@ public:
         {
             fstream << (ptrdiff_t)m_beginIndex[i] << (ptrdiff_t)(m_endIndex[i] - m_beginIndex[i]); // legacy file format stores (end-begin), we keep it that way
             fstream << m_axis[i];
+            fstream << m_stride_multiplier[i];
         }
     }
 
@@ -579,7 +610,7 @@ private:
     {
         auto inputSlice = InputRef(0).GetTensorSliceFor(rank, fr);    // input must be narrowed down
         for (int i = 0; i < (int)m_axis.size(); i++)  
-            inputSlice.NarrowTo(Axis(i)-1, BeginIndex(i), EndIndex(i));
+            inputSlice.NarrowTo(Axis(i)-1, BeginIndex(i), EndIndex(i), m_stride_multiplier[i]);
         return inputSlice;
     }
 
@@ -620,7 +651,7 @@ public:
 
             // propagate as much as we can
             if (isFinalValidationPass || (m_axis[i] - 1 < sampleLayout.GetRank() && 0 <= BeginIndex(i) && BeginIndex(i) <= EndIndex(i) && EndIndex(i) <= sampleLayout[m_axis[i] - 1])) // (the second condition guards against failing an out-of-bounds error if not isFinalValidationPass)
-                sampleLayout.NarrowTo(m_axis[i] - 1, BeginIndex(i), EndIndex(i));
+                sampleLayout.NarrowTo(m_axis[i] - 1, BeginIndex(i), EndIndex(i), m_stride_multiplier[i]);
         }
         SetDims(TensorShape(sampleLayout.GetDims()), HasMBLayout());
     }
@@ -628,6 +659,7 @@ public:
 private:
     std::vector<int> m_beginIndex, m_endIndex; // 'int' because negative indices are allowed, to index from end Python-style
     std::vector<int> m_axis;                   // note: axes are 1-based
+    std::vector<int> m_stride_multiplier;
 };
 
 template class SliceNode<float>;
@@ -708,11 +740,11 @@ private:
     // Helper structure to store input/output views which define parts of input and output we work with.
     struct CroppedIOViews
     {
-        CroppedIOViews(CropNode* cropNode, MatrixGetter matrixGetter, TensorShape inputShapeCropped, TensorShape ouputShape) :
+        CroppedIOViews(CropNode* cropNode, MatrixGetter matrixGetter, TensorShape inputShapeCropped, TensorShape outputShape) :
             // Input view is derived from first input.
             inputViewCropped((cropNode->Input(0).get()->*matrixGetter)(), inputShapeCropped),
             // Output view corresponds to single output.
-            outputView((cropNode->*matrixGetter)(), ouputShape)
+            outputView((cropNode->*matrixGetter)(), outputShape)
         {}
 
         TensorView<ElemType> inputViewCropped;

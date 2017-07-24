@@ -15,7 +15,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
-BOOST_FIXTURE_TEST_CASE(MatrixCopyAssignAccrossDevices, RandomSeedFixture)
+BOOST_FIXTURE_TEST_CASE(MatrixCopyAssignAcrossDevices, RandomSeedFixture)
 {
     bool hasTwoGpus = false;
 #ifndef CPUONLY

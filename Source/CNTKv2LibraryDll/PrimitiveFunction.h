@@ -267,6 +267,9 @@ namespace CNTK
         static const std::wstring AttributeNameSequenceUnpackSuppressMaskOutput;
         static const std::wstring AttributeNameRandomDistributionType;
         static const std::wstring AttributeNameRandomDistributionArgs;
+        static const std::wstring AttributeNameSpatialScale;
+        static const std::wstring AttributeNameSliceStrides;
+        static const std::wstring AttributeNameSliceStridesVec;
 
     protected:
         // base constructor, called by all others except the move one
@@ -533,14 +536,14 @@ namespace CNTK
             auto leftOperandShape  = leftOperandShapeC;
             auto rightOperandShape = rightOperandShapeC;
 
-            if (leftOperandShape == NDShape::Unknown)
+            if (leftOperandShape.IsUnknown())
                 leftOperandShape = rightOperandShape;
 
-            if (rightOperandShape == NDShape::Unknown)
+            if (rightOperandShape.IsUnknown())
                 rightOperandShape = leftOperandShape;
 
             // All operand shapes should be known
-            assert((leftOperandShape != NDShape::Unknown) && (rightOperandShape != NDShape::Unknown));
+            assert(!leftOperandShape.IsUnknown()&& !rightOperandShape.IsUnknown());
 
             const auto& shapeWithSmallerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? rightOperandShape : leftOperandShape;
             const auto& shapeWithLargerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? leftOperandShape : rightOperandShape;

@@ -10,11 +10,9 @@ import cntk as C
 
 import pytest
 
-def test_overload_exception():
+def test_slice_stride():
     c = C.constant(value=list(range(0, 10)))
-
-    with pytest.raises(ValueError):
-        c[0:3:2]
+    assert np.all(c[0:3:2].eval() == [0, 2])
 
 def test_eval_scalar():
     c = C.constant(value=2)

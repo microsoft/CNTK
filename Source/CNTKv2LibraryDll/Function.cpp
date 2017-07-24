@@ -54,10 +54,16 @@ namespace CNTK
 
     std::vector<Variable>& Function::InitOutputs()
     {
+        if (std::this_thread::get_id() == m_outputInitializingByThreadId)
+        {
+            // std::call_once may deadlock when re-entering from the same thread that's running the lambda, early exit
+            RuntimeError("Re-enter Function::InitOutputs() from Function::InitOutputs(), outputs are not initialized yet");
+        }
         // HACK: temporarily changed so that we can see it in the profiler
         //std::call_once(m_outputsInitFlag, [this]() {
         if (m_outputsInitFlag++ == 0)
         {
+            m_outputInitializingByThreadId = std::this_thread::get_id();
             std::vector<Variable> outputs;
             if (!IsPrimitive()) // if not primitive then items may be pushed by external code that lives with a different CRT heap
                 outputs.reserve(Function::MaxNumOutputs);
@@ -100,6 +106,7 @@ namespace CNTK
                 m_outputs = outputs; // free some memory
             else
                 m_outputs = std::move(outputs);
+            m_outputInitializingByThreadId = std::thread::id();
         }//);
 
         return m_outputs;
@@ -743,10 +750,17 @@ namespace CNTK
                                 break;
                             case ParameterCloningMethod::Freeze:
                                 if (cloneeInput.IsParameter())
-                                    clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
+                                {
+                                    //parameter values can be updated so we need our own copy
+                                    const auto& ndav = Parameter(cloneeInput).Value();
+                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name());
+                                }
                                 else
-                                    clonedInput = Constant(Constant(cloneeInput).Value(), cloneeInput.Name());
-
+                                {
+                                    //constants can also be updated via non-sgd means
+                                    const auto& ndav = Constant(cloneeInput).Value();
+                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name());
+                                }
                                 leafVariablesCloneMap[cloneeInput] = clonedInput;
                                 break;
                             default:
@@ -1155,6 +1169,26 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Softmax, operand, Dictionary(), name);
     }
 
+    FunctionPtr Softmax(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        if (!axis.IsStaticAxis() && (axis != Axis::AllStaticAxes()))
+            LogicError("Softmax: support only static axes.");
+
+        if (((operand.Shape().Rank() == 1) && (axis.StaticAxisIndex() == 0)) || 
+            (axis == Axis::AllStaticAxes()))
+        {
+            return UnaryOp(PrimitiveOpType::Softmax, operand, Dictionary(), name);
+        }
+        else
+        {
+            auto operandPlaceholder = PlaceholderVariable();
+            auto operandDelta = operandPlaceholder - ReduceMax(operandPlaceholder, axis);
+            auto result = ElementDivide(Exp(operandDelta), ReduceSum(Exp(operandDelta), axis));
+
+            return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Softmax", name);
+        }
+    }
+
     FunctionPtr Hardmax(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Hardmax, operand, Dictionary(), name);
@@ -1189,17 +1223,14 @@ namespace CNTK
 
     FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name)
     {
-        bool bAllStaticAxis = true; 
-        for (auto& a : axis)
-        {
-            if (!a.IsStaticAxis())
-            {
-                bAllStaticAxis = false;
-                break; 
-            }
-        }
-        if (bAllStaticAxis)
-            return Internal::Slice(operand, axis, beginIndex, endIndex, name);
+        std::vector<int> strides(axis.size(), 1);
+        return Slice(operand, axis, beginIndex, endIndex, strides, name);
+    }
+
+    FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name)
+    {
+        if (std::all_of(axis.cbegin(), axis.cend(), [](Axis axis) { return axis.IsStaticAxis(); }))
+            return Internal::Slice(operand, axis, beginIndex, endIndex, strides, name);
 
         LogicError("Slice: Invalid axis argument provided. Slice along the dynamic batch axis is currently unsupported. To slice a sequence along its ordered dynamic axis use Sequence::Slice.");
     }
@@ -1659,11 +1690,18 @@ namespace CNTK
             name);
     }
 
-    FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name/* = L""*/)
+    FunctionPtr ROIPooling(const Variable& operand, 
+                           const Variable& rois, 
+                           PoolingType poolingType, 
+                           const NDShape& roiOutputShape, 
+                           double spatialScale, 
+                           const std::wstring& name/* = L""*/)
     {
         auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)poolingType;
         additionalProperties[PrimitiveFunction::AttributeNameROIOutputShape] = roiOutputShape;
-        return BinaryOp(PrimitiveOpType::ROIPooling, convolutionMap, rois, std::move(additionalProperties), name);
+        additionalProperties[PrimitiveFunction::AttributeNameSpatialScale] = spatialScale;
+        return BinaryOp(PrimitiveOpType::ROIPooling, operand, rois, std::move(additionalProperties), name);
     }
 
     FunctionPtr Pooling(const Variable& operand,
@@ -1792,6 +1830,17 @@ namespace CNTK
     FunctionPtr ELU(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
+    }
+
+    FunctionPtr SELU(const Variable& operand, double scale, double alpha, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero,
+            ElementTimes(Constant::Scalar(operand.GetDataType(), alpha), ELU(operandPlaceholder)),
+            operandPlaceholder);
+        result = ElementTimes(Constant::Scalar(operand.GetDataType(), scale), result);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"SELU", name);
     }
 
     FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)
@@ -2073,23 +2122,25 @@ namespace CNTK
         {
             return Internal::ScatterPacked(operand, Internal::PackedIndex(/*layout of*/ condition, Where(condition, newDerivedSequenceAxisScalingAndAdditiveFactor)), /*layout of*/ condition, name);
         }
-
-        FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name)
+        
+        FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name)
         {
-            auto additionalProperties = Dictionary(); 
+            auto additionalProperties = Dictionary();
 
-            assert(axis.size() > 0 && axis.size() == beginIndex.size() && axis.size() == endIndex.size());
+            assert(axis.size() > 0 && axis.size() == beginIndex.size() && axis.size() == endIndex.size() && strides.size() == axis.size());
             if (axis.size() == 1)
             {
                 additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis[0];
                 additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = beginIndex[0];
                 additionalProperties[PrimitiveFunction::AttributeNameEndIndex] = endIndex[0];
+                additionalProperties[PrimitiveFunction::AttributeNameSliceStrides] = strides[0];
             }
             else
             {
                 additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axis);
                 additionalProperties[PrimitiveFunction::AttributeNameBeginIndexVec] = AsDictionaryValueVector(beginIndex);
                 additionalProperties[PrimitiveFunction::AttributeNameEndIndexVec] = AsDictionaryValueVector(endIndex);
+                additionalProperties[PrimitiveFunction::AttributeNameSliceStridesVec] = AsDictionaryValueVector(strides);
             }
             return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
         }

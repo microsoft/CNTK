@@ -333,6 +333,13 @@ namespace CNTK
 
         m_initValueFlag.reset(new std::once_flag());
         m_valueInitializer.reset(new ParameterInitializer(initializationConfig));
+
+        if (m_valueInitializer->Contains(RandomSeedAttributeName)) {
+            auto& seed = m_valueInitializer->operator[](RandomSeedAttributeName);
+            if ((unsigned long)seed.Value<size_t>() == SentinelValueForAutoSelectRandomSeed)
+                seed.Value<size_t>() = Internal::GenerateRandomSeed();
+        }
+
         m_valueInitializationDevice.reset(new DeviceDescriptor(device));
     }
 
@@ -345,6 +352,9 @@ namespace CNTK
         Dictionary initConfig;
         initConfig[InitializerTypeAttributeName] = initializerTypeName;
         initConfig[ScaleAttributeName] = scale;
+        // Initializers are sometimes created as default arguments in python.
+        // If the value for an automatically-selected seed is assigned here, 
+        // subsequent calls to SetFixedRandomSeed will be ignored.
         initConfig[RandomSeedAttributeName] = (size_t)seed;        
         return initConfig;
     }
@@ -471,8 +481,10 @@ namespace CNTK
         else
         {
             auto randomSeed = (unsigned long)initConfig[RandomSeedAttributeName].Value<size_t>();
-            if (randomSeed == SentinelValueForAutoSelectRandomSeed)
-                randomSeed = Internal::GenerateRandomSeed();
+            // using this in place on an assert, which is ignored in Release mode.
+            if (randomSeed == SentinelValueForAutoSelectRandomSeed) {
+                RuntimeError("Unexpected 'auto-select' placeholder. At this point the seed should have a fixed value.");
+            }
 
             auto scale = initConfig[ScaleAttributeName].Value<double>();
             int outputRank = DefaultParamInitOutputRank, filterRank = DefaultParamInitFilterRank;

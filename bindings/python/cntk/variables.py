@@ -1,3 +1,8 @@
+'''
+CNTK variables, parameters, constants, and records.
+'''
+
+
 import numpy as np
 
 from . import cntk_py
@@ -6,7 +11,7 @@ from .device import DeviceDescriptor, use_default_device
 from .tensor import TensorOpsMixin
 from .default_options import get_default_override, default_override_or
 from .internal import typemap, sanitize_precision, sanitize_value, \
-        sanitize_shape, sanitize_dtype_cntk
+        sanitize_shape, sanitize_dtype_cntk, sanitize_dynamic_axes
 
 class Record(dict):
     '''

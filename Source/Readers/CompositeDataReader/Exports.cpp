@@ -13,7 +13,9 @@
 #include "CompositeDataReader.h"
 #include "ReaderShim.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 template<class ElemType>
 class CompositeReaderShim : public ReaderShim<ElemType>
@@ -49,4 +51,4 @@ extern "C" DATAREADER_API Reader* CreateCompositeDataReader(const ConfigParamete
     return new CompositeDataReader(*parameters);
 }
 
-}}}
+}

@@ -1246,7 +1246,7 @@ void SectionStats::InitCompute(const ConfigArray& compute)
     m_rms = 0.0;  // root mean square
 
     // second pass measures
-    m_varSum = 0.0; // accumulated sum of difference between the mean and and the value squared
+    m_varSum = 0.0; // accumulated sum of difference between the mean and the value squared
 
     // compute after second pass
     m_variance = 0.0;

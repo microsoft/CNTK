@@ -10,7 +10,6 @@
 #include "TensorShape.h"
 #include <string>
 #include "Config.h"
-#include "Reader.h"
 #include "ConvolutionEngine.h"
 #include "ReshapingNodes.h"
 
@@ -96,6 +95,7 @@ namespace CNTK
         return std::vector<size_t>(tensorShape.GetDims().begin(), tensorShape.GetDims().end());
     }
 
+#if 0 // TODO: This was deleted in master. Delete it here as well if it causes no problems.
     inline DataType AsDataType(Microsoft::MSR::CNTK::ElementType readerDataType)
     {
         switch (readerDataType)
@@ -121,6 +121,7 @@ namespace CNTK
             LogicError("Unsupported StorageType from CNTK Reader");
         }
     }
+#endif
 
     // convert a viewShape into a V1-compatible TensorShape
     // TODO: THIS NO LONGER PADS. Simplify.
@@ -543,7 +544,7 @@ namespace CNTK
         if (axis != Axis::AllStaticAxes() && axis != Axis::AllAxes())
         {
             assert(axis.IsStaticAxis());
-            assert(operandShape != NDShape::Unknown);
+            assert(!operandShape.IsUnknown());
             axis = NormalizeStaticAxis(axis, operandShape.Rank());
         }
         return axis;

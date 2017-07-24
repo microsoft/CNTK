@@ -136,7 +136,7 @@ TrainNetwork = {
 }
 
 # Re-statistics the mean and variance of batch normalization layers while other parameters frozen after training
-# more details: https://github.com/Microsoft/CNTK/wiki/Post-Batch-Normalization-Statistics#post-batch-normalization-statistics
+# more details: https://docs.microsoft.com/en-us/cognitive-toolkit/Post-Batch-Normalization-Statistics
 BNStatistics = {
     action = "bnstat"
     modelPath = "$modelPath$"

@@ -920,7 +920,7 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how);
 // StringFunction implements
 //  - Format
 //  - Chr(c) -- gives a string of one character with Unicode value 'c'
-//  - Replace(s,what,withwhat) -- replace all occurences of 'what' with 'withwhat'
+//  - Replace(s,what,withwhat) -- replace all occurrences of 'what' with 'withwhat'
 //  - Substr(s,begin,num) -- get a substring
 // TODO: RegexReplace()
 class StringFunction : public String
