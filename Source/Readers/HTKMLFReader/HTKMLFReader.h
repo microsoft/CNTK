@@ -91,6 +91,10 @@ private:
     // right splice for latency control blstm
     size_t m_rightSplice;
 
+    // low frame rate
+    size_t m_skip;
+    size_t m_delay;
+
     // for writing outputs to files (standard single input/output network) - deprecate eventually
     bool m_checkDictionaryKeys;
     bool m_convertLabelsToTargets;

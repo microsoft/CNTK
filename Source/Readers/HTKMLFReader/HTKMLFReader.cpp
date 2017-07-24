@@ -340,6 +340,11 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         InvalidArgument("rightSplice only used in latency control blstm batch "
                         "training, so it should be 0 when Truncated is not true");
     }
+    
+    m_skip = readerConfig(L"skip", 1);
+    m_delay = readerConfig(L"delay", 0);
+    assert(m_skip > 0); // at least 1, means no skip
+    assert(m_delay >= 0);
 
     // determine if we partial minibatches are desired
     wstring minibatchMode(readerConfig(L"minibatchMode", L"partial"));
@@ -1707,7 +1712,7 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
     {
         const msra::dbn::matrixstripe featOri = m_mbiter->frames(id);
         size_t fdim = featOri.rows();
-        const size_t actualmbsizeOri = featOri.cols();
+        const size_t actualmbsizeOri = (featOri.cols() - 1) / m_skip + 1;
         m_featuresStartIndexMultiUtt[id + i * numOfFea] = totalFeatNum;
         totalFeatNum = fdim * actualmbsizeOri + m_featuresStartIndexMultiUtt[id + i * numOfFea];
     }
@@ -1725,7 +1730,7 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
         size_t dim = m_labelNameToDimMap[it->first];
 
         const vector<size_t>& uids = m_mbiter->labels(id);
-        size_t actualmbsizeOri = uids.size();
+        size_t actualmbsizeOri = (uids.size() - 1) / m_skip + 1;
         m_labelsStartIndexMultiUtt[id + i * numOfLabel] = totalLabelsNum;
         totalLabelsNum = m_labelsStartIndexMultiUtt[id + i * numOfLabel] + dim * actualmbsizeOri;
     }
@@ -1742,7 +1747,7 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
     foreach_index (id, m_featuresBufferMultiIO)
     {
         const msra::dbn::matrixstripe featOri = m_mbiter->frames(id);
-        const size_t actualmbsizeOri = featOri.cols();
+        const size_t actualmbsizeOri = (featOri.cols() - 1) / m_skip + 1;
         size_t fdim = featOri.rows();
         if (first)
         {
@@ -1756,14 +1761,17 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
                 RuntimeError("The multi-IO features has inconsistent number of frames!");
             }
         }
-        assert(actualmbsizeOri == m_mbiter->currentmbframes());
+        //assert(actualmbsizeOri == m_mbiter->currentmbframes());
 
         if (sizeof(ElemType) == sizeof(float))
         {
             for (int k = 0; k < actualmbsizeOri; k++) // column major, so iterate columns
             {
                 // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                memcpy_s(&m_featuresBufferMultiUtt[i].get()[k * fdim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * fdim, &featOri(0, k), sizeof(ElemType) * fdim);
+                if (k * m_skip + m_delay < featOri.cols()) 
+                    memcpy_s(&m_featuresBufferMultiUtt[i].get()[k * fdim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * fdim, &featOri(0, k*m_skip + m_delay), sizeof(ElemType) * fdim);
+                else 
+                    memcpy_s(&m_featuresBufferMultiUtt[i].get()[k * fdim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * fdim, &featOri(0, (actualmbsizeOri-1) * m_skip), sizeof(ElemType) * fdim);
             }
         }
         else
@@ -1772,7 +1780,10 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
             {
                 for (int d = 0; d < featOri.rows(); d++)
                 {
-                    m_featuresBufferMultiUtt[i].get()[k * featOri.rows() + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]] = featOri(d, k);
+                    if (k * m_skip + m_delay < featOri.cols()) 
+                        m_featuresBufferMultiUtt[i].get()[k * featOri.rows() + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]] = featOri(d, k*m_skip + m_delay);
+                    else 
+                        m_featuresBufferMultiUtt[i].get()[k * featOri.rows() + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]] = featOri(d, (actualmbsizeOri-1) * m_skip);
                 }
             }
         }
@@ -1784,16 +1795,15 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
         size_t dim = m_labelNameToDimMap[it->first];
 
         const vector<size_t>& uids = m_mbiter->labels(id);
-        size_t actualmbsizeOri = uids.size();
+        size_t actualmbsizeOri = (uids.size() - 1) / m_skip + 1;
 
         if (m_convertLabelsToTargetsMultiIO[id])
         {
             size_t labelDim = m_labelToTargetMapMultiIO[id].size();
             for (int k = 0; k < actualmbsizeOri; k++)
             {
-                assert(uids[k] < labelDim);
-                labelDim;
-                size_t labelId = uids[k];
+                assert(uids[k*m_skip] < labelDim);
+                size_t labelId = uids[k*m_skip];
                 for (int j = 0; j < dim; j++)
                 {
                     m_labelsBufferMultiUtt[i].get()[k * dim + j + m_labelsStartIndexMultiUtt[id + i * numOfLabel]] = m_labelToTargetMapMultiIO[id][labelId][j];
@@ -1806,8 +1816,8 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
             // in the future we want to use a sparse matrix here
             for (int k = 0; k < actualmbsizeOri; k++)
             {
-                assert(uids[k] < dim);
-                m_labelsBufferMultiUtt[i].get()[k * dim + uids[k] + m_labelsStartIndexMultiUtt[id + i * numOfLabel]] = (ElemType) 1;
+                assert(uids[k*m_skip] < dim);
+                m_labelsBufferMultiUtt[i].get()[k * dim + uids[k*m_skip] + m_labelsStartIndexMultiUtt[id + i * numOfLabel]] = (ElemType) 1;
             }
         }
     }
