@@ -967,6 +967,34 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         m_pASGDHelper.reset();
 }
 
+
+template <class ElemType>
+void SGD<ElemType>::UpdateBackstitch(
+        const std::list<ComputationNodeBasePtr>& learnableNodes,
+        std::list<Matrix<ElemType>>& smoothedGradients, vector<double>& smoothedCounts,
+        size_t numSamplesInMinibatch,
+        const double learnRatePerSample) {
+    auto smoothedGradientIter = smoothedGradients.begin();
+    auto smoothedCountIter = smoothedCounts.begin();
+    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++, smoothedCountIter++)
+    {
+        ComputationNodeBasePtr node = *nodeIter;
+        if (node->IsParameterUpdateRequired())
+        {
+            double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
+            double nodeDependentRegMultiplier = dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->GetRegMultiplier();
+            UpdateWeights(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
+                    dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
+                    *smoothedGradientIter, *smoothedCountIter,
+                    nodeDependentLearningRatePerSample, 0.0,
+                    numSamplesInMinibatch,
+                    m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
+                    m_needAveMultiplier, m_useNesterovMomentum);
+            node->BumpEvalTimeStamp();
+        }
+    }
+}
+
 // -----------------------------------------------------------------------
 // TrainOneEpoch() -- train one epoch
 // -----------------------------------------------------------------------
@@ -1203,6 +1231,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         ComputationNetwork::BumpEvalTimeStamp(featureNodes);
         ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
+        bool backstitchUpdate = false;
+
         if (actualMBSize > 0)
         {
             assert(wasDataRead);
@@ -1240,20 +1270,48 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
-                // ===========================================================
-                // forward prop for evaluate eval nodes
-                // ===========================================================
+                float scale = 0.0;
+                if (m_backstitchScale.size() > 0) 
+                {
+                    scale = epochNumber < m_backstitchScale.size() ? 
+                        m_backstitchScale[epochNumber] : m_backstitchScale[m_backstitchScale.size() - 1];
+                }
+                // do backstitich training
+                if (scale > 0.0 && numMBsRun % m_backstitchInterval == 0) 
+                {
+                    if (actualNumSubminibatches != 1)
+                        LogicError("Subminibatch is not supported in backstitch training");
+                    // backstatich: back 
+                    net->ForwardProp(forwardPropRoots);
+                    if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
+                        net->Backprop(criterionNodes[0]);
+                    float backLearningRate = -scale * learnRatePerSample;
+                    UpdateBackstitch(learnableNodes, smoothedGradients, smoothedCounts, actualMBSize, backLearningRate);
+                    // backstitch: forward
+                    net->ForwardProp(forwardPropRoots);
+                    if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
+                        net->Backprop(criterionNodes[0]);
+                    float forwardLearningRate = (1 + scale) * learnRatePerSample;
+                    UpdateBackstitch(learnableNodes, smoothedGradients, smoothedCounts, actualMBSize, forwardLearningRate);
+                    backstitchUpdate = true;
+                }
+                else 
+                {
+                    // ===========================================================
+                    // forward prop for evaluate eval nodes
+                    // ===========================================================
 
-                // compute eval node first since when gradient is computed the forward function values
-                // may be changed and need to be recomputed when gradient and function value share the same matrix
-                net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
+                    // compute eval node first since when gradient is computed the forward function values
+                    // may be changed and need to be recomputed when gradient and function value share the same matrix
+                    net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
 
-                // ===========================================================
-                // backprop
-                // ===========================================================
+                    // ===========================================================
+                    // backprop
+                    // ===========================================================
 
-                if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
-                    net->Backprop(criterionNodes[0]);
+                    if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
+                        net->Backprop(criterionNodes[0]);
+                }
 
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)
@@ -1367,7 +1425,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         auto profWeights = ProfilerTimeBegin();
 
         // update model parameters
-        if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
+        if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01) && !backstitchUpdate)
         {
 #if 1       // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria.
             // This will break test cases. So for now, we will only enable this for per-sample criteria.
@@ -1410,6 +1468,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 }
             }
         }
+        
+        backstitchUpdate = false;
 
 
         // aggregation by model averaging or block momentum 
@@ -2908,6 +2968,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     m_packThresholdSizeInBytes = configSGD(L"packThresholdSizeInKB", DEFAULT_PACK_THRESHOLD_SIZE_IN_KB) * 1024;
 
+
     if (configAALR.Exists(L"numMiniBatch4LRSearch"))
     {
         LOGPRINTF(stderr, "WARNING: 'numMiniBatch4LRSearch' is deprecated, please remove it and use 'numSamples4Search' instead.\n");
@@ -2947,6 +3008,12 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     floatargvector momentumPerSample = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
     floatargvector momentumAsTimeConstant = configSGD(L"momentumAsTimeConstant", ConfigRecordType::Array(floatargvector()));
     bool useNesterovMomentum = configSGD(L"useNAG", false);
+
+    m_backstitchScale = configSGD(L"backstitchScale", ConfigRecordType::Array(floatargvector()));
+
+    m_backstitchInterval = configSGD(L"backstitchInterval", 0);
+    if (m_backstitchScale.size() > 0 && m_backstitchInterval <= 0) 
+        LogicError("backstitchInterval should greater than 0 when backstitchScale greater than 0.0");
 
     m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t) 0);
 
@@ -3089,6 +3156,13 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         {
             InvalidArgument("Momentum parameter must be in [0, 1).");
         }
+    }
+
+    if (m_backstitchScale.size() > 0) 
+    {
+        for (int i = 0; i < m_momentumParam.size(); i++)
+            if (m_momentumParam[i] != 0.0)
+                LogicError("momentum must be 0.0 when backstitchScale greater than 0.0");
     }
 
     if (m_learnRateDecreaseFactor > 1 || m_learnRateIncreaseFactor < 1)

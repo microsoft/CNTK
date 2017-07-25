@@ -327,6 +327,10 @@ protected:
     // true: disable Regularization
     // false: enable Regularization (default)
     bool m_disableRegInBatchNormalization;
+
+    // batchstich
+    size_t m_backstitchInterval;
+    floatargvector m_backstitchScale;
 };
 
 template <class ElemType>
@@ -511,6 +515,12 @@ protected:
                          const size_t maxNumberOfSamples = SIZE_MAX,
                          const size_t totalMBsSeenBefore = 0,
                          ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr);
+
+    void UpdateBackstitch(
+        const std::list<ComputationNodeBasePtr>& learnableNodes,
+        std::list<Matrix<ElemType>>& smoothedGradients, vector<double>& smoothedCounts,
+        size_t numSamplesInMinibatch,
+        const double learnRatePerSample); 
 
     void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
