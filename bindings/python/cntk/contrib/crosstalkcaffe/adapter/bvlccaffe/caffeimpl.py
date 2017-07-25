@@ -54,11 +54,8 @@ class CaffeResolver(object):
             self.caffe = caffe
             self.caffepb = caffe.proto.caffe_pb2
         except ImportError:
-            try:
-                from cntk.contrib.crosstalkcaffe.adapter.bvlccaffe import caffe_pb2
-                self.caffepb = caffe_pb2
-            except ImportError:
-                sys.stdout.write('Neither find Caffe runtime nor PB file, pytest mode only.\n')
+            from cntk.contrib.crosstalkcaffe.adapter.bvlccaffe import caffe_pb2
+            self.caffepb = caffe_pb2
         self.net = self.caffepb.NetParameter
         self.solver = self.caffepb.SolverParameter
 
