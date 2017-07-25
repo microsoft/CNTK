@@ -81,12 +81,6 @@ public:
     static void DeleteInstance();
     static MPIWrapperPtr s_mpi;
 
-    // Note that specifically, this function is such that it does not require
-    // MPI initialization. Moreover, it can be used without actually loading any
-    // MPI libs.
-    // TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
-    static int GetTotalNumberOfMPINodes();
-
     virtual size_t NumNodesInUse() const = 0;
     virtual size_t CurrentNodeRank() const = 0;
     virtual bool IsMainNode() const = 0;

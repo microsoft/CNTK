@@ -8,7 +8,7 @@
 #include "DataDeserializerBase.h"
 #include "Descriptors.h"
 #include "TextConfigHelper.h"
-#include "Indexer.h"
+#include "Index.h"
 #include "CorpusDescriptor.h"
 
 namespace CNTK {
@@ -115,7 +115,7 @@ private:
     size_t m_maxAliasLength;
     std::map<std::string, size_t> m_aliasToIdMap;
 
-    std::unique_ptr<Indexer> m_indexer;
+    std::shared_ptr<Index> m_index;
 
     size_t m_fileOffsetStart;
     size_t m_fileOffsetEnd;
@@ -128,11 +128,16 @@ private:
 
     unique_ptr<char[]> m_scratch; // local buffer for string parsing
 
+    // Indicates if the sequence length is computed as the maximum 
+    // of number of samples across all streams (inputs).
+    bool m_useMaximumAsSequenceLength;
+
     size_t m_chunkSizeBytes;
     unsigned int m_traceLevel;
     bool m_hadWarnings;
     unsigned int m_numAllowedErrors;
     bool m_skipSequenceIds;
+    bool m_cacheIndex;
     unsigned int m_numRetries; // specifies the number of times an unsuccessful
                                // file operation should be repeated (default value is 5).
 
@@ -205,6 +210,8 @@ private:
     void SetChunkSize(size_t size);
 
     void SetNumRetries(unsigned int numRetries);
+
+    void SetCacheIndex(bool value);
 
     friend class CNTKTextFormatReaderTestRunner<ElemType>;
 

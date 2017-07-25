@@ -5,9 +5,13 @@
 
 #pragma once
 
+#include <unordered_map>
+#include <vector>
+#include <string>
 #include <boost/algorithm/string.hpp>
 #include <boost/noncopyable.hpp>
-#include "Indexer.h"
+#include <boost/range/iterator_range_core.hpp>
+
 
 namespace CNTK {
 
@@ -55,7 +59,7 @@ namespace CNTK {
 
     public:
         // Parses format with original HTK state align MLF format and state list and builds an MLFFrameRange.
-        void Build(const vector<boost::iterator_range<char*>>& tokens, const unordered_map<std::string, size_t>& stateTable, size_t byteOffset);
+        void Build(const std::vector<boost::iterator_range<char*>>& tokens, const std::unordered_map<std::string, size_t>& stateTable, size_t byteOffset);
 
         ClassIdType ClassId() const { return m_classId;    }
         uint32_t FirstFrame() const { return m_firstFrame; }

@@ -177,12 +177,6 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
                 RuntimeError("Invalid map file format, must contain 2 or 3 tab-delimited columns, line %" PRIu64 " in file %s.", lineIndex, mapPath.c_str());
         }
 
-        // Skipping sequences that are not included in corpus.
-        if (!corpus->IsIncluded(sequenceKey))
-        {
-            continue;
-        }
-
         char* eptr;
         errno = 0;
         size_t cid = strtoull(classId.c_str(), &eptr, 10);

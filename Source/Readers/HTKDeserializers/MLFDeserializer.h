@@ -9,7 +9,7 @@
 #include "HTKDeserializer.h"
 #include "CorpusDescriptor.h"
 #include "MLFUtils.h"
-#include "MLFIndexer.h"
+#include "Index.h"
 
 namespace CNTK {
 
@@ -81,7 +81,7 @@ private:
 
     StateTablePtr m_stateTable;
 
-    std::vector<std::pair<std::wstring, MLFIndexerPtr>> m_indexers;
+    std::vector<std::shared_ptr<Index>> m_indices;
     std::vector<std::wstring> m_mlfFiles;
 };
 

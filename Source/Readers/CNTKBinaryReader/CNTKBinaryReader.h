@@ -6,9 +6,13 @@
 #pragma once
 
 #include "ReaderBase.h"
-#include "BinaryConfigHelper.h"
+
+namespace Microsoft { namespace MSR { namespace CNTK {
+    class ConfigParameters;
+}}}
 
 namespace CNTK {
+
 
 // Implementation of the binary reader.
 // Effectively the class represents a factory for connecting the packer,
@@ -16,7 +20,7 @@ namespace CNTK {
 class CNTKBinaryReader : public ReaderBase
 {
 public:
-    CNTKBinaryReader(const ConfigParameters& parameters);
+    CNTKBinaryReader(const Microsoft::MSR::CNTK::ConfigParameters& parameters);
 };
 
 }

@@ -26,6 +26,7 @@
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
+#include "EnvironmentUtil.h"
 #include "Config.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
@@ -501,7 +502,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
     // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
     // 'false' otherwise.
-    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
+    bool paralleltrain = config(L"parallelTrain", (EnvironmentUtil::GetTotalNumberOfMPINodes() > 1));
 
     if (paralleltrain)
     {
@@ -649,7 +650,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     
     // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
     // 'false' otherwise.
-    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
+    bool paralleltrain = config(L"parallelTrain", (EnvironmentUtil::GetTotalNumberOfMPINodes() > 1));
 
     if (paralleltrain)
     {

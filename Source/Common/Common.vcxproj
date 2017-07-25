@@ -81,6 +81,7 @@
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="DataReader.cpp" />
     <ClCompile Include="DataWriter.cpp" />
+    <ClCompile Include="EnvironmentUtil.cpp" />
     <ClCompile Include="Eval.cpp" />
     <ClCompile Include="ExceptionWithCallStack.cpp" />
     <ClCompile Include="File.cpp" />

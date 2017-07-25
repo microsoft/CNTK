@@ -115,6 +115,7 @@
     <ClCompile Include="HTKLMFReaderTests.cpp" />
     <ClCompile Include="ImageReaderTests.cpp" />
     <ClCompile Include="ReaderLibTests.cpp" />
+    <ClCompile Include="ReaderUtilTests.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
