@@ -83,6 +83,10 @@ namespace CNTK
 #define __declspec_noreturn __attribute__((noreturn))
 #endif
 
+// Some projects require only some generic data types/interfaces from this file, and do not want to link explicitely to CNTKv2Library.
+// In this case they have to define CNTK_HEADERONLY_DEFINITIONS before including CNTKLibrary.h
+#ifndef CNTK_HEADERONLY_DEFINITIONS
+
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
@@ -94,6 +98,8 @@ namespace CNTK
     CNTK_API __declspec_noreturn void ThrowFormatted(const char* format, ...);
 
 #pragma warning(pop)
+
+#endif
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
 #ifndef _MSC_VER // gcc __attribute__((format(printf())) does not percolate through variadic templates; so must go the macro route
@@ -224,6 +230,8 @@ namespace CNTK
 
     struct MinibatchSourceConfig;
 
+#ifndef CNTK_HEADERONLY_DEFINITIONS
+
     namespace Internal
     {
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
@@ -236,7 +244,7 @@ namespace CNTK
         CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
-        CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, bool keepReducedDimensions, const std::wstring& name = L"");
         CNTK_API FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, const Variable& shiftWindow, const Variable& numberOfNegativeSamples, const std::wstring& name = L"");
@@ -412,14 +420,19 @@ namespace CNTK
         class Optional
         {
         public:
-            
+
             Optional() = default;
-            
-            Optional& operator= (T value) 
+
+            Optional& operator= (T value)
             {
                 m_initialized = true;
                 m_value = value;
                 return *this;
+            }
+
+            void Reset()
+            {
+                m_initialized = false;
             }
 
             bool IsInitialized() const
@@ -447,4 +460,6 @@ namespace CNTK
     {
         struct DeviceSelectionTestFixture;
     }
+
+#endif
 }

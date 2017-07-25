@@ -1726,11 +1726,11 @@ static inline int floatcompare(const void *a, const void *b)
 // print model stats
 // Returns a pair (model params, non-null model params) for aggregate statistics printing.
 template <class M>
-pair<unsigned int, unsigned int> printmatvaluedistributionf(const char *name, const M &m)
+std::pair<unsigned int, unsigned int> printmatvaluedistributionf(const char *name, const M &m)
 {
     const unsigned int num = (unsigned int) (m.rows() * m.cols());
     if (num == 0)
-        return make_pair(0UL, 0UL);
+        return std::make_pair(0UL, 0UL);
     fprintf(stderr, "\n###### absolute weight value distribution %s (%d, %d) ######\n", name, m.rows(), m.cols());
 
     std::vector<float> vals(num);
@@ -1816,7 +1816,7 @@ pair<unsigned int, unsigned int> printmatvaluedistributionf(const char *name, co
     }
 #endif
 
-    return make_pair(num, num - numzeros);
+    return std::make_pair(num, num - numzeros);
 }
 #define printmatvaluedistribution(m) msra::math::printmatvaluedistributionf(#m, m)
 

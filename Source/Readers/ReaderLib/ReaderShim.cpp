@@ -19,8 +19,11 @@
 #include "ReaderShim.h"
 #include "DataTransferer.h"
 #include "PerformanceProfiler.h"
+#include "Reader.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 template <class ElemType>
 ReaderShim<ElemType>::ReaderShim() :
@@ -29,7 +32,6 @@ ReaderShim<ElemType>::ReaderShim() :
     m_currentDataTransferIndex(0),
     m_endOfEpoch(false),
     m_endOfSweep(false),
-    m_currentSamplePosition(0),
     m_reader(nullptr),
     m_factory(nullptr)
 {
@@ -68,8 +70,10 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
     m_streams = m_reader->GetStreamDescriptions();
     for (auto i : m_streams)
     {
-        m_nameToStreamId.insert(std::make_pair(i->m_name, i->m_id));
+        m_nameToStreamId.insert(std::make_pair(i.m_name, i.m_id));
     }
+
+    m_currentState = m_reader->GetState();
 }
 
 template <class ElemType>
@@ -101,7 +105,7 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
 template <class ElemType>
 void ReaderShim<ElemType>::SetCurrentSamplePosition(size_t currentSamplePosition)
 {
-    if (m_currentSamplePosition == currentSamplePosition)
+    if (GetCurrentSamplePosition() == currentSamplePosition)
         return;
 
     // Make sure there are no outstanding reads.
@@ -114,9 +118,12 @@ void ReaderShim<ElemType>::SetCurrentSamplePosition(size_t currentSamplePosition
         m_dataTransferers[m_currentDataTransferIndex]->WaitForCopyCPUToGPU();
 
     // Set current position.
-    m_reader->SetCurrentSamplePosition(currentSamplePosition);
+    std::map<std::wstring, size_t> state;
+    state[g_minibatchSourcePosition] = currentSamplePosition;
+    m_reader->SetState(state);
     m_endOfEpoch = false;
-    m_currentSamplePosition = m_reader->GetCurrentSamplePosition();
+
+    m_currentState = m_reader->GetState();
 }
 
 template <class ElemType>
@@ -132,7 +139,7 @@ void ReaderShim<ElemType>::SetConfiguration(const ReaderConfiguration& config, c
         m_dataTransferers[m_currentDataTransferIndex]->WaitForCopyCPUToGPU();
 
     m_reader->SetConfiguration(config, inputDescriptions);
-    m_reader->SetCurrentSamplePosition(m_currentSamplePosition);
+    m_reader->SetState(m_currentState);
 }
 
 template <class ElemType>
@@ -186,7 +193,8 @@ void ReaderShim<ElemType>::StartEpoch(const EpochConfiguration& config, const st
 
     m_endOfEpoch = false;
     m_reader->StartEpoch(config, inputDescriptions);
-    m_currentSamplePosition = m_reader->GetCurrentSamplePosition();
+
+    m_currentState = m_reader->GetState();
 }
 
 template <class ElemType>
@@ -257,7 +265,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // Ok, prefetch is done.
 
     // Let's update our sample position.
-    m_currentSamplePosition = m_reader->GetCurrentSamplePosition();
+    m_currentState = m_reader->GetState();
 
     m_endOfEpoch = result.m_isEndOfEpoch;
     m_endOfSweep = result.m_isEndOfSweep;
@@ -330,6 +338,31 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 }
 
 template <class ElemType>
+void FillMatrixFromStream(StorageFormat type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream, DataTransferer* transferer)
+{
+    size_t numCols = stream->m_layout->GetNumCols();
+
+    if (type == StorageFormat::Dense)
+    {
+        auto data = reinterpret_cast<const ElemType*>(stream->m_data);
+        matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal, transferer);
+    }
+    else if (type == StorageFormat::SparseCSC)
+    {
+        // In the sparse case the m_data layout is identical to CUDA's CSC layout
+        // (see http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc).
+        size_t* data = reinterpret_cast<size_t*>(stream->m_data);
+        size_t nnzCount = *data;
+        ElemType* values = reinterpret_cast<ElemType*>(data + 1);
+        IndexType* rows = reinterpret_cast<IndexType*>(values + nnzCount);
+        IndexType* columns = reinterpret_cast<IndexType*>(rows + nnzCount);
+        matrix->SetMatrixFromCSCFormat(columns, rows, values, nnzCount, numRows, numCols, transferer);
+    }
+    else
+        RuntimeError("Storage type %d is not supported.", (int)type);
+}
+
+template <class ElemType>
 typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMinibatch(size_t currentDataTransferIndex)
 {
     PROFILE_SCOPE(profilerEvtPrefetchMinibatch);
@@ -359,8 +392,15 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
         const auto& stream = minibatch.m_data[streamId];
         mx.second.m_mbLayout = stream->m_layout;
 
-        size_t sampleSize = m_streams[streamId]->m_sampleLayout->GetNumElements();
-        FillMatrixFromStream(m_streams[streamId]->m_storageType, mx.second.m_matrix.get(), sampleSize, stream, m_dataTransferers[currentDataTransferIndex].get());
+        if (m_streams[streamId].m_sampleLayout.IsUnknown())
+        {
+            // Sample layout can be lazily updated on the first minibatch, so let reread it.
+            // In the future we should use NDShape for the sequence instead of sample.
+            m_streams = m_reader->GetStreamDescriptions();
+        }
+
+        size_t sampleSize = m_streams[streamId].m_sampleLayout.TotalSize();
+        FillMatrixFromStream(m_streams[streamId].m_storageFormat, mx.second.m_matrix.get(), sampleSize, stream, m_dataTransferers[currentDataTransferIndex].get());
     }
 
     // Let's record that we started the copy, so that the main thread can wait afterwards.
@@ -368,32 +408,6 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
         m_dataTransferers[currentDataTransferIndex]->RecordCPUToGPUCopy();
 
     return PrefetchResult{ minibatch.m_endOfSweep, minibatch.m_endOfEpoch, true };
-}
-
-
-template <class ElemType>
-/*static*/ void ReaderShim<ElemType>::FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream, DataTransferer* transferer)
-{
-    size_t numCols = stream->m_layout->GetNumCols();
-
-    if (type == StorageType::dense)
-    {
-        auto data = reinterpret_cast<const ElemType*>(stream->m_data);
-        matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal, transferer);
-    }
-    else if (type == StorageType::sparse_csc)
-    {
-        // In the sparse case the m_data layout is identical to CUDA's CSC layout
-        // (see http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc).
-        size_t* data = reinterpret_cast<size_t*>(stream->m_data);
-        size_t nnzCount = *data;
-        ElemType* values = reinterpret_cast<ElemType*>(data + 1);
-        IndexType* rows = reinterpret_cast<IndexType*>(values + nnzCount);
-        IndexType* columns = reinterpret_cast<IndexType*>(rows + nnzCount);
-        matrix->SetMatrixFromCSCFormat(columns, rows, values, nnzCount, numRows, numCols, transferer);
-    }
-    else
-        RuntimeError("Storage type %d is not supported.", (int)type);
 }
 
 template <class ElemType>
@@ -424,9 +438,35 @@ size_t ReaderShim<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
 template <class ElemType>
 size_t ReaderShim<ElemType>::GetCurrentSamplePosition()
 {
-    return m_currentSamplePosition;
+    return m_currentState[g_minibatchSourcePosition];
+}
+template <class ElemType>
+const std::map<std::wstring, size_t>& ReaderShim<ElemType>::GetState()
+{
+    return m_currentState;
+}
+
+template <class ElemType>
+void ReaderShim<ElemType>::SetState(const std::map<std::wstring, size_t>& state)
+{
+    if (m_currentState == state)
+        return;
+
+    // Make sure there are no outstanding reads.
+    if (m_prefetchTask.valid())
+        m_prefetchTask.wait();
+
+    // Let's check that there is no outstanding copies.
+    // Wait on all events if there are any pending copy operations in flight.
+    if (m_dataTransferers[m_currentDataTransferIndex])
+        m_dataTransferers[m_currentDataTransferIndex]->WaitForCopyCPUToGPU();
+
+    // Set current position.
+    m_reader->SetState(state);
+    m_currentState = m_reader->GetState();
+    m_endOfEpoch = false;
 }
 
 template class ReaderShim<float>;
 template class ReaderShim<double>;
-} } }
+}

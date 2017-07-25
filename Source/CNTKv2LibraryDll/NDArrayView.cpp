@@ -578,6 +578,9 @@ namespace CNTK
     template CNTK_API const float* NDArrayView::DataBuffer<float>() const;
     template CNTK_API const double* NDArrayView::DataBuffer<double>() const;
 
+    template CNTK_API const TensorView<float>* NDArrayView::GetTensorView<float>() const;
+    template CNTK_API const TensorView<double>* NDArrayView::GetTensorView<double>() const;
+
     template CNTK_API std::tuple<const float*, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<float>() const;
     template CNTK_API std::tuple<const double*, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<double>() const;
 

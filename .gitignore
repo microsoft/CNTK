@@ -8,6 +8,7 @@
 *.orig
 \#*
 .\#*
+.vscode
 
 # Local build configuration
 Config.make
@@ -274,6 +275,7 @@ Examples/Image/PretrainedModels/*.model
 Examples/Image/FeatureExtraction/*.txt
 Examples/Image/GettingStarted/Output/
 Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
+Tests/EndToEndTests/CNTKv2Python/Keras/keras-*
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/
 Tutorials/.ipynb_checkpoints/
@@ -295,6 +297,7 @@ Tutorials/zip
 Manual/*.tmp
 Manual/*.ckp
 Manual/.ipynb_checkpoints
+Examples/Text/LightRNN/LightRNN/*.so
 
 # other
 /packages

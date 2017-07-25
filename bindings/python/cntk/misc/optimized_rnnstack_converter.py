@@ -54,9 +54,9 @@ def _from_optimized_rnnstack(cudnn_rnn):
         num_gates = 1
         activation = C.relu if recurrent_op == 'rnnReLU' else C.tanh
         if bidirectional:
-            rnn_lambda = lambda x, i : C.splice(C.layers.Recurrence(C.layers.RNNUnit(hidden_size, activation=activation, name=rnn_name+'_fw'+i))(x), C.layers.Recurrence(C.layers.RNNUnit(hidden_size, activation=activation, name=rnn_name+'_bw'+i), go_backwards=True)(x))
+            rnn_lambda = lambda x, i : C.splice(C.layers.Recurrence(C.layers.RNNStep(hidden_size, activation=activation, name=rnn_name+'_fw'+i))(x), C.layers.Recurrence(C.layers.RNNStep(hidden_size, activation=activation, name=rnn_name+'_bw'+i), go_backwards=True)(x))
         else:
-            rnn_lambda = lambda x, i : C.layers.Recurrence(C.layers.RNNUnit(hidden_size, activation=activation, name=rnn_name+"_"+i))(x)
+            rnn_lambda = lambda x, i : C.layers.Recurrence(C.layers.RNNStep(hidden_size, activation=activation, name=rnn_name+"_"+i))(x)
 
     noncudnn_func = rnn_lambda(input_var, '0')
 

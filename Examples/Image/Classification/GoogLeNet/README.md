@@ -19,11 +19,13 @@ ILSVRC2012 datasets are not included in the CNTK distribution. You may obtain it
 
 ## Details
 
-We currently offer the BN-Inception (https://arxiv.org/abs/1502.03167) and Inception V3 (https://arxiv.org/abs/1512.00567) models.
+We currently offer the BN-Inception (https://arxiv.org/abs/1502.03167) and Inception V3 (https://arxiv.org/abs/1512.00567), Inception-ResNet-V1 (https://arxiv.org/abs/1602.07261) models.
 
 ### [BN-Inception](./BN-Inception)
 
 ### [Inception V3](./InceptionV3)
+
+### [Inception-ResNet-V1](./Inception-ResNet-V1)
 
 ## Pre-trained Models
 

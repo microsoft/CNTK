@@ -947,3 +947,42 @@ def test_layers_batch_normalization():
 #    expected_res = scale * (x/(std + 0.00001)) + bias
 #    np.testing.assert_array_almost_equal(res[0], expected_res, decimal=5, \
 #         err_msg="Error in BN computation")
+
+
+def test_cloned_parameters_are_identical():
+    inputs = 2
+    outputs = 4
+    hidden_dimension = 2
+
+    features = C.input_variable((inputs), np.float32)
+    label = C.input_variable((outputs), np.float32)
+
+    def z():
+        return Sequential([
+            Dense(hidden_dimension, activation=C.relu),
+            Dense(outputs)])
+
+    def compare(f1, f2):
+        for x, y in zip(f1.parameters, f2.parameters):
+            assert np.all(x.value == y.value)
+
+    def clone_and_compare(z):
+            compare(z, z.clone('clone'))
+
+    # first, verify that when cloning un-initialized parameters, 
+    # the seed value is properly copied, so that after the
+    # initialization cloned and original value are the same.
+    z1 = z()(features)
+    clone_and_compare(z1)
+
+    # now, do the same, but first force parameter initialization.
+    z2 = z()(features)
+    ignored = 0
+    for x in z2.parameters:
+        ignored += np.sum(x.value)
+    clone_and_compare(z2)
+
+    # now, test the layer's lib clone() method.
+    z3 = z()
+    z4 = z3.clone('clone')
+    compare(z3(features), z4(features))

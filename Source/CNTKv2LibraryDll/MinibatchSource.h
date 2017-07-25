@@ -8,7 +8,6 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Utils.h"
-#include "Reader.h"
 #include "ReaderShim.h"
 #include "DataReader.h"
 
@@ -54,17 +53,17 @@ namespace CNTK
         size_t m_maxNumSweepsToRead;
         size_t m_truncationLength;
         std::unordered_map<StreamInformation, MinibatchData> m_minibatchData;
-        std::vector<Microsoft::MSR::CNTK::StreamDescriptionPtr> m_compositeDataReaderStreamDescs;
 
-        // Restore position on the global timeline.
-        // Is set in the RestoreFromCheckpoint call and used in the next GetNextMinibatch.
-        size_t m_restorePosition;
+        // Inner state of the underlying reader.
+        // Is set in the RestoreFromCheckpoint call and used in the next GetNextMinibatch
+        // when the reader state is restored after the first StartEpoch call.
+        Internal::Optional<Dictionary> m_state;
 
         // For now reusing the shim to allow prefetch.
         // Please only use a subset of the shim interface that includes
         // Init()/StartEpoch()/GetMinibatch()/IsEndOfEpoch()
         // Shim will be deleted in the future versions.
-        std::shared_ptr<Microsoft::MSR::CNTK::ReaderShim<float>> m_shim;
+        std::shared_ptr<ReaderShim<float>> m_shim;
         Microsoft::MSR::CNTK::StreamMinibatchInputs m_matrices;
     };
 }

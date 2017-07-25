@@ -5,20 +5,21 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
 #include <map>
-#include "Config.h"
 #include "Reader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+    class ConfigParameters;
+}}}
+
+namespace CNTK {
 
 // A helper class for binary specific parameters.
 // A simple wrapper around CNTK ConfigParameters.
 class BinaryConfigHelper
 {
 public:
-    explicit BinaryConfigHelper(const ConfigParameters& config);
+    explicit BinaryConfigHelper(const Microsoft::MSR::CNTK::ConfigParameters& config);
 
     // Get all input streams that are specified in the configuration.
     const std::map<std::wstring, std::wstring>& GetRename() const { return m_streams; }
@@ -34,14 +35,14 @@ public:
 
     bool ShouldKeepDataInMemory() const { return m_keepDataInMemory; }
 
-    ElementType GetElementType() const { return m_elementType; }
+    DataType GetElementType() const { return m_elementType; }
 
     DISABLE_COPY_AND_MOVE(BinaryConfigHelper);
 
 private:
     std::wstring m_filepath;
     std::map<std::wstring, std::wstring> m_streams;
-    ElementType m_elementType;
+    DataType m_elementType;
     size_t m_randomizationWindow;
     // Specifies how to interpret randomization window, if true randomization window == number of samples, else 
     // randomization window = number of chunks (default).
@@ -50,4 +51,4 @@ private:
     bool m_keepDataInMemory; // if true the whole dataset is kept in memory
 };
 
-} } }
+}

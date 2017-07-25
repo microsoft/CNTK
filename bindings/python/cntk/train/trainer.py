@@ -48,7 +48,7 @@ class Trainer(cntk_py.Trainer):
             criterion = criterion.outputs           # break up tuple-valued Function into tuple of Functions
         # map Variable to Function
         from cntk import combine
-        criterion = tuple([combine([output], output.name) if isinstance(output, cntk_py.Variable) else output for output in criterion])
+        criterion = tuple([combine([output], name=output.name) if isinstance(output, cntk_py.Variable) else output for output in criterion])
         if len(criterion) == 1:
             criterion = criterion + (None,) # tuple of 1 value: pad with None
         elif len(criterion) != 2:

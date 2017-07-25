@@ -55,7 +55,7 @@ def test_ptb_word_rnn(device_id):
 
     try:
         error = W.train_lm(testing=True)
-        expected_error = 7.109
+        expected_error = 6.87
         assert np.allclose(error, expected_error, atol=TOLERANCE_ABSOLUTE)
     finally:
         os.chdir(current_path)
