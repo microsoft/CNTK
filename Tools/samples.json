@@ -538,12 +538,12 @@
         "language": ["Python"],
         "type": ["Recipe"],
         "dataadded": "05/05/2017"
-    }
+    },
     {
         "category": ["Reinforcement Learning"],
         "name": "Flapping Bird with Keras",
         "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning/FlappingBirdWithKeras",
-        "description": "Using CNTK Keras backend train an agent to navigate a bird through a cactus maze",
+        "description": "Using CNTK Keras backend to train an agent to navigate a bird through a cactus maze",
         "language": ["Python"],
         "type": ["Recipe"],
         "dataadded": "07/21/2017"
