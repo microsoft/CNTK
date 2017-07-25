@@ -7078,6 +7078,22 @@ static void TensorOpWithFnAndReduction(ElemType beta, array<ElemType*, N> pointe
     size_t dims = regularOpDims.size();
     switch (dims)
     {
+    case 12:
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 11>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 11:
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 10>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 10:
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 9>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 9:
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 8>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 8:
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 7>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 7:
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 6>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 6:
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 5>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 5:
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 4>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 4:
         return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 3>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 3:

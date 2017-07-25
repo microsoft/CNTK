@@ -1205,6 +1205,22 @@ void TensorOpN(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, Elem
     size_t dims = regularOpDims.size();
     switch (dims)
     {
+    case 12:
+        return TensorOpWithRegularLoop<ElemType, N, 12>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 11:
+        return TensorOpWithRegularLoop<ElemType, N, 11>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 10:
+        return TensorOpWithRegularLoop<ElemType, N, 10>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 9:
+        return TensorOpWithRegularLoop<ElemType, N, 9>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 8:
+        return TensorOpWithRegularLoop<ElemType, N, 8>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 7:
+        return TensorOpWithRegularLoop<ElemType, N, 7>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 6:
+        return TensorOpWithRegularLoop<ElemType, N, 6>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    case 5:
+        return TensorOpWithRegularLoop<ElemType, N, 5>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 4:
         return TensorOpWithRegularLoop<ElemType, N, 4>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 3:
