@@ -26,7 +26,8 @@ using namespace std;
 namespace Microsoft { namespace MSR { namespace CNTK {
     
 template <class ElemType>
-void LatticeFreeMMINode<ElemType>::Graph2matrixWithSelfLoop(const vector<DataArc> input, size_t maxstate, vector<ElemType>& transVal, vector<CPUSPARSE_INDEX_TYPE>& transRow, vector<CPUSPARSE_INDEX_TYPE>& transCol, size_t &nstates, size_t &transCount, vector<ElemType>& smapVal, vector<CPUSPARSE_INDEX_TYPE>& smapRow, vector<CPUSPARSE_INDEX_TYPE>& smapCol, size_t &smapCount, size_t numSenone, vector<map<int, pair<int, ElemType>>>& fsa)
+void LatticeFreeMMINode<ElemType>::Graph2matrixWithSelfLoop(const vector<DataArc> input, size_t maxstate, vector<ElemType>& transVal, vector<CPUSPARSE_INDEX_TYPE>& transRow, vector<CPUSPARSE_INDEX_TYPE>& transCol, size_t &nstates, 
+	size_t &transCount, vector<ElemType>& smapVal, vector<CPUSPARSE_INDEX_TYPE>& smapRow, vector<CPUSPARSE_INDEX_TYPE>& smapCol, size_t &smapCount, size_t numSenone, vector<map<int, pair<int, ElemType>>>& fsa)
 {
     cout << "Loading with simple format" << endl;
     // decoding graph and turns it into a transition matrix
@@ -41,7 +42,7 @@ void LatticeFreeMMINode<ElemType>::Graph2matrixWithSelfLoop(const vector<DataArc
     size_t count = 0;
     transRow.push_back(0);
 
-    map<int, vector<int> > states4senone;
+    map<int, vector<int>> states4senone;
     set<int> countedState;
     int currentState = 0;
     map<int, pair<int, ElemType>> currentMap;
