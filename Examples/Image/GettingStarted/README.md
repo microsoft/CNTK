@@ -7,7 +7,7 @@
 |Purpose   |This folder contains a number of examples that demonstrate the usage of BrainScript to define basic networks for deep learning on image tasks.
 |Network   |Simple feed-forward networks including dense layers, convolution layers, drop out and batch normalization for classification and regression tasks.
 |Training  |Stochastic gradient descent both with and without momentum.
-|Comments  |There are five configuration files, details are provided below.
+|Comments  |There are seven configuration files, details are provided below.
 
 ## Running the example
 
@@ -42,7 +42,7 @@ An Output folder will be created in the `Image/GettingStarted` folder, which is 
 
 ## Details
 
-There are five cntk configuration files in the current folder. These cntk configuration files use BrainScript, a custom script language for CNTK. To learn more about BrainScript, please follow the introduction of [BrainScript Basic Concepts](https://docs.microsoft.com/en-us/cognitive-toolkit/Brainscript-Basic-concepts).
+There are seven cntk configuration files in the current folder. These cntk configuration files use BrainScript, a custom script language for CNTK. To learn more about BrainScript, please follow the introduction of [BrainScript Basic Concepts](https://docs.microsoft.com/en-us/cognitive-toolkit/Brainscript-Basic-concepts).
 
 ### 01_OneHidden.cntk
 
@@ -123,4 +123,4 @@ The rmse values for training and testing are 0.225 and 0.223 respectively. To vi
 
 `python 07_Deconvolution_Visualizer.py`
 
-The script uses by default the BrainScript model, set `use_brain_script_model=False` to use the Python model for visualization. The visualizations will be stored in the `Output` folder together with a text representation of the encoder and the decoder output.
+The script allows you to specify the type of model you used for training with the argument `-t`, i.e. add `-t Python` to generate the visualization with the Python trained model or `-t BrainScript` for the BrainScript model. If the type is not specified, a Python model is expected. The visualizations will be stored in the `Output` folder together with a text representation of the encoder and the decoder output.

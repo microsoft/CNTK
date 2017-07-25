@@ -10,14 +10,14 @@
 #include "Config.h"
 #include "Reader.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // A helper class for HTKMLF configuration.
 // Provides typed accessor to config parameters.
 class ConfigHelper
 {
 public:
-    ConfigHelper(const ConfigParameters& config) : m_config(config)
+    ConfigHelper(const Microsoft::MSR::CNTK::ConfigParameters& config) : m_config(config)
     {}
 
     // Gets context window for augmentation.
@@ -31,7 +31,7 @@ public:
 
     // Gets element type.
     // Currently both features and labels should be of the same type.
-    ElementType GetElementType() const;
+    DataType GetDataType() const;
 
     // Checks feature type in the configuration.
     void CheckFeatureType();
@@ -71,7 +71,7 @@ public:
     std::wstring GetRandomizer();
 
     // Gets number of utterances per minibatch for epochs as an array.
-    intargvector GetNumberOfUtterancesPerMinibatchForAllEppochs();
+    Microsoft::MSR::CNTK::intargvector GetNumberOfUtterancesPerMinibatchForAllEppochs();
 
 private:
     DISABLE_COPY_AND_MOVE(ConfigHelper);
@@ -79,7 +79,7 @@ private:
     // Expands ... in the name of the feature path.
     void ExpandDotDotDot(std::string& featPath, const std::string& scpPath, std::string& scpDirCached);
 
-    const ConfigParameters& m_config;
+    const Microsoft::MSR::CNTK::ConfigParameters& m_config;
 };
 
-}}}
+}

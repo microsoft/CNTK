@@ -128,6 +128,7 @@ Examples/LanguageUnderstanding/ATIS/Data/ATIS.* text
 Examples/LanguageUnderstanding/ATIS/BrainScript/*.wl text
 
 Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
+Examples/Text/LightRNN/test/word-0.location text
 
 # Binary extensions:
 *.ark binary

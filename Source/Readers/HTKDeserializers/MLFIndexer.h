@@ -10,7 +10,7 @@
 
 #include "Indexer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     class MLFIndexer : boost::noncopyable
     {
@@ -53,4 +53,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     typedef std::shared_ptr<MLFIndexer> MLFIndexerPtr;
 
-}}} // namespace
+}

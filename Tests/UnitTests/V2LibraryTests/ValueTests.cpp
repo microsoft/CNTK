@@ -792,7 +792,7 @@ void ValueCopyToExceptionsTest(const DeviceDescriptor& device)
     auto val = Value::Create(sampleShape, input, device);
 
     // Test variable with unknown shape
-    auto sampleVariable = CreateVariable<float>(NDShape::Unknown, 0);
+    auto sampleVariable = CreateVariable<float>(NDShape::Unknown(), 0);
     VerifyException([&val, &sampleVariable, &output]() {
         val->CopyVariableValueTo(sampleVariable, output);
     }, "The expected exception has not been caught: It is not supported that the outputVariable has a unknown shape or inferred dimension.");

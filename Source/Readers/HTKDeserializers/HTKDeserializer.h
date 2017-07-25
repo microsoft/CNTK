@@ -13,7 +13,7 @@
 #include "ConfigHelper.h"
 #include <boost/noncopyable.hpp>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Class represents an HTK deserializer.
 // Provides a set of chunks/sequences to the upper layers.
@@ -27,22 +27,22 @@ public:
     HTKDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& featureConfig, const std::wstring& featureName, bool primary);
 
     // Get information about chunks.
-    virtual ChunkDescriptions GetChunkDescriptions() override;
+    virtual std::vector<ChunkInfo> ChunkInfos() override;
 
     // Get information about particular chunk.
-    virtual void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result) override;
+    virtual void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result) override;
 
     // Retrieves data for a chunk.
     virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
     // Gets sequence description by the primary one.
-    virtual bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription&) override;
+    virtual bool GetSequenceInfo(const SequenceInfo& primary, SequenceInfo&) override;
 
 private:
     class HTKChunk;
 
     // Initialization functions.
-    void InitializeChunkDescriptions(ConfigHelper& config);
+    void InitializeChunkInfos(ConfigHelper& config);
     void InitializeStreams(const std::wstring& featureName);
     void InitializeFeatureInformation();
     void InitializeAugmentationWindow(const std::pair<size_t, size_t>& augmentationWindow);
@@ -54,10 +54,10 @@ private:
     size_t m_dimension;
 
     // Type of the features.
-    ElementType m_elementType;
+    DataType m_elementType;
 
     // Chunk descriptions.
-    std::vector<HTKChunkDescription> m_chunks;
+    std::vector<HTKChunkInfo> m_chunks;
 
     // Augmentation window.
     std::pair<size_t, size_t> m_augmentationWindow;
@@ -86,4 +86,4 @@ private:
 
 typedef std::shared_ptr<HTKDeserializer> HTKDeserializerPtr;
 
-}}}
+}

@@ -174,7 +174,7 @@ public:
             if (!InputRef(i).NeedsGradient())
                 continue;
 
-            InputRef(i).LazyZeroGradient(); // set gradient to 0 if this is the first time
+            InputRef(i).LazyZeroGradient(this); // set gradient to 0 if this is the first time
 
             auto input = externalFunctionUniqueInputs[i];
             auto inputGradientValue = inputGradientValues[input];

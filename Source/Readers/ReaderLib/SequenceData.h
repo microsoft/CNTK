@@ -10,20 +10,31 @@
 #include "DataDeserializer.h"
 #include "ConcStack.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     // Class represents a sparse sequence for category data.
     // m_data is a non-owning pointer to some staticlly allocated category.
     // TOOD: Possibly introduce typed data here.
     struct CategorySequenceData : SparseSequenceData
     {
+        CategorySequenceData(const NDShape& sampleShape) : m_sampleShape(sampleShape)
+        {}
+
         const void* GetDataBuffer() override
         {
             return m_data;
         }
 
+        const NDShape& GetSampleShape() override
+        {
+            return m_sampleShape;
+        }
+
         // Non-owning pointer to the static data describing the label.
         void *m_data;
+
+        // Non-owning reference on the sample shape.
+        const NDShape& m_sampleShape;
     };
 
     typedef std::shared_ptr<CategorySequenceData> CategorySequenceDataPtr;
@@ -33,7 +44,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class TElemType>
     struct DenseSequenceWithBuffer : DenseSequenceData
     {
-        DenseSequenceWithBuffer(conc_stack<std::vector<TElemType>>& memBuffers, size_t numberOfElements) : m_memBuffers(memBuffers)
+        DenseSequenceWithBuffer(Microsoft::MSR::CNTK::conc_stack<std::vector<TElemType>>& memBuffers, size_t numberOfElements, const NDShape& sampleShape)
+            : m_memBuffers(memBuffers), m_sampleShape(sampleShape)
         {
             m_buffer = m_memBuffers.pop_or_create([numberOfElements]() { return vector<TElemType>(numberOfElements); });
             m_buffer.resize(numberOfElements);
@@ -49,6 +61,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_buffer.data();
         }
 
+        const NDShape& GetSampleShape() override
+        {
+            return m_sampleShape;
+        }
+
         ~DenseSequenceWithBuffer()
         {
             // Giving the memory back.
@@ -56,9 +73,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
+        NDShape m_sampleShape;
         std::vector<TElemType> m_buffer;
-        conc_stack<std::vector<TElemType>>& m_memBuffers;
+        Microsoft::MSR::CNTK::conc_stack<std::vector<TElemType>>& m_memBuffers;
         DISABLE_COPY_AND_MOVE(DenseSequenceWithBuffer);
     };
 
-} } }
+}

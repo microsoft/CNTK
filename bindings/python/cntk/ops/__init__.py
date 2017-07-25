@@ -24,7 +24,7 @@ TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferre
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
 
 @typemap
-def combine(operands, name=''):
+def combine(*operands, **kw_name):
     '''
      Create a new Function instance which just combines the outputs of the specified list of
      'operands' Functions such that the 'Outputs' of the new 'Function' are union of the
@@ -49,6 +49,11 @@ def combine(operands, name=''):
         >>> list(forward.values()) # doctest: +SKIP
         [array([[[ 1., -3.,  6.,  2.]]], dtype=float32),
          array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)]
+        >>> x = C.input_variable((4,))
+        >>> _ = C.combine(x, x)
+        >>> _ = C.combine([x, x])
+        >>> _ = C.combine((x, x))
+        >>> _ = C.combine(C.combine(x, x), x)
 
     Args:
         operands (list): list of functions or their variables to combine
@@ -57,8 +62,20 @@ def combine(operands, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    name = (lambda name='': (name))(**kw_name) # Python 2.7 does not allow (*inputs, name='')
+
     from cntk.cntk_py import combine
-    return combine(operands, name)
+    if len(operands) == 1 and isinstance(operands[0], (tuple, list)):
+        operands = operands[0]
+    if isinstance(operands, tuple):
+        operands = list(operands)
+    operands_unfold = []
+    for o in operands:
+        if hasattr(o, 'outputs') and len(o.outputs) > 1:
+            operands_unfold += o.outputs
+        else:
+            operands_unfold += [o]
+    return combine(operands_unfold, name)
 
 @typemap
 def as_block(composite, block_arguments_map, block_op_name, block_instance_name=''):
@@ -1251,6 +1268,30 @@ def elu(x, name=''):
     x = sanitize_input(x)
     return elu(x, name)
 
+@typemap
+def selu(x, scale=1.0507009873554804934193349852946, alpha=1.6732632423543772848170429916717, name=''):
+    '''
+    Scaled exponential linear unit operation. Computes the element-wise exponential linear
+    of ``x``: ``scale * x`` for ``x >= 0`` and ``x``: ``scale * alpha * (exp(x)-1)`` otherwise.
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.selu([[-1, -0.5, 0, 1, 2]]).eval()
+        array([[-1.111331, -0.691758,  0.      ,  1.050701,  2.101402]], dtype=float32)
+
+    Args:
+        x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
+        name (`str`, default to ''): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function:
+        An instance of :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import selu
+    x = sanitize_input(x)
+    return selu(x, scale, alpha, name)
+
 
 @typemap
 def leaky_relu(x, name=''):
@@ -1430,6 +1471,50 @@ def cos(x, name=''):
     x = sanitize_input(x)
     return cos(x, name)
 
+@typemap
+def sinh(x, name=''):
+    '''
+    Computes the element-wise sinh of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.sinh([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 1.1752 ,  0.5211 ],
+               [-0.25261, -0.82232]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sinh
+    x = sanitize_input(x)
+    return sinh(x, name)
+
+@typemap
+def cosh(x, name=''):
+    '''
+    Computes the element-wise cosh of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.cosh([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 1.54308,  1.12763],
+               [ 1.03141,  1.29468]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import cosh
+    x = sanitize_input(x)
+    return cosh(x, name)
+
 
 @typemap
 def softmax(x, axis=None, name=''):
@@ -1445,7 +1530,9 @@ def softmax(x, axis=None, name=''):
     therefore be interpreted as probabilities for mutually exclusive outcomes
     as in the case of multiclass classification.
 
-    If ``axis`` is given, the softmax will be computed along that axis.
+    If ``axis`` is given as integer, then the softmax will be computed along that axis. 
+    If the provided ``axis`` is -1, it will be computed along the last axis. Otherwise,
+    softmax will be applied to all axes.
 
     Example:
         >>> C.softmax([[1, 1, 2, 3]]).eval()
@@ -1458,6 +1545,10 @@ def softmax(x, axis=None, name=''):
         array([[[ 0.5     ,  0.5     ],
                 [ 0.119203,  0.880797]]], dtype=float32)
 
+        >>> C.softmax([[[1, 1], [3, 5]]], axis=1).eval()
+        array([[[ 0.119203,  0.017986],
+                [ 0.880797,  0.982014]]], dtype=float32)
+
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
         axis (int or :class:`~cntk.axis.Axis`): axis along which the softmax operation will be performed
@@ -1467,18 +1558,11 @@ def softmax(x, axis=None, name=''):
     '''
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
-    # softmax over a specific axis: implemented explicitly
-    # TODO: move this into the C++ API.
     if axis is not None:
-        from cntk.cntk_py import reduce_log_sum, exp, minus
         axis = sanitize_axis(axis)
-        Z = reduce_log_sum(x, axis)  # log denominator
-        # TODO: use as_block()
-        return exp(x - Z.output(), name) # this is the softmax
-        # (note: we need .output() here since the automatisms available outside are not available in here)
-    # softmax over all elements
-    return softmax(x, name)
-
+        return softmax(x, axis, name)
+    else:
+        return softmax(x, name)
 
 @typemap
 def hardmax(x, name=''):
@@ -1862,7 +1946,7 @@ def swapaxes(x, axis1=0, axis2=1, name=''):
     return transpose_axes(x, axis1, axis2, name)
 
 @typemap
-def slice(x, axis, begin_index, end_index, name=''):
+def slice(x, axis, begin_index, end_index, strides=None, name=''):
     '''
     Slice the input along one or multiple axes.
 
@@ -1880,6 +1964,17 @@ def slice(x, axis, begin_index, end_index, name=''):
         ...                                             [4, 5, 6]]],dtype=np.float32)})
         array([[[ 1.],
                 [ 4.]]], dtype=float32)
+        >>> # slice with strides
+        >>> C.slice(x1, 0, 0, 2, 2).eval({x1: np.asarray([[[1,2,-3],
+        ...                                                [4, 5, 6]]],dtype=np.float32)})
+        array([[[ 1.,  2., -3.]]], dtype=float32)
+        <BLANKLINE>
+        >>> # reverse
+        >>> C.slice(x1, 0, 0, 2, -1).eval({x1: np.asarray([[[1,2,-3],
+        ...                                                 [4, 5, 6]]],dtype=np.float32)})
+        array([[[ 4.,  5.,  6.],
+        [ 1.,  2., -3.]]], dtype=float32)
+        <BLANKLINE>
         >>> # slice along multiple axes
         >>> C.slice(x1, [0,1], [1,0], [2,1]).eval({x1: np.asarray([[[1, 2, -3],
         ...                                                         [4, 5, 6]]],dtype=np.float32)})
@@ -1919,6 +2014,7 @@ def slice(x, axis, begin_index, end_index, name=''):
         begin_index (int): the index along axis where the slicing starts
         end_index (int): the index along axis where the slicing ends
         name (str, optional): the name of the Function instance in the network
+        strides(int): step sizes when applying slice, negative value means in reverse order
 
     See also:
         Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
@@ -1931,7 +2027,11 @@ def slice(x, axis, begin_index, end_index, name=''):
     axis = sanitize_axis_list(axis)
     begin_index = sanitize_shape(begin_index)
     end_index = sanitize_shape(end_index)
-    return slice(x, axis, begin_index, end_index, name)
+    if strides is None:
+        strides = [1 for _ in axis]
+    elif not type(strides) in (list, tuple):
+        strides = [strides]
+    return slice(x, axis, begin_index, end_index, strides, name)
 
 # TODO: enable when it is exposed in c++
 
@@ -1980,6 +2080,59 @@ def splice(*inputs, **kw_axis_name):
     axis = sanitize_axis(axis)
 
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
+
+@typemap
+def unpack_batch(x, name=''):
+    '''
+    Concatenate the input tensor's last dynamic axis to static axis.
+    Only tensors with batch axis are supported now.
+
+    Example:
+        >>> data = np.arange(12).reshape((3,2,2))
+        >>> x = C.input((2,2))
+        >>> C.unpack_batch(x).eval({x:data})
+        array([[[  0.,   1.],
+                [  2.,   3.]],
+        <BLANKLINE>
+               [[  4.,   5.],
+                [  6.,   7.]],
+        <BLANKLINE>
+               [[  8.,   9.],
+                [ 10.,  11.]]], dtype=float32)
+
+    Args:
+        x: a tensor with dynamic axis
+        name: (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import unpack_batch
+    x = sanitize_input(x)
+    return unpack_batch(x, name)
+
+@typemap
+def to_batch(x, name=''):
+    '''
+    Concatenate the input tensor's first axis to batch axis.
+
+    Example:
+        >>> data = np.arange(12).reshape((3,2,2))
+        >>> x = C.constant(value=data)
+        >>> y = C.to_batch(x)
+        >>> y.shape
+        (2, 2)
+
+    Args:
+        x: a tensor with dynamic axis
+        name: (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import to_batch
+    x = sanitize_input(x)
+    return to_batch(x, name)
 
 @typemap
 def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
@@ -2685,7 +2838,7 @@ def placeholder(shape=None, dynamic_axes=None, name=''):
     from cntk.cntk_py import placeholder_variable, NDShape, Axis
 
     if shape is None:
-        shape = NDShape.unknown.dimensions()
+        shape = NDShape.unknown().dimensions()
     else:
         shape = sanitize_shape(shape)
 

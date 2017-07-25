@@ -8,6 +8,7 @@
 *.orig
 \#*
 .\#*
+.vscode
 
 # Local build configuration
 Config.make
@@ -295,6 +296,7 @@ Tutorials/zip
 Manual/*.tmp
 Manual/*.ckp
 Manual/.ipynb_checkpoints
+Examples/Text/LightRNN/LightRNN/*.so
 
 # other
 /packages

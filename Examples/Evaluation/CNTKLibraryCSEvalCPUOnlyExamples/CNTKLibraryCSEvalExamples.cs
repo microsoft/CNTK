@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CNTK;
+using CNTKImageProcessing;
 
 namespace CNTKLibraryCSEvalExamples
 {

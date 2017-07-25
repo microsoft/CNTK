@@ -77,7 +77,7 @@ case $targetConfiguration in
 esac
 
 [[ $releaseTag = unknown ]] || [[ $releaseTag =~ ^[1-9][0-9a-z-]*$ ]] || {
-  echo '--release-tag $releaseTag' option does not match expected format.
+  echo \'--release-tag $releaseTag\' option does not match expected format.
   exit 1
 }
 
@@ -153,7 +153,7 @@ opencvVersion="3.1.0"
 opencvPath="/usr/local/opencv-$opencvVersion/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
-cudnnPath="/usr/local/cudnn/cuda/lib64"
+cudnnPath="/usr/local/cudnn-6.0/cuda/lib64"
 openblasPath="/usr/local/openblas/lib"
 kaldiVersion="c024e8aa"
 kaldiPath="/usr/local/kaldi-$kaldiVersion/src/lib"
@@ -265,7 +265,7 @@ if [[ $targetConfiguration != "cpu" ]]; then
 
     # Copy cuDNN
     echo "Copying cuDNN..." >&3
-    CopyFilesFromList $cudnnPath cudnnFiles[@] $baseDependenciesPath/libcudnn.so.5
+    CopyFilesFromList $cudnnPath cudnnFiles[@] $baseDependenciesPath/libcudnn.so.6
 
 fi
 
