@@ -1,0 +1,1 @@
+docker build --tag cntk_cpu_archlinux:v2 .
