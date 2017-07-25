@@ -111,9 +111,9 @@ class DAG_Utils():
             node_repr["cls_maps"]=[]
             for cls_map in node.cls_maps:
                 node_repr["cls_maps"].append(cls_map.file)
-            node_repr["childrens"]=[]
+            node_repr["children"]=[]
             for child in node.next:
-                node_repr["childrens"].append(id_map[child])
+                node_repr["children"].append(id_map[child])
             return node_repr
 
         node_count, node_map=_apply_serialization_indices(node, 0)
@@ -164,7 +164,7 @@ class DAG_Utils():
 
         # create double links
         for i in range(nr_of_nodes):
-            for j in dac_repr_list[i]["childrens"]:
+            for j in dac_repr_list[i]["children"]:
                 dac_list[i].next.append(dac_list[j])
                 dac_list[j].prev.append(dac_list[i])
 

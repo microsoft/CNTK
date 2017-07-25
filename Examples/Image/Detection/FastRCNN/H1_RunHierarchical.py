@@ -54,8 +54,8 @@ def train_fast_rcnn_h(debug_output=False, model_path=model_file):
 
     # Set learning parameters
     l2_reg_weight = 0.0005
-    lr_multiplier = .5
-    lr_per_sample = [0.00001 * lr_multiplier] * 20 + [0.000001 * lr_multiplier] * 15 + [0.0000001 * lr_multiplier]
+    lr_multiplier = .6
+    lr_per_sample = [0.00001 * lr_multiplier] * 20 + [0.000001 * lr_multiplier] * 5 + [0.0000001 * lr_multiplier]
     lr_schedule = learning_rate_schedule(lr_per_sample, unit=UnitType.sample)
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
 

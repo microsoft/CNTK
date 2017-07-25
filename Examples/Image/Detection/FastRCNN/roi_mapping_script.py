@@ -22,6 +22,8 @@ if p.datasetName != "pascalVoc":
 else:
     img_file_dataset = os.path.join(dataset_path, "mappings", "test2007.txt")
 
+print("Remapping rois to datasets order...")
+
 # read a1 mapping
 input_file_a1_img = open(img_file_a1)
 input_map = {}
@@ -29,7 +31,10 @@ input_map = {}
 for line in input_file_a1_img.readlines():
     if line != "":
         pieces = line.split()
-        input_map[int(pieces[0])] = os.path.abspath(pieces[1])
+        if os.sys.platform == 'win32':
+            input_map[int(pieces[0])] = os.path.normpath(os.path.abspath(pieces[1])).lower()
+        else:
+            input_map[int(pieces[0])] = os.path.normpath(os.path.abspath(pieces[1]))
 
 input_file_a1_img.close()
 
@@ -40,10 +45,13 @@ output_map = {}
 for line in input_file_dataset_img.readlines():
     if line != "":
         pieces = line.split()
-        output_map[os.path.abspath(pieces[1])] = int(pieces[0])
+        if os.sys.platform=='win32':
+            output_map[os.path.normpath(os.path.abspath(pieces[1])).lower()] = int(pieces[0])
+        else:
+            output_map[os.path.normpath(os.path.abspath(pieces[1]))] = int(pieces[0])
 
 input_file_dataset_img.close()
-
+#import ipdb;ipdb.set_trace()
 # connect mappings; list for faster access
 index_lookup = [output_map[input_map[p]] for p in sorted(list(input_map.keys()))]
 
@@ -58,3 +66,4 @@ for line in input_file.readlines():
 
 input_file.close()
 output_file.close()
+print("Done!")

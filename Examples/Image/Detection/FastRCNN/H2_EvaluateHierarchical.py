@@ -22,6 +22,8 @@ from utils.hierarchical_classification.hierarchical_classification_helper import
 from H1_RunHierarchical import p, USE_HIERARCHICAL_CLASSIFICATION
 
 HCH = HierarchyHelper(get_tree_str(p.datasetName, USE_HIERARCHICAL_CLASSIFICATION))
+print("Tree used:")
+HCH.tree_map.root_node.print()
 
 output_scale = (p.cntk_padWidth, p.cntk_padHeight)
 
@@ -306,7 +308,6 @@ def _scramble_list(to_sc, perm):
 img_list = _scramble_list(img_list, [1, 3, 2, 4, 0])
 
 def to_cv2_img(img):
-    #import ipdb;ipdb.set_trace()
     img.shape = (3,1000,1000)
 
     # CHW to HWC
