@@ -356,6 +356,7 @@ namespace CNTK
                         case PrimitiveOpType::Sigmoid:
                         case PrimitiveOpType::Tanh:
                         case PrimitiveOpType::ReLU:
+                        case PrimitiveOpType::ReverseGradient:
                         case PrimitiveOpType::Exp:
                         case PrimitiveOpType::Log:
                         case PrimitiveOpType::Sqrt:

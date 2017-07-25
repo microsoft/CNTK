@@ -29,6 +29,7 @@ namespace CNTK
         {PrimitiveOpType::Sigmoid, L"Sigmoid"},
         {PrimitiveOpType::Tanh, L"Tanh"},
         {PrimitiveOpType::ReLU, L"ReLU"},
+        {PrimitiveOpType::ReverseGradient, L"ReverseGradient" },
         {PrimitiveOpType::Exp, L"Exp"},
         {PrimitiveOpType::Log, L"Log"},
         {PrimitiveOpType::Sqrt, L"Sqrt"},

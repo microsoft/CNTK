@@ -151,6 +151,7 @@ DeclareUnaryElementWiseWithOpCodeNode(Cosh,                  Cosh,              
 DeclareUnaryElementWiseWithOpCodeNode(Cosine,                Cosine,                ElementwiseProductWithCosDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Exp,                   Exp,                   ElementwiseProduct,                                              binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Floor,                 Floor,                 None,                                                            noGradient);
+DeclareUnaryElementWiseWithOpCodeNode(ReverseGradient,       Copy,                  Negate,                                                          binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Log,                   Log,                   ElementwiseProductWithLogDerivativeFromOutput,                   binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Negate,                Negate,                Negate,                                                          unaryGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Pass,                  Copy,                  Copy,                                                            unaryGradient);

@@ -372,6 +372,7 @@ ReduceLogSum            = CNTK2.ReduceLogSum
 ReduceMean              = CNTK2.ReduceMean
 ReduceMin               = CNTK2.ReduceMin
 ReduceMax               = CNTK2.ReduceMax
+ReverseGradient         = CNTK2.ReverseGradient
 
 Round                   = CNTK2.Round
 Sigmoid                 = CNTK2.Sigmoid
@@ -492,6 +493,7 @@ CNTK2 = [
     Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+    ReverseGradient(_, tag='') = new ComputationNode [ operation = 'ReverseGradient' ; inputs = _AsNodes (_) /*plus the function args*/ ]
 
     // 11. Criterion nodes
     // No changes here - we said the default input would be the label sequence here, against which the 
