@@ -35,6 +35,8 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
     *preader = new ReaderShim<double>(factory);
 }
 
+extern shared_ptr<DataDeserializer> CreatePlainTextDeserializer(const ConfigParameters& deserializerConfig, bool primary);
+
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
 // A factory method for creating text deserializers.
 extern "C" DATAREADER_API bool CreateDeserializer(DataDeserializerPtr& deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool primary)
@@ -52,6 +54,12 @@ extern "C" DATAREADER_API bool CreateDeserializer(DataDeserializerPtr& deseriali
             deserializer = make_shared<TextParser<float>>(corpus, TextConfigHelper(deserializerConfig), primary);
         else // double
             deserializer = make_shared<TextParser<double>>(corpus, TextConfigHelper(deserializerConfig), primary);
+    }
+    else if (type == L"PlainTextDeserializer")
+    {
+        if (!corpus->IsNumericSequenceKeys())
+            InvalidArgument("Corpus specification not supported for PlainTextDeserializer");
+        deserializer = CreatePlainTextDeserializer(deserializerConfig, primary);
     }
     else
         InvalidArgument("Unknown deserializer type '%ls'", type.c_str());

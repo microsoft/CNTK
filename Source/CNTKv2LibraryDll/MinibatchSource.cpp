@@ -532,6 +532,7 @@ namespace CNTK
             {
                 static const std::unordered_map<std::wstring, std::wstring> deserializerTypeToModule = {
                     { L"CNTKTextFormatDeserializer",   L"CNTKTextFormatReader" },
+                    { L"PlainTextDeserializer",        L"CNTKTextFormatReader" },
                     { L"CNTKBinaryFormatDeserializer", L"CNTKBinaryReader" },
                     { L"ImageDeserializer",            L"ImageReader" },
                     { L"Base64ImageDeserializer",      L"ImageReader" },

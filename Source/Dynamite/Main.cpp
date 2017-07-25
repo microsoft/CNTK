@@ -400,8 +400,13 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     }
 }
 
+extern int mt_main(int argc, char *argv[]);
+
 int main(int argc, char *argv[])
 {
+#if 1
+    return mt_main(argc, argv);
+#else
     argc; argv;
     try
     {
@@ -413,4 +418,5 @@ int main(int argc, char *argv[])
     {
         fprintf(stderr, "EXCEPTION caught: %s\n", e.what());
     }
+#endif
 }

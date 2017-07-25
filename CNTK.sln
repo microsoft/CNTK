@@ -1584,8 +1584,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "fastRCNN", "fastRCNN", "{C2
 		Examples\Image\Detection\FastRCNN\fastRCNN\voc_eval.py = Examples\Image\Detection\FastRCNN\fastRCNN\voc_eval.py
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DynamiteLib", "Source\Dynamite\DynamiteLib.vcxproj", "{E2F320FE-0C01-4C80-810C-3A92205A29DB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DynamiteTest", "Source\Dynamite\DynamiteLib.vcxproj", "{E2F320FE-0C01-4C80-810C-3A92205A29DB}"
 	ProjectSection(ProjectDependencies) = postProject
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715} = {91973E60-A7BE-4C86-8FDB-59C88A0B3715}
 		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
 	EndProjectSection
 EndProject

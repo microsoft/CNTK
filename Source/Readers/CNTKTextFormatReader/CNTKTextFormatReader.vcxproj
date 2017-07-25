@@ -106,6 +106,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="PlainTextDeserializer.cpp" />
     <ClCompile Include="TextConfigHelper.cpp" />
     <ClCompile Include="TextParser.cpp" />
     <ClCompile Include="dllmain.cpp" />
