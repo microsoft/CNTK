@@ -84,7 +84,7 @@ static Deserializer PlainTextDeserializer(const std::vector<PlainTextStreamConfi
         stream[L"definesMBSize"] = s.m_definesMbSize;
         input[key] = stream;
     }
-    ctf.Add(L"type", L"PlainTextDeserializer", L"input", input);
+    ctf.Add(L"type", L"PlainTextDeserializer", L"input", input, L"cacheIndex", cacheIndex);
     return ctf;
 }
 

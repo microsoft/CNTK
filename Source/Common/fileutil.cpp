@@ -1831,6 +1831,7 @@ bool getfiletime(const wstring& path, FILETIME& time)
 #ifdef _WIN32
 // Win32-style variant of this function (in case we want to use it some day)
 // Returns 0 in case of failure. May throw in case of bad_alloc.
+// If paths is not empty, this function will append.
 static BOOL ExpandWildcards(wstring path, vector<wstring>& paths)
 {
     // convert root to DOS filename convention
