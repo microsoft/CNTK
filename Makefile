@@ -1533,10 +1533,13 @@ ifdef CUDA_PATH
 	echo 'libnvidia-ml.so' >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST
 endif
 	cp -p $(JAVA_SWIG_DIR)/CNTKNativeUtils.java $(JAVA_SWIG_DIR)/com/microsoft/CNTK/CNTKNativeUtils.java
+	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk-javadoc.jar README.md
+	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk-sources.jar com
 	$(JDK_BIN_PATH)/javac $(GENERATED_JAVA_DIR)/*.java
+	rm -rf $(GENERATED_JAVA_DIR)/*.java
 	mkdir -p $(LIBDIR)/java
 	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk.jar com
-	cp $(JAVA_SWIG_DIR)/cntk.jar $(LIBDIR)/java
+	cp $(JAVA_SWIG_DIR)/cntk.jar $(JAVA_SWIG_DIR)/cntk-sources.jar $(LIBDIR)/java
 	javac -cp $(JAVA_SWIG_DIR) $(JAVA_TEST_DIR)/src/Main.java -d $(LIBDIR)/java
 
 ALL += java
