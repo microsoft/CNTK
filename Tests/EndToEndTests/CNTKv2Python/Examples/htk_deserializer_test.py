@@ -79,3 +79,21 @@ def test_multiple_mlf_files():
     mbsource.next_minibatch(1)
 
     os.chdir(abs_path)
+
+
+def test_multiple_streams_in_htk():
+    feature_dim = 33
+    context = 2
+
+    os.chdir(data_path)
+
+    features_file = "glob_0000.scp"
+
+    fd = HTKFeatureDeserializer(StreamDefs(
+        amazing_features = StreamDef(shape=feature_dim, context=(context,context), scp=features_file),
+        amazing_features2 = StreamDef(shape=feature_dim, context=(context,context), scp=features_file)))
+
+    mbs = MinibatchSource([fd])
+    mb = mbs.next_minibatch(1)
+    assert (mb[mbs.streams.amazing_features].asarray() == mb[mbs.streams.amazing_features2].asarray()).all()
+    os.chdir(abs_path)
