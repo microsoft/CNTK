@@ -1422,6 +1422,9 @@ class Function(cntk_py.Function):
             ValueError('callbacks list must only contain objects of type ProgressWriter')
         progress_writers = callbacks or []
         evaluator = Evaluator(output, progress_writers + [collector])
+
+        if minibatch_source.is_infinite():
+            raise ValueError("minibatch_source must have a limited number of samples or sweeps.")
         # evaluation loop
         while True:
             data = minibatch_source.next_minibatch(minibatch_size) # fetch minibatch
