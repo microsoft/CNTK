@@ -102,8 +102,8 @@ static Deserializer PlainTextDeserializer(const std::vector<PlainTextStreamConfi
 
 void Train(const DeviceDescriptor& device, bool useSparseLabels)
 {
-    let srcVocabSize = 10000;
-    let tgtVocabSize = 10000;
+    let srcVocabSize = 2330;
+    let tgtVocabSize = 2330;
     //const size_t inputDim = 2000;
     //const size_t embeddingDim = 500;
     //const size_t hiddenDim = 250;
@@ -123,8 +123,8 @@ void Train(const DeviceDescriptor& device, bool useSparseLabels)
     // data
     let minibatchSource = CreateCompositeMinibatchSource(MinibatchSourceConfig({ PlainTextDeserializer(
         {
-            PlainTextStreamConfiguration(L"src", srcVocabSize, { L"d:/work/Karnak/sample-model/data/train.src" }, { L"d:/work/Karnak/sample-model/data/vocab.src", L"<s>", L"</s>", L"<unk/>" }),
-            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/train.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk/>" })
+            PlainTextStreamConfiguration(L"src", srcVocabSize, { L"d:/work/Karnak/sample-model/data/train.src" }, { L"d:/work/Karnak/sample-model/data/vocab.src", L"<s>", L"</s>", L"<unk>" }),
+            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/train.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk>" })
         })},
         /*randomize=*/false/*for now*/));
 }

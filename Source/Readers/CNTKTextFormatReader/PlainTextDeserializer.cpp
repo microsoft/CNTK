@@ -11,15 +11,17 @@
 #include "ReaderConstants.h"
 #include "File.h"
 
+#include <vector>
 #include <memory>
+#include <unordered_map>
 
 #define let const auto
 
-using namespace CNTK;
+namespace CNTK {
+
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
-
-namespace CNTK {
+using namespace msra::strfun;
 
 // helpers
 static void LoadTextFileAsCharArray(vector<char>& buf, const wstring& path, uint64_t begin = 0, uint64_t end = SIZE_MAX)
@@ -59,12 +61,83 @@ public:
         const PlainTextVocabularyConfiguration m_vocabularyConfig;
     };
 
+    // vocabulary (maps grapheme to index)
+    class Vocabulary
+    {
+    public:
+        Vocabulary(const PlainTextVocabularyConfiguration& config)
+        {
+            // load vocab file
+            vector<char> buf;
+            LoadTextFileAsCharArray(buf, config.fileName);
+            // tokenize it
+            m_words = split(string(buf.begin(), buf.end()), "\r\n");
+            // now put them all into an STL hash map
+            m_wordMap.reserve(m_words.size() + 3);
+            for (size_t i = 0; i < m_words.size(); i++)
+            {
+                let res = m_wordMap.insert(make_pair(m_words[i], i));
+                if (!res.second)
+                    InvalidArgument("Vocabulary: Duplicate word '%s' in vocabulary file %S.", m_words[i].c_str(), config.fileName.c_str());
+            }
+            // add the special tokens
+            // These are supposed to be in the vocabulary, but they are missing in some configs.
+            // They are added to the end of the vocab in the order sent-start, sent-end, unknonw-substitute.
+            // Note that sent-start and sent-end are only special if they are specified to be added on the fly.
+            // Special tokens must only use characters in ASCII range, since we don't know the encoding of the vocab file, which we match as 8-bit strings.
+            for (let& specialToken : vector<string>{ AsAsciiString(config.insertAtStart), AsAsciiString(config.insertAtEnd), AsAsciiString(config.substituteForUnknown) })
+            {
+                if (!specialToken.empty())
+                {
+                    let res = m_wordMap.insert(make_pair(specialToken, m_words.size()));
+                    if (res.second)
+                    {
+                        fprintf(stderr, "Vocabulary: Special token '%s' missing, adding as index %d. %S.\n", specialToken.c_str(), (int)m_words.size(), config.fileName.c_str());
+                        m_words.push_back(specialToken);
+                    }
+                }
+            }
+            // precompute the word index of the unknown-substitute token if given
+            m_unknownId = config.substituteForUnknown.empty() ? SIZE_MAX : operator()(AsAsciiString(config.substituteForUnknown).c_str());
+        }
+        size_t operator()(const char* word) const
+        {
+            let res = m_wordMap.find(word);
+            if (res != m_wordMap.end())
+                return res->second;
+            else if (m_unknownId != SIZE_MAX)
+                return m_unknownId;
+            else
+                InvalidArgument("Vocabulary: Encountered an unknown word when no subsitute was specified:", word);
+        }
+        size_t size() const { return m_words.size(); }
+    private:
+        vector<string> m_words;
+        unordered_map<string, size_t> m_wordMap;
+        size_t m_unknownId;
+    };
+
     // info stored for each text stream
     struct PlainTextStream : public PlainTextStreamConfiguration
     {
         // constructor
-        PlainTextStream(const PlainTextStreamConfiguration& streamConfig) : PlainTextStreamConfiguration(streamConfig)
+        PlainTextStream(const PlainTextStreamConfiguration& streamConfig) :
+            PlainTextStreamConfiguration(streamConfig),
+            m_vocabulary(streamConfig.m_vocabularyConfig)
         {
+            if (NDShape{ m_vocabulary.size() } != m_sampleLayout)
+                // BUGBUG: AsString() cannot be called from outside--how to do that?
+                InvalidArgument("PlainTextDeserializer: Sample layout %S does not match vocabulary size %d for %S",
+                                m_sampleLayout.AsString().c_str(), (int)m_vocabulary.size(), streamConfig.m_vocabularyConfig.fileName);
+        }
+
+        // initialization helpers
+        // This is not a fast operation, so call this after the quick construction steps have completed and error-checked.
+        void IndexAllFiles(int traceLevel)
+        {
+            // load the vocabulary files
+            // --TODO do the indexing later, so that we can first load and check the vocab files before loading big data
+
             // index all files
             // That is, determine all line offsets and word counts and remember them in m_textLineRefs.
             // TODO: Later this can be cached.
@@ -86,6 +159,7 @@ public:
                 }
                 // determine line offsets and per-line word counts
                 // This is meant to run over files of GB size and thus be fast.
+                size_t numWordsInFile = 0;
                 const char* pdata = fileAsCString.data(); // start of buffer
                 const char* pend = pdata + fileAsCString.size();
                 for (const char* p0 = pdata; p0 < pend; p0++) // loop over lines
@@ -102,9 +176,13 @@ public:
                         prevIsSpace = thisIsSpace;
                     }
                     thisFileTextLineRefs.push_back(TextLineRef{ (uint64_t)(p0 - pdata), numWords });
-                    m_totalNumWords += numWords;
+                    numWordsInFile += numWords;
                     p0 = p; // now points to '\n'; will be increased above
                 }
+                m_totalNumWords += numWordsInFile;
+                // log
+                if (traceLevel >= 1)
+                    fprintf(stderr, "PlainTextDeserializer: %d words, %d lines. %S\n", (int)numWordsInFile, (int)thisFileTextLineRefs.size(), fileName.c_str());
             }
         }
 
@@ -115,16 +193,22 @@ public:
             const size_t numWords;      // number of word tokens in the line
         };
         vector<vector<TextLineRef>> m_textLineRefs; // [fileIndex][lineIndex] -> (byte offset of line, #words in this line)
-        size_t m_totalNumWords; // total word count for this stream
+        size_t m_totalNumWords;  // total word count for this stream
+        Vocabulary m_vocabulary; // mapping from word strings to neuron indices
     };
 
     PlainTextDeserializerImpl(const vector<PlainTextDeserializerImpl::PlainTextStreamConfiguration>& streamConfigs, bool cacheIndex,
                               DataType elementType, bool primary, int traceLevel) :
         m_streams(streamConfigs.begin(), streamConfigs.end()), m_cacheIndex(cacheIndex), m_elementType(elementType), m_primary(primary), m_traceLevel(traceLevel)
     {
-        // statistics and verify that all files have the same #lines
         if (m_streams.empty())
             InvalidArgument("PlainTextDeserializer: At least one stream must be specified.");
+
+        // index all files
+        for (auto& stream : m_streams)
+            stream.IndexAllFiles(m_traceLevel);
+
+        // statistics and verify that all files have the same #lines
         m_totalNumLines = 0;
         size_t totalNumSrcWords = 0;
         let& firstFileTextLineRefs = m_streams[0].m_textLineRefs;
@@ -226,7 +310,7 @@ shared_ptr<DataDeserializer> CreatePlainTextDeserializer(const ConfigParameters&
         ConfigParameters streamConfigParameters = section.second;
         // basic stream info
         StreamInformation streamInfo;
-        streamInfo.m_name          = msra::strfun::utf16(section.first);
+        streamInfo.m_name          = utf16(section.first);
         streamInfo.m_id            = streamConfigs.size(); // id = index of stream config in stream-config array
         streamInfo.m_storageFormat = StorageFormat::SparseCSC;
         streamInfo.m_elementType   = elementType;
@@ -237,7 +321,7 @@ shared_ptr<DataDeserializer> CreatePlainTextDeserializer(const ConfigParameters&
 #if 1
         // BUGBUG: We pass these pathnames currently as a single string, since passing a vector<wstring> through the V1 Configs gets tripped up by * and :
         fileNamesArg.erase(0, 2); fileNamesArg.pop_back(); fileNamesArg.pop_back(); // strip (\n and )\n
-        let fileNames = msra::strfun::split(fileNamesArg, L"\n");
+        let fileNames = split(fileNamesArg, L"\n");
 #else
         vector<wstring> fileNames = streamConfigParameters(L"dataFiles", ConfigParameters::Array(Microsoft::MSR::CNTK::stringargvector()));
 #endif

@@ -376,6 +376,20 @@ static inline wcstring utf16(const std::wstring& p)
 {
     return p;
 }
+// convert a string to std::string requiring that all characters are in the ASCII range
+template <class _T>
+static inline std::string AsAsciiString(const std::basic_string<_T>& s)
+{
+    std::string res;
+    res.reserve(s.size());
+    for (auto c : s)
+    {
+        if (c < 0 || c > 127)
+            InvalidArgument("AsAsciiString: String is not 7-bit ASCII: %S", utf16(s).c_str());
+        res.push_back((char)c);
+    }
+    return res;
+}
 
 // ----------------------------------------------------------------------------
 // charpath() -- convert a wchar_t path to what gets passed to CRT functions that take narrow characters
