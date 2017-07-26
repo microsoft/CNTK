@@ -1326,41 +1326,46 @@ def test_user_deserializer_sequence_mode():
     run_minibatch_source(mbs, num_chunks=15, num_sequences_per_value=3)
 
 def test_index_caching(tmpdir):
-    import os, time, glob
+    pytest.skip("test_index_caching is disabled")
+    import os, time, glob, uuid
     MB = 1 << 20
     data = MBDATA_DENSE_1
     while(len(data) < 64 * MB):
         data += data
 
-    tmpfile = _write_data(tmpdir, data)
-    streams = stream_defs[0]
+    timeWithoutCache, timeWithCache = 0, 0 
 
     cpu=C.device.cpu()
+    streams = stream_defs[0]
 
-    cache_files = glob.glob(str(tmpdir + '/*.cache'))
-    for cache_file in cache_files:
-        os.remove(cache_file)
+    for _ in range(3):
+        tmpfile = _write_data(tmpdir, data, str(uuid.uuid4()))
+
+        cache_files = glob.glob(str(tmpdir + '/*.cache'))
+        for cache_file in cache_files:
+            os.remove(cache_file)
+
+        config = CTFDeserializer(tmpfile, streams)
+        config['cacheIndex'] = C.cntk_py.DictionaryValue(True)
+
+        start = time.time()
+        MinibatchSource(config, randomize=False).next_minibatch(1, device=cpu)
+        end = time.time()
+
+        timeWithoutCache += (end - start)
+
+        time.sleep(5)
+        
+        cache_files = glob.glob(str(tmpdir + '/*.cache'))
+        assert len(cache_files) == 1
 
 
-    config = CTFDeserializer(tmpfile, streams)
-    config['cacheIndex'] = C.cntk_py.DictionaryValue(True)
+        start = time.time()
+        MinibatchSource(config, randomize=False).next_minibatch(1, device=cpu)
+        end = time.time()
 
-    start = time.time()
-    MinibatchSource(config, randomize=False).next_minibatch(1, device=cpu)
-    end = time.time()
+        os.remove(tmpfile)
 
-    timeWithoutCache = end - start
-
-    time.sleep(5)
-    
-    cache_files = glob.glob(str(tmpdir + '/*.cache'))
-    assert len(cache_files) == 1
-
-
-    start = time.time()
-    MinibatchSource(config, randomize=False).next_minibatch(1, device=cpu)
-    end = time.time()
-
-    timeWithCache = end - start
+        timeWithCache += (end - start)
 
     assert timeWithCache < timeWithoutCache
