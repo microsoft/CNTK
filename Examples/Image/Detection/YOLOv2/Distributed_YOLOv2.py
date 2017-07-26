@@ -20,13 +20,16 @@ from TrainUDFyolov2 import *
 from PARAMETERS import *
 import PARAMETERS as par
 
+import pdb
+from cntk_debug import DebugLayer
+from cntk_debug_single import DebugLayerSingle
 
 # Create a minibatch source.
 def create_image_mb_source(image_file, gtb_file, is_training, total_number_of_samples):
 
     return yolo2.create_mb_source(par_image_height, par_image_width, par_num_channels, (5 * par_max_gtbs), image_file,
                                         gtb_file,
-                                        multithreaded_deserializer=True, 
+                                        multithreaded_deserializer=False,
                                         is_training=is_training, 
                                         max_samples=total_number_of_samples)
 
@@ -40,9 +43,9 @@ def create_trainer(to_train, epoch_size, minibatch_size, num_quantization_bits, 
                                               epoch_size)
 
 
-    mm_schedule = cntk.learners.momentum_schedule([par_momentum])
+    #mm_schedule = cntk.learners.momentum_schedule([par_momentum])
     #mm_schedule = cntk.learners.momentum_schedule([-minibatch_size / np.log(par_momentum)],epoch_size=epoch_size)
-    #mm_schedule = cntk.learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(par_momentum)])
+    mm_schedule = cntk.learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(par_momentum)])
     #mm_schedule = cntk.learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(par_momentum)], epoch_size)
 
     # Instantiate the trainer object to drive the model training
@@ -85,22 +88,53 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size,
     model_name = "checkpoint"
 
 
-    test_config = TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None
-    checkpoint_config = CheckpointConfig(filename=os.path.join(model_path, model_name),
-                                           frequency=5000,
-                                           preserve_all=True,
-                                           restore=restore) if model_path else None
-    cv_config = cntk.CrossValidationConfig(None, mb_size=par_minibatch_size, frequency=callback_frequency*par_epoch_size, callback=safe_model_callback) if callback_frequency is not None else None
+    #test_config = TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None
+    #checkpoint_config = CheckpointConfig(filename=os.path.join(model_path, model_name),
+    #                                       frequency=5000,
+    #                                       preserve_all=True,
+    #                                       restore=restore) if model_path else None
+    cv_config = cntk.CrossValidationConfig(None, mb_size=par_minibatch_size, frequency=1,
+                                           callback=safe_model_callback)
+
+    if False:
+        mb = train_source.next_minibatch(2)
+        test_features = mb[train_source.streams.features]
+
+        data_node = network['mse'].find_by_name('data')
+        feat = cntk.combine([data_node]).eval(test_features)
+        print("raw features:\n{}".format(feat[:, :, 22:23, :10]))
+
+        WH_out = network['mse'].find_by_name('WH-Out')
+        feat = cntk.combine([WH_out]).eval(test_features)
+        print("raw wh-out map: {}".format(feat[0, 527, :]))
+
+        udf_wh_out = network['mse'].find_by_name('WH_Out_d_alias')
+        feat = cntk.combine([udf_wh_out]).eval(test_features)
+        print("udf wh-out map: {}".format(feat[0, 527, :]))
+
+    use_training_session = True
+    if not use_training_session:
+        for i in range(3):
+            print("--- iteration {} ---".format(i))
+            data = train_source.next_minibatch(2, input_map=input_map)  # fetch minibatch.
+            trainer.train_minibatch({image_input: data[image_input].asarray(),
+                                     gtb_input: (data[gtb_input]).asarray()}, device=gpu(0))
+
     # Train all minibatches
-    training_session(
+    else:
+        training_session(
         trainer=trainer, mb_source=train_source,
         model_inputs_to_streams=input_map,
         mb_size=minibatch_size,
         progress_frequency=epoch_size,
-        checkpoint_config= CheckpointConfig(filename=os.path.join(model_path, "Checkpoint_YOLOv2"), restore=restore) if model_path is not None else None,
+        checkpoint_config= CheckpointConfig(filename=os.path.join(model_path, "Checkpoint_YOLOv2"), restore=False) if model_path is not None else None,
         test_config=TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None,
         cv_config=cv_config
     ).train()
+
+    #WH_out = network['mse'].find_by_name('WH-Out')
+    #feat = cntk.combine([WH_out]).eval(test_features)
+    #print("raw cntk: {}".format(feat[0, 527, :]))
 
 
 # Train and evaluate the network.
@@ -135,12 +169,20 @@ def yolov2_train_and_eval(network,
 
 
 if __name__ == '__main__':
+    DETERMINISTIC = False
+
+    if DETERMINISTIC:
+        from _cntk_py import set_fixed_random_seed, force_deterministic_algorithms
+
+        set_fixed_random_seed(1)
+        force_deterministic_algorithms()
+
 
     parser = argparse.ArgumentParser()
 
-    #data_path = os.path.join(par_abs_path, "..", "..", "DataSets","Pascal", "mappings")
-    data_path = os.path.join(par_abs_path, "..", "..", "DataSets", "Grocery")
-    data_path = os.path.join(par_abs_path, "..", "..", "DataSets", "Overfit")
+    if par.par_dataset_name == "Pascal_VOC_2007":data_path = os.path.join(par_abs_path, "..", "..", "DataSets","Pascal", "mappings")
+    elif par.par_dataset_name == "Grocery":data_path = os.path.join(par_abs_path, "..", "..", "DataSets", "Grocery")
+    elif par.par_dataset_name == "Overfit":data_path = os.path.join(par_abs_path, "..", "..", "DataSets", "Overfit")
     parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located',required=False, default=data_path)
     
     parser.add_argument('-trainimages', '--trainimages', help='File containing the images in ImageReader format',
@@ -173,7 +215,7 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
 
-    output_dir = ".\outputdir"#None
+    output_dir = os.path.join(".","outputdir")#None
     if args['outputdir'] is not None:
         output_dir = args['outputdir']
         model_path = args['outputdir'] + "/models"
@@ -208,6 +250,10 @@ if __name__ == '__main__':
     model = yolo2.create_yolov2_net(par)
 
     image_input = input_variable((par_num_channels, par_image_height, par_image_width), name="data")
+    #dummy = user_function(DebugLayerSingle(image_input, debug_name='image_input_d'))
+    #zeros = dummy * 0
+    #zero = reduce_mean(zeros)
+
     output = model(image_input)  # append model to image input
 
     # input for ground truth boxes
@@ -227,15 +273,17 @@ if __name__ == '__main__':
     else:
         gtb_transformed = gtb_input
 
-
     from ErrorFunction import get_error
-    mse = get_error(output, gtb_transformed, cntk_only=False)
+
+    if False:
+        output = user_function(DebugLayer(output, image_input, gtb_transformed, debug_name="out-img-gt"))
+    mse = get_error(output, gtb_transformed, cntk_only=False)# + zero
 
     network = {
         'feature': image_input,
         'gtb_in': gtb_input,
         'mse': mse,
-        'output': output,
+        'output': output
         #'trainfunction': ud_tf
     }
 
@@ -267,5 +315,6 @@ if __name__ == '__main__':
         output.save(save_path)
         print("Saved model to " + save_path)
 
-    from cntk.logging.graph import plot
-    plot(output, "./yopar.pdf")
+    #from cntk.logging.graph import plot
+    #plot(output, "./yopar.png")
+    #plot(network['mse'], "./yolo_mse.png")

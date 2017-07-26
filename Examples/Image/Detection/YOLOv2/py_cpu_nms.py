@@ -15,7 +15,11 @@ def py_cpu_nms(dets, thresh):
     y2 = dets[:, 3]
     scores = dets[:, 4]
 
-    areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+    min_float = np.finfo(np.float32).tiny
+    box_ws = np.maximum(x2-x1, min_float)
+    box_ys = np.maximum(y2-y1, min_float)
+    areas = box_ws * box_ys
+    #areas = (x2 - x1 + 1) * (y2 - y1 + 1)
     order = scores.argsort()[::-1]
 
     keep = []
@@ -27,8 +31,10 @@ def py_cpu_nms(dets, thresh):
         xx2 = np.minimum(x2[i], x2[order[1:]])
         yy2 = np.minimum(y2[i], y2[order[1:]])
 
-        w = np.maximum(0.0, xx2 - xx1 + 1)
-        h = np.maximum(0.0, yy2 - yy1 + 1)
+        #w = np.maximum(0.0, xx2 - xx1 + 1)
+        w = np.maximum(0.0, xx2 - xx1)
+        #h = np.maximum(0.0, yy2 - yy1 + 1)
+        h = np.maximum(0.0, yy2 - yy1)
         inter = w * h
         ovr = inter / (areas[i] + areas[order[1:]] - inter)
 

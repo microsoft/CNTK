@@ -54,12 +54,15 @@ def test_transpose_a_lot():
     for repeat in range(repeat_for):
         for i in range(1, 12):
             permutation = np.random.permutation(i + 1)
-            shape = []
-            entries = 1
-            for j in range(i + 1):
-                length = int(np.random.random_sample() * 4) + 2 # create random int [2,5]
-                shape += [length]
-                entries *= length
+            #shape = []
+            #entries = 1
+            #for j in range(i + 1):
+            #    length = int(np.random.random_sample() * 4) + 2 # create random int [2,5]
+            #    shape += [length]
+            #    entries *= length
+
+            shape = [np.random.randint(2, 5) for _ in range(i + 1)]
+            entries = np.product(shape)
 
             data = np.arange(entries)
             data.shape = shape
@@ -67,4 +70,4 @@ def test_transpose_a_lot():
             np_transposed = np.transpose(np.copy(data), np.copy(permutation))
             by_transposeAlot = transpose_a_lot(np.ascontiguousarray(np.copy(data)), np.copy(permutation)).eval()
 
-        assert np.alltrue(np_transposed == by_transposeAlot)
+            assert np.alltrue(np_transposed == by_transposeAlot)
