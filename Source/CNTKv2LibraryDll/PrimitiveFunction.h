@@ -757,6 +757,12 @@ namespace CNTK
         void SetDropoutRate(double dropoutRate);
 
         void SetRandomSeed(size_t seed);
+    private:
+        //aux functions
+        void CollectReduceOutputAxesForOutputShape(std::vector<Axis>& staticAxesToReduce,
+            std::vector<Axis>& batchAxesToReduce,
+            std::vector<Axis>& dynamicAxesToReduce,
+            bool & isAllAxesReduced);
 
     private:
         PrimitiveOpType m_op;

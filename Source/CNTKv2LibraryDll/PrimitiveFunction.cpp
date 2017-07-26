@@ -160,6 +160,7 @@ namespace CNTK
     {
         auto reduceAxis = [](Axis reductionAxis, Variable input, std::vector<Axis>& outputDynamicAxes)
         {
+            if (!reductionAxis.IsDynamicAxis()) return;
             reductionAxis = NormalizeAxis(reductionAxis, input);
             for (auto inputDynamicAxis : input.DynamicAxes())
             {
@@ -167,11 +168,25 @@ namespace CNTK
                     outputDynamicAxes.push_back(inputDynamicAxis);
             }
         };
+        auto anyOfAxesInReduction = [&functionConfig](std::function<bool (const Axis&)> axis_predicate)
+        {
+            if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis))
+                return axis_predicate(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
+            else
+            {
+                auto &reductionAxes = functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+                return std::any_of(reductionAxes.begin(), 
+                    reductionAxes.end(), 
+                    [&axis_predicate](const CNTK::DictionaryValue& axis) {return axis_predicate(axis.Value<Axis>()); });
 
+            }
+            return false;
+        };
+ 
         // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
         if ((op == PrimitiveOpType::SumAll) ||
-            (op == PrimitiveOpType::ReduceElements && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>() == Axis::AllAxes()) ||
+            (op == PrimitiveOpType::ReduceElements &&  anyOfAxesInReduction([](const Axis& axis) { return axis == Axis::AllAxes(); })) ||
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::EditDistanceError) ||
@@ -189,9 +204,25 @@ namespace CNTK
         {
             outputDynamicAxes = std::vector<Axis>({Axis::DefaultBatchAxis()});
         }
-        else if ((op == PrimitiveOpType::ReduceElements) && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>().IsDynamicAxis() && (inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()))
+        else if (op == PrimitiveOpType::ReduceElements 
+            && anyOfAxesInReduction([](const Axis& axis) { return axis.IsDynamicAxis(); }) //still need this condition to go to the default dynamic axes setting branch!
+            && (inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes())
+            )
         {
-            reduceAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0], outputDynamicAxes);
+            if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis)) 
+            {
+                auto reductionAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                reduceAxis(reductionAxis, inputs[0], outputDynamicAxes);
+            }
+            else if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+            {
+                auto &reductionAxes = functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+                for (const auto& axis : reductionAxes)
+                {
+                    auto reductionAxis = axis.Value<Axis>();
+                    reduceAxis(reductionAxis, inputs[0], outputDynamicAxes);
+                }
+            }
         }
         else if ((op == PrimitiveOpType::Times) && (functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>() == TimesReduceSequenceAxisWithoutInferredInputRank))
         {
@@ -855,30 +886,50 @@ namespace CNTK
                             bool keepDimensions = true;
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameReductionKeepDimensions))
                                 keepDimensions = m_attributes[PrimitiveFunction::AttributeNameReductionKeepDimensions].Value<bool>();
-
-                            auto reductionAxis = NormalizeAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0]);
-                            if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
-                                outputShape = keepDimensions ? NDShape(m_inputs[0].Shape().Rank(), 1) : NDShape({});
-                            else if (reductionAxis == Axis::DefaultBatchAxis())
+                            //Note that we need to normalize the axes inside the attributes here/in InferOutputs
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec))
                             {
-                                auto dynamicAxes = m_inputs[0].DynamicAxes();
-                                if (dynamicAxes != Axis::UnknownDynamicAxes())
-                                {
-                                    if (std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis()) == dynamicAxes.end())
-                                        LogicError("ReduceElements: operand %S; No batch axis found during reduction along the batch axis.", m_inputs[0].AsString().c_str());
-
-                                    if (dynamicAxes.size() > 1)
-                                        LogicError("ReduceElements: operand %S; Reduction along the batch axis on input sequence is currently unsupported.", m_inputs[0].AsString().c_str());
+                                auto &axisDictionary = m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+                                for (auto& value : axisDictionary) {
+                                    auto reductionAxis = NormalizeAxis(value.Value<Axis>(), m_inputs[0]);
                                 }
-
-                                outputShape = m_inputs[0].Shape();
                             }
-                            else if (reductionAxis.IsDynamicAxis())
-                                outputShape = m_inputs[0].Shape();
+                            else if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxis))
+                            {
+                                auto reductionAxis = NormalizeAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0]);
+                            }
                             else
                             {
-                                std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };
-                                outputShape = ReductionOpOutputShape(m_op, m_inputs[0].Shape(), reductionAxes, /*preserveReductionAxes =*/ keepDimensions);
+                                RuntimeError("Function '%ls': Reduce operation with no '%ls' or  '%ls' attributes",
+                                    AsString().c_str(),
+                                    PrimitiveFunction::AttributeNameAxis.c_str(),
+                                    PrimitiveFunction::AttributeNameAxisVec.c_str()
+                                );
+                            }
+
+                            std::vector<Axis> staticAxesToReduce;
+                            std::vector<Axis> batchAxesToReduce;
+                            std::vector<Axis> dynamicAxesToReduce;
+                            bool  isAllAxesReduced;
+
+                            CollectReduceOutputAxesForOutputShape(staticAxesToReduce, batchAxesToReduce, dynamicAxesToReduce, isAllAxesReduced);
+                            if (isAllAxesReduced) {
+                                outputShape = keepDimensions ? NDShape(m_inputs[0].Shape().Rank(), 1) : NDShape({});
+                            }
+                            else {
+                                //TODO for very far future: Handle reduction on (multiple) batches all in once: batchAxesToReduce 
+                                //TODO for very far future: Handle reduction on (multiple) sequences all in once: sequenceAxesToReduce
+                                if (!staticAxesToReduce.empty()) 
+                                {
+                                    std::vector<int> reductionAxesInIndcies(staticAxesToReduce.size());
+                                    for (auto i = 0; i < staticAxesToReduce.size(); ++i) 
+                                    {
+                                        reductionAxesInIndcies[i] = staticAxesToReduce[i].StaticAxisIndex();
+                                    }
+                                    outputShape = ReductionOpOutputShape(m_op, m_inputs[0].Shape(), reductionAxesInIndcies, /*preserveReductionAxes =*/ keepDimensions);
+                                }
+                                else
+                                    outputShape = m_inputs[0].Shape();
                             }
                             break;
                         }
@@ -1025,6 +1076,68 @@ namespace CNTK
                     outputs.push_back(maskOutput);
                 }
             }
+        }
+    }
+
+    /**
+    * Collect output axes for reduce operation.
+    * @param staticAxesToReduce a list of static axes to reduce
+    * @param batchAxesToReduce a list of batch axes to reduce
+    * @param sequenceAxesToReduce a list of sequence axes to reduce
+    * @param isAllAxesReduced a flag which indicates whether all axes need to be reduced
+    */
+    void PrimitiveFunction::CollectReduceOutputAxesForOutputShape(
+        std::vector<Axis>& staticAxesToReduce,
+        std::vector<Axis>& batchAxesToReduce,
+        std::vector<Axis>& sequenceAxesToReduce,
+        bool & isAllAxesReduced)
+    {
+        isAllAxesReduced = false;
+
+        auto collect_axis = [&](const Axis& reductionAxis) {
+            if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
+                isAllAxesReduced = true;
+            else if (reductionAxis == Axis::DefaultBatchAxis())
+            {
+                auto dynamicAxes = m_inputs[0].DynamicAxes();
+                if (dynamicAxes != Axis::UnknownDynamicAxes())
+                {
+                    if (std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis()) == dynamicAxes.end())
+                        LogicError("ReduceElements: operand %S; No batch axis found during reduction along the batch axis.", m_inputs[0].AsString().c_str());
+
+                    if (dynamicAxes.size() > 1)
+                        LogicError("ReduceElements: operand %S; Reduction along the batch axis on input sequence is currently unsupported.", m_inputs[0].AsString().c_str());
+                }
+                batchAxesToReduce.push_back(reductionAxis);
+            }
+            else if (reductionAxis.IsSequenceAxis()) 
+            {
+                sequenceAxesToReduce.push_back(reductionAxis);
+            }
+            else
+            {
+                staticAxesToReduce.push_back(reductionAxis);
+            }
+        };
+        if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec))
+        {
+            const auto &axisDictionary = m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+            for (const auto& value : axisDictionary) {
+                collect_axis(value.Value<Axis>());
+            }
+
+        }
+        else if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxis))
+        {
+            collect_axis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
+        }
+        else
+        {
+            RuntimeError("Function '%ls': Reduce operation with no '%ls' or  '%ls' attributes",
+                AsString().c_str(),
+                PrimitiveFunction::AttributeNameAxis.c_str(),
+                PrimitiveFunction::AttributeNameAxisVec.c_str()
+            );
         }
     }
 

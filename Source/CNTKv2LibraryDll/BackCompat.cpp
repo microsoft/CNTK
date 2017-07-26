@@ -323,7 +323,7 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(ReduceElementsNode))
                 {
                     auto reduceElementsNode = node->As<ReduceElementsNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(reduceElementsNode->ReductionAxis());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(AsAxis(reduceElementsNode->ReductionAxis()));
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameReductionOpName] = reduceElementsNode->ReductionOpName();
 
                     opType = PrimitiveOpType::ReduceElements;

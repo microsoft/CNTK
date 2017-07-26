@@ -1093,6 +1093,23 @@ namespace CNTK
         }
 
         ///
+        /// Indicate whether 'this' Axis is a batch axis.
+        ///
+        bool IsBatchAxis() const
+        {
+            //TODO: Do we assume there is only one batch axis in the whole system?
+            return (this->IsDynamicAxis() && !this->IsSequenceAxis());
+        }
+
+        ///
+        /// Indicate whether 'this' Axis is a sequence axis.
+        ///
+        bool IsSequenceAxis() const
+        {
+            return (this->IsDynamicAxis() && this->m_isOrderedDynamicAxis);
+        }
+
+        ///
         /// Returns a boolean indicating if 'this' Axis is ordered; i.e. if there is an ordering between the dimensions along this axis.
         ///
         bool IsOrdered() const { return IsStaticAxis() || m_isOrderedDynamicAxis; }
@@ -4054,7 +4071,37 @@ namespace CNTK
     /// Create an instance of the CNTK built-in Prod reduction operation on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr ReduceProd(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    //multiple axes reduction below:
 
+    ///
+    /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in LogSum reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceLogSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Mean reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceMean(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Max reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceMax(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Min reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceMin(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Prod reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
     ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
@@ -4248,7 +4295,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-
+ 
     ///
     /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
     ///
