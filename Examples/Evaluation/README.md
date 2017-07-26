@@ -18,7 +18,7 @@ On Linux, only C++ is supported. Please refer to Makefile for building samples. 
 
 # Legacy EvalDll C++/C# Examples
 
-Prior to the CNTK 2.0 version, the CNTK EvalDLL was used to evaluate model trained by using cntk.exe with BrainScript. The EvalDLL is still supported, but works only for the model created by cntk.exe with BrainScript. It can not be used to evaluate models created by CNTK 2.0 using Python. We strongly recommend to use the CNTK 2.0 Libraries for evaluation, as it provides more features.
+Prior to the CNTK v2, the CNTK EvalDLL was used to evaluate model trained by using cntk.exe with BrainScript. The EvalDLL is still supported, but works only for the model created by cntk.exe with BrainScript. It can not be used to evaluate models created by CNTK 2.0 (and up) using Python. We strongly recommend to use the latest CNTK v2 libraries for evaluation, as it provides more features.
 
 The EvalClients.sln inside LegacyEvalDll folder contains the following projects demonstrating how to use the EvalDll library in C++ and C#.
 
