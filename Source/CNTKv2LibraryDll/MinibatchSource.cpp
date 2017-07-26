@@ -159,6 +159,12 @@ namespace CNTK
         m_shim->Init(config);
     }
 
+    bool CompositeMinibatchSource::IsInfinite()
+    {
+        return m_maxNumSamplesToRead == MinibatchSource::InfinitelyRepeat &&
+               m_maxNumSweepsToRead == MinibatchSource::InfinitelyRepeat;
+    }
+
     /*virtual*/ const std::unordered_map<StreamInformation, MinibatchData>&
     CompositeMinibatchSource::GetNextMinibatch(size_t minibatchSizeInSequences,
                                                size_t minibatchSizeInSamples,

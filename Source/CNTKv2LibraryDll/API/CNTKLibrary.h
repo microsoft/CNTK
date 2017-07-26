@@ -5241,6 +5241,11 @@ namespace CNTK
         ///
         virtual void RestoreFromCheckpoint(const Dictionary& /*checkpoint*/) {}
 
+        virtual bool IsInfinite()
+        {
+            return false;
+        }
+
     public:
         ///
         /// Gets the description of the stream with given name. 

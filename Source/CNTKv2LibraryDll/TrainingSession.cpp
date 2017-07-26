@@ -22,6 +22,13 @@ namespace CNTK
             find_if(s.begin(), s.end(), [](wchar_t c) { return !isdigit(c); }) == s.end();
     }
 
+    inline static bool IsInfinite(MinibatchSourcePtr mbSource, size_t numberOfSamples = std::numeric_limits<size_t>::max())
+    {
+        return (numberOfSamples == MinibatchSource::InfinitelyRepeat ||
+                numberOfSamples >= (size_t)std::numeric_limits<long long>::max()) &&
+            mbSource->IsInfinite();
+    }
+
     CheckpointConfig::CheckpointConfig(
         const std::wstring& checkPointFileName,
         size_t checkpointFrequencyInSamples,
@@ -179,6 +186,9 @@ namespace CNTK
             restoredNumberOfSamples = m_trainer->TotalNumberOfSamplesSeen();
         }
 
+        if (IsInfinite(m_source, m_maxNumSamples))
+            InvalidArgument("Train minibatch source must have a limited number of samples or sweeps.");
+
         // Main train loop.
         bool earlyExit = false;
         while (shouldTrain)
@@ -245,6 +255,9 @@ namespace CNTK
     {
         if (m_cv.m_source) // Running cross validation
         {
+            if (IsInfinite(m_cv.m_source, m_cv.m_maxSamples))
+                InvalidArgument("Cross validation minibatch source must have a limited number of samples or sweeps.");
+
             std::unordered_map<Variable, ValuePtr> minibatch;
             double accumulatedError = 0;
             size_t totalNumberOfSamples = 0;
@@ -283,6 +296,9 @@ namespace CNTK
     {
         if (!m_test.m_source)
             return;
+
+        if (IsInfinite(m_test.m_source))
+            InvalidArgument("Test minibatch source must have a limited number of samples or sweeps.");
 
         std::unordered_map<Variable, ValuePtr> minibatch;
         size_t totalNumberOfSamples = 0;

@@ -518,6 +518,13 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
         '''
         return self.stream_info(name)
 
+    def is_infinite(self):
+        '''
+        Should return true if the user has not specified any limit on the number of sweeps and samples.
+        '''
+        return False
+
+
 class MinibatchSourceFromData(UserMinibatchSource):
     '''
     This wraps in-memory data as a CNTK MinibatchSource object (aka "reader"), used to feed the data into a TrainingSession.
