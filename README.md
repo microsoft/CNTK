@@ -2,6 +2,8 @@
 
 ## Latest news 
 
+***2017-07-26.*** Slides for CNTK tutorial at CVPR 2017 has been posted [here](https://www.cntk.ai/Tutorials/CVPR2017/CVPR_2017_Tutorial_final.pdf). 
+
 ***2017-07-07.*** CNTK July interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2064). 
 
 ***2017-06-26.*** A great class for getting started with both Deep Learning and CNTK, [Deep Learning Explained](https://www.edx.org/course/deep-learning-explained-microsoft-dat236x) is now available on edX.
