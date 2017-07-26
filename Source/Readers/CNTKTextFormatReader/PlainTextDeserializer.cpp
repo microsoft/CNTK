@@ -6,6 +6,7 @@
 //
 
 #include "stdafx.h"
+#include "Basics.h"
 #include "DataDeserializer.h"
 #include "ReaderConstants.h"
 #include "File.h"
@@ -137,7 +138,14 @@ shared_ptr<DataDeserializer> CreatePlainTextDeserializer(const ConfigParameters&
         streamInfo.m_sampleLayout  = NDShape{ streamConfigParameters(L"dim") };
         streamInfo.m_definesMbSize = streamConfigParameters(L"definesMBSize", false);
         // list of files. Wildcard expansion is happening here.
+        wstring fileNamesArg = streamConfigParameters(L"dataFiles");
+#if 1
+        // BUGBUG: We pass these pathnames currently as a single string, since passing a vector<wstring> through the V1 Configs gets tripped up by * and :
+        fileNamesArg.erase(0, 2); fileNamesArg.pop_back(); fileNamesArg.pop_back(); // strip (\n and )\n
+        let fileNames = msra::strfun::split(fileNamesArg, L"\n");
+#else
         vector<wstring> fileNames = streamConfigParameters(L"dataFiles", ConfigParameters::Array(Microsoft::MSR::CNTK::stringargvector()));
+#endif
         vector<wstring> expandedFileNames;
         for (let& fileName : fileNames)
             expand_wildcards(fileName, expandedFileNames);

@@ -43,6 +43,7 @@ struct PlainTextStreamConfiguration : public StreamConfiguration
     PlainTextVocabularyConfiguration m_vocabularyConfig;
 };
 
+// Create a PlainTextDeserializer configuration record that can be passed to a CompositeMinibatchSource.
 // parameters needed:
 //  - array of streams:
 //     - dataFiles: main data file names--array of strings (possibly allow single string and array); allow wildcard  --check with Eldar on whether that is common
@@ -67,9 +68,19 @@ static Deserializer PlainTextDeserializer(const std::vector<PlainTextStreamConfi
         const auto& key = s.m_streamName;
         Dictionary stream;
         // PlainTextDeserializer-specific fields
+#if 1   // working around the V1 dictionary which cannot handle arrays of strings with wildcards and colons
+        wstring fileNames = L"(\n";
+        for (let& n : s.m_fileNames)
+        {
+            fileNames.append(n);
+            fileNames.append(L"\n");
+        }
+        fileNames += L")\n";
+#else
         std::vector<DictionaryValue> fileNames;
         for (let& n : s.m_fileNames)
             fileNames.push_back(n);
+#endif
         stream[L"dataFiles"]            = fileNames;
         auto tmp = s.m_vocabularyConfig;
         stream[L"vocabularyFile"]       = s.m_vocabularyConfig.fileName;
@@ -112,8 +123,8 @@ void Train(const DeviceDescriptor& device, bool useSparseLabels)
     // data
     let minibatchSource = CreateCompositeMinibatchSource(MinibatchSourceConfig({ PlainTextDeserializer(
         {
-            PlainTextStreamConfiguration(L"src", srcVocabSize, { L"src.txt" }, { L"src.vocab", L"<s>", L"</s>", L"<unk/>" }),
-            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"tgt.txt" }, { L"tgt.vocab", L"<s>", L"</s>", L"<unk/>" })
+            PlainTextStreamConfiguration(L"src", srcVocabSize, { L"d:/work/Karnak/sample-model/data/*.src", L"xyz" }, { L"d:/work/Karnak/sample-model/data/vocab.src", L"<s>", L"</s>", L"<unk/>" }),
+            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/*.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk/>" })
         })},
         /*randomize=*/false/*for now*/));
 }
