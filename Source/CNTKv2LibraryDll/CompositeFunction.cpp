@@ -622,8 +622,14 @@ namespace CNTK
                 case PrimitiveOpType::Tanh:
                     computationNodePtr = New<TanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::Acos:
+                    computationNodePtr = New<AcosNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::Cos:
                     computationNodePtr = New<CosineNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Asin:
+                    computationNodePtr = New<AsinNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
                 case PrimitiveOpType::Sin:
                     computationNodePtr = New<SinNode<ElementType>>(network->GetDeviceId(), internalNodeName);

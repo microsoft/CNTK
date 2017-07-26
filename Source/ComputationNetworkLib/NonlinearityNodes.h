@@ -114,6 +114,8 @@ public:
 // FloorNode (input)
 // CosineNode (input)
 // SinNode (input)
+// AsinNode (input)
+// AcosNode (input)
 // CoshNode (input)
 // SinhNode (input)
 // Abs(input)
@@ -147,6 +149,8 @@ public:
 
 //                                    Name                   Forward and            Backward opcodes                                                 Gradient optype
 DeclareUnaryElementWiseWithOpCodeNode(Abs,                   Abs,                   ElementwiseProductWithAbsDerivative,                             binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Acos,                  Acos,                  ElementwiseProductWithAcosDerivative,                             binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Asin,                  Asin,                  ElementwiseProductWithAsinDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Cosh,                  Cosh,                  ElementwiseProductWithCoshDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Cosine,                Cosine,                ElementwiseProductWithCosDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Exp,                   Exp,                   ElementwiseProduct,                                              binaryWithOutputGradient);

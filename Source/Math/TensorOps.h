@@ -49,6 +49,8 @@ OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
 OverloadUnaryMathFns(floor);
 OverloadUnaryMathFns(log1p);
+OverloadUnaryMathFns(asin);
+OverloadUnaryMathFns(acos);
 OverloadUnaryMathFns(sinh);
 OverloadUnaryMathFns(cosh);
 
@@ -273,6 +275,8 @@ DefUnaryOp(Sin, sin_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
 DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (exp_(a)-1));
 DefUnaryOp(StableSigmoid, StableSigmoid(a));
+DefUnaryOp(Asin, asin_(a));
+DefUnaryOp(Acos, acos_(a));
 DefUnaryOp(Sinh, sinh_(a));
 DefUnaryOp(Cosh, cosh_(a));
 #pragma pop_macro("DefUnaryOp")
@@ -316,6 +320,8 @@ DefBinaryOp(ElementwiseProductWithReciprocalDerivative, a * -Sqr(b)); // b = out
 DefBinaryOp(ElementwiseProductWithSqrtDerivative, a / (2 * b)); // b = output; d/dx sqrt(x) = 1/(2 * sqrt(x)) --> note this is the same as ElementwiseQuotient w a constant; if more show up like this we should add more template params
 DefBinaryOp(SqrOfDifference, Sqr(a - b));
 DefBinaryOp(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, b >= 0 ? a : a*(1+b)); // b = output;
+DefBinaryOp(ElementwiseProductWithAsinDerivative, a / sqrt_(1 - b * b)); // note: b = input for asin()
+DefBinaryOp(ElementwiseProductWithAcosDerivative, -a / sqrt_(1 - b * b)); // note: b = input for acos()
 DefBinaryOp(ElementwiseProductWithSinhDerivative, a * cosh_(b)); // note: b = input for sinh()
 DefBinaryOp(ElementwiseProductWithCoshDerivative, a * sinh_(b)); // note: b = input for cosh()
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
