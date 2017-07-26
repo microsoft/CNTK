@@ -32,3 +32,4 @@ dependencies:
   - sphinx-rtd-theme==0.2.4
   - sphinx==1.5.4
   - twine==1.8.1
+  - protobuf==3.2.0
