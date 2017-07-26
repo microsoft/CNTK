@@ -1,0 +1,35 @@
+CPU info:
+    CPU Model Name: Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+    Hardware threads: 8
+    Total Memory: 33417320 kB
+-------------------------------------------------------------------
++ '[' Windows_NT '!=' Windows_NT ']'
++ [[ C:\CNTKTestData == '' ]]
++ [[ ! -d C:\CNTKTestData ]]
+++ cygpath -au 'C:\CNTKTestData'
++ TEST_DATA_DIR=/cygdrive/c/CNTKTestData
+++ cygpath -au 'C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\Tools\\..\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe'
++ VSTEST_CONSOLE='/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe'
++ test -x '/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe'
+++ cygpath -au 'C:\Users\zhouwang\Documents\01_OneHidden.model'
++ MODEL_FILE=/cygdrive/c/Users/zhouwang/Documents/01_OneHidden.model
++ cp /cygdrive/c/CNTKTestData/PreTrainedModels/EvalModels/01_OneHidden /cygdrive/c/Users/zhouwang/Documents/01_OneHidden.model
++ '[' cpu == cpu ']'
++ export CUDA_VISIBLE_DEVICES=-1
++ CUDA_VISIBLE_DEVICES=-1
+++ cygpath -aw /cygdrive/c/repos/cntk/x64/release_UWP/CNTKLibraryCPPUWPEvalExamplesTests/AppPackages/CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP_Test/CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP.appx
++ '/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe' /inIsolation /Platform:x64 'C:\repos\cntk\x64\release_UWP\CNTKLibraryCPPUWPEvalExamplesTests\AppPackages\CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP_Test\CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP.appx'
+Microsoft (R) Test Execution Command Line Tool Version 14.0.25420.1
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+Starting test execution, please wait...
+Passed   UWPTestSanity
+Passed   UWPTestModelLoad
+Passed   UWPTestEval
+
+Total tests: 3. Passed: 3. Failed: 0. Skipped: 0.
+Test Run Successful.
+Test execution time: 6.7880 Seconds
++ rm -rf /cygdrive/c/Users/zhouwang/Documents/01_OneHidden.model
++ [[ -f /cygdrive/c/Users/zhouwang/Documents/01_OneHidden.model ]]
++ exit 0

@@ -31,6 +31,10 @@
 
 #include "CNTKLibraryInternals.h"
 
+// undef max in the rest of the file to avoid conflicts with the max macro defined in windows.h.
+#pragma push_macro("max")
+#undef max
+
 namespace CNTK
 {
     ///
@@ -5949,3 +5953,6 @@ namespace CNTK
 
 #endif // !CNTK_HEADERONLY_DEFINITIONS
 }
+
+// restore saved macro definition
+#pragma pop_macro("max")

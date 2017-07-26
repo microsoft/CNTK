@@ -155,6 +155,7 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
     write("\n[CALL STACK]\n");
 
 #ifdef _WIN32
+#ifndef CNTK_UWP
 
     // RtlCaptureStackBackTrace() is a kernel API without default binding, we must manually determine its function pointer.
     typedef USHORT(WINAPI * CaptureStackBackTraceType)(__in ULONG, __in ULONG, __out PVOID*, __out_opt PULONG);
@@ -206,7 +207,7 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
     free(symbolInfo);
 
     SymCleanup(process);
-
+#endif // CNTK_UWP
 #else // Linux
 
     unsigned int MAX_NUM_FRAMES = 1024;

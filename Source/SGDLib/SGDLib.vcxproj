@@ -45,13 +45,13 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\CNTKv2LibraryDll;$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(MSMPI_INC);$(NvmlInclude);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">$(SolutionDir)Source\1BitSGD;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(CNTK_ENABLE_ASGD)'!='false'">$(SolutionDir)Source\multiverso\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(CNTK_ENABLE_1BitSGD)'=='true' and '!$(IsUWP)'">$(SolutionDir)Source\1BitSGD;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(CNTK_ENABLE_ASGD)'!='false' and '!$(IsUWP)'">$(SolutionDir)Source\multiverso\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>WIN32;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">QUANTIZED_GRADIENT_AGGREGATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_ASGD)'!='false'">ASGD_PARALLEL_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true' and '!$(IsUWP)'">QUANTIZED_GRADIENT_AGGREGATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_ASGD)'!='false' and '!$(IsUWP)'">ASGD_PARALLEL_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -63,7 +63,7 @@
   <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
       <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true' and '!$(IsUWP)'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -76,7 +76,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true' and '!$(IsUWP)'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
@@ -154,6 +154,6 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Error Condition="!$(HasMultiverso) And '$(CNTK_ENABLE_ASGD)'!='false'" Text="CNTK requires Multiverso to build, Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#enlisting-in-the-cntk-github-repository for installation instructions." />
+    <Error Condition="!$(HasMultiverso) And '$(CNTK_ENABLE_ASGD)'!='false' and '!$(IsUWP)'" Text="CNTK requires Multiverso to build, Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#enlisting-in-the-cntk-github-repository for installation instructions." />
   </Target>
 </Project>

@@ -6,7 +6,6 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Utils.h"
-#include "PerformanceProfiler.h"
 
 namespace CNTK
 {

@@ -1,9 +1,9 @@
 dataDir: ../Data
 
 tags:
-    - bvt-e ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
-    - nightly-e
-    - weekly-e
+    - bvt-e (build_sku != 'uwp') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+    - nightly-e (build_sku != 'uwp')
+    - weekly-e (build_sku != 'uwp')
 
 testCases:
   CNTK Run must be completed:

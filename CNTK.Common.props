@@ -16,6 +16,7 @@
 
     <GpuBuild>true</GpuBuild>
     <GpuBuild Condition="$(Configuration.EndsWith('_CpuOnly'))">false</GpuBuild>
+    <GpuBuild Condition="$(Configuration.EndsWith('_UWP'))">false</GpuBuild>
 
     <CpuOnlyBuild>true</CpuOnlyBuild>
     <CpuOnlyBuild Condition="$(GpuBuild)">false</CpuOnlyBuild>
