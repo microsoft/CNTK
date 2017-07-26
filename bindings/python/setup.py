@@ -158,7 +158,7 @@ cntk_module = Extension(
 # Do not include examples
 packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
 
-package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt'] }
+package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt', 'contrib/deeprl/tests/data/initial_policy_network.dnn'] }
 
 if IS_WINDOWS:
     # On Windows copy all runtime libs to the base folder of Python

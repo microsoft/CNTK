@@ -5,7 +5,13 @@
 # ==============================================================================
 
 import unittest
-from unittest.mock import MagicMock, Mock, patch
+try:
+    import unittest.mock as mock
+    from unittest.mock import MagicMock, Mock, patch
+except ImportError:
+    # Note: separate install on Py 2.x (pip install mock)
+    import mock
+    from mock import MagicMock, Mock, patch
 
 import cntk.contrib.deeprl.tests.spaces as spaces
 import numpy as np
@@ -35,9 +41,9 @@ class PolicyGradientTest(unittest.TestCase):
         self.assertEqual(mock_model.call_count, 2)
         mock_model.assert_has_calls(
             [
-                unittest.mock.call((1,), 2, '[10]', cross_entropy_with_softmax,
+                mock.call((1,), 2, '[10]', cross_entropy_with_softmax,
                     use_placeholder_for_input=True),
-                unittest.mock.call((1,), 1, '[10]', use_placeholder_for_input=True)
+                mock.call((1,), 1, '[10]', use_placeholder_for_input=True)
             ],
             any_order=True)
 
@@ -98,9 +104,9 @@ class PolicyGradientTest(unittest.TestCase):
         self.assertEqual(mock_model.call_count, 2)
         mock_model.assert_has_calls(
             [
-                unittest.mock.call((2, 1), 2, '[2]', cross_entropy_with_softmax,
+                mock.call((2, 1), 2, '[2]', cross_entropy_with_softmax,
                     use_placeholder_for_input=True),
-                unittest.mock.call((2, 1), 1, '[2]', use_placeholder_for_input=True)
+                mock.call((2, 1), 1, '[2]', use_placeholder_for_input=True)
             ],
             any_order=True)
 
@@ -121,9 +127,9 @@ class PolicyGradientTest(unittest.TestCase):
         self.assertEqual(mock_model.call_count, 2)
         mock_model.assert_has_calls(
             [
-                unittest.mock.call((1,), 2, cross_entropy_with_softmax,
+                mock.call((1,), 2, cross_entropy_with_softmax,
                     use_placeholder_for_input=True),
-                unittest.mock.call((1,), 1, use_placeholder_for_input=True)
+                mock.call((1,), 1, use_placeholder_for_input=True)
             ],
             any_order=True)
 
