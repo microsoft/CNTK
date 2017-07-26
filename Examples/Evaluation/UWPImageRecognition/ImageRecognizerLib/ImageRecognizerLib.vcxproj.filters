@@ -16,8 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="$(TargetDir)\Cntk.Core_app-$(CntkComponentVersion).dll" />
-    <None Include="$(TargetDir)\Cntk.Math_app-$(CntkComponentVersion).dll" />
-    <None Include="$(TargetDir)\libopenblas.dll" />
+    <None Include="utils.inl" />
   </ItemGroup>
 </Project>
