@@ -17,8 +17,22 @@
 
 using namespace CNTK;
 using namespace std;
+using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK {
+
+// helpers
+static void LoadTextFileAsCharArray(vector<char>& buf, const wstring& path, uint64_t begin = 0, uint64_t end = SIZE_MAX)
+{
+    File f(path, fileOptionsRead | fileOptionsBinary);
+    if (end == SIZE_MAX)
+        end = f.Size();
+    f.SetPosition(begin);
+    buf.reserve(end - begin + 1); // add 1 byte as courtesy to the caller, which needs it for the 0-terminator
+    freadOrDie(buf, end - begin, f);
+}
+
+bool IsSpace(char c) { return c == ' ' || c == '\t' || c == '\r'; }
 
 // ===========================================================================
 // This class implements a plain-text deserializer, for lines of space-separate tokens
@@ -28,6 +42,7 @@ namespace CNTK {
 class PlainTextDeserializerImpl : public DataDeserializer
 {
 public:
+    // configuration of each text stream
     const struct PlainTextVocabularyConfiguration
     {
         const std::wstring fileName;
@@ -44,16 +59,93 @@ public:
         const PlainTextVocabularyConfiguration m_vocabularyConfig;
     };
 
-    class PlainTextStream : public PlainTextStreamConfiguration
+    // info stored for each text stream
+    struct PlainTextStream : public PlainTextStreamConfiguration
     {
-    public:
-        PlainTextStream(const PlainTextStreamConfiguration& streamConfig) : PlainTextStreamConfiguration(streamConfig) { }
+        // constructor
+        PlainTextStream(const PlainTextStreamConfiguration& streamConfig) : PlainTextStreamConfiguration(streamConfig)
+        {
+            // index all files
+            // That is, determine all line offsets and word counts and remember them in m_textLineRefs.
+            // TODO: Later this can be cached.
+            vector<char> fileAsCString;
+            let numWords0 = !m_vocabularyConfig.insertAtStart.empty() + !m_vocabularyConfig.insertAtEnd.empty(); // initial count
+            m_textLineRefs.resize(m_fileNames.size());
+            m_totalNumWords = 0;
+            for (size_t i = 0; i < m_fileNames.size(); i++)
+            {
+                let& fileName = m_fileNames[i];
+                auto& thisFileTextLineRefs = m_textLineRefs[i];
+                // load file
+                // TODO: This should use smaller memory size; no need to allocate a GB of RAM for this indexing process.
+                LoadTextFileAsCharArray(fileAsCString, fileName);
+                if (fileAsCString.back() != '\n') // this is required for correctness of the subsequent loop
+                {
+                    fprintf(stderr, "PlainTextStream: Missing newline character at end of file %S\n", fileName.c_str());
+                    fileAsCString.push_back('\n');
+                }
+                // determine line offsets and per-line word counts
+                // This is meant to run over files of GB size and thus be fast.
+                const char* pdata = fileAsCString.data(); // start of buffer
+                const char* pend = pdata + fileAsCString.size();
+                for (const char* p0 = pdata; p0 < pend; p0++) // loop over lines
+                {
+                    const char* p; // running pointer
+                    for (p = p0; IsSpace(*p); p++) // skip initial spaces
+                        ;
+                    size_t numWords = numWords0;
+                    bool prevIsSpace = true;
+                    for (p = p0; *p != '\n'; p++) // count all space/non-space transitions in numWords
+                    {
+                        let thisIsSpace = IsSpace(*p);
+                        numWords += prevIsSpace && !thisIsSpace;
+                        prevIsSpace = thisIsSpace;
+                    }
+                    thisFileTextLineRefs.push_back(TextLineRef{ (uint64_t)(p0 - pdata), numWords });
+                    m_totalNumWords += numWords;
+                    p0 = p; // now points to '\n'; will be increased above
+                }
+            }
+        }
+
+        // information organized by files
+        struct TextLineRef
+        {
+            const uint64_t beginOffset; // byte offset of this line in the file
+            const size_t numWords;      // number of word tokens in the line
+        };
+        vector<vector<TextLineRef>> m_textLineRefs; // [fileIndex][lineIndex] -> (byte offset of line, #words in this line)
+        size_t m_totalNumWords; // total word count for this stream
     };
 
-    PlainTextDeserializerImpl(const vector<PlainTextDeserializerImpl::PlainTextStreamConfiguration>& streamConfigs,
+    PlainTextDeserializerImpl(const vector<PlainTextDeserializerImpl::PlainTextStreamConfiguration>& streamConfigs, bool cacheIndex,
                               DataType elementType, bool primary, int traceLevel) :
-        m_streams(streamConfigs.begin(), streamConfigs.end()), m_elementType(elementType), m_primary(primary), m_traveLevel(traceLevel)
+        m_streams(streamConfigs.begin(), streamConfigs.end()), m_cacheIndex(cacheIndex), m_elementType(elementType), m_primary(primary), m_traceLevel(traceLevel)
     {
+        // statistics and verify that all files have the same #lines
+        if (m_streams.empty())
+            InvalidArgument("PlainTextDeserializer: At least one stream must be specified.");
+        m_totalNumLines = 0;
+        size_t totalNumSrcWords = 0;
+        let& firstFileTextLineRefs = m_streams[0].m_textLineRefs;
+        for (size_t j = 0; j < firstFileTextLineRefs.size(); j++)
+        {
+            m_totalNumLines += firstFileTextLineRefs[j].size();
+            totalNumSrcWords += m_streams[0].m_totalNumWords;
+        }
+        for (size_t i = 1; i < m_streams.size(); i++)
+        {
+            let& thisFileTextLineRefs  = m_streams[i].m_textLineRefs;
+            if (firstFileTextLineRefs.size() != thisFileTextLineRefs.size())
+                InvalidArgument("PlainTextDeserializer: All streams must have the same number of files.");
+            for (size_t j = 0; j < firstFileTextLineRefs.size(); j++)
+                if (firstFileTextLineRefs[j].size() != thisFileTextLineRefs[j].size())
+                    InvalidArgument("PlainTextDeserializer: Files across streams must have the same number of lines.");
+        }
+
+        if (m_traceLevel >= 1)
+            fprintf(stderr, "PlainTextDeserializer: %d files with %d lines and %d words in the first stream out of %d\n",
+                (int)m_streams[0].m_textLineRefs.size(), (int)m_totalNumLines, (int)totalNumSrcWords, (int)m_streams.size());
     }
 
     ///
@@ -102,9 +194,12 @@ public:
 
 private:
     vector<PlainTextStream> m_streams;
+    const bool m_cacheIndex;
     const DataType m_elementType;
     const bool m_primary;
-    const int m_traveLevel;
+    const int m_traceLevel;
+
+    size_t m_totalNumLines; // total line count for the stream (same for all streams)
 };
 
 // factory function to create a PlainTextDeserializer from a V1 config object
@@ -163,11 +258,12 @@ shared_ptr<DataDeserializer> CreatePlainTextDeserializer(const ConfigParameters&
         ));
     }
 
+    bool cacheIndex = configParameters(L"cacheIndex");
     let traceLevel = configParameters(L"traceLevel", 1);
     //let chunkSizeBytes = configParameters(L"chunkSizeInBytes", g_32MB); // 32 MB by default   --do we need this?
 
     // construct the deserializer from that
-    return make_shared<PlainTextDeserializerImpl>(move(streamConfigs), elementType, primary, traceLevel);
+    return make_shared<PlainTextDeserializerImpl>(move(streamConfigs), cacheIndex, elementType, primary, traceLevel);
 }
 
 }; // namespace
