@@ -52,16 +52,16 @@ namespace CNTKLibraryCSEvalExamples
             {
                 var device = DeviceDescriptor.CPUDevice;
 
-                CNTKLibraryManagedExamples.ValueCopyToSparseCSCTest<float>(device);
-                CNTKLibraryManagedExamples.ValueCopyToSparseCSCTest<double>(device);
-
                 CNTKLibraryManagedExamples.EvaluationSingleImage(device);
+
                 // Run memory tests.
                 MemoryTests.ValidateObjectReferences(device);
+
                 CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
 
                 MemoryTests.WriteOutputs();
                 CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(device);
+
                 // Run memory tests again.
                 MemoryTests.ValidateObjectReferences(device);
 
@@ -72,6 +72,9 @@ namespace CNTKLibraryCSEvalExamples
                 CNTKLibraryManagedExamples.LoadModelFromMemory(device);
 
                 MemoryTests.WriteOutputs();
+
+                MemoryTests.ValueCopyToSparseCSCTest<float>(device);
+                MemoryTests.ValueCopyToSparseCSCTest<double>(device);
             }
 
             if (ShouldRunOnGpu())
@@ -92,6 +95,9 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Run memory tests again.
                 MemoryTests.WriteOutputs();
+
+                MemoryTests.ValueCopyToSparseCSCTest<float>(device);
+                MemoryTests.ValueCopyToSparseCSCTest<double>(device);
             }
 
             Console.WriteLine("======== Evaluation completes. ========");

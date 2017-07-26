@@ -1274,15 +1274,15 @@
         return;
     }
 
-	public void CopyVariableValueTo<T>( Variable outputVariable, 
-										out int sequenceLength, 
-										out System.Collections.Generic.IList<int> colStarts,  
-										out System.Collections.Generic.IList<int> rowIndices, 
-										out System.Collections.Generic.IList<T> nonZeroValues, 
-										out int numNonZeroValues) 
-	{
-		var colStartVec = new IntVector();
-		var rowIndicesVec = new IntVector();
+    public void GetSparseData<T>( Variable outputVariable,
+                                    out int sequenceLength,
+                                    out System.Collections.Generic.IList<int> colStarts,
+                                    out System.Collections.Generic.IList<int> rowIndices,
+                                    out System.Collections.Generic.IList<T> nonZeroValues,
+                                    out int numNonZeroValues) 
+    {
+        var colStartVec = new IntVector();
+        var rowIndicesVec = new IntVector();
 
         int[] n1 = new int[1];
         int[] n2 = new int[1];
@@ -1295,11 +1295,11 @@
             }
 
             var nonZeroValuesVec = new FloatVector();
-			_CopyVariableValueToFloat(outputVariable, n1,  colStartVec,   
-				rowIndicesVec, nonZeroValuesVec, n2);
+            _CopyVariableValueToFloat(outputVariable, n1,  colStartVec,   
+                rowIndicesVec, nonZeroValuesVec, n2);
             nonZeroValues = nonZeroValuesVec as System.Collections.Generic.IList<T>;
         }
-		else if (typeof(T).Equals(typeof(double)))
+        else if (typeof(T).Equals(typeof(double)))
         {
             if (_GetDataType() != DataType.Double)
             {
@@ -1316,11 +1316,11 @@
             throw new System.ArgumentException("The value type does not match the list type.");
         }
 
-		sequenceLength = n1[0];
-		numNonZeroValues = n2[0];
+        sequenceLength = n1[0];
+        numNonZeroValues = n2[0];
         colStarts = colStartVec;
         rowIndices = rowIndicesVec;
-	}
+    }
 
 
     // Creates a new Value which is an alias of this Value.

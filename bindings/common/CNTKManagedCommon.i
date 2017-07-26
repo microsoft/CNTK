@@ -40,7 +40,7 @@
 
 // temaplate definitions
 #ifdef SWIGCSHARP
-// bool/double/float are already enabled with SWIG_STD_VECTOR_ENHANCED in std_vector.i
+// int/bool/double/float are already enabled with SWIG_STD_VECTOR_ENHANCED in std_vector.i
 SWIG_STD_VECTOR_ENHANCED(size_t)
 SWIG_STD_VECTOR_ENHANCED(std::shared_ptr<CNTK::NDArrayView>)
 SWIG_STD_VECTOR_ENHANCED(CNTK::Variable)
