@@ -35,7 +35,7 @@ log_dir = None
 # model dimensions
 IMAGE_HEIGHT = 299
 IMAGE_WIDTH = 299
-NUM_CHANNELS = 3  # RGB
+NUM_CHANNELS = 3 # RGB
 NUM_CLASSES = 1000
 model_name = "InceptionV3.model"
 
@@ -52,7 +52,7 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
             xforms.scale(width=IMAGE_WIDTH, height=IMAGE_HEIGHT, channels=NUM_CHANNELS, interpolations='linear'),
             xforms.color(brightness_radius=0.125, contrast_radius=0.5, saturation_radius=0.5)
         ]
-    else: 
+    else:
         transforms += [
             xforms.crop(crop_type='center', side_ratio=0.875), # test has no jitter
             xforms.scale(width=IMAGE_WIDTH, height=IMAGE_HEIGHT, channels=NUM_CHANNELS, interpolations='linear')
@@ -122,7 +122,7 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size):
 
     # Create learner
     learner = nesterov(network['ce'].parameters, lr_schedule, mm_schedule,
-                           l2_regularization_weight=l2_reg_weight)
+                       l2_regularization_weight=l2_reg_weight)
 
     # Create trainer
     return Trainer(network['output'], (network['ce'], network['pe']), learner)
@@ -163,7 +163,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
     metric_denom    = 0
     sample_count    = 0
     minibatch_index = 0
-    
+
     while sample_count < test_epoch_size:
         current_minibatch = min(test_minibatch_size, test_epoch_size - sample_count)
         # Fetch next test min batch.
@@ -183,7 +183,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 
 # Train and evaluate the network.
 def inception_v3_train_and_eval(train_data, test_data, minibatch_size=32, epoch_size=1281167, max_epochs=300, 
-                         restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, profiler_dir=None, testing_parameters=(5000,32)):
+                                restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, profiler_dir=None, testing_parameters=(5000,32)):
     set_computation_network_trace_level(1)
 
     progress_printer = ProgressPrinter(
@@ -198,8 +198,8 @@ def inception_v3_train_and_eval(train_data, test_data, minibatch_size=32, epoch_
     train_source = create_image_mb_source(train_data, True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, False, total_number_of_samples=FULL_DATA_SWEEP)
     return train_and_test(network, trainer, train_source, test_source, progress_printer, max_epochs, minibatch_size, epoch_size, restore, profiler_dir, testing_parameters)
- 
- 
+
+
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
@@ -220,7 +220,7 @@ if __name__=='__main__':
     if args['outputdir'] is not None:
         model_path = args['outputdir'] + "/models"
     if args['logdir'] is not None:
-        log_dir = args['logdir']    
+        log_dir = args['logdir']
     if args['profilerdir'] is not None:
         profiler_dir = args['profilerdir']
     if args['device'] is not None:

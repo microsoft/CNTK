@@ -34,7 +34,7 @@ model_name = "InceptionV3.model"
 
 # Create trainer
 def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantization_bits, progress_printer):
-    
+
     # CNTK weights new gradient by (1-momentum) for unit gain, 
     # thus we divide Caffe's learning rate by (1-momentum)
     initial_learning_rate = 0.45 # equal to 0.045 in caffe
@@ -53,10 +53,10 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantiza
     lr_schedule   = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch, epoch_size=epoch_size)
     mm_schedule   = momentum_schedule(0.9)
     l2_reg_weight = 0.0001 # CNTK L2 regularization is per sample, thus same as Caffe
-    
+
     # Create learner
     local_learner = nesterov(network['ce'].parameters, lr_schedule, mm_schedule,
-                                                l2_regularization_weight=l2_reg_weight)
+                             l2_regularization_weight=l2_reg_weight)
     parameter_learner = data_parallel_distributed_learner(
         local_learner,
         num_quantization_bits=num_quantization_bits,
@@ -79,9 +79,9 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 
     training_session(
         trainer=trainer, mb_source=train_source,
-        model_inputs_to_streams = input_map,
-        mb_size = minibatch_size,
-        progress_frequency = epoch_size,
+        model_inputs_to_streams=input_map,
+        mb_size=minibatch_size,
+        progress_frequency=epoch_size,
         checkpoint_config=CheckpointConfig(frequency=epoch_size, filename=os.path.join(model_path, model_name), restore=restore),
         test_config=TestConfig(test_source, minibatch_size=minibatch_size)
     ).train()
@@ -91,7 +91,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 
 # Train and evaluate the network.
 def inception_v3_train_and_eval(train_data, test_data, num_quantization_bits=32, epoch_size=1281167, max_epochs=300, minibatch_size=None,
-                         restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, scale_up=False, profiling=False):
+                                restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, scale_up=False, profiling=False):
     set_computation_network_trace_level(0)
 
     # NOTE: scaling up minibatch_size increases sample throughput. In 8-GPU machine,
@@ -116,8 +116,8 @@ def inception_v3_train_and_eval(train_data, test_data, num_quantization_bits=32,
     train_source = create_image_mb_source(train_data, True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, False, total_number_of_samples=FULL_DATA_SWEEP)
     train_and_test(network, trainer, train_source, test_source, mb_size, epoch_size, restore, profiling)
- 
- 
+
+
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
