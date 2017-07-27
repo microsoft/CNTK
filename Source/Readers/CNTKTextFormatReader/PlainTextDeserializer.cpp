@@ -254,8 +254,7 @@ public:
         // span multiple files) is divided up into chunks of approximately chunkSizeBytes bytes.
         // The m_chunkRefs array then records the end position (file/line) of each chunk.
         // The start position is computed on the fly later when loading a chunk.
-        let definingStream = 0;  // TODO: we may change this, e.g. select the first that has definesMBSize set? (currently none has)
-        let& definingTextLineRefs = m_streams[definingStream].m_textLineRefs;
+        let& definingTextLineRefs = m_streams[m_definingStream].m_textLineRefs;
         size_t totalDataSize = 0;
         for (let& lineRefs : definingTextLineRefs)
             totalDataSize += lineRefs.back().beginOffset;
@@ -271,6 +270,7 @@ public:
                 chunkRef.m_numberOfSequences++;
                 chunkRef.m_numberOfSamples += fileLineRefs[chunkRef.m_endLineNo - 1].numWords;
                 chunkRef.m_size += fileLineRefs[chunkRef.m_endLineNo].beginOffset - fileLineRefs[chunkRef.m_endLineNo - 1].beginOffset;
+                chunkRef.m_endSequenceId++;
                 // if chunk is large enough, or if we hit the end, then flush the chunk
                 if (chunkRef.m_size >= roundedChunkSize ||
                     (chunkRef.m_endLineNo + 1 == fileLineRefs.size() && chunkRef.m_endFileIndex + 1 ==  definingTextLineRefs.size()))
@@ -309,7 +309,36 @@ public:
     ///
     virtual void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result) override
     {
-        chunkId; result;
+        let& chunkRef = m_chunkRefs[chunkId];
+        let& definingTextLineRefs = m_streams[m_definingStream].m_textLineRefs;
+        result.clear();
+        size_t fileIndex  = chunkId == 0 ? 0 : m_chunkRefs[chunkId - 1].m_endFileIndex;
+        size_t lineNo     = chunkId == 0 ? 0 : m_chunkRefs[chunkId - 1].m_endLineNo;
+        size_t sequenceId = chunkId == 0 ? 0 : m_chunkRefs[chunkId - 1].m_endSequenceId;
+        while (lineNo != chunkRef.m_endLineNo || fileIndex != chunkRef.m_endFileIndex)
+        {
+            let& fileLineRefs = definingTextLineRefs[fileIndex];
+            // if we are pointing to the last entry of a file, advance to the next file
+            if (lineNo == fileLineRefs.size() - 1)
+            {
+                lineNo = 0;
+                fileIndex++;
+                continue;
+            }
+            // emit this line's info
+            let& lineRef = fileLineRefs[lineNo];
+            result.emplace_back(SequenceInfo
+            {
+                result.size(),                  // m_indexInChunk
+                (unsigned int)lineRef.numWords, // m_numberOfSamples
+                ChunkIdType(chunkId),           // m_chunkId
+                SequenceKey(sequenceId, 0)      // m_key
+            });
+            sequenceId++;
+            lineNo++;
+        }
+        if (result.size() != chunkRef.m_numberOfSequences || sequenceId != chunkRef.m_endSequenceId)
+            LogicError("PlainTextDeserializer: SequenceInfosForChunk ran into a discrepancy on #sequences.");
     }
 
     ///
@@ -319,8 +348,7 @@ public:
     ///
     virtual bool GetSequenceInfo(const SequenceInfo& primary, SequenceInfo& result) override
     {
-        primary; result;
-        return true;
+        NOT_IMPLEMENTED; // TODO: What should this do? Just return false?
     }
 
     ///
@@ -328,6 +356,7 @@ public:
     ///
     virtual ChunkPtr GetChunk(ChunkIdType chunkId) override
     {
+        fprintf(stderr, "\n");
         chunkId;
         return nullptr;
     }
@@ -338,14 +367,16 @@ private:
     const DataType m_elementType;
     const bool m_primary;
     const int m_traceLevel;
+    const size_t m_definingStream = 0;  // TODO: we may change this, e.g. select the first that has definesMBSize set? (currently none has)
 
     // working data
     size_t m_totalNumLines; // total line count for the stream (same for all streams)
     struct ChunkRef : public ChunkInfo
     {
-        size_t m_size = 0;           // size of this chunk in bytes
-        size_t m_endFileIndex = 0;   // file and line number of ebnd position (and one after last line)
-        size_t m_endLineNo = 0;      // (start position is computed from the previous chunk end when loading the data)
+        size_t m_size = 0;          // size of this chunk in bytes
+        size_t m_endFileIndex = 0;  // file and line number of ebnd position (and one after last line)
+        size_t m_endLineNo = 0;     // (start position is computed from the previous chunk end when loading the data)
+        size_t m_endSequenceId = 0; // identifier (=global line number) of end entry in this chunk
 
         ChunkRef() : ChunkInfo{ 0, 0, 0 } { }
     };

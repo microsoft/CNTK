@@ -293,7 +293,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             PlainTextStreamConfiguration(featuresName, inputDim,         { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.x.txt" }, { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.x.vocab", L"", L"", L"" }),
             PlainTextStreamConfiguration(labelsName,   numOutputClasses, { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.y.txt" }, { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.y.vocab", L"", L"", L"" })
         })},
-        /*randomize=*/false/*for now*/));
+        /*randomize=*/true));
     // BUGBUG: no way to specify MinibatchSource::FullDataSweep
 #else
     auto minibatchSource = TextFormatMinibatchSource(trainingCTFPath,
