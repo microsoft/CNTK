@@ -836,7 +836,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             else
             {
                 if (std::isnan(avgCriterion) ||
-                    (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion &&
+                    (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * std::abs(prevCriterion) &&
                      prevCriterion != numeric_limits<double>::infinity()))
                 {
                     if (m_adjustLRAfterSecondTry && !lrFailedOnce)
@@ -850,7 +850,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                         lrFailedOnce = false;
                     }
                 }
-                else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan * prevCriterion &&
+                else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan * std::abs(prevCriterion) &&
                          prevCriterion != numeric_limits<double>::infinity())
                 {
                     lrFailedOnce = false;
