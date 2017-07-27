@@ -10,13 +10,6 @@ import argparse
 import numpy as np
 import cntk as C
 
-from cntk.debugging import start_profiler, stop_profiler, set_computation_network_trace_level
-from cntk.learners import learning_rate_schedule, momentum_schedule, nesterov, UnitType
-from cntk.logging import ProgressPrinter, log_number_of_parameters
-from cntk.train.distributed import data_parallel_distributed_learner, Communicator
-from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from cntk.train import training_session, CheckpointConfig, TestConfig, Trainer
-
 from InceptionV3_ImageNet import create_image_mb_source, create_inception_v3
 
 # default Paths relative to current python file.
@@ -46,20 +39,20 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantiza
         lr_per_mb.extend([learning_rate] * learn_rate_adjust_interval)
         learning_rate *= learn_rate_decrease_factor
 
-    lr_schedule = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch, epoch_size=epoch_size)
-    mm_schedule = momentum_schedule(0.9)
+    lr_schedule = C.learners.learning_rate_schedule(lr_per_mb, unit=C.learners.UnitType.minibatch, epoch_size=epoch_size)
+    mm_schedule = C.learners.momentum_schedule(0.9)
     l2_reg_weight = 0.0001 # CNTK L2 regularization is per sample, thus same as Caffe
 
     # Create learner
-    local_learner = nesterov(network['ce'].parameters, lr_schedule, mm_schedule,
+    local_learner = C.learners.nesterov(network['ce'].parameters, lr_schedule, mm_schedule,
                              l2_regularization_weight=l2_reg_weight)
-    parameter_learner = data_parallel_distributed_learner(
+    parameter_learner = C.train.distributed.data_parallel_distributed_learner(
         local_learner,
         num_quantization_bits=num_quantization_bits,
         distributed_after=0)
 
     # Create trainer
-    return Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_printer)
+    return C.train.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_printer)
 
 # Train and test
 def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling=False):
@@ -71,46 +64,46 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
     }
 
     if profiling:
-        start_profiler(sync_gpu=True)
+        C.debugging.start_profiler(sync_gpu=True)
 
-    training_session(
+    C.train.training_session(
         trainer=trainer, mb_source=train_source,
         model_inputs_to_streams=input_map,
         mb_size=minibatch_size,
         progress_frequency=epoch_size,
-        checkpoint_config=CheckpointConfig(frequency=epoch_size, filename=os.path.join(model_path, model_name), restore=restore),
-        test_config=TestConfig(test_source, minibatch_size=minibatch_size)
+        checkpoint_config=C.train.CheckpointConfig(frequency=epoch_size, filename=os.path.join(model_path, model_name), restore=restore),
+        test_config=C.train.TestConfig(test_source, minibatch_size=minibatch_size)
     ).train()
 
     if profiling:
-        stop_profiler()
+        C.debugging.stop_profiler()
 
 # Train and evaluate the network.
 def inception_v3_train_and_eval(train_data, test_data, num_quantization_bits=32, epoch_size=1281167, max_epochs=300, minibatch_size=None,
                                 restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, scale_up=False, profiling=False):
-    set_computation_network_trace_level(0)
+    C.debugging.set_computation_network_trace_level(0)
 
     # NOTE: scaling up minibatch_size increases sample throughput. In 8-GPU machine,
     # ResNet110 samples-per-second is ~7x of single GPU, comparing to ~3x without scaling
     # up. However, bigger minibatch size on the same number of samples means less updates,
     # thus leads to higher training error. This is a trade-off of speed and accuracy
     if minibatch_size is None:
-        mb_size = 32 * (Communicator.num_workers() if scale_up else 1)
+        mb_size = 32 * (C.train.distributed.Communicator.num_workers() if scale_up else 1)
     else:
         mb_size = minibatch_size
 
-    progress_printer = ProgressPrinter(
+    progress_printer = C.logging.ProgressPrinter(
         freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
-        rank=Communicator.rank(),
+        rank=C.train.distributed.Communicator.rank(),
         gen_heartbeat=gen_heartbeat,
         num_epochs=max_epochs)
 
     network = create_inception_v3()
     trainer = create_trainer(network, epoch_size, max_epochs, mb_size, num_quantization_bits, progress_printer)
     train_source = create_image_mb_source(train_data, True, total_number_of_samples=max_epochs * epoch_size)
-    test_source = create_image_mb_source(test_data, False, total_number_of_samples=FULL_DATA_SWEEP)
+    test_source = create_image_mb_source(test_data, False, total_number_of_samples=C.io.FULL_DATA_SWEEP)
     train_and_test(network, trainer, train_source, test_source, mb_size, epoch_size, restore, profiling)
 
 
@@ -162,4 +155,4 @@ if __name__=='__main__':
                                 scale_up=bool(args['scale_up']))
 
     # Must call MPI finalize when process exit without exceptions
-    Communicator.finalize()
+    C.train.distributed.Communicator.finalize()
