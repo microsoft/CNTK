@@ -109,7 +109,7 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size):
 
     # Create learner
     learner = C.learners.nesterov(network['ce'].parameters, lr_schedule, mm_schedule,
-                       l2_regularization_weight=l2_reg_weight)
+                                  l2_regularization_weight=l2_reg_weight)
 
     # Create trainer
     return C.train.Trainer(network['output'], (network['ce'], network['pe']), learner)
@@ -146,9 +146,9 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
     test_epoch_size, test_minibatch_size = testing_parameters
 
     # process minibatches and evaluate the model
-    metric_numer    = 0
-    metric_denom    = 0
-    sample_count    = 0
+    metric_numer = 0
+    metric_denom = 0
+    sample_count = 0
     minibatch_index = 0
 
     while sample_count < test_epoch_size:
