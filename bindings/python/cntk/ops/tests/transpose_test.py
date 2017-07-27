@@ -15,7 +15,7 @@ def test_transpose():
     repeat_for = 5
 
     for repeat in range(repeat_for):
-        for i in range(1, 12):
+        for i in range(1, 5):
             permutation = np.random.permutation(i + 1)
             permutation = [int(p) for p in permutation]
 
