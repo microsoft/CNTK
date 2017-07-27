@@ -61,7 +61,7 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
     if (!dataExtendNames.empty())
     {
         if(dataExtendNames.size() != 1)
-            InvalidArgument("ImageReader supports a single dataExtend block. '%d' dataExtend block be founded");
+            InvalidArgument("ImageReader supports a single dataExtend block.");
         ConfigParameters dataExtend = config(dataExtendNames[0]);
 
         string extendMode = dataExtend("extendMode", "none");
