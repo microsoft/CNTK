@@ -24,8 +24,8 @@ from cntk.train import training_session, CheckpointConfig, TestConfig, Trainer
 from InceptionV3_ImageNet import create_image_mb_source, create_inception_v3
 
 # default Paths relative to current python file.
-abs_path   = os.path.dirname(os.path.abspath(__file__))
-data_path  = os.path.join(abs_path, "..", "..", "..", "..", "DataSets", "ImageNet")
+abs_path = os.path.dirname(os.path.abspath(__file__))
+data_path = os.path.join(abs_path, "..", "..", "..", "..", "DataSets", "ImageNet")
 config_path = abs_path
 model_path = os.path.join(abs_path, "Models")
 log_dir = None
@@ -35,7 +35,7 @@ model_name = "InceptionV3.model"
 # Create trainer
 def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantization_bits, progress_printer):
 
-    # CNTK weights new gradient by (1-momentum) for unit gain, 
+    # CNTK weights new gradient by (1-momentum) for unit gain,
     # thus we divide Caffe's learning rate by (1-momentum)
     initial_learning_rate = 0.45 # equal to 0.045 in caffe
     initial_learning_rate *= minibatch_size / 32
@@ -50,8 +50,8 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantiza
         lr_per_mb.extend([learning_rate] * learn_rate_adjust_interval)
         learning_rate *= learn_rate_decrease_factor
 
-    lr_schedule   = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch, epoch_size=epoch_size)
-    mm_schedule   = momentum_schedule(0.9)
+    lr_schedule = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch, epoch_size=epoch_size)
+    mm_schedule = momentum_schedule(0.9)
     l2_reg_weight = 0.0001 # CNTK L2 regularization is per sample, thus same as Caffe
 
     # Create learner

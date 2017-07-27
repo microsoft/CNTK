@@ -13,16 +13,6 @@ import argparse
 import numpy as np
 import cntk as C
 
-import cntk.io.transforms as xforms
-from cntk.debugging import start_profiler, stop_profiler, enable_profiler, set_computation_network_trace_level
-from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from cntk.learners import learning_rate_schedule, momentum_schedule, nesterov, UnitType
-from cntk.logging import ProgressPrinter, log_number_of_parameters
-from cntk.losses import cross_entropy_with_softmax
-from cntk.metrics import classification_error
-from cntk.ops import input_variable, plus, element_times
-from cntk.train import Trainer
-
 from InceptionV3 import inception_v3_norm_model
 
 # default Paths relative to current python file.
@@ -48,21 +38,21 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
     transforms = []
     if is_training:
         transforms += [
-            xforms.crop(crop_type='randomarea', area_ratio=(0.05, 1.0), aspect_ratio=(0.75, 1.0), jitter_type='uniratio'), # train uses jitter
-            xforms.scale(width=IMAGE_WIDTH, height=IMAGE_HEIGHT, channels=NUM_CHANNELS, interpolations='linear'),
-            xforms.color(brightness_radius=0.125, contrast_radius=0.5, saturation_radius=0.5)
+            C.io.transforms.crop(crop_type='randomarea', area_ratio=(0.05, 1.0), aspect_ratio=(0.75, 1.0), jitter_type='uniratio'), # train uses jitter
+            C.io.transforms.scale(width=IMAGE_WIDTH, height=IMAGE_HEIGHT, channels=NUM_CHANNELS, interpolations='linear'),
+            C.io.transforms.color(brightness_radius=0.125, contrast_radius=0.5, saturation_radius=0.5)
         ]
     else:
         transforms += [
-            xforms.crop(crop_type='center', side_ratio=0.875), # test has no jitter
-            xforms.scale(width=IMAGE_WIDTH, height=IMAGE_HEIGHT, channels=NUM_CHANNELS, interpolations='linear')
+            C.io.transforms.crop(crop_type='center', side_ratio=0.875), # test has no jitter
+            C.io.transforms.scale(width=IMAGE_WIDTH, height=IMAGE_HEIGHT, channels=NUM_CHANNELS, interpolations='linear')
         ]
 
     # deserializer
-    return MinibatchSource(
-        ImageDeserializer(map_file, StreamDefs(
-            features=StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-            labels=StreamDef(field='label', shape=NUM_CLASSES))),   # and second as 'label'
+    return C.io.MinibatchSource(
+        C.io.ImageDeserializer(map_file, C.io.StreamDefs(
+            features=C.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+            labels=C.io.StreamDef(field='label', shape=NUM_CLASSES))),   # and second as 'label'
         randomize=is_training,
         max_samples=total_number_of_samples,
         multithreaded_deserializer=True)
@@ -71,8 +61,8 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
 def create_inception_v3():
 
     # Input variables denoting the features and label data
-    feature_var = input_variable((NUM_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH))
-    label_var = input_variable((NUM_CLASSES))
+    feature_var = C.ops.input_variable((NUM_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH))
+    label_var = C.ops.input_variable((NUM_CLASSES))
 
     drop_rate = 0.2
     bn_time_const = 4096
@@ -80,13 +70,13 @@ def create_inception_v3():
 
     # loss and metric
     aux_weight = 0.3
-    ce_aux = cross_entropy_with_softmax(out['aux'], label_var)
-    ce_z = cross_entropy_with_softmax(out['z'], label_var)
-    ce = plus(element_times(ce_aux, aux_weight), ce_z)
-    pe = classification_error(out['z'], label_var)
-    pe5 = classification_error(out['z'], label_var, topN=5)
+    ce_aux = C.losses.cross_entropy_with_softmax(out['aux'], label_var)
+    ce_z = C.losses.cross_entropy_with_softmax(out['z'], label_var)
+    ce = C.ops.plus(C.ops.element_times(ce_aux, aux_weight), ce_z)
+    pe = C.metrics.classification_error(out['z'], label_var)
+    pe5 = C.metrics.classification_error(out['z'], label_var, topN=5)
 
-    log_number_of_parameters(out['z'])
+    C.logging.log_number_of_parameters(out['z'])
     print()
 
     return {
@@ -116,16 +106,16 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size):
         lr_per_mb.extend([learning_rate] * learn_rate_adjust_interval)
         learning_rate *= learn_rate_decrease_factor
 
-    lr_schedule = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch, epoch_size=epoch_size)
-    mm_schedule = momentum_schedule(0.9)
+    lr_schedule = C.learners.learning_rate_schedule(lr_per_mb, unit=C.learners.UnitType.minibatch, epoch_size=epoch_size)
+    mm_schedule = C.learners.momentum_schedule(0.9)
     l2_reg_weight = 0.0001 # CNTK L2 regularization is per sample, thus same as Caffe
 
     # Create learner
-    learner = nesterov(network['ce'].parameters, lr_schedule, mm_schedule,
+    learner = C.learners.nesterov(network['ce'].parameters, lr_schedule, mm_schedule,
                        l2_regularization_weight=l2_reg_weight)
 
     # Create trainer
-    return Trainer(network['output'], (network['ce'], network['pe']), learner)
+    return C.train.Trainer(network['output'], (network['ce'], network['pe']), learner)
 
 # Train and test
 def train_and_test(network, trainer, train_source, test_source, progress_printer, max_epochs, minibatch_size, epoch_size, restore, profiler_dir, testing_parameters):
@@ -138,7 +128,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 
     # perform model training
     if profiler_dir:
-        start_profiler(profiler_dir, True)
+        C.debugging.start_profiler(profiler_dir, True)
 
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
@@ -149,10 +139,10 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
         network['output'].save(os.path.join(model_path, "BN-Inception_{}.model".format(epoch)))
-        enable_profiler() # begin to collect profiler data after first epoch
+        C.debugging.enable_profiler() # begin to collect profiler data after first epoch
 
     if profiler_dir:
-        stop_profiler()
+        C.debugging.stop_profiler()
 
     # Finished
     # Evaluation parameters
@@ -184,9 +174,9 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 # Train and evaluate the network.
 def inception_v3_train_and_eval(train_data, test_data, minibatch_size=32, epoch_size=1281167, max_epochs=300, 
                                 restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, profiler_dir=None, testing_parameters=(5000,32)):
-    set_computation_network_trace_level(1)
+    C.debugging.set_computation_network_trace_level(1)
 
-    progress_printer = ProgressPrinter(
+    progress_printer = C.logging.ProgressPrinter(
         freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
@@ -196,7 +186,7 @@ def inception_v3_train_and_eval(train_data, test_data, minibatch_size=32, epoch_
     network = create_inception_v3()
     trainer = create_trainer(network, epoch_size, max_epochs, minibatch_size)
     train_source = create_image_mb_source(train_data, True, total_number_of_samples=max_epochs * epoch_size)
-    test_source = create_image_mb_source(test_data, False, total_number_of_samples=FULL_DATA_SWEEP)
+    test_source = create_image_mb_source(test_data, False, total_number_of_samples=C.io.FULL_DATA_SWEEP)
     return train_and_test(network, trainer, train_source, test_source, progress_printer, max_epochs, minibatch_size, epoch_size, restore, profiler_dir, testing_parameters)
 
 
