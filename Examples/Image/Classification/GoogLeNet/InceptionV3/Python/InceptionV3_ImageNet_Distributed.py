@@ -4,16 +4,12 @@
 # for full license information.
 # ==============================================================================
 
-from __future__ import print_function
-from __future__ import division
-
 import os
 import math
 import argparse
 import numpy as np
 import cntk as C
 
-import cntk.io.transforms as xforms
 from cntk.debugging import start_profiler, stop_profiler, set_computation_network_trace_level
 from cntk.learners import learning_rate_schedule, momentum_schedule, nesterov, UnitType
 from cntk.logging import ProgressPrinter, log_number_of_parameters
