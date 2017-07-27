@@ -1590,8 +1590,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKLibraryCPPUWPEvalExampl
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageRecognitionAppCS", "Tests\EndToEndTests\EvalClientTests\UWPImageRecognitionTest\ImageRecognitionAppCS\ImageRecognitionAppCS.csproj", "{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C5E944BA-A7C4-482F-BE01-077A7DFC159C} = {C5E944BA-A7C4-482F-BE01-077A7DFC159C}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageRecognitionLib", "Tests\EndToEndTests\EvalClientTests\UWPImageRecognitionTest\ImageRecognizerLib\ImageRecognizerLib.vcxproj", "{C5E944BA-A7C4-482F-BE01-077A7DFC159C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -2234,40 +2240,25 @@ Global
 		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Release_UWP|x64.Deploy.0 = Release_UWP|x64
 		{D5CB8825-0D1F-4940-9906-9BD87614B24E}.Release|x64.ActiveCfg = Release_UWP|x64
 		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Debug_CpuOnly|x64.ActiveCfg = Debug_UWP|x64
-		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Debug_CpuOnly|x64.Build.0 = Debug_UWP|x64
-		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Debug_CpuOnly|x64.Deploy.0 = Debug_UWP|x64
 		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Debug_UWP|x64.ActiveCfg = Debug_UWP|x64
 		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Debug_UWP|x64.Build.0 = Debug_UWP|x64
 		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Debug_UWP|x64.Deploy.0 = Debug_UWP|x64
-		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Debug|x64.ActiveCfg = Debug|x64
-		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Debug|x64.Build.0 = Debug|x64
-		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Debug|x64.Deploy.0 = Debug|x64
+		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Debug|x64.ActiveCfg = Debug_UWP|x64
 		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release_CpuOnly|x64.ActiveCfg = Release_UWP|x64
-		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release_CpuOnly|x64.Build.0 = Release_UWP|x64
-		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release_CpuOnly|x64.Deploy.0 = Release_UWP|x64
 		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release_NoOpt|x64.ActiveCfg = Release_UWP|x64
-		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release_NoOpt|x64.Build.0 = Release_UWP|x64
-		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release_NoOpt|x64.Deploy.0 = Release_UWP|x64
 		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release_UWP|x64.ActiveCfg = Release_UWP|x64
 		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release_UWP|x64.Build.0 = Release_UWP|x64
 		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release_UWP|x64.Deploy.0 = Release_UWP|x64
 		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release|x64.ActiveCfg = Release_UWP|x64
-		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release|x64.Build.0 = Release_UWP|x64
-		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5}.Release|x64.Deploy.0 = Release_UWP|x64
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Debug_CpuOnly|x64.ActiveCfg = Debug_UWP|x64
-		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Debug_CpuOnly|x64.Build.0 = Debug_UWP|x64
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Debug_UWP|x64.ActiveCfg = Debug_UWP|x64
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Debug_UWP|x64.Build.0 = Debug_UWP|x64
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Debug|x64.ActiveCfg = Debug_UWP|x64
-		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Debug|x64.Build.0 = Debug_UWP|x64
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Release_CpuOnly|x64.ActiveCfg = Release_UWP|x64
-		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Release_CpuOnly|x64.Build.0 = Release_UWP|x64
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Release_NoOpt|x64.ActiveCfg = Release_UWP|x64
-		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Release_NoOpt|x64.Build.0 = Release_UWP|x64
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Release_UWP|x64.ActiveCfg = Release_UWP|x64
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Release_UWP|x64.Build.0 = Release_UWP|x64
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Release|x64.ActiveCfg = Release_UWP|x64
-		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Release|x64.Build.0 = Release_UWP|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
