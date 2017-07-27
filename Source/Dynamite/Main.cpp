@@ -267,7 +267,7 @@ void LogVal(const Variable& x)
 
 void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabels)
 {
-    const size_t inputDim         = 2000;
+    const size_t inputDim         = 2000; // TODO: it's only 1000??
     const size_t embeddingDim     = 500;
     const size_t hiddenDim        = 250;
     const size_t attentionDim     = 20;
@@ -415,7 +415,7 @@ extern int mt_main(int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
-#if 1
+#if 0
     return mt_main(argc, argv);
 #else
     argc; argv;
