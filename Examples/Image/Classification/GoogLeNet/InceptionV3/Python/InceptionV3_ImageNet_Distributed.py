@@ -45,7 +45,7 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantiza
 
     # Create learner
     local_learner = C.learners.nesterov(network['ce'].parameters, lr_schedule, mm_schedule,
-                             l2_regularization_weight=l2_reg_weight)
+                                        l2_regularization_weight=l2_reg_weight)
     parameter_learner = C.train.distributed.data_parallel_distributed_learner(
         local_learner,
         num_quantization_bits=num_quantization_bits,
