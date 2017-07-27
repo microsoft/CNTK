@@ -44,7 +44,10 @@ bool IsSpace(char c) { return c == ' ' || c == '\t' || c == '\r'; }
 class PlainTextDeserializerImpl : public DataDeserializer
 {
 public:
-    // configuration of each text stream
+    // -----------------------------------------------------------------------
+    // per-stream configuration
+    // -----------------------------------------------------------------------
+
     const struct PlainTextVocabularyConfiguration
     {
         const std::wstring fileName;
@@ -61,7 +64,10 @@ public:
         const PlainTextVocabularyConfiguration m_vocabularyConfig;
     };
 
+    // -----------------------------------------------------------------------
     // vocabulary (maps grapheme to index)
+    // -----------------------------------------------------------------------
+
     class Vocabulary
     {
     public:
@@ -117,7 +123,10 @@ public:
         size_t m_unknownId;
     };
 
-    // info stored for each text stream
+    // -----------------------------------------------------------------------
+    // per-stream data
+    // -----------------------------------------------------------------------
+
     struct PlainTextStream : public PlainTextStreamConfiguration
     {
         // constructor
@@ -154,7 +163,7 @@ public:
                 LoadTextFileAsCharArray(fileAsCString, fileName);
                 if (fileAsCString.back() != '\n') // this is required for correctness of the subsequent loop
                 {
-                    fprintf(stderr, "PlainTextStream: Missing newline character at end of file %S\n", fileName.c_str());
+                    fprintf(stderr, "PlainTextStream: Missing newline character at end of file %S.\n", fileName.c_str());
                     fileAsCString.push_back('\n');
                 }
                 // determine line offsets and per-line word counts
@@ -179,10 +188,11 @@ public:
                     numWordsInFile += numWords;
                     p0 = p; // now points to '\n'; will be increased above
                 }
+                thisFileTextLineRefs.push_back(TextLineRef{ (uint64_t)(pend - pdata), 0 }); // add one extra token
                 m_totalNumWords += numWordsInFile;
                 // log
                 if (traceLevel >= 1)
-                    fprintf(stderr, "PlainTextDeserializer: %d words, %d lines. %S\n", (int)numWordsInFile, (int)thisFileTextLineRefs.size(), fileName.c_str());
+                    fprintf(stderr, "PlainTextDeserializer: %d words, %d lines. %S\n", (int)numWordsInFile, (int)thisFileTextLineRefs.size() - 1, fileName.c_str());
             }
         }
 
@@ -190,15 +200,19 @@ public:
         struct TextLineRef
         {
             const uint64_t beginOffset; // byte offset of this line in the file
-            const size_t numWords;      // number of word tokens in the line
+            const size_t numWords;      // number of final word tokens in the line. This includes <s> and </s> if specified to be added.
         };
-        vector<vector<TextLineRef>> m_textLineRefs; // [fileIndex][lineIndex] -> (byte offset of line, #words in this line)
+        vector<vector<TextLineRef>> m_textLineRefs; // [fileIndex][lineIndex] -> (byte offset of line, #words in this line); has one extra beyond last line to simplify length calculation
         size_t m_totalNumWords;  // total word count for this stream
         Vocabulary m_vocabulary; // mapping from word strings to neuron indices
     };
 
-    PlainTextDeserializerImpl(const vector<PlainTextDeserializerImpl::PlainTextStreamConfiguration>& streamConfigs, bool cacheIndex,
-                              DataType elementType, bool primary, int traceLevel) :
+    // -----------------------------------------------------------------------
+    // implementation of PlainTextDeserializer itself
+    // -----------------------------------------------------------------------
+
+    PlainTextDeserializerImpl(const vector<PlainTextDeserializerImpl::PlainTextStreamConfiguration>& streamConfigs, size_t chunkSizeBytes, bool cacheIndex,
+        DataType elementType, bool primary, int traceLevel) :
         m_streams(streamConfigs.begin(), streamConfigs.end()), m_cacheIndex(cacheIndex), m_elementType(elementType), m_primary(primary), m_traceLevel(traceLevel)
     {
         if (m_streams.empty())
@@ -206,7 +220,11 @@ public:
 
         // index all files
         for (auto& stream : m_streams)
+        {
             stream.IndexAllFiles(m_traceLevel);
+            if (stream.m_totalNumWords == 0)
+                InvalidArgument("PlainTextDeserializer: Corpus must not be empty.");
+        }
 
         // statistics and verify that all files have the same #lines
         m_totalNumLines = 0;
@@ -214,12 +232,12 @@ public:
         let& firstFileTextLineRefs = m_streams[0].m_textLineRefs;
         for (size_t j = 0; j < firstFileTextLineRefs.size(); j++)
         {
-            m_totalNumLines += firstFileTextLineRefs[j].size();
+            m_totalNumLines += firstFileTextLineRefs[j].size() - 1; // -1 because of one extra line at end
             totalNumSrcWords += m_streams[0].m_totalNumWords;
         }
         for (size_t i = 1; i < m_streams.size(); i++)
         {
-            let& thisFileTextLineRefs  = m_streams[i].m_textLineRefs;
+            let& thisFileTextLineRefs = m_streams[i].m_textLineRefs;
             if (firstFileTextLineRefs.size() != thisFileTextLineRefs.size())
                 InvalidArgument("PlainTextDeserializer: All streams must have the same number of files.");
             for (size_t j = 0; j < firstFileTextLineRefs.size(); j++)
@@ -229,7 +247,45 @@ public:
 
         if (m_traceLevel >= 1)
             fprintf(stderr, "PlainTextDeserializer: %d files with %d lines and %d words in the first stream out of %d\n",
-                (int)m_streams[0].m_textLineRefs.size(), (int)m_totalNumLines, (int)totalNumSrcWords, (int)m_streams.size());
+            (int)m_streams[0].m_textLineRefs.size(), (int)m_totalNumLines, (int)totalNumSrcWords, (int)m_streams.size());
+
+        // form chunks
+        // Chunks are formed by byte size of the first stream. The entire stream (which may
+        // span multiple files) is divided up into chunks of approximately chunkSizeBytes bytes.
+        // The m_chunkRefs array then records the end position (file/line) of each chunk.
+        // The start position is computed on the fly later when loading a chunk.
+        let definingStream = 0;  // TODO: we may change this, e.g. select the first that has definesMBSize set? (currently none has)
+        let& definingTextLineRefs = m_streams[definingStream].m_textLineRefs;
+        size_t totalDataSize = 0;
+        for (let& lineRefs : definingTextLineRefs)
+            totalDataSize += lineRefs.back().beginOffset;
+        let numTargetChunks = totalDataSize / chunkSizeBytes; // (tend towards less chunks)
+        let roundedChunkSize = (totalDataSize + numTargetChunks - 1) / numTargetChunks;
+        ChunkRef chunkRef;
+        for (chunkRef.m_endFileIndex = 0; chunkRef.m_endFileIndex < definingTextLineRefs.size(); chunkRef.m_endFileIndex++)
+        {
+            let& fileLineRefs = definingTextLineRefs[chunkRef.m_endFileIndex];
+            for (chunkRef.m_endLineNo = 1; chunkRef.m_endLineNo < fileLineRefs.size(); chunkRef.m_endLineNo++)
+            {
+                // add line to chunk
+                chunkRef.m_numberOfSequences++;
+                chunkRef.m_numberOfSamples += fileLineRefs[chunkRef.m_endLineNo - 1].numWords;
+                chunkRef.m_size += fileLineRefs[chunkRef.m_endLineNo].beginOffset - fileLineRefs[chunkRef.m_endLineNo - 1].beginOffset;
+                // if chunk is large enough, or if we hit the end, then flush the chunk
+                if (chunkRef.m_size >= roundedChunkSize ||
+                    (chunkRef.m_endLineNo + 1 == fileLineRefs.size() && chunkRef.m_endFileIndex + 1 ==  definingTextLineRefs.size()))
+                {
+                    assert(m_chunkRefs.m_id == m_chunkRefs.size());
+                    m_chunkRefs.push_back(chunkRef);
+                    // and reset for forming next chunk
+                    chunkRef.m_id++;
+                    chunkRef.m_numberOfSamples = 0;
+                    chunkRef.m_numberOfSequences = 0;
+                    chunkRef.m_size = 0;
+                }
+            }
+        }
+        assert(chunkRef.m_size == 0); // we must have flushed it out inside the loop already
     }
 
     ///
@@ -245,7 +301,7 @@ public:
     ///
     virtual std::vector<ChunkInfo> ChunkInfos() override
     {
-        return std::vector<ChunkInfo>();
+        return std::vector<ChunkInfo>(m_chunkRefs.begin(), m_chunkRefs.end());
     }
 
     ///
@@ -283,7 +339,17 @@ private:
     const bool m_primary;
     const int m_traceLevel;
 
+    // working data
     size_t m_totalNumLines; // total line count for the stream (same for all streams)
+    struct ChunkRef : public ChunkInfo
+    {
+        size_t m_size = 0;           // size of this chunk in bytes
+        size_t m_endFileIndex = 0;   // file and line number of ebnd position (and one after last line)
+        size_t m_endLineNo = 0;      // (start position is computed from the previous chunk end when loading the data)
+
+        ChunkRef() : ChunkInfo{ 0, 0, 0 } { }
+    };
+    vector<ChunkRef> m_chunkRefs; // reference to all chunks
 };
 
 // factory function to create a PlainTextDeserializer from a V1 config object
@@ -344,10 +410,10 @@ shared_ptr<DataDeserializer> CreatePlainTextDeserializer(const ConfigParameters&
 
     bool cacheIndex = configParameters(L"cacheIndex");
     let traceLevel = configParameters(L"traceLevel", 1);
-    //let chunkSizeBytes = configParameters(L"chunkSizeInBytes", g_32MB); // 32 MB by default   --do we need this?
+    let chunkSizeBytes = 10000; // configParameters(L"chunkSizeInBytes", g_32MB); // 32 MB by default   --TODO: currently not passed in from outer factory function
 
     // construct the deserializer from that
-    return make_shared<PlainTextDeserializerImpl>(move(streamConfigs), cacheIndex, elementType, primary, traceLevel);
+    return make_shared<PlainTextDeserializerImpl>(move(streamConfigs), chunkSizeBytes, cacheIndex, elementType, primary, traceLevel);
 }
 
 }; // namespace
