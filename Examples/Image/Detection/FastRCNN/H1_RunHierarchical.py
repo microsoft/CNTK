@@ -4,7 +4,11 @@
 # for full license information.
 # ==============================================================================
 
-from A2_RunWithPyModel import *
+import sys, os
+import cntk as C
+from cntk import cntk_py, reduce_sum, ops, user_function, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule, momentum_sgd, Trainer
+from cntk.logging import ProgressPrinter, log_number_of_parameters
+from A2_RunWithPyModel import create_mb_source, p, image_height, image_width, num_channels, num_classes, num_rois, base_path, frcn_predictor, momentum_time_constant, max_epochs, epoch_size, mb_size, model_file
 from htree_helper import get_tree_str
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
