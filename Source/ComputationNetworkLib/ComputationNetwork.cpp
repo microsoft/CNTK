@@ -997,7 +997,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
         {
             if (!regex_match(n->first, nameFilter))
             {
-                // if regexStr is not empty and the the node does not match with the regexStr
+                // if regexStr is not empty and the node does not match with the regexStr
                 continue;
             }
 

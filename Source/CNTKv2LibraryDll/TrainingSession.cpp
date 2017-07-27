@@ -22,6 +22,13 @@ namespace CNTK
             find_if(s.begin(), s.end(), [](wchar_t c) { return !isdigit(c); }) == s.end();
     }
 
+    inline static bool IsInfinite(MinibatchSourcePtr mbSource, size_t numberOfSamples = std::numeric_limits<size_t>::max())
+    {
+        return (numberOfSamples == MinibatchSource::InfinitelyRepeat ||
+                numberOfSamples >= (size_t)std::numeric_limits<long long>::max()) &&
+            mbSource->IsInfinite();
+    }
+
     CheckpointConfig::CheckpointConfig(
         const std::wstring& checkPointFileName,
         size_t checkpointFrequencyInSamples,
@@ -148,7 +155,9 @@ namespace CNTK
                     SaveCheckpoint(currentIndex);
                     // enable profiler after the first checkpoint
                     // This has effect only if the profiler is globally enabled by StartProfiler()
+#ifndef CNTK_UWP
                     Microsoft::MSR::CNTK::ProfilerEnable(true);
+#endif
                     return true;
                 } });
 
@@ -177,6 +186,9 @@ namespace CNTK
             restoredNumberOfSamples = m_trainer->TotalNumberOfSamplesSeen();
         }
 
+        if (IsInfinite(m_source, m_maxNumSamples))
+            InvalidArgument("Train minibatch source must have a limited number of samples or sweeps.");
+
         // Main train loop.
         bool earlyExit = false;
         while (shouldTrain)
@@ -195,7 +207,9 @@ namespace CNTK
             shouldTrain = Trainer()->TrainMinibatch(minibatch, computeDevice);
             earlyExit |= !OnMinibatchEnd(); // If the callback wants to have early exit - we stop training.
 
+#ifndef CNTK_UWP
             auto profMisc = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainPost);
+#endif
 
             // Peform actions if required.
             size_t totalNumberOfSamples = Trainer()->TotalNumberOfSamplesSeen();
@@ -241,6 +255,9 @@ namespace CNTK
     {
         if (m_cv.m_source) // Running cross validation
         {
+            if (IsInfinite(m_cv.m_source, m_cv.m_maxSamples))
+                InvalidArgument("Cross validation minibatch source must have a limited number of samples or sweeps.");
+
             std::unordered_map<Variable, ValuePtr> minibatch;
             double accumulatedError = 0;
             size_t totalNumberOfSamples = 0;
@@ -252,7 +269,7 @@ namespace CNTK
             while (shouldCV)
             {
                 size_t samplesLeft = m_cv.m_maxSamples <= totalNumberOfSamples ? 0 : m_cv.m_maxSamples - totalNumberOfSamples;
-                GetCrossValidationMinibatch(minibatch, std::min(m_cv.m_mbSize[totalNumberOfSamples], samplesLeft), computeDevice);                
+                GetCrossValidationMinibatch(minibatch, (std::min)(m_cv.m_mbSize[totalNumberOfSamples], samplesLeft), computeDevice);                
 
                 // TODO: it may be slow to rely on TestMinibatch to return error each time, since it may require transfer
                 // of error from the GPU each time, accumulatedError can be allocated on GPU
@@ -279,6 +296,9 @@ namespace CNTK
     {
         if (!m_test.m_source)
             return;
+
+        if (IsInfinite(m_test.m_source))
+            InvalidArgument("Test minibatch source must have a limited number of samples or sweeps.");
 
         std::unordered_map<Variable, ValuePtr> minibatch;
         size_t totalNumberOfSamples = 0;
@@ -314,7 +334,7 @@ namespace CNTK
         }
 
         size_t mbSize = GetMinibatchSize() * scaleFactor;
-        mbSize = std::min(mbSize, maxMbSize);
+        mbSize = (std::min)(mbSize, maxMbSize);
         GetNextMinibatch(m_source, minibatch, m_varToStream, mbSize, workerRank, numberOfWorkers, computeDevice);
     }
 

@@ -641,14 +641,27 @@ public:
         return TensorShape(*this).AppendInPlace(rank, newDim);
     }
     // narrow a dimension k to given bounds [begin, end), done in-place
-    TensorShape& NarrowTo(size_t k, size_t begin, size_t end)
+    TensorShape& NarrowTo(size_t k, size_t begin, size_t end, int strides = 1)
     {
         if (k >= size())
             LogicError("NarrowTo: Index out of bounds.");
         if (end <= begin || end > m_dims[k])
             LogicError("NarrowTo: Invalid bounds parameter, dimensions must be at least one.");
-        m_offset += m_strides[k] * begin;
-        m_dims[k] = end - begin;
+        bool reverse = strides < 0;
+        size_t realStrides = std::abs(strides);
+        if (realStrides == 0)
+            LogicError("NarrowTo: Narrow with stride 0 is not supported.");
+        if (realStrides == 0 || realStrides > (end - begin))
+            LogicError("NarrowTo: stride %zd is invalid for interval [%zd, %zd).", realStrides, begin, end);
+        size_t start = reverse ? (end - 1) : begin;
+        auto dims = (end - begin) / realStrides;
+        if ((end - begin) % realStrides > 0)
+            dims++;
+        m_offset += m_strides[k] * start;
+        m_dims[k] = dims;
+        m_strides[k] *= realStrides;
+        if (reverse)
+            m_strides[k] *= -1;
         return *this;
     }
     // narrow all dimensions to two given bounds vectors, done in-place

@@ -16,9 +16,11 @@ The CNTKLibraryEvalExamples.sln contains code samples demonstrating how to use t
 After a successful build, the executable is saved under the $(SolutionDir)..\..$(Platform)$(ProjectName).$(Configuration)\ folder, e.g. ..\..\X64\CNTKLibraryCSEvalCPUOnlyExamples.Release\CNTKLibraryCSEvalCPUOnlyExamples.exe.
 On Linux, only C++ is supported. Please refer to Makefile for building samples. The target name CNTKLIBRARY_CPP_EVAL_EXAMPLES is used to build CNTKLibraryCPPEvalExamples.
 
-# EvalDll Eval C++/C# Examples
+# Legacy EvalDll C++/C# Examples
 
-The EvalClients.sln contains the following projects demonstrating how to use the EvalDll library in C++ and C#.
+Prior to the CNTK 2.0 version, the CNTK EvalDLL was used to evaluate model trained by using cntk.exe with BrainScript. The EvalDLL is still supported, but works only for the model created by cntk.exe with BrainScript. It can not be used to evaluate models created by CNTK 2.0 using Python. We strongly recommend to use the CNTK 2.0 Libraries for evaluation, as it provides more features.
+
+The EvalClients.sln inside LegacyEvalDll folder contains the following projects demonstrating how to use the EvalDll library in C++ and C#.
 
 * CPPEvalClient: this sample uses the C++ EvalDll.
 * CPPEvalExtendedClient: this sample uses the C++ extended Eval interface in EvalDll to evaluate a RNN model.

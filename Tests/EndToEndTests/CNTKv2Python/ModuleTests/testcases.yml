@@ -4,9 +4,9 @@ dataDir: .
 
 tags:
     # Python only in Release builds.
-    - bvt-l (flavor == 'release')
-    - nightly-l (flavor == 'release')
-    - weekly-l (flavor == 'release')
+    - bvt-l (flavor == 'release') and (build_sku != 'uwp')
+    - nightly-l (flavor == 'release') and (build_sku != 'uwp')
+    - weekly-l (flavor == 'release') and (build_sku != 'uwp')
 
 testCases:
   Run must finish with error code 0 (outputs __COMPLETED__ in that case):

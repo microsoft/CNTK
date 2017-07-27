@@ -9,13 +9,13 @@
 #include <vector>
 #include "Config.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Helper function to get sections that contains specified parameter.
-inline std::vector<std::string> TryGetSectionsWithParameter(const ConfigParameters& config, const std::string& parameterName)
+inline std::vector<std::string> TryGetSectionsWithParameter(const Microsoft::MSR::CNTK::ConfigParameters& config, const std::string& parameterName)
 {
     std::vector<std::string> sectionNames;
-    for (const std::pair<std::string, ConfigParameters>& section : config)
+    for (const std::pair<std::string, Microsoft::MSR::CNTK::ConfigParameters>& section : config)
     {
         if (section.second.ExistsCurrent(parameterName))
         {
@@ -27,7 +27,7 @@ inline std::vector<std::string> TryGetSectionsWithParameter(const ConfigParamete
 }
 
 // Helper function to get sections that contains specified parameter. Throws if the parameter does not exist.
-inline std::vector<std::string> GetSectionsWithParameter(const std::string& reader, const ConfigParameters& config, const std::string& parameterName)
+inline std::vector<std::string> GetSectionsWithParameter(const std::string& reader, const Microsoft::MSR::CNTK::ConfigParameters& config, const std::string& parameterName)
 {
     auto result = TryGetSectionsWithParameter(config, parameterName);
     if (result.empty())
@@ -80,4 +80,4 @@ TString Expand3Dots(const TString& filePath, const TString& directoryExpansion)
     return pos == 0 ? directoryExpansion + filePath.substr(pos + 3) : filePath;
 }
 
-}}}
+}

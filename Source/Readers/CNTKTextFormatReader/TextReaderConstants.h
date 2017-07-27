@@ -5,7 +5,7 @@
 
 #pragma once
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     const char SPACE_CHAR = ' ';
     const char TAB_CHAR = '\t';
@@ -40,4 +40,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return isValueDelimiter(c) || (isNonPrintable(c) && c != ROW_DELIMITER);
     }
 
-}}}
+}

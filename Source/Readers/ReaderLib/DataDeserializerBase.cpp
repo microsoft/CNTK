@@ -5,11 +5,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "DataDeserializerBase.h"
-#include "Indexer.h"
+#include "Index.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
-    bool DataDeserializerBase::GetSequenceDescriptionByKey(const Index& index, const KeyType& key, SequenceDescription& r)
+    bool DataDeserializerBase::GetSequenceInfoByKey(const Index& index, const SequenceKey& key, SequenceInfo& r)
     {
         if (m_primary)
             LogicError("Matching by sequence key is not supported for primary deserilalizer.");
@@ -32,4 +32,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return true;
     }
 
-}}}
+}

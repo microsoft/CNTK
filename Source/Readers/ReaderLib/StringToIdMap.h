@@ -9,9 +9,10 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <deque>
 #include "Basics.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // This class represents a string registry pattern to share strings between different deserializers if needed.
 // It associates a unique key for a given string.
@@ -91,4 +92,4 @@ private:
 typedef TStringToIdMap<std::wstring> WStringToIdMap;
 typedef TStringToIdMap<std::string> StringToIdMap;
 
-}}}
+}

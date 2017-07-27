@@ -362,4 +362,17 @@
       <Filter>cntk\ops\tests</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cntk\cntk_py_wrap.h">
+      <Filter>cntk</Filter>
+    </ClInclude>
+    <ClInclude Include="cntk\SwigDeserializer.h">
+      <Filter>cntk</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cntk\cntk_py_wrap.cpp">
+      <Filter>cntk</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>

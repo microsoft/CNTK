@@ -413,7 +413,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     emulating_1D = False   # len(filter_shape) < 2 # TODO: 1D no longer needs emulation. Remove all related code once it passes Jenkins.
 
     actual_output_channels_shape = num_filters                if not emulating_output_depth else (1,)
-    actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # TODO: C++ suport for 1D
+    actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # TODO: C++ support for 1D
     actual_filter_shape          = (1,) * emulating_1D + filter_shape
 
     # add the dimension to the options as well
@@ -1012,7 +1012,7 @@ def GlobalMaxPooling(name=''):
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
     '''
-    return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False, op_name='GlobalMaxPooling', name=name)
+    return _Pooling(PoolingType_Max, NDShape.unknown().dimensions(), pad=False, op_name='GlobalMaxPooling', name=name)
 
 
 def GlobalAveragePooling(name=''):
@@ -1042,7 +1042,7 @@ def GlobalAveragePooling(name=''):
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
     '''
-    return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False, op_name='GlobalAveragePooling', name=name)
+    return _Pooling(PoolingType_Average, NDShape.unknown().dimensions(), pad=False, op_name='GlobalAveragePooling', name=name)
 
 
 # Create a max unpooling layer

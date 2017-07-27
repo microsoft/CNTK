@@ -48,7 +48,9 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CntkBitmapExtensions.cs" />
+    <Compile Include="..\ImageExtension\CNTKImageProcessing.cs">
+      <Link>CNTKImageProcessing.cs</Link>
+    </Compile>
     <Compile Include="CNTKLibraryCSEvalExamples.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

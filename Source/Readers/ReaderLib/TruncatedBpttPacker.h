@@ -9,7 +9,7 @@
 #include "MemoryProvider.h"
 #include "PackerBase.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Represents a buffer of prepared sequences from which the minibatch is created.
 struct SequenceBuffer;
@@ -22,7 +22,7 @@ class TruncatedBPTTPacker : public PackerBase
 public:
     TruncatedBPTTPacker(
         SequenceEnumeratorPtr sequenceEnumerator,
-        const std::vector<StreamDescriptionPtr>& streams,
+        const std::vector<StreamInformation>& streams,
         size_t numberOfBuffers = 2,
         CorpusDescriptorPtr corpus = nullptr);
 
@@ -73,4 +73,4 @@ private:
 
 typedef std::shared_ptr<TruncatedBPTTPacker> TruncatedBPTTPackerPtr;
 
-}}}
+}

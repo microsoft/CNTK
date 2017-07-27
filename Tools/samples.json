@@ -127,6 +127,15 @@
     },
     {
         "category": ["Image"],
+        "name":  "GoogLeNet (Inception-ResNet-V1)",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/Inception-ResNet-V1#cntk-examples-imageclassificationgooglenetinception-resnet-v1",
+        "description":  "GoogLeNet (Inception-ResNet-V1) network for image classification.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"],
+	"dateadded": "7/5/2017"
+    },
+    {
+        "category": ["Image"],
         "name":  "MNIST Logistic Regression (LR) OCR",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103B_MNIST_LogisticRegression.ipynb",
         "description":  "Recognize hand written digits (OCR) with MNIST data using multi-class LR.",
@@ -513,6 +522,15 @@
 	"dateadded": "4/14/2017"
     },
     {
+        "category": ["Text"],
+        "name": "LightRNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/LightRNN",
+        "description": "LightRNN: Memory and Computation-Efficient Recurrent Neural Networks",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dateadded": "07/14/2017"
+    },
+    {
         "category": ["Reinforcement Learning"],
         "name": "Deep Q Neural Network",
         "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning",
@@ -520,5 +538,14 @@
         "language": ["Python"],
         "type": ["Recipe"],
         "dataadded": "05/05/2017"
+    },
+    {
+        "category": ["Reinforcement Learning"],
+        "name": "Flapping Bird with Keras",
+        "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning/FlappingBirdWithKeras",
+        "description": "Using CNTK Keras backend to train an agent to navigate a bird through a cactus maze",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dataadded": "07/21/2017"
     }
 ]

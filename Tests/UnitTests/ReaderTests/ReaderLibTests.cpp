@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include <numeric>
 #include <random>
+#include <set>
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
 #include "BlockRandomizer.h"
@@ -15,7 +16,7 @@
 #include "TruncatedBpttPacker.h"
 #include "CudaMemoryProvider.h"
 #include "HeapMemoryProvider.h"
-#include "MemoryBuffer.h"
+#include "BufferedFileReader.h"
 
 #pragma warning(push)
 // disable warning about possible mod 0 operation in uniform_int_distribution
@@ -30,6 +31,8 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
+using namespace ::CNTK;
+
 BOOST_AUTO_TEST_SUITE(ReaderLibTests)
 
 class MockChunk : public Chunk
@@ -37,7 +40,7 @@ class MockChunk : public Chunk
 private:
     size_t m_chunkBegin;
     size_t m_chunkEnd;
-    TensorShapePtr m_sampleLayout;
+    NDShape m_sampleShape;
     uint32_t m_sequenceLength;
     vector<vector<float>>& m_sequenceData;
 
@@ -45,7 +48,7 @@ public:
     MockChunk(size_t chunkBegin, size_t chunkEnd, vector<vector<float>>& sequenceData, uint32_t sequenceLength)
         : m_chunkBegin(chunkBegin),
           m_chunkEnd(chunkEnd),
-          m_sampleLayout(make_shared<TensorShape>(1)),
+          m_sampleShape(NDShape({ 1 })),
           m_sequenceLength(sequenceLength),
           m_sequenceData(sequenceData)
     {
@@ -61,30 +64,30 @@ public:
         auto data = make_shared<MockDenseSequenceData>();
         data->m_data = &m_sequenceData[sequenceId][0];
         data->m_numberOfSamples = m_sequenceLength;
-        data->m_sampleLayout = m_sampleLayout;
+        data->m_sampleShape = m_sampleShape;
         result.push_back(data);
     }
 
     ~MockChunk() override {};
 };
 
-class MockDeserializer : public IDataDeserializer
+class MockDeserializer : public DataDeserializer
 {
 private:
     uint32_t m_sequenceLength;
     size_t m_numChunks;
     size_t m_numSequencesPerChunk;
-    vector<SequenceDescription> m_descriptions;
-    vector<StreamDescriptionPtr> m_streams;
-    TensorShapePtr m_sampleLayout;
-    vector<ChunkDescriptionPtr> m_chunkDescriptions;
+    vector<SequenceInfo> m_descriptions;
+    vector<StreamInformation> m_streams;
+    NDShape m_sampleShape;
+    vector<ChunkInfo> m_chunkDescriptions;
     vector<vector<float>> m_sequenceData;
 
 public:
     MockDeserializer(size_t numChunks, size_t numSequencesPerChunks, const vector<float>& data, uint32_t sequenceLength = 1)
         : m_numChunks(numChunks),
           m_numSequencesPerChunk(numSequencesPerChunks),
-          m_sampleLayout(make_shared<TensorShape>(1)),
+          m_sampleShape(NDShape(1)),
           m_sequenceLength(sequenceLength)
     {
         m_sequenceData.reserve(data.size());
@@ -99,35 +102,33 @@ public:
 
         for (size_t i = 0; i < numSequences; i++)
         {
-            m_descriptions.push_back(SequenceDescription {
+            m_descriptions.push_back(SequenceInfo {
                 i,
                 m_sequenceLength,
                 (ChunkIdType) (i / m_numSequencesPerChunk),
-                KeyType(0, static_cast<uint32_t>(i))
+                SequenceKey(0, static_cast<uint32_t>(i))
             });
         }
 
         for (ChunkIdType i = 0; i < numChunks; i++)
         {
-            m_chunkDescriptions.push_back(make_shared<ChunkDescription>(ChunkDescription {
+            m_chunkDescriptions.push_back(ChunkInfo {
                 i,
                 m_numSequencesPerChunk * m_sequenceLength,
                 m_numSequencesPerChunk
-            }));
+            });
         }
 
-        m_streams.push_back(make_shared<StreamDescription>(StreamDescription{
-            L"input",
-            0,
-            StorageType::dense,
-            ElementType::tfloat,
-            m_sampleLayout
-        }));
-
-
+        StreamInformation si;
+        si.m_name = L"input";
+        si.m_id = 0;
+        si.m_storageFormat = StorageFormat::Dense;
+        si.m_elementType = DataType::Float;
+        si.m_sampleLayout = m_sampleShape;
+        m_streams.push_back(si);
     };
 
-    vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+    vector<StreamInformation> StreamInfos() override
     {
         return m_streams;
     }
@@ -141,21 +142,21 @@ public:
         return chunk;
     }
 
-    virtual bool GetSequenceDescription(const SequenceDescription&, SequenceDescription&) override
+    virtual bool GetSequenceInfo(const SequenceInfo&, SequenceInfo&) override
     {
         throw logic_error("Not implemented");
     }
 
-    virtual ChunkDescriptions GetChunkDescriptions() override
+    virtual std::vector<ChunkInfo> ChunkInfos() override
     {
         return m_chunkDescriptions;
     }
 
-    virtual void GetSequencesForChunk(ChunkIdType chunkId, vector<SequenceDescription>& descriptions) override
+    virtual void SequenceInfosForChunk(ChunkIdType chunkId, vector<SequenceInfo>& descriptions) override
     {
         for (size_t i = chunkId * m_numSequencesPerChunk; i < (chunkId + 1) * m_numSequencesPerChunk; i++)
         {
-            descriptions.push_back(SequenceDescription{
+            descriptions.push_back(SequenceInfo{
                 i,
                 m_sequenceLength,
                 chunkId,
@@ -205,7 +206,9 @@ BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
         underTest->StartEpoch(config);
 
         // Rereading second epoch
-        underTest->SetCurrentSamplePosition(firstEpoch.size());
+        std::map<std::wstring, size_t> state;
+        state[g_minibatchSourcePosition] = firstEpoch.size();
+        underTest->SetState(state);
         auto anotherSecond = ReadNextSamples(underTest, secondEpoch.size());
         BOOST_CHECK_EQUAL_COLLECTIONS(
             secondEpoch.begin(),
@@ -214,7 +217,8 @@ BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
             anotherSecond.end());
 
         // Rereading first epoch
-        underTest->SetCurrentSamplePosition(0);
+        state[g_minibatchSourcePosition] = 0;
+        underTest->SetState(state);
         auto anotherFirst = ReadNextSamples(underTest, firstEpoch.size());
         BOOST_CHECK_EQUAL_COLLECTIONS(
             firstEpoch.begin(),
@@ -223,7 +227,8 @@ BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
             anotherFirst.end());
 
         // Rereading third epoch
-        underTest->SetCurrentSamplePosition(firstEpoch.size() + secondEpoch.size());
+        state[g_minibatchSourcePosition] = firstEpoch.size() + secondEpoch.size();
+        underTest->SetState(state);
         auto anotherThird = ReadNextSamples(underTest, thirdEpoch.size());
         BOOST_CHECK_EQUAL_COLLECTIONS(
             thirdEpoch.begin(),
@@ -439,7 +444,7 @@ void OneEpochRandomizationTest(SequenceEnumerator& randomizer, size_t sweepSize,
                                   actual.begin(), actual.end());
 }
 
-void TestRandomization(EpochConfiguration& epochConfiguration, IDataDeserializerPtr deserializer, size_t sweepSize, const vector<float>& expectedRandomized, const vector<float>& expectedNotRandomized, size_t sequenceLength = 1)
+void TestRandomization(EpochConfiguration& epochConfiguration, DataDeserializerPtr deserializer, size_t sweepSize, const vector<float>& expectedRandomized, const vector<float>& expectedNotRandomized, size_t sequenceLength = 1)
 {
     BlockRandomizer randomizer1(0, SIZE_MAX, deserializer, /*prefetch =*/ false);
     BlockRandomizer randomizer2(0, SIZE_MAX, deserializer, /*prefetch =*/ true);
@@ -941,21 +946,21 @@ BOOST_AUTO_TEST_CASE(CheckGetCurrentCursorForRandomizers)
     auto test = [](SequenceEnumeratorPtr r, size_t epochSize)
     {
         auto firstEpoch = ReadFullEpoch(r, epochSize, 0);
-        auto firstCursor = r->GetCurrentSamplePosition();
-        BOOST_CHECK_EQUAL(firstCursor, firstEpoch.size());
+        auto firstCursor = r->GetState();
+        BOOST_CHECK_EQUAL(firstCursor[g_minibatchSourcePosition], firstEpoch.size());
 
         auto secondEpoch = ReadFullEpoch(r, epochSize, 1);
-        auto secondCursor = r->GetCurrentSamplePosition();
-        BOOST_CHECK_EQUAL(secondCursor - firstCursor, secondEpoch.size());
+        auto secondCursor = r->GetState();
+        BOOST_CHECK_EQUAL(secondCursor[g_minibatchSourcePosition] - firstCursor[g_minibatchSourcePosition], secondEpoch.size());
 
         auto thirdEpoch = ReadFullEpoch(r, epochSize, 2);
-        auto thirdCursor = r->GetCurrentSamplePosition();
-        BOOST_CHECK_EQUAL(thirdCursor - secondCursor, thirdEpoch.size());
+        auto thirdCursor = r->GetState();
+        BOOST_CHECK_EQUAL(thirdCursor[g_minibatchSourcePosition] - secondCursor[g_minibatchSourcePosition], thirdEpoch.size());
 
         auto anotherSecondEpoch = ReadFullEpoch(r, epochSize, 1);
-        auto anotherSecondCursor = r->GetCurrentSamplePosition();
+        auto anotherSecondCursor = r->GetState();
 
-        BOOST_CHECK_EQUAL(anotherSecondCursor, secondCursor);
+        BOOST_CHECK_EQUAL(anotherSecondCursor[g_minibatchSourcePosition], secondCursor[g_minibatchSourcePosition]);
     };
 
     // Inside sweep
@@ -978,8 +983,18 @@ BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)
     string randomKey(10, (char)distr(rng));
 
     CorpusDescriptor corpus(false);
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded(randomKey));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded(""));
+    BOOST_CHECK_EQUAL(false, corpus.IsHashingEnabled());
+    BOOST_CHECK_EQUAL(false, corpus.IsNumericSequenceKeys());
+
+    BOOST_CHECK_EQUAL(0, corpus.KeyToId(randomKey));
+    BOOST_CHECK_EQUAL(1, corpus.KeyToId(""));
+}
+
+BOOST_AUTO_TEST_CASE(CorpusDescriptorHashing)
+{
+    auto hashVersion = CorpusDescriptor::s_hashVersion;
+    BOOST_CHECK_EQUAL(1, hashVersion);
+    BOOST_CHECK_EQUAL(1661589163364855789u, CorpusDescriptor(false, true).KeyToId("abcDEF_+123!890x.Y.Z@"));
 }
 
 BOOST_AUTO_TEST_CASE(NumericCorpusDescriptor)
@@ -1011,25 +1026,6 @@ BOOST_AUTO_TEST_CASE(LiteralCorpusDescriptor)
     CorpusDescriptor corpus(false);
     BOOST_CHECK(100 != corpus.KeyToId("100"));
     BOOST_CHECK_NO_THROW(corpus.KeyToId("not a number"));
-}
-
-BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
-{
-    FILE* test = fopen("test.tmp", "w+");
-    fwrite("1\n", sizeof(char), 2, test);
-    fwrite("2\n", sizeof(char), 2, test);
-    fwrite("4\n", sizeof(char), 2, test);
-    fclose(test);
-
-    CorpusDescriptor corpus(L"test.tmp", true, false);
-    BOOST_CHECK_EQUAL(false, corpus.IsIncluded("0"));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded("1"));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded("2"));
-    BOOST_CHECK_EQUAL(false, corpus.IsIncluded("3"));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded("4"));
-    BOOST_CHECK_EQUAL(false, corpus.IsIncluded("5"));
-
-    remove("test.tmp");
 }
 
 BOOST_AUTO_TEST_CASE(LiteralCorpusDescriptorWithHash)
@@ -1205,329 +1201,17 @@ BOOST_AUTO_TEST_CASE(CheckNoDegenerateMinibatches)
     }
 }
 
-const std::string g_MemBufferTextData =
-    "0\t|a 1 1\t|b 1 1\n"    // 16 characters
-    "0\t|a 2 2\t|b 2 2\n"    // 16 
-    "0\t|a 3 3\t|b 3 3\n"    // 16
-    "0\t|a 4 4\n"            // 9
-    "0\t|a 5 5\n"            // 9
-    "1\t|b 6 6\t |a 6 6 6\n" // 19
-    "1\t|b 7 7\t |a 7 7 7\n" // 19
-    "1\t|b 8 8 8 8 8\n"      // 15
-    "1\t|b 9\n"              // 7
-    "1\t|b 10 10 10 10 10\n";// 20
-
-BOOST_AUTO_TEST_CASE(MemoryBufferWithoutCompleteLines)
-{
-    FILE* test = fopen("test.tmp", "w+b");
-    fwrite(g_MemBufferTextData.c_str(), 1, g_MemBufferTextData.size(), test);
-    fclose(test);
-
-    test = fopen("test.tmp", "r");
-    BOOST_CHECK_EQUAL(filesize(test), 146);
-
-    MemoryBuffer mb(25);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
-
-    auto p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(48, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(50, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(50, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(57, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(75, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(75, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(100, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(100, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(119, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(125, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(125, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == mb.End(), true);
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(146, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), true);
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-
-    remove("test.tmp");
-}
-
-BOOST_AUTO_TEST_CASE(MemoryBufferWithCompleteLines)
-{
-    FILE* test = fopen("test.tmp", "w+b");
-    fwrite(g_MemBufferTextData.c_str(), 1, g_MemBufferTextData.size(), test);
-    fclose(test);
-
-    test = fopen("test.tmp", "r");
-    BOOST_CHECK_EQUAL(filesize(test), 146);
-
-    MemoryBuffer mb(25, true);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
-
-    auto p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(48, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == mb.End(), true);
-    BOOST_CHECK_EQUAL(57, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(57, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(119, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == mb.End(), true);
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(146, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), true);
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-
-    remove("test.tmp");
-}
-
-const std::string g_MemBufferTextData1 =
-    "0\t|a 1 1\t|b 1 1\n"  // 16 characters
-    "1\t|b 10 10 10 10 10";// 19
-
-BOOST_AUTO_TEST_CASE(MemoryBufferWithoutLastCR)
-{
-    FILE* test = fopen("test.tmp", "w+b");
-    fwrite(g_MemBufferTextData1.c_str(), 1, g_MemBufferTextData1.size(), test);
-    fclose(test);
-
-    test = fopen("test.tmp", "r");
-    BOOST_CHECK_EQUAL(filesize(test), 35);
-
-    MemoryBuffer mb(25);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
-
-    auto p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(35, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(mb.Eof(), true);
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-
-    remove("test.tmp");
-}
-
-BOOST_AUTO_TEST_CASE(MemoryBufferFullLineWithoutLastCR)
-{
-    FILE* test = fopen("test.tmp", "w+b");
-    fwrite(g_MemBufferTextData1.c_str(), 1, g_MemBufferTextData1.size(), test);
-    fclose(test);
-
-    test = fopen("test.tmp", "r");
-    BOOST_CHECK_EQUAL(filesize(test), 35);
-
-    MemoryBuffer mb(25, true);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
-
-    auto p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(mb.End() != mb.Start(), true);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(35, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-    BOOST_CHECK_EQUAL(mb.Eof(), true);
-
-    remove("test.tmp");
-}
-
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(PackerTests)
 
-typedef std::multimap<size_t, SequentialDeserializer::SequenceInfo> CorpusSubset;
+typedef std::multimap<size_t, SequentialDeserializer::MockSequenceInfo> CorpusSubset;
 
 // Runs single worker till reach end of epoch.
 void RunSingleWorker(
     PackerPtr packerUnderTest,
-    const std::map<size_t, SequentialDeserializer::SequenceInfo>& corpus,
-    std::multimap<size_t, SequentialDeserializer::SequenceInfo>& subset,
+    const std::map<size_t, SequentialDeserializer::MockSequenceInfo>& corpus,
+    std::multimap<size_t, SequentialDeserializer::MockSequenceInfo>& subset,
     size_t expectedMinibatchSize,
     bool strict)
 {
@@ -1588,7 +1272,7 @@ void RunSingleWorker(
 
 void RunAllWorkers(
     size_t numWorkers,
-    const std::map<size_t, SequentialDeserializer::SequenceInfo>& corpus,
+    const std::map<size_t, SequentialDeserializer::MockSequenceInfo>& corpus,
     std::map<pair<size_t, size_t>, CorpusSubset>& result,
     PackerPtr packer,
     SequenceEnumeratorPtr randomizer,
@@ -1783,8 +1467,8 @@ void CheckPackerOnSweep(
 
             if (performWorkerChunkCheck) // We know expected number of chunks.
             {
-                bool shouldAddOne = deserializer->GetChunkDescriptions().size() % numWorkers > rank;
-                size_t expectedNumberOfChunks = deserializer->GetChunkDescriptions().size() / numWorkers + (shouldAddOne ? 1 : 0);
+                bool shouldAddOne = deserializer->ChunkInfos().size() % numWorkers > rank;
+                size_t expectedNumberOfChunks = deserializer->ChunkInfos().size() / numWorkers + (shouldAddOne ? 1 : 0);
                 BOOST_REQUIRE_EQUAL(workerChunks.size(), expectedNumberOfChunks);
 
                 std::set<size_t> intersect;
@@ -1806,7 +1490,7 @@ void CheckPackerOnSweep(
                 BOOST_REQUIRE_EQUAL(numberOfSamplesInEpoch[e], sampleCount);
         }
 
-        BOOST_REQUIRE_EQUAL(totalChunks.size(), deserializer->GetChunkDescriptions().size());
+        BOOST_REQUIRE_EQUAL(totalChunks.size(), deserializer->ChunkInfos().size());
 
         auto actual = ToSet(GetCorpus(allData));
         auto expected = ToSet(CorpusSubset(deserializer->Corpus().begin(), deserializer->Corpus().end()));
@@ -1828,7 +1512,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerBigChunksWithFrames1Sweep)
 
     {
         auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnSweep(packer, blockRandomizer, deserializer, 1, 64, true, true);
         CheckPackerOnSweep(packer, blockRandomizer, deserializer, 5, 64, true, true);
@@ -1839,7 +1523,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerBigChunksWithFrames1Sweep)
 
     {
         auto noRandomizer = make_shared<NoRandomizer>(deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnSweep(packer, noRandomizer, deserializer, 1, 64, true, false);
         CheckPackerOnSweep(packer, noRandomizer, deserializer, 5, 64, true, false);
@@ -1859,7 +1543,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerSmallChunksWithFrames1Sweep)
 
     {
         auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnSweep(packer, blockRandomizer, deserializer, 1, 64, true, true);
         CheckPackerOnSweep(packer, blockRandomizer, deserializer, 3, 64, true, true);
@@ -1870,7 +1554,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerSmallChunksWithFrames1Sweep)
 
     {
         auto noRandomizer = make_shared<NoRandomizer>(deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnSweep(packer, noRandomizer, deserializer, 1, 64, true, true);
         CheckPackerOnSweep(packer, noRandomizer, deserializer, 3, 64, true, true);
@@ -1891,7 +1575,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerBigChunksWithSequences1Sweep)
 
     {
         auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnSweep(packer, blockRandomizer, deserializer, 1, 64, false, true);
         CheckPackerOnSweep(packer, blockRandomizer, deserializer, 5, 64, false, true);
@@ -1902,7 +1586,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerBigChunksWithSequences1Sweep)
 
     {
         auto noRandomizer = make_shared<NoRandomizer>(deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnSweep(packer, noRandomizer, deserializer, 1, 64, false, false);
         CheckPackerOnSweep(packer, noRandomizer, deserializer, 5, 64, false, false);
@@ -1922,7 +1606,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerSmallChunksWithSequences1Sweep)
 
     {
         auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnSweep(packer, blockRandomizer, deserializer, 1, 64, false, true);
         CheckPackerOnSweep(packer, blockRandomizer, deserializer, 3, 64, false, true);
@@ -1933,7 +1617,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerSmallChunksWithSequences1Sweep)
 
     {
         auto noRandomizer = make_shared<NoRandomizer>(deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnSweep(packer, noRandomizer, deserializer, 1, 64, false, true);
         CheckPackerOnSweep(packer, noRandomizer, deserializer, 3, 64, false, true);
@@ -1960,7 +1644,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerBigChunksWithFrames)
 
     {
         auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnDataSet(packer, blockRandomizer, deserializer, 1, sweepNumberOfSamples * 2, 2, sweepNumberOfSamples, 64, true);
         CheckPackerOnDataSet(packer, blockRandomizer, deserializer, 5, sweepNumberOfSamples * 2 / 5, 2, sweepNumberOfSamples, 64, true);
@@ -1971,7 +1655,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerBigChunksWithFrames)
 
     {
         auto noRandomizer = make_shared<NoRandomizer>(deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnDataSet(packer, noRandomizer, deserializer, 1, sweepNumberOfSamples * 2, 2, sweepNumberOfSamples, 64, true);
         CheckPackerOnDataSet(packer, noRandomizer, deserializer, 5, sweepNumberOfSamples * 2 / 5, 2, sweepNumberOfSamples, 64, true);
@@ -1991,7 +1675,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerSmallChunksWithFrames)
 
     {
         auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnDataSet(packer, blockRandomizer, deserializer, 1, sweepNumberOfSamples * 2, 2, sweepNumberOfSamples, 64, true);
         CheckPackerOnDataSet(packer, blockRandomizer, deserializer, 3, sweepNumberOfSamples * 2 / 3, 2, sweepNumberOfSamples, 64, true);
@@ -2002,7 +1686,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerSmallChunksWithFrames)
 
     {
         auto noRandomizer = make_shared<NoRandomizer>(deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnDataSet(packer, noRandomizer, deserializer, 1, sweepNumberOfSamples * 2, 2, sweepNumberOfSamples, 64, true);
         CheckPackerOnDataSet(packer, noRandomizer, deserializer, 3, sweepNumberOfSamples * 2 / 3, 2, sweepNumberOfSamples, 64, true);
@@ -2023,7 +1707,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerBigChunksWithSequences)
 
     {
         auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnDataSet(packer, blockRandomizer, deserializer, 1, sweepNumberOfSamples * 2, 2, sweepNumberOfSamples, 64, false);
         CheckPackerOnDataSet(packer, blockRandomizer, deserializer, 5, sweepNumberOfSamples * 2 / 5, 2, sweepNumberOfSamples, 64, false);
@@ -2034,7 +1718,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerBigChunksWithSequences)
 
     {
         auto noRandomizer = make_shared<NoRandomizer>(deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnDataSet(packer, noRandomizer, deserializer, 1, sweepNumberOfSamples * 2, 2, sweepNumberOfSamples, 64, false);
         CheckPackerOnDataSet(packer, noRandomizer, deserializer, 5, sweepNumberOfSamples * 2 / 5, 2, sweepNumberOfSamples, 64, false);
@@ -2054,7 +1738,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerSmallChunksWithSequences)
 
     {
         auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(blockRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnDataSet(packer, blockRandomizer, deserializer, 1, sweepNumberOfSamples * 2, 2, sweepNumberOfSamples, 64, false);
         CheckPackerOnDataSet(packer, blockRandomizer, deserializer, 3, sweepNumberOfSamples * 2 / 3, 2, sweepNumberOfSamples, 64, false);
@@ -2065,7 +1749,7 @@ BOOST_AUTO_TEST_CASE(SequencePackerSmallChunksWithSequences)
 
     {
         auto noRandomizer = make_shared<NoRandomizer>(deserializer, true);
-        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->GetStreamDescriptions(), 1, true);
+        PackerPtr packer = std::make_shared<SequencePacker>(noRandomizer, deserializer->StreamInfos(), 1, true);
 
         CheckPackerOnDataSet(packer, noRandomizer, deserializer, 1, sweepNumberOfSamples * 2, 2, sweepNumberOfSamples, 64, false);
         CheckPackerOnDataSet(packer, noRandomizer, deserializer, 3, sweepNumberOfSamples * 2 / 3, 2, sweepNumberOfSamples, 64, false);
@@ -2082,7 +1766,7 @@ BOOST_AUTO_TEST_CASE(TestTruncatedBpttPacker)
     uint32_t maxSequenceLength = 10;
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
     auto noRandomizer = make_shared<NoRandomizer>(deserializer, true);
-    auto packer = std::make_shared<TruncatedBPTTPacker>(noRandomizer, deserializer->GetStreamDescriptions());
+    auto packer = std::make_shared<TruncatedBPTTPacker>(noRandomizer, deserializer->StreamInfos());
     
     EpochConfiguration config;
     config.m_allowMinibatchesToCrossSweepBoundaries = true;
@@ -2108,7 +1792,9 @@ BOOST_AUTO_TEST_CASE(TestTruncatedBpttPacker)
         sampleCount += mb.m_data[0]->m_layout->GetActualNumSamples();
     }
 
-    noRandomizer->SetCurrentSamplePosition(sweepNumberOfSamples);
+    std::map<std::wstring, size_t> state;
+    state[g_minibatchSourcePosition] = sweepNumberOfSamples;
+    noRandomizer->SetState(state);
     packer->Reset();
 
     auto mb = packer->ReadMinibatch();

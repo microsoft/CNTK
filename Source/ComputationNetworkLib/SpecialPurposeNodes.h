@@ -1041,6 +1041,11 @@ public:
         auto& result = Value();
         auto& inputValue = InputRef(1).Value();
 
+        if (inputValue.GetNumElements() != result.GetNumElements())
+        {
+            InvalidArgument("%ls %ls operation: unexpected dimension mismatch", NodeName().c_str(), OperationName().c_str());
+        }
+
         m_result->AssignValuesOf(inputValue);
         result.AssignValuesOf(inputValue);
     }
@@ -1066,8 +1071,8 @@ public:
 
         if (Input(0)->HasMBLayout() || Input(1)->HasMBLayout())
             InvalidArgument("AssignNode: None of the inputs can have dynamic axes.");
-
-        if (Input(0)->GetSampleLayout() != Input(1)->GetSampleLayout())
+        //only check layout in final pass, as there may be free dimension axis
+        if (isFinalValidationPass && Input(0)->GetSampleLayout() != Input(1)->GetSampleLayout())
             InvalidArgument("AssignNode: All inputs should have same sample layout.");
     }
 

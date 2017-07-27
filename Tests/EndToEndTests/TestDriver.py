@@ -262,10 +262,15 @@ class Test:
     if windows:
       if args.build_sku == "cpu":
         os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, (flavor + "_CpuOnly"), "cntk.exe")
+      elif args.build_sku == "uwp":
+        os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, (flavor + "_UWP"), "cntk.exe")
       else:
         os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, flavor, "cntk.exe")
       os.environ["MPI_BINARY"] = os.path.join(os.environ["MSMPI_BIN"], "mpiexec.exe")
     else:
+      # No UWP on Linux
+      assert args.build_sku != "uwp"
+
       tempPath = os.path.join(args.build_location, args.build_sku, flavor, "bin", "cntk")
       if not os.path.isfile(tempPath):
         for bsku in ["/build/gpu/", "/build/cpu/", "/build/1bitsgd/"]:
@@ -275,7 +280,8 @@ class Test:
       os.environ["TEST_CNTK_BINARY"] = tempPath
       os.environ["MPI_BINARY"] = "mpiexec"
     os.environ["TEST_1BIT_SGD"] = ("1" if args.build_sku == "1bitsgd" else "0")
-    if not os.path.exists(os.environ["TEST_CNTK_BINARY"]):
+    # N.B. no cntk.exe in UWP build
+    if args.build_sku != "uwp" and not os.path.exists(os.environ["TEST_CNTK_BINARY"]):
       raise ValueError("the cntk executable does not exist at path '%s'"%os.environ["TEST_CNTK_BINARY"])
     os.environ["TEST_BIN_DIR"] = os.path.dirname(os.environ["TEST_CNTK_BINARY"])
     os.environ["TEST_DIR"] = self.testDir
@@ -841,14 +847,14 @@ if __name__ == "__main__":
       sys.exit(1)
     args.flavors = [args.flavor]
 
-  args.buildSKUs = ["cpu", "gpu", "1bitsgd"]
+  args.buildSKUs = ["cpu", "gpu", "1bitsgd", "uwp"]
   if (args.build_sku):
     args.build_sku = args.build_sku.lower()
     if not args.build_sku in args.buildSKUs:
       six.print_("--build-sku must be one of", args.buildSKUs, file=sys.stderr)
       sys.exit(1)
     args.buildSKUs = [args.build_sku]
-    if args.build_sku == "cpu" and args.devices == ["gpu"]:
+    if (args.build_sku == "cpu" or args.build_sku == "uwp") and args.devices == ["gpu"]:
       print >>sys.stderr, "Invalid combination: --build-sku cpu and --device gpu"
       sys.exit(1)
 
