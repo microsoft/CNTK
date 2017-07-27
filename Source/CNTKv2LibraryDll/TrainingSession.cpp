@@ -253,6 +253,16 @@ namespace CNTK
     // TODO: Possibly expose a limiting counter on the number of samples for validation.
     bool TrainingSession::CrossValidate(size_t currentIndex, const DeviceDescriptor& computeDevice)
     {
+        // Making sure we get the consistent state of the
+        // training minibatch source in case of bptt.
+        // When CV happens in the middle of the training, the packer can still has some truncated
+        // sequences in the buffer. CV resets the state of the DelayedNode, so the first
+        // training minibatch after CV will cause an exception.
+        // Checkpoining currently drop intermediat buffers.
+        // TODO: This is meant as a stop gap, the minibatch source should be properly drained instead.
+        auto state = m_source->GetCheckpointState();
+
+        bool result = false;
         if (m_cv.m_source) // Running cross validation
         {
             if (IsInfinite(m_cv.m_source, m_cv.m_maxSamples))
@@ -269,7 +279,7 @@ namespace CNTK
             while (shouldCV)
             {
                 size_t samplesLeft = m_cv.m_maxSamples <= totalNumberOfSamples ? 0 : m_cv.m_maxSamples - totalNumberOfSamples;
-                GetCrossValidationMinibatch(minibatch, (std::min)(m_cv.m_mbSize[totalNumberOfSamples], samplesLeft), computeDevice);                
+                GetCrossValidationMinibatch(minibatch, (std::min)(m_cv.m_mbSize[totalNumberOfSamples], samplesLeft), computeDevice);
 
                 // TODO: it may be slow to rely on TestMinibatch to return error each time, since it may require transfer
                 // of error from the GPU each time, accumulatedError can be allocated on GPU
@@ -279,17 +289,20 @@ namespace CNTK
                     accumulatedError += errorAndCount.first->AsScalar<double>();
                     totalNumberOfSamples += errorAndCount.second;
                     numberOfMinibatches++;
-                }                
+                }
             }
 
             m_cv.m_source->RestoreFromCheckpoint(checkpoint);
             Trainer()->SummarizeTestProgress();
-            return OnCrossValidationEnd(currentIndex, accumulatedError / totalNumberOfSamples, totalNumberOfSamples, numberOfMinibatches);
+            result = OnCrossValidationEnd(currentIndex, accumulatedError / totalNumberOfSamples, totalNumberOfSamples, numberOfMinibatches);
         }
         else // Only invoking the callback.
         {
-            return OnCrossValidationEnd(currentIndex, 0, 0, 0);
+            result = OnCrossValidationEnd(currentIndex, 0, 0, 0);
         }
+
+        m_source->RestoreFromCheckpoint(state);
+        return result;
     }
 
     void TrainingSession::Test(const DeviceDescriptor& computeDevice)
@@ -363,7 +376,12 @@ namespace CNTK
             return;
 
         for (auto v : inputVarToStream)
-            minibatch.insert({ v.first, minibatchData[v.second].data });
+        {
+            auto value = minibatchData.find(v.second);
+            if (value == minibatchData.end())
+                RuntimeError("Minibatch source cannot find a stream with name '%ls'", v.second.m_name.c_str());
+            minibatch.insert({ v.first, value->second.data });
+        }
     }
 
     void TrainingSession::RestoreFromCheckpoint(const std::wstring& checkpointFileName)
