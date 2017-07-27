@@ -25,6 +25,8 @@ private:
     // All streams this reader provides.
     std::vector<StreamDescriptionPtr> m_streams;
 
+    std::vector<AppendFuncDescriptionPtr> m_appendFuncs;
+
     // Seed for the random generator.
     unsigned int m_seed;
 };

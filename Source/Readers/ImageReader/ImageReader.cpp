@@ -38,6 +38,11 @@ ImageReader::ImageReader(const ConfigParameters& config)
         omp_set_num_threads(threadCount);
     }
 
+    m_appendFuncs = configHelper.GetAppendFuncs();
+    ParamsMapPtr dataExtendParamsPtr = nullptr;
+    if(m_appendFuncs.size() > 0)
+        dataExtendParamsPtr.reset(&(m_appendFuncs[configHelper.GetDataExtendFuncId()]->m_params));
+
     auto deserializer = std::make_shared<ImageDataDeserializer>(config);
 
     SequenceEnumeratorPtr randomizer;
@@ -47,7 +52,7 @@ ImageReader::ImageReader(const ConfigParameters& config)
     {
         // We do not do io prefetching, because chunks are single images currently.
         bool ioPrefetch = false;
-        randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, ioPrefetch, multithreadedGetNextSequences);
+        randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, ioPrefetch, multithreadedGetNextSequences, 0, true, dataExtendParamsPtr);
     }
     else
     {

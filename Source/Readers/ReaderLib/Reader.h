@@ -6,6 +6,7 @@
 #pragma once
 
 #include <vector>
+#include <map>
 #include <memory>
 #include <functional>
 #include "Sequences.h"
@@ -80,6 +81,17 @@ struct StreamDescription
                                    // If not specified - can be specified per sequence
 };
 typedef std::shared_ptr<StreamDescription> StreamDescriptionPtr;
+
+typedef size_t FuncId;
+typedef std::map<std::string, std::string> ParamsMap;
+typedef std::shared_ptr<ParamsMap> ParamsMapPtr;
+struct AppendFuncDescription
+{
+    FuncId m_id;
+    std::wstring m_name;
+    ParamsMap m_params;
+};
+typedef std::shared_ptr<AppendFuncDescription> AppendFuncDescriptionPtr;
 
 // Represent a minibatch date for a single stream formatted in according to the minibatch layout.
 // This data is returned per stream as a part of Minibatch from the ReadMinibatch function.

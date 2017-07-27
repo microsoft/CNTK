@@ -8,6 +8,7 @@
 #include <vector>
 #include "DataDeserializer.h"
 #include <random>
+#include <math.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -77,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const std::vector<RandomizedChunk>& GetRandomizedChunks() const;
 
         // Randomizes chunks based on the seed.
-        void Randomize(unsigned int seed);
+        void Randomize(unsigned int seed, ParamsMapPtr dataExtendParams= nullptr, size_t curEpoch = 0);
 
         // Randomize by spraying original sequences over a window of "m_randomizationRange" samples.
         void RandomizeUsingWindowInSamples();
@@ -91,6 +92,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<RandomizedChunk> m_randomizedChunks;
         // Original chunks.
         std::vector<ChunkDescriptionPtr> m_originalChunks;
+
+        // for data extend, last used chunk idx
+        std::vector<ChunkIdType> m_lastChunksIndices;
 
         // Randomization range in samples.
         size_t m_randomizationRange;

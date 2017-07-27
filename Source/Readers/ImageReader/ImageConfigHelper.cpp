@@ -15,6 +15,7 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
 {
     std::vector<std::string> featureNames = GetSectionsWithParameter("ImageReader", config, "width");
     std::vector<std::string> labelNames = GetSectionsWithParameter("ImageReader", config, "labelDim");
+    std::vector<std::string> dataExtendNames = TryGetSectionsWithParameter(config, "extendMode");
 
     // REVIEW alexeyk: currently support only one feature and label section.
     if (featureNames.size() != 1 || labelNames.size() != 1)
@@ -56,6 +57,43 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
     labelSection->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
     labelSection->m_storageType = StorageType::dense;
     m_streams.push_back(labelSection);
+
+    if (!dataExtendNames.empty())
+    {
+        if(dataExtendNames.size() != 1)
+            InvalidArgument("ImageReader supports a single dataExtend block. '%d' dataExtend block be founded");
+        ConfigParameters dataExtend = config(dataExtendNames[0]);
+
+        string extendMode = dataExtend("extendMode", "none");
+        std::transform(extendMode.begin(), extendMode.end(), extendMode.begin(), ::tolower);
+        if (!(extendMode == "none" || extendMode == "equidiff" || extendMode == "expand"))
+            InvalidArgument("data extend mode: none, equidiff, expand");
+        
+        string randomFill = dataExtend("randomFill", "false");
+        std::transform(randomFill.begin(), randomFill.end(), randomFill.begin(), ::tolower);
+        if (!(randomFill == "true" || randomFill == "false"))
+            InvalidArgument("randomFill is a bool value.");
+
+        string useSplitRead = dataExtend("useSplitRead", "false");
+        std::transform(useSplitRead.begin(), useSplitRead.end(), useSplitRead.begin(), ::tolower);
+        if(!(useSplitRead == "true" || useSplitRead == "false"))
+            InvalidArgument("useSplitRead is a bool value.");
+
+        string randomData = dataExtend("randomData", "false");
+        std::transform(randomData.begin(), randomData.end(), randomData.begin(), ::tolower);
+        if (!(randomData == "true" || randomData == "false"))
+            InvalidArgument("randomData is a bool value.");
+
+        auto dataExtendSection = std::make_shared<AppendFuncDescription>();
+        dataExtendSection->m_id = 0;
+        dataExtendSection->m_name = msra::strfun::utf16(dataExtend.ConfigName());
+        (dataExtendSection->m_params)["extendMode"] = extendMode;
+        (dataExtendSection->m_params)["extendEpochs"] = dataExtend("extendEpochs", "0");
+        (dataExtendSection->m_params)["randomFill"] = randomFill;
+        (dataExtendSection->m_params)["randomData"] = randomData;
+        (dataExtendSection->m_params)["useSplitRead"] = useSplitRead;
+        m_appendFuncs.push_back(dataExtendSection);
+    }
 
     m_mapPath = config(L"file");
 
@@ -102,6 +140,11 @@ std::vector<StreamDescriptionPtr> ImageConfigHelper::GetStreams() const
     return m_streams;
 }
 
+std::vector<AppendFuncDescriptionPtr> ImageConfigHelper::GetAppendFuncs() const
+{
+    return m_appendFuncs;
+}
+
 size_t ImageConfigHelper::GetFeatureStreamId() const
 {
     // Currently we only support a single feature/label stream, so the index is hard-wired.
@@ -112,6 +155,11 @@ size_t ImageConfigHelper::GetLabelStreamId() const
 {
     // Currently we only support a single feature/label stream, so the index is hard-wired.
     return 1;
+}
+
+size_t ImageConfigHelper::GetDataExtendFuncId() const
+{
+    return 0;
 }
 
 std::string ImageConfigHelper::GetMapPath() const

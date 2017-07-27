@@ -30,11 +30,15 @@ public:
     // Get all streams that are specified in the configuration.
     std::vector<StreamDescriptionPtr> GetStreams() const;
 
+    std::vector<AppendFuncDescriptionPtr> GetAppendFuncs() const;
+
     // Get index of the feature stream.
     size_t GetFeatureStreamId() const;
 
     // Get index of the label stream.
     size_t GetLabelStreamId() const;
+
+    size_t GetDataExtendFuncId() const;
 
     // Get the map file path that describes mapping of images into their labels.
     std::string GetMapPath() const;
@@ -77,6 +81,7 @@ private:
 
     std::string m_mapPath;
     std::vector<StreamDescriptionPtr> m_streams;
+    std::vector<AppendFuncDescriptionPtr> m_appendFuncs;
     ImageLayoutKind m_dataFormat;
     int m_cpuThreadCount;
     bool m_randomize;

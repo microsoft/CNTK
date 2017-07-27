@@ -43,7 +43,8 @@ public:
         bool shouldPrefetch,
         bool multithreadedGetNextSequences = false,
         size_t maxNumberOfInvalidSequences = 0, // per worker
-        bool sampleBasedRandomizationWindow = true);
+        bool sampleBasedRandomizationWindow = true,
+        ParamsMapPtr dataExtendParams = nullptr);
 
     // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;
@@ -134,6 +135,8 @@ private:
 
     // A map of data chunks from original chunk id into chunk.
     std::map<size_t, ChunkPtr> m_chunks;
+
+    std::shared_ptr<std::map<std::string, std::string>> m_dataExtendParams;
 
     // Whether to get sequences using multiple thread.
     bool m_multithreadedGetNextSequences;

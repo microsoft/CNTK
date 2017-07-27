@@ -28,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // Randomizes chunks and calculates randomization windows.
-    void ChunkRandomizer::Randomize(unsigned int seed)
+    void ChunkRandomizer::Randomize(unsigned int seed, ParamsMapPtr dataExtendParams, size_t curEpoch)
     {
         std::vector<ChunkIdType> randomizedChunkIndices;
         randomizedChunkIndices.reserve(m_originalChunks.size());
@@ -37,14 +37,111 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             randomizedChunkIndices.push_back(i);
         }
 
-#define RandomSeed
-#ifdef RandomSeed
-        fprintf(stderr, "Overlap reader.\n");
-        seed = std::random_device()();
-#endif
+        string extendMode = "none";
+        size_t extendEpochs = 0;
+        float curDataRatio = 1;
+        bool randomFill = false;
+        bool useSplitRead = false;
+        bool randomData = false;
 
+        if (dataExtendParams != nullptr)
+        {
+            extendMode = (*dataExtendParams)["extendMode"];
+            extendEpochs = std::stoi((*dataExtendParams)["extendEpochs"]);
+            if (extendMode != "none" && extendEpochs > 0 && extendEpochs > curEpoch)
+            {
+                if (extendMode == "equidiff")
+                    curDataRatio = (float)1 / extendEpochs * (curEpoch + 1);
+                else if (extendMode == "expand")
+                    curDataRatio = (float)1 / (extendEpochs - curEpoch);
+
+                randomFill = (*dataExtendParams)["randomFill"] == "true" ? true : false;
+                randomData = (*dataExtendParams)["randomData"] == "true" ? true : false;
+                useSplitRead = (*dataExtendParams)["useSplitRead"] == "true" ? true : false;
+
+                fprintf(stderr, "Data extend stage, extendMode: %s, dataRatio: %f, randomFill: %s, useSplitRead: %s, randomData: %s",
+                    extendMode.c_str(), curDataRatio, (*dataExtendParams)["randomFill"].c_str(), 
+                    (*dataExtendParams)["useSplitRead"].c_str(), (*dataExtendParams)["randomData"].c_str());
+            }
+            else if (extendEpochs < 0)
+            {
+                InvalidArgument("extend epochs size must bigger than 0");
+            }
+        }
+
+        if (useSplitRead)
+        {
+            fprintf(stderr, "use split reader.\n");
+            seed = std::random_device()();
+        }
+        
         m_rng.seed(seed);
         RandomShuffleMT(randomizedChunkIndices, m_rng);
+
+        if (curDataRatio != 1)
+        {
+            size_t extractSize = (int)std::floor(m_originalChunks.size() * curDataRatio);
+            std::vector<ChunkIdType> extractedChunkIndices;
+
+            if (randomData)
+            {
+                for (ChunkIdType i = 0; i < extractSize; i++)
+                    extractedChunkIndices.push_back(randomizedChunkIndices.at(i));
+            }
+            else
+            {
+                for (int i = 0; i < m_lastChunksIndices.size(); i++)
+                    extractedChunkIndices.push_back(m_lastChunksIndices.at(i));
+
+                ChunkIdType idx = 0;
+                while (extractedChunkIndices.size() < extractSize)
+                {
+                    if (std::find(extractedChunkIndices.begin(), extractedChunkIndices.end(), randomizedChunkIndices.at(idx))
+                        == extractedChunkIndices.end())
+                    {
+                        extractedChunkIndices.push_back(randomizedChunkIndices.at(idx));
+                    }
+                    idx++;
+                }
+
+                m_lastChunksIndices.clear();
+                m_lastChunksIndices.reserve(extractedChunkIndices.size());
+                for (int i = 0; i < extractedChunkIndices.size(); i++)
+                    m_lastChunksIndices.push_back(extractedChunkIndices.at(i));
+
+            }
+
+            size_t repectTime = (int)std::floor(m_originalChunks.size() / extractSize);
+
+            ChunkIdType curIdxPos = 0;
+            for (size_t i = 0; i < repectTime; i++)
+            {
+                if (randomFill)
+                {
+                    m_rng.seed(std::random_device()());
+                    RandomShuffleMT(extractedChunkIndices, m_rng);
+                }
+                for (ChunkIdType idx = 0; idx < extractSize; idx++)
+                    randomizedChunkIndices[curIdxPos++] = extractedChunkIndices[idx];
+            }
+
+            ChunkIdType fIdxPos = curIdxPos;
+            while (curIdxPos < m_originalChunks.size())
+            {
+                if (randomFill)
+                {
+                    std::srand((unsigned)time(NULL));
+                    randomizedChunkIndices[curIdxPos++] = extractedChunkIndices[std::rand() % extractSize];
+                }
+                else
+                {
+                    randomizedChunkIndices[curIdxPos] = extractedChunkIndices[curIdxPos - fIdxPos];
+                    curIdxPos++;
+                }
+            }
+
+            assert(randomizedChunkIndices.size() == m_originalChunks.size());
+        }
 
         // Place randomized chunks on the timeline
         m_randomizedChunks.clear();
