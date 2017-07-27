@@ -108,10 +108,10 @@
     <CNTKBinSuffix Condition="'$(Configuration)' == 'Debug'">d</CNTKBinSuffix>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="..\$(Platform)\$(Configuration)\ImageRecognizerLib\Cntk.Core_app-2.0$(CNTKBinSuffix).dll">
+    <Content Include="..\$(Platform)\$(Configuration)\ImageRecognizerLib\Cntk.Core_app-2.1$(CNTKBinSuffix).dll">
       <DeploymentContent>true</DeploymentContent>
     </Content>
-    <Content Include="..\$(Platform)\$(Configuration)\ImageRecognizerLib\Cntk.Math_app-2.0$(CNTKBinSuffix).dll">
+    <Content Include="..\$(Platform)\$(Configuration)\ImageRecognizerLib\Cntk.Math_app-2.1$(CNTKBinSuffix).dll">
       <DeploymentContent>true</DeploymentContent>
     </Content>
     <Content Include="..\$(Platform)\$(Configuration)\ImageRecognizerLib\libopenblas.dll">
