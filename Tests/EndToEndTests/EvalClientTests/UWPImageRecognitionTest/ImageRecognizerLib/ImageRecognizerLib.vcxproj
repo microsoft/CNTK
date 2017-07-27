@@ -67,7 +67,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)\Examples\Evaluation\UWPImageRecognition\ImageRecognizerLib\CNTKImageRecognizer.cpp" />
-    <None Include="$(SolutionDir)\Examples\Evaluation\UWPImageRecognition\utils.inl" />
+    <None Include="$(SolutionDir)\Examples\Evaluation\UWPImageRecognition\ImageRecognizerLib\utils.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
