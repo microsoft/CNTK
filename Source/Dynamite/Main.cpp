@@ -9,6 +9,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "CNTKLibrary.h"
+#include "PlainTextDeseralizer.h"
 #include "Layers.h"
 #include "Common.h"
 #include "TimerUtility.h"
@@ -286,11 +287,21 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const wstring featuresName = L"features";
     const wstring labelsName   = L"labels";
 
+#if 1 // test bed for new PlainTextReader
+    let minibatchSource = CreateCompositeMinibatchSource(MinibatchSourceConfig({ PlainTextDeserializer(
+        {
+            PlainTextStreamConfiguration(featuresName, inputDim,         { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.x.txt" }, { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.x.vocab", L"", L"", L"" }),
+            PlainTextStreamConfiguration(labelsName,   numOutputClasses, { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.y.txt" }, { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.y.vocab", L"", L"", L"" })
+        })},
+        /*randomize=*/false/*for now*/));
+    // BUGBUG: no way to specify MinibatchSource::FullDataSweep
+#else
     auto minibatchSource = TextFormatMinibatchSource(trainingCTFPath,
     {
         { featuresName, inputDim,         true,  L"x" },
         { labelsName,   numOutputClasses, false, L"y" }
     }, MinibatchSource::FullDataSweep);
+#endif
 
     auto featureStreamInfo = minibatchSource->StreamInfo(featuresName);
     auto labelStreamInfo   = minibatchSource->StreamInfo(labelsName);
