@@ -1,7 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <Import Project="$(SolutionDir)\CNTK.Common.props" />
   <UsingTask TaskName="DownloadFile" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v12.0.dll">
     <ParameterGroup>
       <Url ParameterType="System.String" Required="true" />
@@ -37,12 +36,12 @@
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{A5A43C5B-DE2A-4C0C-9213-0A381AF9435A};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <PackageCertificateKeyFile>ImageRecognitionAppCS_TemporaryKey.pfx</PackageCertificateKeyFile>
-    <CNTKRoot>$(RepoRootPath)</CNTKRoot>
-    <AppSrcDir>$(CNTKRoot)\Examples\Evaluation\UWPImageRecognition\App</AppSrcDir>
+    <CNTKRoot>$(SolutionDir)</CNTKRoot>
+    <AppSrcDir>$(SolutionDir)Examples\Evaluation\UWPImageRecognition\App</AppSrcDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug_UWP|x64'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>$(OutDir)</OutputPath>
+    <OutputPath>$(CNTKRoot)$(Platform)\$(Configuration)\</OutputPath>
     <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_UWP</DefineConstants>
     <NoWarn>;2008</NoWarn>
     <DebugType>full</DebugType>
@@ -52,7 +51,7 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_UWP|x64'">
-    <OutputPath>$(OutDir)</OutputPath>
+    <OutputPath>$(CNTKRoot)$(Platform)\$(Configuration)\</OutputPath>
     <DefineConstants>TRACE;NETFX_CORE;WINDOWS_UWP</DefineConstants>
     <Optimize>true</Optimize>
     <NoWarn>;2008</NoWarn>
@@ -88,8 +87,8 @@
     <None Include="ImageRecognitionAppCS_TemporaryKey.pfx" />
   </ItemGroup>
   <PropertyGroup>
-    <CNTKBinSuffix/>
-    <CNTKBinSuffix Condition="$(DebugBuild)">d</CNTKBinSuffix>
+    <CNTKBinSuffix />
+    <CNTKBinSuffix Condition="$(Configuration.StartsWith('Debug'))">d</CNTKBinSuffix>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="Properties\Default.rd.xml" />
@@ -121,10 +120,10 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ImageRecognizerLib\ImageRecognizerLib.vcxproj">
-      <Project>{c5e944ba-a7c4-482f-be01-077a7dfc159c}</Project>
-      <Name>ImageRecognizerLib</Name>
-    </ProjectReference>
+    <Reference Include="ImageRecognitionLib, Version=255.255.255.255, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(CNTKRoot)$(Platform)\$(Configuration)\ImageRecognitionLib.winmd</HintPath>
+    </Reference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>
