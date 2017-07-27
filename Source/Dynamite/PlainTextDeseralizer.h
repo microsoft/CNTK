@@ -71,12 +71,12 @@ Deserializer PlainTextDeserializer(const std::vector<PlainTextStreamConfiguratio
         for (let& n : s.m_fileNames)
             fileNames.push_back(n);
 #endif
-        stream[L"dataFiles"]            = fileNames;
-        auto tmp = s.m_vocabularyConfig;
-        stream[L"vocabularyFile"]       = s.m_vocabularyConfig.fileName;
-        stream[L"insertAtStart"]        = s.m_vocabularyConfig.insertAtStart;
-        stream[L"insertAtEnd"]          = s.m_vocabularyConfig.insertAtEnd;
-        stream[L"substituteForUnknown"] = s.m_vocabularyConfig.substituteForUnknown;
+        stream[L"dataFiles"] = fileNames;
+        stream[L"vocabularyFile"] = s.m_vocabularyConfig.fileName;
+        // note: we cannnot pass empty strings via the V1 ConfigParameters interface; so instead let them default to empty
+        if (!s.m_vocabularyConfig.insertAtStart       .empty()) stream[L"insertAtStart"]        = s.m_vocabularyConfig.insertAtStart;
+        if (!s.m_vocabularyConfig.insertAtEnd         .empty()) stream[L"insertAtEnd"]          = s.m_vocabularyConfig.insertAtEnd;
+        if (!s.m_vocabularyConfig.substituteForUnknown.empty()) stream[L"substituteForUnknown"] = s.m_vocabularyConfig.substituteForUnknown;
         // standard fields
         stream[L"dim"] = s.m_dim;
         if (!s.m_isSparse || !s.m_streamAlias.empty())
