@@ -104,9 +104,9 @@ public:
                 }
             }
             // precompute the word index of the unknown-substitute token if given
-            m_unknownId = config.substituteForUnknown.empty() ? SIZE_MAX : operator()(AsAsciiString(config.substituteForUnknown).c_str());
+            m_unknownId = TryGetWordId(config.substituteForUnknown);
         }
-        size_t operator()(const char* word) const
+        size_t operator[](const char* word) const
         {
             let res = m_wordMap.find(word);
             if (res != m_wordMap.end())
@@ -114,7 +114,14 @@ public:
             else if (m_unknownId != SIZE_MAX)
                 return m_unknownId;
             else
-                InvalidArgument("Vocabulary: Encountered an unknown word when no subsitute was specified:", word);
+                InvalidArgument("Vocabulary: Encountered unknown word '%s' when no subsitute was specified.", word);
+        }
+        size_t TryGetWordId(const wstring& word) const // for special tokens; returns SIZE_MAX if word == ""
+        {
+            if (word.empty())
+                return SIZE_MAX;
+            else
+                return operator[](AsAsciiString(word).c_str());
         }
         size_t size() const { return m_words.size(); }
     private:
@@ -136,17 +143,19 @@ public:
         {
             if (NDShape{ m_vocabulary.size() } != m_sampleLayout)
                 // BUGBUG: AsString() cannot be called from outside--how to do that?
-                InvalidArgument("PlainTextDeserializer: Sample layout %S does not match vocabulary size %d for %S",
+                InvalidArgument("PlainTextDeserializer: Sample layout %S does not match vocabulary size %d for %S.",
                                 m_sampleLayout.AsString().c_str(), (int)m_vocabulary.size(), streamConfig.m_vocabularyConfig.fileName);
+
+            // make sure we don't overflow. Word ids must fit into SparseIndexType (==int).
+            let maxId = m_vocabulary.size() - 1;
+            if ((size_t)(SparseIndexType)maxId != maxId)
+                InvalidArgument("PlainTextDeserializer: Vocabulary size too large for SparseIndexType for %S.", streamConfig.m_vocabularyConfig.fileName);
         }
 
         // initialization helpers
         // This is not a fast operation, so call this after the quick construction steps have completed and error-checked.
         void IndexAllFiles(int traceLevel)
         {
-            // load the vocabulary files
-            // --TODO do the indexing later, so that we can first load and check the vocab files before loading big data
-
             // index all files
             // That is, determine all line offsets and word counts and remember them in m_textLineRefs.
             // TODO: Later this can be cached.
@@ -365,23 +374,108 @@ private:
     class PlainTextChunk : public Chunk
     {
     public:
-        PlainTextChunk(const ChunkRef& chunkRef, const PlainTextDeserializerImpl& us) : m_chunkRef(chunkRef), m_us(us) { }
+        // constructor loads the chunk data and parses it into binary id sequences
+        PlainTextChunk(const ChunkRef& chunkRef, const PlainTextDeserializerImpl& outer) :
+            m_chunkRef(chunkRef), m_outer(outer)
+        {
+            let chunkId = chunkRef.m_id;
+            let numStreams = outer.m_streams.size();
+            m_data.resize(numStreams);
+            m_endOffsets.resize(numStreams);
+            // first sequence id
+            m_firstSequenceId = chunkId == 0 ? 0 : outer.m_chunkRefs[chunkId - 1].m_endSequenceId;
+            // load all streams' data
+            vector<char> buf;
+            for (size_t streamIndex = 0; streamIndex < numStreams; streamIndex++)
+            {
+                auto& data = m_data[streamIndex];
+                auto& endOffsets = m_endOffsets[streamIndex];
+                data.clear();
+                endOffsets.clear();
+                endOffsets.reserve(chunkRef.m_numberOfSequences);
+                let& stream = outer.m_streams[streamIndex];
+                let& textLineRefs = stream.m_textLineRefs;
+                let& vocabulary = stream.m_vocabulary;
+                // fetch special symbol ids if given (will be SIZE_MAX if not given)
+                let insertAtStartId = vocabulary.TryGetWordId(stream.m_vocabularyConfig.insertAtStart);
+                let insertAtEndId   = vocabulary.TryGetWordId(stream.m_vocabularyConfig.insertAtEnd);
+                // generate all sequences for this chunk, for all streams
+                size_t fileIndex  = chunkId == 0 ? 0 : outer.m_chunkRefs[chunkId - 1].m_endFileIndex;
+                size_t lineNo     = chunkId == 0 ? 0 : outer.m_chunkRefs[chunkId - 1].m_endLineNo;
+                while (fileIndex < chunkRef.m_endFileIndex ||
+                       (fileIndex == chunkRef.m_endFileIndex && lineNo < chunkRef.m_endLineNo))
+                {
+                    // fetch lines until endLineNo if in same file or end of file
+                    let& fileLineRefs = textLineRefs[fileIndex];
+                    let endLineNo = (fileIndex < chunkRef.m_endFileIndex) ? fileLineRefs.size() - 1 : chunkRef.m_endLineNo;
+                    let bufBeginOffset = fileLineRefs[lineNo].beginOffset; // offset of first line in buffer
+                    let& fileName = stream.m_fileNames[fileIndex];
+                    LoadTextFileAsCharArray(buf, fileName, bufBeginOffset, fileLineRefs[endLineNo].beginOffset);
+                    buf.push_back('\n'); // ensure line-end marker for consistency checking
+                    for (; lineNo < endLineNo; lineNo++)
+                    {
+                        // <s>
+                        if (insertAtStartId != SIZE_MAX)
+                            data.push_back((SparseIndexType)insertAtStartId);
+                        // word tokens
+                        auto* p    = buf.data() + fileLineRefs[lineNo    ].beginOffset - bufBeginOffset;
+                        auto* pend = buf.data() + fileLineRefs[lineNo + 1].beginOffset - bufBeginOffset; // (for consistency check only)
+                        let numWords = fileLineRefs[lineNo].numWords;
+                        for (size_t i = 0; i < numWords; i++)
+                        {
+                            // locate next word
+                            // For simplicity, We do not distinguish space and newline here, since we already counted everything.
+                            while (IsSpace(*p)) // skip to next word beginning
+                                p++;
+                            if (p >= pend)
+                                LogicError("PlainTextDeserializer: Unexpectedly run over end of line while consuming input words of line %d in %S.", (int)lineNo, fileName.c_str());
+                            const char* word = p;
+                            while (!IsSpace(*p) && *p != '\n')
+                                p++;
+                            *p++ = 0; // 'word' is now a 0-terminated string
+                            // get word id
+                            data.push_back((SparseIndexType)vocabulary[word]);
+                        }
+                        // </s>
+                        if (insertAtEndId != SIZE_MAX)
+                            data.push_back((SparseIndexType)insertAtEndId);
+                        endOffsets.push_back(data.size());
+                    }
+                    // advance to beginning of next file
+                    fileIndex++;
+                    lineNo = 0;
+                }
+                // consistency check
+                if (endOffsets.size() != chunkRef.m_numberOfSequences)
+                    LogicError("PlainTextDeserializer: Chunk %d's actual sequence count inconsistent with underlying files.", (int)chunkId);
+            }
+        }
         virtual void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override final
         {
-            // TODO: simplify to a simple lookup. Really this should be a lambda. We could make it so.
-            m_us.GetSequence(m_chunkRef, sequenceIndex, result);
+            if (sequenceIndex > m_chunkRef.m_numberOfSequences)
+                LogicError("PlainTextDeserializer: GetSequence sequenceIndex parameter (%d) out of bounds.", (int)sequenceIndex);
+            let numStreams = m_data.size();
+            result.resize(numStreams);
+            for (size_t streamIndex = 0; streamIndex < numStreams; streamIndex++)
+            {
+                auto& data = m_data[streamIndex];
+                auto& endOffsets = m_endOffsets[streamIndex];
+                let beginOffset = sequenceIndex == 0 ? 0 : endOffsets[sequenceIndex - 1];
+                let endOffset = endOffsets[sequenceIndex];
+                let numWords = endOffset - beginOffset;
+                //auto sparseSequenceData = make_shared<SparseSequenceData>(numWords);
+                data;
+                //result[streamIndex] = x;
+            }
         }
     private:
         const ChunkRef& m_chunkRef;
-        const PlainTextDeserializerImpl& m_us;
+        const PlainTextDeserializerImpl& m_outer;    // TODO: remove if not needed
+        vector<vector<SparseIndexType>> m_data; // [streamIndex][n] concatenated data for all sequences for all streams
+        vector<vector<size_t>> m_endOffsets;    // [streamIndex][lineNo] end offset of line (begin offset taken from lineNo-1)
+        size_t m_firstSequenceId;               // sequence id of first sequence in this chunk
     };
     friend class PlainTextChunk;
-
-    void GetSequence(const ChunkRef& chunkRef, size_t sequenceIndex, std::vector<SequenceDataPtr>& result) const
-    {
-        chunkRef; sequenceIndex; result;
-        fprintf(stderr, "\n");
-    }
 public:
 
     ///
@@ -389,7 +483,6 @@ public:
     ///
     virtual ChunkPtr GetChunk(ChunkIdType chunkId) override
     {
-        // TODO: Load the actual chunk data; convert to index form; and pass to PlainTextChunk.
         return make_shared<PlainTextChunk>(m_chunkRefs[chunkId], *this);
     }
 
