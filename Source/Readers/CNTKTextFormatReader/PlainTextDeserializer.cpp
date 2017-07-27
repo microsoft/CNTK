@@ -348,17 +348,49 @@ public:
     ///
     virtual bool GetSequenceInfo(const SequenceInfo& primary, SequenceInfo& result) override
     {
+        primary; result;
         NOT_IMPLEMENTED; // TODO: What should this do? Just return false?
     }
+
+private:
+    struct ChunkRef : public ChunkInfo
+    {
+        size_t m_size = 0;          // size of this chunk in bytes
+        size_t m_endFileIndex = 0;  // file and line number of ebnd position (and one after last line)
+        size_t m_endLineNo = 0;     // (start position is computed from the previous chunk end when loading the data)
+        size_t m_endSequenceId = 0; // identifier (=global line number) of end entry in this chunk
+
+        ChunkRef() : ChunkInfo{ 0, 0, 0 } { }
+    };
+    class PlainTextChunk : public Chunk
+    {
+    public:
+        PlainTextChunk(const ChunkRef& chunkRef, const PlainTextDeserializerImpl& us) : m_chunkRef(chunkRef), m_us(us) { }
+        virtual void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override final
+        {
+            // TODO: simplify to a simple lookup. Really this should be a lambda. We could make it so.
+            m_us.GetSequence(m_chunkRef, sequenceIndex, result);
+        }
+    private:
+        const ChunkRef& m_chunkRef;
+        const PlainTextDeserializerImpl& m_us;
+    };
+    friend class PlainTextChunk;
+
+    void GetSequence(const ChunkRef& chunkRef, size_t sequenceIndex, std::vector<SequenceDataPtr>& result) const
+    {
+        chunkRef; sequenceIndex; result;
+        fprintf(stderr, "\n");
+    }
+public:
 
     ///
     /// Gets chunk data given its id.
     ///
     virtual ChunkPtr GetChunk(ChunkIdType chunkId) override
     {
-        fprintf(stderr, "\n");
-        chunkId;
-        return nullptr;
+        // TODO: Load the actual chunk data; convert to index form; and pass to PlainTextChunk.
+        return make_shared<PlainTextChunk>(m_chunkRefs[chunkId], *this);
     }
 
 private:
@@ -371,15 +403,6 @@ private:
 
     // working data
     size_t m_totalNumLines; // total line count for the stream (same for all streams)
-    struct ChunkRef : public ChunkInfo
-    {
-        size_t m_size = 0;          // size of this chunk in bytes
-        size_t m_endFileIndex = 0;  // file and line number of ebnd position (and one after last line)
-        size_t m_endLineNo = 0;     // (start position is computed from the previous chunk end when loading the data)
-        size_t m_endSequenceId = 0; // identifier (=global line number) of end entry in this chunk
-
-        ChunkRef() : ChunkInfo{ 0, 0, 0 } { }
-    };
     vector<ChunkRef> m_chunkRefs; // reference to all chunks
 };
 
