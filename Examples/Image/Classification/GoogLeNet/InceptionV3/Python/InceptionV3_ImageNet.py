@@ -13,16 +13,15 @@ import argparse
 import numpy as np
 import cntk as C
 
-import C.io.transforms as xforms
-from C.debugging import start_profiler, stop_profiler, enable_profiler, set_computation_network_trace_level
-from C.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from C.learners import learning_rate_schedule, momentum_schedule, nesterov, UnitType
-from C.logging import ProgressPrinter, log_number_of_parameters
-from C.losses import cross_entropy_with_softmax
-from C.metrics import classification_error
-from C.ops import input_variable
-from C.train import Trainer
-from C.ops import plus, element_times
+import cntk.io.transforms as xforms
+from cntk.debugging import start_profiler, stop_profiler, enable_profiler, set_computation_network_trace_level
+from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
+from cntk.learners import learning_rate_schedule, momentum_schedule, nesterov, UnitType
+from cntk.logging import ProgressPrinter, log_number_of_parameters
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
+from cntk.ops import input_variable, plus, element_times
+from cntk.train import Trainer
 
 from InceptionV3 import inception_v3_norm_model
 

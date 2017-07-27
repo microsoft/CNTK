@@ -13,13 +13,13 @@ import argparse
 import numpy as np
 import cntk as C
 
-import C.io.transforms as xforms
-from C.debugging import start_profiler, stop_profiler, set_computation_network_trace_level
-from C.learners import learning_rate_schedule, momentum_schedule, nesterov, UnitType
-from C.logging import ProgressPrinter, log_number_of_parameters
-from C.train.distributed import data_parallel_distributed_learner, Communicator
-from C.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from C.train import training_session, CheckpointConfig, TestConfig, Trainer
+import cntk.io.transforms as xforms
+from cntk.debugging import start_profiler, stop_profiler, set_computation_network_trace_level
+from cntk.learners import learning_rate_schedule, momentum_schedule, nesterov, UnitType
+from cntk.logging import ProgressPrinter, log_number_of_parameters
+from cntk.train.distributed import data_parallel_distributed_learner, Communicator
+from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
+from cntk.train import training_session, CheckpointConfig, TestConfig, Trainer
 
 from InceptionV3_ImageNet import create_image_mb_source, create_inception_v3
 
@@ -50,15 +50,15 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantiza
         lr_per_mb.extend([learning_rate] * learn_rate_adjust_interval)
         learning_rate *= learn_rate_decrease_factor
 
-    lr_schedule       = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch, epoch_size=epoch_size)
-    mm_schedule       = momentum_schedule(0.9)
-    l2_reg_weight     = 0.0001 # CNTK L2 regularization is per sample, thus same as Caffe
+    lr_schedule   = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch, epoch_size=epoch_size)
+    mm_schedule   = momentum_schedule(0.9)
+    l2_reg_weight = 0.0001 # CNTK L2 regularization is per sample, thus same as Caffe
     
     # Create learner
     local_learner = nesterov(network['ce'].parameters, lr_schedule, mm_schedule,
                                                 l2_regularization_weight=l2_reg_weight)
     parameter_learner = data_parallel_distributed_learner(
-        local_learner, 
+        local_learner,
         num_quantization_bits=num_quantization_bits,
         distributed_after=0)
 
@@ -85,7 +85,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         checkpoint_config=CheckpointConfig(frequency=epoch_size, filename=os.path.join(model_path, model_name), restore=restore),
         test_config=TestConfig(test_source, minibatch_size=minibatch_size)
     ).train()
-        
+
     if profiling:
         stop_profiler()
 
@@ -119,7 +119,7 @@ def inception_v3_train_and_eval(train_data, test_data, num_quantization_bits=32,
  
  
 if __name__=='__main__':
-    
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located', required=False, default=data_path)
