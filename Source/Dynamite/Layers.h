@@ -226,13 +226,19 @@ static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& d
 
 struct Sequence
 {
-    // TODO: Finish this one.
     static UnarySequenceModel Recurrence(const BinaryModel& stepFunction, const Variable& initialState)
     {
+        auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
         return [=](vector<Variable>& res, const vector<Variable>& x)
         {
-            res.resize(x.size());
-            NOT_IMPLEMENTED;
+            Variable state = initialState;
+            res.clear();
+            for (let& xt : x)
+            {
+                state = stepFunction(state, xt);
+                res.push_back(state);
+            }
+            res.back() = barrier(res.back());
         };
     }
 
@@ -287,7 +293,7 @@ static inline void as_vector(vector<Variable>& res, const Variable& x)
 
 // TODO: move this out, and don't use Dynamite Model structure
 
-static UnaryModel Sequential(const vector<UnaryModel>& fns)
+static UnaryModel StaticSequential(const vector<UnaryModel>& fns)
 {
     map<wstring, shared_ptr<ModelParameters>> captured;
     for (size_t i = 0l; i < fns.size(); i++)

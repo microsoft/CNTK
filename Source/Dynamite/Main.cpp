@@ -30,7 +30,7 @@ using namespace Dynamite;
 // baseline model for CNTK Static
 UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
-    return Sequential({
+    return StaticSequential({
         Embedding(embeddingDim, device),
         StaticSequence::Fold(RNNStep(hiddenDim, device)),
         Linear(numOutputClasses, device)
@@ -65,7 +65,7 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
     return UnaryModel({},
     {
         { L"embed",  embed  },
-        { L"step",   step   },
+        { L"step",   step },
         { L"linear", linear }
     },
     [=](const Variable& x) mutable -> Variable
