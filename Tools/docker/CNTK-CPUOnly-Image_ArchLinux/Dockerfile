@@ -27,7 +27,7 @@ RUN export "PATH=/usr/bin/core_perl:$PATH" && \
 RUN su docker -c 'pacaur -S --noprogressbar --noedit --noconfirm base-devel expect cmake gcc-fortran \
     ffmpeg jasper libjpeg-turbo libpng lapacke libtiff protobuf python-protobuf unzip automake libtool autoconf \
     subversion apr apr-util serf m4 jdk7-openjdk openmpi python2-mpi4py libzip opencv blas boost boost-libs swig \
-    anaconda '
+    anaconda swig '
 
 # ENV PATH /usr/local/mpi/bin:$PATH
 ENV LD_LIBRARY_PATH /usr/lib/openmpi/:$LD_LIBRARY_PATH
@@ -48,7 +48,7 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     /opt/anaconda/bin/conda env create -p /opt/anaconda/envs/cntk-py36/ --file /tmp/conda-linux-cntk-py36-environment.yml 
 ENV PATH /opt/anaconda/envs/cntk-py36/bin:$PATH
 ADD activate-cntk ./activate-cntk
-RUN CONFIGURE_OPTS="" && \
+RUN CONFIGURE_OPTS="--with-py36-path=/opt/anaconda/envs/cntk-py36" && \
     git submodule update --init Source/Multiverso && \
     git submodule sync --recursive && \
     git submodule update --init --recursive && \
@@ -56,28 +56,20 @@ RUN CONFIGURE_OPTS="" && \
     git submodule update --init --recursive && \
     sed -i "s,libprotobuf.a,libprotobuf.so,g" Makefile && \ 
     sed -i "s,libprotobuf.a,libprotobuf.so,g" configure && \
-    sed -i "s,QWordVal qval = valQ.Quantize,QWordVal qval = valQ.template Quantize,g" Source/Math/ColumnQuantizer.h && \ 
-    # sed -i "s,    template CNTK_API const float\* NDArrayView::DataBuffer,    "\
-# "template CNTK_API const TensorView<float>* NDArrayView::GetTensorView<float>() "\
-# "const;"$"\n    template CNTK_API const TensorView<double>* NDArrayView::GetTensorView<double>() "\
-# "const;"$"\n\n    template CNTK_API const float\* NDArrayView::DataBuffer,g" Source/CNTKv2LibraryDll/NDArrayView.cpp && \ 
+    sed -i "s,QWordVal qval = valQ.Quantize,QWordVal qval = valQ.template Quantize,g" Source/Math/ColumnQuantizer.h && \
+    sed -i "s,libmpi.so.12,libmpi.so,g" bindings/python/cntk/train/distributed.py && \
     mkdir -p build-mkl/cpu/release && \
     cd build-mkl/cpu/release && \
     ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
-    make -j"$(nproc)" all # && \
-    # cd ../../.. && \    
-    # mkdir -p build/cpu/release && \
-    # cd build/cpu/release && \
-    # ../../../configure $CONFIGURE_OPTS --with-openblas=/usr/pkgs/openblas-0.2.19-2 && \
-    # make -j"$(nproc)" all 
+    make -j"$(nproc)" all
 
-# RUN cd Examples/Image/DataSets/CIFAR-10 && \
-    # python install_cifar10.py && \
-    # cd ../../../..
+RUN cd Examples/Image/DataSets/CIFAR-10 && \
+    python install_cifar10.py && \
+    cd ../../../..
 
-# RUN cd Examples/Image/DataSets/MNIST && \
-    # python install_mnist.py && \
-    # cd ../../../..
+RUN cd Examples/Image/DataSets/MNIST && \
+    python install_mnist.py && \
+    cd ../../../..
 
 RUN pacman -Scc --noconfirm && \
   rm /var/cache/pacman/pkg/* && \
