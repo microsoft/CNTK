@@ -519,7 +519,7 @@ def create_mb_source(img_height, img_width, img_channels, output_size, image_fil
 
 
     # read rois and labels
-    roi_source = CTFDeserializer(roi_file, StreamDefs(label=StreamDef(field='rois', shape=output_size)))
+    roi_source = CTFDeserializer(roi_file, StreamDefs(label=StreamDef(field='roiAndLabel', shape=output_size)))
 
     rc = MinibatchSource([image_source, roi_source], randomize=False, trace_level=TraceLevel.Error,
                          multithreaded_deserializer=multithreaded_deserializer, max_samples=max_samples)#, max_epochs=max_epochs)

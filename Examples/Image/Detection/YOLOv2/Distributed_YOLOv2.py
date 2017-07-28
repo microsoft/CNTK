@@ -24,6 +24,7 @@ import pdb
 from cntk_debug import DebugLayer
 from cntk_debug_single import DebugLayerSingle
 
+model_path = None
 # Create a minibatch source.
 def create_image_mb_source(image_file, gtb_file, is_training, total_number_of_samples):
 
@@ -216,6 +217,7 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
 
     output_dir = os.path.join(".","outputdir")#None
+    model_path = None
     if args['outputdir'] is not None:
         output_dir = args['outputdir']
         model_path = args['outputdir'] + "/models"
