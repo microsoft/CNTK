@@ -121,10 +121,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_rng.seed(std::random_device()());
                     RandomShuffleMT(extractedChunkIndices, m_rng);
                 }
+                else
+                {
+                    m_rng.seed((unsigned int)i);
+                    RandomShuffleMT(extractedChunkIndices, m_rng);
+                }
+
                 for (ChunkIdType idx = 0; idx < extractSize; idx++)
                     randomizedChunkIndices[curIdxPos++] = extractedChunkIndices[idx];
             }
 
+            if (curIdxPos < m_originalChunks.size())
+            {
+                m_rng.seed((unsigned int)curIdxPos);
+                RandomShuffleMT(extractedChunkIndices, m_rng);
+            }
             ChunkIdType fIdxPos = curIdxPos;
             while (curIdxPos < m_originalChunks.size())
             {
