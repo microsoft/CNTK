@@ -114,6 +114,11 @@ public:
         return m_endOfSweep;
     }
 
+    ReaderPtr Reader() const
+    {
+        return m_reader;
+    }
+
 private:
 
     void StartAsyncPrefetching();

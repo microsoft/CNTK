@@ -291,6 +291,7 @@ IGNORE_FUNCTION CNTK::CreateEvaluator;
 IGNORE_STRUCT CNTK::StreamInformation;
 IGNORE_STRUCT std::hash<::CNTK::StreamInformation>;
 %ignore operator==(const StreamInformation& left, const StreamInformation& right);
+%ignore operator!=(const StreamInformation& left, const StreamInformation& right);
 
 IGNORE_STRUCT CNTK::MinibatchData;
 IGNORE_CLASS CNTK::MinibatchSource;

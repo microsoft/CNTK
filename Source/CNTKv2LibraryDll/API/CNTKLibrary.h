@@ -387,6 +387,11 @@ namespace CNTK
             (left.m_sampleLayout == right.m_sampleLayout));
     }
 
+    inline bool operator!=(const StreamInformation& left, const StreamInformation& right)
+    {
+        return !(left == right);
+    }
+
     // Some projects require only some generic data types/interfaces from this file, and do not want to link explicitely to CNTKv2Library.
     // In this case they have to define CNTK_HEADERONLY_DEFINITIONS before including CNTKLibrary.h
 #ifndef CNTK_HEADERONLY_DEFINITIONS

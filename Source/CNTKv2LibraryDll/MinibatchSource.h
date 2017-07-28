@@ -45,6 +45,8 @@ namespace CNTK
             return Microsoft::MSR::CNTK::InputStreamDescription(s.m_name, CNTKdeviceId, CNTKMatrixType, CNTKMatrixFormat);
         }
 
+        void UpdateStreamSampleShape();
+
     private:
         std::unordered_set<StreamInformation> m_streamInfos;
         bool m_epochEndReached;
@@ -67,5 +69,8 @@ namespace CNTK
         // Shim will be deleted in the future versions.
         std::shared_ptr<ReaderShim<float>> m_shim;
         Microsoft::MSR::CNTK::StreamMinibatchInputs m_matrices;
+
+        // Flag indicating that some shapes are still unknown.
+        bool m_unknownSampleShape;
     };
 }

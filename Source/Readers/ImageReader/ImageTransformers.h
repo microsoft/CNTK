@@ -92,6 +92,7 @@ public:
 
 private:
     void Apply(uint8_t copyId, cv::Mat &mat) override;
+    StreamInformation Transform(const StreamInformation& inputStream) override;
 
 private:
     enum class RatioJitterType

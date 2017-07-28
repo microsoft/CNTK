@@ -128,6 +128,12 @@ namespace CNTK
         return result;
     }
 
+    inline bool HasUnknownShape(const std::unordered_set<StreamInformation>& streams)
+    {
+        return std::find_if(streams.begin(), streams.end(),
+            [](const StreamInformation& s) { return s.m_sampleLayout.IsUnknown(); }) != streams.end();
+    }
+
     CompositeMinibatchSource::CompositeMinibatchSource(const MinibatchSourceConfig& configuration)
         : m_epochEndReached(false),
           m_prevMinibatchSize(0),
@@ -155,8 +161,33 @@ namespace CNTK
         auto compositeDataReaderStreamDescs = compositeDataReader->GetStreamDescriptions();
         m_streamInfos.insert(compositeDataReaderStreamDescs.begin(), compositeDataReaderStreamDescs.end());
 
+        // Check whether some shapes are unknown.
+        m_unknownSampleShape = HasUnknownShape(m_streamInfos);
+
         m_shim = std::shared_ptr<ReaderShim<float>>(new ReaderShim<float>(compositeDataReader), [](ReaderShim<float>* x) { x->Destroy(); });
         m_shim->Init(config);
+    }
+
+    void CompositeMinibatchSource::UpdateStreamSampleShape()
+    {
+        auto streams = m_shim->Reader()->GetStreamDescriptions();
+        std::unordered_set<StreamInformation> result;
+        for (auto& s : m_streamInfos)
+        {
+            auto stream = std::find_if(streams.begin(), streams.end(),
+                [&s](const StreamInformation& a) { return s.m_name == a.m_name; });
+            if (stream == streams.end())
+                LogicError("Deserializer changed the number of streams dynamically. This is not supported.");
+
+            auto updated = s;
+            updated.m_sampleLayout = stream->m_sampleLayout;
+
+            if(updated != *stream)
+                LogicError("Deserializer changed the stream properties dynamically. This is supported only for sample shapes.");
+
+            result.insert(updated);
+        }
+        m_streamInfos.swap(result);
     }
 
     bool CompositeMinibatchSource::IsInfinite()
@@ -268,6 +299,14 @@ namespace CNTK
 
             auto hasData = m_shim->GetMinibatch(m_matrices);
             m_epochEndReached = m_shim->IsEndOfEpoch();
+
+            // Check the shape on the streams,
+            // because shapes can be evaluated lazily on the first minibatch.
+            if (m_unknownSampleShape)
+            {
+                UpdateStreamSampleShape();
+                m_unknownSampleShape = false;
+            }
 
             if (m_epochEndReached && !hasData)
                 return m_minibatchData;

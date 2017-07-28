@@ -113,6 +113,15 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
     }
 }
 
+// The method describes how input stream is transformed to the output stream. Called once per applied stream.
+// Scale transformer transforms the stream so that all samples are of the same size.
+StreamInformation CropTransformer::Transform(const StreamInformation& inputStream)
+{
+    TransformBase::Transform(inputStream);
+    m_outputStream.m_sampleLayout = NDShape::Unknown();
+    return m_outputStream;
+}
+
 void CropTransformer::StartEpoch(const EpochConfiguration &config)
 {
     ImageTransformerBase::StartEpoch(config);
