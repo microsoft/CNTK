@@ -123,6 +123,7 @@
     <ClCompile Include="MT.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CNTKLibraryHelpers.h" />
     <ClInclude Include="Layers.h" />
     <ClInclude Include="PlainTextDeseralizer.h" />
   </ItemGroup>

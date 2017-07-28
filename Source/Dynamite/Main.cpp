@@ -9,6 +9,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "CNTKLibrary.h"
+#include "CNTKLibraryHelpers.h"
 #include "PlainTextDeseralizer.h"
 #include "Layers.h"
 #include "Common.h"
@@ -93,28 +94,18 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
         let loss = Reshape(Minus(ReduceLogSum(z, Axis(0)), ReduceSum(ElementTimes(label, z), Axis(0))), NDShape());
         return loss;
     };
-    // create a batch mapper (which will allow suspension)
+    // create a batch mapper (which will eventually allow suspension)
     let batchModel = Batch::Map(criterion);
     // for final summation, we create a new lambda (featBatch, labelBatch) -> mbLoss
     vector<Variable> losses;
     return [=](const vector<Variable>& features, const vector<Variable>& labels) mutable
     {
-        batchModel(losses, features, labels);
+        batchModel(losses, features, labels);             // batch-compute the criterion
         let collatedLosses = Splice(losses, Axis(0));     // collate all seq losses
         let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
+        losses.clear();
         return mbLoss;
     };
-}
-
-// helper to convert a tensor to a vector of slices
-vector<Variable> ToVector(const Variable& x)
-{
-    vector<Variable> res;
-    let len = x.Shape().Dimensions().back();
-    res.reserve(len);
-    for (size_t t = 0; t < len; t++)
-        res.emplace_back(Index(x, t));
-    return res;
 }
 
 UnarySequenceModel Recurrence(const BinaryModel& step, const Variable& initialState, bool goBackwards = false)

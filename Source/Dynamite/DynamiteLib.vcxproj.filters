@@ -25,5 +25,8 @@
     <ClInclude Include="PlainTextDeseralizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CNTKLibraryHelpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
