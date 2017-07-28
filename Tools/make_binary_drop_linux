@@ -215,6 +215,10 @@ cp -pr Examples $baseDropPath
 echo "Copying Tutorials..." >&3
 cp -pr Tutorials $baseDropPath
 
+# Copy Manual
+echo "Copying Manual..." >&3
+cp -pr Manual $baseDropPath
+
 # Copy Scripts (Scripts folder from the root of the Repo)
 echo "Copying Scripts..." >&3
 cp -pr Scripts $baseDropPath
