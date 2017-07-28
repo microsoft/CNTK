@@ -94,6 +94,7 @@ typedef TModel<function<Variable(const Variable&, const Variable&)>> BinaryModel
 typedef TModel<function<Variable(const Variable&, const Variable&, const Variable&)>> TernaryModel;
 typedef TModel<function<void(vector<Variable>&, const vector<Variable>&)>> UnarySequenceModel;
 typedef TModel<function<void(vector<Variable>&, const vector<Variable>&, const vector<Variable>&)>> BinarySequenceModel;
+typedef TModel<function<Variable(const vector<Variable>&)>> UnaryFoldingModel;
 
 struct Batch
 {
@@ -240,7 +241,7 @@ static UnaryModel Sequential(const vector<UnaryModel>& fns)
     });
 }
 
-struct Sequence
+struct StaticSequence // for CNTK Static
 {
     //const static function<Variable(Variable)> Last;
     //static Variable Last(Variable x) { return CNTK::Sequence::Last(x); };
@@ -266,6 +267,31 @@ struct Sequence
             return CNTK::Sequence::Last(recurrence(x));
         });
     }
+};
+
+struct Sequence
+{
+    // TODO: Finish this one.
+    static UnarySequenceModel Recurrence(const BinaryModel& stepFunction, const Variable& initialState)
+    {
+        return [=](vector<Variable>& res, const vector<Variable>& x)
+        {
+            res.resize(x.size());
+            NOT_IMPLEMENTED;
+        };
+    }
+
+    static UnaryFoldingModel Fold(const BinaryModel& stepFunction, const Variable& initialState)
+    {
+        auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
+        return [=](const vector<Variable>& x) -> Variable
+        {
+            Variable state = initialState;
+            for (let& xt : x)
+                state = stepFunction(state, xt);
+            return barrier(state);
+        };
+    }
 
     static function<void(vector<Variable>&, const vector<Variable>&)> Map(UnaryModel f)
     {
@@ -283,7 +309,6 @@ struct Sequence
         });
     }
 };
-//const /*static*/ function<Variable(Variable)> Sequence::Last = [](Variable x) -> Variable { return CNTK::Sequence::Last(x); };
 
 // slice the last dimension (index with index i; then drop the axis)
 static Variable Index(const Variable& input, size_t i)

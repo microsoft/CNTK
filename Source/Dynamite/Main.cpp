@@ -31,7 +31,7 @@ UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, siz
 {
     return Sequential({
         Embedding(embeddingDim, device),
-        Dynamite::Sequence::Fold(RNNStep(hiddenDim, device)),
+        StaticSequence::Fold(RNNStep(hiddenDim, device)),
         Linear(numOutputClasses, device)
     });
 }
@@ -56,9 +56,9 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
 {
     auto embed   = Embedding(embeddingDim, device);
     auto step    = RNNStep(hiddenDim, device);
-    auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
+    auto zero = Constant({ hiddenDim }, 0.0f, device);
+    auto fold = Dynamite::Sequence::Fold(step, zero);
     auto linear  = Linear(numOutputClasses, device);
-    auto zero    = Constant({ hiddenDim }, 0.0f, device);
     vector<Variable> xvec;
     vector<Variable> evec;
     return UnaryModel({},
@@ -72,19 +72,9 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
         // 'x' is an entire sequence; last dimension is length
         as_vector(xvec, x);
         embed(evec, xvec);
-        let len = xvec.size(); //x.Shape().Dimensions().back();
-        Variable state = zero;
-        for (size_t t = 0; t < len; t++)
-        {
-            //if (t == 9)
-            //    fprintf(stderr, "");
-            auto xt = evec[t]; // Index(x, t);
-            //xt = embed(xt);
-            state = step(state, xt);
-        }
-        state = barrier(state); // for better batching
-        evec.clear(); xvec.clear();
-        return linear(state);
+        auto h = fold(evec);
+        evec.clear(); xvec.clear(); // release the memory
+        return linear(h);
     });
 }
 
