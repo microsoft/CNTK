@@ -109,20 +109,19 @@ struct Batch
     }
 
     // UNTESTED
-    static function<const vector<Variable>&(const vector<Variable>&)> Map(UnaryModel f)
+    static UnarySequenceModel Map(UnaryModel f)
     {
-        return [=](const vector<Variable>& batch)
+        return UnarySequenceModel({}, { { L"f", f } }, [=](vector<Variable>& res, const vector<Variable>& batch)
         {
 #if 0
             return map(f, batch);
 #else
-            vector<Variable> res;
-            res.reserve(batch.size());
+            res.clear();
             for (const auto& x : batch)
                 res.push_back(f(x));
             return res;
 #endif
-        };
+        });
     }
     static function<void(vector<Variable>&, const vector<Variable>&, const vector<Variable>&)> Map(BinaryModel f)
     {
@@ -173,6 +172,11 @@ struct UnaryBroadcastingModel : public UnaryModel
     {
         return Base::operator()(x);
     }
+    void operator() (vector<Variable>& res, const vector<Variable>& x) const
+    {
+        res = Batch::map(*this, x);
+    }
+    // TODO: get rid if this variant:
     vector<Variable> operator() (const vector<Variable>& x) const
     {
         return Batch::map(*this, x);
@@ -239,7 +243,7 @@ static UnaryModel Sequential(const vector<UnaryModel>& fns)
 struct Sequence
 {
     //const static function<Variable(Variable)> Last;
-    static Variable Last(Variable x) { return CNTK::Sequence::Last(x); };
+    //static Variable Last(Variable x) { return CNTK::Sequence::Last(x); };
 
     static UnaryModel Recurrence(const BinaryModel& stepFunction)
     {
@@ -259,18 +263,24 @@ struct Sequence
         auto recurrence = Recurrence(stepFunction);
         return UnaryModel({}, captured, [=](const Variable& x)
         {
-            return Sequence::Last(recurrence(x));
+            return CNTK::Sequence::Last(recurrence(x));
         });
     }
 
-    static function<vector<Variable>(const vector<Variable>&)> Map(UnaryModel f)
+    static function<void(vector<Variable>&, const vector<Variable>&)> Map(UnaryModel f)
     {
         return Batch::Map(f);
     }
 
-    static function<vector<Variable>(const vector<Variable>&)> Embedding(size_t embeddingDim, const DeviceDescriptor& device)
+    // TODO: This is somewhat broken presently.
+    static UnarySequenceModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
     {
-        return Map(Dynamite::Embedding(embeddingDim, device));
+        let embed = Dynamite::Embedding(embeddingDim, device);
+        return UnarySequenceModel(embed.Parameters(), {},
+        [=](vector<Variable>& res, const vector<Variable>& x)
+        {
+            return Map(embed);
+        });
     }
 };
 //const /*static*/ function<Variable(Variable)> Sequence::Last = [](Variable x) -> Variable { return CNTK::Sequence::Last(x); };
@@ -284,6 +294,15 @@ static Variable Index(const Variable& input, size_t i)
     dims.pop_back(); // drop last axis
     x = Reshape(x, dims);
     return x;
+}
+
+static inline void as_vector(vector<Variable>& res, const Variable& x)
+{
+    // 'x' is an entire sequence; last dimension is length
+    let len = x.Shape().Dimensions().back();
+    res.resize(len);
+    for (size_t t = 0; t < len; t++)
+        res[t] = Index(x, t);
 }
 
 // slice the last dimension if an NDArrayView (index with index i; then drop the axis)

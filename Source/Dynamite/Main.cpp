@@ -59,26 +59,31 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
     auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
     auto linear  = Linear(numOutputClasses, device);
     auto zero    = Constant({ hiddenDim }, 0.0f, device);
+    vector<Variable> xvec;
+    vector<Variable> evec;
     return UnaryModel({},
     {
         { L"embed",  embed  },
         { L"step",   step   },
         { L"linear", linear }
     },
-    [=](const Variable& x) -> Variable
+    [=](const Variable& x) mutable -> Variable
     {
         // 'x' is an entire sequence; last dimension is length
-        let len = x.Shape().Dimensions().back();
+        as_vector(xvec, x);
+        embed(evec, xvec);
+        let len = xvec.size(); //x.Shape().Dimensions().back();
         Variable state = zero;
         for (size_t t = 0; t < len; t++)
         {
             //if (t == 9)
             //    fprintf(stderr, "");
-            auto xt = Index(x, t);
-            xt = embed(xt);
+            auto xt = evec[t]; // Index(x, t);
+            //xt = embed(xt);
             state = step(state, xt);
         }
         state = barrier(state); // for better batching
+        evec.clear(); xvec.clear();
         return linear(state);
     });
 }
@@ -101,9 +106,9 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
     // create a batch mapper (which will allow suspension)
     let batchModel = Batch::Map(criterion);
     // for final summation, we create a new lambda (featBatch, labelBatch) -> mbLoss
-    return [=](const vector<Variable>& features, const vector<Variable>& labels)
+    vector<Variable> losses;
+    return [=](const vector<Variable>& features, const vector<Variable>& labels) mutable
     {
-        vector<Variable> losses;   // TODO: move this out
         batchModel(losses, features, labels);
         let collatedLosses = Splice(losses, Axis(0));     // collate all seq losses
         let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
@@ -149,10 +154,10 @@ UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& s
     let fwd = Recurrence(stepFwd, initialState);
     let bwd = Recurrence(stepBwd, initialState, true);
     let splice = Batch::Map(BinaryModel([](Variable a, Variable b) { return Splice({ a, b }, Axis(0)); }));
-    return [=](vector<Variable>& res, const vector<Variable>& seq)
+    vector<Variable> rFwd, rBwd; // TODO: move this out
+    return [=](vector<Variable>& res, const vector<Variable>& seq) mutable
     {
         // does not work since Gather can currently not concatenate
-        vector<Variable> rFwd, rBwd; // TODO: move this out
         fwd(rFwd, seq);
         bwd(rBwd, seq);
         splice(res, rFwd, rBwd);
