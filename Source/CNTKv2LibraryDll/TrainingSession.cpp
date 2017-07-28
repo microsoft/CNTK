@@ -377,9 +377,12 @@ namespace CNTK
 
         for (auto v : inputVarToStream)
         {
-            auto value = minibatchData.find(v.second);
+            // Try to match streams by name.
+            auto value = std::find_if(minibatchData.begin(), minibatchData.end(),
+                [&v](const std::pair<StreamInformation, MinibatchData>& d) { return v.second.m_name == d.first.m_name; });
             if (value == minibatchData.end())
                 RuntimeError("Minibatch source cannot find a stream with name '%ls'", v.second.m_name.c_str());
+
             minibatch.insert({ v.first, value->second.data });
         }
     }
