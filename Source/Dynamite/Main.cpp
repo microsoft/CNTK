@@ -288,13 +288,15 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const wstring labelsName   = L"labels";
 
 #if 1 // test bed for new PlainTextReader
-    let minibatchSource = CreateCompositeMinibatchSource(MinibatchSourceConfig({ PlainTextDeserializer(
+    auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(
         {
             PlainTextStreamConfiguration(featuresName, inputDim,         { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.x.txt" }, { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.x.vocab", L"", L"", L"" }),
             PlainTextStreamConfiguration(labelsName,   numOutputClasses, { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.y.txt" }, { L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.y.vocab", L"", L"", L"" })
-        })},
-        /*randomize=*/true));
-    // BUGBUG: no way to specify MinibatchSource::FullDataSweep
+        }) },
+        /*randomize=*/true);
+    minibatchSourceConfig.maxSamples = MinibatchSource::FullDataSweep;
+    let minibatchSource = CreateCompositeMinibatchSource(minibatchSourceConfig);
+    // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep
 #else
     auto minibatchSource = TextFormatMinibatchSource(trainingCTFPath,
     {

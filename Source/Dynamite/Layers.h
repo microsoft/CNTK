@@ -356,7 +356,7 @@ vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector
                 assert(data->Shape().Dimensions().back() == 1);
                 data = Index(data, 0); // slice off sample axis (the last in C++)
             }
-#if 0
+#if 1 // needed for now since PlainTextDeserializer cannot deliver Dense data, and Dynamite metric blows up on Sparse
             // convert sparse, since currently we cannot GatherBatch() sparse data
             if (data->IsSparse())
             {
