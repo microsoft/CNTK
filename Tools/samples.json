@@ -28,12 +28,21 @@
     },
     {
         "category": [""],
-        "name":  "Model Evaluation in C++/C#",
+        "name":  "Model Evaluation in C++/C#/.NET",
         "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Eval-Examples",
         "description":  "Evaluation or inference of an already trained CNTK model in C++/C#.",
-        "language":  ["C#"],
+        "language":  ["C++", "C#", ".NET"],
         "type":  ["Example"],
 	"dateadded": "4/14/2017"
+    },
+    {
+        "category": [""],
+        "name":  "Model Evaluation on Universal Windows Platform (UWP)",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Library-Evaluation-on-UWP",
+        "description":  "Evaluation or inference of an already trained CNTK model on UWP.",
+        "language":  ["C++", "C#"],
+        "type":  ["Example"],
+	"dateadded": "7/31/2017"
     },
     {
         "category": ["Image"],
