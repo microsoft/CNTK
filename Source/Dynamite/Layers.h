@@ -91,8 +91,9 @@ public:
 };
 typedef TModel<function<Variable(const Variable&)>> UnaryModel;
 typedef TModel<function<Variable(const Variable&, const Variable&)>> BinaryModel;
-typedef TModel<function<vector<Variable>(const vector<Variable>&)>> UnarySequenceModel;
-typedef TModel<function<vector<Variable>(const vector<Variable>&, const vector<Variable>&)>> BinarySequenceModel;
+typedef TModel<function<Variable(const Variable&, const Variable&, const Variable&)>> TernaryModel;
+typedef TModel<function<void(vector<Variable>&, const vector<Variable>&)>> UnarySequenceModel;
+typedef TModel<function<void(vector<Variable>&, const vector<Variable>&, const vector<Variable>&)>> BinarySequenceModel;
 
 struct Batch
 {
@@ -123,16 +124,14 @@ struct Batch
 #endif
         };
     }
-    static function<vector<Variable>(const vector<Variable>&, const vector<Variable>&)> Map(BinaryModel f)
+    static function<void(vector<Variable>&, const vector<Variable>&, const vector<Variable>&)> Map(BinaryModel f)
     {
-        return [=](const vector<Variable>& xBatch, const vector<Variable>& yBatch)
+        return [=](vector<Variable>& res, const vector<Variable>& xBatch, const vector<Variable>& yBatch)
         {
-            vector<Variable> res;
-            res.reserve(xBatch.size());
+            res.resize(xBatch.size());
             assert(yBatch.size() == xBatch.size());
             for (size_t i = 0; i < xBatch.size(); i++)
-                res.emplace_back(f(xBatch[i], yBatch[i]));
-            return res;
+                res[i] = f(xBatch[i], yBatch[i]);
         };
     }
     static function<vector<vector<Variable>>(const vector<vector<Variable>>&, const vector<vector<Variable>>&)> Map(BinarySequenceModel f)
@@ -140,10 +139,10 @@ struct Batch
         return [=](const vector<vector<Variable>>& xBatch, const vector<vector<Variable>>& yBatch)
         {
             vector<vector<Variable>> res;
-            res.reserve(xBatch.size());
+            res.resize(xBatch.size());
             assert(yBatch.size() == xBatch.size());
             for (size_t i = 0; i < xBatch.size(); i++)
-                res.emplace_back(f(xBatch[i], yBatch[i]));
+                f(res[i], xBatch[i], yBatch[i]);
             return res;
         };
     }
@@ -180,7 +179,7 @@ struct UnaryBroadcastingModel : public UnaryModel
     }
 };
 
-UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
+static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
     auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"E");
     return UnaryModel({ E }, [=](const Variable& x)
@@ -189,7 +188,7 @@ UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& de
     });
 }
 
-BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
+static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
     auto R = Parameter({ outputDim, outputDim                  }, DataType::Float, GlorotUniformInitializer(), device, L"R");
@@ -200,14 +199,27 @@ BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 
-UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
+static TernaryModel LSTMStep(size_t outputDim, const DeviceDescriptor& device)
+{
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
+    auto R = Parameter({ outputDim, outputDim }, DataType::Float, GlorotUniformInitializer(), device, L"R");
+    auto b = Parameter({ outputDim }, 0.0f, device, L"b");
+    return TernaryModel({ W, R, b }, [=](const Variable& prevH, const Variable& prevC, const Variable& input)
+    {
+        // TODO: complete this
+        prevC;
+        return ReLU(Times(W, input) + b + Times(R, prevH));
+    });
+}
+
+static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
     auto b = Parameter({ outputDim }, 0.0f, device, L"b");
     return UnaryModel({ W, b }, [=](const Variable& x) { return Times(W, x) + b; });
 }
 
-UnaryModel Sequential(const vector<UnaryModel>& fns)
+static UnaryModel Sequential(const vector<UnaryModel>& fns)
 {
     map<wstring, shared_ptr<ModelParameters>> captured;
     for (size_t i = 0l; i < fns.size(); i++)
@@ -226,7 +238,8 @@ UnaryModel Sequential(const vector<UnaryModel>& fns)
 
 struct Sequence
 {
-    const static function<Variable(Variable)> Last;
+    //const static function<Variable(Variable)> Last;
+    static Variable Last(Variable x) { return CNTK::Sequence::Last(x); };
 
     static UnaryModel Recurrence(const BinaryModel& stepFunction)
     {
@@ -260,10 +273,10 @@ struct Sequence
         return Map(Dynamite::Embedding(embeddingDim, device));
     }
 };
-const /*static*/ function<Variable(Variable)> Sequence::Last = [](Variable x) -> Variable { return CNTK::Sequence::Last(x); };
+//const /*static*/ function<Variable(Variable)> Sequence::Last = [](Variable x) -> Variable { return CNTK::Sequence::Last(x); };
 
 // slice the last dimension (index with index i; then drop the axis)
-Variable Index(const Variable& input, size_t i)
+static Variable Index(const Variable& input, size_t i)
 {
     auto dims = input.Shape().Dimensions();
     Variable x = Slice(input, { Axis((int)input.Shape().Rank() - 1) }, { (int)i }, { (int)i + 1 });
@@ -275,7 +288,7 @@ Variable Index(const Variable& input, size_t i)
 
 // slice the last dimension if an NDArrayView (index with index i; then drop the axis)
 // This is used for MB conversion.
-NDArrayViewPtr Index(NDArrayViewPtr data, size_t i)
+static NDArrayViewPtr Index(NDArrayViewPtr data, size_t i)
 {
     auto dims = data->Shape().Dimensions();
     auto startOffset = vector<size_t>(dims.size(), 0);
@@ -297,7 +310,7 @@ NDArrayViewPtr Index(NDArrayViewPtr data, size_t i)
 
 // helper for converting data to dense
 template<typename ElementType>
-NDArrayViewPtr MakeEye(size_t n, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
+static NDArrayViewPtr MakeEye(size_t n, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
 {
     vector<ElementType> buffer(n*n, 0);
     for (size_t i = 0; i < n; i++)
@@ -306,7 +319,7 @@ NDArrayViewPtr MakeEye(size_t n, const CNTK::DataType& dataType, const CNTK::Dev
     eye = eye->DeepClone(device);
     return eye;
 }
-NDArrayViewPtr Eye(size_t n, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
+static NDArrayViewPtr Eye(size_t n, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
 {
     static map<pair<size_t, CNTK::DataType>, NDArrayViewPtr> cached;
     let key = make_pair(n, dataType);
@@ -325,7 +338,7 @@ NDArrayViewPtr Eye(size_t n, const CNTK::DataType& dataType, const CNTK::DeviceD
     return eye;
 }
 
-vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector<Variable>& variables, const DeviceDescriptor& device) // variables needed for axis info only
+static vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector<Variable>& variables, const DeviceDescriptor& device) // variables needed for axis info only
 // returns vector[numArgs] OF vector[numBatchItems] OF Constant[seqLen,sampleShape]
 {
     let numArgs = inputs.size();

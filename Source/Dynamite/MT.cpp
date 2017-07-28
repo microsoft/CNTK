@@ -7,7 +7,7 @@
 
 #include "CNTKLibrary.h"
 #include "PlainTextDeseralizer.h"
-//#include "Layers.h"
+#include "Layers.h"
 //#include "Common.h"
 //#include "TimerUtility.h"
 
@@ -21,35 +21,91 @@
 using namespace CNTK;
 using namespace std;
 
-//using namespace Dynamite;
+using namespace Dynamite;
 
-void Train(const DeviceDescriptor& device, bool useSparseLabels)
+const DeviceDescriptor device(DeviceDescriptor::GPUDevice(0));
+//const DeviceDescriptor device(DeviceDescriptor::CPUDevice());
+const size_t srcVocabSize = 2330;
+const size_t tgtVocabSize = 2330;
+const size_t embeddingDim = 128;
+const size_t attentionDim = 128;
+const size_t numEncoderLayers = 1;
+const size_t encoderHiddenDim = 128;
+
+auto BidirectionalLSTMEncoder(size_t numLayers, size_t encoderHiddenDim, double dropoutInputKeepProb)
 {
-    let srcVocabSize = 2330;
-    let tgtVocabSize = 2330;
+    //vector<TernaryModel> lstms(numLayers);
+    //for (auto& lstm : lstms)
+    //    lstm = LSTMStep(encoderHiddenDim, device);
+    return UnaryModel({},
+    {},
+    [=](const Variable& x) -> Variable
+    {
+        return x;
+    });
+}
+
+UnaryModel CreateModelFunction()
+{
+    auto embed = Embedding(embeddingDim, device);
+    auto encoder = BidirectionalLSTMEncoder(numEncoderLayers, encoderHiddenDim, 0.8);
+    //auto step = RNNStep(hiddenDim, device);
+    //auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
+    auto linear = Linear(tgtVocabSize, device);
+    auto zero = Constant({ encoderHiddenDim }, 0.0f, device);
+    return UnaryModel({},
+    {
+        { L"embed",   embed },
+        { L"encoder", encoder },
+        { L"linear",  linear }
+    },
+    [=](const Variable& x) -> Variable
+    {
+#if 1
+        return x;
+#else
+        // 'x' is an entire sequence; last dimension is length
+        let len = x.Shape().Dimensions().back();
+        Variable state = zero;
+        for (size_t t = 0; t < len; t++)
+        {
+            //if (t == 9)
+            //    fprintf(stderr, "");
+            auto xt = Index(x, t);
+            xt = embed(xt);
+            state = step(state, xt);
+        }
+        state = barrier(state); // for better batching
+        return linear(state);
+#endif
+    });
+}
+
+void Train()
+{
     //const size_t inputDim = 2000;
     //const size_t embeddingDim = 500;
     //const size_t hiddenDim = 250;
     //const size_t attentionDim = 20;
     //const size_t numOutputClasses = 5;
     //
-    //const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
-    //
-    //// static model and criterion function
-    //auto model_fn = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
-    //auto criterion_fn = CreateCriterionFunction(model_fn);
-    //
-    //// dynamic model and criterion function
-    //auto d_model_fn = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
-    //auto d_criterion_fn = CreateCriterionFunctionUnrolled(d_model_fn);
+    // dynamic model and criterion function
+    auto model_fn = CreateModelFunction();
+    auto criterion_fn = model_fn;// CreateCriterionFunction(model_fn);
 
     // data
-    let minibatchSource = CreateCompositeMinibatchSource(MinibatchSourceConfig({ PlainTextDeserializer(
+    auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(
         {
             PlainTextStreamConfiguration(L"src", srcVocabSize, { L"d:/work/Karnak/sample-model/data/train.src" }, { L"d:/work/Karnak/sample-model/data/vocab.src", L"<s>", L"</s>", L"<unk>" }),
             PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/train.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk>" })
         })},
-        /*randomize=*/false/*for now*/));
+        /*randomize=*/true);
+    minibatchSourceConfig.maxSamples = MinibatchSource::FullDataSweep;
+    let minibatchSource = CreateCompositeMinibatchSource(minibatchSourceConfig);
+    // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep
+
+    let parameters = model_fn.Parameters();
+    auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.05));
 }
 
 int mt_main(int argc, char *argv[])
@@ -57,7 +113,7 @@ int mt_main(int argc, char *argv[])
     argc; argv;
     try
     {
-        Train(DeviceDescriptor::GPUDevice(0), true);
+        Train();
         //Train(DeviceDescriptor::CPUDevice(), true);
     }
     catch (exception& e)

@@ -103,7 +103,8 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
     // for final summation, we create a new lambda (featBatch, labelBatch) -> mbLoss
     return [=](const vector<Variable>& features, const vector<Variable>& labels)
     {
-        let losses = batchModel(features, labels);
+        vector<Variable> losses;   // TODO: move this out
+        batchModel(losses, features, labels);
         let collatedLosses = Splice(losses, Axis(0));     // collate all seq losses
         let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
         return mbLoss;
@@ -123,10 +124,10 @@ vector<Variable> ToVector(const Variable& x)
 
 UnarySequenceModel Recurrence(const BinaryModel& step, const Variable& initialState, bool goBackwards = false)
 {
-    return [=](const vector<Variable>& seq)
+    return [=](vector<Variable>& res, const vector<Variable>& seq)
     {
         let len = seq.size();
-        vector<Variable> res(len);
+        res.resize(len);
         for (size_t t = 0; t < len; t++)
         {
             if (!goBackwards)
@@ -140,7 +141,6 @@ UnarySequenceModel Recurrence(const BinaryModel& step, const Variable& initialSt
                 res[len - 1 - t] = step(prev, seq[len - 1 - t]);
             }
         }
-        return res;
     };
 }
 
@@ -149,12 +149,14 @@ UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& s
     let fwd = Recurrence(stepFwd, initialState);
     let bwd = Recurrence(stepBwd, initialState, true);
     let splice = Batch::Map(BinaryModel([](Variable a, Variable b) { return Splice({ a, b }, Axis(0)); }));
-    return [=](const vector<Variable>& seq)
+    return [=](vector<Variable>& res, const vector<Variable>& seq)
     {
-        // does not work since Gather canm currently not concatenate
-        let rFwd = fwd(seq);
-        let rBwd = bwd(seq);
-        return splice(rFwd, rBwd);
+        // does not work since Gather can currently not concatenate
+        vector<Variable> rFwd, rBwd; // TODO: move this out
+        fwd(rFwd, seq);
+        bwd(rBwd, seq);
+        splice(res, rFwd, rBwd);
+        rFwd.clear(); rBwd.clear(); // don't hold references
     };
 }
 
