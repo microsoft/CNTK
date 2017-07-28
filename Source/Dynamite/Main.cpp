@@ -65,7 +65,7 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
     return UnaryModel({},
     {
         { L"embed",  embed  },
-        { L"step",   step },
+        { L"fold",   fold   },
         { L"linear", linear }
     },
     [=](const Variable& x) mutable -> Variable
@@ -105,44 +105,6 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
         let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
         losses.clear();
         return mbLoss;
-    };
-}
-
-UnarySequenceModel Recurrence(const BinaryModel& step, const Variable& initialState, bool goBackwards = false)
-{
-    return [=](vector<Variable>& res, const vector<Variable>& seq)
-    {
-        let len = seq.size();
-        res.resize(len);
-        for (size_t t = 0; t < len; t++)
-        {
-            if (!goBackwards)
-            {
-                let& prev = t == 0 ? initialState : res[t - 1];
-                res[t] = step(prev, seq[t]);
-            }
-            else
-            {
-                let& prev = t == 0 ? initialState : res[len - 1 - (t - 1)];
-                res[len - 1 - t] = step(prev, seq[len - 1 - t]);
-            }
-        }
-    };
-}
-
-UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& stepBwd, const Variable& initialState)
-{
-    let fwd = Recurrence(stepFwd, initialState);
-    let bwd = Recurrence(stepBwd, initialState, true);
-    let splice = Batch::Map(BinaryModel([](Variable a, Variable b) { return Splice({ a, b }, Axis(0)); }));
-    vector<Variable> rFwd, rBwd; // TODO: move this out
-    return [=](vector<Variable>& res, const vector<Variable>& seq) mutable
-    {
-        // does not work since Gather can currently not concatenate
-        fwd(rFwd, seq);
-        bwd(rBwd, seq);
-        splice(res, rFwd, rBwd);
-        rFwd.clear(); rBwd.clear(); // don't hold references
     };
 }
 
@@ -307,9 +269,15 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     // tie model parameters
     d_model_fn.Nested(L"embed" )[L"E"].SetValue(model_fn.Nested(L"[0]")[L"E"]                .Value());
+#if 1
+    d_model_fn.Nested(L"fold").Nested(L"step")[L"W"].SetValue(model_fn.Nested(L"[1]").Nested(L"step")[L"W"].Value());
+    d_model_fn.Nested(L"fold").Nested(L"step")[L"R"].SetValue(model_fn.Nested(L"[1]").Nested(L"step")[L"R"].Value());
+    d_model_fn.Nested(L"fold").Nested(L"step")[L"b"].SetValue(model_fn.Nested(L"[1]").Nested(L"step")[L"b"].Value());
+#else
     d_model_fn.Nested(L"step"  )[L"W"].SetValue(model_fn.Nested(L"[1]").Nested(L"step")[L"W"].Value());
     d_model_fn.Nested(L"step"  )[L"R"].SetValue(model_fn.Nested(L"[1]").Nested(L"step")[L"R"].Value());
     d_model_fn.Nested(L"step"  )[L"b"].SetValue(model_fn.Nested(L"[1]").Nested(L"step")[L"b"].Value());
+#endif
     d_model_fn.Nested(L"linear")[L"W"].SetValue(model_fn.Nested(L"[2]")[L"W"]                .Value());
     d_model_fn.Nested(L"linear")[L"b"].SetValue(model_fn.Nested(L"[2]")[L"b"]                .Value());
 

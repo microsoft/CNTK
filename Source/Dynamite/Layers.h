@@ -226,32 +226,61 @@ static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& d
 
 struct Sequence
 {
-    static UnarySequenceModel Recurrence(const BinaryModel& stepFunction, const Variable& initialState)
+    static UnarySequenceModel Recurrence(const BinaryModel& step, const Variable& initialState, bool goBackwards = false)
     {
         auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
-        return [=](vector<Variable>& res, const vector<Variable>& x)
+        return UnarySequenceModel({}, { { L"step", step } },
+        [=](vector<Variable>& res, const vector<Variable>& seq)
         {
-            Variable state = initialState;
-            res.clear();
-            for (let& xt : x)
+            let len = seq.size();
+            res.resize(len);
+            for (size_t t = 0; t < len; t++)
             {
-                state = stepFunction(state, xt);
-                res.push_back(state);
+                if (!goBackwards)
+                {
+                    let& prev = t == 0 ? initialState : res[t - 1];
+                    res[t] = step(prev, seq[t]);
+                }
+                else
+                {
+                    let& prev = t == 0 ? initialState : res[len - 1 - (t - 1)];
+                    res[len - 1 - t] = step(prev, seq[len - 1 - t]);
+                }
             }
-            res.back() = barrier(res.back());
-        };
+            if (!goBackwards)
+                res.back() = barrier(res.back());
+            else
+                res.front() = barrier(res.front());
+        });
     }
 
-    static UnaryFoldingModel Fold(const BinaryModel& stepFunction, const Variable& initialState)
+    //UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& stepBwd, const Variable& initialState)
+    //{
+    //    let fwd = Recurrence(stepFwd, initialState);
+    //    let bwd = Recurrence(stepBwd, initialState, true);
+    //    let splice = Batch::Map(BinaryModel([](Variable a, Variable b) { return Splice({ a, b }, Axis(0)); }));
+    //    vector<Variable> rFwd, rBwd; // TODO: move this out
+    //    return [=](vector<Variable>& res, const vector<Variable>& seq) mutable
+    //    {
+    //        // does not work since Gather can currently not concatenate
+    //        fwd(rFwd, seq);
+    //        bwd(rBwd, seq);
+    //        splice(res, rFwd, rBwd);
+    //        rFwd.clear(); rBwd.clear(); // don't hold references
+    //    };
+    //}
+
+    static UnaryFoldingModel Fold(const BinaryModel& step, const Variable& initialState)
     {
         auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
-        return [=](const vector<Variable>& x) -> Variable
+        return UnaryFoldingModel({}, { { L"step", step }  },
+        [=](const vector<Variable>& x) -> Variable
         {
             Variable state = initialState;
             for (let& xt : x)
-                state = stepFunction(state, xt);
+                state = step(state, xt);
             return barrier(state);
-        };
+        });
     }
 
     static function<void(vector<Variable>&, const vector<Variable>&)> Map(UnaryModel f)
@@ -315,22 +344,22 @@ struct StaticSequence // for CNTK Static
     //const static function<Variable(Variable)> Last;
     //static Variable Last(Variable x) { return CNTK::Sequence::Last(x); };
 
-    static UnaryModel Recurrence(const BinaryModel& stepFunction)
+    static UnaryModel Recurrence(const BinaryModel& step)
     {
         return [=](const Variable& x)
         {
             auto dh = PlaceholderVariable();
-            auto rec = stepFunction(PastValue(dh), x);
+            auto rec = step(PastValue(dh), x);
             FunctionPtr(rec)->ReplacePlaceholders({ { dh, rec } });
             return rec;
         };
     }
 
-    static UnaryModel Fold(const BinaryModel& stepFunction)
+    static UnaryModel Fold(const BinaryModel& step)
     {
         map<wstring, shared_ptr<ModelParameters>> captured;
-        captured[L"step"] = stepFunction;
-        auto recurrence = Recurrence(stepFunction);
+        captured[L"step"] = step;
+        auto recurrence = Recurrence(step);
         return UnaryModel({}, captured, [=](const Variable& x)
         {
             return CNTK::Sequence::Last(recurrence(x));
