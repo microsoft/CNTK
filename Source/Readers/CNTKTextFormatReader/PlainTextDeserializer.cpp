@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// This implements a plain-text deserializer
+// This implements a plain-text deserializer, for lines of space-separated word tokens.
 //
 
 #include "stdafx.h"
@@ -34,7 +34,7 @@ static void LoadTextFileAsCharArray(vector<char>& buf, const wstring& path, uint
     freadOrDie(buf, end - begin, f);
 }
 
-bool IsSpace(char c) { return c == ' ' || c == '\t' || c == '\r'; }
+static inline bool IsSpace(char c) { return c == ' ' || c == '\t' || c == '\r'; }
 
 // ===========================================================================
 // This class implements a plain-text deserializer, for lines of space-separate tokens
@@ -106,6 +106,10 @@ public:
             // precompute the word index of the unknown-substitute token if given
             m_unknownId = TryGetWordId(config.substituteForUnknown);
         }
+
+        // look up a word in the vocabulary
+        // If the word is not found, and an unknown-substitute was specified, that is returned instead.
+        // Otherwise it fails.
         size_t operator[](const char* word) const
         {
             let res = m_wordMap.find(word);
@@ -116,22 +120,26 @@ public:
             else
                 InvalidArgument("Vocabulary: Encountered unknown word '%s' when no subsitute was specified.", word);
         }
-        size_t TryGetWordId(const wstring& word) const // for special tokens; returns SIZE_MAX if word == ""
+
+        // special look-up function for special tokens which can be "" (it returns the sentinel value SIZE_MAX for those)
+        size_t TryGetWordId(const wstring& word) const
         {
             if (word.empty())
                 return SIZE_MAX;
             else
                 return operator[](AsAsciiString(word).c_str());
         }
+
         size_t size() const { return m_words.size(); }
     private:
-        vector<string> m_words;
-        unordered_map<string, size_t> m_wordMap;
-        size_t m_unknownId;
+        vector<string> m_words;                  // [wordId] the word list
+        unordered_map<string, size_t> m_wordMap; // [word] -> wordId map
+        size_t m_unknownId;                      // wordId of unknown-substitute, or SIZE_MAX if not specified
     };
 
     // -----------------------------------------------------------------------
     // per-stream data
+    // This holds all information for one stream.
     // -----------------------------------------------------------------------
 
     struct PlainTextStream : public PlainTextStreamConfiguration
@@ -220,6 +228,7 @@ public:
     // implementation of PlainTextDeserializer itself
     // -----------------------------------------------------------------------
 
+    // constructor indexes all files already (determines chunks and line offsets in files)
     PlainTextDeserializerImpl(const vector<PlainTextDeserializerImpl::PlainTextStreamConfiguration>& streamConfigs, size_t chunkSizeBytes, bool cacheIndex,
         DataType elementType, bool primary, int traceLevel) :
         m_streams(streamConfigs.begin(), streamConfigs.end()), m_cacheIndex(cacheIndex), m_elementType(elementType), m_primary(primary), m_traceLevel(traceLevel)
@@ -321,6 +330,7 @@ public:
         let& chunkRef = m_chunkRefs[chunkId];
         let& definingTextLineRefs = m_streams[m_definingStream].m_textLineRefs;
         result.clear();
+        // iterate over all lines in the chunk and gather their SequenceInfo records
         size_t fileIndex  = chunkId == 0 ? 0 : m_chunkRefs[chunkId - 1].m_endFileIndex;
         size_t lineNo     = chunkId == 0 ? 0 : m_chunkRefs[chunkId - 1].m_endLineNo;
         size_t sequenceId = chunkId == 0 ? 0 : m_chunkRefs[chunkId - 1].m_endSequenceId;
@@ -347,7 +357,7 @@ public:
             lineNo++;
         }
         if (result.size() != chunkRef.m_numberOfSequences || sequenceId != chunkRef.m_endSequenceId)
-            LogicError("PlainTextDeserializer: SequenceInfosForChunk ran into a discrepancy on #sequences.");
+            LogicError("PlainTextDeserializer: SequenceInfosForChunk ran into a discrepancy on sequence counts.");
     }
 
     ///
@@ -362,6 +372,13 @@ public:
     }
 
 private:
+    // -----------------------------------------------------------------------
+    // data structures returned by GetChunk()
+    // -----------------------------------------------------------------------
+
+    // ChunkRef is a reference to the data of a chunk. It stores the end position (one
+    // line beyond end) as file index/line number. The start position is determined when
+    // needed as the previous chunk's end position (or 0/0 for the first chunk).
     struct ChunkRef : public ChunkInfo
     {
         size_t m_size = 0;          // size of this chunk in bytes
@@ -371,19 +388,23 @@ private:
 
         ChunkRef() : ChunkInfo{ 0, 0, 0 } { }
     };
+
+    // PlainTextChunk loads and holds the data for one data chunk when requested.
+    // It carries the GetSequence() method, which returns individual sequences from 
+    // the loaded chunk data.
     class PlainTextChunk : public Chunk
     {
     public:
         // constructor loads the chunk data and parses it into binary id sequences
-        PlainTextChunk(const ChunkRef& chunkRef, const PlainTextDeserializerImpl& outer) :
-            m_chunkRef(chunkRef), m_outer(outer)
+        PlainTextChunk(const ChunkRef& chunkRef, const PlainTextDeserializerImpl& owningDeserializer) :
+            m_chunkRef(chunkRef), m_owningDeserializer(owningDeserializer)
         {
             let chunkId = chunkRef.m_id;
-            let numStreams = outer.m_streams.size();
+            let numStreams = owningDeserializer.m_streams.size();
             m_data.resize(numStreams);
             m_endOffsets.resize(numStreams);
             // first sequence id
-            m_firstSequenceId = chunkId == 0 ? 0 : outer.m_chunkRefs[chunkId - 1].m_endSequenceId;
+            m_firstSequenceId = chunkId == 0 ? 0 : owningDeserializer.m_chunkRefs[chunkId - 1].m_endSequenceId;
             // load all streams' data
             size_t maxSequenceLength = 0;
             vector<char> buf;
@@ -394,15 +415,15 @@ private:
                 data.clear();
                 endOffsets.clear();
                 endOffsets.reserve(chunkRef.m_numberOfSequences);
-                let& stream = outer.m_streams[streamIndex];
+                let& stream = owningDeserializer.m_streams[streamIndex];
                 let& textLineRefs = stream.m_textLineRefs;
                 let& vocabulary = stream.m_vocabulary;
                 // fetch special symbol ids if given (will be SIZE_MAX if not given)
                 let insertAtStartId = vocabulary.TryGetWordId(stream.m_vocabularyConfig.insertAtStart);
                 let insertAtEndId   = vocabulary.TryGetWordId(stream.m_vocabularyConfig.insertAtEnd);
-                // generate all sequences for this chunk, for all streams
-                size_t fileIndex  = chunkId == 0 ? 0 : outer.m_chunkRefs[chunkId - 1].m_endFileIndex;
-                size_t lineNo     = chunkId == 0 ? 0 : outer.m_chunkRefs[chunkId - 1].m_endLineNo;
+                // generate all sequences for this chunk, for the current stream
+                size_t fileIndex  = chunkId == 0 ? 0 : owningDeserializer.m_chunkRefs[chunkId - 1].m_endFileIndex;
+                size_t lineNo     = chunkId == 0 ? 0 : owningDeserializer.m_chunkRefs[chunkId - 1].m_endLineNo;
                 while (fileIndex < chunkRef.m_endFileIndex ||
                        (fileIndex == chunkRef.m_endFileIndex && lineNo < chunkRef.m_endLineNo))
                 {
@@ -415,7 +436,7 @@ private:
                     buf.push_back('\n'); // ensure line-end marker for consistency checking
                     for (; lineNo < endLineNo; lineNo++)
                     {
-                        // <s>
+                        // insert <s> if requested
                         if (insertAtStartId != SIZE_MAX)
                             data.push_back((SparseIndexType)insertAtStartId);
                         // word tokens
@@ -437,7 +458,7 @@ private:
                             // get word id
                             data.push_back((SparseIndexType)vocabulary[word]);
                         }
-                        // </s>
+                        // insert </s> if requested
                         if (insertAtEndId != SIZE_MAX)
                             data.push_back((SparseIndexType)insertAtEndId);
                         endOffsets.push_back(data.size());
@@ -457,7 +478,8 @@ private:
             m_onesDoubleBuffer.resize(maxSequenceLength, 1);
         }
 
-        // one sequence in one stream
+        // PlainTextSequenceData is the data structure returned by GetSequence().
+        // It holds references to the data of one sequence in one stream.
         class PlainTextSequenceData : public SparseSequenceData
         {
         public:
@@ -487,6 +509,11 @@ private:
             const void* m_dataPtr;
         };
 
+        ///
+        /// Gets data for the sequence with the given index.
+        /// result contains a SequenceDataPtr for every input stream declared by the
+        /// deserializer that produced this chunk.
+        ///
         virtual void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override final
         {
             if (sequenceIndex > m_chunkRef.m_numberOfSequences)
@@ -497,7 +524,7 @@ private:
             {
                 auto& data = m_data[streamIndex];
                 auto& endOffsets = m_endOffsets[streamIndex];
-                let& stream = m_outer.m_streams[streamIndex];
+                let& stream = m_owningDeserializer.m_streams[streamIndex];
 
                 let beginOffset = sequenceIndex == 0 ? 0 : endOffsets[sequenceIndex - 1];
                 let numWords = endOffsets[sequenceIndex] - beginOffset;
@@ -508,8 +535,8 @@ private:
             }
         }
     private:
-        const ChunkRef& m_chunkRef;
-        const PlainTextDeserializerImpl& m_outer;    // TODO: remove if not needed
+        const ChunkRef& m_chunkRef;             // reference to the chunk descriptor that this Chunk represents
+        const PlainTextDeserializerImpl& m_owningDeserializer; // reference to the owningDeserializer PlainTextDeserializer instance
         vector<vector<SparseIndexType>> m_data; // [streamIndex][n] concatenated data for all sequences for all streams
         vector<vector<size_t>> m_endOffsets;    // [streamIndex][lineNo] end offset of line (begin offset taken from lineNo-1)
         size_t m_firstSequenceId;               // sequence id of first sequence in this chunk
@@ -528,19 +555,22 @@ public:
     }
 
 private:
-    vector<PlainTextStream> m_streams;
-    const bool m_cacheIndex;
+    vector<PlainTextStream> m_streams; // information of all streams, including configuration
+    const bool m_cacheIndex;           // (not implemented) if true then persist the index to disk
     const DataType m_elementType;
-    const bool m_primary;
+    const bool m_primary;              // whether this deserializer is the primary one (determines chunking) or not
     const int m_traceLevel;
-    const size_t m_definingStream = 0;  // TODO: we may change this, e.g. select the first that has definesMBSize set? (currently none has)
+    const size_t m_definingStream = 0; // chunks are defined by this stream  --TODO: we may change this, e.g. select the first that has definesMBSize set? (currently none has)
 
     // working data
-    size_t m_totalNumLines; // total line count for the stream (same for all streams)
-    vector<ChunkRef> m_chunkRefs; // reference to all chunks
+    size_t m_totalNumLines;       // total line count for the stream (same for all streams)
+    vector<ChunkRef> m_chunkRefs; // descriptors of all chunks (but not the actual data, which is loaded on-demand)
 };
 
+// ---------------------------------------------------------------------------
 // factory function to create a PlainTextDeserializer from a V1 config object
+// ---------------------------------------------------------------------------
+
 shared_ptr<DataDeserializer> CreatePlainTextDeserializer(const ConfigParameters& configParameters, bool primary)
 {
     // convert V1 configParameters back to a C++ data structure
@@ -598,7 +628,7 @@ shared_ptr<DataDeserializer> CreatePlainTextDeserializer(const ConfigParameters&
 
     bool cacheIndex = configParameters(L"cacheIndex");
     let traceLevel = configParameters(L"traceLevel", 1);
-    let chunkSizeBytes = 10000; // configParameters(L"chunkSizeInBytes", g_32MB); // 32 MB by default   --TODO: currently not passed in from outer factory function
+    let chunkSizeBytes = 10000; // configParameters(L"chunkSizeInBytes", g_32MB); // 32 MB by default   --TODO: currently not passed in from owningDeserializer factory function
 
     // construct the deserializer from that
     return make_shared<PlainTextDeserializerImpl>(move(streamConfigs), chunkSizeBytes, cacheIndex, elementType, primary, traceLevel);
