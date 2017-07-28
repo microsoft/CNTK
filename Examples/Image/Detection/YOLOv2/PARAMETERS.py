@@ -54,7 +54,7 @@ elif(par_dataset_name == "Pascal_VOC_2007"):
     par_max_gtbs = 50
     par_boxes_centered = True
     par_train_data_file = 'trainval2007.txt'
-    par_train_roi_file = 'trainval2007_rois_center_rel.txt'
+    par_train_roi_file = 'trainval2007_rois_rel-ctr-wh_noPad_skipDif.txt'
     _par_lr_dataset_adoption=.01
     par_max_epochs=30 #150
 
