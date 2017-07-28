@@ -354,6 +354,11 @@ def roipooling(operand, rois, pooling_type, roi_output_shape, spatial_scale, nam
     that are relative to the image size [W x H]. This operation can be used as a replacement for the final
     pooling layer of an image classification network (as presented in Fast R-CNN and others).
 
+    .. versionchanged:: 2.1
+      The signature was updated to match the Caffe implementation:
+      the parameters `pooling_type` and `spatial_scale` were added, and
+      the coordinates for the parameters `rois` are now absolute to the original image size.
+
     Args:
         operand: a convolutional feature map as the input volume ([W x H x C x N]).
         pooling_type: only :const:`~cntk.ops.MAX_POOLING`
