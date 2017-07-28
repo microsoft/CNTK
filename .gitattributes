@@ -124,6 +124,7 @@ TIMIT*.statelist text
 TIMIT*.tfsa text
 TIMIT*.transitions text
 
+Examples/Evaluation/UWPImageRecognition/ImageRecognizerLib/utils.inl text
 Examples/LanguageUnderstanding/ATIS/Data/ATIS.* text
 Examples/LanguageUnderstanding/ATIS/BrainScript/*.wl text
 Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
