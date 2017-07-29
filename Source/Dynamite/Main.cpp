@@ -373,7 +373,7 @@ extern int mt_main(int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
-#if 0
+#if 1
     return mt_main(argc, argv);
 #else
     argc; argv;

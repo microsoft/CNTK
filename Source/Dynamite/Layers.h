@@ -28,8 +28,9 @@ namespace Dynamite {
 struct ModelParameters
 {
     map<wstring, Parameter> m_parameters;
-    map<wstring, shared_ptr<ModelParameters>> m_nestedParameters;
-    ModelParameters(const vector<Parameter>& parameters, const map<wstring, shared_ptr<ModelParameters>>& parentParameters)
+    typedef shared_ptr<ModelParameters> ModelParametersPtr;
+    map<wstring, ModelParametersPtr> m_nestedParameters;
+    ModelParameters(const vector<Parameter>& parameters, const map<wstring, ModelParametersPtr>& parentParameters)
         : m_nestedParameters(parentParameters)
     {
         for (const auto& p : parameters)
@@ -71,7 +72,7 @@ public:
         return res;
     }
 };
-typedef shared_ptr<ModelParameters> ModelParametersPtr;
+typedef ModelParameters::ModelParametersPtr ModelParametersPtr;
 
 template<class Base>
 class TModel : public Base, public ModelParametersPtr
@@ -79,15 +80,32 @@ class TModel : public Base, public ModelParametersPtr
     const ModelParameters& ParameterSet() const { return **this; }
 public:
     TModel(const Base& f) : Base(f){}
-    // need to think a bit how to store nested NnaryModels
+    // constructor with parameters (their names are the Name() properties)
     TModel(const vector<Parameter>& parameters, const Base& f)
-        : Base(f), ModelParametersPtr(make_shared<ModelParameters>(parameters, map<wstring, shared_ptr<ModelParameters>>()))
+        : Base(f), ModelParametersPtr(make_shared<ModelParameters>(parameters, map<wstring, ModelParametersPtr>()))
     {
     }
-    TModel(const vector<Parameter>& parameters, const map<wstring, shared_ptr<ModelParameters>>& nested, const Base& f)
+    // constructor with nested items that have names
+    TModel(const vector<Parameter>& parameters, const map<wstring, ModelParametersPtr>& nested, const Base& f)
         : Base(f), ModelParametersPtr(make_shared<ModelParameters>(parameters, nested))
     {
     }
+    // constructor with nested items that are indexed
+private:
+    // create a named map where names are [%d]
+    map<wstring, ModelParametersPtr> NameNumberedParameters(const vector<ModelParametersPtr>& nested)
+    {
+        map<wstring, ModelParametersPtr> res;
+        for (let& p : nested)
+            res[L"[" + std::to_wstring(res.size()) + L"]"] = p;
+        return res;
+    }
+public:
+    TModel(const vector<ModelParametersPtr>& nested, const Base& f)
+        : Base(f), ModelParametersPtr(make_shared<ModelParameters>(vector<Parameter>(), NameNumberedParameters(nested)))
+    {
+    }
+    // TODO: would be neat to support a vector of strings for tested paths, or even . separated paths
     const Parameter& operator[](const wstring& name) { return ParameterSet()[name]; }
     const ModelParameters& Nested(const wstring& name) { return ParameterSet().Nested(name); }
     vector<Parameter> Parameters() const { let res = ParameterSet().CollectParameters(); return vector<Parameter>(res.begin(), res.end()); }
@@ -105,7 +123,7 @@ struct Batch
     static UnarySequenceModel Map(UnaryModel f)
     {
         return UnarySequenceModel({}, { { L"f", f } },
-            [=](vector<Variable>& res, const vector<Variable>& batch)
+        [=](vector<Variable>& res, const vector<Variable>& batch)
         {
 #if 0
             return map(f, batch);
@@ -296,7 +314,8 @@ struct Sequence
         });
     }
 
-    static UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& stepBwd, const Variable& initialStateFwd, const Variable& initialStateBwd)
+    static UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const Variable& initialStateFwd, 
+                                           const BinaryModel& stepBwd, const Variable& initialStateBwd)
     {
         let fwd = Recurrence(stepFwd, initialStateFwd);
         let bwd = Recurrence(stepBwd, initialStateBwd, true);
@@ -361,7 +380,7 @@ static inline void as_vector(vector<Variable>& res, const Variable& x)
 
 static UnaryModel StaticSequential(const vector<UnaryModel>& fns)
 {
-    map<wstring, shared_ptr<ModelParameters>> captured;
+    map<wstring, ModelParametersPtr> captured;
     for (size_t i = 0l; i < fns.size(); i++)
     {
         auto name = L"[" + std::to_wstring(i) + L"]";
@@ -394,7 +413,7 @@ struct StaticSequence // for CNTK Static
 
     static UnaryModel Fold(const BinaryModel& step)
     {
-        map<wstring, shared_ptr<ModelParameters>> captured;
+        map<wstring, ModelParametersPtr> captured;
         captured[L"step"] = step;
         auto recurrence = Recurrence(step);
         return UnaryModel({}, captured, [=](const Variable& x)

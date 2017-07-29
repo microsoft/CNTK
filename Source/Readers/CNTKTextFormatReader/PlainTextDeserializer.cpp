@@ -421,6 +421,7 @@ private:
                 // fetch special symbol ids if given (will be SIZE_MAX if not given)
                 let insertAtStartId = vocabulary.TryGetWordId(stream.m_vocabularyConfig.insertAtStart);
                 let insertAtEndId   = vocabulary.TryGetWordId(stream.m_vocabularyConfig.insertAtEnd);
+                let numWords0 = !(insertAtStartId == SIZE_MAX) + !(insertAtEndId == SIZE_MAX); // number of words we generate on the fly
                 // generate all sequences for this chunk, for the current stream
                 size_t fileIndex  = chunkId == 0 ? 0 : owningDeserializer.m_chunkRefs[chunkId - 1].m_endFileIndex;
                 size_t lineNo     = chunkId == 0 ? 0 : owningDeserializer.m_chunkRefs[chunkId - 1].m_endLineNo;
@@ -443,7 +444,7 @@ private:
                         auto* p    = buf.data() + fileLineRefs[lineNo    ].beginOffset - bufBeginOffset;
                         auto* pend = buf.data() + fileLineRefs[lineNo + 1].beginOffset - bufBeginOffset; // (for consistency check only)
                         let numWords = fileLineRefs[lineNo].numWords;
-                        for (size_t i = 0; i < numWords; i++)
+                        for (size_t i = numWords0; i < numWords; i++)
                         {
                             // locate next word
                             // For simplicity, We do not distinguish space and newline here, since we already counted everything.
