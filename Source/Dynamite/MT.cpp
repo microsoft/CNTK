@@ -77,6 +77,37 @@ UnarySequenceModel CreateModelFunction()
     });
 }
 
+BinaryFoldingModel CreateCriterionFunction(const UnarySequenceModel& model_fn)
+{
+    BinaryModel criterion = [=](const Variable& feature, const Variable& label) -> Variable
+    {
+        // ...TODO: Continue here
+        let z = model_fn(feature);
+        //let loss = CNTK::CrossEntropyWithSoftmax(z, label);
+        auto s1 = label.Shape();
+        auto z1 = z.Shape();
+        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
+        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
+        // TODO: reduce ops must be able to drop the axis
+        // TODO: dynamite should rewrite Times() that is really a dot product
+        let loss = Reshape(Minus(ReduceLogSum(z, Axis(0)), ReduceSum(ElementTimes(label, z), Axis(0))), NDShape());
+        return loss;
+    };
+    // create a batch mapper (which will eventually allow suspension)
+    let batchModel = Batch::Map(criterion);
+    // for final summation, we create a new lambda (featBatch, labelBatch) -> mbLoss
+    vector<Variable> losses;
+    return BinaryFoldingModel({}, { { L"model", model_fn } },
+    [=](const vector<Variable>& features, const vector<Variable>& labels) mutable -> Variable
+    {
+        batchModel(losses, features, labels);             // batch-compute the criterion
+        let collatedLosses = Splice(losses, Axis(0));     // collate all seq losses
+        let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
+        losses.clear();
+        return mbLoss;
+    });
+}
+
 void Train()
 {
     //const size_t inputDim = 2000;
@@ -87,7 +118,7 @@ void Train()
     //
     // dynamic model and criterion function
     auto model_fn = CreateModelFunction();
-    auto criterion_fn = model_fn;// CreateCriterionFunction(model_fn);
+    auto criterion_fn = CreateCriterionFunction(model_fn);
 
     // run something through to get the parameter matrices shaped --ugh!
     vector<Variable> d1{ Constant({ srcVocabSize }, 0.0, device) };

@@ -116,6 +116,7 @@ typedef TModel<function<Variable(const Variable&, const Variable&, const Variabl
 typedef TModel<function<void(vector<Variable>&, const vector<Variable>&)>> UnarySequenceModel;
 typedef TModel<function<void(vector<Variable>&, const vector<Variable>&, const vector<Variable>&)>> BinarySequenceModel;
 typedef TModel<function<Variable(const vector<Variable>&)>> UnaryFoldingModel;
+typedef TModel<function<Variable(const vector<Variable>&, const vector<Variable>&)>> BinaryFoldingModel;
 
 struct Batch
 {
