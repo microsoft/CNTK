@@ -28,9 +28,9 @@ namespace Dynamite {
 struct ModelParameters
 {
     map<wstring, Parameter> m_parameters;
-    map<wstring, shared_ptr<ModelParameters>> m_parentParameters;
+    map<wstring, shared_ptr<ModelParameters>> m_nestedParameters;
     ModelParameters(const vector<Parameter>& parameters, const map<wstring, shared_ptr<ModelParameters>>& parentParameters)
-        : m_parentParameters(parentParameters)
+        : m_nestedParameters(parentParameters)
     {
         for (const auto& p : parameters)
             if (p.Name().empty())
@@ -48,18 +48,27 @@ struct ModelParameters
     }
     const ModelParameters& Nested(const wstring& name) const
     {
-        auto iter = m_parentParameters.find(name);
-        if (iter == m_parentParameters.end())
+        auto iter = m_nestedParameters.find(name);
+        if (iter == m_nestedParameters.end())
             LogicError("no such captured model: %ls", name.c_str());
         return *iter->second;
     }
     // recursively traverse and collect all Parameters
-    const void AppendParametersTo(vector<Parameter>& res) const
+public:
+    struct ParameterLessPredicate { bool operator() (const Parameter& a, const Parameter& b) { return &a < &b; } };
+    void CollectParameters(set<Parameter, ParameterLessPredicate>& res) const
     {
         for (let& kv : m_parameters)
-            res.push_back(kv.second);
-        for (let& kv : m_parentParameters)
-            kv.second->AppendParametersTo(res);
+            res.insert(kv.second);
+        for (let& kv : m_nestedParameters)
+            kv.second->CollectParameters(res);
+    }
+public:
+    set<Parameter, ParameterLessPredicate> CollectParameters() const
+    {
+        set<Parameter, ParameterLessPredicate> res;
+        CollectParameters(res);
+        return res;
     }
 };
 typedef shared_ptr<ModelParameters> ModelParametersPtr;
@@ -81,12 +90,7 @@ public:
     }
     const Parameter& operator[](const wstring& name) { return ParameterSet()[name]; }
     const ModelParameters& Nested(const wstring& name) { return ParameterSet().Nested(name); }
-    vector<Parameter> Parameters() const
-    {
-        vector<Parameter> res;
-        ParameterSet().AppendParametersTo(res);
-        return res;
-    }
+    vector<Parameter> Parameters() const { let res = ParameterSet().CollectParameters(); return vector<Parameter>(res.begin(), res.end()); }
 };
 typedef TModel<function<Variable(const Variable&)>> UnaryModel;
 typedef TModel<function<Variable(const Variable&, const Variable&)>> BinaryModel;
