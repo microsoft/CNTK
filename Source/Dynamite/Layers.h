@@ -54,13 +54,12 @@ struct ModelParameters
         return *iter->second;
     }
     // recursively traverse and collect all Parameters
-    const vector<Parameter>& AppendParametersTo(vector<Parameter>& res) const
+    const void AppendParametersTo(vector<Parameter>& res) const
     {
         for (let& kv : m_parameters)
             res.push_back(kv.second);
         for (let& kv : m_parentParameters)
             kv.second->AppendParametersTo(res);
-        return res;
     }
 };
 typedef shared_ptr<ModelParameters> ModelParametersPtr;
@@ -98,21 +97,11 @@ typedef TModel<function<Variable(const vector<Variable>&)>> UnaryFoldingModel;
 
 struct Batch
 {
-    // UNTESTED
-    // This function would trigger the complex behavior.
-    static vector<Variable> map(const UnaryModel& f, const vector<Variable>& batch)
-    {
-        vector<Variable> res;
-        res.reserve(batch.size());
-        for (const auto& x : batch)
-            res.push_back(f(x));
-        return res;
-    }
-
-    // UNTESTED
+    // TODO: this is code dup with Sequence; but it is weird that the batches are SequenceModels. Fix this.
     static UnarySequenceModel Map(UnaryModel f)
     {
-        return UnarySequenceModel({}, { { L"f", f } }, [=](vector<Variable>& res, const vector<Variable>& batch)
+        return UnarySequenceModel({}, { { L"f", f } },
+            [=](vector<Variable>& res, const vector<Variable>& batch)
         {
 #if 0
             return map(f, batch);
@@ -124,16 +113,32 @@ struct Batch
 #endif
         });
     }
-    static function<void(vector<Variable>&, const vector<Variable>&, const vector<Variable>&)> Map(BinaryModel f)
+
+    // for binary functions
+    static BinarySequenceModel Map(BinaryModel f)
     {
-        return [=](vector<Variable>& res, const vector<Variable>& xBatch, const vector<Variable>& yBatch)
+        return BinarySequenceModel({}, { { L"f", f } },
+            [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& y)
         {
-            res.resize(xBatch.size());
-            assert(yBatch.size() == xBatch.size());
-            for (size_t i = 0; i < xBatch.size(); i++)
-                res[i] = f(xBatch[i], yBatch[i]);
-        };
+            assert(y.size() == x.size());
+            res.resize(x.size());
+            for (size_t i = 0; i < x.size(); i++)
+                res[i] = f(x[i], y[i]);
+        });
     }
+
+    // TODO: get rid of this
+    // This function would trigger the complex behavior.
+    static vector<Variable> map(const UnaryModel& f, const vector<Variable>& batch)
+    {
+        vector<Variable> res;
+        res.reserve(batch.size());
+        for (const auto& x : batch)
+            res.push_back(f(x));
+        return res;
+    }
+
+    // batch map
     static function<vector<vector<Variable>>(const vector<vector<Variable>>&, const vector<vector<Variable>>&)> Map(BinarySequenceModel f)
     {
         return [=](const vector<vector<Variable>>& xBatch, const vector<vector<Variable>>& yBatch)
@@ -226,10 +231,43 @@ static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& d
 
 struct Sequence
 {
+    static UnarySequenceModel Map(UnaryModel f)
+    {
+        return UnarySequenceModel({}, { { L"f", f } },
+            [=](vector<Variable>& res, const vector<Variable>& batch)
+        {
+#if 0
+            return map(f, batch);
+#else
+            res.clear();
+            for (const auto& x : batch)
+                res.push_back(f(x));
+            return res;
+#endif
+        });
+    }
+
+    // for binary functions
+    static BinarySequenceModel Map(BinaryModel f)
+    {
+        return BinarySequenceModel({}, { { L"f", f } },
+            [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& y)
+        {
+            assert(y.size() == x.size());
+            res.resize(x.size());
+            for (size_t i = 0; i < x.size(); i++)
+                res[i] = f(x[i], y[i]);
+        });
+    }
+
     static UnarySequenceModel Recurrence(const BinaryModel& step, const Variable& initialState, bool goBackwards = false)
     {
         auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
-        return UnarySequenceModel({}, { { L"step", step } },
+        // if initialState is a learnable parameter, then we must keep it
+        vector<Parameter> rememberedInitialState;
+        if (initialState.IsParameter())
+            rememberedInitialState.push_back((Parameter)initialState);
+        return UnarySequenceModel(rememberedInitialState, { { L"step", step } },
         [=](vector<Variable>& res, const vector<Variable>& seq)
         {
             let len = seq.size();
@@ -254,21 +292,21 @@ struct Sequence
         });
     }
 
-    //UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& stepBwd, const Variable& initialState)
-    //{
-    //    let fwd = Recurrence(stepFwd, initialState);
-    //    let bwd = Recurrence(stepBwd, initialState, true);
-    //    let splice = Batch::Map(BinaryModel([](Variable a, Variable b) { return Splice({ a, b }, Axis(0)); }));
-    //    vector<Variable> rFwd, rBwd; // TODO: move this out
-    //    return [=](vector<Variable>& res, const vector<Variable>& seq) mutable
-    //    {
-    //        // does not work since Gather can currently not concatenate
-    //        fwd(rFwd, seq);
-    //        bwd(rBwd, seq);
-    //        splice(res, rFwd, rBwd);
-    //        rFwd.clear(); rBwd.clear(); // don't hold references
-    //    };
-    //}
+    static UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& stepBwd, const Variable& initialStateFwd, const Variable& initialStateBwd)
+    {
+        let fwd = Recurrence(stepFwd, initialStateFwd);
+        let bwd = Recurrence(stepBwd, initialStateBwd, true);
+        let splice = Sequence::Map(BinaryModel([](const Variable& a, const Variable& b) { return Splice({ a, b }, Axis(0)); }));
+        vector<Variable> rFwd, rBwd;
+        return UnarySequenceModel({}, { { L"stepFwd", stepFwd },{ L"stepBwd", stepBwd } },
+        [=](vector<Variable>& res, const vector<Variable>& seq) mutable
+        {
+            fwd(rFwd, seq);
+            bwd(rBwd, seq);
+            splice(res, rFwd, rBwd);
+            rFwd.clear(); rBwd.clear(); // don't hold references
+        });
+    }
 
     static UnaryFoldingModel Fold(const BinaryModel& step, const Variable& initialState)
     {
@@ -281,11 +319,6 @@ struct Sequence
                 state = step(state, xt);
             return barrier(state);
         });
-    }
-
-    static function<void(vector<Variable>&, const vector<Variable>&)> Map(UnaryModel f)
-    {
-        return Batch::Map(f);
     }
 
     // TODO: This is somewhat broken presently.

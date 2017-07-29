@@ -34,9 +34,11 @@ const size_t encoderHiddenDim = 128;
 
 auto BidirectionalLSTMEncoder(size_t numLayers, size_t encoderHiddenDim, double dropoutInputKeepProb)
 {
-    //vector<TernaryModel> lstms(numLayers);
+    dropoutInputKeepProb;
+    // TODO: change to LSTMs. Need to solve the problem of additional hidden state.
+    //vector<BinaryModel> lstms(numLayers);
     //for (auto& lstm : lstms)
-    //    lstm = LSTMStep(encoderHiddenDim, device);
+    //    lstm = Dynamite::Sequence::BiRecurrence(RNNStep(encoderHiddenDim, device), RNNStep(encoderHiddenDim, device));
     return UnaryModel({},
     {},
     [=](const Variable& x) -> Variable
