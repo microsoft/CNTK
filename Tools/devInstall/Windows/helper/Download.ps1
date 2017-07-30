@@ -119,7 +119,6 @@ function DownloadAndExtract(
     ExtractAllFromZip $outFileName $targetPathRoot
 }
 
-
 function DownloadFileWebRequest (
     [string] $SourceFile,
     [string] $OutFile,
@@ -258,16 +257,6 @@ function DownloadFileWebClient(
     }
 
     throw "Download $SourceFile Failed!"
-}
-
-function PlatformMatching(
-    [string] $regExprPlatform)
-{
-    $runningOn = ((Get-WmiObject -class Win32_OperatingSystem).Caption).ToUpper()
-    $isMatching = ($runningOn -match $regExprPlatform) 
-
-    Write-Verbose "Function [PlatformMatching]: $runningOn -match on platform [$regExprPlatform] = [$isMatching]"
-    return $isMatching
 }
 
 function CheckHash(
