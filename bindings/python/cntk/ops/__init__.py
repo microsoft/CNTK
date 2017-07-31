@@ -1477,6 +1477,50 @@ def cos(x, name=''):
     return cos(x, name)
 
 @typemap
+def acos(x, name=''):
+    '''
+    Computes the element-wise arccos (inverse cosine) of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.acos([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 0.     ,  1.0472 ],
+               [ 1.82348,  2.41886]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import acos
+    x = sanitize_input(x)
+    return acos(x, name)
+
+@typemap
+def asin(x, name=''):
+    '''
+    Computes the element-wise arcsin (inverse sine) of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.asin([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 1.5708 ,  0.5236 ],
+               [-0.25268, -0.84806]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import asin
+    x = sanitize_input(x)
+    return asin(x, name)
+
+@typemap
 def sinh(x, name=''):
     '''
     Computes the element-wise sinh of ``x``:
@@ -1535,7 +1579,7 @@ def softmax(x, axis=None, name=''):
     therefore be interpreted as probabilities for mutually exclusive outcomes
     as in the case of multiclass classification.
 
-    If ``axis`` is given as integer, then the softmax will be computed along that axis. 
+    If ``axis`` is given as integer, then the softmax will be computed along that axis.
     If the provided ``axis`` is -1, it will be computed along the last axis. Otherwise,
     softmax will be applied to all axes.
 
@@ -2263,7 +2307,7 @@ def reduce_log_sum_exp(x, axis=None, name=''):
     Example:
         >>> # create 3x2x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
-        
+
         >>> C.reduce_log_sum_exp(data, axis=0).eval().round(4)
         array([[[ 55.      ,   2.0986],
                 [ 60.      ,   3.0986]]], dtype=float32)
@@ -2386,7 +2430,7 @@ def reduce_max(x, axis=None, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
 
-    Note that CNTK keeps the shape of the resulting tensors when reducing over multiple static axes.        
+    Note that CNTK keeps the shape of the resulting tensors when reducing over multiple static axes.
     '''
     from cntk.cntk_py import reduce_max
     x = sanitize_input(x)
@@ -2414,12 +2458,12 @@ def reduce_min(x, axis=None, name=''):
                [[ 55.,   1.]]], dtype=float32)
         >>> C.reduce_min(data, (0,2)).eval().round(4)
         array([[[ 1.],
-                [ 2.]]], dtype=float32)   
+                [ 2.]]], dtype=float32)
 
         >>> x = C.input_variable((2,2))
         >>> C.reduce_min( x * 1.0, (C.Axis.default_batch_axis(), 1)).eval({x: data}).round(4)
         array([[ 1.],
-               [ 2.]], dtype=float32)  
+               [ 2.]], dtype=float32)
 
     Args:
         x: input tensor
@@ -2458,7 +2502,7 @@ def reduce_prod(x, axis=None, name=''):
         >>> C.reduce_prod(data, (0,2)).eval().round(4)
         array([[[   8250.],
                 [ 384000.]]], dtype=float32)
-                  
+
         >>> x = C.input_variable((2,2))
         >>> C.reduce_prod( x * 1.0, (C.Axis.default_batch_axis(), 1)).eval({x: data}).round(4)
         array([[   8250.],

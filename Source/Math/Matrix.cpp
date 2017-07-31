@@ -3133,6 +3133,72 @@ Matrix<ElemType>& Matrix<ElemType>::AssignNegativeSineOf(const Matrix<ElemType>&
     return *this;
 }
 
+//[this]=acos([this]) element wise
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::InplaceAcos()
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->InplaceAcos(),
+                            m_GPUMatrix->InplaceAcos(),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignAcosOf(const Matrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAcosOf: Matrix a is empty.");
+
+    DecideAndMoveToRightDevice(a, *this);
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            this,
+                            m_CPUMatrix->AssignAcosOf(*a.m_CPUMatrix),
+                            m_GPUMatrix->AssignAcosOf(*a.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+//[this]=asin([this]) element wise
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::InplaceAsin()
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->InplaceAsin(),
+                            m_GPUMatrix->InplaceAsin(),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignAsinOf(const Matrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAsinOf: Matrix a is empty.");
+
+    DecideAndMoveToRightDevice(a, *this);
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            this,
+                            m_CPUMatrix->AssignAsinOf(*a.m_CPUMatrix),
+                            m_GPUMatrix->AssignAsinOf(*a.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
 //[this]=cosh([this]) element wise
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::InplaceCosh()
