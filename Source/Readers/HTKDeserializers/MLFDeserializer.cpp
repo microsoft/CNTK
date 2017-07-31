@@ -63,7 +63,7 @@ struct MLFSequenceData : SparseSequenceData
         return m_values.data();
     }
 
-    const NDShape& GetSampleShape() override
+    const NDShape& GetSampleShape() const override
     {
         return m_frameShape;
     }

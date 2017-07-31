@@ -24,7 +24,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             return m_data;
         }
 
-        const NDShape& GetSampleShape() override
+        const NDShape& GetSampleShape() const override
         {
             return m_sampleShape;
         }

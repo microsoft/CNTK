@@ -40,7 +40,7 @@ struct ImageSequenceData : DenseSequenceData
         return m_image.ptr();
     }
 
-    const NDShape& GetSampleShape() override
+    const NDShape& GetSampleShape() const override
     {
         return m_sampleShape;
     }

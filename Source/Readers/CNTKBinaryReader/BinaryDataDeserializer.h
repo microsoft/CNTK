@@ -107,7 +107,7 @@ protected:
             return m_data;
         }
 
-        const NDShape& GetSampleShape() override
+        const NDShape& GetSampleShape() const override
         {
             return m_sampleShape;
         }
@@ -129,7 +129,7 @@ protected:
             return m_data;
         }
 
-        const NDShape& GetSampleShape() override
+        const NDShape& GetSampleShape() const override
         {
             return m_sampleShape;
         }

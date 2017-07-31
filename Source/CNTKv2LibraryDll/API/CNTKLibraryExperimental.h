@@ -74,7 +74,7 @@ namespace CNTK {
         virtual ~SequenceDataBase() = default;
 
         // Returns the shape of samples in the sequence.
-        virtual const NDShape& GetSampleShape() = 0;
+        virtual const NDShape& GetSampleShape() const = 0;
 
         // Returns a pointer to internal data buffer.
         virtual const void* GetDataBuffer() = 0;

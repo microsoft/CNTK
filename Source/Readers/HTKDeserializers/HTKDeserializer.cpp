@@ -463,7 +463,7 @@ struct HTKFloatSequenceData : DenseSequenceData
         return m_buffer.GetData();
     }
 
-    const NDShape& GetSampleShape() override
+    const NDShape& GetSampleShape() const override
     {
         return m_frameShape;
     }
@@ -490,7 +490,7 @@ struct HTKDoubleSequenceData : DenseSequenceData
         return m_buffer.data();
     }
 
-    const NDShape& GetSampleShape() override
+    const NDShape& GetSampleShape() const override
     {
         return m_frameShape;
     }

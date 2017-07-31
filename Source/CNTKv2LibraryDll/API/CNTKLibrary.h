@@ -5285,7 +5285,11 @@ namespace CNTK
         /// the randomization window set to DefaultRandomizationWindowInChunks when 'randomize' is
         /// 'true' (default).
         ///
-        CNTK_API MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize = true);
+        CNTK_API MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, 
+                                        bool randomize = true, 
+                                        size_t maxSamples = MinibatchSource::InfinitelyRepeat, 
+                                        size_t randomizationWindowInSamples = 0,
+                                        size_t randomizationWindowInChunks = MinibatchSource::DefaultRandomizationWindowInChunks);
 
         /// 
         /// The maximum number of input samples (not 'label samples') the reader can produce 

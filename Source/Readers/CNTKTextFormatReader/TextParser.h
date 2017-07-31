@@ -54,7 +54,7 @@ private:
             return m_buffer.data();
         }
 
-        const NDShape& GetSampleShape() override
+        const NDShape& GetSampleShape() const override
         {
             return m_sampleShape;
         }
@@ -78,7 +78,7 @@ private:
             return m_buffer.data();
         }
 
-        const NDShape& GetSampleShape() override
+        const NDShape& GetSampleShape() const override
         {
             return m_sampleShape;
         }

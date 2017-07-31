@@ -62,8 +62,12 @@ namespace CNTK
         return flattened;
     }
 
-    MinibatchSourceConfig::MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize/* = true*/)
-        : deserializers(Flatten(deserializers))
+    MinibatchSourceConfig::MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, 
+                                                bool randomize/* = true*/,
+                                                size_t maxSamples/* = MinibatchSource::InfinitelyRepeat*/,
+                                                size_t randomizationWindowInSamples/* = 0*/,
+                                                size_t randomizationWindowInChunks/* = MinibatchSource::DefaultRandomizationWindowInChunks*/)
+        : deserializers(Flatten(deserializers)), maxSamples(maxSamples), randomizationWindowInSamples(randomizationWindowInSamples), randomizationWindowInChunks(randomizationWindowInChunks)
     {
         if (!randomize)
         {
