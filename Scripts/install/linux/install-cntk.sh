@@ -107,13 +107,13 @@ TARGET_CONFIGURATION="${BASH_REMATCH[1]}"
 
 # Anaconda download / install dependencies
 # [coreutils for sha{1,256}sum]
-PACKAGES="bzip2 wget coreutils"
+PACKAGES="bzip2 wget ca-certificates coreutils"
 
 # CNTK run-time dependencies (OpenMPI)
 if [[ "$(lsb_release -i)" =~ :.*Ubuntu ]] && [[ "$(lsb_release -r)" =~ :.*14\.04 ]]; then
   # On Ubuntu 14.04: need to build ourselves, openmpi-bin is too old
   BUILD_OPENMPI=1
-  PACKAGES+=" wget ca-certificates build-essential"
+  PACKAGES+=" build-essential"
 else
   # Else: try with openmpi-bin
   BUILD_OPENMPI=0

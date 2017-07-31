@@ -18,7 +18,7 @@
 
 %pragma(java) jniclasscode=%{
   static {
-    String libName = "Cntk.Core.JavaBinding-2.0";
+    String libName = "Cntk.Core.JavaBinding-2.1";
     try {
        System.loadLibrary(libName);
     } catch (UnsatisfiedLinkError e) {

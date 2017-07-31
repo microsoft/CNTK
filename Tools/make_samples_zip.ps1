@@ -28,7 +28,7 @@ Copy-Item -ErrorAction Stop -Verbose:$isVerbose -Path LICENSE.md -Destination Sa
 
 Copy-Item -ErrorAction Stop -Verbose:$isVerbose -Path Scripts\install\sample_requirements.txt -Destination SamplesZip\requirements.txt
 
-Copy-Item -ErrorAction Stop -Verbose:$isVerbose -Recurse Examples, Tutorials -Destination SamplesZip
+Copy-Item -ErrorAction Stop -Verbose:$isVerbose -Recurse Examples, Tutorials, Manual -Destination SamplesZip
 
 Push-Location SamplesZip
 
