@@ -69,29 +69,36 @@ namespace Dynamite {
         {
         case DataType::Float:  eye = MakeEye<float>(n, dataType, device);  break;
         case DataType::Double: eye = MakeEye<double>(n, dataType, device); break;
-        default: throw logic_error("Eye: Unsupported ype.");
+        default: throw logic_error("Eye: Unsupported data type.");
         }
         cached[key] = eye;
         return eye;
     }
 
-    static vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector<Variable>& variables, const DeviceDescriptor& device) // variables needed for axis info only
-                                                                                                                                                  // returns vector[numArgs] OF vector[numBatchItems] OF Constant[seqLen,sampleShape]
+    // returns vector[numArgs] OF vector[numBatchItems] OF Constant[seqLen,sampleShape]
+    // or no seqLen if isSequence is false for the respective stream
+    static void FromCNTKMB(vector<vector<Variable>>& res, const vector<ValuePtr>& inputs, const vector<bool>& isSequence, const DeviceDescriptor& device) // variables needed for axis info only
     {
         let numArgs = inputs.size();
-        vector<vector<Variable>> res(numArgs);
+        res.clear(); // free memory in case it is still held
+        res.resize(numArgs);
         size_t numSeq = 0;
         for (size_t i = 0; i < numArgs; i++)
         {
             // prepare argument i
             let& input = inputs[i];
-            let& variable = variables[i];
-
-            auto sequences = input->UnpackVariableValue(variable, device); // vector[numBatchItems] of NDArrayViews
+            // UnpackVariableValue() requires an InputVariable for reference, so create one
+            // CNTK Readers always return data with 2 axes (length, batch), even for data without sequence axis (the readers don't know).
+            // Hence, users must pass in whether a stream is meant to have a sequence axis or not.
+            let fullShape = input->Shape();
+            let sampleShape = fullShape.SubShape(0, fullShape.Rank() - 2); // input.Shape() includes the dynamic axes shape at the end
+            let dynamicAxes = isSequence[i] ? Axis::DefaultInputVariableDynamicAxes() : vector<Axis>{ Axis::DefaultBatchAxis() };
+            let variable = CNTK::InputVariable(sampleShape, input->IsSparse(), input->GetDataType(), dynamicAxes);
+            auto sequences = input->UnpackVariableValue(variable, device); // -> vector[numBatchItems] of NDArrayViews
             if (numSeq == 0)
                 numSeq = sequences.size();
             else if (numSeq != sequences.size())
-                CNTK::LogicError("inconsistent MB size");
+                CNTK::LogicError("FromCNTKMB: Streams must all have the same number of sequences.");
             auto hasAxis = variable.DynamicAxes().size() > 1;
 
             auto& arg = res[i];
@@ -99,15 +106,14 @@ namespace Dynamite {
             for (size_t s = 0; s < numSeq; s++)
             {
                 auto data = sequences[s];      // NDArrayView
-                                               //data = data->DeepClone(); // otherwise getting a dangling ref with the allPrimitiveFunctions hack
-                                               // return in correct shape
+                // return in correct shape
                 if (!hasAxis)
                 {
-                    assert(data->Shape().Dimensions().back() == 1);
+                    if (data->Shape().Dimensions().back() != 1)
+                        CNTK::LogicError("FromCNTKMB: Streams declared as !isSequence must have a trailing dimension of 1.");
                     data = Index(data, 0); // slice off sample axis (the last in C++)
                 }
 #if 1 // needed for now since PlainTextDeserializer cannot deliver Dense data, and Dynamite metric blows up on Sparse
-                // convert sparse, since currently we cannot GatherBatch() sparse data
                 if (data->IsSparse())
                 {
                     // multiply with  an identity matrix
@@ -115,11 +121,10 @@ namespace Dynamite {
                     data = NDArrayView::MatrixProduct(false, eye, false, data, false, 1.0, 1);
                 }
 #endif
-                arg[s] = Constant(data);
+                arg[s] = Constant(data); // TODO: does this make a copy?
                 //data = data->AsShape(data->Shape()); // (for debugging)
             }
         }
-        return res;
     }
 
 }; // namespace

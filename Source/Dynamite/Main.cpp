@@ -84,15 +84,7 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
     BinaryModel criterion = [=](const Variable& feature, const Variable& label) -> Variable
     {
         let z = model(feature);
-        //let loss = CNTK::CrossEntropyWithSoftmax(z, label);
-        auto s1 = label.Shape();
-        auto z1 = z.Shape();
-        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
-        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
-        // TODO: reduce ops must be able to drop the axis
-        // TODO: dynamite should rewrite Times() that is really a dot product
-        let loss = Reshape(Minus(ReduceLogSum(z, Axis(0)), ReduceSum(ElementTimes(label, z), Axis(0))), NDShape());
-        return loss;
+        return Dynamite::CrossEntropyWithSoftmax(z, label);
     };
     // create a batch mapper (which will eventually allow suspension)
     let batchModel = Batch::Map(criterion);
@@ -321,8 +313,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         Variable mbLoss;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "FromCNTKMB:     %.6f sec\n");
-            args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data },
-                              { features, labels }, device);
+            FromCNTKMB(args, { minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, { true, false }, device);
         }
         //vector<vector<vector<Variable>>> vargs(args.size());
         //for (size_t i = 0; i < args.size(); i++)
@@ -373,7 +364,7 @@ extern int mt_main(int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
-#if 1
+#if 0
     return mt_main(argc, argv);
 #else
     argc; argv;

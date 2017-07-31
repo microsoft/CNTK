@@ -257,7 +257,7 @@ struct Sequence
     static UnarySequenceModel Map(UnaryModel f)
     {
         return UnarySequenceModel({}, { { L"f", f } },
-            [=](vector<Variable>& res, const vector<Variable>& batch)
+        [=](vector<Variable>& res, const vector<Variable>& batch)
         {
 #if 0
             return map(f, batch);
@@ -274,7 +274,7 @@ struct Sequence
     static BinarySequenceModel Map(BinaryModel f)
     {
         return BinarySequenceModel({}, { { L"f", f } },
-            [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& y)
+        [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& y)
         {
             assert(y.size() == x.size());
             res.resize(x.size());
@@ -356,6 +356,23 @@ struct Sequence
         });
     }
 };
+
+// we need a special definition since the built-in one creates a BlockFunction, which costs too much each time
+static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label)
+{
+    let loss1 = CNTK::CrossEntropyWithSoftmax(z, label);
+    let ls1 = loss1->Output().Shape(); ls1;
+    // TODO: find a proper way of handling sparse labels
+    auto s1 = label.Shape();
+    auto z1 = z.Shape();
+    //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
+    //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
+    // TODO: reduce ops must be able to drop the axis
+    // TODO: dynamite should rewrite Times() that is really a dot product
+    let loss = Minus(ReduceLogSum(z, Axis(0)), ReduceSum(ElementTimes(label, z), Axis(0)));
+    return Reshape(loss, NDShape());
+    //return loss; // Reshape(loss, NDShape());
+}
 
 // slice the last dimension (index with index i; then drop the axis)
 static Variable Index(const Variable& input, size_t i)

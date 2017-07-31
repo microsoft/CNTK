@@ -6,6 +6,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "CNTKLibrary.h"
+#include "CNTKLibraryHelpers.h"
 #include "PlainTextDeseralizer.h"
 #include "Layers.h"
 //#include "Common.h"
@@ -53,7 +54,7 @@ auto BidirectionalLSTMEncoder(size_t numLayers, size_t encoderHiddenDim, double 
     });
 }
 
-UnarySequenceModel CreateModelFunction()
+BinarySequenceModel CreateModelFunction()
 {
     auto embed = Embedding(embeddingDim, device);
     auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderHiddenDim, 0.8);
@@ -62,48 +63,61 @@ UnarySequenceModel CreateModelFunction()
     auto linear = Linear(tgtVocabSize, device);
     //auto zero = Constant({ encoderHiddenDim }, 0.0f, device);
     vector<Variable> e, h;
-    return UnarySequenceModel({},
+    return BinarySequenceModel({},
     {
         { L"embed",   embed },
         { L"encoder", encode },
         { L"linear",  linear }
     },
-    [=](vector<Variable>& res, const vector<Variable>& x) mutable
+    [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& history) mutable
     {
+        // encoder
         embed(e, x);
         encode(h, e);
+        // decoder (outputting logprobs of words)
+        // dummy for now
         linear(res, h);
         e.clear(); h.clear();
     });
 }
 
-BinaryFoldingModel CreateCriterionFunction(const UnarySequenceModel& model_fn)
+BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
 {
-    BinaryModel criterion = [=](const Variable& feature, const Variable& label) -> Variable
+    vector<Variable> features, history, labels, losses;
+    // features and labels are tensors with first dimension being the length
+    BinaryModel criterion = [=](const Variable& featuresAsTensor, const Variable& labelsAsTensor) mutable -> Variable
     {
-        // ...TODO: Continue here
-        let z = model_fn(feature);
-        //let loss = CNTK::CrossEntropyWithSoftmax(z, label);
-        auto s1 = label.Shape();
-        auto z1 = z.Shape();
-        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
-        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
-        // TODO: reduce ops must be able to drop the axis
-        // TODO: dynamite should rewrite Times() that is really a dot product
-        let loss = Reshape(Minus(ReduceLogSum(z, Axis(0)), ReduceSum(ElementTimes(label, z), Axis(0))), NDShape());
+        // convert sequence tensors into sequences of tensors
+        // and strip the corresponding boundary markers
+        //  - features: strip any?
+        //  - labels: strip leading <s>
+        //  - history: strip training </s>
+        as_vector(features, featuresAsTensor);
+        as_vector(history, labelsAsTensor);
+        labels.assign(history.begin() + 1, history.end()); // make a full copy (of single-word references) without leading <s>
+        history.pop_back(); // remove trailing </s>
+        // apply model function
+        // returns the sequence of output log probs over words
+        vector<Variable> z;
+        model_fn(z, features, history);
+        features.clear(); history.clear(); // free some GPU memory
+        // compute loss per word
+        let sequenceLoss = Dynamite::Sequence::Map(BinaryModel(Dynamite::CrossEntropyWithSoftmax));
+        sequenceLoss(losses, features, labels);
+        let loss = Batch::sum(losses); // TODO: Batch is not the right namespace; but this does the right thing
         return loss;
     };
     // create a batch mapper (which will eventually allow suspension)
     let batchModel = Batch::Map(criterion);
     // for final summation, we create a new lambda (featBatch, labelBatch) -> mbLoss
-    vector<Variable> losses;
+    vector<Variable> lossesPerSequence;
     return BinaryFoldingModel({}, { { L"model", model_fn } },
-    [=](const vector<Variable>& features, const vector<Variable>& labels) mutable -> Variable
+    [=](const /*batch*/vector<Variable>& features, const /*batch*/vector<Variable>& labels) mutable -> Variable
     {
-        batchModel(losses, features, labels);             // batch-compute the criterion
-        let collatedLosses = Splice(losses, Axis(0));     // collate all seq losses
+        batchModel(lossesPerSequence, features, labels);             // batch-compute the criterion
+        let collatedLosses = Splice(lossesPerSequence, Axis(0));     // collate all seq lossesPerSequence
         let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
-        losses.clear();
+        lossesPerSequence.clear();
         return mbLoss;
     });
 }
@@ -122,8 +136,9 @@ void Train()
 
     // run something through to get the parameter matrices shaped --ugh!
     vector<Variable> d1{ Constant({ srcVocabSize }, 0.0, device) };
-    vector<Variable> d2;
-    model_fn(d2, d1);
+    vector<Variable> d2{ Constant({ tgtVocabSize }, 0.0, device) };
+    vector<Variable> d3;
+    model_fn(d3, d1, d2);
 
     // data
     auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(
@@ -140,12 +155,16 @@ void Train()
     auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.05));
 
     const size_t minibatchSize = 200;  // use 10 for ~3 sequences/batch
-    for (size_t repeats = 0; true; repeats++)
+    for (size_t mbCount = 0; true; mbCount++)
     {
+        // get next minibatch
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
-        if (minibatchData.empty())
+        if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
             break;
         fprintf(stderr, "#seq: %d, #words: %d\n", (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences, (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples);
+        // train minibatch
+        vector<vector<Variable>> args; // [variable index][batch index]
+        Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, device);
     }
 }
 
