@@ -12,7 +12,7 @@ import subprocess
 import re
 import pytest
 
-from cntk.cntk_py import DeviceKind_CPU
+from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import try_set_default_device
 from cntk.ops.tests.ops_test_utils import cntk_device
 
@@ -29,8 +29,8 @@ from InceptionV3_ImageNet import inception_v3_train_and_eval
 TOLERANCE_ABSOLUTE = 1e-1
 
 def test_inception_v3_imagenet(device_id):
-    if cntk_device(device_id).type() != DeviceKind_CPU:
-        pytest.skip('test only runs on CPU')
+    if cntk_device(device_id).type() != DeviceKind_GPU:
+        pytest.skip('test only runs on GPU')
     try_set_default_device(cntk_device(device_id))
 
     current_path = os.getcwd()
@@ -46,8 +46,8 @@ def test_inception_v3_imagenet(device_id):
     test_data = os.path.join(base_path, 'val_map.txt')
 
     try:
-        error = inception_v3_train_and_eval(train_data, test_data, minibatch_size=16, epoch_size=200,
-                                            max_epochs=4, restore=False, testing_parameters=(200, 32))
+        error = inception_v3_train_and_eval(train_data, test_data, minibatch_size=8, epoch_size=200,
+                                            max_epochs=4, restore=False, testing_parameters=(200, 8))
     finally:
         os.chdir(current_path)
 
