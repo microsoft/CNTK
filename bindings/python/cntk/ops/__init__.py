@@ -1995,6 +1995,12 @@ def swapaxes(x, axis1=0, axis2=1, name=''):
     return transpose_axes(x, axis1, axis2, name)
 
 @typemap
+def pad(x, head, foot, mode=0, name=''):
+    from cntk.cntk_py import pad
+    x = sanitize_input(x)
+    return pad(x, name, list(reversed(head)), list(reversed(foot)), mode)
+
+@typemap
 def slice(x, axis, begin_index, end_index, strides=None, name=''):
     '''
     Slice the input along one or multiple axes.

@@ -643,6 +643,11 @@ public:
         auto& gradient = Gradient();
         auto& inputGradient = Input(0)->Gradient();
 
+        auto origin_rows = gradient.GetNumRows();
+        auto origin_cols = gradient.GetNumCols();
+
+        gradient.Resize(inputGradient.GetNumRows(), inputGradient.GetNumCols());
+
         if (Input(0)->IsGradientOptimized(this))
         {
             if (Input(0)->ParentGradientReused())
@@ -657,6 +662,8 @@ public:
         }
         else
             inputGradient += gradient;
+
+        gradient.Resize(origin_rows, origin_cols);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override 
@@ -881,6 +888,146 @@ private:
 template class SliceNode<float>;
 template class SliceNode<double>;
 
+template <class ElemType>
+class PaddingNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; 
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() 
+    {
+        return L"Padding";
+    }
+public:
+    enum : size_t
+    {
+        CONSTANTPAD = 0,                        // the default, fill the padding cells with 0
+        REFLECTPAD = 1, // Padding with reflect mode
+        SYMMETRICPAD = 2, // Padding with symmetric mode
+    };
+
+public:
+    PaddingNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<size_t> head, std::vector<size_t> foot, size_t mode = CONSTANTPAD)
+        : Base(deviceId, name), m_head(head), m_foot(foot), m_mode(mode)
+    {
+    }
+
+    PaddingNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name)
+    {
+    }
+    
+public:
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
+        let input = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        int maxRank = (int)(Input(0)->GetSampleLayout().GetRank());
+        let dims = Input(0)->GetSampleLayout().GetDims();
+        let outputDims = GetSampleLayout().GetDims();
+        auto outputSubSlice = outputSlice;
+        for (int index = maxRank - 1; index >= 0; index--)
+        {
+            outputSubSlice.NarrowTo(index, m_head[index], dims[index] + m_head[index]);
+        }
+
+        auto output = TensorView<ElemType>(ValuePtr(), outputSubSlice);
+        output.AssignCopyOf(input);
+
+        for (int index = maxRank - 1; index >= 0; index--)
+        {
+            if (m_mode == REFLECTPAD) // reflect
+            {
+                FillPaddingCells(fr, rank, index, 0, m_head[index] + 1, m_head[index], false);
+                FillPaddingCells(fr, rank, index, outputDims[index] - m_foot[index], outputDims[index] - 2 * m_foot[index] - 1, m_foot[index], true);
+            }
+            else if (m_mode == SYMMETRICPAD)
+            {
+                FillPaddingCells(fr, rank, index, 0, m_head[index], m_head[index], false);
+                FillPaddingCells(fr, rank, index, outputDims[index] - m_foot[index], outputDims[index] - 2 * m_foot[index], m_foot[index], true);
+            }
+        }
+    }
+    
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //todo
+        //size_t rank = DetermineElementwiseTensorRank();
+        //let outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
+
+        //auto inputGrad = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
+        //let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
+        //let outputGrad = TensorView<ElemType>(GradientPtr(), outputSubSlice);
+        //inputGrad.AddCopyOf(outputGrad);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override 
+    {
+        return false;
+    }
+    
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override 
+    {
+        return false;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        TensorShape inputShape = Input(0)->GetSampleLayout();
+        auto inputDims = inputShape.GetDims();
+        if (inputDims.size() != m_head.size() || m_head.size() != m_foot.size())
+            LogicError("The padding op's pattern doesn't match the sample layout of its input");
+
+        SmallVector<size_t> outDims;
+        for (int i = 0; i < inputDims.size(); i++)
+            outDims.push_back(inputDims[i] + m_head[i] + m_foot[i]);
+
+        if (isFinalValidationPass)
+        {
+            if (m_mode == REFLECTPAD)
+            {
+                for (int i = 0; i < outDims.size(); i++)
+                    if (m_head[i] > outDims[i] - 1 || m_foot[i] > outDims[i] - 1)
+                        LogicError("Pad: with REFLECTPAD mode, the head and foot length must be no greater than input dimension - 1.");
+            }
+            else if (m_mode == SYMMETRICPAD)
+            {
+                for (int i = 0; i < outDims.size(); i++)
+                    if (m_head[i] > outDims[i] || m_foot[i] > outDims[i])
+                        LogicError("Pad: with SYMMETRICPAD mode, the head and foot length must be no greater than input dimension.");
+            }
+        }
+
+        SetDims(TensorShape(outDims), HasMBLayout());
+    }
+
+private:
+
+    void FillPaddingCells(const FrameRange& fr, size_t rank, size_t axis, size_t outputIndex, size_t inputIndex, size_t size, bool reverse)
+    {
+        if (size > 0)
+        {
+            auto outputOriginSlice = GetTensorSliceFor(rank, fr);
+            auto outputSlice = outputOriginSlice.NarrowTo(axis, outputIndex, outputIndex + size, reverse ? 1 : -1);
+            auto inputOriginSlice = GetTensorSliceFor(rank, fr);
+            auto inputSlice = inputOriginSlice.NarrowTo(axis, inputIndex, inputIndex + size, reverse ? -1 : 1);
+
+            auto outputTensor = TensorView<ElemType>(ValuePtr(), outputSlice);
+            auto inputTensor = TensorView<ElemType>(ValuePtr(), inputSlice);
+            outputTensor.AssignCopyOf(inputTensor);
+        }
+    }
+
+    std::vector<size_t> m_head;
+    std::vector<size_t> m_foot;
+    size_t m_mode;
+};
+
+template class PaddingNode<float>;
+template class PaddingNode<double>;
+
 // -----------------------------------------------------------------------
 // CropNode
 //
@@ -991,7 +1138,7 @@ protected:
 // stacks multiple inputs on top of each other
 // The inputs will be spliced w.r.t. their first tensor dimension (the "row" dimension).
 // TODO: This is very close to the planned SpliceNode (just make m_spliceDim actually configurable) except for splicing along time.
-// -----------------------------------------------------------------------
+// -----------------------------------11------------------------------------
 
 template <class ElemType>
 class RowStackNode : public ComputationNode<ElemType> // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs

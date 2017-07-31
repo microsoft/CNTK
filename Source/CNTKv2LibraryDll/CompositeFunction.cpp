@@ -1063,6 +1063,14 @@ namespace CNTK
                     computationNodePtr = New<RowStackNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(spliceAxis));
                     break;
                 }
+                case PrimitiveOpType::Pad:
+                {
+                    auto head = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNamePaddingHead].Value<std::vector<DictionaryValue>>());
+                    auto foot = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNamePaddingFoot].Value<std::vector<DictionaryValue>>());
+                    auto mode = functionConfig[PrimitiveFunction::AttributeNamePaddingMode].Value<size_t>();
+                    computationNodePtr = New<PaddingNode<ElementType>>(network->GetDeviceId(), internalNodeName, head, foot, mode);
+                    break;
+                }
                 case PrimitiveOpType::OptimizedRNNStack:
                 {
                     auto bidirectional = functionConfig[PrimitiveFunction::AttributeNameBidirectional].Value<bool>();

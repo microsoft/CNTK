@@ -108,6 +108,7 @@ namespace CNTK
         {PrimitiveOpType::RandomDistribution, L"RandomDistribution"},
         {PrimitiveOpType::UnpackBatch, L"UnpackBatchAxis"},
         {PrimitiveOpType::ToBatch, L"ToBatchAxis"},
+        {PrimitiveOpType::Pad, L"Pad"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -274,6 +275,9 @@ namespace CNTK
         static const std::wstring AttributeNameSpatialScale;
         static const std::wstring AttributeNameSliceStrides;
         static const std::wstring AttributeNameSliceStridesVec;
+        static const std::wstring AttributeNamePaddingHead;
+        static const std::wstring AttributeNamePaddingFoot;
+        static const std::wstring AttributeNamePaddingMode;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
