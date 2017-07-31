@@ -44,7 +44,8 @@ public:
         bool multithreadedGetNextSequences = false,
         size_t maxNumberOfInvalidSequences = 0, // per worker
         bool sampleBasedRandomizationWindow = true,
-        ParamsMapPtr dataExtendParams = nullptr);
+        ParamsMapPtr dataExtendParams = nullptr,
+        size_t splitReadEpochs = 0);
 
     // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;
@@ -137,6 +138,8 @@ private:
     std::map<size_t, ChunkPtr> m_chunks;
 
     std::shared_ptr<std::map<std::string, std::string>> m_dataExtendParams;
+
+    size_t m_splitReadEpochs;
 
     // Whether to get sequences using multiple thread.
     bool m_multithreadedGetNextSequences;

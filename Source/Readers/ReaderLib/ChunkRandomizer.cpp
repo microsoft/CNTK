@@ -28,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // Randomizes chunks and calculates randomization windows.
-    void ChunkRandomizer::Randomize(unsigned int seed, ParamsMapPtr dataExtendParams, size_t curEpoch)
+    void ChunkRandomizer::Randomize(unsigned int seed, ParamsMapPtr dataExtendParams, size_t curEpoch, size_t splitReadEpochs)
     {
         std::vector<ChunkIdType> randomizedChunkIndices;
         randomizedChunkIndices.reserve(m_originalChunks.size());
@@ -69,7 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        if (useSplitRead)
+        if (useSplitRead || (curEpoch < splitReadEpochs))
         {
             fprintf(stderr, "use split reader.\n");
             seed = std::random_device()();

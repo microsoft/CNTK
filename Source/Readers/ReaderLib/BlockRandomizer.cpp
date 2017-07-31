@@ -24,7 +24,8 @@ BlockRandomizer::BlockRandomizer(
     bool multithreadedGetNextSequence,
     size_t maxNumberOfInvalidSequences,
     bool sampleBasedRandomizationWindow,
-    ParamsMapPtr dataExtendParams)
+    ParamsMapPtr dataExtendParams,
+    size_t splitReadEpochs)
     : m_verbosity(verbosity),
       m_deserializer(deserializer),
       m_sweep(SIZE_MAX),
@@ -36,7 +37,8 @@ BlockRandomizer::BlockRandomizer(
       m_multithreadedGetNextSequences(multithreadedGetNextSequence),
       m_prefetchedChunk(CHUNKID_MAX),
       m_cleaner(maxNumberOfInvalidSequences),
-      m_dataExtendParams(dataExtendParams)
+      m_dataExtendParams(dataExtendParams),
+      m_splitReadEpochs(splitReadEpochs)
 {
     assert(deserializer != nullptr);
 
@@ -110,7 +112,7 @@ void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
         m_sweep = sweep;
 
         // Rerandomizing the chunks.
-        m_chunkRandomizer->Randomize((unsigned int)m_sweep, m_dataExtendParams, m_config.m_epochIndex);
+        m_chunkRandomizer->Randomize((unsigned int)m_sweep, m_dataExtendParams, m_config.m_epochIndex, m_splitReadEpochs);
 
         // Resetting sequence randomizer.
         m_sequenceRandomizer->Reset(m_sweep);

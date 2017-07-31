@@ -52,7 +52,8 @@ ImageReader::ImageReader(const ConfigParameters& config)
     {
         // We do not do io prefetching, because chunks are single images currently.
         bool ioPrefetch = false;
-        randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, ioPrefetch, multithreadedGetNextSequences, 0, true, dataExtendParamsPtr);
+        randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, ioPrefetch, multithreadedGetNextSequences, 0, true, 
+            dataExtendParamsPtr, (size_t)configHelper.GetSplitReadEpochs());
     }
     else
     {

@@ -100,6 +100,8 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
     m_grayscale = config(L"grayscale", c == 1);
     std::string rand = config(L"randomize", "auto");
 
+    m_splitReadEpochs = config(L"splitRead", 0);
+
     if (AreEqualIgnoreCase(rand, "auto"))
     {
         m_randomize = true;
@@ -165,6 +167,11 @@ size_t ImageConfigHelper::GetDataExtendFuncId() const
 std::string ImageConfigHelper::GetMapPath() const
 {
     return m_mapPath;
+}
+
+int ImageConfigHelper::GetSplitReadEpochs() const
+{
+    return m_splitReadEpochs;
 }
 
 CropType ImageConfigHelper::ParseCropType(const std::string &src)

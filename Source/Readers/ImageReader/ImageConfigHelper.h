@@ -40,6 +40,8 @@ public:
 
     size_t GetDataExtendFuncId() const;
 
+    int GetSplitReadEpochs() const;
+
     // Get the map file path that describes mapping of images into their labels.
     std::string GetMapPath() const;
 
@@ -87,6 +89,7 @@ private:
     bool m_randomize;
     bool m_grayscale;
     CropType m_cropType;
+    int m_splitReadEpochs;
 };
 
 typedef std::shared_ptr<ImageConfigHelper> ImageConfigHelperPtr;
