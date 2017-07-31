@@ -22,6 +22,17 @@ class HierarchyHelper:
         self.cls_maps = list(self.tree_map.meta_map.keys())
 
         self.output_mapper = self.tree_map.get_output_mapper()
+        self.cached_label_map = None
+        self.index_used_cls_map = 0
+
+    def set_used_class_map(self, index_in_list):
+        """
+        Sets the class map used for label creation. Default is the first ClassMap in the list.
+        :param index_in_list: index of the ClassMap to use in the cls_map list
+        :return: None
+        """
+        self.cached_label_map = None
+        self.index_used_cls_map = index_in_list
 
     def get_vectors_for_label_nr(self, label):
         """
@@ -29,7 +40,16 @@ class HierarchyHelper:
         :param label: label as in the ClassMap (int)
         :return: tuple of vectors (target, scale)
         """
-        return self.tree_map.get_train_softmax_vectors(to_Set=[(self.cls_maps[0], label)], scale_value=1)
+
+        #cached_map has to be invalidated if the used classmap is changed!
+        if self.cached_label_map is None:
+            self.cached_label_map = [None] * self.cls_maps[self.index_used_cls_map].getEntries()
+
+        if self.cached_label_map[label] is None:
+            self.cached_label_map[label] = self.tree_map.get_train_softmax_vectors(to_Set=[(self.cls_maps[self.index_used_cls_map], label)], scale_value=1)
+
+        return self.cached_label_map[label]
+        #return self.tree_map.get_train_softmax_vectors(to_Set=[(self.cls_maps[0], label)], scale_value=1)
 
     def get_vectors_for_label(self, label):
         """

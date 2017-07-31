@@ -29,6 +29,7 @@ output_scale = (p.cntk_padWidth, p.cntk_padHeight)
 
 use_gt_as_rois = False
 
+
 def prepare_ground_truth_boxes(gtbs):
     """
     Creates an object that can be passed as the parameter "all_gt_infos" to "evaluate_detections" in map_helpers
@@ -196,9 +197,10 @@ def to_image_input_coordinates(coords, img_dims=None, relative_coord=False, cent
     return coords
 
 
-def eval_fast_rcnn_mAP(eval_model):
+def eval_fast_rcnn_mAP(eval_model, num_test_images=5):
+    VISUALIZE = False
     classes = HCH.output_mapper.get_all_classes()
-    num_test_images = 500
+    #num_test_images = 500
     num_classes = len(classes)
     num_channels = 3
     image_height = p.cntk_padHeight
@@ -254,7 +256,8 @@ def eval_fast_rcnn_mAP(eval_model):
 
         img = mb_data[image_input].asarray()
 
-        all_raw_imgs.append(img)
+        if VISUALIZE:
+            all_raw_imgs.append(img)
 
         if use_gt_as_rois:
             rois = np.copy(gt_data[:, :4])
@@ -267,10 +270,13 @@ def eval_fast_rcnn_mAP(eval_model):
             {image_input: mb_data[image_input], roi_input: np.reshape(rois, roi_input.shape)})
         all_raw_outputs.append(output.copy())
 
+        if img_i % 100 == 0 and img_i != 0:
+            print("Images processed: " + str(img_i))
+
     all_gt_infos = prepare_ground_truth_boxes(gtbs=all_raw_gt_boxes)
     all_boxes = prepare_predictions(all_raw_outputs, all_raw_rois, num_classes)
 
-    if False:
+    if VISUALIZE:
         bb_img_gt_l = visualize_gt(all_gt_infos, all_raw_imgs, False)
         bb_img_rois_l = visualize_rois(all_boxes, all_raw_imgs, False)
 
@@ -307,6 +313,7 @@ def _scramble_list(to_sc, perm):
 
 img_list = _scramble_list(img_list, [1, 3, 2, 4, 0])
 
+
 def to_cv2_img(img):
     img.shape = (3,1000,1000)
 
@@ -316,6 +323,7 @@ def to_cv2_img(img):
 
     #import ipdb;ipdb.set_trace()
     return img
+
 
 def visualize_gt(all_gt_infos, imgs=None, plot=True):
     if imgs is None:
@@ -447,24 +455,44 @@ def points_to_xywh(points):
 
 
 if __name__ == '__main__':
-    """
-    Evaluates the Classification of the model created by the H1 script. Since only the classification is to be tested
-    the roi_input is given the ground truth boxes. This way it can be assured, that no issues due to bad region
-    proposals is taken into account and the classification accurancy can be measured.
-    """
-    os.chdir(p.cntkFilesDir)
-    model_path = os.path.join(abs_path, "Output", p.datasetName + "_hfrcn_py.model")
+    if True:
+        """
+        Evaluates the Classification of the model created by the H1 script. Since only the classification is to be tested
+        the roi_input is given the ground truth boxes. This way it can be assured, that no issues due to bad region
+        proposals is taken into account and the classification accurancy can be measured.
+        """
+        os.chdir(p.cntkFilesDir)
+        model_path = os.path.join(abs_path, "Output", p.datasetName + "_hfrcn_py.model")
 
-    # Train only if no model exists yet
-    if os.path.exists(model_path):
-        print("Loading existing model from %s" % model_path)
-        trained_model = load_model(model_path)
+        # Train only if no model exists yet
+        if os.path.exists(model_path):
+            print("Loading existing model from %s" % model_path)
+            trained_model = load_model(model_path)
+        else:
+            print("No trained model found! Start training now ...")
+            import H1_RunHierarchical as h1
+
+            trained_model = h1.create_and_save_model(model_path)
+            print("Stored trained model at %s" % model_path)
+
+        # Evaluate the test set
+        eval_fast_rcnn_mAP(trained_model)
+
+    # eval multiple trained models
     else:
-        print("No trained model found! Start training now ...")
-        import H1_RunHierarchical as h1
+        hier_HCH = HierarchyHelper(get_tree_str(p.datasetName, True))
+        flat_HCH = HierarchyHelper(get_tree_str(p.datasetName, False))
 
-        trained_model = h1.create_and_save_model(model_path)
-        print("Stored trained model at %s" % model_path)
+        model_list = [r"./h/hfrcn.model",
+                      r"./nh/hfrcn.model"]
+        HCH_List = [hier_HCH, flat_HCH]
+        for i in range(len(model_list)):
+            model_path = model_list[i]
+            HCH = HCH_List[i]
+            print("\n==========================================================================\nevaluating model: " + model_path + "\n==========================================================================\n")
+            HCH.tree_map.root_node.print()
+            print()
+            trained_model = load_model(model_path)
+            eval_fast_rcnn_mAP(trained_model, 4952)
 
-    # Evaluate the test set
-    eval_fast_rcnn_mAP(trained_model)
+
