@@ -76,7 +76,9 @@ BinarySequenceModel CreateModelFunction()
         encode(h, e);
         // decoder (outputting logprobs of words)
         // dummy for now
-        linear(res, h);
+        res.resize(history.size());
+        for (size_t t = 0; t < res.size(); t++)
+            res[t] = linear(t < h.size() ? h[t] : h.back());
         e.clear(); h.clear();
     });
 }
@@ -103,7 +105,7 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
         features.clear(); history.clear(); // free some GPU memory
         // compute loss per word
         let sequenceLoss = Dynamite::Sequence::Map(BinaryModel(Dynamite::CrossEntropyWithSoftmax));
-        sequenceLoss(losses, features, labels);
+        sequenceLoss(losses, z, labels);
         let loss = Batch::sum(losses); // TODO: Batch is not the right namespace; but this does the right thing
         return loss;
     };
@@ -153,8 +155,12 @@ void Train()
 
     let parameters = model_fn.Parameters();
     auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.05));
+    unordered_map<Parameter, NDArrayViewPtr> gradients;
+    for (let& p : parameters) // TODO: test that this works outside of the loop
+        gradients[p] = nullptr; // TryGetGradient(p); // TODO: get the existing gradient matrix from the parameter--or just fill it in? Would block memory free
 
     const size_t minibatchSize = 200;  // use 10 for ~3 sequences/batch
+    vector<vector<Variable>> args; // [variable index][batch index]  --TODO: does this really work outside the loop?
     for (size_t mbCount = 0; true; mbCount++)
     {
         // get next minibatch
@@ -162,9 +168,13 @@ void Train()
         if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
             break;
         fprintf(stderr, "#seq: %d, #words: %d\n", (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences, (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples);
-        // train minibatch
-        vector<vector<Variable>> args; // [variable index][batch index]
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, device);
+        // train minibatch
+        let mbLoss = criterion_fn(args[0], args[1]);
+        mbLoss.Backward(gradients);
+        learner->Update(gradients, minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
+        let loss1 = mbLoss.Value()->AsScalar<float>(); // note: this does the GPU sync, so better do that only every N
+        fprintf(stderr, "CrossEntropy loss = %.7f\n", loss1 / minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences);
     }
 }
 

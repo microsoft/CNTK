@@ -338,8 +338,10 @@ class Variable::AutoBatch
             // priority must match (depending on barrier or not)
             if (a->m_priority != b->m_priority)
                 return false;
+            // some operations have variable number of arguments. Those cannot be batched, e.g. Splice().
+            if (a->m_inputs.size() != b->m_inputs.size())
+                return false;
             // all input dimensions must match (with exception of a few special cases)
-            assert(a->m_inputs.size() == b->m_inputs.size());
             for (size_t i = 0; i < a->m_inputs.size(); i++)
             {
                 // there are a few special cases
@@ -1211,7 +1213,7 @@ public:
             {
                 // We were running under the assumption that all betas are zero, so we can use beta=0 below.
                 // Now we must run with beta 1, and therefore manually reset all pevious ones.
-                for (size_t i1 = 0; i1 < i; i++) // tehse were all beta=0
+                for (size_t i1 = 0; i1 < i; i1++) // these were all beta=0
                     Unalias(inputs, i1).m_dataFields->m_gradient->SetValue(0.0f);
                 allBetasZero = false;
             }
@@ -1444,7 +1446,7 @@ public:
     void BatchedBackward(const Variable& root, unordered_map<Parameter, NDArrayViewPtr>& gradients)
     {
         if (!root.m_dataFields->m_needsGradient)
-            logic_error("BatchedBackward: cannot compute gradient for root with m_needsGradient being False.");
+            LogicError("BatchedBackward: cannot compute gradient for root with m_needsGradient being False.");
         // BUGBUG: make sure some edge cases are done right:
         //  - root.m_needsGradient=false
         //  - gradients contains root
@@ -1479,9 +1481,9 @@ public:
             let& param = kv.first;
             let& fields = *param.m_dataFields;
             if (!fields.m_consumers.first.first) // if no consumer entry, we did not reach this gradient
-                logic_error("BatchedBackward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
+                LogicError("BatchedBackward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
             if (!fields.m_needsGradient) // (we could also just leafve the gradient 0)
-                logic_error("BatchedBackward: cannot compute gradient for variable with m_needsGradient being False.");
+                LogicError("BatchedBackward: cannot compute gradient for variable with m_needsGradient being False.");
             RAggregateGradientFromAllConsumers(param);
         }
         //fprintf(stderr, "Back-propagated through %d functions\n", (int)order.size());

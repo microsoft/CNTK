@@ -80,8 +80,9 @@ namespace Dynamite {
     static void FromCNTKMB(vector<vector<Variable>>& res, const vector<ValuePtr>& inputs, const vector<bool>& isSequence, const DeviceDescriptor& device) // variables needed for axis info only
     {
         let numArgs = inputs.size();
-        res.clear(); // free memory in case it is still held
         res.resize(numArgs);
+        for (auto& r : res) // free memory if still held from previous call
+            r.clear();
         size_t numSeq = 0;
         for (size_t i = 0; i < numArgs; i++)
         {
