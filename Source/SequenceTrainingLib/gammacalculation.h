@@ -334,10 +334,13 @@ public:
                 {
                     prevPhoneId = (size_t)maxIndexes(0, frameInd);
 
-                    phoneSeq.push_back(blankTokenId);
-                    phoneBound.push_back(frameCounter);
-                    phoneSeq.push_back(prevPhoneId);
-                    phoneBound.push_back(frameCounter);
+					if (prevPhoneId != blankTokenId)
+					{
+						phoneSeq.push_back(blankTokenId);
+						phoneBound.push_back(frameCounter);
+						phoneSeq.push_back(prevPhoneId);
+						phoneBound.push_back(frameCounter);
+					}
                 }
             }
             phoneSeq.push_back(blankTokenId);
