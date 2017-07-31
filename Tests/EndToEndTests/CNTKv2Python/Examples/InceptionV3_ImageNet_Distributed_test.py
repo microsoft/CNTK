@@ -24,7 +24,7 @@ from distributed_common import mpiexec_test
 from prepare_test_data import prepare_ImageNet_data
 script_under_test = os.path.join(example_dir, "InceptionV3_ImageNet_Distributed.py")
 
-mpiexec_params = ["-n", "2"]
+mpiexec_params = ["-n", "1"]
 
 def test_inception_v3_imagenet_distributed(device_id):
     params = ["-n", "4",
