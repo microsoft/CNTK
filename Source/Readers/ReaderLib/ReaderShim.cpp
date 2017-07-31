@@ -24,6 +24,21 @@ namespace CNTK {
 
 using namespace Microsoft::MSR::CNTK;
 
+// TODO: Currently there is implementation of these in the V2 library, but it is not exposed and requires linking dependency.
+inline NDShape AsNDShape(const Microsoft::MSR::CNTK::TensorShape& tensorShape)
+{
+    return std::vector<size_t>(tensorShape.GetDims().begin(), tensorShape.GetDims().end());
+}
+
+inline TensorShape AsTensorShape(const NDShape& viewShape)
+{
+    size_t minRankSize = 0; // TensorShape is required to be at least 1D
+    SmallVector<size_t> tensorViewShape(std::max<size_t>(minRankSize, viewShape.Rank()));
+    for (size_t i = 0; i < tensorViewShape.size(); ++i)
+        tensorViewShape[i] = (i < viewShape.Rank()) ? viewShape[i] : 1;
+    return tensorViewShape;
+}
+
 template <class ElemType>
 ReaderShim<ElemType>::ReaderShim() :
     m_deviceId(CPUDEVICE),
@@ -186,7 +201,8 @@ void ReaderShim<ElemType>::StartEpoch(const EpochConfiguration& config, const st
         m_prefetchBuffers[i.GetStreamName()] = StreamPrefetchBuffer
         {
             std::make_shared<Matrix<ElemType>>(0, 0, i.GetDeviceId(), i.GetMatrixType(), i.GetMatrixFormat()),
-            std::make_shared<MBLayout>()
+            std::make_shared<MBLayout>(),
+            NDShape::Unknown()
         };
     }
 
@@ -317,6 +333,18 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
                 "Did you consider adding a DynamicAxis() to the Input nodes?",
                 layout->GetAxisName(), layoutToInputMap[layout->GetAxisName()].c_str(), i->first.c_str());
         }
+
+        // Check sample shape.
+        const auto& sampleShape = m_prefetchBuffers[i->first].m_sampleShape;
+        if (i->second.sampleLayout.size() == 0 || AsNDShape(i->second.sampleLayout).IsUnknown()) // Not set.
+        {
+            i->second.sampleLayout = AsTensorShape(sampleShape);
+        }
+        else if (i->second.sampleLayout.GetNumElements() != AsTensorShape(sampleShape).GetNumElements())
+        {
+            RuntimeError("Sample shape provided by the deserializer '%s' does not match the shape expected by the network '%s'.",
+                string(AsTensorShape(sampleShape)).c_str(), string(i->second.sampleLayout).c_str());
+        }
     }
 
     // Number of logical sequences should be the same across all streams.
@@ -390,6 +418,7 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
         size_t streamId = m_nameToStreamId[mx.first];
         const auto& stream = minibatch.m_data[streamId];
         mx.second.m_mbLayout = stream->m_layout;
+        mx.second.m_sampleShape = stream->m_sampleShape;
 
         if (m_streams[streamId].m_sampleLayout.IsUnknown())
         {

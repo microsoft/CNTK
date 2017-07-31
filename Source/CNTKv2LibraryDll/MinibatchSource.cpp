@@ -292,7 +292,7 @@ namespace CNTK
                     if (!matrix)
                         LogicError("GetNextMinibatch: Invalid matrix type.");
 
-                    minibatchValuePtr = MakeSharedObject<PackedValue>(s.m_sampleLayout, Axis::DefaultInputVariableDynamicAxes(), matrix, input.pMBLayout, /*readOnly =*/ false);
+                    minibatchValuePtr = MakeSharedObject<PackedValue>(AsNDShape(input.sampleLayout), Axis::DefaultInputVariableDynamicAxes(), matrix, input.pMBLayout, /*readOnly =*/ false);
 
                     size_t numSamples = input.pMBLayout->GetActualNumSamples();
                     size_t numSequences = input.pMBLayout->GetNumSequences();

@@ -9,6 +9,7 @@
 #include <cmath>
 #include "TruncatedBpttPacker.h"
 #include "ReaderUtil.h"
+#include <algorithm>
 
 namespace CNTK {
 
@@ -143,6 +144,12 @@ TruncatedBPTTPacker::TruncatedBPTTPacker(
         pMBLayout->SetUniqueAxisName(L"TruncatedBPTTPacker");
         m_currentLayouts.push_back(pMBLayout);
     }
+
+    auto shapeUnknown = std::find_if(m_inputStreamDescriptions.begin(), m_inputStreamDescriptions.end(),
+        [](const StreamInformation& s) { return s.m_sampleLayout.IsUnknown(); });
+
+    if (shapeUnknown != m_inputStreamDescriptions.end())
+        RuntimeError("Input streams with unknown sample shape are currently not supported.");
 }
 
 void TruncatedBPTTPacker::Reset() 
@@ -230,6 +237,7 @@ Minibatch TruncatedBPTTPacker::ReadMinibatch()
         StreamMinibatchPtr m = make_shared<StreamMinibatch>();
         m->m_data = m_streamBuffers[m_currentBufferIndex][streamIndex].m_data.get();
         m->m_layout = m_currentLayouts[streamIndex];
+        m->m_sampleShape = m_outputStreamDescriptions[streamIndex].m_sampleLayout;
         result.m_data.push_back(m);
     }
 
