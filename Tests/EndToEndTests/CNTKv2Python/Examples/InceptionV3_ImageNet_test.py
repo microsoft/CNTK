@@ -12,7 +12,7 @@ import subprocess
 import re
 import pytest
 
-from cntk.cntk_py import DeviceKind_GPU
+from cntk.cntk_py import DeviceKind_CPU
 from cntk.device import try_set_default_device
 from cntk.ops.tests.ops_test_utils import cntk_device
 
@@ -29,8 +29,8 @@ from InceptionV3_ImageNet import inception_v3_train_and_eval
 TOLERANCE_ABSOLUTE = 1e-1
 
 def test_inception_v3_imagenet(device_id):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
-        pytest.skip('test only runs on GPU')
+    if cntk_device(device_id).type() != DeviceKind_CPU:
+        pytest.skip('test only runs on CPU')
     try_set_default_device(cntk_device(device_id))
 
     current_path = os.getcwd()
