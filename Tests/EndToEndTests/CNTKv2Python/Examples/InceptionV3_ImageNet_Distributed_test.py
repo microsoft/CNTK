@@ -34,4 +34,4 @@ def test_inception_v3_imagenet_distributed(device_id):
               "-m", "2",
               "-r",
               "-device", str(device_id)]
-    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.99, True, timeout_seconds=400, use_only_cpu=True)
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.99, True, timeout_seconds=400)
