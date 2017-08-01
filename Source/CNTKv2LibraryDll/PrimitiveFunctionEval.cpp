@@ -45,6 +45,7 @@ namespace CNTK
                      out = out->AsShape(outputShape);
                 break;
             case PrimitiveOpType::Slice:
+                if (attributes.Size() > 1)
                 {
                     auto axis       = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
                     auto beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
@@ -59,6 +60,16 @@ namespace CNTK
                         extent[axisIndex] = endIndex - beginIndex;
                         out = out->SliceView(startOffset, extent, true); // slice it
                     }
+                }
+                else // Index() --has no axis or endIndex parameter. and must drop the final axis
+                {
+                    auto index = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+                    auto extent = outputShape.Dimensions(); // note: last dimension is missing; this will strip it in the output
+                    if (extent.size() + 1 != out->Shape().Rank())
+                        LogicError("Variable '%S' Value(): The input and output rank for op %S (when indexing) must differ by 1.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+                    auto startOffset = vector<size_t>(extent.size() + 1, 0);
+                    startOffset.back() = (size_t) index;
+                    out = out->SliceView(startOffset, extent, true); // slice it
                 }
                 break;
             }

@@ -590,6 +590,16 @@ public:
         result.DropDimsInPlace(toDrop);
         return result;
     }
+    TensorShape& DropLastDimInPlace()
+    {
+        if (m_dims.size() == 0)
+            LogicError("DropLastDimInPlace: cannot drop dimension because input is a scalar");
+        if (m_dims.back() != 1)
+            LogicError("DropLastDimInPlace: last dimension must be 1");
+        m_dims.pop_back();
+        m_strides.pop_back();
+        return *this;
+    }
     TensorShape& SetBroadcastStrides() // set strides to 0 for broadcasting dimensions
     {
         for (size_t k = 0; k < size(); k++)

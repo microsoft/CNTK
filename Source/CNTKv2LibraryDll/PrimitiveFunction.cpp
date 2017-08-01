@@ -481,8 +481,21 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
 
                             std::vector<Axis> axis;
-                            std::vector<int> beginIndex, endIndex, strides; 
-                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
+                            std::vector<int> beginIndex, endIndex, strides;
+                            // [fseide] Index() indexes the last axis and drops it
+                            bool isIndexOp = m_attributes.Size() == 1; // Index() only has one parameter; this test is faster than looking up a member
+                            if (isIndexOp)
+                            {
+                                size_t rank = m_inputs[0].Shape().Rank();
+                                if (rank == 0)
+                                    InvalidArgument("Function '%S': Index operation cannot be applied top scalars.");
+                                axis.push_back(Axis(rank - 1));
+                                int index = m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+                                beginIndex.push_back(index);
+                                endIndex.push_back(index + 1);
+                                strides.push_back(1);
+                            }
+                            else if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
                             {
@@ -543,6 +556,9 @@ namespace CNTK
                                     outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex, strides[i]);
                                 }
                             }
+                            // [fseide] Index() drops the last axis
+                            if (isIndexOp)
+                                outputTensorShape.DropLastDimInPlace();
                             outputShape = AsNDShape(outputTensorShape, /*allowNonFlattenableTensorShapes = */ true);
                             break;
                         }

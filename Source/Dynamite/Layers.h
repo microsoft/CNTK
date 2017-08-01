@@ -393,17 +393,6 @@ static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label
     //return loss; // Reshape(loss, NDShape());
 }
 
-// slice the last dimension (index with index i; then drop the axis)
-static Variable Index(const Variable& input, size_t i)
-{
-    auto dims = input.Shape().Dimensions();
-    Variable x = Slice(input, { Axis((int)input.Shape().Rank() - 1) }, { (int)i }, { (int)i + 1 });
-    dims = x.Shape().Dimensions();
-    dims.pop_back(); // drop last axis
-    x = Reshape(x, dims);
-    return x;
-}
-
 static inline void as_vector(vector<Variable>& res, const Variable& x)
 {
     // 'x' is an entire sequence; last dimension is length

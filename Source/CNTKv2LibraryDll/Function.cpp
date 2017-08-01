@@ -1221,9 +1221,14 @@ namespace CNTK
         return TransposeAxes(operand, Axis(0), Axis(1), name);
     }
 
+    FunctionPtr Index(const Variable& operand, int index, const std::wstring& name)
+    {
+        return Internal::Index(operand, index, name);
+    }
+
     FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name)
     {
-        std::vector<int> strides(axis.size(), 1);
+        std::vector<int> strides; // pass an empty array to denote no strides (saves one malloc) (axis.size(), 1);
         return Slice(operand, axis, beginIndex, endIndex, strides, name);
     }
 
@@ -2123,24 +2128,33 @@ namespace CNTK
             return Internal::ScatterPacked(operand, Internal::PackedIndex(/*layout of*/ condition, Where(condition, newDerivedSequenceAxisScalingAndAdditiveFactor)), /*layout of*/ condition, name);
         }
         
+        FunctionPtr Index(const Variable& operand, int index, const std::wstring& name)
+        {
+            auto additionalProperties = Dictionary();
+            additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = index;
+            return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
+        }
+
         FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name)
         {
             auto additionalProperties = Dictionary();
 
-            assert(axis.size() > 0 && axis.size() == beginIndex.size() && axis.size() == endIndex.size() && strides.size() == axis.size());
+            assert(axis.size() > 0 && axis.size() == beginIndex.size() && axis.size() == endIndex.size() && (strides.empty() || strides.size() == axis.size()));
             if (axis.size() == 1)
             {
                 additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis[0];
                 additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = beginIndex[0];
                 additionalProperties[PrimitiveFunction::AttributeNameEndIndex] = endIndex[0];
-                additionalProperties[PrimitiveFunction::AttributeNameSliceStrides] = strides[0];
+                if (!strides.empty())
+                    additionalProperties[PrimitiveFunction::AttributeNameSliceStrides] = strides[0];
             }
             else
             {
                 additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axis);
                 additionalProperties[PrimitiveFunction::AttributeNameBeginIndexVec] = AsDictionaryValueVector(beginIndex);
                 additionalProperties[PrimitiveFunction::AttributeNameEndIndexVec] = AsDictionaryValueVector(endIndex);
-                additionalProperties[PrimitiveFunction::AttributeNameSliceStridesVec] = AsDictionaryValueVector(strides);
+                if (!strides.empty())
+                    additionalProperties[PrimitiveFunction::AttributeNameSliceStridesVec] = AsDictionaryValueVector(strides);
             }
             return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
         }
