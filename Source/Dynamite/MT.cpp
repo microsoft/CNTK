@@ -9,8 +9,6 @@
 #include "CNTKLibraryHelpers.h"
 #include "PlainTextDeseralizer.h"
 #include "Layers.h"
-//#include "Common.h"
-//#include "TimerUtility.h"
 
 #include <cstdio>
 #include <map>
@@ -26,8 +24,8 @@ using namespace Dynamite;
 
 const DeviceDescriptor device(DeviceDescriptor::GPUDevice(0));
 //const DeviceDescriptor device(DeviceDescriptor::CPUDevice());
-const size_t srcVocabSize = 2330;
-const size_t tgtVocabSize = 2330;
+const size_t srcVocabSize = 27579 + 3; // 2330;
+const size_t tgtVocabSize = 21163 + 3; // 2330;
 const size_t embeddingDim = 128;
 const size_t attentionDim = 128;
 const size_t numEncoderLayers = 1;
@@ -73,9 +71,15 @@ TernaryModel AttentionModel(size_t attentionDim1)
         let projectedQuery = Times(Q, query); // [A x 1]
         let projectedKeys  = Times(K, keys);  // [A x T]
         let tanh = Tanh(projectedQuery + projectedKeys); // [A x T]
-        let u = TransposeTimes(tanh, v, L"vProj"); // [T] col vector
-        let w = Dynamite::Softmax(u);
-        let res = Times(data, w, L"att"); // [A]
+#if 0 // this fails auto-batching
+        let u = Times(v, tanh, L"vProj"); // [T] vector                         // [128] * [128 x 4 x 7] -> [4 x 7]
+        let w = Dynamite::Softmax(u);                                           // [4 x 7]
+        let res = Times(data, w, L"att"); // [A]                                // [128 x 4 x 7] * [4 x 7]
+#else
+        let u = TransposeTimes(tanh, v, L"vProj"); // [T] col vector            // [128 x 4 x 7]' * [128] = [7 x 4]         [128] * [128 x 4 x 7] -> [4 x 7]
+        let w = Dynamite::Softmax(u);                                           // [7 x 4]                                  [4 x 7]
+        let res = Times(data, w, L"att"); // [A]                                // [128 x 4 x 7] * [7 x 4]                  [128 x 4 x 7] * [4 x 7]
+#endif
         return res;
      });
 }
@@ -91,9 +95,8 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
         lstms.push_back(RNNStep(hiddenDim, device));
     let attentionModel = AttentionModel(attentionDim); // (state, encoding) -> interpolated encoding
     let barrier = Barrier();
-    auto merge = Dense(hiddenDim, false, device); // one additional transform to merge attention into hidden state
-    auto dense = Dense(tgtVocabSize, true/*false*/, device); // dense layer without non-linearity
-    // TODO: Dense with no bias--does that make sense??
+    auto merge = Dense(hiddenDim, device); // one additional transform to merge attention into hidden state
+    auto dense = Dense(tgtVocabSize, device); // dense layer without non-linearity
 
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
     // decode from a top layer of an encoder, using history as history
@@ -205,12 +208,6 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
 
 void Train()
 {
-    //const size_t inputDim = 2000;
-    //const size_t embeddingDim = 500;
-    //const size_t hiddenDim = 250;
-    //const size_t attentionDim = 20;
-    //const size_t numOutputClasses = 5;
-    //
     // dynamic model and criterion function
     auto model_fn = CreateModelFunction();
     auto criterion_fn = CreateCriterionFunction(model_fn);
@@ -226,8 +223,10 @@ void Train()
     // data
     auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(
         {
-            PlainTextStreamConfiguration(L"src", srcVocabSize, { L"d:/work/Karnak/sample-model/data/train.src" }, { L"d:/work/Karnak/sample-model/data/vocab.src", L"<s>", L"</s>", L"<unk>" }),
-            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/train.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk>" })
+            //PlainTextStreamConfiguration(L"src", srcVocabSize, { L"d:/work/Karnak/sample-model/data/train.src" }, { L"d:/work/Karnak/sample-model/data/vocab.src", L"<s>", L"</s>", L"<unk>" }),
+            //PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/train.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk>" })
+            PlainTextStreamConfiguration(L"src", srcVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.vocab", L"<s>", L"</s>", L"<unk>" }),
+            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.vocab", L"<s>", L"</s>", L"<unk>" })
         }) },
         /*randomize=*/true);
     minibatchSourceConfig.maxSamples = MinibatchSource::InfinitelyRepeat;
@@ -242,7 +241,7 @@ void Train()
     for (let& p : parameters) // TODO: test that this works outside of the loop
         gradients[p] = nullptr; // TryGetGradient(p); // TODO: get the existing gradient matrix from the parameter--or just fill it in? Would block memory free
 
-    const size_t minibatchSize = 384;// 50;  // 384 is 32 sequences, assuming av. length ~12
+    const size_t minibatchSize = 184;// 50;  // 384 is 32 sequences, assuming av. length ~12
     vector<vector<Variable>> args; // [variable index][batch index]  --TODO: does this really work outside the loop?
     size_t totalLabels = 0;
     for (size_t mbCount = 0; true; mbCount++)
@@ -262,6 +261,8 @@ void Train()
         let mbLoss = criterion_fn(args[0], args[1]);
         let lossPerLabel = mbLoss.Value()->AsScalar<float>() / numLabels; // note: this does the GPU sync, so better do that only every N
         fprintf(stderr, "CrossEntropy loss = %.7f; PPL = %.3f; seenLabels=%d\n", lossPerLabel, exp(lossPerLabel), (int)totalLabels);
+        if (std::isnan(lossPerLabel))
+            throw runtime_error("Loss is NaN.");
         // backprop and model update
         mbLoss.Backward(gradients);
         learner->Update(gradients, numLabels);

@@ -20,9 +20,9 @@
 #include <vector>
 #include <string>
 
-#define LOG_DETAILS   // if defined, log all forward and backward operations
-#define LOG_STATS     // if defined, log statistics (#operations)
-//#define NO_BATCHED_FORWARD  // if defined, don't batch forward
+//#define LOG_DETAILS   // if defined, log all forward and backward operations
+//#define LOG_STATS     // if defined, log statistics (#operations)
+#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
 using namespace Microsoft::MSR::CNTK;
@@ -647,7 +647,7 @@ class Variable::AutoBatch
             m_numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
         // perform the op
-        let isTimes = (op == PrimitiveOpType::Times); // is special-cased
+        let isTimes = (op == PrimitiveOpType::Times || op == PrimitiveOpType::TransposeTimes); // is special-cased
 #ifdef NO_BATCHED_FORWARD
         auto doNaively = true;
 #else
