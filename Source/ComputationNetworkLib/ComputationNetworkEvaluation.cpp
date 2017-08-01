@@ -408,6 +408,16 @@ void ComputationNetwork::ResetEvalTimeStamps()
         nodeIter->second->ResetEvalTimeStamp();
 }
 
+// Set EvalTimeStamp of all nodes as outdated, so that each node will be evaluated at least once.
+// The ResetEvalTimeStamps() above cannot do the work, since it only (re)sets the node to the current
+// global timestamp, which could be updated by other threads, so that the nodes of the network might
+// have different timestamps and the nodes with a higher timestamps are not treated as "outdated".
+void ComputationNetwork::SetEvalTimeStampsOutdatedWithRegardToAll()
+{
+    for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+        nodeIter->second->SetEvalTimeStampOutdatedWrtAll();
+}
+
 /*static*/ void ComputationNetwork::BumpEvalTimeStamp(const vector<ComputationNodeBasePtr>& nodes)
 {
     for (size_t i = 0; i < nodes.size(); i++)
@@ -695,7 +705,7 @@ void ComputationNetwork::ValidateNetwork()
     for (auto& node : nodes)
     {
         // nodes must output non-zero dimensional data, otherwise assume user error
-        if (node->GetSampleLayout().GetNumElements() == 0)
+        if (!node->m_needsDynamicValidation && node->GetSampleLayout().GetNumElements() == 0)
             RuntimeError("%ls operation has 0 elements", node->NodeName().c_str());
     }
     if (TraceLevel() > 0)
@@ -738,8 +748,8 @@ bool ComputationNetwork::ValidateNode(ComputationNodeBasePtr node, bool isFinalV
     auto sampleLayout = node->GetSampleLayout();
 
     // also take the opportunity to propagate m_needsGradient and m_nodeNeedsDynamicValidation
-    bool nodeNeedsDynamicValidation = node->NeedsDynamicValidation();
-    node->m_needsDynamicValidation |= nodeNeedsDynamicValidation;
+    auto nodeNeedsDynamicValidation = node->NeedsDynamicValidation();
+    node->m_needsDynamicValidation |= node->ForceDynamicValidation();
     auto needsGradient = node->m_needsGradient;
     for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
     {
@@ -1090,25 +1100,43 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         }
     }
 
+    // gradient reuse maps
+    std::unordered_map<MatrixPool::AliasNodePtr, std::unordered_set<MatrixPool::AliasNodePtr>> gradientReuseChildrenMap;
+    std::unordered_map<MatrixPool::AliasNodePtr, MatrixPool::AliasNodePtr> gradientReuseParentMap;
     for (auto& keyValue : parentsMap)
     {
         // Indicate on the node that it's parent overwrites its gradient if the node is not part of a loop
         // and has exactly one parent who implements the gradient overwrite optimization
         if (Globals::ShouldOptimizeGradientAccumulation() &&
             !keyValue.first->IsPartOfLoop() &&
-            (keyValue.second.size() == 1) &&
-            (*keyValue.second.begin())->ImplementsGradientOverwriteOptimization())
+            (keyValue.second.size() == 1))
         {
-            // We cannot enable the gradient overwrite optimization if this node's (lone) parent
-            // has this same node as multiple of its inputs since, in that case the
-            // gradients will flow back from multiple paths of the same parent into the input
-            auto& allInputsOfParent = (*keyValue.second.begin())->GetInputs();
-            if (std::count(allInputsOfParent.begin(), allInputsOfParent.end(), keyValue.first) <= 1)
-                keyValue.first->MarkParentOverwritesGradient();
+            auto parent = *keyValue.second.begin();
+            auto opt = parent->ImplementsGradientOptimization(keyValue.first.get());
+            if (opt != ParentGradientOptimization::None && trainRootNode != parent)
+            {
+                // We cannot enable the gradient overwrite/reuse optimization if this node's (lone) parent
+                // has this same node as multiple of its inputs since, in that case the
+                // gradients will flow back from multiple paths of the same parent into the input
+
+                auto& allInputsOfParent = parent->GetInputs();
+                if (std::count(allInputsOfParent.begin(), allInputsOfParent.end(), keyValue.first) <= 1)
+                {
+                    auto child = keyValue.first;
+                    child->SetParentGradientOptimization(opt);
+                    if (opt == ParentGradientOptimization::Reuse)
+                    {
+                        gradientReuseChildrenMap[&*parent].insert(&*child);
+                        if (gradientReuseParentMap.find(&*child) != gradientReuseParentMap.end())
+                            LogicError("Already has a gradient reuse parent.");
+                        gradientReuseParentMap[&*child] = &*parent;
+                    }
+                }
+            }
         }
     }
 
-    m_matrixPool.ResetStepCounter();
+    m_matrixPool.Reset();
 
     TravserseInSortedGlobalEvalOrder(forwardPropRoots, [&outputValueNeededDuringBackProp, &parentsMap, this](const ComputationNodeBasePtr& node) {
         if (node->Is<SEQTraversalFlowControlNode>())
@@ -1135,6 +1163,56 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     if (trainRootNode != nullptr)
     {
         const std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
+
+        // compact the alias map for cases like s = a + b + c + d
+
+        std::unordered_map<MatrixPool::AliasNodePtr, std::unordered_set<MatrixPool::AliasNodePtr>> compactGradientAliasMap;
+        std::unordered_map<MatrixPool::AliasNodePtr, MatrixPool::AliasNodePtr> compactGradientAliasRootMap;
+        for (const auto& gradientReuseKeyValue : gradientReuseChildrenMap)
+        {
+            // keep searching parent until reaching root
+
+            auto parent = gradientReuseKeyValue.first;
+            auto parentIter = gradientReuseParentMap.find(parent);
+            while (parentIter != gradientReuseParentMap.end())
+            {
+                parent = parentIter->second;
+                parentIter = gradientReuseParentMap.find(parent);
+            }
+
+            // add children to the alias group under the root
+
+            auto children = gradientReuseKeyValue.second;
+            compactGradientAliasMap[parent].insert(children.begin(), children.end());
+
+            for (const auto& child : children)
+            {
+                if (compactGradientAliasRootMap.find(child) != compactGradientAliasRootMap.end())
+                    LogicError("one node cannot be in two alias group");
+
+                compactGradientAliasRootMap[child] = parent;
+            }
+
+            // and add root itself to the alias group
+
+            compactGradientAliasMap[parent].insert(parent);
+            compactGradientAliasRootMap[parent] = parent;
+        }
+
+        // print the memory aliasing info
+        if (TraceLevel() > 0 && compactGradientAliasRootMap.size() > 0)
+        {
+            fprintf(stderr, "\nGradient Memory Aliasing: %d are aliased.\n", (int)compactGradientAliasRootMap.size());
+            for (const auto pair : compactGradientAliasRootMap)
+            {
+                auto child = (const ComputationNodeBase*)pair.first;
+                auto parent = (const ComputationNodeBase*)pair.second;
+                if (child != parent)
+                    fprintf(stderr, "\t%S (gradient) reuses %S (gradient)\n", child->GetName().c_str(), parent->GetName().c_str());
+            }
+        }
+
+        m_matrixPool.SetAliasInfo(compactGradientAliasMap, compactGradientAliasRootMap);
 
         // now, simulate the gradient computation order to determine how to allocate matrices
         set<ComputationNodeBasePtr> completedGradient;

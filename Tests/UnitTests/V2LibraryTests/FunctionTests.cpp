@@ -932,7 +932,7 @@ void TestFindName(const DeviceDescriptor& device)
     CheckFindByNameResult(minusFunc3->FindByName(minusFuncName), minusFunc3);
     CheckFindByNameResult(minusFunc3->FindByName(blockFuncName), blockFunc);
 
-    // Test FindByName with block funcitons, nestedSearchInsideBlockFunction is true
+    // Test FindByName with block functions, nestedSearchInsideBlockFunction is true
     CheckFindByNameResult(minusFunc3->FindByName(anotherPlusFuncName, true), anotherPlusFunc1);
     CheckFindByNameResult(minusFunc3->FindByName(anotherMinusFuncName, true), anotherMinusFunc1);
     CheckFindByNameResult(minusFunc3->FindByName(nonExistingFuncName, true), nullptr);
@@ -978,7 +978,7 @@ void TestFindName(const DeviceDescriptor& device)
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(minusFuncName), minusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(blockFuncName), blockFuncName, 1);
 
-    // Test FindAllWithName with block funcitons, nestedSearchInsideBlockFunction is true
+    // Test FindAllWithName with block functions, nestedSearchInsideBlockFunction is true
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName, true), anotherPlusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherMinusFuncName, true), anotherMinusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(nonExistingFuncName, true), nonExistingFuncName, 0);

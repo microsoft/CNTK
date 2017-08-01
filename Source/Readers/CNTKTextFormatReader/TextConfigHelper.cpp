@@ -21,7 +21,9 @@ using std::map;
 
 #undef max // max is defined in minwindef.h
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
 {
@@ -40,11 +42,11 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     string precision = config.Find("precision", "float");
     if (AreEqualIgnoreCase(precision, "double"))
     {
-        m_elementType = ElementType::tdouble;
+        m_elementType = DataType::Double;
     }
     else if (AreEqualIgnoreCase(precision, "float"))
     {
-        m_elementType = ElementType::tfloat;
+        m_elementType = DataType::Float;
     }
     else
     {
@@ -73,11 +75,11 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
 
         if (AreEqualIgnoreCase(type, "dense"))
         {
-            stream.m_storageType = StorageType::dense;
+            stream.m_storageFormat = StorageFormat::Dense;
         }
         else if (AreEqualIgnoreCase(type, "sparse"))
         {
-            stream.m_storageType = StorageType::sparse_csc;
+            stream.m_storageFormat = StorageFormat::SparseCSC;
             if (stream.m_sampleDimension > numeric_limits<IndexType>::max())
             {
                 RuntimeError("Sample dimension (%" PRIu64 ") for sparse input '%ls'"
@@ -125,6 +127,7 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     m_chunkSizeBytes = config(L"chunkSizeInBytes", g_32MB); // 32 MB by default
     m_keepDataInMemory = config(L"keepDataInMemory", false);
     m_frameMode = config(L"frameMode", false);
+    m_cacheIndex = config(L"cacheIndex", false);
 
     m_randomizationWindow = GetRandomizationWindowFromConfig(config);
     m_sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", false);
@@ -134,4 +137,4 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     }
 }
 
-}}}
+}

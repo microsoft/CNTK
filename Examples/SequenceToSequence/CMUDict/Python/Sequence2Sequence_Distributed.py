@@ -74,7 +74,7 @@ def train_and_test(s2smodel, train_reader, test_reader, block_size, num_quantiza
         checkpoint_config=CheckpointConfig(frequency = epoch_size,
                                            filename = os.path.join(model_path, "SequenceToSequence"),
                                            restore = False),
-        cv_config=CrossValidationConfig(source=test_reader, mb_size=minibatch_size)
+        cv_config=CrossValidationConfig(test_reader, minibatch_size=minibatch_size)
     ).train()
 
 def sequence_to_sequence_translator(train_data, test_data, epoch_size=908241, num_quantization_bits=default_quantization_bits, block_size=3200, warm_up=0, minibatch_size=72, max_epochs=10, randomize_data=False, log_to_file=None, num_mbs_per_log=10, gen_heartbeat=False):

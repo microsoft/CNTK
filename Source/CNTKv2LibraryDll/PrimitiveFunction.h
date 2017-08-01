@@ -82,8 +82,12 @@ namespace CNTK
         {PrimitiveOpType::ReconcileDynamicAxis, L"ReconcileDynamicAxis"},
         {PrimitiveOpType::LogSoftmax, L"LogSoftmax"},
         {PrimitiveOpType::CosDistance, L"CosDistance"},
+        {PrimitiveOpType::Asin, L"Asin"},
+        {PrimitiveOpType::Acos, L"Acos"},
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
+        {PrimitiveOpType::Cosh, L"Cosh"},
+        {PrimitiveOpType::Sinh, L"Sinh"},
         {PrimitiveOpType::Pass, L"Pass"},
         {PrimitiveOpType::Block, L"Block"},
         {PrimitiveOpType::Unpooling, L"Unpooling"},
@@ -101,6 +105,9 @@ namespace CNTK
         {PrimitiveOpType::Assign, L"Assign" },
         {PrimitiveOpType::Gather, L"Gather"},
         {PrimitiveOpType::StableSigmoid, L"StableSigmoid"},
+        {PrimitiveOpType::RandomDistribution, L"RandomDistribution"},
+        {PrimitiveOpType::UnpackBatch, L"UnpackBatchAxis"},
+        {PrimitiveOpType::ToBatch, L"ToBatchAxis"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -232,6 +239,7 @@ namespace CNTK
         static const std::wstring AttributeNameBlendTimeConstant;
         static const std::wstring AttributeNameEpsilon;
         static const std::wstring AttributeNameUseCuDNNEngine;
+        static const std::wstring AttributeNameNewDataType;
         static const std::wstring AttributeNameNewDynamicAxes;
         static const std::wstring AttributeNameNewSequenceAxisLengthScalingFactor;
         static const std::wstring AttributeNameNewSequenceAxisLengthAdditiveFactor;
@@ -261,6 +269,11 @@ namespace CNTK
         static const std::wstring AttributeNameSequenceAxisNamePrefix;
         static const std::wstring AttributeNameSequenceUnpackPaddingValue;
         static const std::wstring AttributeNameSequenceUnpackSuppressMaskOutput;
+        static const std::wstring AttributeNameRandomDistributionType;
+        static const std::wstring AttributeNameRandomDistributionArgs;
+        static const std::wstring AttributeNameSpatialScale;
+        static const std::wstring AttributeNameSliceStrides;
+        static const std::wstring AttributeNameSliceStridesVec;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -306,7 +319,8 @@ namespace CNTK
         {
             return (OpType() == PrimitiveOpType::Dropout) ||
                    (OpType() == PrimitiveOpType::RandomSample) ||
-                   (OpType() == PrimitiveOpType::RandomSampleInclusionFrequency);
+                   (OpType() == PrimitiveOpType::RandomSampleInclusionFrequency) ||
+                   (OpType() == PrimitiveOpType::RandomDistribution);
         }
 
         Dictionary GetState() const;
@@ -455,14 +469,14 @@ namespace CNTK
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
 
-            if (leftOperandShape == NDShape::Unknown)
+            if (leftOperandShape.IsUnknown())
                 leftOperandShape = rightOperandShape;
 
-            if (rightOperandShape == NDShape::Unknown)
+            if (rightOperandShape.IsUnknown())
                 rightOperandShape = leftOperandShape;
 
             // All operand shapes should be known
-            assert((leftOperandShape != NDShape::Unknown) && (rightOperandShape != NDShape::Unknown));
+            assert(!leftOperandShape.IsUnknown()&& !rightOperandShape.IsUnknown());
 
             const auto& shapeWithSmallerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? rightOperandShape : leftOperandShape;
             const auto& shapeWithLargerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? leftOperandShape : rightOperandShape;
@@ -745,6 +759,12 @@ namespace CNTK
         void SetDropoutRate(double dropoutRate);
 
         void SetRandomSeed(size_t seed);
+    private:
+        //aux functions
+        void CollectReduceOutputAxesForOutputShape(std::vector<Axis>& staticAxesToReduce,
+            std::vector<Axis>& batchAxesToReduce,
+            std::vector<Axis>& dynamicAxesToReduce,
+            bool & isAllAxesReduced);
 
     private:
         PrimitiveOpType m_op;
@@ -762,7 +782,9 @@ namespace CNTK
         // Version 12: Add Assign node.
         // Version 13: Add Gather op.
         // Version 14: Add StableSigmoid
-        static const size_t s_serializationVersion = 14;
+        // Version 15: Add RandomDistribution
+        // Version 16: Add to_batch/unpack_batch.
+        static const size_t s_serializationVersion = 16;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

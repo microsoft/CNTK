@@ -57,7 +57,7 @@ class NDLScript;
 template <typename ElemType>
 class NDLNode;
 
-// NDLNodeEvaluator - Node evaluaton interface
+// NDLNodeEvaluator - Node evaluation interface
 // implemented by execution engines to convert script to approriate internal formats
 template <typename ElemType>
 class NDLNodeEvaluator

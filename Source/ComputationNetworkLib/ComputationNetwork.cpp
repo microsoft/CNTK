@@ -84,7 +84,7 @@ void ComputationNetwork::ClearNetwork()
 // serialization
 // -----------------------------------------------------------------------
 
-// after after editing--network is possibly not validated/compiled
+// after editing--network is possibly not validated/compiled
 void ComputationNetwork::SaveEdited(const wstring& fileName, const FileOptions fileFormat)
 {
     if (!IsCompiled())
@@ -997,7 +997,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
         {
             if (!regex_match(n->first, nameFilter))
             {
-                // if regexStr is not empty and the the node does not match with the regexStr
+                // if regexStr is not empty and the node does not match with the regexStr
                 continue;
             }
 

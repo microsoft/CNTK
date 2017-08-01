@@ -4,6 +4,7 @@
 //
 #include "Include/Basics.h"
 #include "Include/MPIWrapper.h"
+#include "Include/EnvironmentUtil.h"
 
 #if HAS_MPI
 #pragma comment(lib, "msmpi.lib")
@@ -364,28 +365,6 @@ MPI_Datatype MPIWrapper::GetDataType(size_t *)
     return sizeof(size_t) == 4 ? MPI_UNSIGNED : MPI_LONG_LONG_INT;
 }
 
-// Note that specifically, this function is such that it does not require
-// MPI initialization. Moreover, it can be used without actually loading any
-// MPI libs.
-// TODO: Once we move to dynamic loading for MPI libs on Linux, move it to the implementation
-//       and forward the call to the implementation instead of handling it globally here.
-int MPIWrapper::GetTotalNumberOfMPINodes()
-{
-#if !HAS_MPI
-    return 0;
-#else
-#ifdef WIN32
-    const char* p = std::getenv("PMI_SIZE");
-#else
-    const char* p = std::getenv("OMPI_COMM_WORLD_SIZE");
-#endif
-    if (!p)
-        return 0;
-    else
-        return std::stoi(string(p));
-#endif
-}
-
 #if HAS_MPI
 // -----------------------------------------------------------------------
 // MPIWrapper that actually calls into msmpi.dll
@@ -415,12 +394,8 @@ MPIWrapperMpi::MPIWrapperMpi()
     m_multiHost = true;
 
     // Verify that the environment variable used by GetTotalNumberOfMPINodes()  
-    // matches what the MPI API says. There're actually two possible cases:
-    // 1) when we're running with mpiexec both values have to match;
-    // 2) when we're running without mpiexec, the former will return 0, and
-    // the later will be set to 1.
-    assert((GetTotalNumberOfMPINodes() == 0 && m_numNodesInUse == 1) ||
-        (GetTotalNumberOfMPINodes() == m_numNodesInUse));
+    // matches what the MPI API says.
+    assert(EnvironmentUtil::GetTotalNumberOfMPINodes() == m_numNodesInUse);
 
     char name[BUFSIZ];
     int length;

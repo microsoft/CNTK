@@ -5,6 +5,7 @@
 # ==============================================================================
 
 from .. import cntk_py
+from cntk.internal import sanitize_2d_number, sanitize_range
 
 def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect_ratio=1.0, jitter_type='none'):
     '''
@@ -24,7 +25,7 @@ def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect
         crop_size (`int`, default 0): crop size in pixels. Ignored if set to 0.
           When crop_size is non-zero, for example, crop_size=256, it means a cropping
           window of size 256x256 pixels will be taken. If one want to crop with
-          non-square shapes, specify crop_size=256:224 will crop 256x224 (width x height)
+          non-square shapes, specify crop_size=(256,224) will crop 256x224 (width x height)
           pixels. `When crop_size is specified, side_ratio, area_ratio and aspect_ratio
           will be ignored.`
         side_ratio (`float`, default 0.0): It specifies the ratio of final image
@@ -33,7 +34,7 @@ def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect
           image size of 640x480, side_ratio of 0.5 means we crop a square region
           (if aspect_ratio is 1.0) of the input image, whose width and height are
           equal to 0.5*min(640, 480) = 240. To enable scale jitter (a popular data
-          augmentation technique), use colon-delimited values like side_ratio=0.5:0.75,
+          augmentation technique), use tuple like side_ratio=(0.5,0.75),
           which means the crop will have size between 240 (0.5*min(640, 480)) and 360
           (0.75*min(640, 480)).
         area_ratio (`float`, default 0.0): It specifies the area ratio of final image
@@ -41,7 +42,7 @@ def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect
           set within `(0,1]`. For example, for an input image size of 200x150 pixels,
           the area is 30,000. If area_ratio is 0.3333, we crop a square region (if
           aspect_ratio is 1.0) with width and height equal to sqrt(30,000*0.3333)=100.
-          To enable scale jitter, use colon-delimited values such as area_ratio=0.3333:0.8,
+          To enable scale jitter, use tuple such as area_ratio=(0.3333,0.8),
           which means the crop will have size between 100 (sqrt(30,000*0.3333)) and
           155 (sqrt(30,000*0.8)).
         aspect_ratio (`float`, default 1.0): It specifies the aspect ratio (width/height
@@ -49,7 +50,7 @@ def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect
           if due to size_ratio the crop size is 240x240, an aspect_ratio of 0.64 will
           change the window size to non-square: 192x300 or 300x192, each having 50%
           chance. Note the area of the crop window does not change. To enable aspect
-          ratio jitter, use colon-delimited values such as aspect_ratio=0.64:1.0, which means
+          ratio jitter, use tuple such as aspect_ratio=(0.64,1.0), which means
           the crop will have size between 192x300 (or euqally likely 300x192) and 240x240.
         jitter_type (str, default 'none'): crop scale jitter type, possible
           values are 'none' and 'uniratio'. 'uniratio' means uniform distributed jitter
@@ -58,6 +59,11 @@ def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect
     Returns:
         A dictionary-like object describing the crop transform
     '''
+    crop_size = sanitize_2d_number(crop_size)
+    side_ratio = sanitize_range(side_ratio)
+    area_ratio = sanitize_range(area_ratio)
+    aspect_ratio = sanitize_range(aspect_ratio)
+
     return cntk_py.reader_crop(crop_type, crop_size, side_ratio,
         area_ratio, aspect_ratio, jitter_type)
 

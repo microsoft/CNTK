@@ -145,8 +145,18 @@
     <None Include="cntk\tests\__init__.py" />
     <None Include="README.md" />
     <None Include="setup.py" />
-    <None Include="swig_install.sh" />
     <None Include="test.bat" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cntk\cntk_py_wrap.h">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="cntk\SwigDeserializer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cntk\cntk_py_wrap.cpp">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

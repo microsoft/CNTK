@@ -4,6 +4,8 @@
 # for full license information.
 # ==============================================================================
 from __future__ import print_function
+from __future__ import division
+
 import sys
 import time
 
@@ -41,7 +43,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         rank (`int` or `None`, default `None`): set this to distributed.rank if you are using distributed
           parallelism -- each rank's log will go to separate file.
         gen_heartbeat (`bool`, default `False`): If True output a progress message every 10 seconds or so to stdout.
-        num_epochs (`int`, default 300): The total number of epochs to be trained.  Used for some metadata.
+        num_epochs (`int`, default None): The total number of epochs to be trained.  Used for some metadata.
           This parameter is optional.
         test_freq (`int` or `None`, default `None`): similar to ``freq``, but applies to printing intermediate
           test results.
@@ -53,7 +55,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
           worker synchronization info.
     '''
 
-    def __init__(self, freq=None, first=0, tag='', log_to_file=None, rank=None, gen_heartbeat=False, num_epochs=300,
+    def __init__(self, freq=None, first=0, tag='', log_to_file=None, rank=None, gen_heartbeat=False, num_epochs=None,
                  test_freq=None, test_first=0, metric_is_pct=True, distributed_freq=None, distributed_first=0):
         '''
         Constructor.
@@ -96,6 +98,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         self.__disown__()
 
         # print out data about CNTK build
+        # TODO: this is for internal purposes, so find better way
         cntk_py.print_built_info()
 
         self.logfilename = None
@@ -111,8 +114,8 @@ class ProgressPrinter(cntk_py.ProgressWriter):
             with open(self.logfilename, "w") as logfile:
                 logfile.write(self.logfilename + "\n")
 
-            self.___logprint('CNTKCommandTrainInfo: train : ' + str(num_epochs))
-            self.___logprint('CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : ' + str(num_epochs))
+            self.___logprint('CNTKCommandTrainInfo: train : ' + str(num_epochs if num_epochs is not None else 300))
+            self.___logprint('CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : ' + str(num_epochs if num_epochs is not None else 300))
             self.___logprint('CNTKCommandTrainBegin: train')
 
         if freq == 0:
@@ -398,17 +401,18 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         speed = _avg(samples, elapsed_seconds)
         avg_loss = _avg(aggregate_loss, samples)
 
+        of_epochs = " of " + str(self.num_epochs) if self.num_epochs is not None else ''
         if aggregate_metric is not None:
             avg_metric = _avg(aggregate_metric, samples)
             if self.metric_is_pct:
-                fmt_str = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples/s);"
+                fmt_str = "Finished Epoch[{}{}]: {}loss = {:0.6f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples/s);"
             else:
-                fmt_str = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);"
-            msg = fmt_str.format(summaries, self.num_epochs, self.tag, avg_loss, samples, avg_metric * self.metric_multiplier,
+                fmt_str = "Finished Epoch[{}{}]: {}loss = {:0.6f} * {}, metric = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);"
+            msg = fmt_str.format(summaries, of_epochs, self.tag, avg_loss, samples, avg_metric * self.metric_multiplier,
                     samples, elapsed_seconds, speed)
         else:
-            msg = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);".format(
-                summaries, self.num_epochs, self.tag, avg_loss, samples, elapsed_seconds, speed)
+            msg = "Finished Epoch[{}{}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);".format(
+                summaries, of_epochs, self.tag, avg_loss, samples, elapsed_seconds, speed)
 
         self.___logprint(msg)
 
@@ -513,6 +517,38 @@ class TensorBoardProgressWriter(cntk_py.ProgressWriter):
             self.write_value('minibatch/test_avg_metric', avg_metric, self.total_training_updates())
         else:
             self.write_value('summary/test_avg_metric', avg_metric, self.summaries)
+
+
+class TrainingSummaryProgressCallback(cntk_py.ProgressWriter):
+    '''
+    Helper to pass a callback function to be called after each training epoch
+    to :class:`~cntk.train.trainer.Trainer`,
+    :class:`~cntk.eval.evaluator.Evaluator`, and :class:`~cntk.train.training_session.TrainingSession`,
+    as well a :func:`cntk.ops.functions.Function.train`, :func:`cntk.ops.functions.Function.test`.
+
+    This allows the user to add additional logging after each training epoch.
+
+    Args:
+     epoch_size (int): periodically call the callback after processing this many samples
+     callback (function): function(epoch_index, epoch_loss, epoch_metric, epoch_samples)
+    '''
+    def __init__(self, epoch_size, callback):
+        self._epoch_size = epoch_size
+        self._callback = callback
+        super(TrainingSummaryProgressCallback, self).__init__(sys.maxsize, 0, epoch_size, 0, sys.maxsize, 0)
+        self.__disown__()
+    def on_write_training_update(self, samples, updates, aggregate_loss, aggregate_metric):
+        pass
+    def on_write_test_update(self, *args, **kwargs):
+        pass
+    def on_write_training_summary(self, samples, updates, summaries, aggregate_loss, aggregate_metric, elapsed_milliseconds):
+        self._callback(summaries-1, aggregate_loss, aggregate_metric, samples)
+        pass
+    def on_write_test_summary(self, samples, updates, summaries, aggregate_metric, elapsed_milliseconds):
+        pass
+    def write(self, *args, **kwargs):
+        pass
+
 
 
 # print the total number of parameters to log

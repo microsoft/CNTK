@@ -39,6 +39,12 @@ public:
             LogicError("UserDefinedV2FunctionNode ctor should never be called with externalFunction == nullptr");
     }
 
+    virtual bool ForceDynamicValidation() const override 
+    {
+        auto outputs = m_externalFunction->Outputs();
+        return std::any_of(outputs.begin(), outputs.end(), [](const ::CNTK::Variable& output) { return output.Shape().HasFreeDimension(); });
+    }
+
     virtual void ForwardPropNonLooping() override
     {
         this->m_outputsValue[0] = m_value;
@@ -168,7 +174,7 @@ public:
             if (!InputRef(i).NeedsGradient())
                 continue;
 
-            InputRef(i).LazyZeroGradient(); // set gradient to 0 if this is the first time
+            InputRef(i).LazyZeroGradient(this); // set gradient to 0 if this is the first time
 
             auto input = externalFunctionUniqueInputs[i];
             auto inputGradientValue = inputGradientValues[input];

@@ -10,7 +10,7 @@ See License.md in the root level folder of the CNTK repository for full license 
 
 ## Overview
 
-|Data      |The Penn Treebank Project (https://www.cis.upenn.edu/~treebank/) annotates naturally-occuring text for linguistic structure .
+|Data      |The Penn Treebank Project (https://www.cis.upenn.edu/~treebank/) annotates naturally-occurring text for linguistic structure .
 |:---------|:---|
 |Purpose   |Showcase how to train a recurrent network for text data.
 |Network   |SimpleNetworkBuilder for recurrent network with two hidden layers.

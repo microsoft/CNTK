@@ -1,7 +1,7 @@
 You want to contribute to CNTK? We're really excited to work together!
 
-Please, follow the steps from the Wiki Article at
+Please, follow the steps from the documentation:
 
-https://github.com/Microsoft/CNTK/wiki/Contributing-to-CNTK
+https://docs.microsoft.com/en-us/cognitive-toolkit/contributing-to-cntk
 
 Your CNTK team.

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+python -c "import sys; sys.exit(not sys.version_info[0:2] in [(2,7), (3,4)])" || {
+  echo Running this test only for Python 2.7 or 3.4 to save time.
+  echo __COMPLETED__
+  exit 0
+}
+
 cd ../../..
 
 downloaders=(
@@ -9,6 +15,7 @@ downloaders=(
   Examples/Image/DataSets/Grocery/install_grocery.py
   Examples/Image/DataSets/MNIST/install_mnist.py
   Examples/Image/DataSets/Pascal/install_pascalvoc.py
+  Examples/Text/LightRNN/PTB/Data/download_data.py
   Examples/Text/WordLMWithSampledSoftmax/download_data.py
   Examples/Video/DataSets/UCF11/ucf11_utils.py
 )

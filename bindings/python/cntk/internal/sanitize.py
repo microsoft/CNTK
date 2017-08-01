@@ -121,6 +121,42 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
 
     return constant(value=arg)
 
+def sanitize_2d_number(x):
+    '''
+    Convert ``x`` to a tuple.
+
+    Args:
+        x: a scalar number or a tuple of length 2 that contains the 2D values.
+
+    Returns:
+        A tuple of length two.
+    '''
+    if isinstance(x, numbers.Number):
+        return (x,x)
+    elif (isinstance(x, tuple) and (len(x) == 2) and 
+          isinstance(x[0], numbers.Number) and isinstance(x[1], numbers.Number)):
+        return x
+
+    raise ValueError('Input argument must be a number or a tuple of two numbers.')
+
+def sanitize_range(x):
+    '''
+    Convert ``x`` to a tuple such as the first element is less than or equal to the 
+    second element.
+
+    Args:
+        x: a scalar number or a tuple of length 2 that contains the range values.
+
+    Returns:
+        A tuple of length two where the first element is less than or equal to the 
+        second element.
+    '''
+    x =  sanitize_2d_number(x)
+    if x[0] <= x[1]:
+        return x
+
+    raise ValueError('Input argument must be a number or a tuple of two numbers such as the first number is smaller than or equal to the second number.')
+
 @typemap
 def sanitize_batch(var, batch, seq_starts=None, device=None):
     '''
@@ -328,7 +364,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     if isinstance(arguments, cntk_py.Value):
         if len(op_arguments) != 1:
             raise ValueError('your graph has %i inputs, but you specified '
-                             'only one' % (len(op_arguments), len(arguments)))
+                             'only one' % len(op_arguments))
 
         arguments = { op_arguments[0]: arguments }
 
@@ -484,6 +520,28 @@ def sanitize_axis_list(axes):
         retAxes.append(sanitize_axis(ax))
     return retAxes
 
+def sanitize_multi_axis_reduction_list(axes):
+    '''
+    Sanitizes a list of axes for multi-axis reduction which can not contain sequence axis.
+
+    Args:
+        axes (list of :class:`~cntk.axis.Axis` or int or None): the axes to be used.
+
+          * :class:`~cntk.axis.Axis`: use axis instance directly (will convert
+            row- to col-major in case of static axis).
+          * int: if positive, use it as static axis. If negative, count from
+            last to first axis
+          * None: denote all available axes
+    '''
+    if not type(axes) in (list, tuple):
+        axes = [axes]
+    retAxes = []
+    for ax in axes:
+        if (isinstance(ax, Axis)) and (ax.is_sequence_axis):
+            raise ValueError('Reduction operation over multiple axes can not contain sequence axis: %s' % ax)
+        retAxes.append(sanitize_axis(ax))
+    return retAxes
+
 def sanitize_dynamic_axes(axes):
     if not type(axes) in (list, tuple):
         axes = [axes]
@@ -552,6 +610,15 @@ def sanitize_permutation(perm):
     if n != len(set(positive_perm)):
         raise ValueError('duplicate item in permutation')
     return [n-i-1 for i in reversed(positive_perm)]
+
+def sanitize_random_args(shape, dtype):
+    from cntk.default_options import get_default_override
+    shape = sanitize_shape(shape)
+    dtype = get_default_override(None, dtype=dtype)
+    if dtype is None:
+        dtype = np.float32
+    dtype = sanitize_dtype_cntk(dtype)
+    return shape, dtype
 
 # Workaround for Python 2.7 not having functools.lru_cache
 def memoize(func):

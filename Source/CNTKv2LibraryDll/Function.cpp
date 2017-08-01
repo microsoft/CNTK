@@ -10,6 +10,7 @@
 #include "BlockFunction.h"
 #include "Utils.h"
 #include "UserFunctionFactory.h"
+#include "TrainingNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -53,7 +54,13 @@ namespace CNTK
 
     std::vector<Variable>& Function::InitOutputs()
     {
+        if (std::this_thread::get_id() == m_outputInitializingByThreadId)
+        {
+            // std::call_once may deadlock when re-entering from the same thread that's running the lambda, early exit
+            RuntimeError("Re-enter Function::InitOutputs() from Function::InitOutputs(), outputs are not initialized yet");
+        }
         std::call_once(m_outputsInitFlag, [this]() {
+            m_outputInitializingByThreadId = std::this_thread::get_id();
             std::vector<Variable> outputs;
             outputs.reserve(Function::MaxNumOutputs);
             InferOutputs(outputs);
@@ -75,6 +82,7 @@ namespace CNTK
                     m_outputs.back().m_outputComposite = nullptr;
                 }
             }
+            m_outputInitializingByThreadId = std::thread::id();
         });
 
         return m_outputs;
@@ -678,10 +686,17 @@ namespace CNTK
                                 break;
                             case ParameterCloningMethod::Freeze:
                                 if (cloneeInput.IsParameter())
-                                    clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
+                                {
+                                    //parameter values can be updated so we need our own copy
+                                    const auto& ndav = Parameter(cloneeInput).Value();
+                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name());
+                                }
                                 else
-                                    clonedInput = Constant(Constant(cloneeInput).Value(), cloneeInput.Name());
-
+                                {
+                                    //constants can also be updated via non-sgd means
+                                    const auto& ndav = Constant(cloneeInput).Value();
+                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name());
+                                }
                                 leafVariablesCloneMap[cloneeInput] = clonedInput;
                                 break;
                             default:
@@ -998,6 +1013,12 @@ namespace CNTK
         }
     }
 
+    FunctionPtr NullaryOp(PrimitiveOpType op, Dictionary&& opConfig, const std::wstring& name)
+    {
+        std::vector<Variable> operands{};
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
+    }
+
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand };
@@ -1019,14 +1040,34 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Tanh, operand, Dictionary(), name);
     }
 
+    FunctionPtr Asin(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Asin, operand, Dictionary(), name);
+    }
+
     FunctionPtr Sin(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Sin, operand, Dictionary(), name);
     }
 
+    FunctionPtr Acos(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Acos, operand, Dictionary(), name);
+    }
+
     FunctionPtr Cos(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Cos, operand, Dictionary(), name);
+    }
+
+    FunctionPtr Cosh(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Cosh, operand, Dictionary(), name);
+    }
+
+    FunctionPtr Sinh(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Sinh, operand, Dictionary(), name);
     }
 
     FunctionPtr ReLU(const Variable& operand, const std::wstring& name)
@@ -1084,6 +1125,26 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Softmax, operand, Dictionary(), name);
     }
 
+    FunctionPtr Softmax(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        if (!axis.IsStaticAxis() && (axis != Axis::AllStaticAxes()))
+            LogicError("Softmax: support only static axes.");
+
+        if (((operand.Shape().Rank() == 1) && (axis.StaticAxisIndex() == 0)) || 
+            (axis == Axis::AllStaticAxes()))
+        {
+            return UnaryOp(PrimitiveOpType::Softmax, operand, Dictionary(), name);
+        }
+        else
+        {
+            auto operandPlaceholder = PlaceholderVariable();
+            auto operandDelta = operandPlaceholder - ReduceMax(operandPlaceholder, axis);
+            auto result = ElementDivide(Exp(operandDelta), ReduceSum(Exp(operandDelta), axis));
+
+            return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Softmax", name);
+        }
+    }
+
     FunctionPtr Hardmax(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Hardmax, operand, Dictionary(), name);
@@ -1118,17 +1179,14 @@ namespace CNTK
 
     FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name)
     {
-        bool bAllStaticAxis = true; 
-        for (auto& a : axis)
-        {
-            if (!a.IsStaticAxis())
-            {
-                bAllStaticAxis = false;
-                break; 
-            }
-        }
-        if (bAllStaticAxis)
-            return Internal::Slice(operand, axis, beginIndex, endIndex, name);
+        std::vector<int> strides(axis.size(), 1);
+        return Slice(operand, axis, beginIndex, endIndex, strides, name);
+    }
+
+    FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name)
+    {
+        if (std::all_of(axis.cbegin(), axis.cend(), [](Axis axis) { return axis.IsStaticAxis(); }))
+            return Internal::Slice(operand, axis, beginIndex, endIndex, strides, name);
 
         LogicError("Slice: Invalid axis argument provided. Slice along the dynamic batch axis is currently unsupported. To slice a sequence along its ordered dynamic axis use Sequence::Slice.");
     }
@@ -1175,6 +1233,112 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
 
         return UnaryOp(PrimitiveOpType::Dropout, operand, std::move(additionalProperties), name);
+    } 
+
+    Dictionary CreateRandomDistributionAttributes(const wstring& type, const std::vector<double>& args, unsigned long seed) 
+    {
+        auto additionalProperties = Dictionary();
+
+        if (seed == SentinelValueForAutoSelectRandomSeed)
+            seed = Internal::GenerateRandomSeed(true);
+        additionalProperties.Add(
+            PrimitiveFunction::AttributeNameRandomDistributionType, type,
+            PrimitiveFunction::AttributeNameRandomDistributionArgs, AsDictionaryValueVector(args),
+            PrimitiveFunction::AttributeNameRngSeed, size_t(seed),
+            PrimitiveFunction::AttributeNameRngOffset, size_t(0));
+        return additionalProperties;
+    }
+
+    Dictionary CreateRandomDistributionAttributes(const wstring& type, const std::vector<double>& args, unsigned long seed, const NDShape& shape, DataType dataType)
+    {
+        auto additionalProperties = CreateRandomDistributionAttributes(type, args, seed);
+        additionalProperties.Add(
+            PrimitiveFunction::AttributeNameNewShape, shape,
+            PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(dataType));
+        return additionalProperties;
+    }
+
+    FunctionPtr UniformRandom(const NDShape& shape, DataType dataType, double low, double high, unsigned long seed, const std::wstring& name)
+    {
+        if (low >= high)
+            LogicError("UniformRandom: low end of the range (%g) must be < high end of the range (%g)", low, high);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeUniform, { low, high }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr UniformRandomLike(const Variable& operand, double low, double high, unsigned long seed, const std::wstring& name)
+    {
+        if (low >= high)
+            LogicError("UniformRandomLike: low end of the range (%g) must be < high end of the range (%g)", low, high);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeUniform, { low, high }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr NormalRandom(const NDShape& shape, DataType dataType, double mean, double stdev, unsigned long seed, const std::wstring& name)
+    {
+        if (stdev < 0)
+            LogicError("NormalRandom: standard deviation (%g) must be non-negative", stdev);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeNormal, { mean, stdev }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr NormalRandomLike(const Variable& operand, double mean, double stdev, unsigned long seed, const std::wstring& name)
+    {
+        if (stdev < 0)
+            LogicError("NormalRandomLike: standard deviation (%g) must be non-negative", stdev);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeNormal, { mean, stdev }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr ToBatch(const Variable& operand, const std::wstring& name)
+    {
+        if (operand.DynamicAxes().size() > 0)
+            LogicError("ToBatch: the input should not have dynamic axis.");
+
+        if (operand.Shape().Dimensions().size() == 0)
+            LogicError("ToBatch: the input can not be scalar.");
+
+        return UnaryOp(PrimitiveOpType::ToBatch, operand, Dictionary(), name);
+    }
+
+    FunctionPtr UnpackBatch(const Variable& operand, const std::wstring& name)
+    {
+        if (operand.DynamicAxes().size() > 1)
+            LogicError("UnpackBatch: only support input with batch axis and no sequence axis.");
+
+        return UnaryOp(PrimitiveOpType::UnpackBatch, operand, Dictionary(), name);
+    }
+
+    FunctionPtr GumbelRandom(const NDShape& shape, DataType dataType, double loc, double scale, unsigned long seed, const std::wstring& name)
+    {
+        if (scale < 0)
+            LogicError("GumbelRandom: scale (%g) must be non-negative", scale);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeGumbel, { loc, scale }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr GumbelRandomLike(const Variable& operand, double loc, double scale, unsigned long seed, const std::wstring& name)
+    {
+        if (scale < 0)
+            LogicError("GumbelRandomLike: scale (%g) must be non-negative", scale);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeGumbel, { loc, scale }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr BernoulliRandom(const NDShape& shape, DataType dataType, double mean, unsigned long seed, const std::wstring& name)
+    {
+        if (mean < 0 || mean > 1)
+            LogicError("BernoulliRandom: mean (%g) must be between 0 and 1", mean);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeBernoulli, { mean }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr BernoulliRandomLike(const Variable& operand, double mean, unsigned long seed, const std::wstring& name)
+    {
+        if (mean < 0 || mean > 1)
+            LogicError("BernoulliRandomLike: mean (%g) must be between 0 and 1", mean);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeBernoulli, { mean }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name)
@@ -1284,8 +1448,13 @@ namespace CNTK
 
     FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name)
     {
-        std::vector<Variable> operands = { prediction, targets };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Logistic, operands, Dictionary(), name), name);
+        auto predictionPlaceholder = PlaceholderVariable(L"prediction");
+        auto labelPlaceholder = PlaceholderVariable(L"targets");
+        Constant onePlusEps = Constant::Scalar(1.0f+1e-6f);
+        Constant one = Constant::Scalar(1.0f);
+        Constant eps = Constant::Scalar(1e-6f);
+        auto compositeBinaryCrossEntropy = Negate(Plus(ElementTimes(labelPlaceholder,Log(eps + predictionPlaceholder)), ElementTimes(Minus(one, labelPlaceholder), Log(Minus(onePlusEps, predictionPlaceholder)))));
+        return AsBlock(std::move(compositeBinaryCrossEntropy), { { predictionPlaceholder, prediction },{ labelPlaceholder, targets } }, L"BinaryCrossEntropy", name);
     }
 
     FunctionPtr WeightedBinaryCrossEntropy(const Variable& prediction, const Variable& targets, const Variable& weights, const std::wstring& name)
@@ -1450,6 +1619,38 @@ namespace CNTK
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalProdReductionOpName, axis, name);
     }
 
+    //multiple axes reduction below:
+
+    FunctionPtr ReduceSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, axis, name);
+    }
+
+    FunctionPtr ReduceLogSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalLogSumReductionOpName, axis, name);
+    }
+
+    FunctionPtr ReduceMean(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMeanReductionOpName, axis, name);
+    }
+
+    FunctionPtr ReduceMax(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMaxReductionOpName, axis, name);
+    }
+
+    FunctionPtr ReduceMin(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMinReductionOpName, axis, name);
+    }
+
+    FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalProdReductionOpName, axis, name);
+    }
+
     FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name)
     {
         auto operandPlaceholder = PlaceholderVariable(L"operand");
@@ -1497,11 +1698,18 @@ namespace CNTK
             name);
     }
 
-    FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name/* = L""*/)
+    FunctionPtr ROIPooling(const Variable& operand, 
+                           const Variable& rois, 
+                           PoolingType poolingType, 
+                           const NDShape& roiOutputShape, 
+                           double spatialScale, 
+                           const std::wstring& name/* = L""*/)
     {
         auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)poolingType;
         additionalProperties[PrimitiveFunction::AttributeNameROIOutputShape] = roiOutputShape;
-        return BinaryOp(PrimitiveOpType::ROIPooling, convolutionMap, rois, std::move(additionalProperties), name);
+        additionalProperties[PrimitiveFunction::AttributeNameSpatialScale] = spatialScale;
+        return BinaryOp(PrimitiveOpType::ROIPooling, operand, rois, std::move(additionalProperties), name);
     }
 
     FunctionPtr Pooling(const Variable& operand,
@@ -1633,6 +1841,17 @@ namespace CNTK
     FunctionPtr ELU(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
+    }
+
+    FunctionPtr SELU(const Variable& operand, double scale, double alpha, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero,
+            ElementTimes(Constant::Scalar(operand.GetDataType(), alpha), ELU(operandPlaceholder)),
+            operandPlaceholder);
+        result = ElementTimes(Constant::Scalar(operand.GetDataType(), scale), result);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"SELU", name);
     }
 
     FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)
@@ -1814,14 +2033,19 @@ namespace CNTK
             auto broadcastAsPlaceholder = PlaceholderVariable(L"broadcastAs");
             return AsBlock(ReconcileDynamicAxes(operandPlaceholder, broadcastAsPlaceholder), { { operandPlaceholder, operand }, { broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
         }
-
-        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)
+        
+        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, bool keepReducedDimensions, const std::wstring& name)
         {
             auto operandPlaceholder = PlaceholderVariable(L"operand");
             auto unpackedSequence = Unpack(operandPlaceholder, ReductionIdentityValue(PrimitiveFunction::InternalSumReductionOpName), /*suppressMaskOutput =*/ true, name);
-            auto reductionResult = Internal::ReduceElements(unpackedSequence, reductionOpName, Axis(-1), /*keepReducedDimensions =*/ false);
+            auto reductionResult = Internal::ReduceElements(unpackedSequence, reductionOpName, Axis(-1), keepReducedDimensions);
 
             return AsBlock(std::move(reductionResult), { { operandPlaceholder, operand } }, L"Sequence::ReduceElements", name);
+        }
+
+        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)
+        {
+            return  ReduceElements(operand, reductionOpName, /*keepReducedDimensions =*/ false, name);
         }
 
         FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)
@@ -1914,23 +2138,25 @@ namespace CNTK
         {
             return Internal::ScatterPacked(operand, Internal::PackedIndex(/*layout of*/ condition, Where(condition, newDerivedSequenceAxisScalingAndAdditiveFactor)), /*layout of*/ condition, name);
         }
-
-        FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name)
+        
+        FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name)
         {
-            auto additionalProperties = Dictionary(); 
+            auto additionalProperties = Dictionary();
 
-            assert(axis.size() > 0 && axis.size() == beginIndex.size() && axis.size() == endIndex.size());
+            assert(axis.size() > 0 && axis.size() == beginIndex.size() && axis.size() == endIndex.size() && strides.size() == axis.size());
             if (axis.size() == 1)
             {
                 additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis[0];
                 additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = beginIndex[0];
                 additionalProperties[PrimitiveFunction::AttributeNameEndIndex] = endIndex[0];
+                additionalProperties[PrimitiveFunction::AttributeNameSliceStrides] = strides[0];
             }
             else
             {
                 additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axis);
                 additionalProperties[PrimitiveFunction::AttributeNameBeginIndexVec] = AsDictionaryValueVector(beginIndex);
                 additionalProperties[PrimitiveFunction::AttributeNameEndIndexVec] = AsDictionaryValueVector(endIndex);
+                additionalProperties[PrimitiveFunction::AttributeNameSliceStridesVec] = AsDictionaryValueVector(strides);
             }
             return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
         }
@@ -1953,7 +2179,7 @@ namespace CNTK
             LogicError("ReduceElements: operand %S; Invalid axis argument provided. To reduce an operand along its ordered dynamic axis use Sequence::ReduceElements.",
                        operand.AsString().c_str());
         }
-
+ 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
         {
             bool keepReducedDimensions = true;
@@ -1961,6 +2187,97 @@ namespace CNTK
                 keepReducedDimensions = false;
 
             return ReduceElements(operand, reductionOpName, axis, keepReducedDimensions, name);
+        }
+         
+        FunctionPtr ComposeReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::vector<Axis>& axes, bool keepReducedDimensions, const std::wstring& name)
+        {
+            if (
+                std::any_of(axes.begin(), axes.end(),
+                    [](const Axis& axis) {
+                return axis.IsStaticAxis() ||
+                    (axis == Axis::AllStaticAxes()) ||
+                    (axis == Axis::AllAxes()) ||
+                    (axis == Axis::DefaultBatchAxis()); })
+                || ((reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
+                    && std::any_of(axes.begin(), axes.end(),
+                        [](const Axis& axis) {return axis == Axis::OperandSequenceAxis(); }))
+                    )
+            {
+                auto additionalProperties = Dictionary();
+                additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
+                additionalProperties[PrimitiveFunction::AttributeNameReductionOpName] = reductionOpName;
+                additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = keepReducedDimensions;
+                return UnaryOp(PrimitiveOpType::ReduceElements, operand, std::move(additionalProperties), name);
+            }
+
+                LogicError("ReduceElements: operand %S; Invalid axis argument provided. To reduce an operand along its ordered dynamic axis use Sequence::ReduceElements.",
+                    operand.AsString().c_str());
+        }
+
+        ///
+        /// Compose reduction operation along multiple axes.
+        /// Compose reduction along multiple axes to perform reduction over static axes first, then sequence axis and then batch axis.
+        ///
+        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::vector<Axis>& axes, bool keepReducedDimensions, const std::wstring& name)
+        {
+            //if axes is empty, raise error:
+            if (axes.empty())
+                LogicError("ReduceElements: operand %S; Empty axes argument provided.", operand.AsString().c_str());
+
+            //if reduce over all axes, we directly compose the reduction node:
+            for (auto &axis : axes)
+                if (axis == Axis::AllAxes() || axis == Axis::AllStaticAxes())
+                    return  ComposeReduceElements(operand, reductionOpName, axes, keepReducedDimensions, name);
+
+            std::vector<Axis> static_axes;
+            std::vector<Axis> sequence_axes;
+            std::vector<Axis> batch_axes;
+            bool static_axes_reduced = false;
+            for (auto& axis : axes)
+            {
+                if (axis.IsBatchAxis())
+                {
+                    batch_axes.push_back(axis);
+                }
+                else if (axis.IsSequenceAxis())
+                {
+                    sequence_axes.push_back(axis);
+                }
+                else if (axis.IsStaticAxis() || (axis == Axis::AllStaticAxes()))
+                {
+                    if (axis == Axis::AllStaticAxes())
+                        static_axes_reduced = true;
+                    if (static_axes_reduced && static_axes.size() > 1)
+                        LogicError("ReduceElements: operand %S; additional static axes are provided when doing reduction over AllStaticAxes.", operand.AsString().c_str());
+                    static_axes.push_back(axis);
+                }
+            }
+            auto operand_placeholder = PlaceholderVariable(L"reduction_operand");
+
+            FunctionPtr res = operand_placeholder;
+            if (!static_axes.empty())
+            {
+                res = ComposeReduceElements(res, reductionOpName, static_axes, keepReducedDimensions, name + L"_static_axes_subop");
+            }            
+            if (!sequence_axes.empty())
+            {
+                res = CNTK::Sequence::ReduceElements(res, reductionOpName, keepReducedDimensions, name + L"_sequence_axes_subop");
+            }
+            if (!batch_axes.empty())
+            {
+                res = ComposeReduceElements(res, reductionOpName, batch_axes, keepReducedDimensions, name + L"_batch_axes_subop");
+            }
+            return AsBlock(std::move(res), { { operand_placeholder, operand }}, L"MultiAxisReduce", name);
+        }
+
+        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::vector<Axis>& axes, const std::wstring& name)
+        {
+            bool keepReducedDimensions = true;
+            if (std::any_of(axes.begin(), axes.end(),
+                [](const Axis& axis) {return axis == Axis::AllStaticAxes() || axis == Axis::AllAxes(); }))
+                keepReducedDimensions = false;
+
+            return ReduceElements(operand, reductionOpName, axes, keepReducedDimensions, name);
         }
 
         FunctionPtr Convolution(const Variable& convolutionMap,

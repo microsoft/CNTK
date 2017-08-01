@@ -3,6 +3,10 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+"""
+Tensor operations.
+"""
+
 
 import warnings
 from scipy import sparse
@@ -91,12 +95,29 @@ class TensorOpsMixin(object):
         Slicing of a Variable. E.g. var[2:3] will translate into slice(var, axis=0, begin_index=2, end_index=3)
         '''
         from . import ops
+        
+        if hasattr(self, 'outputs') and len(self.outputs) > 1:
+            try:
+                return self.outputs[arg]
+            except Exception as e:
+                msg = 'Slice for multioutput functions is not supported, ' \
+                      'the fallback to select to output requires ' \
+                      'that only one index is provided. arg: {}, self: {}'.format(
+                    arg, self)
+                raise KeyError(msg)
 
         # int or slice: normalize into a tuple of int or tuple of slice
         if not isinstance(arg, tuple): 
             arg = (arg,)
         r = self
         axis0 = 0
+
+        from cntk.default_options import get_global_option, get_default_override, default_override_or
+
+        keras_mode_flag = get_global_option('align_axis', 0)
+        if keras_mode_flag == 1:
+            if (getattr(self, 'dynamic_axes') is not None and len(self.dynamic_axes) > 0):
+                axis0 = -get_default_override(None, axis_offset=default_override_or(len(self.dynamic_axes)))
 
         for axis, s in enumerate(arg):
             if s is Ellipsis: # ellipsis means index relative to end after this point
@@ -106,15 +127,10 @@ class TensorOpsMixin(object):
                 s = slice(s, s+1)
 
             if isinstance(s, slice):
-                if s.step is not None and s.step != 1:
-                    # TODO: This is not hard to implement in SliceNode.
-                    raise ValueError("slicing with a step other than 1 is "
-                                     "currently not supported")
-                # implement as a CNTK slice() operation
                 begin = s.start or 0
                 end   = s.stop  or 0
                 if begin != 0 or end != 0:
-                    r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
+                    r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end, strides=s.step)
             elif isinstance(s, (tuple, list)):
                 # Select multiple elements from the same dimension. This is
                 # different from NumPy's advanced indexing, since we just go
@@ -223,8 +239,10 @@ class ArrayMixin(object):
 
             def to_csr(dense_data):
                 if len(dense_data.shape) > 2:
-                    raise ValueError('Cannot convert a sparse NDArrayView or Value object '
-                                     'with shape %s of rank > 2 to a scipy.csr matrix.' % str(dense_data.shape))
+                    warnings.warn('Cannot convert a sparse NDArrayView or Value object '
+                                     'with shape %s of rank > 2 to a scipy.csr matrix.'
+                                     ' Returning dense data.' % str(dense_data.shape))
+                    return dense_data
                 return sparse.csr_matrix(dense_data)
 
             if isinstance(dense_data, list):

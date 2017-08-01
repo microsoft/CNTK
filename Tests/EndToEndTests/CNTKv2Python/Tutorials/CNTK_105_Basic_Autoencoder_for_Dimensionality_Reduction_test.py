@@ -20,7 +20,7 @@ def test_cntk_105_basic_autoencoder_for_dimensionality_reduction_noErrors(nb):
     print(errors)
     assert errors == []
 
-expectedError = 3.1
+expectedError = 3.05
 
 def test_cntk_105_basic_autoencoder_for_dimensionality_reduction_simple_trainerror(nb):
     testCell = [cell for cell in nb.cells

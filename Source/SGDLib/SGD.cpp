@@ -650,61 +650,61 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
         else
         {
-            std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
-            totalMBsSeen += TrainOneEpoch(net,
-                refNet,
-                refNode,
-                i,
-                m_epochSize,
-                trainSetDataReader,
-                learnRatePerSample,
-                chosenMinibatchSize,
-                featureNodes,
-                labelNodes,
-                criterionNodes,
-                evaluationNodes,
-                inputMatrices,
-                learnableNodes, smoothedGradients, smoothedCounts,
-                epochCriterion, epochEvalErrors,
-                "", SIZE_MAX, totalMBsSeen, tensorBoardWriter);
-            totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
+        std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
+        totalMBsSeen += TrainOneEpoch(net,
+                                      refNet,
+                                      refNode,
+                                      i,
+                                      m_epochSize,
+                                      trainSetDataReader,
+                                      learnRatePerSample,
+                                      chosenMinibatchSize,
+                                      featureNodes,
+                                      labelNodes,
+                                      criterionNodes,
+                                      evaluationNodes,
+                                      inputMatrices,
+                                      learnableNodes, smoothedGradients, smoothedCounts,
+                                      epochCriterion, epochEvalErrors,
+                                      "", SIZE_MAX, totalMBsSeen, tensorBoardWriter);
+        totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
 
-            timer.Stop();
-            double epochTime = timer.ElapsedSeconds();
+        timer.Stop();
+        double epochTime = timer.ElapsedSeconds();
 
-            if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
-                lrControlCriterion = epochEvalErrors[0].Average();
-            else
-                lrControlCriterion = epochCriterion.Average();
+        if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
+            lrControlCriterion = epochEvalErrors[0].Average();
+        else
+            lrControlCriterion = epochCriterion.Average();
 
-            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Training] ", i + 1, (int)m_maxEpochs);
-            epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
+        LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Training] ", i + 1, (int)m_maxEpochs);
+        epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
 
-            m_lastFinishedEpochTrainLoss = epochCriterion.Average();
-            for (size_t j = 0; j < epochEvalErrors.size(); j++)
-                epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
-            fprintf(stderr, "totalSamplesSeen = %d; learningRatePerSample = %.8g; epochTime=%.6gs\n", (int)totalTrainingSamplesSeen, learnRatePerSample, epochTime);
+        m_lastFinishedEpochTrainLoss = epochCriterion.Average();
+        for (size_t j = 0; j < epochEvalErrors.size(); j++)
+            epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
+        fprintf(stderr, "totalSamplesSeen = %zu; learningRatePerSample = %.8g; epochTime=%.6gs\n", totalTrainingSamplesSeen, learnRatePerSample, epochTime);
 #if 0
-            // TODO: This was only printed if >1 eval criterion. Why? Needed?
-            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]:     Criterion Node [%ls] Per Sample = %.8g\n",
-                i + 1, (int)m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion.Average());
+        // TODO: This was only printed if >1 eval criterion. Why? Needed?
+        LOGPRINTF(stderr, "Finished Epoch[%2d of %d]:     Criterion Node [%ls] Per Sample = %.8g\n",
+            i + 1, (int)m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion.Average());
 
-            for (size_t j = 0; j < epochEvalErrors.size(); j++)
-            {
-                LOGPRINTF(stderr, "Finished Epoch[%2d of %d]:     Evaluation Node [%ls] Per Sample = %.8g\n",
-                    i + 1, (int)m_maxEpochs, evalNodeNames[j].c_str(), epochEvalErrors[j].Average());
-            }
+        for (size_t j = 0; j < epochEvalErrors.size(); j++)
+        {
+            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]:     Evaluation Node [%ls] Per Sample = %.8g\n",
+                i + 1, (int) m_maxEpochs, evalNodeNames[j].c_str(), epochEvalErrors[j].Average());
+        }
 #endif
 
-            if (tensorBoardWriter)
+        if (tensorBoardWriter)
+        {
+            tensorBoardWriter->WriteValue(L"summary/" + criterionNodes[0]->NodeName(), (float)epochCriterion.Average(), i + 1);
+            for (size_t j = 0; j < epochEvalErrors.size(); j++)
             {
-                tensorBoardWriter->WriteValue(L"summary/" + criterionNodes[0]->NodeName(), (float)epochCriterion.Average(), i + 1);
-                for (size_t j = 0; j < epochEvalErrors.size(); j++)
-                {
-                    tensorBoardWriter->WriteValue(L"summary/" + evaluationNodes[0]->NodeName(), (float)epochEvalErrors[j].Average(), i + 1);
-                }
+                tensorBoardWriter->WriteValue(L"summary/" + evaluationNodes[0]->NodeName(), (float)epochEvalErrors[j].Average(), i + 1);
+            }
 
-                tensorBoardWriter->Flush();
+            tensorBoardWriter->Flush();
             }
         }
 
@@ -844,8 +844,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     }
                     else
                     {
-                        learnRatePerSample *= m_learnRateDecreaseFactor;
-                        LOGPRINTF(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
+                    learnRatePerSample *= m_learnRateDecreaseFactor;
+                    LOGPRINTF(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
                         lrFailedOnce = false;
                     }
                 }
@@ -883,18 +883,43 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // Persist model and check-point info
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
         {
-            SaveCheckPointInfo(
-                i,
-                totalTrainingSamplesSeen,
-                learnRatePerSample,
-                smoothedGradients,
-                smoothedCounts,
-                prevCriterion,
-                chosenMinibatchSize);
-            auto modelName = GetModelNameForEpoch(i);
-            if (m_traceLevel > 0)
-                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
-            net->Save(modelName);
+            if (loadedPrevModel)
+            {
+                // If previous best model is loaded, we will first remove epochs that lead to worse results
+                for (int j = 1; j < m_learnRateAdjustInterval; j++)
+                {
+                    int epochToDelete = i - j;
+                    LOGPRINTF(stderr, "SGD: removing model and checkpoint files for epoch %d after rollback to epoch %lu\n", epochToDelete + 1, (unsigned long)(i - m_learnRateAdjustInterval) + 1);  // report 1 based epoch number
+                    _wunlink(GetModelNameForEpoch(epochToDelete).c_str());
+                    _wunlink(GetCheckPointFileNameForEpoch(epochToDelete).c_str());
+                }
+
+                // Set i back to the loaded model
+                i -= m_learnRateAdjustInterval;
+                LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
+                SaveCheckPointInfo(
+                    i,
+                    totalTrainingSamplesSeen,
+                    learnRatePerSample,
+                    smoothedGradients,
+                    smoothedCounts,
+                    prevCriterion,
+                    chosenMinibatchSize);
+            }
+            else
+            {
+                SaveCheckPointInfo(
+                    i,
+                    totalTrainingSamplesSeen,
+                    learnRatePerSample,
+                    smoothedGradients,
+                    smoothedCounts,
+                    prevCriterion,
+                    chosenMinibatchSize);
+                auto modelName = GetModelNameForEpoch(i);
+                if (m_traceLevel > 0)
+                    LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
+                net->Save(modelName);
 
             if (loadedPrevModel)
             {
@@ -1136,10 +1161,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (useDistributedMBReading)
             fprintf(stderr, ", distributed reading is ENABLED");
 
-        if (m_maxSamplesInRAM < SIZE_MAX)
-            fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
+            if (m_maxSamplesInRAM < SIZE_MAX)
+                fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
         else if (numSubminibatchesNeeded > 1)
-            fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
+                fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
 
         fprintf(stderr, ".\n");
     }
@@ -1329,7 +1354,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // independent of their actual content (which is considered outdated).
 
         // Sum of actualMBSize across all nodes when using parallel training
-        // 'aggregate' here means accross-worker aggregate for this one minibatch.
+        // 'aggregate' here means across-worker aggregate for this one minibatch.
         size_t aggregateNumSamples = actualMBSize; // (0 for empty MB)
         size_t aggregateNumSamplesWithLabel = CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], numSamplesWithLabelOfNetwork); // (0 for empty MB)
 
@@ -2451,17 +2476,18 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 #if 0   // BUGBUG!!! This replicates a bug carried over from Alexey's original implementation.
         static double smoothedCount = 0;
 #endif
+        smoothedCount = varMomentum * smoothedCount + (1.0 - varMomentum) * actualMBSize;
+        double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = m_gradType.targetAdagradAvDenom * sqrt(smoothedCount);
 
-        smoothedGradientValues.FSAdagradUpdate(actualMBSize,
-                                         gradientValues, functionValues, smoothedCount,
-                                         learnRatePerSample, m_gradType.targetAdagradAvDenom,
-                                         momentum, varMomentum);
+        smoothedGradientValues.FSAdagradUpdate(
+                                         gradientValues, functionValues, targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
+                                         learnRatePerSample, momentum, varMomentum);
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
         double aveMultiplier = smoothedGradientValues.RmsProp(gradientValues, (ElemType) m_rpi.gamma,
                                                         (ElemType) m_rpi.inc, (ElemType) m_rpi.max,
-                                                        (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier);
+                                                        (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier, true);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
     }
 
@@ -3308,7 +3334,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 #endif
             m_isAsyncBufferEnabled = configDataParallelASGD(L"UsePipeline", false);
             m_isSimulateMA = configDataParallelASGD(L"SimModelAverage", false); // using parameter server-based version of ModelAveragingSGD
-            if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning")) // adjust learning rate per m_adjustNumInBatch minibatchs until to original one,
+            if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning")) // adjust learning rate per m_adjustNumInBatch minibatches until to original one,
                                                                                  // this option could be used to takcle the unstableness of DataParallelASGD if you get a chance
             {
                 const ConfigRecordType & configAdjustLearningRateAtBeginning(configDataParallelASGD(L"AdjustLearningRateAtBeginning", ConfigRecordType::Record()));

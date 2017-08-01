@@ -7,13 +7,13 @@
 
 #include <stdio.h>
 
-void MultiThreadsEvaluation(bool);
+void MultiThreadsEvaluation(const wchar_t*, bool);
 
 int main()
 {
-
+    const wchar_t* modelFileName = L"01_OneHidden.model";
     fprintf(stderr, "\n##### Run CNTKLibraryCPPEvalGPUExamples on CPU and GPU. #####\n");
-    MultiThreadsEvaluation(true);
+    MultiThreadsEvaluation(modelFileName, true);
 
     fprintf(stderr, "Evaluation complete.\n");
     fflush(stderr);

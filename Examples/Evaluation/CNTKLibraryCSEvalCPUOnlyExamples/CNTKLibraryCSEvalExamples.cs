@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CNTK;
+using CNTKImageProcessing;
 
 namespace CNTKLibraryCSEvalExamples
 {
@@ -72,7 +73,7 @@ namespace CNTKLibraryCSEvalExamples
                 var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
                 inputDataMap.Add(inputVar, inputVal);
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
                 outputDataMap.Add(outputVar, null);
 
@@ -158,7 +159,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Create input data map.
                 inputDataMap.Add(inputVar, inputVal);
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
                 outputDataMap.Add(outputVar, null);
 
@@ -248,7 +249,7 @@ namespace CNTKLibraryCSEvalExamples
                     var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
                     inputDataMap.Add(inputVar, inputVal);
 
-                    // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                    // Create output data map. Using null as Value to indicate using system allocated memory.
                     // Alternatively, create a Value object and add it to the data map.
                     outputDataMap.Add(outputVar, null);
 
@@ -295,7 +296,8 @@ namespace CNTKLibraryCSEvalExamples
                 Function modelFunc = Function.Load(modelBuffer, device);
 
                 // Get input variable. The model has only one single input.
-                // The same way described above for output variable can be used here to get input variable by name.
+                // If the model have more than one input, use the following way to get input variable by name.
+                // Variable inputVar = modelFunc.Arguments.Where(variable => string.Equals(variable.Name, inputName)).Single();
                 Variable inputVar = modelFunc.Arguments.Single();
 
                 // Get shape data for the input variable
@@ -326,7 +328,7 @@ namespace CNTKLibraryCSEvalExamples
                 var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
                 inputDataMap.Add(inputVar, inputVal);
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
                 outputDataMap.Add(outputVar, null);
 
@@ -444,7 +446,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Prepare output
                 Variable outputVar = modelFunc.Output;
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
@@ -567,7 +569,7 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Prepare output
                 Variable outputVar = modelFunc.Output;
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
@@ -687,7 +689,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Prepare output
                 Variable outputVar = modelFunc.Output;
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
