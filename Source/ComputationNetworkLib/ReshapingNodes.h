@@ -930,6 +930,11 @@ public:
             outputSubSlice.NarrowTo(index, m_head[index], dims[index] + m_head[index]);
         }
 
+        if (m_mode == CONSTANTPAD)
+        {
+            Value().SetValue(0);
+        }
+
         auto output = TensorView<ElemType>(ValuePtr(), outputSubSlice);
         output.AssignCopyOf(input);
 
@@ -951,13 +956,19 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         //todo
-        //size_t rank = DetermineElementwiseTensorRank();
-        //let outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
+        size_t rank = DetermineElementwiseTensorRank();
+        let outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
 
-        //auto inputGrad = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
-        //let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
-        //let outputGrad = TensorView<ElemType>(GradientPtr(), outputSubSlice);
-        //inputGrad.AddCopyOf(outputGrad);
+        auto inputGrad = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
+        int maxRank = (int)(Input(inputIndex)->GetSampleLayout().GetRank());
+        let dims = Input(inputIndex)->GetSampleLayout().GetDims();
+        auto outputSubSlice = outputSlice;
+        for (int index = maxRank - 1; index >= 0; index--)
+        {
+            outputSubSlice.NarrowTo(index, m_head[index], dims[index] + m_head[index]);
+        }
+        let outputGrad = TensorView<ElemType>(GradientPtr(), outputSubSlice);
+        inputGrad.AddCopyOf(outputGrad);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override 
