@@ -976,7 +976,7 @@ public:
         if (GotToken().kind != eof)
             Fail(L"junk at end of source", GetCursor());
     }
-    // top-level parse function parses dictonary members without enclosing [ ... ] and returns it as a dictionary
+    // top-level parse function parses dictionary members without enclosing [ ... ] and returns it as a dictionary
     ExpressionPtr ParseRecordMembersToDict()
     {
         let topMembers = ParseRecordMembers();
