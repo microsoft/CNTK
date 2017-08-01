@@ -397,6 +397,8 @@ namespace CNTK
                         case PrimitiveOpType::Hardmax:
                         case PrimitiveOpType::Dropout:
                         case PrimitiveOpType::LogSoftmax:
+                        case PrimitiveOpType::Asin:
+                        case PrimitiveOpType::Acos:
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
                         case PrimitiveOpType::Cosh:

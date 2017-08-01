@@ -379,6 +379,26 @@ __global__ void _elementWiseNegativeSineOnCuda(
 };
 
 template <class ElemType>
+__global__ void _elementWiseAcosOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = acos_(a[id]);
+};
+
+template <class ElemType>
+__global__ void _elementWiseAsinOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = asin_(a[id]);
+};
+
+template <class ElemType>
 __global__ void _elementWiseCoshOnCuda(
     const ElemType* a,
     ElemType* res,

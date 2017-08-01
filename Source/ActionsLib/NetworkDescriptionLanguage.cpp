@@ -153,6 +153,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     wstring nodeType = msra::strfun::utf16(p_nodeType);
     bool ret = false;
          if (EqualInsensitive(nodeType, OperationNameOf(AbsNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AcosNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AsinNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode))) ret = true;
 #ifdef COMING_SOON

@@ -85,7 +85,7 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
-    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opCosh, opSinh, opExponentialLinearUnit, opStableSigmoid,
+    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opAcos, opAsin, opCosh, opSinh, opExponentialLinearUnit, opStableSigmoid,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative, opStableSigmoidDerivative,
     // binary
@@ -96,6 +96,7 @@ enum ElementWiseOperator
     opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,
     opElementwiseProductWithLinearRectifierDerivativeFromOutput, opElementwiseProductWithLogDerivativeFromOutput,
     opElementwiseProductWithCosDerivative, opElementwiseProductWithSinDerivative,
+    opElementwiseProductWithAcosDerivative, opElementwiseProductWithAsinDerivative,
     opElementwiseProductWithCoshDerivative, opElementwiseProductWithSinhDerivative,
     opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative,
     opElementwiseProductWithReciprocalDerivative, opSqrOfDifference,
@@ -134,6 +135,8 @@ enum ElementWiseOperator
     Macro(LinearRectifier);       \
     Macro(Cosine);                \
     Macro(Sin);                   \
+    Macro(Acos);                  \
+    Macro(Asin);                  \
     Macro(Cosh);                  \
     Macro(Sinh);                  \
     Macro(ExponentialLinearUnit); \
@@ -166,6 +169,8 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithLogDerivativeFromOutput);                    \
     Macro(ElementwiseProductWithCosDerivative);                              \
     Macro(ElementwiseProductWithSinDerivative);                              \
+    Macro(ElementwiseProductWithAcosDerivative);                             \
+    Macro(ElementwiseProductWithAsinDerivative);                             \
     Macro(ElementwiseProductWithCoshDerivative);                             \
     Macro(ElementwiseProductWithSinhDerivative);                             \
     Macro(ElementwiseProductWithAbsDerivative);                              \

@@ -1536,6 +1536,30 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignNegativeSineOf(const GPUMatrix<E
 }
 
 template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceAcos()
+{
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignAcosOf(const GPUMatrix<ElemType>& /*a*/)
+{
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceAsin()
+{
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignAsinOf(const GPUMatrix<ElemType>& /*a*/)
+{
+    return *this;
+}
+
+template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceCosh()
 {
     return *this;

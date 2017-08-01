@@ -1040,9 +1040,19 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Tanh, operand, Dictionary(), name);
     }
 
+    FunctionPtr Asin(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Asin, operand, Dictionary(), name);
+    }
+
     FunctionPtr Sin(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Sin, operand, Dictionary(), name);
+    }
+
+    FunctionPtr Acos(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Acos, operand, Dictionary(), name);
     }
 
     FunctionPtr Cos(const Variable& operand, const std::wstring& name)
