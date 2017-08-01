@@ -346,7 +346,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 #endif
             loss1 = mbLoss.Value()->AsScalar<float>(); // note: this does the GPU sync
         }
-        fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[featureStreamInfo].numberOfSequences);
+        fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[labelStreamInfo].numberOfSamples);
 #endif
 #if 1   // static CNTK
         double crit;// = trainer->PreviousMinibatchLossAverage();
@@ -364,7 +364,7 @@ extern int mt_main(int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
-#if 1
+#if 01
     return mt_main(argc, argv);
 #else
     argc; argv;
