@@ -1,10 +1,11 @@
-﻿# Copyright (c) Microsoft. All rights reserved.
+# Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
 from __future__ import print_function
+from builtins import input as builtin_input
 import cntk as C
 from cntk import *
 from cntk.initializer import glorot_uniform
@@ -204,10 +205,17 @@ if __name__ == '__main__':
     os.chdir(base_path)
     model_path = os.path.join(abs_path, "Output", "frcn_py.model")
 
-    # Train only is no model exists yet
+    # Asks to retrain model if it exists
     if os.path.exists(model_path):
-        print("Loading existing model from %s" % model_path)
-        trained_model = load_model(model_path)
+        print("Model exists in %s" % model_path)
+        retrain_choice = builtin_input('--> INPUT: Press "y" to retrain model, this will delete the previous model:')
+        if retrain_choice.lower() in ['y', 'yes']:
+            trained_model = train_fast_rcnn()
+            trained_model.save(model_path)
+            print("Stored trained model at %s" % model_path)
+        else:
+            print("Loading existing model from %s" % model_path)
+            trained_model = load_model(model_path)
     else:
         trained_model = train_fast_rcnn()
         trained_model.save(model_path)
