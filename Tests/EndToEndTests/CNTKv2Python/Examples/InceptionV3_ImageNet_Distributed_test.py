@@ -29,7 +29,7 @@ mpiexec_params = ["-n", "2"]
 def test_inception_v3_imagenet_distributed(device_id):
     # Inception-V3 distributed test on ImageNet need plenty of memory,
     # for now, the test server might feel hard to handle
-    pytest.skip('test only runs on GPU')
+    pytest.skip('Mute Inception-V3 distributed test temporarily')
 
     params = ["-n", "2",
               "-datadir", prepare_ImageNet_data(),
