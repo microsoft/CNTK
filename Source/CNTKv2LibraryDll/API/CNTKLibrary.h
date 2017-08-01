@@ -1916,6 +1916,12 @@ namespace CNTK
         CNTK_API const std::wstring& Name() const;
 
         ///
+        /// Debug helper that updates the name of 'this' variable
+        /// This is temporary.
+        ///
+        CNTK_API void DebugUpdateName(const std::wstring& newName);
+
+        ///
         /// Returns the internally generated unique name of the variable
         /// The uid may be generated on demand upon first call.
         ///

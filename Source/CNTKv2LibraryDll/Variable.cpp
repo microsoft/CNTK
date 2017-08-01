@@ -42,6 +42,11 @@ namespace CNTK
         return m_dataFields->m_name; 
     }
 
+    void Variable::DebugUpdateName(const std::wstring& newName)
+    {
+        m_dataFields->m_name = newName;
+    }
+
     const std::wstring& Variable::Uid() const
     {
         return m_dataFields->Uid();

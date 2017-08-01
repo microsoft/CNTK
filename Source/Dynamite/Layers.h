@@ -23,6 +23,9 @@ using namespace std;
 
 #define BarrierOp Alias
 
+#pragma warning(push)
+#pragma warning(disable: 4505) // unreferenced function was removed --TODO: use push/pop
+
 namespace Dynamite {
 
 struct ModelParameters
@@ -76,7 +79,12 @@ public:
         for (let& kv : m_nestedParameters) // log nested functions
             kv.second->LogParameters(kv.first + L".");
         for (let& kv : m_parameters) // log parameters defined right here
-            fprintf(stderr, "%S : %S\n", (prefix + kv.first).c_str(), kv.second.Shape().AsString().c_str());
+        {
+            let name = prefix + kv.first;
+            fprintf(stderr, "%S : %S\n", name.c_str(), kv.second.Shape().AsString().c_str());
+            // for debugging, implant the full name. This way, the full name will show up in AutoBatch log output.
+            const_cast<Parameter&>(kv.second).DebugUpdateName(name);
+        }
     }
 };
 typedef ModelParameters::ModelParametersPtr ModelParametersPtr;
@@ -187,7 +195,7 @@ struct Batch
     {
         let& shape = batch.front().Shape();
         let axis = (int)shape.Rank(); // add a new axis
-        return Reshape(ReduceSum(Splice(batch, Axis(axis)), Axis(axis)), shape);
+        return Reshape(ReduceSum(Splice(batch, Axis(axis)), Axis(axis)), shape, L"sum");
     }
 
     static Variable sum(const vector<vector<Variable>>& batch)
@@ -236,7 +244,7 @@ static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
     auto b = Parameter({ outputDim }, 0.0f, device, L"b");
     return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
     {
-        return ReLU(Times(W, input) + b + Times(R, prevOutput));
+        return ReLU(Times(W, input) + b + Times(R, prevOutput), L"RNNStep.h");
     });
 }
 
@@ -253,11 +261,22 @@ static TernaryModel LSTMStep(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 
-static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
+static UnaryBroadcastingModel Dense(size_t outputDim, bool bias, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
-    auto b = Parameter({ outputDim }, 0.0f, device, L"b");
-    return UnaryModel({ W, b }, [=](const Variable& x) { return Times(W, x) + b; });
+    if (bias)
+    {
+        auto b = Parameter({ outputDim }, 0.0f, device, L"b");
+        return UnaryModel({ W, b }, [=](const Variable& x) { return Times(W, x) + b; });
+    }
+    else
+        return UnaryModel({ W }, [=](const Variable& x) { return Times(W, x); });
+}
+
+// by default we have a bias
+static UnaryBroadcastingModel Dense(size_t outputDim, const DeviceDescriptor& device)
+{
+    return Dense(outputDim, true, device);
 }
 
 // create a Barrier function
@@ -331,7 +350,7 @@ struct Sequence
     {
         let fwd = Recurrence(stepFwd, initialStateFwd);
         let bwd = Recurrence(stepBwd, initialStateBwd, true);
-        let splice = Sequence::Map(BinaryModel([](const Variable& a, const Variable& b) { return Splice({ a, b }, Axis(0)); }));
+        let splice = Sequence::Map(BinaryModel([](const Variable& a, const Variable& b) { return Splice({ a, b }, Axis(0), L"biH"); }));
         vector<Variable> rFwd, rBwd;
         return UnarySequenceModel({}, { { L"stepFwd", stepFwd },{ L"stepBwd", stepBwd } },
         [=](vector<Variable>& res, const vector<Variable>& seq) mutable
@@ -357,27 +376,33 @@ struct Sequence
     }
 
     // TODO: This is somewhat broken presently.
-    static UnarySequenceModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
-    {
-        let embed = Dynamite::Embedding(embeddingDim, device);
-        return UnarySequenceModel(embed.Parameters(), {},
-        [=](vector<Variable>& res, const vector<Variable>& x)
-        {
-            return Map(embed);
-        });
-    }
+    //static UnarySequenceModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
+    //{
+    //    let embed = Dynamite::Embedding(embeddingDim, device);
+    //    return UnarySequenceModel(embed.Parameters(), {},
+    //    [=](vector<Variable>& res, const vector<Variable>& x)
+    //    {
+    //        return Map(embed);
+    //    });
+    //}
 };
+
+// built-in Softmax requires temp memory, so we use an explicit expression instead
+static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes())
+{
+    return z - ReduceLogSum(z, axis, L"smLogDenom");
+}
 
 // built-in Softmax requires temp memory, so we use an explicit expression instead
 static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes())
 {
-    return z - ReduceLogSum(z, axis);
+    return Exp(LogSoftmax(z, axis), L"sm");
 }
 
 // built-in Softplus is a BlockFunction, so need to replace it here
 static Variable Softplus(const Variable& z, const std::wstring& name)
 {
-    return LogAddExp(z, Constant::Scalar(z.GetDataType(), 0.0));
+    return LogAddExp(z, Constant::Scalar(z.GetDataType(), 0.0), name);
 }
 
 // we need a special definition since the built-in one creates a BlockFunction, which costs too much each time
@@ -388,9 +413,9 @@ static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label
     //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
     // TODO: reduce ops must be able to drop the axis
     // TODO: dynamite should rewrite Times() that is really a dot product
-    let loss = Minus(ReduceLogSum(z, axis), ReduceSum(ElementTimes(label, z), axis));
-    return Reshape(loss, NDShape());
-    //return loss; // Reshape(loss, NDShape());
+    let loss = Minus(ReduceLogSum(z, axis, L"ceLogDenom"), ReduceSum(ElementTimes(label, z, L"ceLabel"), axis, L"ceLogNumer"), L"ce");
+    //return Reshape(loss, NDShape(), L"ce");
+    return loss; // Reshape(loss, NDShape());
 }
 
 static inline void as_vector(vector<Variable>& res, const Variable& x)
@@ -399,7 +424,7 @@ static inline void as_vector(vector<Variable>& res, const Variable& x)
     let len = x.Shape().Dimensions().back();
     res.resize(len);
     for (size_t t = 0; t < len; t++)
-        res[t] = Index(x, t);
+        res[t] = Index(x, (int)t, L"as_vector[" + std::to_wstring(t) + L"]");
 }
 
 // TODO: move this out, and don't use Dynamite Model structure
@@ -450,3 +475,5 @@ struct StaticSequence // for CNTK Static
 };
 
 }; // namespace
+
+#pragma warning(pop)

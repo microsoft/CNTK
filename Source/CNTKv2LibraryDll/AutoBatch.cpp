@@ -20,7 +20,7 @@
 #include <vector>
 #include <string>
 
-//#define LOG_DETAILS   // if defined, log all forward and backward operations
+#define LOG_DETAILS   // if defined, log all forward and backward operations
 #define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
@@ -539,8 +539,12 @@ class Variable::AutoBatch
         let& inputs = f.m_inputs;
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
-        fprintf(stderr, "%s%S%S = %S(", prefix, f.Uid().c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
-        for (size_t i = 0; i < inputs.size() && i < 4; i++)
+        auto uid = f.Uid();
+        let& name = f.Name();
+        if (!name.empty())
+            uid = name + L":" + uid;
+        fprintf(stderr, "%s%S%S = %S (", prefix, uid.c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
+        for (size_t i = 0; i < inputs.size(); i++)
         {
             let& input = Unalias(inputs, i);
             let& fields = *input.m_dataFields;
@@ -551,6 +555,9 @@ class Variable::AutoBatch
                 auto uid = input.Uid();
                 if (uid.size() > 9 && wcscmp(uid.c_str() + uid.size() - 9, L"_Output_0") == 0)
                     uid.resize(uid.size() - 9);
+                let& name = input.IsOutput() ? input.Owner()->Name() : input.Name();
+                if (!name.empty())
+                    uid = name + L":" + uid;
                 return uid;
             };
             if (fields.m_lazyIndex.first)
@@ -560,9 +567,12 @@ class Variable::AutoBatch
             }
             else
                 fprintf(stderr, "%s%s%S%S", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input).c_str(), input.Shape().AsString().c_str());
+            if (i == 4 && inputs.size() > 5) // skip the middle ones
+            {
+                fprintf(stderr, ", ...+%d", (int)(inputs.size() - 5));
+                i = inputs.size() - 2;
+            }
         }
-        if (inputs.size() > 4)
-            fprintf(stderr, ", +%d", (int)(inputs.size() - 4));
         fprintf(stderr, ")\n");
     }
 

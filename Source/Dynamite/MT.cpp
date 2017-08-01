@@ -40,8 +40,8 @@ UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, 
     dropoutInputKeepProb;
     vector<UnarySequenceModel> layers;
     for (size_t i = 0; i < numLayers; i++)
-        layers.push_back(Dynamite::Sequence::BiRecurrence(RNNStep(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device),
-                                                          RNNStep(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device)));
+        layers.push_back(Dynamite::Sequence::BiRecurrence(RNNStep(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device, L"fwdInitialValue"),
+                                                          RNNStep(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device, L"fwdInitialValue")));
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
     return UnarySequenceModel(vector<ModelParametersPtr>(layers.begin(), layers.end()),
     [=](vector<Variable>& res, const vector<Variable>& x) mutable
@@ -61,11 +61,11 @@ UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, 
 //  - keys used for the weights
 //  - data gets interpolated
 // Here they are the same.
-TernaryModel AttentionModel(size_t attentionDim)
+TernaryModel AttentionModel(size_t attentionDim1)
 {
-    auto Q = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"Q"); // query projection
-    auto K = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"K"); // keys projection
-    auto v = Parameter({ attentionDim }, DataType::Float, GlorotUniformInitializer(), device, L"v"); // tanh projection
+    auto Q = Parameter({ attentionDim1, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"Q"); // query projection
+    auto K = Parameter({ attentionDim1, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"K"); // keys projection
+    auto v = Parameter({ attentionDim1 }, DataType::Float, GlorotUniformInitializer(), device, L"v"); // tanh projection
     return TernaryModel({ Q, K, v },
     [=](const Variable& query, const Variable& keys, const Variable& data) -> Variable
     {
@@ -73,9 +73,9 @@ TernaryModel AttentionModel(size_t attentionDim)
         let projectedQuery = Times(Q, query); // [A x 1]
         let projectedKeys  = Times(K, keys);  // [A x T]
         let tanh = Tanh(projectedQuery + projectedKeys); // [A x T]
-        let u = TransposeTimes(tanh, v); // [T] col vector
+        let u = TransposeTimes(tanh, v, L"vProj"); // [T] col vector
         let w = Dynamite::Softmax(u);
-        let res = Times(data, w); // [A]
+        let res = Times(data, w, L"att"); // [A]
         return res;
      });
 }
@@ -84,15 +84,16 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
 {
     dropoutInputKeepProb;
     // create all the layer objects
-    let initialState = Constant({ hiddenDim }, 0.0f, device);
-    let initialContext = Constant({ 2 * hiddenDim }, 0.0f, device); // 2 * because bidirectional --TODO: can this be inferred?
+    let initialState = Constant({ hiddenDim }, 0.0f, device, L"initialState");
+    let initialContext = Constant({ 2 * hiddenDim }, 0.0f, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     vector<BinaryModel> lstms;
     for (size_t i = 0; i < numLayers; i++)
         lstms.push_back(RNNStep(hiddenDim, device));
     let attentionModel = AttentionModel(attentionDim); // (state, encoding) -> interpolated encoding
     let barrier = Barrier();
-    auto merge = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
-    auto dense = Linear(tgtVocabSize, device); // dense layer without non-linearity
+    auto merge = Dense(hiddenDim, false, device); // one additional transform to merge attention into hidden state
+    auto dense = Dense(tgtVocabSize, true/*false*/, device); // dense layer without non-linearity
+    // TODO: Dense with no bias--does that make sense??
 
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
     // decode from a top layer of an encoder, using history as history
@@ -101,7 +102,12 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     map<wstring, ModelParametersPtr> nestedLayers;
     for (let& lstm : lstms)
         nestedLayers[L"lstm[" + std::to_wstring(nestedLayers.size()) + L"]"] = lstm;
-    nestedLayers.insert({ { L"attentionModel", attentionModel }, { L"merge", merge }, { L"dense", dense } });
+    nestedLayers.insert(
+    {
+        { L"attentionModel", attentionModel },
+        { L"merge", merge },
+        { L"dense", dense }
+    });
     return BinarySequenceModel({}, nestedLayers,
     [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
     {
@@ -117,7 +123,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
             // do recurrent step
             // In inference, history[t] would become res[t-1].
             // TODO: Why not learn the output of the first step, and skip the <s> and funky initial attention context?
-            let input = Splice({ history[t], attentionContext }, Axis(0));
+            let input = Splice({ history[t], attentionContext }, Axis(0), L"augInput");
             state = lstms[0](state, input);
             // compute attention vector
             attentionContext = attentionModel(state, /*keys=*/hEncsTensor, /*data=*/hEncsTensor);
@@ -190,8 +196,8 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
     [=](const /*batch*/vector<Variable>& features, const /*batch*/vector<Variable>& labels) mutable -> Variable
     {
         batchModel(lossesPerSequence, features, labels);             // batch-compute the criterion
-        let collatedLosses = Splice(lossesPerSequence, Axis(0));     // collate all seq lossesPerSequence
-        let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
+        let collatedLosses = Splice(lossesPerSequence, Axis(0), L"cesPerSeq");     // collate all seq lossesPerSequence
+        let mbLoss = ReduceSum(collatedLosses, Axis(0), L"ceBatch");  // aggregate over entire minibatch
         lossesPerSequence.clear();
         return mbLoss;
     });
@@ -229,29 +235,36 @@ void Train()
     // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep
 
     let parameters = model_fn.Parameters();
-    auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005));
-    // TODO: change to Adam
-    //auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.05));
+    //auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005));
+    let epochSize = 100000; // it's a small corpus, ~50k samples
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001 * sqrt(384), 0.00005 * sqrt(384), 0.000025 * sqrt(384), 0.00001 * sqrt(384) }, epochSize), MomentumAsTimeConstantSchedule(1000), true, MomentumAsTimeConstantSchedule(10000));
     unordered_map<Parameter, NDArrayViewPtr> gradients;
     for (let& p : parameters) // TODO: test that this works outside of the loop
         gradients[p] = nullptr; // TryGetGradient(p); // TODO: get the existing gradient matrix from the parameter--or just fill it in? Would block memory free
 
-    const size_t minibatchSize = 50;  // 384 is 32 sequences, assuming av. length ~12
+    const size_t minibatchSize = 384;// 50;  // 384 is 32 sequences, assuming av. length ~12
     vector<vector<Variable>> args; // [variable index][batch index]  --TODO: does this really work outside the loop?
+    size_t totalLabels = 0;
     for (size_t mbCount = 0; true; mbCount++)
     {
         // get next minibatch
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
             break;
-        fprintf(stderr, "#seq: %d, #words: %d\n", (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences, (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples);
+        let numLabels = minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples;
+        totalLabels += numLabels;
+        fprintf(stderr, "#seq: %d, #words: %d, lr=%.8f\n",
+                (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences,
+                (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples,
+                learner->LearningRate());
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, device);
         // train minibatch
         let mbLoss = criterion_fn(args[0], args[1]);
-        let loss1 = mbLoss.Value()->AsScalar<float>(); // note: this does the GPU sync, so better do that only every N
-        fprintf(stderr, "CrossEntropy loss = %.7f\n", loss1 / minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
-        //mbLoss.Backward(gradients);
-        //learner->Update(gradients, minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
+        let lossPerLabel = mbLoss.Value()->AsScalar<float>() / numLabels; // note: this does the GPU sync, so better do that only every N
+        fprintf(stderr, "CrossEntropy loss = %.7f; PPL = %.3f; seenLabels=%d\n", lossPerLabel, exp(lossPerLabel), (int)totalLabels);
+        // backprop and model update
+        mbLoss.Backward(gradients);
+        learner->Update(gradients, numLabels);
     }
 }
 
