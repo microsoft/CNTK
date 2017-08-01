@@ -1041,6 +1041,55 @@ def test_base64_is_equal_image(tmpdir):
         images2 = mb[images2_stream].asarray()
         assert(images1 == images2).all()
 
+def test_crop_dimensionality(tmpdir):
+    import io; from PIL import Image
+    np.random.seed(1)
+
+    file_mapping_path = str(tmpdir / 'file_mapping.txt')
+    with open(file_mapping_path, 'w') as file_mapping:
+        for i in range(5):
+            data = np.random.randint(0, 2**8, (20, 40, 3))
+            image = Image.fromarray(data.astype('uint8'), "RGB")
+            buf = io.BytesIO()
+            image.save(buf, format='PNG')
+            assert image.width == 40 and image.height == 20
+            
+            label = str(i) 
+            # save to mapping + png file
+            file_name = label + '.png'
+            with open(str(tmpdir/file_name), 'wb') as f:
+                f.write(buf.getvalue())
+            file_mapping.write('.../%s\t%s\n' % (file_name, label))
+
+    transforms1 = [
+        xforms.scale(width=40, height=20, channels=3),
+        xforms.crop(crop_type='randomside', 
+                    crop_size=(20, 10), side_ratio=(0.2, 0.5),
+                    jitter_type='uniratio')]
+
+    transforms2 = [
+        xforms.crop(crop_type='randomside', 
+                    crop_size=(20, 10), side_ratio=(0.2, 0.5),
+                    jitter_type='uniratio')]
+
+    d1 = ImageDeserializer(file_mapping_path,
+        StreamDefs(
+            images1=StreamDef(field='image', transforms=transforms1),
+            labels1=StreamDef(field='label', shape=10)))
+
+    d2 = ImageDeserializer(file_mapping_path,
+        StreamDefs(
+            images2=StreamDef(field='image', transforms=transforms2),
+            labels2=StreamDef(field='label', shape=10)))
+
+    mbs = MinibatchSource([d1, d2])
+    for j in range(5):
+        mb = mbs.next_minibatch(1)
+        images1 = mb[mbs.streams.images1].asarray()
+        images2 = mb[mbs.streams.images2].asarray()
+        assert images1.shape == (1, 1, 3, 10, 20)
+        assert (images1 == images2).all()
+
 def test_prefetch_with_unpacking(tmpdir):
     data = r'''0  |S0 1 1 1 1   |S1 1000
 1   |S0 2 2 2 2  |S1 100
