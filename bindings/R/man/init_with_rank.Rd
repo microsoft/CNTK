@@ -7,7 +7,9 @@
 init_with_rank(initializer, output_rank = NULL, filter_rank = NULL)
 }
 \arguments{
-\item{filter_rank}{}
+\item{output_rank}{(int) output rank}
+
+\item{filter_rank}{(int) filter rank}
 
 \item{init}{- Initializer to be overriden}
 }

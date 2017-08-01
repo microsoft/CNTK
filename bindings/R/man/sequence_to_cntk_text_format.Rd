@@ -7,7 +7,10 @@
 sequence_to_cntk_text_format(seq_inx, alias_tensor_map)
 }
 \arguments{
-\item{alias_tensor_map}{}
+\item{seq_inx}{number of current sequence}
+
+\item{alias_tensor_map}{(named list) maps alias to tensor (matrix). Tensors
+are assumed to have dynamic axes}
 }
 \description{
 Converts a list of NumPy arrays representing tensors of inputs into a format

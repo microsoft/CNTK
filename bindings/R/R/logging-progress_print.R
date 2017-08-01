@@ -38,7 +38,7 @@ ProgressPrinter <- function(freq = NULL, first = 0, tag = '',
 
 #' Printer - End Progress Pring
 #'
-#' @param printer
+#' @param printer Printer instance on which to perform the operation
 #' @param msg
 #'
 #' @export
@@ -48,7 +48,7 @@ printer_end_progress_print <- function(printer, msg = '') {
 
 #' Printer - Log
 #'
-#' @param printer
+#' @param printer Printer instance on which to perform the operation
 #' @param message
 #'
 #' @export
@@ -58,7 +58,7 @@ printer_log <- function(printer, message) {
 
 #' Printer - On Training Update End
 #'
-#' @param printer
+#' @param printer Printer instance on which to perform the operation
 #'
 #' @export
 printer_on_training_update_end <- function(printer) {
@@ -67,7 +67,7 @@ printer_on_training_update_end <- function(printer) {
 
 #' Printer - On Write Distributed Sync Update
 #'
-#' @param printer
+#' @param printer Printer instance on which to perform the operation
 #' @param samples
 #' @param updates
 #' @param aggregate_metric
@@ -85,7 +85,7 @@ printer_on_write_distributed_sync_update <- function(printer, samples,
 
 #' Printer - On Write Test Summary
 #'
-#' @param printer
+#' @param printer Printer instance on which to perform the operation
 #' @param samples
 #' @param updates
 #' @param summaries
@@ -107,7 +107,7 @@ printer_on_write_test_summary <- function(printer, samples, updates,
 
 #' any writer
 #'
-#' @param printer
+#' @param printer Printer instance on which to perform the operation
 #' @param samples
 #' @param updates
 #' @param aggregate_metric
@@ -122,9 +122,9 @@ printer_on_write_test_update <- function(printer, samples, updates,
 	)
 }
 
-#' any writer
+#' Printer - On Write Training Summary
 #'
-#' @param printer
+#' @param printer Printer instance on which to perform the operation
 #' @param samples
 #' @param updates
 #' @param summaries
@@ -147,9 +147,9 @@ printer_on_write_training_summary <- function(printer, samples, updates,
 	)
 }
 
-#' any writer
+#' Printer - Training Update on Write
 #'
-#' @param printer
+#' @param printer Printer instance on which to perform the operation
 #' @param samples
 #' @param updates
 #' @param aggregate_loss
@@ -166,10 +166,9 @@ printer_on_write_training_update <- function(printer, samples, updates,
 	)
 }
 
+#' Printer - Write
 #'
-#'
-#' @param printer
-#'
+#' @param printer Printer instance on which to perform the operation
 #' @param key
 #' @param value
 #'
@@ -182,10 +181,9 @@ printer_write <- function(printer, key, value) {
 }
 
 
-#'
+#' New TensorBoard Progress Writer
 #'
 #' @param freq
-#'
 #' @param log_dir
 #' @param rank
 #' @param model
@@ -201,7 +199,7 @@ TensorBoardProgressWriter <- function(freq = NULL, log_dir = '.', rank = NULL,
 	)
 }
 
-#'
+#' Close Tensorboard
 #'
 #' @param tensorboard_writer
 #'
@@ -210,7 +208,7 @@ tensorboard_close <- function(tensorboard_writer) {
 	tensorboard_writer$close()
 }
 
-#'
+#' Flush Tensorboard
 #'
 #' @param tensorboard_writer
 #'
@@ -219,10 +217,9 @@ tensorboard_flush <- function(tensorboard_writer) {
 	tensorboard_writer$flush()
 }
 
-#'
+#' TensorBoard Write Value
 #'
 #' @param tensorboard_writer
-#'
 #' @param name string (optional) the name of the Function instance in the network
 #' @param value
 #' @param step
@@ -237,10 +234,9 @@ tensorboard_write_value <- function(tensorboard_writer, name, value, step) {
 }
 
 
-#'
+#' Training Summary Progress Callback
 #'
 #' @param epoch_size
-#'
 #' @param callback
 #'
 #' @export
@@ -252,10 +248,9 @@ TrainingSummaryProgressCallback <- function(epoch_size, callback) {
 }
 
 
-#'
+#' Log Number of Parameters
 #'
 #' @param model
-#'
 #' @param trace_level
 #'
 #' @export

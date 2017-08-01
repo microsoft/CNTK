@@ -7,7 +7,11 @@
 ImageDeserializer(filename, streams)
 }
 \arguments{
-\item{streams}{}
+\item{filename}{(str) file name of the input data file}
+
+\item{streams}{any dictionary-like object that contains a mapping from
+stream names to StreamDef objects. Each StreamDef object configures a label
+stream.}
 }
 \description{
 Configures the image reader that reads images and corresponding labels from

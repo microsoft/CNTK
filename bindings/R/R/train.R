@@ -64,7 +64,7 @@ Trainer <- function(model, criterion, parameter_learners,
 
 #' Restore Trainer From Checkpoint
 #'
-#' @param trainer
+#' @param trainer the Trainer instance on which to perform the operation
 #' @param filename
 #'
 #' @export
@@ -74,7 +74,7 @@ restore_trainer_from_checkpoint <- function(trainer, filename) {
 
 #' Save Trainer Checkpoint
 #'
-#' @param trainer
+#' @param trainer the Trainer instance on which to perform the operation
 #' @param filename
 #'
 #' @export
@@ -84,7 +84,7 @@ save_trainer_checkpoint  <- function(trainer, filename) {
 
 #' Summarize Test Progress
 #'
-#' @param trainer
+#' @param trainer the Trainer instance on which to perform the operation
 #'
 #' @export
 summarize_test_progress <- function(trainer) {
@@ -93,7 +93,7 @@ summarize_test_progress <- function(trainer) {
 
 #' Summarize Training Progress
 #'
-#' @param trainer
+#' @param trainer the Trainer instance on which to perform the operation
 #'
 #' @export
 summarize_training_progress <- function(trainer) {
@@ -102,7 +102,7 @@ summarize_training_progress <- function(trainer) {
 
 #' Test Minibatch
 #'
-#' @param trainer
+#' @param trainer the Trainer instance on which to perform the operation
 #' @param arguments
 #' @param device - instance of DeviceDescriptor
 #'
@@ -116,7 +116,7 @@ test_minibatch <- function(trainer, arguments, device = NULL) {
 
 #' Train Minibatch
 #'
-#' @param trainer
+#' @param trainer the Trainer instance on which to perform the operation
 #' @param data
 #' @param outputs
 #' @param device - instance of DeviceDescriptor

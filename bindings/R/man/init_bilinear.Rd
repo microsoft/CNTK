@@ -7,7 +7,9 @@
 init_bilinear(kernel_width, kernel_height)
 }
 \arguments{
-\item{kernel_height}{}
+\item{kernel_width}{kernel width}
+
+\item{kernel_height}{kernel height}
 }
 \description{
 Bilinear Initializer

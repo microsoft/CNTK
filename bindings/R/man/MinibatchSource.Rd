@@ -13,7 +13,61 @@ MinibatchSource(deserializers, max_samples = IO_INFINITELY_REPEAT,
   truncation_length = 0, randomize = TRUE)
 }
 \arguments{
-\item{randomize}{}
+\item{deserializers}{(deserializer or list) deserializers to be used in the
+composite reader}
+
+\item{max_samples}{(int, defaults to IO_INFINITELY_REPEAT) The maximum
+number of input samples (not ‘label samples’) the reader can produce. After
+this number has been reached, the reader returns empty minibatches on
+subsequent calls to next_minibatch(). max_samples and max_sweeps are
+mutually exclusive, an exception will be raised if both have non-default
+values.}
+
+\item{max_sweeps}{(int, defaults to IO_INFINITELY_REPEAT) The maximum number
+of of sweeps over the input dataset After this number has been reached, the
+reader returns empty minibatches on subsequent calls to func:next_minibatch.
+max_samples and max_sweeps are mutually exclusive, an exception will be
+raised if both have non-default values.}
+
+\item{randomization_window_in_chunks}{(int, defaults to
+IO_DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS) size of the randomization window
+in chunks, non-zero value enables randomization.
+randomization_window_in_chunks and randomization_window_in_samples are
+mutually exclusive, an exception will be raised if both have non-zero
+values.}
+
+\item{randomization_window_in_samples}{(int, defaults to 0)  size of the
+randomization window in samples, non-zero value enables randomization.
+randomization_window_in_chunks and randomization_window_in_samples are
+mutually exclusive, an exception will be raised if both have non-zero
+values.}
+
+\item{randomization_seed}{(int, defaults to 0) Initial randomization seed
+value (incremented every sweep when the input data is re-randomized).}
+
+\item{trace_level}{(TraceLevel) the output verbosity level, defaults to the
+current logging verbosity level given by get_trace_level().}
+
+\item{multithreaded_deserializer}{(bool) specifies if the deserialization
+should be done on a single or multiple threads. Defaults to None, which is
+effectively “auto” (multhithreading is disabled unless ImageDeserializer is
+present in the deserializers list). False and True faithfully turn the
+multithreading off/on.}
+
+\item{frame_mode}{(bool) switches the frame mode on and off. If the frame
+mode is enabled the input data will be processed as individual frames
+ignoring all sequence information (this option cannot be used for BPTT, an
+exception will be raised if frame mode is enabled and the truncation length
+is non-zero).}
+
+\item{truncation_length}{(int) truncation length in samples, non-zero value
+enables the truncation (only applicable for BPTT, cannot be used in frame
+mode, an exception will be raised if frame mode is enabled and the
+truncation length is non-zero).}
+
+\item{randomize}{(bool) Enables or disables randomization; use
+randomization_window_in_chunks or randomization_window_in_samples to specify
+the randomization range}
 }
 \description{
 Source of minibatch data

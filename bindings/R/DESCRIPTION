@@ -11,8 +11,8 @@ URL: https://github.com/Microsoft/CNTK, https://akzaidi.github.io/CNTK//index.ht
 BugReports: https://github.com/Microsoft/CNTK/issues
 Description: Provides an R interface to the CNTK deep-learning toolkit.
 Depends: R (>= 3.2.3)
-License: MIT
 Encoding: UTF-8
+License: file LICENSE
 RoxygenNote: 6.0.1.9000
 Imports: reticulate
 Suggests: knitr,

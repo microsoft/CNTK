@@ -7,8 +7,10 @@
 restore_mb_from_checkpoint(mb_source, checkpoint)
 }
 \arguments{
-\item{checkpoint}{}
+\item{mb_source}{minibatch source on which to perform the operation}
+
+\item{checkpoint}{(dict) checkpoint to restore from}
 }
 \description{
-Sets the state of the checkpoint.
+Restores the MinibatchSource state from the specified checkpoint.
 }

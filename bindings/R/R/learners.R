@@ -6,15 +6,16 @@
 #' parameter values using first order gradients. To instantiate a concrete
 #' learner, use the factory methods in this module.
 #'
-#' @param parameters – list of network parameters list of parameter associated with this learner
-#' @param learningRateSchedule get_learning_rate(learner)
+#' @param parameters – list of network parameters list of parameter associated
+#' with this learner
+#' @param learning_rate_schedule get_learning_rate(learner)
 #' @example \dontrun{
 #' reset_learning_rate(learner, learning_rate)
 #' update_learner(learner, gradient_values, training_sample_count)
 #' }
 #'
 #' @export
-Learner <- function(parameters, learningRateSchedule) {
+Learner <- function(parameters, learning_rate_schedule) {
 	cntk$learners$Learner(
 		parameters,
 		learningRateSchedule

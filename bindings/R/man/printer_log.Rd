@@ -7,6 +7,8 @@
 printer_log(printer, message)
 }
 \arguments{
+\item{printer}{Printer instance on which to perform the operation}
+
 \item{message}{}
 }
 \description{

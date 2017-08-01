@@ -10,9 +10,9 @@ summarize_test_progress(trainer)
 summarize_test_progress(trainer)
 }
 \arguments{
-\item{trainer}{}
+\item{trainer}{the Trainer instance on which to perform the operation}
 
-\item{evaluator}{}
+\item{evaluator}{the Evaluator instance from which to get progress}
 }
 \description{
 Summarize Evaluator Test Progress

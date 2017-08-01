@@ -9,8 +9,8 @@ IO_MAX_UNPOOLING <- 0L
 
 #' Absolute Value
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_abs <- function(x, name = '') {
@@ -28,8 +28,8 @@ op_abs <- function(x, name = '') {
 #' specific instance of the aliased Function/Variable in the computation graph
 #' instead of substituting all usages of the aliased Function/Variable.
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_alias <- function(x, name = '') {
@@ -38,9 +38,9 @@ op_alias <- function(x, name = '') {
 
 #' Argmax Across Axis
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param axis - axis across which to perform operation
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param axis axis across which to perform operation
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_argmax <- function(x, axis = NULL, name = '') {
@@ -53,9 +53,9 @@ op_argmax <- function(x, axis = NULL, name = '') {
 
 #' Argmin Across Axis
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param axis - axis across which to perform operation
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param axis axis across which to perform operation
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_argmin <- function(x, axis = NULL, name = '') {
@@ -102,7 +102,7 @@ as_block <- function(composite, block_arguments_map, block_op_name,
 #' graph of Functions underlying the specified rootFunction.
 #'
 #' @param root_function
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 as_composite <- function(root_function, name = '') {
@@ -138,7 +138,7 @@ as_composite <- function(root_function, name = '') {
 #'
 #' @param ref
 #' @param input
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_assign <- function(ref, input, name = '') {
@@ -178,7 +178,7 @@ op_associative_multi_arg <- function(f) {
 #' @param blent_time_constant
 #' @param epsilon (float, default 0.00001) - added to avoid division by 0
 #' @param use_cudnn_engine
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #' @param running_count
 #'
 #' @export
@@ -210,7 +210,7 @@ op_batch_normalization <- function(operand, scale, bias, running_mean,
 #' smallest integer greater than or equal to the input.
 #'
 #' @param arg
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_ceil <- function(arg, name = '') {
@@ -223,10 +223,10 @@ op_ceil <- function(arg, name = '') {
 #' and max_value, i.e. min(max(x, min_value), max_value).  The output tensor
 #' has the same shape as x.
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #' @param min_value
 #' @param max_value
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_clip <- function(x, min_value, max_value, name = '') {
@@ -250,7 +250,7 @@ op_clip <- function(x, min_value, max_value, name = '') {
 #' output.
 #'
 #' @param operands
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_combine <- function(operands, name = '') {
@@ -265,7 +265,7 @@ op_combine <- function(operands, name = '') {
 #' @param value
 #' @param shape - list of ints representing tensor shape
 #' @param dtype - data type to be used ("float32", "float64", or "auto")
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_constant <- function(value = NULL, shape = NULL, dtype = 'auto', name = '') {
@@ -307,7 +307,7 @@ op_constant <- function(value = NULL, shape = NULL, dtype = 'auto', name = '') {
 #' @param sharing
 #' @param auto_padding
 #' @param max_temp_mem_size_in_samples
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_convolution <- function(convolution_map, operand, strides = c(1),
@@ -356,7 +356,7 @@ op_convolution <- function(convolution_map, operand, strides = c(1),
 #' @param auto_padding
 #' @param output_shape - user expected output shape after convolution transpose.
 #' @param max_temp_mem_size_in_samples
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_convolution_transpose <- function(convolution_map, operand, strides = c(1),
@@ -381,8 +381,8 @@ op_convolution_transpose <- function(convolution_map, operand, strides = c(1),
 #' Computes the element-wise cosine of x: The output tensor has the same shape
 #' as x.
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_cos <- function(x, name = '') {
@@ -401,10 +401,10 @@ op_cos <- function(x, name = '') {
 #' are not set to 0 are multiplied with (1 / (1 - dropout_rate)), this is not
 #' necessary.
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #' @param dropout_rate
 #' @param seed
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_dropout <- function(x, dropout_rate = 0, seed = 4294967293, name = '') {
@@ -420,7 +420,7 @@ op_dropout <- function(x, dropout_rate = 0, seed = 4294967293, name = '') {
 #'
 #' @param left - left side tensor
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_element_divide <- function(left, right, name = '') {
@@ -436,7 +436,7 @@ op_element_divide <- function(left, right, name = '') {
 #' @param left - left side tensor
 #'
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_element_max <- function(left, right, name = '') {
@@ -452,7 +452,7 @@ op_element_max <- function(left, right, name = '') {
 #' @param left - left side tensor
 #'
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_element_min <- function(left, right, name = '') {
@@ -469,7 +469,7 @@ op_element_min <- function(left, right, name = '') {
 #'
 #' @param value_if_true
 #' @param value_if_false
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_element_select <- function(flag, value_if_true, value_if_false, name = '') {
@@ -486,7 +486,7 @@ op_element_select <- function(flag, value_if_true, value_if_false, name = '') {
 #' @param left - left side tensor
 #'
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_element_times <- function(left, right, name = '') {
@@ -501,7 +501,7 @@ op_element_times <- function(left, right, name = '') {
 #'
 #' @param left - left side tensor
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_elu <- function(left, right, name = '') {
@@ -516,7 +516,7 @@ op_elu <- function(left, right, name = '') {
 #'
 #' @param left - left side tensor
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_equal <- function(left, right, name = '') {
@@ -529,9 +529,9 @@ op_equal <- function(left, right, name = '') {
 
 #' Element-wise Exponential
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #'
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_exp <- function(x, name = '') {
@@ -541,7 +541,7 @@ op_exp <- function(x, name = '') {
 #' Floor
 #'
 #' @param arg
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_floor <- function(arg, name = '') {
@@ -555,7 +555,7 @@ op_floor <- function(arg, name = '') {
 #' @param features
 #' @param blank_token_id
 #' @param delay_constraint
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_forward_backward <- function(graph, features, blank_token_id,
@@ -587,7 +587,7 @@ op_gather <- function(reference, indices) {
 #'
 #' @param left - left side tensor
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_greater <- function(left, right, name = '') {
@@ -603,7 +603,7 @@ op_greater <- function(left, right, name = '') {
 #'
 #' @param left - left side tensor
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_greater_equal <- function(left, right, name = '') {
@@ -616,8 +616,8 @@ op_greater_equal <- function(left, right, name = '') {
 
 #' Hardmax
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_hardmax <- function(x, name = '') {
@@ -654,7 +654,7 @@ op_input_variable <- function(shape, dtype = 'float32', needs_gradient = FALSE,
 #' Labels To Graph
 #'
 #' @param labels
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_labels_to_graph <- function(labels, name = '') {
@@ -663,8 +663,8 @@ op_labels_to_graph <- function(labels, name = '') {
 
 #' Leaky Relu
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_leaky_relu <- function(x, name = '') {
@@ -675,7 +675,7 @@ op_leaky_relu <- function(x, name = '') {
 #'
 #' @param left - left side tensor
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_less <- function(left, right, name = '') {
@@ -690,7 +690,7 @@ op_less <- function(left, right, name = '') {
 #'
 #' @param left - left side tensor
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_less_equal <- function(left, right, name = '') {
@@ -703,8 +703,8 @@ op_less_equal <- function(left, right, name = '') {
 
 #' Element-wise Natural Log
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_log <- function(x, name = '') {
@@ -718,7 +718,7 @@ op_log <- function(x, name = '') {
 #'
 #' @param left - left side tensor
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_log_add_exp <- function(left, right, name = '') {
@@ -733,7 +733,7 @@ op_log_add_exp <- function(left, right, name = '') {
 #'
 #' @param left - left side tensor
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_minus <- function(left, right, name = '') {
@@ -746,8 +746,8 @@ op_minus <- function(left, right, name = '') {
 
 #' Element-wise Negation
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_negate <- function(x, name = '') {
@@ -758,7 +758,7 @@ op_negate <- function(x, name = '') {
 #'
 #' @param left - left side tensor
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_not_equal <- function(left, right, name = '') {
@@ -771,11 +771,11 @@ op_not_equal <- function(left, right, name = '') {
 
 #' Create One-Hot Encoding
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #' @param num_classes
 #' @param sparse_output
-#' @param axis - axis across which to perform operation
-#' @param name (str) - the name of the Function instance in the network
+#' @param axis axis across which to perform operation
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_one_hot <- function(x, num_classes, sparse_output = FALSE, axis = -1,
@@ -797,7 +797,7 @@ op_one_hot <- function(x, num_classes, sparse_output = FALSE, axis = -1,
 #' @param num_layers
 #' @param bidirectional
 #' @param recurrent_op
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_optimized_rnnstack <- function(operand, weights, hidden_size, num_layers,
@@ -820,7 +820,7 @@ op_optimized_rnnstack <- function(operand, weights, hidden_size, num_layers,
 #' @param dtype - data type to be used ("float32", "float64", or "auto")
 #' @param dynamic_axes
 #' @param needs_gradient
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_output_variable <- function(shape, dtype, dynamic_axes,
@@ -837,8 +837,8 @@ op_output_variable <- function(shape, dtype, dynamic_axes,
 #' Parametric ReLU
 #'
 #' @param alpha
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_param_relu <- function(alpha, x, name = '') {
@@ -858,7 +858,7 @@ op_param_relu <- function(alpha, x, name = '') {
 #' init_glorot_uniform()) – initial value of weights W
 #' @param dtype - data type to be used ("float32", "float64", or "auto")
 #' @param device - instance of DeviceDescriptor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_parameter <- function(shape = NULL, init = NULL, dtype = "auto",
@@ -877,7 +877,7 @@ op_parameter <- function(shape = NULL, init = NULL, dtype = "auto",
 #' @param operand
 #' @param mean
 #' @param inv_stddev
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_dim_mean_variance_normalize <- function(operand, mean, inv_stddev,
@@ -894,7 +894,7 @@ op_dim_mean_variance_normalize <- function(operand, mean, inv_stddev,
 #'
 #' @param shape - list of ints representing tensor shape
 #' @param dynamic_axes
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_placeholder <- function(shape = NULL, dynamic_axes = NULL, name = '') {
@@ -909,7 +909,7 @@ op_placeholder <- function(shape = NULL, dynamic_axes = NULL, name = '') {
 #'
 #' @param left - left side tensor
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_plus <- function(left, right, name = '') {
@@ -926,7 +926,7 @@ op_plus <- function(left, right, name = '') {
 #' @param auto_padding
 #' @param ceil_out_dim
 #' @param include_pad
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_pooling <- function(operand, pooling_type, pooling_window_shape,
@@ -948,7 +948,7 @@ op_pooling <- function(operand, pooling_type, pooling_window_shape,
 #'
 #' @param base
 #' @param exponent
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_pow <- function(base, exponent, name = '') {
@@ -965,7 +965,7 @@ op_pow <- function(base, exponent, name = '') {
 #' @param num_samples
 #' @param allow_duplicates
 #' @param seed
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_random_sample <- function(weights, num_samples, allow_duplicates,
@@ -985,7 +985,7 @@ op_random_sample <- function(weights, num_samples, allow_duplicates,
 #' @param num_samples
 #' @param allow_duplicates
 #' @param seed
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_random_sample_inclusion_frequency <- function(weights, num_samples,
@@ -1002,8 +1002,8 @@ op_random_sample_inclusion_frequency <- function(weights, num_samples,
 
 #' Element-wise Reciprocal
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_reciprocal <- function(x, name = '') {
@@ -1012,9 +1012,9 @@ op_reciprocal <- function(x, name = '') {
 
 #' Reconcile Dynamic Axes
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #' @param dynamic_axes_as
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_reconcile_dynamic_axes <- function(x, dynamic_axes_as, name = '') {
@@ -1027,9 +1027,9 @@ op_reconcile_dynamic_axes <- function(x, dynamic_axes_as, name = '') {
 
 #' Reduce Max Across Axis
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param axis - axis across which to perform operation
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param axis axis across which to perform operation
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_reduce_log_sum_exp <- function(x, axis = NULL, name = '') {
@@ -1042,9 +1042,9 @@ op_reduce_log_sum_exp <- function(x, axis = NULL, name = '') {
 
 #' Reduce Max Across Axis
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param axis - axis across which to perform operation
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param axis axis across which to perform operation
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_reduce_max <- function(x, axis = NULL, name = '') {
@@ -1057,9 +1057,9 @@ op_reduce_max <- function(x, axis = NULL, name = '') {
 
 #' Reduce Mean Across Axis
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param axis - axis across which to perform operation
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param axis axis across which to perform operation
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_reduce_mean <- function(x, axis = NULL, name = '') {
@@ -1072,9 +1072,9 @@ op_reduce_mean <- function(x, axis = NULL, name = '') {
 
 #' Reduce Minimum Across Axis
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param axis - axis across which to perform operation
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param axis axis across which to perform operation
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_reduce_min <- function(x, axis = NULL, name = '') {
@@ -1087,9 +1087,9 @@ op_reduce_min <- function(x, axis = NULL, name = '') {
 
 #' Reduce Prod Across Axis
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param axis - axis across which to perform operation
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param axis axis across which to perform operation
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_reduce_prod <- function(x, axis = NULL, name = '') {
@@ -1102,9 +1102,9 @@ op_reduce_prod <- function(x, axis = NULL, name = '') {
 
 #' Reduce Sum Across Axis
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param axis - axis across which to perform operation
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param axis axis across which to perform operation
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_reduce_sum <- function(x, axis = NULL, name = '') {
@@ -1117,9 +1117,9 @@ op_reduce_sum <- function(x, axis = NULL, name = '') {
 
 #' Rectified Linear Units Operation
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #'
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_relu <- function(x, name = '') {
@@ -1128,11 +1128,11 @@ op_relu <- function(x, name = '') {
 
 #' Reshape
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #' @param shape - list of ints representing tensor shape
 #' @param begin_axis - shape replacement begins at this axis
 #' @param end_axis - shape replacement ends at this axis (non-inclusive)
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_reshape <- function(x, shape, begin_axis = NULL, end_axis = NULL,
@@ -1151,7 +1151,7 @@ op_reshape <- function(x, shape, begin_axis = NULL, end_axis = NULL,
 #' @param conv_feature_map
 #' @param rois
 #' @param roi_output_shape
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_roipooling <- function(conv_feature_map, rois, roi_output_shape, name='') {
@@ -1166,7 +1166,7 @@ op_roipooling <- function(conv_feature_map, rois, roi_output_shape, name='') {
 #' Element-wise Rounding
 #'
 #' @param arg
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_round <- function(arg, name = '') {
@@ -1175,8 +1175,8 @@ op_round <- function(arg, name = '') {
 
 #' Element-wise Sigmoid
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_sigmoid <- function(x, name = '') {
@@ -1185,8 +1185,8 @@ op_sigmoid <- function(x, name = '') {
 
 #' Element-wise Sine
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_sin <- function(x, name = '') {
@@ -1195,11 +1195,11 @@ op_sin <- function(x, name = '') {
 
 #' Slice
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param axis - axis across which to perform operation
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param axis axis across which to perform operation
 #' @param begin_index - index where slicing starts
 #' @param end_index - index where slicing ends
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_slice <- function(x, axis, begin_index, end_index, name = '') {
@@ -1228,9 +1228,9 @@ op_slice <- function(x, axis, begin_index, end_index, name = '') {
 #'
 #' If axis is given, the softmax will be computed along that axis.
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param axis - axis across which to perform operation
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param axis axis across which to perform operation
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_softmax <- function(x, axis = NULL, name = '') {
@@ -1253,9 +1253,9 @@ op_softmax <- function(x, axis = NULL, name = '') {
 #'
 #' The output tensor has the same shape as x.
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #' @param steepness
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_softplus <- function(x, steepness = 1, name = '') {
@@ -1281,8 +1281,8 @@ op_splice <- function(inputs, ...) {
 
 #' Element-wise Square-root
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_sqrt <- function(x, name = '') {
@@ -1291,8 +1291,8 @@ op_sqrt <- function(x, name = '') {
 
 #' Element-wise Square
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_square <- function(x, name = '') {
@@ -1302,7 +1302,7 @@ op_square <- function(x, name = '') {
 #' Stop Gradient
 #'
 #' @param input
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_stop_gradient <- function(input, name = '') {
@@ -1312,10 +1312,10 @@ op_stop_gradient <- function(input, name = '') {
 
 #' Swap Axes
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #' @param axis1
 #' @param axis2
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_swap_axes <- function(x, axis1 = 0, axis2 = 1, name = '') {
@@ -1329,8 +1329,8 @@ op_swap_axes <- function(x, axis1 = 0, axis2 = 1, name = '') {
 
 #' Hyperbolic tan
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param x matrix or CNTK Function that outputs a tensor
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_tanh <- function(x, name = '') {
@@ -1343,7 +1343,7 @@ op_tanh <- function(x, name = '') {
 #' @param right - right side tensor
 #' @param output_rank
 #' @param infer_input_rank_to_map
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_times <- function(left, right, output_rank = 1, infer_input_rank_to_map = -1,
@@ -1362,7 +1362,7 @@ op_times <- function(left, right, output_rank = 1, infer_input_rank_to_map = -1,
 #' @param left - left side tensor
 #'
 #' @param right - right side tensor
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_times_transpose <- function(left, right, name = '') {
@@ -1375,10 +1375,10 @@ op_times_transpose <- function(left, right, name = '') {
 
 #' To Sequence
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #' @param sequence_lengths
 #' @param sequence_axis_name_prefix
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_to_sequence <- function(x, sequence_lengths = NULL,
@@ -1394,10 +1394,10 @@ op_to_sequence <- function(x, sequence_lengths = NULL,
 
 #' To Sequence Like
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #'
 #' @param dynamic_axes_like
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_to_sequence_like <- function(x, dynamic_axes_like, name = '') {
@@ -1410,9 +1410,9 @@ op_to_sequence_like <- function(x, dynamic_axes_like, name = '') {
 
 #' Transpose
 #'
-#' @param x - matrix or CNTK Function that outputs a tensor
+#' @param x matrix or CNTK Function that outputs a tensor
 #' @param perm
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_transpose <- function(x, perm, name = '') {
@@ -1432,7 +1432,7 @@ op_transpose <- function(x, perm, name = '') {
 #' @param strides (int or tuple of ints, defaults to 1) – stride of the
 #' operation. Use a list of ints to specify a per-axis value.
 #' @param auto_padding
-#' @param name (str) - the name of the Function instance in the network
+#' @param name (str) the name of the Function instance in the network
 #'
 #' @export
 op_unpooling <- function(operand, pooling_input, unpooling_window_shape,

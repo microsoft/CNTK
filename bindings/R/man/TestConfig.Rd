@@ -9,8 +9,21 @@ TestConfig(minibatch_source = NULL, minibatch_size = 32,
   mb_size = NULL)
 }
 \arguments{
-\item{mb_size}{}
+\item{:}{minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for cross validation}
+
+\item{:}{minibatch_size(int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): minibatch schedule for cross validation}
+
+\item{:}{model_inputs_to_streams (dict): mapping between input variables and input streams
+If NULL, the mapping provided to the training session constructor is used.
+Don't specify this if `minibatch_source` is a tuple of numpy/scipy arrays.}
+
+\item{:}{criterion (:class:`~cntk.ops.functions.Function`): criterion function.
+Must be specified if `minibatch_source` is a tuple of numpy/scipy arrays.}
+
+\item{:}{source (:class:`~cntk.io.MinibatchSource`): DEPRECATED, use minibatch_source instead}
+
+\item{:}{mb_size(int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): DEPRECATED, use minibatch_size instead}
 }
 \description{
-New Test Configuration
+A test configuration for the training session.
 }

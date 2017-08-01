@@ -7,7 +7,7 @@
 printer_on_training_update_end(printer)
 }
 \arguments{
-\item{printer}{}
+\item{printer}{Printer instance on which to perform the operation}
 }
 \description{
 Printer - On Training Update End

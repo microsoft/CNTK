@@ -7,6 +7,8 @@
 restore_trainer_from_checkpoint(trainer, filename)
 }
 \arguments{
+\item{trainer}{the Trainer instance on which to perform the operation}
+
 \item{filename}{}
 }
 \description{

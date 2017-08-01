@@ -7,6 +7,8 @@
 save_trainer_checkpoint(trainer, filename)
 }
 \arguments{
+\item{trainer}{the Trainer instance on which to perform the operation}
+
 \item{filename}{}
 }
 \description{

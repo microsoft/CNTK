@@ -7,7 +7,8 @@
 mb_as_sequences(minibatch_data, variable = NULL)
 }
 \arguments{
-\item{variable}{}
+\item{minibatch_data}{the MinibatchData instance on which to perform the
+operation}
 }
 \value{
 a list of matrices if dense, otherwise a SciPy CSR array

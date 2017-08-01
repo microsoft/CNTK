@@ -7,6 +7,8 @@
 train_minibatch(trainer, data, outputs = NULL, device = NULL)
 }
 \arguments{
+\item{trainer}{the Trainer instance on which to perform the operation}
+
 \item{device}{- instance of DeviceDescriptor}
 }
 \description{

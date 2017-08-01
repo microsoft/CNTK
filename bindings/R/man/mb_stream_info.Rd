@@ -7,7 +7,10 @@
 mb_stream_info(mb_source, name)
 }
 \arguments{
-\item{name}{string (optional) the name of the Function instance in the network}
+\item{mb_source}{minibatch source on which to perform the operation}
+
+\item{name}{string (optional) the name of the Function instance in the
+network}
 }
 \description{
 Gets the description of the stream with given name. Throws an exception if

@@ -1,7 +1,7 @@
 #' Bilinear Initializer
 #'
-#' @param kernel_width
-#' @param kernel_height
+#' @param kernel_width kernel width
+#' @param kernel_height kernel height
 #'
 #' @export
 init_bilinear <- function(kernel_width, kernel_height) {
@@ -13,10 +13,10 @@ init_bilinear <- function(kernel_width, kernel_height) {
 
 #' Glorot Normal Initializer
 #'
-#' @param scale
-#' @param output_rank
-#' @param filter_rank
-#' @param seed
+#' @param scale (float) scale
+#' @param output_rank (int) output rank
+#' @param filter_rank (int) filter rank
+#' @param seed (int) random seed
 #'
 #' @export
 init_glorot_normal <- function(scale = 1, output_rank = 2147483647,
@@ -31,10 +31,10 @@ init_glorot_normal <- function(scale = 1, output_rank = 2147483647,
 
 #' Glorot Uniform Initializer
 #'
-#' @param scale
-#' @param output_rank
-#' @param filter_rank
-#' @param seed
+#' @param scale (float) scale
+#' @param output_rank (int) output rank
+#' @param filter_rank (int) filter rank
+#' @param seed (int) random seed
 #'
 #' @export
 init_glorot_uniform <- function(scale = 1, output_rank = 2147483647,
@@ -49,10 +49,10 @@ init_glorot_uniform <- function(scale = 1, output_rank = 2147483647,
 
 #' He Normal Initializer
 #'
-#' @param scale
-#' @param output_rank
-#' @param filter_rank
-#' @param seed
+#' @param scale (float) scale
+#' @param output_rank (int) output rank
+#' @param filter_rank (int) filter rank
+#' @param seed (int) random seed
 #'
 #' @export
 init_he_normal <- function(scale = 1, output_rank = 2147483647,
@@ -67,10 +67,10 @@ init_he_normal <- function(scale = 1, output_rank = 2147483647,
 
 #' He Uniform Initializer
 #'
-#' @param scale
-#' @param output_rank
-#' @param filter_rank
-#' @param seed
+#' @param scale (float) scale
+#' @param output_rank (int) output rank
+#' @param filter_rank (int) filter rank
+#' @param seed (int) random seed
 #'
 #' @export
 init_he_uniform <- function(scale = 1, output_rank = 2147483647,
@@ -89,8 +89,8 @@ init_he_uniform <- function(scale = 1, output_rank = 2147483647,
 #' constructed without an explicit output_rank and filter_rank specification
 #'
 #' @param init - Initializer to be overriden
-#' @param output_rank
-#' @param filter_rank
+#' @param output_rank (int) output rank
+#' @param filter_rank (int) filter rank
 #'
 #' @export
 init_with_rank <- function(initializer, output_rank = NULL,
@@ -104,10 +104,10 @@ init_with_rank <- function(initializer, output_rank = NULL,
 
 #' Normal Initializer
 #'
-#' @param scale
-#' @param output_rank
-#' @param filter_rank
-#' @param seed
+#' @param scale (float) scale
+#' @param output_rank (int) output rank
+#' @param filter_rank (int) filter rank
+#' @param seed (int) random seed
 #'
 #' @export
 init_normal <- function(scale = 1, output_rank = 2147483647,
@@ -122,8 +122,8 @@ init_normal <- function(scale = 1, output_rank = 2147483647,
 
 #' Truncated Normal Initializer
 #'
-#' @param stdev
-#' @param seed
+#' @param stdev (float) standard deviation
+#' @param seed (int) random seed
 #'
 #' @export
 init_truncated_normal <- function(stdev, seed = NULL) {
@@ -135,8 +135,8 @@ init_truncated_normal <- function(stdev, seed = NULL) {
 
 #' Uniform Initializer
 #'
-#' @param scale
-#' @param seed
+#' @param scale (float) scale
+#' @param seed (int) random seed
 #'
 #' @export
 init_uniform <- function(scale, seed = NULL) {
@@ -148,10 +148,10 @@ init_uniform <- function(scale, seed = NULL) {
 
 #' Xavier Initializer
 #'
-#' @param scale
-#' @param output_rank
-#' @param filter_rank
-#' @param seed
+#' @param scale (float) scale
+#' @param output_rank (int) output rank
+#' @param filter_rank (int) filter rank
+#' @param seed (int) random seed
 #'
 #' @export
 init_xavier <- function(scale = 1, output_rank = 2147483647,

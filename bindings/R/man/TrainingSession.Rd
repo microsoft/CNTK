@@ -8,7 +8,23 @@ TrainingSession(trainer, mb_source, mb_size, model_inputs_to_streams,
   max_samples, progress_frequency, checkpoint_config, cv_config, test_config)
 }
 \arguments{
-\item{test_config}{}
+\item{trainer}{trainer}
+
+\item{mb_source}{minibatch source used for training}
+
+\item{mb_size}{minibatch size schedule for training}
+
+\item{model_inputs_to_streams}{(dict): mapping between input variables and input streams}
+
+\item{max_samples}{(int): maximum number of samples used for training}
+
+\item{progress_frequency}{(int): frequency in samples for aggregated progress printing}
+
+\item{checkpoint_config}{(:class:`CheckpointConfig`): checkpoint configuration}
+
+\item{cv_config}{(:class:`CrossValidationConfig`): cross validation configuration}
+
+\item{test_config}{(:class:`TestConfig`): test configuration}
 }
 \description{
 The instance of the class should be created by using training_session()

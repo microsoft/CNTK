@@ -7,7 +7,7 @@
 mb_stream_infos(mb_source)
 }
 \arguments{
-\item{mb_source}{}
+\item{mb_source}{minibatch source on which to perform the operation}
 }
 \description{
 Function to be implemented by the user.

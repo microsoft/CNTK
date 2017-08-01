@@ -7,7 +7,7 @@
 summarize_training_progress(trainer)
 }
 \arguments{
-\item{trainer}{}
+\item{trainer}{the Trainer instance on which to perform the operation}
 }
 \description{
 Summarize Training Progress

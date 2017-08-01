@@ -2,14 +2,16 @@
 % Please edit documentation in R/logging-progress_print.R
 \name{printer_on_write_training_summary}
 \alias{printer_on_write_training_summary}
-\title{any writer}
+\title{Printer - On Write Training Summary}
 \usage{
 printer_on_write_training_summary(printer, samples, updates, summaries,
   aggregate_loss, aggregate_metric, elapsed_milliseconds)
 }
 \arguments{
+\item{printer}{Printer instance on which to perform the operation}
+
 \item{elapsed_milliseconds}{}
 }
 \description{
-any writer
+Printer - On Write Training Summary
 }

@@ -7,6 +7,8 @@
 printer_end_progress_print(printer, msg = "")
 }
 \arguments{
+\item{printer}{Printer instance on which to perform the operation}
+
 \item{msg}{}
 }
 \description{

@@ -26,7 +26,6 @@ Base64ImageDeserializer <- function(filename, streams) {
 #' @param streams A python dictionary-like object that contains a mapping from
 #' stream names to StreamDef objects. Each StreamDef object configures an input
 #' stream.
-#' @return NULL
 #' @references See also \url{https://www.cntk.ai/pythondocs/cntk.io.html?highlight=ctfdeserializer#cntk.io.CTFDeserializer}
 #' @export
 CTFDeserializer <- function(filename, streams) {
@@ -37,7 +36,9 @@ CTFDeserializer <- function(filename, streams) {
 #'
 #' Configures the HTK feature reader that reads speech data from scp files.
 #'
-#' @param streams
+#' @param streams any dictionary-like object that contains a mapping from
+#' stream names to StreamDef objects. Each StreamDef object configures a label
+#' stream.
 #'
 #' @export
 HTKFeatureDeserializer <- function(streams) {
@@ -49,9 +50,11 @@ HTKFeatureDeserializer <- function(streams) {
 #' Configures an HTK label reader that reads speech HTK format MLF (Master
 #' Label File)
 #'
-#' @param label_mapping_file
-#' @param streams
-#' @param phoneBoundaries
+#' @param label_mapping_file label mpaping file
+#' @param streams any dictionary-like object that contains a mapping from
+#' stream names to StreamDef objects. Each StreamDef object configures a label
+#' stream.
+#' @param phoneBoundaries phone boundaries
 #'
 #' @export
 HTKMLFDeserializer <- function(label_mapping_file, streams,
@@ -84,8 +87,10 @@ IO_DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS <- io$DEFAULT_RANDOMIZATION_WINDOW_IN_
 #' Form: `<full path to image> <tab> <numerical label (0-based class id)>` or
 #' 'sequenceId <tab> path <tab> label`
 #'
-#' @param filename
-#' @param streams
+#' @param filename (str) file name of the input data file
+#' @param streams any dictionary-like object that contains a mapping from
+#' stream names to StreamDef objects. Each StreamDef object configures a label
+#' stream.
 #'
 #' @export
 ImageDeserializer <- function(filename, streams) {
@@ -117,11 +122,6 @@ ImageDeserializer <- function(filename, streams) {
 #'
 #' mb_as_sequences(variable = NULL)
 #'
-#' @param value
-#' @param num_sequences
-#' @param num_samples
-#' @param sweep_end
-#'
 #' @export
 MinibatchData <- function(value, num_sequences, num_samples, sweep_end) {
 	cntk$io$MinibatchData(
@@ -137,8 +137,8 @@ MinibatchData <- function(value, num_sequences, num_samples, sweep_end) {
 #' Convert the value of this minibatch instance to a sequence of NumPy arrays
 #' that have their masked entries removed.
 #'
-#' @param minibatch_data
-#' @param variable
+#' @param minibatch_data the MinibatchData instance on which to perform the
+#' operation
 #'
 #' @return 	a list of matrices if dense, otherwise a SciPy CSR array
 #'
@@ -173,17 +173,51 @@ mb_as_sequences <- function(minibatch_data, variable = NULL) {
 #' mb_stream_info(minibatch_source, name)
 #' mb_stream_infos(minibatch_source)
 #'
-#' @param deserializers
-#' @param max_samples
-#' @param max_sweeps
-#' @param randomization_window_in_chunks
-#' @param randomization_window_in_samples
-#' @param randomization_seed
-#' @param trace_level
-#' @param multithreaded_deserializer
-#' @param frame_mode
-#' @param truncation_length
-#' @param randomize
+#' @param deserializers (deserializer or list) deserializers to be used in the
+#' composite reader
+#' @param max_samples (int, defaults to IO_INFINITELY_REPEAT) The maximum
+#' number of input samples (not ‘label samples’) the reader can produce. After
+#' this number has been reached, the reader returns empty minibatches on
+#' subsequent calls to next_minibatch(). max_samples and max_sweeps are
+#' mutually exclusive, an exception will be raised if both have non-default
+#' values.
+#' @param max_sweeps (int, defaults to IO_INFINITELY_REPEAT) The maximum number
+#' of of sweeps over the input dataset After this number has been reached, the
+#' reader returns empty minibatches on subsequent calls to func:next_minibatch.
+#' max_samples and max_sweeps are mutually exclusive, an exception will be
+#' raised if both have non-default values.
+#' @param randomization_window_in_chunks (int, defaults to
+#' IO_DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS) size of the randomization window
+#' in chunks, non-zero value enables randomization.
+#' randomization_window_in_chunks and randomization_window_in_samples are
+#' mutually exclusive, an exception will be raised if both have non-zero
+#' values.
+#' @param randomization_window_in_samples (int, defaults to 0)  size of the
+#' randomization window in samples, non-zero value enables randomization.
+#' randomization_window_in_chunks and randomization_window_in_samples are
+#' mutually exclusive, an exception will be raised if both have non-zero
+#' values.
+#' @param randomization_seed (int, defaults to 0) Initial randomization seed
+#' value (incremented every sweep when the input data is re-randomized).
+#' @param trace_level (TraceLevel) the output verbosity level, defaults to the
+#' current logging verbosity level given by get_trace_level().
+#' @param multithreaded_deserializer (bool) specifies if the deserialization
+#' should be done on a single or multiple threads. Defaults to None, which is
+#' effectively “auto” (multhithreading is disabled unless ImageDeserializer is
+#' present in the deserializers list). False and True faithfully turn the
+#' multithreading off/on.
+#' @param frame_mode (bool) switches the frame mode on and off. If the frame
+#' mode is enabled the input data will be processed as individual frames
+#' ignoring all sequence information (this option cannot be used for BPTT, an
+#' exception will be raised if frame mode is enabled and the truncation length
+#' is non-zero).
+#' @param truncation_length (int) truncation length in samples, non-zero value
+#' enables the truncation (only applicable for BPTT, cannot be used in frame
+#' mode, an exception will be raised if frame mode is enabled and the
+#' truncation length is non-zero).
+#' @param randomize (bool) Enables or disables randomization; use
+#' randomization_window_in_chunks or randomization_window_in_samples to specify
+#' the randomization range
 #'
 #' @export
 MinibatchSource <- function(deserializers, max_samples = IO_INFINITELY_REPEAT,
@@ -258,9 +292,8 @@ MinibatchSource <- function(deserializers, max_samples = IO_INFINITELY_REPEAT,
 #' copied, so if you want to modify the data while being read through a
 #' MinibatchSourceFromData, please pass a copy.
 #'
-#'
-#' @param data_streams
-#' @param max_samples
+#' @param data_streams data streams
+#' @param max_samples max samples
 #'
 #' @seealso \code{get_minibatch_checkpoint_state} \code{next_minibatch} \code{restore_mb_from_checkpoint} \code{mb_stream_infos}
 #'
@@ -313,12 +346,29 @@ get_minibatch_checkpoint_state <- function(mb_source) {
 
 #' Next Minibatch
 #'
-#' @param minibatch_source
-#' @param minibatch_size_in_samples
-#' @param input_map
+#' Reads a minibatch that contains data for all input streams. The minibatch
+#' size is specified in terms of #samples and/or #sequences for the primary
+#' input stream; value of 0 for #samples/#sequences means unspecified. In case
+#' the size is specified in terms of both #sequences and #samples, the smaller
+#' of the 2 is taken. An empty map is returned when the MinibatchSource has no
+#' more data to return.
+#'
+#' @param minibatch_source (MinibatchSource or MinibatchSourceFromData) source
+#' for minibatch
+#' @param minibatch_size_in_samples number of samples to retrieve for the next
+#' minibatch. Must be > 0.
+#' @param input_map mapping of Variable to StreamInformation which will be used
+#' to convert the returned data.
 #' @param device - instance of DeviceDescriptor
-#' @param num_data_partitions
-#' @param partition_index
+#' @param num_data_partitions Used for distributed training, indicates into how
+#' many partitions the source should split the data.
+#' @param partition_index Used for distributed training, indicates data from
+#' which partition to take.
+#'
+#' @return (MinibatchData) mapping of StreamInformation to MinibatchData if
+#' input_map was not specified. Otherwise, the returned value will be a mapping
+#' of Variable to class:MinibatchData. When the maximum number of
+#' epochs/samples is exhausted, the return value is an empty dict.
 #'
 #' @export
 next_minibatch <- function(minibatch_source, minibatch_size_in_samples,
@@ -338,12 +388,6 @@ next_minibatch <- function(minibatch_source, minibatch_size_in_samples,
 #'
 #' Function to be implemented by the user
 #'
-#' @param usermb_source
-#' @param num_samples
-#' @param num_workers
-#' @param worker_rank
-#' @param device - instance of DeviceDescriptor
-#'
 #' @export
 usermb_next_minibatch <- function(usermb_source, num_samples,
 								  num_workers, worker_rank, device = NULL) {
@@ -357,10 +401,10 @@ usermb_next_minibatch <- function(usermb_source, num_samples,
 
 #' Restore Minibatch From Checkpoint
 #'
-#' Sets the state of the checkpoint.
+#' Restores the MinibatchSource state from the specified checkpoint.
 #'
-#' @param mb_source
-#' @param checkpoint
+#' @param mb_source minibatch source on which to perform the operation
+#' @param checkpoint (dict) checkpoint to restore from
 #'
 #' @export
 restore_mb_from_checkpoint <- function(mb_source, checkpoint) {
@@ -372,8 +416,9 @@ restore_mb_from_checkpoint <- function(mb_source, checkpoint) {
 #' Gets the description of the stream with given name. Throws an exception if
 #' there are none or multiple streams with this same name.
 #'
-#' @param mb_source
-#' @param name string (optional) the name of the Function instance in the network
+#' @param mb_source minibatch source on which to perform the operation
+#' @param name string (optional) the name of the Function instance in the
+#' network
 #'
 #' @export
 mb_stream_info <- function(mb_source, name) {
@@ -384,7 +429,7 @@ mb_stream_info <- function(mb_source, name) {
 #'
 #' Function to be implemented by the user.
 #'
-#' @param mb_source
+#' @param mb_source minibatch source on which to perform the operation
 #'
 #' @export
 mb_stream_infos <- function(mb_source) {
@@ -396,11 +441,12 @@ mb_stream_infos <- function(mb_source) {
 #'
 #' Configuration of a stream in a text format reader.
 #'
-#' @param name string (optional) the name of the Function instance in the network
-#' @param dim
-#' @param is_sparse
-#' @param stream_alias
-#' @param defines_mb_size
+#' @param name string (optional) the name of the Function instance in the
+#' network
+#' @param dim dimensions of the stream
+#' @param is_sparse (bool) whether provided data is sparse
+#' @param stream_alias name of the stream in the file
+#' @param defines_mb_size (bool) whether the stream defines the minibatch size
 #'
 #' @export
 StreamConfiguration <- function(name, dim, is_sparse = FALSE, stream_alias = '',
@@ -418,8 +464,6 @@ StreamConfiguration <- function(name, dim, is_sparse = FALSE, stream_alias = '',
 #'
 #' Alias for Record
 #'
-#' @param ...
-#'
 #' @export
 StreamDefs <- function(...) {
 	cntk$variables$Record(...)
@@ -432,7 +476,8 @@ StreamDefs <- function(...) {
 #' deserializer, and certain keys are meaningless for certain deserializers.
 #'
 #' @param field string defining the name of the stream
-#' @param shape - list of ints representing tensor shape integer defining the dimensions of the stream
+#' @param shape - list of ints representing tensor shape integer defining the
+#' dimensions of the stream
 #' @param is_sparse logical for whether the data is sparse (FALSE by default)
 #' @param transforms list of transforms to be applied to the Deserializer
 #' @param context vector of length two defining whther reading in HTK data,
@@ -466,11 +511,12 @@ StreamDef <- function(field = NULL, shape = NULL, is_sparse = FALSE,
 #' Stream information container that is used to describe streams when
 #' implementing custom minibatch source through UserMinibatchSource.
 #'
-#' @param name string (optional) the name of the Function instance in the network
-#' @param stream_id
-#' @param storage_format
-#' @param dtype - data type to be used ("float32", "float64", or "auto")
-#' @param shape - list of ints representing tensor shape
+#' @param name string (optional) the name of the Function instance in the
+#' network
+#' @param stream_id (int) unique ID of the stream
+#' @param storage_format "dense" or "sparse"
+#' @param dtype data type to be used ("float32", "float64", or "auto")
+#' @param shape list of ints representing tensor shape
 #'
 #' @export
 StreamInformation <- function(name, stream_id, storage_format, dtype, shape) {
@@ -488,8 +534,9 @@ StreamInformation <- function(name, stream_id, storage_format, dtype, shape) {
 #' Converts a list of NumPy arrays representing tensors of inputs into a format
 #' that is readable by CTFDeserializer.
 #'
-#' @param seq_inx
-#' @param alias_tensor_map
+#' @param seq_inx number of current sequence
+#' @param alias_tensor_map (named list) maps alias to tensor (matrix). Tensors
+#' are assumed to have dynamic axes
 #'
 #' @export
 sequence_to_cntk_text_format <- function(seq_inx, alias_tensor_map) {

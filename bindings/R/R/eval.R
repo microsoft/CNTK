@@ -13,8 +13,8 @@
 #'
 #' eval_test_minibatch(evaluator, arguments, device = NULL)
 #'
-#' @param eval_function
-#' @param progress_writers
+#' @param eval_function (Function) evaluation function
+#' @param progress_writers (list) progress writers to track training progress
 #'
 #' @export
 Evaluator <- function(eval_function, progress_writers = NULL) {
@@ -26,7 +26,7 @@ Evaluator <- function(eval_function, progress_writers = NULL) {
 
 #' Summarize Evaluator Test Progress
 #'
-#' @param evaluator
+#' @param evaluator the Evaluator instance from which to get progress
 #'
 #' @export
 summarize_test_progress <- function(evaluator) {
@@ -35,9 +35,10 @@ summarize_test_progress <- function(evaluator) {
 
 #' Test Evaluator Minibatch
 #'
-#' @param evaluator
-#'
-#' @param arguments
+#' @param evaluator the Evaluator instance on which to perform the operation
+#' @param arguments named list of input variable names to input data or if node
+#' has a unique input, arguments is mapped to this input. For nodes with more
+#' than one input, only a named list is allowed.
 #' @param device - instance of DeviceDescriptor
 #'
 #' @export

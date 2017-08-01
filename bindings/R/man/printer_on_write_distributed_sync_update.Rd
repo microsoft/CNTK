@@ -8,6 +8,8 @@ printer_on_write_distributed_sync_update(printer, samples, updates,
   aggregate_metric)
 }
 \arguments{
+\item{printer}{Printer instance on which to perform the operation}
+
 \item{aggregate_metric}{}
 }
 \description{

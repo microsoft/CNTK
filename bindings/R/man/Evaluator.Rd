@@ -7,7 +7,9 @@
 Evaluator(eval_function, progress_writers = NULL)
 }
 \arguments{
-\item{progress_writers}{}
+\item{eval_function}{(Function) evaluation function}
+
+\item{progress_writers}{(list) progress writers to track training progress}
 }
 \description{
 Class for evaluation of minibatches against the specified evaluation

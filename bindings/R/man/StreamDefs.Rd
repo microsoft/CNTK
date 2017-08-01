@@ -6,9 +6,6 @@
 \usage{
 StreamDefs(...)
 }
-\arguments{
-\item{...}{}
-}
 \description{
 Alias for Record
 }

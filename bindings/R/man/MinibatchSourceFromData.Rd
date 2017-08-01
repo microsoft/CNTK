@@ -7,7 +7,9 @@
 MinibatchSourceFromData(data_streams, max_samples = IO_INFINITELY_REPEAT)
 }
 \arguments{
-\item{max_samples}{}
+\item{data_streams}{data streams}
+
+\item{max_samples}{max samples}
 }
 \description{
 This wraps in-memory data as a CNTK MinibatchSource object (aka “reader”),

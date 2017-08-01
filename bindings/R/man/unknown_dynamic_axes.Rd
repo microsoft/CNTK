@@ -2,7 +2,7 @@
 % Please edit documentation in R/axis.R
 \name{unknown_dynamic_axes}
 \alias{unknown_dynamic_axes}
-\title{unknown_dynamic_axes}
+\title{Unknown Dynamic Axes}
 \usage{
 unknown_dynamic_axes()
 }

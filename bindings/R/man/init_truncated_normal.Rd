@@ -7,7 +7,9 @@
 init_truncated_normal(stdev, seed = NULL)
 }
 \arguments{
-\item{seed}{}
+\item{stdev}{(float) standard deviation}
+
+\item{seed}{(int) random seed}
 }
 \description{
 Truncated Normal Initializer

@@ -8,6 +8,8 @@ printer_on_write_test_summary(printer, samples, updates, summaries,
   aggregate_metric, elapsed_milliseconds)
 }
 \arguments{
+\item{printer}{Printer instance on which to perform the operation}
+
 \item{elapsed_milliseconds}{}
 }
 \description{

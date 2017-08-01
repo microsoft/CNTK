@@ -8,7 +8,14 @@ CheckpointConfig(filename, frequency = NULL, restore = TRUE,
   preserve_all = FALSE)
 }
 \arguments{
-\item{preserve_all}{}
+\item{:}{filename (str): checkpoint file name.}
+
+\item{:}{frequency (int): checkpointing period (number samples between checkpoints). If `NULL`, no checkpointing takes place.
+If ``sys.maxsize``, a single checkpoint is taken at the end of the training.}
+
+\item{:}{restore (bool): flag, indicating whether to restore from available checkpoint before the start of the training}
+
+\item{:}{preserve_all (bool): saves all checkpoints, using ``filename`` as prefix and checkpoint index as a suffix.}
 }
 \description{
 New Checkpoint Config

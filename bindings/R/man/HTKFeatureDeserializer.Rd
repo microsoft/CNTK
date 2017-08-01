@@ -7,7 +7,9 @@
 HTKFeatureDeserializer(streams)
 }
 \arguments{
-\item{streams}{}
+\item{streams}{any dictionary-like object that contains a mapping from
+stream names to StreamDef objects. Each StreamDef object configures a label
+stream.}
 }
 \description{
 Configures the HTK feature reader that reads speech data from scp files.

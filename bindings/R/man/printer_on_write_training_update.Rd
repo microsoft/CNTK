@@ -2,14 +2,16 @@
 % Please edit documentation in R/logging-progress_print.R
 \name{printer_on_write_training_update}
 \alias{printer_on_write_training_update}
-\title{any writer}
+\title{Printer - Training Update on Write}
 \usage{
 printer_on_write_training_update(printer, samples, updates, aggregate_loss,
   aggregate_metric)
 }
 \arguments{
+\item{printer}{Printer instance on which to perform the operation}
+
 \item{aggregate_metric}{}
 }
 \description{
-any writer
+Printer - Training Update on Write
 }

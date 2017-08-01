@@ -10,8 +10,31 @@ CrossValidationConfig(minibatch_source = NULL, frequency = NULL,
   mb_size = NULL)
 }
 \arguments{
-\item{mb_size}{}
+\item{:}{minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for cross validation}
+
+\item{:}{frequency (int): frequency in samples for cross validation
+If NULL or ``sys.maxsize``, a single cross validation is performed at the end of training.}
+
+\item{:}{minibatch_size(int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): minibatch schedule for cross validation}
+
+\item{:}{callback (func (index, average_error, cv_num_samples, cv_num_minibatches)): Callback that will
+be called with frequency which can implement custom cross validation logic,
+returns FALSE if training should be stopped.}
+
+\item{:}{max_samples (int, default NULL): number of samples to perform
+cross-validation on. If NULL, all samples are taken.}
+
+\item{:}{model_inputs_to_streams (dict): mapping between input variables and input streams
+If NULL, the mapping provided to the training session constructor is used.
+Don't specify this if `minibatch_source` is a tuple of numpy/scipy arrays.}
+
+\item{:}{criterion (:class:`~cntk.ops.functions.Function`): criterion function.
+Must be specified if `minibatch_source` is a tuple of numpy/scipy arrays.}
+
+\item{:}{source (:class:`~cntk.io.MinibatchSource`): DEPRECATED, use minibatch_source instead}
+
+\item{:}{mb_size(int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): DEPRECATED, use minibatch_size instead}
 }
 \description{
-New Cross Validation Configuration
+A cross validation configuration for the training session.
 }

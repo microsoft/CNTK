@@ -7,7 +7,13 @@
 HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = FALSE)
 }
 \arguments{
-\item{phoneBoundaries}{}
+\item{label_mapping_file}{label mpaping file}
+
+\item{streams}{any dictionary-like object that contains a mapping from
+stream names to StreamDef objects. Each StreamDef object configures a label
+stream.}
+
+\item{phoneBoundaries}{phone boundaries}
 }
 \description{
 Configures an HTK label reader that reads speech HTK format MLF (Master

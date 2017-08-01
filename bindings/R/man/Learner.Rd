@@ -4,12 +4,13 @@
 \alias{Learner}
 \title{Learner}
 \usage{
-Learner(parameters, learningRateSchedule)
+Learner(parameters, learning_rate_schedule)
 }
 \arguments{
-\item{parameters}{– list of network parameters list of parameter associated with this learner}
+\item{parameters}{– list of network parameters list of parameter associated
+with this learner}
 
-\item{learningRateSchedule}{get_learning_rate(learner)}
+\item{learning_rate_schedule}{get_learning_rate(learner)}
 }
 \description{
 Abstraction for learning a subset of parameters of a learnable function

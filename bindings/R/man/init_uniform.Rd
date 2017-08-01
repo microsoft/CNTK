@@ -7,7 +7,9 @@
 init_uniform(scale, seed = NULL)
 }
 \arguments{
-\item{seed}{}
+\item{scale}{(float) scale}
+
+\item{seed}{(int) random seed}
 }
 \description{
 Uniform Initializer

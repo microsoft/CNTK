@@ -8,7 +8,13 @@ init_he_normal(scale = 1, output_rank = 2147483647,
   filter_rank = 2147483647, seed = NULL)
 }
 \arguments{
-\item{seed}{}
+\item{scale}{(float) scale}
+
+\item{output_rank}{(int) output rank}
+
+\item{filter_rank}{(int) filter rank}
+
+\item{seed}{(int) random seed}
 }
 \description{
 He Normal Initializer

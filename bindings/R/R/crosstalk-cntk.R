@@ -1,20 +1,27 @@
+#' Convolution2D Arguments
+#'
 #' @export
 Conv2DArgs <- function() {
 	cntk$crosstalk$Conv2DArgs()
 }
 
+#' Conv2D Variable Attribute
+#'
 #' @export
 Conv2DAttr <- function() {
 	cntk$crosstalk$conv2DAttr()
 }
 
+#' Crosstalk Base Class
+#'
 #' @export
 Crosstalk <- function() {
 	cntk$crosstalk$Crosstalk()
 }
 
-#' @param ct
+#' Assign Crosstalk Value
 #'
+#' @param ct Crosstalk instance on which to perform the operation
 #' @param name string (optional) the name of the Function instance in the network
 #' @param value
 #' @param load
@@ -30,8 +37,9 @@ ct_assign <- function(ct, name, value = NULL, load = FALSE, load_name = NULL) {
 	)
 }
 
-#' @param ct
+#' Compare Crosstalk Var
 #'
+#' @param ct Crosstalk instance on which to perform the operation
 #' @param name string (optional) the name of the Function instance in the network
 #' @param compare_name
 #' @param rtol
@@ -50,8 +58,9 @@ ct_compare <- function(ct, name, compare_name = NULL, rtol = 1e-05, atol=1e-08,
 	)
 }
 
-#' @param ct
+#' Fetch Crosstalk Var
 #'
+#' @param ct Crosstalk instance on which to perform the operation
 #' @param name string (optional) the name of the Function instance in the network
 #' @param save
 #'
@@ -60,8 +69,9 @@ ct_fetch <- function(ct, name, save = FALSE) {
 	ct$fetch(name, save = save)
 }
 
-#' @param ct
+#' Load Crosstalk Vars
 #'
+#' @param ct Crosstalk instance on which to perform the operation
 #' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
@@ -69,8 +79,9 @@ ct_load <- function(ct, names) {
 	ct$load(names)
 }
 
-#' @param ct
+#' Load Crosstalk Raw Value
 #'
+#' @param ct Crosstalk instance on which to perform the operation
 #' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
@@ -78,15 +89,18 @@ ct_load_raw_value <- function(ct, name) {
 	ct$load_raw_value(name)
 }
 
-#' @param ct
+#' Next Crosstalk Pass
+#'
+#' @param ct Crosstalk instance on which to perform the operation
 #'
 #' @export
 ct_next_pass <- function(ct) {
 	ct$next_pass()
 }
 
-#' @param ct
+#' Register Crosstalk Var Type Getter/Setters
 #'
+#' @param ct Crosstalk instance on which to perform the operation
 #' @param var_type
 #' @param setter
 #' @param getter
@@ -100,15 +114,18 @@ ct_register_funcs <- function(ct, var_type, setter = NULL, getter = NULL) {
 	)
 }
 
-#' @param ct
+#' Reset Crosstalk Vars
+#'
+#' @param ct Crosstalk instance on which to perform the operation
 #'
 #' @export
 ct_reset <- function(ct) {
 	ct$reset()
 }
 
-#' @param ct
+#' Save Crosstalk Vars
 #'
+#' @param ct Crosstalk instance on which to perform the operation
 #' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
@@ -116,15 +133,18 @@ ct_save <- function(ct, names) {
 	ct$save(names)
 }
 
-#' @param ct
+#' Save All Crosstalk Vars
+#'
+#' @param ct Crosstalk instance on which to perform the operation
 #'
 #' @export
 ct_save_all <- function(ct) {
 	ct$save_all()
 }
 
-#' @param ct
+#' Set Crosstalk Working Directory
 #'
+#' @param ct Crosstalk instance on which to perform the operation
 #' @param dir
 #'
 #' @export
@@ -132,8 +152,9 @@ ct_set_workdir <- function(ct, dir) {
 	ct$set_workdir(dir)
 }
 
-#' @param ct
+#' Watch Crosstalk Variable
 #'
+#' @param ct Crosstalk instance on which to perform the operation
 #' @param var
 #' @param name string (optional) the name of the Function instance in the network
 #' @param var_type
@@ -150,38 +171,51 @@ ct_watch <- function(ct, var, name, var_type = NULL, attr = NULL) {
 }
 
 
+#' EmbedAttr
+#'
 #' @export
 EmbedAttr <- function() {
 	cntk$crosstalk$EmbedAttr()
 }
 
+#' Variable Setter/Getter Functions
+#'
 #' @export
 FuncInfo <- function() {
 	cntk$crosstalk$FuncInfo()
 }
 
+#' RNN Variable Arguments
+#'
 #' @export
 RnnArgs <- function() {
 	cntk$crosstalk$RnnArgs()
 }
 
+#' RNN Variable Attributes
+#'
 #' @export
 RnnAttr <- function() {
 	cntk$crosstalk$RnnAttr()
 }
 
+#' Variable Information
+#'
 #' @export
 VarInfo <- function() {
 	cntk$crosstalk$VarInfo()
 }
 
+#' CNTK Implementation for Crosstalk
+#'
 #' @export
 CNTKCrosstalk <- function() {
 	cntk$crosstalk$crosstalk_cntk$CNTKCrosstalk
 }
 
-#' @param cct
+#' CNTKCrosstalk Var is Parameter
 #'
+#' @param cct
 #' @param name string (optional) the name of the Function instance in the network
 #'
 #' @export
@@ -189,6 +223,8 @@ ct_is_param <- function(cct, name) {
 	cct$is_param(name)
 }
 
+#' Load All CNTKCrosstalk Params From Files
+#'
 #' @param cct
 #'
 #' @export
@@ -196,6 +232,8 @@ ct_load_all_params <- function(cct) {
 	cct$load_all_params()
 }
 
+#' Save All CNTKCrosstalk Params to Files
+#'
 #' @param cct
 #'
 #' @export
@@ -203,8 +241,9 @@ ct_save_all_params <- function(cct) {
 	cct$save_all_params()
 }
 
-#' @param cct
+#' Set CNTKCrosstalk Mapped Data
 #'
+#' @param cct
 #' @param data
 #'
 #' @export
@@ -212,8 +251,9 @@ ct_set_data <- function(cct, data) {
 	cct$set_data(data)
 }
 
-#' @param func
+#' Find Parameter in Function - CNTKCrosstalk
 #'
+#' @param func
 #' @param name string (optional) the name of the Function instance in the network
 #' @param shape - list of ints representing tensor shape
 #' @param allow_not_found

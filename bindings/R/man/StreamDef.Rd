@@ -11,7 +11,8 @@ StreamDef(field = NULL, shape = NULL, is_sparse = FALSE,
 \arguments{
 \item{field}{string defining the name of the stream}
 
-\item{shape}{- list of ints representing tensor shape integer defining the dimensions of the stream}
+\item{shape}{- list of ints representing tensor shape integer defining the
+dimensions of the stream}
 
 \item{is_sparse}{logical for whether the data is sparse (FALSE by default)}
 
