@@ -342,7 +342,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::UnpackBatch) == 79 &&
                   static_cast<size_t>(PrimitiveOpType::ToBatch) == 80 &&
                   static_cast<size_t>(PrimitiveOpType::Asin) == 81 &&
-                  static_cast<size_t>(PrimitiveOpType::Acos) == 82,
+                  static_cast<size_t>(PrimitiveOpType::Acos) == 82 &&
+                  static_cast<size_t>(PrimitiveOpType::Pad) == 83,
                   "PrimitiveOpType enum value was modified.");
 }
 

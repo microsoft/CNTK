@@ -788,7 +788,8 @@ namespace CNTK
         // Version 14: Add StableSigmoid
         // Version 15: Add RandomDistribution
         // Version 16: Add to_batch/unpack_batch.
-        static const size_t s_serializationVersion = 16;
+        // Version 16: Add Pad.
+        static const size_t s_serializationVersion = 17;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

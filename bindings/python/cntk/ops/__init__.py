@@ -22,6 +22,7 @@ from ..default_options import get_default_override, default_override_or
 
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
+CONSTANT_PAD = cntk_py.CONSTANTPAD
 
 @typemap
 def combine(*operands, **kw_name):
@@ -1995,7 +1996,42 @@ def swapaxes(x, axis1=0, axis2=1, name=''):
     return transpose_axes(x, axis1, axis2, name)
 
 @typemap
-def pad(x, head, foot, mode=0, name=''):
+def pad(x, head, foot, mode=CONSTANT_PAD, name=''):
+    '''
+    Padding a tensor according to the patterns you specified.
+    Three padding mode is supported: CONSTANT / REFLECT / SYMMETRIC.
+
+    Example:
+        >>> data = np.arange(6).reshape((2,3))
+        >>> x = C.constant(value=data)
+        >>> C.pad(x,[1,2],[1,2]).eval()
+        array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  1.,  2.,  0.,  0.],
+               [ 0.,  0.,  3.,  4.,  5.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.,  0.,  0.]], dtype=float32)
+        >>> C.pad(x,[1,2],[1,2], mode=1).eval()
+        array([[ 5.,  4.,  3.,  4.,  5.,  4.,  3.],
+               [ 2.,  1.,  0.,  1.,  2.,  1.,  0.],
+               [ 5.,  4.,  3.,  4.,  5.,  4.,  3.],
+               [ 2.,  1.,  0.,  1.,  2.,  1.,  0.]], dtype=float32)
+        >>> C.pad(x,[1,2],[1,2], mode=2).eval()
+        array([[ 1.,  0.,  0.,  1.,  2.,  2.,  1.],
+               [ 1.,  0.,  0.,  1.,  2.,  2.,  1.],
+               [ 4.,  3.,  3.,  4.,  5.,  5.,  4.],
+               [ 4.,  3.,  3.,  4.,  5.,  5.,  4.]], dtype=float32)
+
+    Args:
+        x: tensor to be padding
+        head (list of int): how many values to add before the contents of x in each dimension
+        foot (list of int): how many values to add after the contents of x in each dimension
+        mode (int): padding mode:
+                    0 - CONSTANT
+                    1 - REFLECT
+                    2 - SYMMETRIC
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
     from cntk.cntk_py import pad
     x = sanitize_input(x)
     return pad(x, name, list(reversed(head)), list(reversed(foot)), mode)
