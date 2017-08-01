@@ -21,7 +21,7 @@
 using namespace CNTK;
 using namespace std;
 
-#define Barrier Alias
+#define BarrierOp Alias
 
 namespace Dynamite {
 
@@ -252,6 +252,9 @@ static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& d
     return UnaryModel({ W, b }, [=](const Variable& x) { return Times(W, x) + b; });
 }
 
+// create a Barrier function
+static UnaryModel Barrier() { return [](const Variable& x) -> Variable { return BarrierOp(x); }; }
+
 struct Sequence
 {
     static UnarySequenceModel Map(UnaryModel f)
@@ -285,7 +288,7 @@ struct Sequence
 
     static UnarySequenceModel Recurrence(const BinaryModel& step, const Variable& initialState, bool goBackwards = false)
     {
-        auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
+        let barrier = Barrier();
         // if initialState is a learnable parameter, then we must keep it
         vector<Parameter> rememberedInitialState;
         if (initialState.IsParameter())
@@ -334,7 +337,7 @@ struct Sequence
 
     static UnaryFoldingModel Fold(const BinaryModel& step, const Variable& initialState)
     {
-        auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
+        let barrier = Barrier();
         return UnaryFoldingModel({}, { { L"step", step }  },
         [=](const vector<Variable>& x) -> Variable
         {

@@ -32,14 +32,16 @@ const size_t embeddingDim = 128;
 const size_t attentionDim = 128;
 const size_t numEncoderLayers = 1;
 const size_t encoderHiddenDim = 128;
+const size_t numDecoderLayers = 1;
+const size_t decoderHiddenDim = 128;
 
-auto BidirectionalLSTMEncoder(size_t numLayers, size_t encoderHiddenDim, double dropoutInputKeepProb)
+UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
 {
     dropoutInputKeepProb;
     vector<UnarySequenceModel> layers;
     for (size_t i = 0; i < numLayers; i++)
-        layers.push_back(Dynamite::Sequence::BiRecurrence(RNNStep(encoderHiddenDim, device), Constant({ encoderHiddenDim }, 0.0f, device),
-                                                          RNNStep(encoderHiddenDim, device), Constant({ encoderHiddenDim }, 0.0f, device)));
+        layers.push_back(Dynamite::Sequence::BiRecurrence(RNNStep(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device),
+                                                          RNNStep(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device)));
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
     return UnarySequenceModel(vector<ModelParametersPtr>(layers.begin(), layers.end()),
     [=](vector<Variable>& res, const vector<Variable>& x) mutable
@@ -54,10 +56,87 @@ auto BidirectionalLSTMEncoder(size_t numLayers, size_t encoderHiddenDim, double 
     });
 }
 
+// Bahdanau attention model
+// (query, keys as tensor, data sequence as tensor) -> interpolated data vector
+//  - keys used for the weights
+//  - data gets interpolated
+// Here they are the same.
+TernaryModel AttentionModel(size_t attentionDim)
+{
+    auto Q = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"Q"); // query projection
+    auto K = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"K"); // keys projection
+    auto v = Parameter({ attentionDim, 1 }, DataType::Float, GlorotUniformInitializer(), device, L"v"); // tanh projection
+    return TernaryModel({ Q, K, v },
+    [=](const Variable& query, const Variable& keys, const Variable& data) -> Variable
+    {
+        // compute attention weights
+        let projectedQuery = Times(Q, query); // [A x 1]
+        let projectedKeys  = Times(K, keys);  // [A x T]
+        let tanh = Tanh(projectedQuery + projectedKeys); // [A x T]
+        let u = TransposeTimes(tanh, v); // [T] col vector
+        let w = Softmax(u);
+        let res = Times(data, w); // [A]
+        return res;
+     });
+}
+
+BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
+{
+    dropoutInputKeepProb;
+    // create all the layer objects
+    let initialState = Constant({ hiddenDim }, 0.0f, device);
+    let initialContext = Constant({ attentionDim }, 0.0f, device);
+    vector<BinaryModel> lstms;
+    for (size_t i = 0; i < numLayers; i++)
+        lstms.push_back(RNNStep(hiddenDim, device));
+    let attentionModel = AttentionModel(attentionDim); // (state, encoding) -> interpolated encoding
+    let barrier = Barrier();
+    auto merge = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
+    auto dense = Linear(tgtVocabSize, device); // dense layer without non-linearity
+
+    vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
+    // decode from a top layer of an encoder, using history as history
+    // A real decoder version would do something here, e.g. if history is empty then use its own output,
+    // and maybe also take a reshuffling matrix for beam decoding.
+    auto nestedLayers = vector<ModelParametersPtr>(lstms.begin(), lstms.end()); // TODO: no, name them properly
+    nestedLayers.push_back(attentionModel);
+    nestedLayers.push_back(merge);
+    nestedLayers.push_back(dense);
+    return BinarySequenceModel(nestedLayers,
+    [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
+    {
+        res.resize(history.size());
+        // TODO: this is one layer only for now
+        // convert encoder sequence into a dense tensor, so that we can do matrix products along the sequence axis
+        Variable hEncsTensor = Splice(hEncs, Axis(1)); // [hiddenDim, inputLen]
+        // decoding loop
+        Variable state = initialState;
+        Variable attentionContext = initialContext; // note: this is almost certainly wrong
+        for (size_t t = 0; t < history.size(); t++)
+        {
+            // do recurrent step
+            // In inference, history[t] would become res[t-1].
+            // TODO: Why not learn the output of the first step, and skip the <s> and funky initial attention context?
+            let input = Splice({ history[t], attentionContext }, Axis(0));
+            state = lstms[0](state, input);
+            // compute attention vector
+            attentionContext = attentionModel(state, /*kers=*/hEncsTensor, /*data=*/hEncsTensor);
+            // compute an enhanced hidden state with attention value merged in
+            let m = Tanh(merge(Splice({ state, attentionContext }, Axis(0))));
+            // compute output
+            let z = dense(m);
+            res[t] = z;
+        }
+        // ...unused for now
+        hs[0].clear(); hs[1].clear();
+    });
+}
+
 BinarySequenceModel CreateModelFunction()
 {
     auto embed = Embedding(embeddingDim, device);
     auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderHiddenDim, 0.8);
+    auto decode = AttentionDecoder(numDecoderLayers, decoderHiddenDim, 0.8);
     //auto step = RNNStep(hiddenDim, device);
     //auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
     auto linear = Linear(tgtVocabSize, device);
@@ -75,10 +154,7 @@ BinarySequenceModel CreateModelFunction()
         embed(e, x);
         encode(h, e);
         // decoder (outputting logprobs of words)
-        // dummy for now
-        res.resize(history.size());
-        for (size_t t = 0; t < res.size(); t++)
-            res[t] = linear(t < h.size() ? h[t] : h.back());
+        decode(res, history, h);
         e.clear(); h.clear();
     });
 }
@@ -137,8 +213,8 @@ void Train()
     auto criterion_fn = CreateCriterionFunction(model_fn);
 
     // run something through to get the parameter matrices shaped --ugh!
-    vector<Variable> d1{ Constant({ srcVocabSize }, 0.0, device) };
-    vector<Variable> d2{ Constant({ tgtVocabSize }, 0.0, device) };
+    vector<Variable> d1{ Constant({ srcVocabSize }, 0.0f, device) };
+    vector<Variable> d2{ Constant({ tgtVocabSize }, 0.0f, device) };
     vector<Variable> d3;
     model_fn(d3, d1, d2);
 
@@ -155,6 +231,8 @@ void Train()
 
     let parameters = model_fn.Parameters();
     auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.05));
+    // TODO: change to Adam
+    //auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.05));
     unordered_map<Parameter, NDArrayViewPtr> gradients;
     for (let& p : parameters) // TODO: test that this works outside of the loop
         gradients[p] = nullptr; // TryGetGradient(p); // TODO: get the existing gradient matrix from the parameter--or just fill it in? Would block memory free
