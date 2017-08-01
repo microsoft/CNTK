@@ -1801,7 +1801,7 @@ namespace CNTK
 
         inline std::wstring GenerateUid(const std::wstring& prefix)
         {
-#if 1
+#if 0
             return GenerateUid(prefix.c_str()); // will chop prefix to 2 chars
 #else
             return GenerateUid(std::wstring(prefix));

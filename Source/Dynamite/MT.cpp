@@ -74,9 +74,6 @@ TernaryModel AttentionModel(size_t attentionDim)
         let projectedKeys  = Times(K, keys);  // [A x T]
         let tanh = Tanh(projectedQuery + projectedKeys); // [A x T]
         let u = TransposeTimes(tanh, v); // [T] col vector
-        tanh->Output().Shape().AsString();
-        v.Shape().AsString();
-        u->Output().Shape().AsString();
         let w = Dynamite::Softmax(u);
         let res = Times(data, w); // [A]
         return res;
@@ -182,6 +179,7 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
         let sequenceLoss = Dynamite::Sequence::Map(BinaryModel([](const Variable& z, const Variable& label) { return Dynamite::CrossEntropyWithSoftmax(z, label); }));
         sequenceLoss(losses, z, labels);
         let loss = Batch::sum(losses); // TODO: Batch is not the right namespace; but this does the right thing
+        labels.clear(); losses.clear();
         return loss;
     };
     // create a batch mapper (which will eventually allow suspension)
@@ -226,19 +224,19 @@ void Train()
             PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/train.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk>" })
         }) },
         /*randomize=*/true);
-    minibatchSourceConfig.maxSamples = MinibatchSource::FullDataSweep;
+    minibatchSourceConfig.maxSamples = MinibatchSource::InfinitelyRepeat;
     let minibatchSource = CreateCompositeMinibatchSource(minibatchSourceConfig);
     // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep
 
     let parameters = model_fn.Parameters();
-    auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.05));
+    auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005));
     // TODO: change to Adam
     //auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.05));
     unordered_map<Parameter, NDArrayViewPtr> gradients;
     for (let& p : parameters) // TODO: test that this works outside of the loop
         gradients[p] = nullptr; // TryGetGradient(p); // TODO: get the existing gradient matrix from the parameter--or just fill it in? Would block memory free
 
-    const size_t minibatchSize = 200;  // use 10 for ~3 sequences/batch
+    const size_t minibatchSize = 50;  // 384 is 32 sequences, assuming av. length ~12
     vector<vector<Variable>> args; // [variable index][batch index]  --TODO: does this really work outside the loop?
     for (size_t mbCount = 0; true; mbCount++)
     {
@@ -250,10 +248,10 @@ void Train()
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, device);
         // train minibatch
         let mbLoss = criterion_fn(args[0], args[1]);
-        mbLoss.Backward(gradients);
-        learner->Update(gradients, minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
         let loss1 = mbLoss.Value()->AsScalar<float>(); // note: this does the GPU sync, so better do that only every N
-        fprintf(stderr, "CrossEntropy loss = %.7f\n", loss1 / minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences);
+        fprintf(stderr, "CrossEntropy loss = %.7f\n", loss1 / minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
+        //mbLoss.Backward(gradients);
+        //learner->Update(gradients, minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
     }
 }
 
