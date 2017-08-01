@@ -76,6 +76,15 @@ TernaryModel AttentionModel(size_t attentionDim)
         let u = TransposeTimes(tanh, v); // [T] col vector
         let w = Softmax(u);
         let res = Times(data, w); // [A]
+        query.Shape().AsString();
+        keys.Shape().AsString();
+        data.Shape().AsString();
+        projectedQuery->Output().Shape().AsString();
+        projectedKeys->Output().Shape().AsString();
+        tanh->Output().Shape().AsString();
+        u->Output().Shape().AsString();
+        w->Output().Shape().AsString();
+        res->Output().Shape().AsString();
         return res;
      });
 }
@@ -98,17 +107,17 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     // decode from a top layer of an encoder, using history as history
     // A real decoder version would do something here, e.g. if history is empty then use its own output,
     // and maybe also take a reshuffling matrix for beam decoding.
-    auto nestedLayers = vector<ModelParametersPtr>(lstms.begin(), lstms.end()); // TODO: no, name them properly
-    nestedLayers.push_back(attentionModel);
-    nestedLayers.push_back(merge);
-    nestedLayers.push_back(dense);
-    return BinarySequenceModel(nestedLayers,
+    map<wstring, ModelParametersPtr> nestedLayers;
+    for (let& lstm : lstms)
+        nestedLayers[L"lstm[" + std::to_wstring(nestedLayers.size()) + L"]"] = lstm;
+    nestedLayers.insert({ { L"attentionModel", attentionModel }, { L"merge", merge }, { L"dense", dense } });
+    return BinarySequenceModel({}, nestedLayers,
     [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
     {
         res.resize(history.size());
         // TODO: this is one layer only for now
         // convert encoder sequence into a dense tensor, so that we can do matrix products along the sequence axis
-        Variable hEncsTensor = Splice(hEncs, Axis(1)); // [hiddenDim, inputLen]
+        Variable hEncsTensor = Splice(hEncs, Axis(1)); // [2*hiddenDim, inputLen]
         // decoding loop
         Variable state = initialState;
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
@@ -120,7 +129,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
             let input = Splice({ history[t], attentionContext }, Axis(0));
             state = lstms[0](state, input);
             // compute attention vector
-            attentionContext = attentionModel(state, /*kers=*/hEncsTensor, /*data=*/hEncsTensor);
+            attentionContext = attentionModel(state, /*keys=*/hEncsTensor, /*data=*/hEncsTensor);
             // compute an enhanced hidden state with attention value merged in
             let m = Tanh(merge(Splice({ state, attentionContext }, Axis(0))));
             // compute output
@@ -135,18 +144,14 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
 BinarySequenceModel CreateModelFunction()
 {
     auto embed = Embedding(embeddingDim, device);
-    auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderHiddenDim, 0.8);
+    auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderHiddenDim / 2, 0.8); // TODO: need to figure out the factor of 2
     auto decode = AttentionDecoder(numDecoderLayers, decoderHiddenDim, 0.8);
-    //auto step = RNNStep(hiddenDim, device);
-    //auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
-    auto linear = Linear(tgtVocabSize, device);
-    //auto zero = Constant({ encoderHiddenDim }, 0.0f, device);
     vector<Variable> e, h;
     return BinarySequenceModel({},
     {
         { L"embed",   embed },
         { L"encoder", encode },
-        { L"linear",  linear }
+        { L"decode",  decode }
     },
     [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& history) mutable
     {
@@ -217,6 +222,8 @@ void Train()
     vector<Variable> d2{ Constant({ tgtVocabSize }, 0.0f, device) };
     vector<Variable> d3;
     model_fn(d3, d1, d2);
+
+    model_fn.LogParameters();
 
     // data
     auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(

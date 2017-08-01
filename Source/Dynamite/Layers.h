@@ -71,6 +71,13 @@ public:
         CollectParameters(res);
         return res;
     }
+    void LogParameters(const wstring& prefix = L"") const
+    {
+        for (let& kv : m_nestedParameters) // log nested functions
+            kv.second->LogParameters(kv.first + L".");
+        for (let& kv : m_parameters) // log parameters defined right here
+            fprintf(stderr, "%S : %S\n", (prefix + kv.first).c_str(), kv.second.Shape().AsString().c_str());
+    }
 };
 typedef ModelParameters::ModelParametersPtr ModelParametersPtr;
 
@@ -109,6 +116,7 @@ public:
     const Parameter& operator[](const wstring& name) { return ParameterSet()[name]; }
     const ModelParameters& Nested(const wstring& name) { return ParameterSet().Nested(name); }
     vector<Parameter> Parameters() const { let res = ParameterSet().CollectParameters(); return vector<Parameter>(res.begin(), res.end()); }
+    void LogParameters() const { ParameterSet().LogParameters(); }
 };
 typedef TModel<function<Variable(const Variable&)>> UnaryModel;
 typedef TModel<function<Variable(const Variable&, const Variable&)>> BinaryModel;
