@@ -1945,7 +1945,7 @@ public:
         return false;
     }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {
-        return false;
+        return true;
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
