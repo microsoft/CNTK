@@ -75,18 +75,25 @@ namespace CNTK
         auto reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
         switch (primitiveOp)
         {
-            // elementwise ops are done outside, we just set the opcode
-        case PrimitiveOpType::Plus:         op = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;                break;
-        case PrimitiveOpType::Minus:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opDifference;         break;
-        case PrimitiveOpType::ElementTimes: op = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct; break;
-        case PrimitiveOpType::ReLU:         op = Microsoft::MSR::CNTK::ElementWiseOperator::opLinearRectifier;    break;
-        case PrimitiveOpType::Tanh:         op = Microsoft::MSR::CNTK::ElementWiseOperator::opTanh;               break;
-        case PrimitiveOpType::Sigmoid:      op = Microsoft::MSR::CNTK::ElementWiseOperator::opSigmoid;            break;
-        case PrimitiveOpType::Log:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opLog;                break;
-        case PrimitiveOpType::Exp:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opExp;                break;
-        case PrimitiveOpType::Cos:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opCosine;             break;
-        case PrimitiveOpType::Sin:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opSin;                break;
-        case PrimitiveOpType::Negate:       op = Microsoft::MSR::CNTK::ElementWiseOperator::opNegate;             break;
+            // binary elementwise ops are done outside, we just set the opcode
+        case PrimitiveOpType::Plus:         op = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;                   break;
+        case PrimitiveOpType::Minus:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opDifference;            break;
+        case PrimitiveOpType::ElementTimes: op = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct;    break;
+            // unary elementwise ops as well are done outside, we just set the opcode
+        case PrimitiveOpType::ReLU:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opLinearRectifier;       break;
+        case PrimitiveOpType::Tanh:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opTanh;                  break;
+        case PrimitiveOpType::Sigmoid:       op = Microsoft::MSR::CNTK::ElementWiseOperator::opSigmoid;               break;
+        case PrimitiveOpType::Log:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opLog;                   break;
+        case PrimitiveOpType::Exp:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opExp;                   break;
+        case PrimitiveOpType::Cos:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opCosine;                break;
+        case PrimitiveOpType::Sin:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opSin;                   break;
+        case PrimitiveOpType::Negate:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opNegate;                break;
+        case PrimitiveOpType::Floor:         op = Microsoft::MSR::CNTK::ElementWiseOperator::opFloor;                 break;
+        case PrimitiveOpType::Abs:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opAbs;                   break;
+        case PrimitiveOpType::Sqrt:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt;                  break;
+        case PrimitiveOpType::Reciprocal:    op = Microsoft::MSR::CNTK::ElementWiseOperator::opReciprocal;            break;
+        case PrimitiveOpType::ELU:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opExponentialLinearUnit; break;
+        case PrimitiveOpType::StableSigmoid: op = Microsoft::MSR::CNTK::ElementWiseOperator::opStableSigmoid;         break;
             // reduction ops are also done outside, but set the reductionOp
         case PrimitiveOpType::ReduceElements:
             {
@@ -133,11 +140,6 @@ namespace CNTK
             break;
             // the following N-nary operations should be easy, mostly a matter of writing tests
             // unary operations to be completed
-        case PrimitiveOpType::Sqrt:
-        case PrimitiveOpType::Floor:
-        case PrimitiveOpType::Abs:
-        case PrimitiveOpType::Reciprocal:
-        case PrimitiveOpType::ELU:
         case PrimitiveOpType::Pow:
         case PrimitiveOpType::Softmax:
         case PrimitiveOpType::Hardmax:
@@ -257,7 +259,19 @@ namespace CNTK
                                           /*B=*/const_cast<NDArrayView*>(arg1)->shared_from_this(), /*transB=*/false, alpha, /*outputRank dummy=*/0, /*C=*/gradient, beta);
             break;
             // unary operations with simple TensorView implementation
-        case PrimitiveOpType::ReLU:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLinearRectifierDerivativeFromOutput; arg2 = outputValue; break;
+        case PrimitiveOpType::ReLU:          op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLinearRectifierDerivativeFromOutput;       arg2 = outputValue; break;
+        case PrimitiveOpType::Tanh:          op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithTanhDerivativeFromOutput;                  arg2 = outputValue; break;
+        case PrimitiveOpType::Sigmoid:       op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithSigmoidDerivativeFromOutput;               arg2 = outputValue; break;
+        case PrimitiveOpType::Log:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLogDerivativeFromOutput;                   arg2 = outputValue; break;
+        case PrimitiveOpType::Exp:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct;                                              arg2 = outputValue; break;
+        case PrimitiveOpType::Cos:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithCosDerivative;                             arg2 = inputValues[0]; break;
+        case PrimitiveOpType::Sin:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithSinDerivative;                             arg2 = inputValues[0]; break;
+        case PrimitiveOpType::Negate:        op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opNegate;                                                          break;
+        case PrimitiveOpType::Abs:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithAbsDerivative;                             arg2 = inputValues[0]; break;
+        case PrimitiveOpType::Sqrt:          op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithSqrtDerivative;                            arg2 = outputValue; break;
+        case PrimitiveOpType::Reciprocal:    op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithReciprocalDerivative;                      arg2 = outputValue; break;
+        case PrimitiveOpType::ELU:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExponentialLinearUnitDerivativeFromOutput; arg2 = outputValue; break;
+        case PrimitiveOpType::StableSigmoid: op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithSigmoidDerivativeFromOutput;               arg2 = outputValue; break;
             // no-op operations with simple TensorView implementation
             // NOTE: These do not need any data copy if there is only one consumer, which we won't know here. That case will be caught in the batched version.
         case PrimitiveOpType::NoOp:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
@@ -317,6 +331,11 @@ namespace CNTK
                 else
                     op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; // full slice actually: just copy (like a NoOp)
             }
+            break;
+            // primitives that have zero gradient (piecewise constants)
+        case PrimitiveOpType::Floor:
+            if (beta == 0)
+                gradient->SetValue(0.0f);
             break;
         default:
             //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());

@@ -368,19 +368,27 @@ struct Sequence
     }
 };
 
-// we need a special definition since the built-in one creates a BlockFunction, which costs too much each time
-static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label)
+// built-in Softmax requires temp memory, so we use an explicit expression instead
+static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes())
 {
-    let loss1 = CNTK::CrossEntropyWithSoftmax(z, label);
-    let ls1 = loss1->Output().Shape(); ls1;
+    return z - ReduceLogSum(z, axis);
+}
+
+// built-in Softplus is a BlockFunction, so need to replace it here
+static Variable Softplus(const Variable& z, const std::wstring& name)
+{
+    return LogAddExp(z, Constant::Scalar(z.GetDataType(), 0.0));
+}
+
+// we need a special definition since the built-in one creates a BlockFunction, which costs too much each time
+static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label, const Axis& axis = Axis::AllStaticAxes())
+{
     // TODO: find a proper way of handling sparse labels
-    auto s1 = label.Shape();
-    auto z1 = z.Shape();
     //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
     //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
     // TODO: reduce ops must be able to drop the axis
     // TODO: dynamite should rewrite Times() that is really a dot product
-    let loss = Minus(ReduceLogSum(z, Axis(0)), ReduceSum(ElementTimes(label, z), Axis(0)));
+    let loss = Minus(ReduceLogSum(z, axis), ReduceSum(ElementTimes(label, z), axis));
     return Reshape(loss, NDShape());
     //return loss; // Reshape(loss, NDShape());
 }

@@ -65,7 +65,7 @@ TernaryModel AttentionModel(size_t attentionDim)
 {
     auto Q = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"Q"); // query projection
     auto K = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"K"); // keys projection
-    auto v = Parameter({ attentionDim, 1 }, DataType::Float, GlorotUniformInitializer(), device, L"v"); // tanh projection
+    auto v = Parameter({ attentionDim }, DataType::Float, GlorotUniformInitializer(), device, L"v"); // tanh projection
     return TernaryModel({ Q, K, v },
     [=](const Variable& query, const Variable& keys, const Variable& data) -> Variable
     {
@@ -74,17 +74,11 @@ TernaryModel AttentionModel(size_t attentionDim)
         let projectedKeys  = Times(K, keys);  // [A x T]
         let tanh = Tanh(projectedQuery + projectedKeys); // [A x T]
         let u = TransposeTimes(tanh, v); // [T] col vector
-        let w = Softmax(u);
-        let res = Times(data, w); // [A]
-        query.Shape().AsString();
-        keys.Shape().AsString();
-        data.Shape().AsString();
-        projectedQuery->Output().Shape().AsString();
-        projectedKeys->Output().Shape().AsString();
         tanh->Output().Shape().AsString();
+        v.Shape().AsString();
         u->Output().Shape().AsString();
-        w->Output().Shape().AsString();
-        res->Output().Shape().AsString();
+        let w = Dynamite::Softmax(u);
+        let res = Times(data, w); // [A]
         return res;
      });
 }
@@ -94,7 +88,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     dropoutInputKeepProb;
     // create all the layer objects
     let initialState = Constant({ hiddenDim }, 0.0f, device);
-    let initialContext = Constant({ attentionDim }, 0.0f, device);
+    let initialContext = Constant({ 2 * hiddenDim }, 0.0f, device); // 2 * because bidirectional --TODO: can this be inferred?
     vector<BinaryModel> lstms;
     for (size_t i = 0; i < numLayers; i++)
         lstms.push_back(RNNStep(hiddenDim, device));
@@ -144,7 +138,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
 BinarySequenceModel CreateModelFunction()
 {
     auto embed = Embedding(embeddingDim, device);
-    auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderHiddenDim / 2, 0.8); // TODO: need to figure out the factor of 2
+    auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderHiddenDim, 0.8);
     auto decode = AttentionDecoder(numDecoderLayers, decoderHiddenDim, 0.8);
     vector<Variable> e, h;
     return BinarySequenceModel({},
@@ -185,7 +179,7 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
         model_fn(z, features, history);
         features.clear(); history.clear(); // free some GPU memory
         // compute loss per word
-        let sequenceLoss = Dynamite::Sequence::Map(BinaryModel(Dynamite::CrossEntropyWithSoftmax));
+        let sequenceLoss = Dynamite::Sequence::Map(BinaryModel([](const Variable& z, const Variable& label) { return Dynamite::CrossEntropyWithSoftmax(z, label); }));
         sequenceLoss(losses, z, labels);
         let loss = Batch::sum(losses); // TODO: Batch is not the right namespace; but this does the right thing
         return loss;
