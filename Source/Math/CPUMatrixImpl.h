@@ -2726,6 +2726,60 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNegativeSineOf(const CPUMatrix<E
     return *this;
 }
 
+//[this]=acos([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceAcos()
+{
+    return AssignAcosOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAcosOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAcosOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord (i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = acos(v);
+    }
+
+    return *this;
+}
+
+//[this]=asin([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceAsin()
+{
+    return AssignAsinOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAsinOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAsinOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord (i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = asin(v);
+    }
+
+    return *this;
+}
+
 //[this]=cosh([this]) element wise
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceCosh()

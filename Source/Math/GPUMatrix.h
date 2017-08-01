@@ -380,6 +380,12 @@ public:
     GPUMatrix<ElemType>& InplaceNegativeSine();
     GPUMatrix<ElemType>& AssignNegativeSineOf(const GPUMatrix<ElemType>& a);
 
+    GPUMatrix<ElemType>& InplaceAcos();
+    GPUMatrix<ElemType>& AssignAcosOf(const GPUMatrix<ElemType>& a);
+
+    GPUMatrix<ElemType>& InplaceAsin();
+    GPUMatrix<ElemType>& AssignAsinOf(const GPUMatrix<ElemType>& a);
+
     GPUMatrix<ElemType>& InplaceCosh();
     GPUMatrix<ElemType>& AssignCoshOf(const GPUMatrix<ElemType>& a);
 
