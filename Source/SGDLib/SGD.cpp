@@ -844,8 +844,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     }
                     else
                     {
-                    learnRatePerSample *= m_learnRateDecreaseFactor;
-                    LOGPRINTF(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
+                        learnRatePerSample *= m_learnRateDecreaseFactor;
+                        LOGPRINTF(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
                         lrFailedOnce = false;
                     }
                 }
@@ -883,43 +883,19 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // Persist model and check-point info
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
         {
-            if (loadedPrevModel)
-            {
-                // If previous best model is loaded, we will first remove epochs that lead to worse results
-                for (int j = 1; j < m_learnRateAdjustInterval; j++)
-                {
-                    int epochToDelete = i - j;
-                    LOGPRINTF(stderr, "SGD: removing model and checkpoint files for epoch %d after rollback to epoch %lu\n", epochToDelete + 1, (unsigned long)(i - m_learnRateAdjustInterval) + 1);  // report 1 based epoch number
-                    _wunlink(GetModelNameForEpoch(epochToDelete).c_str());
-                    _wunlink(GetCheckPointFileNameForEpoch(epochToDelete).c_str());
-                }
+            SaveCheckPointInfo(
+                i,
+                totalTrainingSamplesSeen,
+                learnRatePerSample,
+                smoothedGradients,
+                smoothedCounts,
+                prevCriterion,
+                chosenMinibatchSize);
 
-                // Set i back to the loaded model
-                i -= m_learnRateAdjustInterval;
-                LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
-                SaveCheckPointInfo(
-                    i,
-                    totalTrainingSamplesSeen,
-                    learnRatePerSample,
-                    smoothedGradients,
-                    smoothedCounts,
-                    prevCriterion,
-                    chosenMinibatchSize);
-            }
-            else
-            {
-                SaveCheckPointInfo(
-                    i,
-                    totalTrainingSamplesSeen,
-                    learnRatePerSample,
-                    smoothedGradients,
-                    smoothedCounts,
-                    prevCriterion,
-                    chosenMinibatchSize);
-                auto modelName = GetModelNameForEpoch(i);
-                if (m_traceLevel > 0)
-                    LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
-                net->Save(modelName);
+            auto modelName = GetModelNameForEpoch(i);
+            if (m_traceLevel > 0)
+                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
+            net->Save(modelName);
 
             if (loadedPrevModel)
             {
@@ -934,7 +910,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
                 ////// Set i back to the loaded model
                 ////i -= m_learnRateAdjustInterval;
-                LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
+                LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i + 1); // report 1 based epoch number
                 ////SaveCheckPointInfo(
                 ////    i,
                 ////    totalTrainingSamplesSeen,
@@ -1161,10 +1137,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (useDistributedMBReading)
             fprintf(stderr, ", distributed reading is ENABLED");
 
-            if (m_maxSamplesInRAM < SIZE_MAX)
-                fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
+        if (m_maxSamplesInRAM < SIZE_MAX)
+            fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
         else if (numSubminibatchesNeeded > 1)
-                fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
+            fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
 
         fprintf(stderr, ".\n");
     }
