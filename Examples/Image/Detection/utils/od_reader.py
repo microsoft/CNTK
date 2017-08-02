@@ -8,7 +8,7 @@ import zipfile
 import cv2 # pip install opencv-python
 import numpy as np
 import os
-import pdb
+from utils.proposal_helpers import ProposalProvider, compute_targets, compute_image_stats
 
 DEBUG = False
 if DEBUG:
@@ -16,16 +16,26 @@ if DEBUG:
 
 
 class ObjectDetectionReader:
-    def __init__(self, img_map_file, roi_map_file, max_annotations_per_image,
-                 pad_width, pad_height, pad_value, randomize, use_flipping,
-                 max_images=None, buffered_rpn_proposals=None):
+    def __init__(self, img_map_file, roi_map_file, num_classes,
+                 max_annotations_per_image, pad_width, pad_height, pad_value,
+                 randomize, use_flipping,
+                 proposal_provider, proposal_iou_threshold,
+                 provide_targets, normalize_means, normalize_stds, max_images=None):
+        self._num_classes = num_classes
         self._pad_width = pad_width
         self._pad_height = pad_height
         self._pad_value = pad_value
         self._randomize = randomize
         self._use_flipping = use_flipping
         self._flip_image = True # will be set to False in the first call to _reset_reading_order
-        self._buffered_rpn_proposals = buffered_rpn_proposals
+        self._proposal_provider = proposal_provider
+        self._proposal_iou_threshold = proposal_iou_threshold
+        self._provide_targets = provide_targets
+        self._normalize_means = normalize_means
+        self._normalize_stds = normalize_stds
+
+        self._proposal_dict = {}
+        self._proposal_targets = {}
         self._img_file_paths = []
         self._gt_annotations = []
 
@@ -51,9 +61,10 @@ class ObjectDetectionReader:
             self._debug_plot(resized_with_pad, roi_data)
         else:
             img_data, img_dims = self._load_resize_and_pad_image(index)
-        buffered_proposals = self._get_buffered_proposals(index)
 
-        return img_data, roi_data, img_dims, buffered_proposals
+        proposals, label_targets, bbox_targets, bbox_inside_weights = self._get_proposals_and_targets(index)
+
+        return img_data, roi_data, img_dims, proposals, label_targets, bbox_targets, bbox_inside_weights
 
     def sweep_end(self):
         return self._reading_index >= self._num_images
@@ -67,7 +78,6 @@ class ObjectDetectionReader:
             try:
                 cv2.rectangle(img_data, pt1, pt2, color, thickness)
             except:
-                pdb.set_trace()
                 print("Unexpected error:", sys.exc_info()[0])
 
         mp.imshow(img_data)
@@ -88,7 +98,7 @@ class ObjectDetectionReader:
         # read roi map file
         with open(roi_map_file) as f:
             roi_map_lines = f.readlines()
-        # TODO: check whether this avoids reading empty lines
+
         roi_map_lines = [line for line in roi_map_lines if len(line) > 0]
         if max_images is not None:
             roi_map_lines = roi_map_lines[:max_images]
@@ -141,24 +151,20 @@ class ObjectDetectionReader:
 
         return img
 
-    def _prepare_annotations_and_image_stats(self, index, img_width, img_height):
+    def _prepare_annotations_proposals_and_stats(self, index, img):
+        img_width = len(img[0])
+        img_height = len(img)
+
+        # prepare image statistics for scaling and padding images later
+        # [target_w, target_h, img_width, img_height, top, bottom, left, right, scale_factor]
+        img_stats = compute_image_stats(img_width, img_height, self._pad_width, self._pad_height)
+        self._img_stats[index] = img_stats
+        scale_factor = img_stats[-1]
+        top = img_stats[4]
+        left = img_stats[6]
+
+        # prepare annotations
         annotations = self._gt_annotations[index]
-        do_scale_w = img_width > img_height
-        target_w = self._pad_width
-        target_h = self._pad_height
-
-        if do_scale_w:
-            scale_factor = float(self._pad_width) / float(img_width)
-            target_h = int(np.round(img_height * scale_factor))
-        else:
-            scale_factor = float(self._pad_height) / float(img_height)
-            target_w = int(np.round(img_width * scale_factor))
-
-        top = int(max(0, np.round((self._pad_height - target_h) / 2)))
-        left = int(max(0, np.round((self._pad_width - target_w) / 2)))
-        bottom = self._pad_height - top - target_h
-        right = self._pad_width - left - target_w
-
         xyxy = annotations[:, :4]
         xyxy *= scale_factor
         xyxy += (left, top, left, top)
@@ -170,9 +176,29 @@ class ObjectDetectionReader:
         annotations[:, 2] = np.round(annotations[:, 2])
         annotations[:, 3] = np.round(annotations[:, 3])
 
-        # keep image stats for scaling and padding images later
-        img_stats = [target_w, target_h, img_width, img_height, top, bottom, left, right]
-        self._img_stats[index] = img_stats
+        # prepare proposals
+        if self._proposal_provider is not None:
+            proposals = self._proposal_provider.get_proposals(index, img)
+
+            if self._proposal_provider.requires_scaling():
+                proposals = proposals * scale_factor
+                proposals += (left, top, left, top)
+            self._proposal_dict[index] = proposals
+
+            if self._provide_targets:
+                # add gt rois to front of list for Fast R-CNN
+                gt_rois = annotations[np.where(annotations[:, 4] > 0)]
+                num_proposals = proposals.shape[0]
+                num_gt = gt_rois.shape[0]
+                proposals_incl_gt = np.zeros(proposals.shape)
+                proposals_incl_gt[:num_gt,:] = gt_rois[:,:4]
+                proposals_incl_gt[num_gt:,:] = proposals[:(num_proposals - num_gt),:]
+                self._proposal_dict[index] = proposals_incl_gt
+
+                # prepare proposal targets
+                self._proposal_targets[index] = \
+                    compute_targets(proposals_incl_gt, gt_rois, iou_threshold=self._proposal_iou_threshold,
+                                    normalize_means=self._normalize_means, normalize_stds=self._normalize_stds)
 
     def _get_next_image_index(self):
         if self._reading_index < 0 or self._reading_index >= self._num_images:
@@ -186,11 +212,9 @@ class ObjectDetectionReader:
 
         img = self._read_image(image_path)
         if self._img_stats[index] is None:
-            img_width = len(img[0])
-            img_height = len(img)
-            self._prepare_annotations_and_image_stats(index, img_width, img_height)
+            self._prepare_annotations_proposals_and_stats(index, img)
 
-        target_w, target_h, img_width, img_height, top, bottom, left, right = self._img_stats[index]
+        target_w, target_h, img_width, img_height, top, bottom, left, right, scale = self._img_stats[index]
 
         resized = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_NEAREST)
         resized_with_pad = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT,
@@ -216,15 +240,44 @@ class ObjectDetectionReader:
             return flipped_annotations
         return annotations
 
-    def _get_buffered_proposals(self, index):
-        if self._buffered_rpn_proposals is None:
-            return None
+    def _get_proposals_and_targets(self, index):
+        if self._proposal_provider is None:
+            return None, None, None, None
 
-        buffered_proposals = self._buffered_rpn_proposals[index]
+        proposals = self._proposal_dict[index]
         if self._flip_image:
-            flipped_proposals = np.array(buffered_proposals, dtype=np.float32)
-            flipped_proposals[:,0] = self._pad_width - buffered_proposals[:,2] - 1
-            flipped_proposals[:,2] = self._pad_width - buffered_proposals[:,0] - 1
-            return flipped_proposals
-        return buffered_proposals
+            flipped_proposals = np.array(proposals, dtype=np.float32)
+            flipped_proposals[:,0] = self._pad_width - proposals[:,2] - 1
+            flipped_proposals[:,2] = self._pad_width - proposals[:,0] - 1
+            proposals = flipped_proposals
+
+        if self._provide_targets:
+            targets = self._proposal_targets[index]
+            bbox_targets_single = targets[:,:4]
+            label_target_inds = targets[:,4]
+            bbox_inside_weights_single = targets[:,5]
+
+            # convert label targets to 1-hot vectors, convert bbox targets and bbiw to '4-hot'
+            label_targets = np.zeros((targets.shape[0], self._num_classes))
+            bbox_targets = np.zeros((targets.shape[0], self._num_classes*4))
+            bbox_inside_weights = np.zeros((targets.shape[0], self._num_classes*4))
+            for r in range(targets.shape[0]):
+                class_ind = int(label_target_inds[r])
+                label_targets[r, class_ind] = 1
+                bbox_targets[r, class_ind*4:(class_ind+1)*4] = bbox_targets_single[r]
+                bbox_inside_weights[r, class_ind*4:(class_ind+1)*4] = bbox_inside_weights_single[r]
+
+            # TODO: double check this flipping of regression targets
+            # apply flipping to x-position regression target
+            if self._flip_image:
+                # TODO: check ::4
+                flipped_bbox_targets = np.array(bbox_targets, np.float32)
+                flipped_bbox_targets[:,0::4] = -bbox_targets[:,0::4]
+                bbox_targets = flipped_bbox_targets
+        else:
+            label_targets = None
+            bbox_targets = None
+            bbox_inside_weights = None
+
+        return proposals, label_targets, bbox_targets, bbox_inside_weights
 

@@ -8,7 +8,6 @@ from __future__ import print_function
 from builtins import str
 import sys, os, time
 import numpy as np
-from easydict import EasyDict
 from builtins import range
 import copy, textwrap
 from PIL import Image, ImageFont, ImageDraw
@@ -16,8 +15,8 @@ from PIL.ExifTags import TAGS
 from matplotlib.pyplot import imsave
 import cntk
 from cntk import input_variable, Axis
-from utils.nms.nms_wrapper import apply_nms_to_single_image_results
-from cntk_helpers import regress_rois
+from utils.nms_wrapper import apply_nms_to_single_image_results
+from utils.rpn.bbox_transform import regress_rois
 import cv2 # pip install opencv-python
 
 available_font = "arial.ttf"
@@ -26,84 +25,18 @@ try:
 except:
     available_font = "FreeMono.ttf"
 
-
 ####################################
 # Visualize results
 ####################################
-def visualizeResultsFaster(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padHeight, classes,
-                     nmsKeepIndices = None, boDrawNegativeRois = True, decisionThreshold = 0.0):
-    # read and resize image
-    imgWidth, imgHeight = imWidthHeight(imgPath)
-    scale = 800.0 / max(imgWidth, imgHeight)
-    imgHeight = int(imgHeight * scale)
-    imgWidth = int(imgWidth * scale)
-    if imgWidth > imgHeight:
-        h_border = 0
-        v_border = int((imgWidth - imgHeight)/2)
-    else:
-        h_border = int((imgHeight - imgWidth)/2)
-        v_border = 0
-
-    PAD_COLOR = [103, 116, 123] # [114, 114, 114]
-    cv_img = cv2.imread(imgPath)
-    rgb_img = cv2.cvtColor(cv_img,cv2.COLOR_BGR2RGB)
-    resized = cv2.resize(rgb_img, (imgWidth, imgHeight), interpolation=cv2.INTER_NEAREST)
-    imgDebug = cv2.copyMakeBorder(resized,v_border,v_border,h_border,h_border,cv2.BORDER_CONSTANT,value=PAD_COLOR)
-    rect_scale = 800 / padWidth
-
-    assert(len(roiLabels) == len(roiRelCoords))
-    if roiScores:
-        assert(len(roiLabels) == len(roiScores))
-        minScore = min(roiScores)
-        print("roiScores min: {}, max: {}, threshold: {}".format(minScore, max(roiScores), decisionThreshold))
-        if minScore > decisionThreshold:
-            decisionThreshold = minScore * 0.5
-            print("reset decision threshold to: {}".format(decisionThreshold))
-
-    # draw multiple times to avoid occlusions
-    for iter in range(0,3):
-        for roiIndex in range(len(roiRelCoords)):
-            label = roiLabels[roiIndex]
-            if roiScores:
-                score = roiScores[roiIndex]
-                if decisionThreshold and score < decisionThreshold:
-                    label = 0
-
-            # init drawing parameters
-            thickness = 1
-            if label == 0:
-                color = (255, 0, 0)
-            else:
-                color = getColorsPalette()[label]
-
-            rect = [(rect_scale * i) for i in roiRelCoords[roiIndex]]
-            rect[0] = int(max(0, min(padWidth, rect[0])))
-            rect[1] = int(max(0, min(padHeight, rect[1])))
-            rect[2] = int(max(0, min(padWidth, rect[2])))
-            rect[3] = int(max(0, min(padHeight, rect[3])))
-
-            # draw in higher iterations only the detections
-            if iter == 0 and boDrawNegativeRois:
-                drawRectangles(imgDebug, [rect], color=color, thickness=thickness)
-            elif iter==1 and label > 0:
-                if not nmsKeepIndices or (roiIndex in nmsKeepIndices):
-                    thickness = 4
-                drawRectangles(imgDebug, [rect], color=color, thickness=thickness)
-            elif iter == 2 and label > 0:
-                if not nmsKeepIndices or (roiIndex in nmsKeepIndices):
-                    font = ImageFont.truetype(available_font, 18)
-                    text = classes[label]
-                    if roiScores:
-                        text += "(" + str(round(score, 2)) + ")"
-                    imgDebug = drawText(imgDebug, (rect[0],rect[1]), text, color = (255,255,255), font = font, colorBackground=color)
-    return imgDebug
-
 def load_resize_and_pad(image_path, width, height, pad_value=114):
     if "@" in image_path:
         print("WARNING: zipped image archives are not supported for visualizing results.")
         exit(0)
 
     img = cv2.imread(image_path)
+    return resize_and_pad(img, width, height, pad_value)
+
+def resize_and_pad(img, width, height, pad_value=114):
     img_width = len(img[0])
     img_height = len(img)
     scale_w = img_width > img_height
@@ -130,88 +63,139 @@ def load_resize_and_pad(image_path, width, height, pad_value=114):
     dims = (width, height, target_w, target_h, img_width, img_height)
     return resized_with_pad, model_arg_rep, dims
 
-# Tests a Faster R-CNN model and plots images with detected boxes
-def eval_and_plot_faster_rcnn(eval_model, num_images_to_plot, test_map_file, img_shape,
-                              results_base_path, feature_node_name, classes,
-                              drawUnregressedRois=False, drawNegativeRois=False,
-                              nmsThreshold=0.5, nmsConfThreshold=0.0, bgrPlotThreshold = 0.8):
+def visualize_detections(img_path, roi_coords, roi_labels, roi_scores,
+                         pad_width, pad_height, classes,
+                         draw_negative_rois = False, decision_threshold = 0.0):
+    # read and resize image
+    imgWidth, imgHeight = imWidthHeight(img_path)
+    scale = 800.0 / max(imgWidth, imgHeight)
+    imgHeight = int(imgHeight * scale)
+    imgWidth = int(imgWidth * scale)
+    if imgWidth > imgHeight:
+        h_border = 0
+        v_border = int((imgWidth - imgHeight)/2)
+    else:
+        h_border = int((imgHeight - imgWidth)/2)
+        v_border = 0
+
+    PAD_COLOR = [103, 116, 123] # [114, 114, 114]
+    cv_img = cv2.imread(img_path)
+    rgb_img = cv2.cvtColor(cv_img,cv2.COLOR_BGR2RGB)
+    resized = cv2.resize(rgb_img, (imgWidth, imgHeight), interpolation=cv2.INTER_NEAREST)
+    result_img = cv2.copyMakeBorder(resized,v_border,v_border,h_border,h_border,cv2.BORDER_CONSTANT,value=PAD_COLOR)
+    rect_scale = 800 / pad_width
+
+    assert(len(roi_labels) == len(roi_coords))
+    if roi_scores is not None:
+        assert(len(roi_labels) == len(roi_scores))
+        minScore = min(roi_scores)
+        if minScore > decision_threshold:
+            decision_threshold = minScore * 0.5
+
+    # draw multiple times to avoid occlusions
+    for iter in range(0,3):
+        for roiIndex in range(len(roi_coords)):
+            label = roi_labels[roiIndex]
+            if roi_scores is not None:
+                score = roi_scores[roiIndex]
+                if decision_threshold and score < decision_threshold:
+                    label = 0
+
+            # init drawing parameters
+            thickness = 1
+            if label == 0:
+                color = (255, 0, 0)
+            else:
+                color = getColorsPalette()[label]
+
+            rect = [(rect_scale * i) for i in roi_coords[roiIndex]]
+            rect[0] = int(max(0, min(pad_width, rect[0])))
+            rect[1] = int(max(0, min(pad_height, rect[1])))
+            rect[2] = int(max(0, min(pad_width, rect[2])))
+            rect[3] = int(max(0, min(pad_height, rect[3])))
+
+            # draw in higher iterations only the detections
+            if iter == 0 and draw_negative_rois:
+                drawRectangles(result_img, [rect], color=color, thickness=thickness)
+            elif iter==1 and label > 0:
+                thickness = 4
+                drawRectangles(result_img, [rect], color=color, thickness=thickness)
+            elif iter == 2 and label > 0:
+                font = ImageFont.truetype(available_font, 18)
+                text = classes[label]
+                if roi_scores is not None:
+                    text += "(" + str(round(score, 2)) + ")"
+                result_img = drawText(result_img, (rect[0],rect[1]), text, color = (255,255,255), font = font, colorBackground=color)
+    return result_img
+
+def plot_test_set_results(evaluator, num_images_to_plot, results_base_path, cfg):
     # get image paths
-    with open(test_map_file) as f:
+    with open(cfg["DATA"].TEST_MAP_FILE) as f:
         content = f.readlines()
-    img_base_path = os.path.dirname(os.path.abspath(test_map_file))
+    img_base_path = os.path.dirname(os.path.abspath(cfg["DATA"].TEST_MAP_FILE))
     img_file_names = [os.path.join(img_base_path, x.split('\t')[1]) for x in content]
+    img_shape = (cfg.NUM_CHANNELS, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH)
 
-    # prepare model
-    image_input = input_variable(img_shape, dynamic_axes=[Axis.default_batch_axis()], name=feature_node_name)
-    dims_input = input_variable((1,6), dynamic_axes=[Axis.default_batch_axis()], name='dims_input')
-    frcn_eval = eval_model(image_input, dims_input)
-
-    #dims_input_const = cntk.constant([image_width, image_height, image_width, image_height, image_width, image_height], (1, 6))
-    print("Plotting results from Faster R-CNN model for %s images." % num_images_to_plot)
+    print("Plotting results from for %s images." % num_images_to_plot)
     for i in range(0, num_images_to_plot):
-        imgPath = img_file_names[i]
-
-        # evaluate single image
-        _, cntk_img_input, dims = load_resize_and_pad(imgPath, img_shape[2], img_shape[1])
-
-        dims_input = np.array(dims, dtype=np.float32)
-        dims_input.shape = (1,) + dims_input.shape
-        output = frcn_eval.eval({frcn_eval.arguments[0]: [cntk_img_input], frcn_eval.arguments[1]: dims_input})
-
-        out_dict = dict([(k.name, k) for k in output])
-        out_cls_pred = output[out_dict['cls_pred']][0]
-        out_rpn_rois = output[out_dict['rpn_rois']][0]
-        out_bbox_regr = output[out_dict['bbox_regr']][0]
-
+        img_path = img_file_names[i]
+        out_cls_pred, out_rpn_rois, out_bbox_regr, dims = evaluator.process_image_detailed(img_path)
         labels = out_cls_pred.argmax(axis=1)
-        scores = out_cls_pred.max(axis=1).tolist()
+        scores = out_cls_pred.max(axis=1)
 
-        if drawUnregressedRois:
+        if cfg.DRAW_UNREGRESSED_ROIS:
             # plot results without final regression
-            imgDebug = visualizeResultsFaster(imgPath, labels, scores, out_rpn_rois, img_shape[2], img_shape[1],
-                                              classes, nmsKeepIndices=None, boDrawNegativeRois=drawNegativeRois,
-                                              decisionThreshold=bgrPlotThreshold)
-            imsave("{}/{}_{}".format(results_base_path, i, os.path.basename(imgPath)), imgDebug)
+            imgDebug = visualize_detections(img_path, out_rpn_rois, labels, scores,
+                                            img_shape[2], img_shape[1],
+                                            classes=cfg["DATA"].CLASSES,
+                                            draw_negative_rois=cfg.DRAW_NEGATIVE_ROIS,
+                                            decision_threshold=cfg.RESULTS_BGR_PLOT_THRESHOLD)
+            imsave("{}/{}_{}".format(results_base_path, i, os.path.basename(img_path)), imgDebug)
 
         # apply regression and nms to bbox coordinates
         regressed_rois = regress_rois(out_rpn_rois, out_bbox_regr, labels, dims)
-
         nmsKeepIndices = apply_nms_to_single_image_results(regressed_rois, labels, scores,
-                                                    nms_threshold=nmsThreshold,
-                                                    conf_threshold=nmsConfThreshold)
+                                                           use_gpu_nms=cfg.USE_GPU_NMS,
+                                                           device_id=cfg.GPU_ID,
+                                                           nms_threshold=cfg.RESULTS_NMS_THRESHOLD,
+                                                           conf_threshold=cfg.RESULTS_NMS_CONF_THRESHOLD)
 
-        img = visualizeResultsFaster(imgPath, labels, scores, regressed_rois, img_shape[2], img_shape[1],
-                                     classes, nmsKeepIndices=nmsKeepIndices,
-                                     boDrawNegativeRois=drawNegativeRois,
-                                     decisionThreshold=bgrPlotThreshold)
-        imsave("{}/{}_regr_{}".format(results_base_path, i, os.path.basename(imgPath)), img)
+        filtered_bboxes = regressed_rois[nmsKeepIndices]
+        filtered_labels = labels[nmsKeepIndices]
+        filtered_scores = scores[nmsKeepIndices]
 
+        img = visualize_detections(img_path, filtered_bboxes, filtered_labels, filtered_scores,
+                                   img_shape[2], img_shape[1],
+                                   classes=cfg["DATA"].CLASSES,
+                                   draw_negative_rois=cfg.DRAW_NEGATIVE_ROIS,
+                                   decision_threshold=cfg.RESULTS_BGR_PLOT_THRESHOLD)
+        imsave("{}/{}_regr_{}".format(results_base_path, i, os.path.basename(img_path)), img)
 
 ####################################
 # helper library
 ####################################
 
-def imread(imgPath, boThrowErrorIfExifRotationTagSet = True):
-    if not os.path.exists(imgPath):
+def imread(img_path, boThrowErrorIfExifRotationTagSet = True):
+    if not os.path.exists(img_path):
         print("ERROR: image path does not exist.")
         error
 
-    rotation = rotationFromExifTag(imgPath)
+    rotation = rotationFromExifTag(img_path)
     if boThrowErrorIfExifRotationTagSet and rotation != 0:
         print ("Error: exif roation tag set, image needs to be rotated by %d degrees." % rotation)
-    img = cv2.imread(imgPath)
+    img = cv2.imread(img_path)
     if img is None:
-        print ("ERROR: cannot load image " + imgPath)
+        print ("ERROR: cannot load image " + img_path)
         error
     if rotation != 0:
         img = imrotate(img, -90).copy()  # got this error occassionally without copy "TypeError: Layout of the output array img is incompatible with cv::Mat"
     return img
 
-def rotationFromExifTag(imgPath):
+def rotationFromExifTag(img_path):
     TAGSinverted = {v: k for k, v in TAGS.items()}
     orientationExifId = TAGSinverted['Orientation']
     try:
-        imageExifTags = Image.open(imgPath)._getexif()
+        imageExifTags = Image.open(img_path)._getexif()
     except:
         imageExifTags = None
 
@@ -231,8 +215,8 @@ def rotationFromExifTag(imgPath):
             error
     return rotation
 
-def imwrite(img, imgPath):
-    cv2.imwrite(imgPath, img)
+def imwrite(img, img_path):
+    cv2.imwrite(img_path, img)
 
 def imresize(img, scale, interpolation = cv2.INTER_LINEAR):
     return cv2.resize(img, (0,0), fx=scale, fy=scale, interpolation=interpolation)
@@ -283,7 +267,6 @@ def drawRectangles(img, rects, color = (0, 255, 0), thickness = 2):
         try:
             cv2.rectangle(img, pt1, pt2, color, thickness)
         except:
-            import pdb; pdb.set_trace()
             print("Unexpected error:", sys.exc_info()[0])
 
 def drawCrossbar(img, pt):
@@ -389,5 +372,3 @@ class Bbox:
 
     def surfaceArea(self):
         return self.width() * self.height()
-
-
