@@ -75,7 +75,7 @@ At every stop the following information is given:
  * Node type (e.g. 'Times')
  * Name if given, otherwise it is omitted
  * uid, which is a unique reference within the graph
- * shape having the format [dynamic axis](static axes). E.g. ``[*,*](2,)``
+ * shape having the format ``[dynamic axis](static axes)``. E.g. ``[*,*](2,)``
    means that the node's output has two dynamic axes (batch and sequence) and
    one static axis (2 dimensions)
 ''' % DEBUG_USAGE
