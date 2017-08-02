@@ -1418,3 +1418,14 @@ def test_index_caching(tmpdir):
         timeWithCache += (end - start)
 
     assert timeWithCache < timeWithoutCache
+
+def test_setting_py_value_to_deserializer(tmpdir):
+    config = create_ctf_deserializer(tmpdir)
+
+    for value in [True, False]:
+        config['cacheIndex'] = value
+        assert config['cacheIndex'] == value
+
+    for traceLevel in [1,2]:
+        config['traceLevel'] = traceLevel
+        assert config['traceLevel'] == traceLevel
