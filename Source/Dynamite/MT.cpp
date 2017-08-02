@@ -116,7 +116,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     {
         res.resize(history.size());
         // TODO: this is one layer only for now
-        // convert encoder sequence into a dense tensor, so that we can do matrix products along the sequence axis
+        // convert encoder sequence into a dense tensor, so that we can do matrix products along the sequence axis - 1
         Variable hEncsTensor = Splice(hEncs, Axis(1)); // [2*hiddenDim, inputLen]
         // decoding loop
         Variable state = initialState;
@@ -274,24 +274,29 @@ void Train()
 }
 
 // prints object of subRank from offset, similar to Numpy format
-static __declspec(noinline) size_t PrintTensor(const vector<float>& data, const vector<size_t>& dims, const vector<size_t>& strides, size_t subRank, size_t index, size_t offset, size_t width = 8, size_t maxItems = 4)
+// index is along 'axis'; subRank is recursion depth (rank of current object)
+// SubRank and axis are the same except for matrix level (subRank=2); then the axes are transposed if columnMajor.
+static __declspec(noinline) size_t PrintTensor(const vector<float>& data, const vector<size_t>& dims, const vector<size_t>& strides, size_t subRank, size_t axis, size_t index, size_t offset, size_t width = 8, size_t maxItems = 4, bool columnMajor = true)
 {
     let rank = dims.size();
     // print preceding separator
     if (index > 0)
     {
-        fprintf(stderr, ",");
+        if (subRank == 1 && columnMajor)
+            fprintf(stderr, ";");
+        else
+            fprintf(stderr, ",");
         for (size_t n = 0; n < subRank; n++)
             fprintf(stderr, "\n");
         fprintf(stderr, "%*s", subRank == 0 ? 2 : (int)(rank - subRank), "");
     }
     // print object
-    if (index > 0 && dims[subRank] > maxItems) // dims[subRank] is guaranteed to be valid if index > 0
+    if (index > 0 && dims[axis] > maxItems) // dims[axis] is guaranteed to be valid if index > 0
     {
         if (index == (maxItems + 1) / 2)
         {
             fprintf(stderr, "...");
-            return dims[subRank] - maxItems / 2;
+            return dims[axis] - maxItems / 2;
         }
     }
     if (subRank == 0) // scalar: print the item
@@ -299,14 +304,14 @@ static __declspec(noinline) size_t PrintTensor(const vector<float>& data, const 
         //fprintf(stderr, "%8f", data[offset]);
     else
     {
-        let axis = subRank - 1;
+        let axis1 = (rank >= 2 && subRank <= 2 && columnMajor) ? 2 - subRank : subRank - 1;
         if (rank > 0)
             fprintf(stderr, "[");
-        if (axis == 0)
+        if (subRank - 1 == 0)
             fprintf(stderr, " ");
-        for (size_t index1 = 0; index1 < dims[axis]; )
-            index1 = PrintTensor(data, dims, strides, axis, index1, offset + index1 * strides[axis], width, maxItems);
-        if (axis == 0)
+        for (size_t index1 = 0; index1 < dims[axis1]; )
+            index1 = PrintTensor(data, dims, strides, subRank - 1, axis1, index1, offset + index1 * strides[axis1], width, maxItems, columnMajor);
+        if (subRank - 1 == 0)
             fprintf(stderr, " ");
         if (rank > 0)
             fprintf(stderr, "]");
@@ -331,7 +336,7 @@ void testPrint()
             vector<float> data;
             for (size_t val = 0; val < stride; val++)
                 data.push_back((float)val);
-            PrintTensor(data, dims, strides, rank, 0, 0);
+            PrintTensor(data, dims, strides, rank, rank, 0, 0);
             fprintf(stderr, "\n");
         }
     }
