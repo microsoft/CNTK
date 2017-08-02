@@ -270,7 +270,7 @@ def eval_fast_rcnn_mAP(eval_model, num_test_images=5):
             {image_input: mb_data[image_input], roi_input: np.reshape(rois, roi_input.shape)})
         all_raw_outputs.append(output.copy())
 
-        if img_i % 100 == 0 and img_i != 0:
+        if img_i % 1000 == 0 and img_i != 0:
             print("Images processed: " + str(img_i))
 
     all_gt_infos = prepare_ground_truth_boxes(gtbs=all_raw_gt_boxes)
@@ -321,7 +321,6 @@ def to_cv2_img(img):
     img = np.transpose(img, (1,2,0))
     img = np.asarray(img, dtype=np.uint8)
 
-    #import ipdb;ipdb.set_trace()
     return img
 
 
@@ -383,14 +382,12 @@ def visualize_rois(all_boxes, imgs=None, plot=True):
 
 def add_rois_to_img(img, rois, cls_name, remove_padding=True):
     if rois.size == 0: return
-    if img is None: import ipdb;ipdb.set_trace()
 
     rois[:, 0:4] /= output_scale + output_scale
     if(remove_padding):
         rois[:, [0, 2]] -= 7 / 32
         rois[:, [0, 2]] *= 16 / 9
 
-    # import ipdb;ipdb.set_trace()
     draw_bb_on_image(img, points_to_xywh(rois), cls_name)
 
 
@@ -455,44 +452,25 @@ def points_to_xywh(points):
 
 
 if __name__ == '__main__':
-    if True:
-        """
-        Evaluates the Classification of the model created by the H1 script. Since only the classification is to be tested
-        the roi_input is given the ground truth boxes. This way it can be assured, that no issues due to bad region
-        proposals is taken into account and the classification accurancy can be measured.
-        """
-        os.chdir(p.cntkFilesDir)
-        model_path = os.path.join(abs_path, "Output", p.datasetName + "_hfrcn_py.model")
+    """
+    Evaluates the Classification of the model created by the H1 script. Since only the classification is to be tested
+    the roi_input is given the ground truth boxes. This way it can be assured, that no issues due to bad region
+    proposals is taken into account and the classification accurancy can be measured.
+    """
+    os.chdir(p.cntkFilesDir)
+    model_path = os.path.join(abs_path, "Output", p.datasetName + "_hfrcn_py.model")
 
-        # Train only if no model exists yet
-        if os.path.exists(model_path):
-            print("Loading existing model from %s" % model_path)
-            trained_model = load_model(model_path)
-        else:
-            print("No trained model found! Start training now ...")
-            import H1_RunHierarchical as h1
-
-            trained_model = h1.create_and_save_model(model_path)
-            print("Stored trained model at %s" % model_path)
-
-        # Evaluate the test set
-        eval_fast_rcnn_mAP(trained_model)
-
-    # eval multiple trained models
+    # Train only if no model exists yet
+    if os.path.exists(model_path):
+        print("Loading existing model from %s" % model_path)
+        trained_model = load_model(model_path)
     else:
-        hier_HCH = HierarchyHelper(get_tree_str(p.datasetName, True))
-        flat_HCH = HierarchyHelper(get_tree_str(p.datasetName, False))
+        print("No trained model found! Start training now ...")
+        import H1_RunHierarchical as h1
 
-        model_list = [r"./h/hfrcn.model",
-                      r"./nh/hfrcn.model"]
-        HCH_List = [hier_HCH, flat_HCH]
-        for i in range(len(model_list)):
-            model_path = model_list[i]
-            HCH = HCH_List[i]
-            print("\n==========================================================================\nevaluating model: " + model_path + "\n==========================================================================\n")
-            HCH.tree_map.root_node.print()
-            print()
-            trained_model = load_model(model_path)
-            eval_fast_rcnn_mAP(trained_model, 4952)
+        trained_model = h1.create_and_save_model(model_path)
+        print("Stored trained model at %s" % model_path)
 
+    # Evaluate the test set
+    eval_fast_rcnn_mAP(trained_model, p.cntk_num_test_images)
 
