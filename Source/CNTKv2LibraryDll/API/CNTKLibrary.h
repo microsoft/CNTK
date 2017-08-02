@@ -903,6 +903,12 @@ namespace CNTK
         ///
         CNTK_API std::wstring AsString() const;
 
+        ///
+        /// Log the value of the tensor to a file
+        /// This is for debugging purposes.
+        ///
+        CNTK_API void LogToFile(const std::wstring& name, FILE* f = stderr, size_t maxItems = 6, bool columnMajor = true) const;
+
     private:
         // Disallow copy and move construction and assignment
         NDArrayView(const NDArrayView&) = delete; NDArrayView& operator=(const NDArrayView&) = delete; NDArrayView& operator=(NDArrayView&&) = delete; NDArrayView(NDArrayView&& other) = delete;

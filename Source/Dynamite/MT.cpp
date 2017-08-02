@@ -69,7 +69,9 @@ TernaryModel AttentionModel(size_t attentionDim1)
     {
         // compute attention weights
         let projectedQuery = Times(Q, query); // [A x 1]
+        //LOG(projectedQuery);
         let projectedKeys  = Times(K, keys);  // [A x T]
+        //LOG(projectedKeys);
         let tanh = Tanh(projectedQuery + projectedKeys); // [A x T]
 #if 0 // this fails auto-batching
         let u = Times(v, tanh, L"vProj"); // [T] vector                         // [128] * [128 x 4 x 7] -> [4 x 7]
@@ -77,7 +79,11 @@ TernaryModel AttentionModel(size_t attentionDim1)
         let res = Times(data, w, L"att"); // [A]                                // [128 x 4 x 7] * [4 x 7]
 #else
         let u = TransposeTimes(tanh, v, L"vProj"); // [T] col vector            // [128 x 4 x 7]' * [128] = [7 x 4]         [128] * [128 x 4 x 7] -> [4 x 7]
+        //LOG(tanh);
+        //LOG(v);
+        LOG(u);
         let w = Dynamite::Softmax(u);                                           // [7 x 4]                                  [4 x 7]
+        LOG(w);
         let res = Times(data, w, L"att"); // [A]                                // [128 x 4 x 7] * [7 x 4]                  [128 x 4 x 7] * [4 x 7]
 #endif
         return res;
@@ -118,6 +124,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
         // TODO: this is one layer only for now
         // convert encoder sequence into a dense tensor, so that we can do matrix products along the sequence axis - 1
         Variable hEncsTensor = Splice(hEncs, Axis(1)); // [2*hiddenDim, inputLen]
+        LOG(hEncsTensor);
         // decoding loop
         Variable state = initialState;
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
@@ -128,10 +135,12 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
             // TODO: Why not learn the output of the first step, and skip the <s> and funky initial attention context?
             let input = Splice({ history[t], attentionContext }, Axis(0), L"augInput");
             state = lstms[0](state, input);
+            LOG(state);
             // compute attention vector
             attentionContext = attentionModel(state, /*keys=*/hEncsTensor, /*data=*/hEncsTensor);
             // compute an enhanced hidden state with attention value merged in
             let m = Tanh(merge(Splice({ state, attentionContext }, Axis(0))));
+            LOG(m);
             // compute output
             let z = dense(m);
             res[t] = z;
@@ -157,6 +166,7 @@ BinarySequenceModel CreateModelFunction()
     {
         // encoder
         embed(e, x);
+        LOG(e);
         encode(h, e);
         // decoder (outputting logprobs of words)
         decode(res, history, h);
@@ -212,14 +222,6 @@ void Train()
     auto model_fn = CreateModelFunction();
     auto criterion_fn = CreateCriterionFunction(model_fn);
 
-    // run something through to get the parameter matrices shaped --ugh!
-    vector<Variable> d1{ Constant({ srcVocabSize }, 0.0f, device) };
-    vector<Variable> d2{ Constant({ tgtVocabSize }, 0.0f, device) };
-    vector<Variable> d3;
-    model_fn(d3, d1, d2);
-
-    model_fn.LogParameters();
-
     // data
     auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(
         {
@@ -232,6 +234,14 @@ void Train()
     minibatchSourceConfig.maxSamples = MinibatchSource::InfinitelyRepeat;
     let minibatchSource = CreateCompositeMinibatchSource(minibatchSourceConfig);
     // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep in a single expression
+
+    // run something through to get the parameter matrices shaped --ugh!
+    vector<Variable> d1{ Constant({ srcVocabSize }, 0.0f, device) };
+    vector<Variable> d2{ Constant({ tgtVocabSize }, 0.0f, device) };
+    vector<Variable> d3;
+    model_fn(d3, d1, d2);
+
+    model_fn.LogParameters();
 
     let parameters = model_fn.Parameters();
     //auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005));
@@ -273,93 +283,13 @@ void Train()
     }
 }
 
-// prints object of subRank from offset
-// The print format is similar to numpy, except if columnMajor is specified.
-// In that case, the matrix level is printed in Matlab format.
-// 'index' is along 'axis'; subRank is recursion depth (rank of current object).
-// SubRank and axis are the same except for matrix level (subRank=2); then the axes are transposed if columnMajor.
-static __declspec(noinline) size_t AsString(string& res,
-                                            const float* data, const vector<size_t>& dims, const vector<size_t>& strides,
-                                            size_t subRank, size_t axis, size_t index, size_t maxItems = 6, bool columnMajor = true)
-{
-    let rank = dims.size();
-    // print preceding separator
-    if (index > 0)
-    {
-        if (subRank == 1 && columnMajor)
-            res.append(1, ';');
-        else
-            res.append(1, ',');
-        for (size_t n = 0; n < subRank; n++)
-            res.append(1, '\n');
-        res.append(subRank == 0 ? 2 : (int)(rank - subRank), ' ');
-    }
-    // print object
-    if (index > 0 && dims[axis] > maxItems) // dims[axis] is guaranteed to be valid if index > 0
-    {
-        if (index == (maxItems + 1) / 2)
-        {
-            if (columnMajor && subRank == 1)
-                res.append(1, ' ');
-            res.append(3, '.');
-            return dims[axis] - maxItems / 2;
-        }
-    }
-    if (subRank == 0) // scalar: print the item
-        res.append(to_string(*data));
-    else
-    {
-        let axis1 = (rank >= 2 && subRank <= 2 && columnMajor) ? 2 - subRank : subRank - 1; // column major for matrix level
-        if (!columnMajor || rank < 2 || subRank != 1)
-            if (rank > 0)
-                res.append(1, '[');
-        if (subRank == 1)
-            res.append(1, ' ');
-        for (size_t index1 = 0; index1 < dims[axis1]; )
-            index1 = AsString(res, data + index1 * strides[axis1], dims, strides, subRank - 1, axis1, index1, maxItems, columnMajor);
-        if (!columnMajor || rank < 2 || subRank != 1)
-        {
-            if (subRank == 1 || (columnMajor && subRank == 2))
-                res.append(1, ' ');
-            if (rank > 0)
-                res.append(1, ']');
-        }
-    }
-    return index + 1;
-}
-
-void testPrint()
-{
-    for (size_t dim = 5; dim >= 3; dim -= 2)
-    {
-        for (size_t rank = 0; rank < 5; rank++)
-        {
-            vector<size_t> dims(rank, dim);
-            vector<size_t> strides;
-            size_t stride = 1;
-            for (let& dim : dims)
-            {
-                strides.push_back(stride);
-                stride *= dim;
-            }
-            vector<float> data;
-            for (size_t val = 0; val < stride; val++)
-                data.push_back((float)val);
-            string res;
-            res.reserve(stride * 5);
-            AsString(res, data.data(), dims, strides, rank, rank, 0);
-            fprintf(stderr, "%s\n", res.c_str());
-        }
-    }
-}
 
 int mt_main(int argc, char *argv[])
 {
     argc; argv;
     try
     {
-        testPrint();
-        //Train();
+        Train();
         //Train(DeviceDescriptor::CPUDevice(), true);
     }
     catch (exception& e)

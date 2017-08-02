@@ -478,6 +478,79 @@ void TensorView<ElemType>::DoScatterBatchOf(ElemType beta, size_t numOutputs, co
     });
 }
 
+// -------------------------------------------------------------------
+// AsString() -- format a tensor for logging/printing
+// -------------------------------------------------------------------
+
+// prints object of subRank from offset
+// The print format is similar to numpy, except if columnMajor is specified.
+// In that case, the matrix level is printed in Matlab format.
+// 'index' is along 'axis'; subRank is recursion depth (rank of current object).
+// SubRank and axis are the same except for matrix level (subRank=2); then the axes are transposed if columnMajor.
+template <class ElemType, class DimsVecType/*vector or SmallVector*/, class StridesVecType/*vector or SmallVector*/>
+static __declspec(noinline) size_t TensorDataAsString(string& res,
+                                                      const ElemType* data, const DimsVecType& dims, const StridesVecType& strides,
+                                                      size_t subRank, size_t axis, size_t index, size_t maxItems = 6, bool columnMajor = true)
+{
+    let rank = dims.size();
+    // print preceding separator
+    if (index > 0)
+    {
+        if (subRank == 1 && columnMajor)
+            res.append(1, ';');
+        else
+            res.append(1, ',');
+        for (size_t n = 0; n < subRank; n++)
+            res.append(1, '\n');
+        res.append(subRank == 0 ? 2 : (int)(rank - subRank), ' ');
+    }
+    // print object
+    if (index > 0 && dims[axis] > maxItems) // dims[axis] is guaranteed to be valid if index > 0
+    {
+        if (index == (maxItems + 1) / 2)
+        {
+            if (columnMajor && subRank == 1)
+                res.append(1, ' ');
+            res.append(3, '.');
+            return dims[axis] - maxItems / 2;
+        }
+    }
+    if (subRank == 0) // scalar: print the item
+        res.append(to_string(*data));
+    else
+    {
+        let axis1 = (rank >= 2 && subRank <= 2 && columnMajor) ? 2 - subRank : subRank - 1; // column major for matrix level
+        if (!columnMajor || rank < 2 || subRank != 1)
+            if (rank > 0)
+                res.append(1, '[');
+        if (subRank == 1)
+            res.append(1, ' ');
+        for (size_t index1 = 0; index1 < dims[axis1]; )
+            index1 = TensorDataAsString(res, data + index1 * strides[axis1], dims, strides, subRank - 1, axis1, index1, maxItems, columnMajor);
+        if (!columnMajor || rank < 2 || subRank != 1)
+        {
+            if (subRank == 1 || (columnMajor && subRank == 2))
+                res.append(1, ' ');
+            if (rank > 0)
+                res.append(1, ']');
+        }
+    }
+    return index + 1;
+}
+
+template <class ElemType>
+string TensorView<ElemType>::AsString(size_t maxItems /*= 6*/, bool columnMajor /*= true*/) const
+{
+    unique_ptr<ElemType[]> data(m_sob->CopyToArray());
+    let dims    = m_shape.GetDims();
+    let strides = m_shape.GetStrides();
+    let rank = m_shape.GetRank();
+    string res;
+    res.reserve(m_sob->GetNumElements() * 5);
+    TensorDataAsString(res, data.get(), dims, strides, rank, rank, 0, maxItems, columnMajor);
+    return res;
+}
+
 template class TensorView<float>;
 template class TensorView<double>;
 

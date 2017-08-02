@@ -987,6 +987,27 @@ namespace CNTK
         return wss.str();
     }
 
+    // log a tensor to a file, e.g. stderr, for debugging purposes
+    void NDArrayView::LogToFile(const std::wstring& name, FILE* f, size_t maxItems /*= 6*/, bool columnMajor /*= true*/) const
+    {
+        std::string asString;
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            asString = GetTensorViewPtr<float>()->AsString(maxItems, !Internal::IsReversingTensorShapesInErrorMessagesEnabled());
+            break;
+        case DataType::Double:
+            asString = GetTensorViewPtr<double>()->AsString(maxItems, !Internal::IsReversingTensorShapesInErrorMessagesEnabled());
+            break;
+        default:
+            LogicError("NDArrayView::LogToFile: Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+        if (!name.empty())
+            fprintf(f, "%S =\n", name.c_str());
+        fprintf(f, "%s\n", asString.c_str());
+    }
+
     // Explicit template instantiations
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<float>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<double>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);

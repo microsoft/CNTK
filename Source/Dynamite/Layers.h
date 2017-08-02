@@ -28,6 +28,12 @@ using namespace std;
 
 namespace Dynamite {
 
+// debugging helper
+static inline NDArrayViewPtr GetValueAsTensor(const Variable& var) { return var.Value(); }
+static inline NDArrayViewPtr GetValueAsTensor(const FunctionPtr & fun) { return fun->Output().Value(); }
+static inline NDArrayViewPtr GetValueAsTensor(const vector<Variable>& vec) { return (Splice(vec, Axis((int)vec[0].Shape().Rank())))->Output().Value(); }
+#define LOG(var) (GetValueAsTensor(var)->LogToFile(L#var, stderr, 37)) // helper to log a value
+
 struct ModelParameters
 {
     map<wstring, Parameter> m_parameters;
@@ -390,12 +396,15 @@ struct Sequence
 // built-in Softmax requires temp memory, so we use an explicit expression instead
 static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes())
 {
+    LOG(z);
+    LOG(ReduceLogSum(z, axis, L"smLogDenom"));
     return z - ReduceLogSum(z, axis, L"smLogDenom");
 }
 
 // built-in Softmax requires temp memory, so we use an explicit expression instead
 static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes())
 {
+    LOG(LogSoftmax(z, axis));
     return Exp(LogSoftmax(z, axis), L"sm");
 }
 

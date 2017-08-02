@@ -180,6 +180,12 @@ public:
     Matrix<ElemType>&       GetSOB()       { return *m_sob; }
     friend Test::TensorTest<ElemType>;
 
+    // -------------------------------------------------------------------
+    // others
+    // -------------------------------------------------------------------
+
+    std::string AsString(size_t maxItems = 6, bool columnMajor = true) const;
+
 private:
     // -------------------------------------------------------------------
     // sob members
