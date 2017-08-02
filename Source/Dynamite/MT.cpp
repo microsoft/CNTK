@@ -273,24 +273,26 @@ void Train()
     }
 }
 
-// prints object of subRank from offset, similar to Numpy format
-// index is along 'axis'; subRank is recursion depth (rank of current object)
+// prints object of subRank from offset
+// The print format is similar to numpy, except if columnMajor is specified.
+// In that case, the matrix level is printed in Matlab format.
+// 'index' is along 'axis'; subRank is recursion depth (rank of current object).
 // SubRank and axis are the same except for matrix level (subRank=2); then the axes are transposed if columnMajor.
-static __declspec(noinline) size_t PrintTensor(string& res,
-                                               const float* data, const vector<size_t>& dims, const vector<size_t>& strides,
-                                               size_t subRank, size_t axis, size_t index, size_t width = 8, size_t maxItems = 4, bool columnMajor = true)
+static __declspec(noinline) size_t AsString(string& res,
+                                            const float* data, const vector<size_t>& dims, const vector<size_t>& strides,
+                                            size_t subRank, size_t axis, size_t index, size_t maxItems = 6, bool columnMajor = true)
 {
     let rank = dims.size();
     // print preceding separator
     if (index > 0)
     {
         if (subRank == 1 && columnMajor)
-            fprintf(stderr, ";");
+            res.append(1, ';');
         else
-            fprintf(stderr, ",");
+            res.append(1, ',');
         for (size_t n = 0; n < subRank; n++)
-            fprintf(stderr, "\n");
-        fprintf(stderr, "%*s", subRank == 0 ? 2 : (int)(rank - subRank), "");
+            res.append(1, '\n');
+        res.append(subRank == 0 ? 2 : (int)(rank - subRank), ' ');
     }
     // print object
     if (index > 0 && dims[axis] > maxItems) // dims[axis] is guaranteed to be valid if index > 0
@@ -298,29 +300,29 @@ static __declspec(noinline) size_t PrintTensor(string& res,
         if (index == (maxItems + 1) / 2)
         {
             if (columnMajor && subRank == 1)
-                fprintf(stderr, " ");
-            fprintf(stderr, "...");
+                res.append(1, ' ');
+            res.append(3, '.');
             return dims[axis] - maxItems / 2;
         }
     }
     if (subRank == 0) // scalar: print the item
-        fprintf(stderr, "%*f", (int)width, *data);
+        res.append(to_string(*data));
     else
     {
         let axis1 = (rank >= 2 && subRank <= 2 && columnMajor) ? 2 - subRank : subRank - 1; // column major for matrix level
         if (!columnMajor || rank < 2 || subRank != 1)
             if (rank > 0)
-                fprintf(stderr, "[");
+                res.append(1, '[');
         if (subRank == 1)
-            fprintf(stderr, " ");
+            res.append(1, ' ');
         for (size_t index1 = 0; index1 < dims[axis1]; )
-            index1 = PrintTensor(res, data + index1 * strides[axis1], dims, strides, subRank - 1, axis1, index1, width, maxItems, columnMajor);
+            index1 = AsString(res, data + index1 * strides[axis1], dims, strides, subRank - 1, axis1, index1, maxItems, columnMajor);
         if (!columnMajor || rank < 2 || subRank != 1)
         {
             if (subRank == 1 || (columnMajor && subRank == 2))
-                fprintf(stderr, " ");
+                res.append(1, ' ');
             if (rank > 0)
-                fprintf(stderr, "]");
+                res.append(1, ']');
         }
     }
     return index + 1;
@@ -344,7 +346,8 @@ void testPrint()
             for (size_t val = 0; val < stride; val++)
                 data.push_back((float)val);
             string res;
-            PrintTensor(res, data.data(), dims, strides, rank, rank, 0);
+            res.reserve(stride * 5);
+            AsString(res, data.data(), dims, strides, rank, rank, 0);
             fprintf(stderr, "%s\n", res.c_str());
         }
     }
