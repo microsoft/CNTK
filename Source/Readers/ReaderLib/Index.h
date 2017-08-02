@@ -17,15 +17,12 @@ class IndexedSequence;
 // Metadata describing a sequence within a chunk.
 struct SequenceDescriptor
 {
-    SequenceDescriptor(size_t key, uint32_t numberOfSamples, uint32_t size, size_t offset)
+    SequenceDescriptor(size_t key, uint32_t numberOfSamples, uint32_t size, uint32_t offset)
         : m_key(key),
         m_numberOfSamples(numberOfSamples),
         m_byteSize(size),
-        m_offsetInChunk(static_cast<uint32_t>(offset))
-    {
-        if (m_offsetInChunk != offset)
-            RuntimeError("Sequence offset overflows uint32_t type.");
-    }
+        m_offsetInChunk(offset)
+    {}
 
     const size_t m_key;                // Unique sequence identifier.
     const uint32_t m_numberOfSamples;  // Number of samples in this sequence.
