@@ -231,23 +231,25 @@ void Train()
         /*randomize=*/true);
     minibatchSourceConfig.maxSamples = MinibatchSource::InfinitelyRepeat;
     let minibatchSource = CreateCompositeMinibatchSource(minibatchSourceConfig);
-    // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep
+    // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep in a single expression
 
     let parameters = model_fn.Parameters();
     //auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005));
     let epochSize = 100000; // it's a small corpus, ~50k samples
-    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001 * sqrt(384), 0.00005 * sqrt(384), 0.000025 * sqrt(384), 0.00001 * sqrt(384) }, epochSize), MomentumAsTimeConstantSchedule(1000), true, MomentumAsTimeConstantSchedule(10000));
+    let minibatchSize = 384;// 50;  // 384 is 32 sequences, assuming av. length ~12
+    let minibatchSizeAtStart = 50; // start smaller for stability  --TODO: This is wrong with current Adam implementation
+    //auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001 * sqrt(minibatchSize), 0.00005 * sqrt(minibatchSize), 0.000025 * sqrt(minibatchSize), 0.00001 * sqrt(minibatchSize) }, epochSize), MomentumAsTimeConstantSchedule(1000), true, MomentumAsTimeConstantSchedule(10000));
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*3, 0.00005*3, 0.000025*3, 0.00001*3 }, epochSize), MomentumAsTimeConstantSchedule(1000), true, MomentumAsTimeConstantSchedule(10000));
     unordered_map<Parameter, NDArrayViewPtr> gradients;
-    for (let& p : parameters) // TODO: test that this works outside of the loop
-        gradients[p] = nullptr; // TryGetGradient(p); // TODO: get the existing gradient matrix from the parameter--or just fill it in? Would block memory free
+    for (let& p : parameters)
+        gradients[p] = nullptr;
 
-    const size_t minibatchSize = 184;// 50;  // 384 is 32 sequences, assuming av. length ~12
-    vector<vector<Variable>> args; // [variable index][batch index]  --TODO: does this really work outside the loop?
+    vector<vector<Variable>> args;
     size_t totalLabels = 0;
     for (size_t mbCount = 0; true; mbCount++)
     {
         // get next minibatch
-        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        auto minibatchData = minibatchSource->GetNextMinibatch(totalLabels < 5000 ? minibatchSizeAtStart : minibatchSize, device);
         if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
             break;
         let numLabels = minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples;
@@ -261,6 +263,8 @@ void Train()
         let mbLoss = criterion_fn(args[0], args[1]);
         let lossPerLabel = mbLoss.Value()->AsScalar<float>() / numLabels; // note: this does the GPU sync, so better do that only every N
         fprintf(stderr, "CrossEntropy loss = %.7f; PPL = %.3f; seenLabels=%d\n", lossPerLabel, exp(lossPerLabel), (int)totalLabels);
+        if (mbCount < 400 || mbCount % 20 == 0)
+            fflush(stderr);
         if (std::isnan(lossPerLabel))
             throw runtime_error("Loss is NaN.");
         // backprop and model update
@@ -269,12 +273,77 @@ void Train()
     }
 }
 
+// prints object of subRank from offset, similar to Numpy format
+static __declspec(noinline) size_t PrintTensor(const vector<float>& data, const vector<size_t>& dims, const vector<size_t>& strides, size_t subRank, size_t index, size_t offset, size_t width = 8, size_t maxItems = 4)
+{
+    let rank = dims.size();
+    // print preceding separator
+    if (index > 0)
+    {
+        fprintf(stderr, ",");
+        for (size_t n = 0; n < subRank; n++)
+            fprintf(stderr, "\n");
+        fprintf(stderr, "%*s", subRank == 0 ? 2 : (int)(rank - subRank), "");
+    }
+    // print object
+    if (index > 0 && dims[subRank] > maxItems) // dims[subRank] is guaranteed to be valid if index > 0
+    {
+        if (index == (maxItems + 1) / 2)
+        {
+            fprintf(stderr, "...");
+            return dims[subRank] - maxItems / 2;
+        }
+    }
+    if (subRank == 0) // scalar: print the item
+        fprintf(stderr, "%*f", (int)width, data[offset]);
+        //fprintf(stderr, "%8f", data[offset]);
+    else
+    {
+        let axis = subRank - 1;
+        if (rank > 0)
+            fprintf(stderr, "[");
+        if (axis == 0)
+            fprintf(stderr, " ");
+        for (size_t index1 = 0; index1 < dims[axis]; )
+            index1 = PrintTensor(data, dims, strides, axis, index1, offset + index1 * strides[axis], width, maxItems);
+        if (axis == 0)
+            fprintf(stderr, " ");
+        if (rank > 0)
+            fprintf(stderr, "]");
+    }
+    return index + 1;
+}
+
+void testPrint()
+{
+    for (size_t dim = 5; dim >= 3; dim -= 2)
+    {
+        for (size_t rank = 0; rank < 5; rank++)
+        {
+            vector<size_t> dims(rank, dim);
+            vector<size_t> strides;
+            size_t stride = 1;
+            for (let& dim : dims)
+            {
+                strides.push_back(stride);
+                stride *= dim;
+            }
+            vector<float> data;
+            for (size_t val = 0; val < stride; val++)
+                data.push_back((float)val);
+            PrintTensor(data, dims, strides, rank, 0, 0);
+            fprintf(stderr, "\n");
+        }
+    }
+}
+
 int mt_main(int argc, char *argv[])
 {
     argc; argv;
     try
     {
-        Train();
+        testPrint();
+        //Train();
         //Train(DeviceDescriptor::CPUDevice(), true);
     }
     catch (exception& e)

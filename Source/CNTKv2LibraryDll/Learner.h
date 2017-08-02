@@ -311,6 +311,7 @@ namespace CNTK
         }
 
         double m_smoothedCount;
+        double m_franksAsIfSmoothedCount = 0; // TODO: need checkpointing etc., fix with Yuqing
         MomentumSchedule m_varianceMomentumSchedule;
         double m_epsilon;
         bool m_adamax;

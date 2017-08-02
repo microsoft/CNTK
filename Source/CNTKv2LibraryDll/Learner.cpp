@@ -737,6 +737,9 @@ namespace CNTK
     /*virtual*/ void LearnerAdam::UpdateOnMinibatch(size_t trainingSampleCount)
     {
         m_smoothedCount += 1.0;
+
+        const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
+        m_franksAsIfSmoothedCount = varMomentum * m_franksAsIfSmoothedCount + (1.0 - varMomentum) * trainingSampleCount; // [fseide]
     }
 
     /*virtual*/ void LearnerAdam::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
@@ -756,7 +759,9 @@ namespace CNTK
 
         const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
 
-        smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, m_smoothedCount, learningRate,
+        const auto franksAsIfFactor = sqrt(m_franksAsIfSmoothedCount); // correction term since denominator uses sum instead of av, so it makes things sqrt(N) too small
+
+        smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, m_smoothedCount, learningRate     * franksAsIfFactor,
                                            momentum, varMomentum, (ElementType)m_epsilon, UseUnitGainMomentum(), m_adamax);
     }
 
