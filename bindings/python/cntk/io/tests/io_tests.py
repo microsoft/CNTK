@@ -1418,3 +1418,4 @@ def test_index_caching(tmpdir):
         timeWithCache += (end - start)
 
     assert timeWithCache < timeWithoutCache
+
