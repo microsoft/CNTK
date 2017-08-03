@@ -318,7 +318,8 @@ private:
             Matrix<ElemType>* gpuCopyBuffer = m_aggregationBuffer.get();
 
             ElemType* reductionBuffer;
-            size_t currentGradientIndex = m_gradientIndexToAggregate[0];
+            // CurrentGradientIndex will load the index from m_gradientIndexToAggregate
+            size_t currentGradientIndex = -2;  
             //pipeline loop
             for (size_t i : m_gradientIndexToAggregate)
             {
@@ -361,20 +362,24 @@ private:
                 gpuToCpuIndex++;
                 currentGradientIndex = i;
             }
-            //for last copy
-            if (allReduceIndex != 0)
+            // If currentGradientIndex == -2, it means no gradient index from m_gradientIndexToAggregate
+            if (currentGradientIndex == -2)
             {
-                m_gpuDataTransferers[allReduceIndex]->WaitForCopyGPUToCPUAsync();
-            }
-            reductionBuffer = m_intermediateCPUBuffers[allReduceIndex].get();
-            m_mpi->AllReduce(reductionBuffer, (currentGradientIndex == -1) ? m_aggregationBuffer->GetNumElements() : gradients[currentGradientIndex]->GetNumElements());
+                //for last copy
+                if (allReduceIndex != 0)
+                {
+                    m_gpuDataTransferers[allReduceIndex]->WaitForCopyGPUToCPUAsync();
+                }
+                reductionBuffer = m_intermediateCPUBuffers[allReduceIndex].get();
+                m_mpi->AllReduce(reductionBuffer, (currentGradientIndex == -1) ? m_aggregationBuffer->GetNumElements() : gradients[currentGradientIndex]->GetNumElements());
 
-            //2.3 Async h_to_g copy
-            cpuToGpuIndex = allReduceIndex;
-            m_gpuDataTransferers[cpuToGpuIndex]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[cpuToGpuIndex].get(),
-                (currentGradientIndex == -1) ? m_aggregationBuffer->GetNumElements() : gradients[currentGradientIndex]->GetNumElements(),
-                (currentGradientIndex == -1) ? m_aggregationBuffer->Data() : gradients[currentGradientIndex]->Data());
-            allReduceIndex ++;
+                //2.3 Async h_to_g copy
+                cpuToGpuIndex = allReduceIndex;
+                m_gpuDataTransferers[cpuToGpuIndex]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[cpuToGpuIndex].get(),
+                    (currentGradientIndex == -1) ? m_aggregationBuffer->GetNumElements() : gradients[currentGradientIndex]->GetNumElements(),
+                    (currentGradientIndex == -1) ? m_aggregationBuffer->Data() : gradients[currentGradientIndex]->Data());
+                allReduceIndex ++;
+            }
         }
         // non-NCCL 
         else if (!m_nccl.IsSupported())
