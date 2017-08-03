@@ -14,7 +14,7 @@ class ClassMap():
     """Awaits format {<Identifier> <number> }"""
     def __init__(self, cls_map_file):
         strings = open(cls_map_file).read().split()
-        self.cls_map = {}
+        self.cls_map = [None]*int(len(strings)/2)#{}
         for i in range(int(len(strings)/2)):
             self.cls_map[int(strings[2*i+1])] = strings[2*i]
 
@@ -22,7 +22,7 @@ class ClassMap():
         return self.cls_map[i]
 
 LIMIT_TO_FIRST = 10
-NMS_IOU_THRESHOLD = 0.7
+NMS_IOU_THRESHOLD = .5 # 0.7
 cls_map = ClassMap(r"../../DataSets/Pascal/mappings/class_map.txt")
 DATA_SET = "Pascal_VOC_2007"
 CONF_THRESHOLD = 0.25 # 0.015
@@ -110,6 +110,149 @@ def load_image(img_path):
 
 def save_image(img, dir, name):
     cv2.imwrite(os.path.join(dir,name), img)
+
+
+def prepare_ground_truth_boxes(gtbs, classes, image_width, image_height):
+    """
+        Creates an object that can be passed as the parameter "all_gt_infos" to "evaluate_detections" in map_helpers
+        Parameters
+        ----------
+        gtbs - arraylike of shape (nr_of_images, nr_of_boxes, cords+original_label) where nr_of_boxes may be a dynamic axis
+
+        Returns
+        -------
+        Object for parameter "all_gt_infos"
+        """
+    num_test_images = len(gtbs)
+    all_gt_infos = {key: [] for key in classes}
+    for image_i in range(num_test_images):
+        image_gtbs = np.copy(gtbs[image_i])
+        coords = image_gtbs[:, 0:4]
+        original_labels = image_gtbs[:, -1:]
+
+        coords = xywh_to_point(coords)
+        coords[[0,2]] *= image_width
+        coords[[1,3]] *= image_height
+
+        all_gt_boxes = np.concatenate([coords, original_labels], axis=1)
+
+        for cls_index, cls_name in enumerate(classes):
+            if cls_index == 0: continue
+            cls_gt_boxes = all_gt_boxes[np.where(all_gt_boxes[:, -1] == cls_index)]
+            all_gt_infos[cls_name].append({'bbox': np.array(cls_gt_boxes),
+                                           'difficult': [False] * len(cls_gt_boxes),
+                                           'det': [False] * len(cls_gt_boxes)})
+
+    return all_gt_infos
+
+def prepare_predictions(outputs, classes,  image_width, image_height):
+    """
+        prepares the prediction for the ap computation.
+        :param outputs: list of outputs per Image of the network
+        :param roiss: list of rois rewponsible for the predictions of above outputs.
+        :param num_classes: the total number of classes
+        :return: Prepared object for ap computation by utils.map.map_helpers
+        """
+    num_test_images = len(outputs)
+
+    all_boxes = [[[] for _ in range(num_test_images)] for _ in range(len(classes))]
+
+    for img_i in range(num_test_images):
+        output = outputs[img_i]
+        coords = output[:4]
+        objs = output [4:5]
+        cls_preds = output[5:]
+        labels = np.argmax(cls_preds, axis=1)
+        labels.shape += (1,)
+
+        coords = xywh_to_point(coords)
+        coords[[0, 2]] *= image_width
+        coords[[1, 3]] *= image_height
+
+        preds_for_img = np.concatenate([coords, objs, labels], axis=1)  # (nr_of_rois x 6) --> coords_score_label
+
+        for cls_j in range(1, len(classes)):
+            coords_score_label_for_cls = preds_for_img[np.where(preds_for_img[:, -1] == cls_j)]
+            all_boxes[cls_j][img_i] = coords_score_label_for_cls[:, :-1].astype(np.float32, copy=False)
+
+    return all_boxes
+
+def eval_map(model, img_file, gtb_file, num_images_to_eval):
+    from YOLOv2 import create_mb_source
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    sys.path.append(os.path.join(abs_path, ".."))
+    from utils.map.map_helpers import evaluate_detections
+
+    import PARAMETERS as par
+    rois_per_image = par.par_max_gtbs
+
+    data_input = logging.graph.find_by_name(model, "data")
+    img_width = data_input.shape[2]
+    img_height = data_input.shape[1]
+
+    mb_source = create_mb_source(img_height=img_height, img_width=img_width, img_channels=3, output_size=7, image_file=img_file, roi_file=gtb_file, is_training=False, max_samples=num_images_to_eval)
+
+    image_input = input_variable((3, img_height, img_width),
+                                 dynamic_axes=[Axis.default_batch_axis()])
+    gt_input = input_variable((rois_per_image * 5,))
+    input_map = {  # add real gtb
+        image_input: mb_source.streams.features,
+        gt_input: mb_source.streams.label,
+    }
+
+    all_raw_gt_boxes = []
+    all_raw_outputs = []
+    all_raw_imgs = []
+
+    VISUALIZE = False
+
+    classes = cls_map.cls_map[1:]
+    # evaluate test images and write network output to file
+    print("Evaluating YOLOv2 model for %s images." % num_images_to_eval)
+    #print(type(classes))
+    for img_i in range(0, num_images_to_eval):
+        mb_data = mb_source.next_minibatch(1, input_map=input_map)
+
+        # receives rel coords
+        gt_data = mb_data[gt_input].asarray()
+        gt_data.shape = (rois_per_image, 5)
+
+
+        all_gt_boxes = gt_data[np.where(gt_data[:, 4] != 0)]  # remove padded boxes!
+        all_raw_gt_boxes.append(all_gt_boxes.copy())
+
+        img = mb_data[image_input].asarray()
+
+        if VISUALIZE:
+            all_raw_imgs.append(img)
+
+        output = model.eval({image_input: mb_data[image_input]})
+        all_raw_outputs.append(output.copy())
+
+        if img_i % 1000 == 0 and img_i != 0:
+            print("Images processed: " + str(img_i))
+
+    all_gt_infos = prepare_ground_truth_boxes(all_raw_gt_boxes, classes, img_width, img_height)
+    all_boxes = prepare_predictions(all_raw_outputs, classes, img_width, img_height)
+
+    if VISUALIZE:
+        bb_img_gt_l = visualize_gt(all_gt_infos, all_raw_imgs, False)
+        bb_img_rois_l = visualize_rois(all_boxes, all_raw_imgs, False)
+
+        for img_i in range(len(bb_img_gt_l)):
+            save_image(bb_img_gt_l[img_i], ".", "test_gt_" + str(img_i) + ".png")
+        for img_i in range(len(bb_img_rois_l)):
+            save_image(bb_img_rois_l[img_i], ".", "test_rois_" + str(img_i) + ".png")
+
+    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=True, use_07_metric=True)
+    ap_list = []
+    for class_name in classes:
+        if class_name == "__background__": continue
+        ap_list += [aps[class_name]]
+        print('AP for {:>15} = {:.6f}'.format(class_name, aps[class_name]))
+    print('Mean AP = {:.6f}'.format(np.nanmean(ap_list)))
+
+    return aps
 
 if __name__ == "__main__":
 
