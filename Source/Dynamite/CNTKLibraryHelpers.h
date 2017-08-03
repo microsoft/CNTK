@@ -107,6 +107,8 @@ namespace Dynamite {
             for (size_t s = 0; s < numSeq; s++)
             {
                 auto data = sequences[s];      // NDArrayView
+                //if (!data->IsSparse())
+                //    data = data->DeepClone(); // sometimes we get "cannot resize"--just fishing here
                 // return in correct shape
                 if (!hasAxis)
                 {

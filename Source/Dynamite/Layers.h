@@ -269,7 +269,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     auto b  = Parameter({ outputDim * 3 }, 0.0f, device, L"b");
     let stackAxis = vector<Axis>{ Axis(0) };
     let stackedDim = (int)outputDim;
-    let one = Constant::Scalar(1.0);
+    let one = Constant::Scalar(1.0f, device); // for "1 -"...
     // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
     return BinaryModel({ W, R, R1, b }, [=](const Variable& dh, const Variable& x)
     {

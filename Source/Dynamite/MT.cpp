@@ -26,12 +26,15 @@ const DeviceDescriptor device(DeviceDescriptor::GPUDevice(0));
 //const DeviceDescriptor device(DeviceDescriptor::CPUDevice());
 const size_t srcVocabSize = 27579 + 3; // 2330;
 const size_t tgtVocabSize = 21163 + 3; // 2330;
-const size_t embeddingDim = 128;
+const size_t embeddingDim = 300;
 const size_t attentionDim = 128;
 const size_t numEncoderLayers = 1;
 const size_t encoderHiddenDim = 128;
 const size_t numDecoderLayers = 1;
 const size_t decoderHiddenDim = 128;
+
+size_t mbCount = 0; // made a global so that we can trigger debug information on it
+#define DOLOG(var) ((mbCount % 50 == 49) ? LOG(var) : 0)
 
 UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
 {
@@ -64,27 +67,32 @@ TernaryModel AttentionModel(size_t attentionDim1)
     auto Q = Parameter({ attentionDim1, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"Q"); // query projection
     auto K = Parameter({ attentionDim1, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"K"); // keys projection
     auto v = Parameter({ attentionDim1 }, DataType::Float, GlorotUniformInitializer(), device, L"v"); // tanh projection
-    return TernaryModel({ Q, K, v },
+    auto scale = Parameter({ }, 1.0f, device, L"scale");
+    return TernaryModel({ Q, K, v, scale },
     [=](const Variable& query, const Variable& keys, const Variable& data) -> Variable
     {
         // compute attention weights
         let projectedQuery = Times(Q, query); // [A x 1]
-        //LOG(projectedQuery);
+        DOLOG(projectedQuery);
         let projectedKeys  = Times(K, keys);  // [A x T]
         //LOG(projectedKeys);
-        let tanh = Tanh(projectedQuery + projectedKeys); // [A x T]
+        let tanh = Tanh((projectedQuery + projectedKeys) * scale); // [A x T]
 #if 0 // this fails auto-batching
         let u = Times(v, tanh, L"vProj"); // [T] vector                         // [128] * [128 x 4 x 7] -> [4 x 7]
         let w = Dynamite::Softmax(u);                                           // [4 x 7]
         let res = Times(data, w, L"att"); // [A]                                // [128 x 4 x 7] * [4 x 7]
 #else
         let u = TransposeTimes(tanh, v, L"vProj"); // [T] col vector            // [128 x 4 x 7]' * [128] = [7 x 4]         [128] * [128 x 4 x 7] -> [4 x 7]
-        //LOG(tanh);
-        //LOG(v);
-        //LOG(u);
+        DOLOG(Q);
+        DOLOG(K);
+        DOLOG(v);
+        DOLOG(scale);
+        DOLOG(tanh);
+        DOLOG(u);
         let w = Dynamite::Softmax(u);                                           // [7 x 4]                                  [4 x 7]
-        LOG(w);
+        DOLOG(w);
         let res = Times(data, w, L"att"); // [A]                                // [128 x 4 x 7] * [7 x 4]                  [128 x 4 x 7] * [4 x 7]
+        DOLOG(res);
 #endif
         return res;
      });
@@ -103,6 +111,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     let barrier = Barrier();
     auto merge = Dense(hiddenDim, device); // one additional transform to merge attention into hidden state
     auto dense = Dense(tgtVocabSize, device); // dense layer without non-linearity
+    auto embed = Embedding(embeddingDim, device); // target embeddding
 
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
     // decode from a top layer of an encoder, using history as history
@@ -114,8 +123,9 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     nestedLayers.insert(
     {
         { L"attentionModel", attentionModel },
-        { L"merge", merge },
-        { L"dense", dense }
+        //{ L"merge", merge },
+        { L"dense", dense },
+        { L"embed", embed } // note: seems not in the reference model
     });
     return BinarySequenceModel({}, nestedLayers,
     [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
@@ -124,7 +134,6 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
         // TODO: this is one layer only for now
         // convert encoder sequence into a dense tensor, so that we can do matrix products along the sequence axis - 1
         Variable hEncsTensor = Splice(hEncs, Axis(1)); // [2*hiddenDim, inputLen]
-        LOG(hEncsTensor);
         // decoding loop
         Variable state = initialState;
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
@@ -133,18 +142,23 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
             // do recurrent step
             // In inference, history[t] would become res[t-1].
             // TODO: Why not learn the output of the first step, and skip the <s> and funky initial attention context?
-            let input = Splice({ history[t], attentionContext }, Axis(0), L"augInput");
+            //let pred = history[t];
+            let pred = embed(history[t]);
+            let input = Splice({ pred, attentionContext }, Axis(0), L"augInput");
             state = lstms[0](state, input);
             //LOG(state);
             // compute attention vector
             attentionContext = attentionModel(state, /*keys=*/hEncsTensor, /*data=*/hEncsTensor);
             // compute an enhanced hidden state with attention value merged in
-            let m = Tanh(merge(Splice({ state, attentionContext }, Axis(0))));
-            //LOG(m);
+            //let m = Tanh(merge(Splice({ state, attentionContext }, Axis(0))));
+            let m = state; // normal s2s: predict from hidden state
+            DOLOG(m);
             // compute output
             let z = dense(m);
+            DOLOG(z);
             res[t] = z;
         }
+        DOLOG(hEncsTensor);
         // ...unused for now
         hs[0].clear(); hs[1].clear();
     });
@@ -166,7 +180,7 @@ BinarySequenceModel CreateModelFunction()
     {
         // encoder
         embed(e, x);
-        //LOG(e);
+        DOLOG(e);
         encode(h, e);
         // decoder (outputting logprobs of words)
         decode(res, history, h);
@@ -245,21 +259,45 @@ void Train()
 
     let parameters = model_fn.Parameters();
     //auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005));
-    let epochSize = 100000; // it's a small corpus, ~50k samples
-    let minibatchSize = 384;// 50;  // 384 is 32 sequences, assuming av. length ~12
+    //let epochSize = 100000; // it's a small corpus, ~50k samples
+    let epochSize = 10000000; // this is maybe half a true epoch
+    let minibatchSize = 1384;// 50;  // 384 is 32 sequences, assuming av. length ~12
     let minibatchSizeAtStart = 50; // start smaller for stability  --TODO: This is wrong with current Adam implementation
     //auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001 * sqrt(minibatchSize), 0.00005 * sqrt(minibatchSize), 0.000025 * sqrt(minibatchSize), 0.00001 * sqrt(minibatchSize) }, epochSize), MomentumAsTimeConstantSchedule(1000), true, MomentumAsTimeConstantSchedule(10000));
-    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*3, 0.00005*3, 0.000025*3, 0.00001*3 }, epochSize), MomentumAsTimeConstantSchedule(1000), true, MomentumAsTimeConstantSchedule(10000));
+    // correction:
+    //  - LR is specified for av gradient
+    //  - numer should be /32
+    //  - denom should be /sqrt(32)
+    let f = 1/sqrt(32.0)/*AdaGrad correction-correction*/;
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*f, 0.0001*f, 0.0001*f, 0.0001*f, 0.00005*f, 0.00005*f, 0.00005*f, 0.000025*f, 0.000025*f, 0.000025*f, 0.00001*f }, epochSize), MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000));
     unordered_map<Parameter, NDArrayViewPtr> gradients;
     for (let& p : parameters)
         gradients[p] = nullptr;
 
     vector<vector<Variable>> args;
     size_t totalLabels = 0;
-    for (size_t mbCount = 0; true; mbCount++)
+    class SmoothedVar
+    {
+        double smoothedNumer = 0; double smoothedDenom = 0;
+        const double smoothedDecay = 0.99;
+    public:
+        double Update(double avgVal, size_t count)
+        {
+            // TODO: implement the correct smoothing
+            smoothedNumer = smoothedDecay * smoothedNumer + (1 - smoothedDecay) * avgVal * count;
+            smoothedDenom = smoothedDecay * smoothedDenom + (1 - smoothedDecay) * count;
+            return Value();
+        }
+        double Value() const
+        {
+            return smoothedNumer / smoothedDenom;
+        }
+    } smoothedLoss;
+    for (mbCount = 0; true; mbCount++)
     {
         // get next minibatch
-        auto minibatchData = minibatchSource->GetNextMinibatch(totalLabels < 5000 ? minibatchSizeAtStart : minibatchSize, device);
+        //auto minibatchData = minibatchSource->GetNextMinibatch(max(min((size_t)minibatchSize, minibatchSizeAtStart * mbCount / 50), (size_t)1), device);
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
             break;
         let numLabels = minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples;
@@ -271,15 +309,19 @@ void Train()
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, device);
         // train minibatch
         let mbLoss = criterion_fn(args[0], args[1]);
-        let lossPerLabel = mbLoss.Value()->AsScalar<float>() / numLabels; // note: this does the GPU sync, so better do that only every N
-        fprintf(stderr, "CrossEntropy loss = %.7f; PPL = %.3f; seenLabels=%d\n", lossPerLabel, exp(lossPerLabel), (int)totalLabels);
-        if (mbCount < 400 || mbCount % 20 == 0)
-            fflush(stderr);
-        if (std::isnan(lossPerLabel))
-            throw runtime_error("Loss is NaN.");
         // backprop and model update
         mbLoss.Backward(gradients);
         learner->Update(gradients, numLabels);
+        let lossPerLabel = mbLoss.Value()->AsScalar<float>() / numLabels; // note: this does the GPU sync, so better do that only every N
+        let smoothedLossVal = smoothedLoss.Update(lossPerLabel, numLabels);
+        fprintf(stderr, "%d: CrossEntropy loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d\n",
+                        (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels);
+        // log
+        // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
+        if (mbCount < 400 || mbCount % 5 == 0)
+            fflush(stderr);
+        if (std::isnan(lossPerLabel))
+            throw runtime_error("Loss is NaN.");
     }
 }
 
@@ -295,6 +337,7 @@ int mt_main(int argc, char *argv[])
     catch (exception& e)
     {
         fprintf(stderr, "EXCEPTION caught: %s\n", e.what());
+        fflush(stderr);
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
