@@ -1028,6 +1028,16 @@ class Function(cntk_py.Function):
 
     @property
     @typemap
+    def block_outputs_mapping(self):
+        '''
+        Returns the mapping from the arguments of the composite underlying this block function
+        to the Variables that they are bound to in the outer graph of Functions that this
+        block Function is part of.
+        '''
+        return super(Function, self).block_outputs_mapping()
+
+    @property
+    @typemap
     def uid(self):
         '''
         The internally generated unique name of the function.

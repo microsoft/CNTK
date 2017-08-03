@@ -141,6 +141,8 @@ IGNORE_FUNCTION CNTK::Function::Gradients;
 IGNORE_FUNCTION CNTK::Function::RegisterNativeUserFunction;
 IGNORE_FUNCTION CNTK::Function::NativeUserFunction;
 IGNORE_FUNCTION CNTK::Function::SetAttribute;
+IGNORE_FUNCTION CNTK::Function::GetEvaluationOrder;
+IGNORE_FUNCTION CNTK::Function::BlockOutputsMapping;
 
 IGNORE_CLASS CNTK::Parameter;
 IGNORE_CLASS CNTK::Constant;

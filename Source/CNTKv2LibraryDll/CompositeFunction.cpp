@@ -1388,6 +1388,41 @@ namespace CNTK
         return { computationNetwork, variableToNodeMap };
     }
 
+    std::shared_ptr<std::vector<Variable>> CompositeFunction::GetEvaluationOrderImpl(const std::unordered_set<Variable>& outputs)
+    {
+        bool shouldPurge = false;
+        if (m_computationNetwork == nullptr)
+        {
+            GetComputationNetwork<float>(DeviceDescriptor::CPUDevice(), {}, outputs, std::unordered_set<Variable>(), true);
+            shouldPurge = true;
+        }
+
+        std::vector<ComputationNodeBasePtr> outputsToEvaluate;
+        for (auto outputVariable : outputs)
+            outputsToEvaluate.push_back(m_variableToNodeMap.at(outputVariable));
+
+        auto nodesInEvalOrder = m_computationNetwork->GetEvalOrder(nullptr);
+
+        auto result = MakeSharedObject<std::vector<Variable>>();
+        for (const auto& node : nodesInEvalOrder)
+        {
+            auto found = std::find_if(m_variableToNodeMap.begin(), m_variableToNodeMap.end(),
+                [&node](const std::pair<Variable, ComputationNodeBasePtr>& p) { return p.second == node; });
+
+            if (found != m_variableToNodeMap.end())
+            {
+                result->push_back(found->first);
+            }
+            else if(node->NodeName() != L"*")
+                RuntimeError("Cannot find a computation node!");
+        }
+
+        if (shouldPurge)
+            PurgeComputationNetwork();
+
+        return result;
+    }
+
     template <typename ElementType>
     ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device,
                                                                    const std::unordered_set<Variable>& backpropRoots,

@@ -45,11 +45,11 @@ def create_mb_source(features_file, labels_file, label_mapping_file,
 
 def create_recurrent_network():
     # Input variables denoting the features and label data
-    features = sequence.input_variable(((2*context+1)*feature_dim))
+    features = sequence.input_variable(((2*context+1)*feature_dim), name = "myinput")
     labels = sequence.input_variable((num_classes))
 
     # create network
-    model = Sequential([For(range(3), lambda : Recurrence(LSTM(256))),
+    model = Sequential([For(range(1), lambda : Recurrence(LSTM(256))),
                         Dense(num_classes)])
     z = model(features)
     ce = cross_entropy_with_softmax(z, labels)
@@ -108,6 +108,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         cv_config = CrossValidationConfig(test_source, minibatch_size=minibatch_size,
                                           model_inputs_to_streams = cv_input_map, frequency=cv_freq)
     ).train()
+    network['output'].save('my_super.model')
 
 def htk_lstm_truncated(features_file, labels_file, label_mapping_file, minibatch_size=64, epoch_size=640000, 
                        num_quantization_bits=32, block_size=3200, warm_up=0, max_epochs=5, num_mbs_per_log=None, 

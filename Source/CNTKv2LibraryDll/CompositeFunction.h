@@ -190,6 +190,8 @@ namespace CNTK
                                      bool useMangledNamesForComputationNodes);
 
     private:
+        std::shared_ptr<std::vector<Variable>> CompositeFunction::GetEvaluationOrderImpl(const std::unordered_set<Variable>& outputs) override;
+
         // Replace any PlaceHolder Variables in the graph of Functions underlying 'this' CompositeFunction. All PlaceHolder variables
         // should have been replaced before performing any Forward compute of 'this' Function.
         virtual void OnPlaceholdersReplaced(const std::unordered_map<Variable, Variable>& placeholderReplacements,

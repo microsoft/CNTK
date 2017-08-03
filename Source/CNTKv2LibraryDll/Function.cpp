@@ -265,6 +265,19 @@ namespace CNTK
         return std::shared_ptr<std::vector<std::pair<Variable, Variable>>>(new std::vector<std::pair<Variable, Variable>>(std::move(blockFunction->CompositeArgumentsMap())), [](std::vector<std::pair<Variable, Variable>>* ptr) { delete ptr; });
     }
 
+    std::shared_ptr<std::vector<std::pair<Variable, Variable>>> Function::BlockOutputsMappingImpl() const
+    {
+        if (!IsBlock())
+            InvalidArgument("Function::BlockOutputsMapping() called for a Function '%S' which is not a block.", this->AsString().c_str());
+
+        auto blockFunction = dynamic_cast<const BlockFunction*>(this);
+        auto outputsMap = blockFunction->CompositeOutputsMap();
+        auto result = MakeSharedObject<std::vector<std::pair<Variable, Variable>>>();
+        for (auto o : outputsMap)
+            result->emplace_back(o);
+        return result;
+    }
+
     /*static*/ void Function::ReplacePlaceholderInPlace(Variable& var,
                                                         const std::unordered_map<Variable, Variable>& placeholderReplacements,
                                                         std::unordered_set<Variable>& replacedPlaceholders)

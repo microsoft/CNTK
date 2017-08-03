@@ -3234,6 +3234,11 @@ namespace CNTK
             return *BlockArgumentsMappingImpl().get();
         }
 
+        std::vector<std::pair<Variable, Variable>> BlockOutputsMapping() const
+        {
+            return *BlockOutputsMappingImpl().get();
+        }
+
         ///
         /// Returns all inputs of 'this' Function.
         /// Note that inputs here denotes all Variables that feed into this Function including any
@@ -3431,8 +3436,19 @@ namespace CNTK
 
         static UDFDeserializeCallbackPtr GetUDFDeserializeCallback(const std::wstring& uniqueOpName);
 
+        std::vector<Variable> GetEvaluationOrder(const std::unordered_set<Variable>& outputs)
+        {
+            std::vector<Variable> result;
+            result = *GetEvaluationOrderImpl(outputs);
+            return result;
+        }
 
     protected:
+        virtual std::shared_ptr<std::vector<Variable>> GetEvaluationOrderImpl(const std::unordered_set<Variable>&)
+        {
+            NOT_IMPLEMENTED;
+        }
+
         static bool IsArgument(const Variable& var)
         {
             return (var.IsInput() || var.IsPlaceholder() || var.IsOutput());
@@ -3490,6 +3506,7 @@ namespace CNTK
 
     private:
         CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
+        CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockOutputsMappingImpl() const;
 
         // Lazily initialize the Function's outputs on first invocation
         CNTK_API std::vector<Variable>& InitOutputs();

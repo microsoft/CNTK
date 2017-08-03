@@ -181,12 +181,6 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
             fprintf(stderr, "\n");
         }
     }
-
-#if 0
-    // now turn this into a nested network, ready for evaluation
-    if (rootNode)
-        FormNestedNetwork(rootNode);
-#endif
 }
 
 // checks whether a node is recurrent, and which direction
@@ -304,38 +298,27 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
             for (let& iter : m_allSEQNodes)
             {
                 for (let& iter2 : iter->m_nestedNodes)
-            {
-                    if (iter2 == cur)
                 {
-                    bFound = true;
+                    if (iter2 == cur)
+                    {
+                        bFound = true;
                         // validate that the loop is really the same, by a set comparison
-                        unordered_set<ComputationNodeBasePtr> newLoop     (        nestedNodes.begin(),         nestedNodes.end());
+                        unordered_set<ComputationNodeBasePtr> newLoop(nestedNodes.begin(), nestedNodes.end());
                         unordered_set<ComputationNodeBasePtr> existingLoop(iter->m_nestedNodes.begin(), iter->m_nestedNodes.end());
                         if (newLoop != existingLoop)
                             LogicError("DetermineSCCsR: %ls %ls operation rediscovered in a loop, but that loop is not the same as last time.", cur->NodeName().c_str(), cur->OperationName().c_str());
-                    break;
+                        break;
+                    }
                 }
-            }
             }
             if (bFound)
                 fprintf(stderr, "\nDetermineSCCsR: %ls %ls operation was discovered multiple times as loop participant", cur->NodeName().c_str(), cur->OperationName().c_str());
             // TODO: Once we forbid FormRecurrentLoops() from non-NULL, can we ever re-hit a loop here? If not, then turn bFound into a LogicError().
             if (!bFound)
             {
-#if 0
-                intptr_t hash = 0;
-                for (let& node : nestedNodes)
-                    hash += (intptr_t)node.get();
-                fprintf(stderr, "\nDetermineSCCsR: %ls %ls operation loop[%d]: hash 0x%016x over %d nodes", cur->NodeName().c_str(), cur->OperationName().c_str(), (int)m_allSEQNodes.size(), (unsigned int)hash, (int)nestedNodes.size());
-#endif
-#if 1
                 if (loopId != m_allSEQNodes.size())
                     LogicError("DetermineSCCsR: %ls %ls operation has inconsistent loopId (%d) vs. m_allSEQNodes.size() (%d)", cur->NodeName().c_str(), cur->OperationName().c_str(), (int)loopId, (int)m_allSEQNodes.size());
                 SEQTraversalFlowControlNode rInfo2(m_allSEQNodes.size(), cur);
-#else
-                assert(loopId == m_allSEQNodes.size()); // BUGBUG: Only true if all loops are shared among roots. Fix: use m_allSEQNodes.size() instead
-                SEQTraversalFlowControlNode rInfo2(loopId, cur);
-#endif
                 // TODO: can we prove that 'cur' == nestedNodes.front()? If so, we won't need to store it separately.
                 rInfo2.m_nestedNodes = move(nestedNodes); // TODO: make these two part of the constructor
                 for (auto node : rInfo2.m_nestedNodes)
@@ -413,8 +396,6 @@ void ComputationNetwork::ReorderLoops(list<ComputationNodeBasePtr>& nodes,
 {
     list<ComputationNodeBasePtr> newList;
 
-    list<ComputationNodeBasePtr> vTmp;
-    list<ComputationNodeBasePtr> vRecurrentTmp;
     vector<bool> accessed(m_allSEQNodes.size(), false);
     for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
     {
@@ -433,19 +414,6 @@ void ComputationNetwork::ReorderLoops(list<ComputationNodeBasePtr>& nodes,
             newList.push_back(*nodeIter);
         }
     }
-
-    if (vRecurrentTmp.size() > 0)
-    {
-        newList.insert(newList.end(), vRecurrentTmp.begin(), vRecurrentTmp.end());
-        vRecurrentTmp.clear();
-    }
-
-    if (vTmp.size() > 0)
-    {
-        newList.insert(newList.end(), vTmp.begin(), vTmp.end());
-        vTmp.clear();
-    }
-
     nodes = newList;
 }
 

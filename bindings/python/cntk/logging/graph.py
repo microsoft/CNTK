@@ -193,15 +193,7 @@ def plot(root, filename=None):
     function_nodes = {}  # [uid] -> dot node
 
     def node_desc(node):
-        name = "<font point-size=\"10\" face=\"sans\">'%s'</font> <br/>"%node.name
-        try:
-            name += "<b><font point-size=\"14\" face=\"sans\">%s</font></b> <br/>"%node.op_name
-        except AttributeError:
-            pass
-
-        name += "<font point-size=\"8\" face=\"sans\">%s</font>"%node.uid
-
-        return '<' + name + '>'
+        return '<' + node.uid + '>'
 
     def shape_desc(node):
         dyn_axes = node.dynamic_axes
@@ -231,7 +223,7 @@ def plot(root, filename=None):
                     op_name = primitive_op_map.get(node.op_name, node.op_name)
                     render_as_primitive = len(op_name) <= 4
                     size = 0.4 if render_as_primitive else 0.6
-                    cur_node = pydot.Node(node.uid, label='"' + op_name + '"',
+                    cur_node = pydot.Node(node.uid, label='"' + op_name + node_desc(node) + '"',
                                           shape='ellipse'  if render_as_primitive else 'box',
                                           fixedsize='true' if render_as_primitive else 'false', height=size, width=size,
                                           fontsize=20  if render_as_primitive and len(op_name) == 1 else 12 ,
@@ -239,7 +231,7 @@ def plot(root, filename=None):
                     # TODO: Would be cool, if the user could pass a dictionary with overrides. But maybe for a later version.
                 else:
                     f_name = '\n' + node.name + '()' if node.name else ''
-                    cur_node = pydot.Node(node.uid, label='"' + node.op_name + f_name + '"',
+                    cur_node = pydot.Node(node.uid, label='"' + node.op_name + f_name + node_desc(node) + '"',
                                           fixedsize='true', height=1, width=1.3,
                                           penwidth=4 if node.op_name != 'Pass' and node.op_name != 'ParameterOrder' else 1)
                 dot_object.add_node(cur_node)
@@ -289,7 +281,7 @@ def plot(root, filename=None):
                                 name = input.name
                             else:
                                 name = name + '\n' + input.name
-                        name += '\n' + shape_desc(input)
+                        name += '\n' + shape_desc(input) + '\n' + node_desc(input)
                         if input.is_input or input.is_placeholder: # graph inputs are eggs (since dot has no oval)
                             input_node = pydot.Node(input.uid, shape='egg', label=name, fixedsize='true', height=1, width=1.3, penwidth=4) # wish it had an oval
                         elif not input.name and input.is_constant and (input.shape == () or input.shape == (1,)): # unnamed scalar constants are just shown as values
@@ -301,7 +293,7 @@ def plot(root, filename=None):
                         input_node = lazy_create_node(input.owner)  # connect to where the output comes from directly, no need to draw it
                     dot_object.add_node(input_node)
                     label = input.name if input.name else input.uid # the Output variables have no name if the function has none
-                    label += '\n' + shape_desc(input)
+                    label += '\n' + shape_desc(input) + '\n' + node_desc(input)
                     dot_object.add_edge(pydot.Edge(input_node, cur_node, label=label))
 
             # add node's output
@@ -314,10 +306,10 @@ def plot(root, filename=None):
             if (filename):
                 if node.uid == root_uid: # only final network outputs are drawn
                     for output in node.outputs:
-                        final_node = pydot.Node(output.uid, shape='egg', label=output.name + '\n' + shape_desc(output),
+                        final_node = pydot.Node(output.uid, shape='egg', label=output.name + '\n' + shape_desc(output) + '\n' + node_desc(output),
                                                 fixedsize='true', height=1, width=1.3, penwidth=4)
                         dot_object.add_node(final_node)
-                        dot_object.add_edge(pydot.Edge(cur_node, final_node, label=shape_desc(output)))
+                        dot_object.add_edge(pydot.Edge(cur_node, final_node, label=shape_desc(output) + '\n' + node_desc(output)))
 
         except AttributeError:
             # OutputVariable node
