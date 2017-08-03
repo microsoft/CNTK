@@ -34,6 +34,11 @@ static inline NDArrayViewPtr GetValueAsTensor(const FunctionPtr & fun) { return 
 static inline NDArrayViewPtr GetValueAsTensor(const vector<Variable>& vec) { return (Splice(vec, Axis((int)vec[0].Shape().Rank())))->Output().Value(); }
 #define LOG(var) (GetValueAsTensor(var)->LogToFile(L#var, stderr, 10)) // helper to log a value
 
+static inline FunctionPtr operator*(const Variable& leftOperand, const Variable& rightOperand)
+{
+    return ElementTimes(leftOperand, rightOperand);
+}
+
 struct ModelParameters
 {
     map<wstring, Parameter> m_parameters;
@@ -254,7 +259,48 @@ static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 
-static TernaryModel LSTMStep(size_t outputDim, const DeviceDescriptor& device)
+// TODO: change outputDim to an NDShape
+static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
+{
+    let activation = [](const Variable& x) { return Tanh(x); };
+    auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
+    auto R  = Parameter({ outputDim * 2, outputDim }, DataType::Float, GlorotUniformInitializer(), device, L"R");
+    auto R1 = Parameter({ outputDim    , outputDim }, DataType::Float, GlorotUniformInitializer(), device, L"R1");
+    auto b  = Parameter({ outputDim * 3 }, 0.0f, device, L"b");
+    let stackAxis = vector<Axis>{ Axis(0) };
+    let stackedDim = (int)outputDim;
+    let one = Constant::Scalar(1.0);
+    // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
+    return BinaryModel({ W, R, R1, b }, [=](const Variable& dh, const Variable& x)
+    {
+        let& dhs = dh;
+        // projected contribution from input(s), hidden, and bias
+        let projx3 = b + Times(W, x);
+        let projh2 = Times(R, dh);
+        let zt_proj = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim) + Slice(projh2, stackAxis, 0 * stackedDim, 1 * stackedDim);
+        let rt_proj = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim) + Slice(projh2, stackAxis, 1 * stackedDim, 2 * stackedDim);
+        let ct_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim);
+
+        let zt = Sigmoid(zt_proj)->Output();        // fun update gate z(t)
+
+        let rt = Sigmoid(rt_proj);                  // reset gate r(t)
+
+        let rs = dhs * rt;                          // "cell" c
+        let ct = activation(ct_proj + Times(R1, rs));
+
+        let ht = (one - zt) * ct + zt * dhs; // hidden state ht / output
+
+        //# for comparison: CUDNN_GRU
+        //# i(t) = sigmoid(W_i x(t) + R_i h(t - 1) + b_Wi + b_Ru)
+        //# r(t) = sigmoid(W_r x(t) + R_r h(t - 1) + b_Wr + b_Rr)   --same up to here
+        //# h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
+        //# h(t) = (1 - i(t).*h'(t)) + i(t) .* h(t-1)                     --TODO: need to confirm bracketing with NVIDIA
+
+        return ht;
+    });
+}
+
+static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
     auto R = Parameter({ outputDim, outputDim }, DataType::Float, GlorotUniformInitializer(), device, L"R");
@@ -411,6 +457,7 @@ static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxe
 // built-in Softplus is a BlockFunction, so need to replace it here
 static Variable Softplus(const Variable& z, const std::wstring& name)
 {
+    // TODO: This will create a Constant object every single time--better create it once. Or pre-define constant 0 and 1.
     return LogAddExp(z, Constant::Scalar(z.GetDataType(), 0.0), name);
 }
 

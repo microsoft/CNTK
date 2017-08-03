@@ -1232,6 +1232,12 @@ namespace CNTK
         return Slice(operand, axis, beginIndex, endIndex, strides, name);
     }
 
+    FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, int beginIndex, int endIndex, const std::wstring& name)
+    {
+        // TODO: avoid the vectors altogether; they get elided one level down anyway
+        return Slice(operand, axis, vector<int>{ beginIndex }, vector<int>{ endIndex }, name);
+    }
+
     FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name)
     {
         if (std::all_of(axis.cbegin(), axis.cend(), [](Axis axis) { return axis.IsStaticAxis(); }))

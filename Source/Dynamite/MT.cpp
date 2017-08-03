@@ -38,8 +38,8 @@ UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, 
     dropoutInputKeepProb;
     vector<UnarySequenceModel> layers;
     for (size_t i = 0; i < numLayers; i++)
-        layers.push_back(Dynamite::Sequence::BiRecurrence(RNNStep(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device, L"fwdInitialValue"),
-                                                          RNNStep(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device, L"fwdInitialValue")));
+        layers.push_back(Dynamite::Sequence::BiRecurrence(GRU(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device, L"fwdInitialValue"),
+                                                          GRU(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device, L"fwdInitialValue")));
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
     return UnarySequenceModel(vector<ModelParametersPtr>(layers.begin(), layers.end()),
     [=](vector<Variable>& res, const vector<Variable>& x) mutable
@@ -98,7 +98,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     let initialContext = Constant({ 2 * hiddenDim }, 0.0f, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     vector<BinaryModel> lstms;
     for (size_t i = 0; i < numLayers; i++)
-        lstms.push_back(RNNStep(hiddenDim, device));
+        lstms.push_back(GRU(hiddenDim, device));
     let attentionModel = AttentionModel(attentionDim); // (state, encoding) -> interpolated encoding
     let barrier = Barrier();
     auto merge = Dense(hiddenDim, device); // one additional transform to merge attention into hidden state
