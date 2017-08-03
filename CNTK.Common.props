@@ -30,6 +30,9 @@
     <HasJava>false</HasJava>
     <HasJava Condition="Exists('$(JAVA_HOME)\bin\javac.exe')">true</HasJava>
 
+    <BuildJavaBindings>false</BuildJavaBindings>
+    <BuildJavaBindings Condition="$(HasSwig) And $(HasJava) and !$(CNTK_BUILD_BINDINGS)">true</BuildJavaBindings>
+
     <CntkComponentVersion>2.1</CntkComponentVersion>
     <CntkComponentVersion Condition="$(DebugBuild)">$(CntkComponentVersion)d</CntkComponentVersion>
   </PropertyGroup>
