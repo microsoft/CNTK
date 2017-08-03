@@ -560,7 +560,7 @@ namespace CNTK
                 }
             };
 
-        auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
+            auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
             RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
 
             auto trainerModelCompositeFunction = dynamic_cast<CompositeFunction*>(this);
@@ -931,15 +931,18 @@ namespace CNTK
             InvalidArgument("Function '%S' being restored is not equivalent (isomorphic) to the Function '%S' loaded from checkpoint.",
                             this->AsString().c_str(), restoredFunction->AsString().c_str());
 
-        auto parameters = Parameters();
-        auto restoredParameters = restoredFunction->Parameters();
+        auto inputs = Inputs();
+        auto restoredInputs = restoredFunction->Inputs();
 
-        assert(parameters.size() == restoredParameters.size());
+        assert(inputs.size() == restoredInputs.size());
 
-        for (int i = 0; i < parameters.size(); i++)
+        for (int i = 0; i < inputs.size(); i++)
         {
-            assert(Internal::AreEquivalent(parameters[i], restoredParameters[i]));
-            parameters[i].Value()->CopyFrom(*(restoredParameters[i].Value().get()));
+            assert(inputs[i].Kind() == restoredInputs[i].Kind());
+            if (!inputs[i].IsConstant() && !inputs[i].IsParameter())
+                continue;
+            assert(Internal::AreEquivalent(inputs[i], restoredInputs[i]));
+            inputs[i].Value()->CopyFrom(*(restoredInputs[i].Value().get()));
         }
 
         auto restoredCompositeFunction = dynamic_cast<const CompositeFunction*>(restoredFunction.get());
