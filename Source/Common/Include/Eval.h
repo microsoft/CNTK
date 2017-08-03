@@ -148,7 +148,7 @@ public:
     virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup);
 
     // StartEvaluateMinibatchLoop - Prepare network for Evaluate() calls.
-    // ouputNodeName - name of node that will be evaluated
+    // outputNodeName - name of node that will be evaluated
     virtual void StartEvaluateMinibatchLoop(const std::wstring& outputNodeName);
 
     // Evaluate - Evaluate using the model with the given inputs and outputs
@@ -187,7 +187,7 @@ struct ValueBuffer
 {
     //
     // All elements of a sequence, concatenated.
-    // For dense inputs, the number of samples is given by the the length of
+    // For dense inputs, the number of samples is given by the length of
     // this vector / product of tensor dimensions. E.g. for a tensor of dimension
     // [2,2] and 12 elements in the buffer, the number of samples is 3.
     // For sparse inputs, the number of samples is indicated by the m_colIndices field.

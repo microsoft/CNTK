@@ -1,7 +1,7 @@
 name: cntk-py35
 channels:
 - defaults
-# For imageio:
+# For imageio, opencv (and pillow):
 - conda-forge
 dependencies:
 - h5py=2.6.0=np111py35_2
@@ -11,19 +11,28 @@ dependencies:
 - numpy=1.11.2=py35_0
 - pandas=0.19.1=np111py35_0
 - pandas-datareader=0.2.1=py35_0
-- pillow=3.4.2=py35_0
+- pillow=3.2.0=py35_1
 - pip=8.1.2=py35_0
 - python=3.5.2=0
 - pyyaml=3.12=py35_0
+- scikit-image=0.12.3=np111py35_1
+- scikit-learn=0.18.1=np111py35_0
 - scipy=0.18.1=np111py35_0
 - seaborn=0.7.1=py35_0
 - setuptools=27.2.0=py35_1
 - six=1.10.0=py35_0
 - wheel=0.29.0=py35_0
+- opencv=3.1.0=np111py35_1
 - pip:
+  - gym==0.5.2
+  - keras==2.0.6
+  - pydot-ng==1.0.0
+  - pygame==1.9.3
   - pytest==3.0.3
-  - sphinx==1.5.4
   - sphinx-rtd-theme==0.2.4
+  - sphinx==1.5.4
   - twine==1.8.1
+  - protobuf==3.2.0
   - gym==0.5.2
   - pydot-ng==1.0.0
+  - easydict==1.6.0

@@ -376,9 +376,9 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseTranspose, RandomSeedFixture)
     sparseMatrix.SetMatrixFromCSRFormat(c_i, c_j, c_v, c_size, c_rowCount, c_colCount);
 
     const GPUSparseMatrix<float> transposeMatrixA = sparseMatrix.Transpose();
-    GPUSparseMatrix<float> inplaceTranposeMatrix(sparseMatrix);
-    inplaceTranposeMatrix.InplaceTranspose();
-    BOOST_CHECK(inplaceTranposeMatrix.IsEqualTo(transposeMatrixA));
+    GPUSparseMatrix<float> inplaceTransposeMatrix(sparseMatrix);
+    inplaceTransposeMatrix.InplaceTranspose();
+    BOOST_CHECK(inplaceTransposeMatrix.IsEqualTo(transposeMatrixA));
 
     const GPUSparseMatrix<float> tranposeMatrixB = sparseMatrix.Transpose();
     GPUSparseMatrix<float> assignedTransposeMatrix(c_deviceIdZero);

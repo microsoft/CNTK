@@ -103,6 +103,9 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput = L"sequenceUnpackSuppressMaskOutput";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionType = L"randomDistributionType";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionArgs = L"randomDistributionArgs";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSpatialScale = L"spatialScale";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStrides = L"sliceStrides";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStridesVec = L"sliceStridesVec";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -157,6 +160,7 @@ namespace CNTK
     {
         auto reduceAxis = [](Axis reductionAxis, Variable input, std::vector<Axis>& outputDynamicAxes)
         {
+            if (!reductionAxis.IsDynamicAxis()) return;
             reductionAxis = NormalizeAxis(reductionAxis, input);
             for (auto inputDynamicAxis : input.DynamicAxes())
             {
@@ -164,11 +168,25 @@ namespace CNTK
                     outputDynamicAxes.push_back(inputDynamicAxis);
             }
         };
+        auto anyOfAxesInReduction = [&functionConfig](std::function<bool (const Axis&)> axis_predicate)
+        {
+            if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis))
+                return axis_predicate(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
+            else
+            {
+                auto &reductionAxes = functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+                return std::any_of(reductionAxes.begin(), 
+                    reductionAxes.end(), 
+                    [&axis_predicate](const CNTK::DictionaryValue& axis) {return axis_predicate(axis.Value<Axis>()); });
 
+            }
+            return false;
+        };
+ 
         // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
         if ((op == PrimitiveOpType::SumAll) ||
-            (op == PrimitiveOpType::ReduceElements && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>() == Axis::AllAxes()) ||
+            (op == PrimitiveOpType::ReduceElements &&  anyOfAxesInReduction([](const Axis& axis) { return axis == Axis::AllAxes(); })) ||
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::EditDistanceError) ||
@@ -177,13 +195,34 @@ namespace CNTK
             (op == PrimitiveOpType::Logistic) ||
             (op == PrimitiveOpType::LambdaRank) ||
             (op == PrimitiveOpType::NDCG) || 
-            (op == PrimitiveOpType::RandomDistribution && inputs.empty()))
+            (op == PrimitiveOpType::RandomDistribution && inputs.empty()) ||
+            (op == PrimitiveOpType::UnpackBatch))
         {
             outputDynamicAxes = std::vector<Axis>({});
         }
-        else if ((op == PrimitiveOpType::ReduceElements) && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>().IsDynamicAxis() && (inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()))
+        else if (op == PrimitiveOpType::ToBatch)
         {
-            reduceAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0], outputDynamicAxes);
+            outputDynamicAxes = std::vector<Axis>({Axis::DefaultBatchAxis()});
+        }
+        else if (op == PrimitiveOpType::ReduceElements 
+            && anyOfAxesInReduction([](const Axis& axis) { return axis.IsDynamicAxis(); }) //still need this condition to go to the default dynamic axes setting branch!
+            && (inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes())
+            )
+        {
+            if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis)) 
+            {
+                auto reductionAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                reduceAxis(reductionAxis, inputs[0], outputDynamicAxes);
+            }
+            else if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+            {
+                auto &reductionAxes = functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+                for (const auto& axis : reductionAxes)
+                {
+                    auto reductionAxis = axis.Value<Axis>();
+                    reduceAxis(reductionAxis, inputs[0], outputDynamicAxes);
+                }
+            }
         }
         else if ((op == PrimitiveOpType::Times) && (functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>() == TimesReduceSequenceAxisWithoutInferredInputRank))
         {
@@ -277,7 +316,7 @@ namespace CNTK
             std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
             bool needsGradient = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
 
-            NDShape outputShape = NDShape::Unknown;
+            NDShape outputShape = NDShape::Unknown();
             bool allInputShapesUnknown = (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return !input.Shape().IsUnknown(); }) == m_inputs.end());
             bool anyInputShapesUnknown = (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.Shape().IsUnknown(); }) != m_inputs.end());
             if (!anyInputShapesUnknown || (!allInputShapesUnknown && (outputDynamicAxes != Axis::UnknownDynamicAxes())))
@@ -358,8 +397,12 @@ namespace CNTK
                         case PrimitiveOpType::Hardmax:
                         case PrimitiveOpType::Dropout:
                         case PrimitiveOpType::LogSoftmax:
+                        case PrimitiveOpType::Asin:
+                        case PrimitiveOpType::Acos:
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
+                        case PrimitiveOpType::Cosh:
+                        case PrimitiveOpType::Sinh:
                         case PrimitiveOpType::Pass:
                         case PrimitiveOpType::LabelsToGraph:
                         case PrimitiveOpType::StopGradient:
@@ -426,9 +469,14 @@ namespace CNTK
                                 InvalidArgument("AssignNode: None of the operands '%S' can have dynamic axes.", NamedListString(m_inputs).c_str());
                             if (!(m_inputs[0].IsConstant() || m_inputs[0].IsParameter()))
                                 InvalidArgument("AssignNode: Ref operand must be constant or parameter only.");
-                            if (m_inputs[0].Shape() != m_inputs[1].Shape())
+                            //delay the check for free dimension
+                            if (m_inputs[0].Shape() != m_inputs[1].Shape() && 
+                                !m_inputs[0].Shape().HasUnboundDimension() && 
+                                !m_inputs[1].Shape().HasUnboundDimension())
+                            {
                                 InvalidArgument("AssignNode: All inputs should have same sample layout.");
-
+                            }
+                                
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
                             break;
                         case PrimitiveOpType::ScatterPacked:
@@ -475,7 +523,7 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
 
                             std::vector<Axis> axis;
-                            std::vector<int> beginIndex, endIndex; 
+                            std::vector<int> beginIndex, endIndex, strides; 
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
@@ -486,6 +534,10 @@ namespace CNTK
 
                                 beginIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
                                 endIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
+                                if (m_attributes.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
+                                    strides = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
+                                else
+                                    strides.resize(axis.size(), 1);
                             }
                             else if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxis) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
@@ -494,6 +546,10 @@ namespace CNTK
                                 axis.push_back(NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape()));
                                 beginIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
                                 endIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
+                                if (m_attributes.Contains(PrimitiveFunction::AttributeNameSliceStrides))
+                                    strides.push_back(m_attributes[PrimitiveFunction::AttributeNameSliceStrides].Value<int>());
+                                else
+                                    strides.push_back(1);
                             }
                             else
                             {
@@ -526,7 +582,7 @@ namespace CNTK
                                 if ((((sliceAxisDim != NDShape::FreeDimension) && (sliceAxisDim != NDShape::InferredDimension)) || (((beginIndex[i] >= 0) && (endIndex[i] > 0)) || ((beginIndex[i] < 0) && (endIndex[i] <= 0)))) &&
                                     ((ax.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim)))
                                 {
-                                    outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex);
+                                    outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex, strides[i]);
                                 }
                             }
                             outputShape = AsNDShape(outputTensorShape, /*allowNonFlattenableTensorShapes = */ true);
@@ -600,7 +656,7 @@ namespace CNTK
                                 LogicError("Function '%S': Currently pooling does not support operands with free static axes dimensions.", AsString().c_str());
 
                             // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
-                            if ((poolingWindowsShape == NDShape::Unknown) && !inputShape.SubShape(0, inputShape.Rank() - 1).HasUnboundDimension())
+                            if (poolingWindowsShape.IsUnknown() && !inputShape.SubShape(0, inputShape.Rank() - 1).HasUnboundDimension())
                             {
                                 if ((std::find(autoPadding.begin(), autoPadding.end(), true) != autoPadding.end()) || (lowerPad.TotalSize() > 0) || (upperPad.TotalSize() > 0))
                                     RuntimeError("Padding isn't allowed for Unknown pooling window shape!");
@@ -682,6 +738,25 @@ namespace CNTK
                             outputShape = outputShape.AppendShape(inputShape1);
                             break;
                         }
+                        case PrimitiveOpType::ToBatch:
+                        {
+                            assert(m_inputs.size() == 1);
+                            auto inputShape = m_inputs[0].Shape();
+                            auto inputDims = inputShape.Dimensions();
+                            if (inputDims.size() == 0)
+                                LogicError("Function '%S': Input can't be scalar", AsString().c_str());
+                            inputDims.pop_back();
+                            outputShape = NDShape(inputDims);
+                            break;
+                        }
+                        case PrimitiveOpType::UnpackBatch:
+                        {
+                            assert(m_inputs.size() == 1);
+                            auto inputShape = m_inputs[0].Shape();
+                            outputShape = NDShape(inputShape.Dimensions());
+                            outputShape = outputShape.AppendShape({NDShape::FreeDimension});
+                            break;
+                        }
                         case PrimitiveOpType::Times:
                         {
                             assert(m_inputs.size() == 2);
@@ -720,7 +795,7 @@ namespace CNTK
                             auto& strides = m_attributes[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
                             auto& lowerPad = m_attributes[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
                             auto& upperPad = m_attributes[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
-                            NDShape tmpShape = NDShape::Unknown; 
+                            NDShape tmpShape = NDShape::Unknown();
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameOutputShape))
                                 tmpShape = m_attributes[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                             auto sharing = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
@@ -813,30 +888,50 @@ namespace CNTK
                             bool keepDimensions = true;
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameReductionKeepDimensions))
                                 keepDimensions = m_attributes[PrimitiveFunction::AttributeNameReductionKeepDimensions].Value<bool>();
-
-                            auto reductionAxis = NormalizeAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0]);
-                            if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
-                                outputShape = keepDimensions ? NDShape(m_inputs[0].Shape().Rank(), 1) : NDShape({});
-                            else if (reductionAxis == Axis::DefaultBatchAxis())
+                            //Note that we need to normalize the axes inside the attributes here/in InferOutputs
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec))
                             {
-                                auto dynamicAxes = m_inputs[0].DynamicAxes();
-                                if (dynamicAxes != Axis::UnknownDynamicAxes())
-                                {
-                                    if (std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis()) == dynamicAxes.end())
-                                        LogicError("ReduceElements: operand %S; No batch axis found during reduction along the batch axis.", m_inputs[0].AsString().c_str());
-
-                                    if (dynamicAxes.size() > 1)
-                                        LogicError("ReduceElements: operand %S; Reduction along the batch axis on input sequence is currently unsupported.", m_inputs[0].AsString().c_str());
+                                auto &axisDictionary = m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+                                for (auto& value : axisDictionary) {
+                                    auto reductionAxis = NormalizeAxis(value.Value<Axis>(), m_inputs[0]);
                                 }
-
-                                outputShape = m_inputs[0].Shape();
                             }
-                            else if (reductionAxis.IsDynamicAxis())
-                                outputShape = m_inputs[0].Shape();
+                            else if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxis))
+                            {
+                                auto reductionAxis = NormalizeAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0]);
+                            }
                             else
                             {
-                                std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };
-                                outputShape = ReductionOpOutputShape(m_op, m_inputs[0].Shape(), reductionAxes, /*preserveReductionAxes =*/ keepDimensions);
+                                RuntimeError("Function '%ls': Reduce operation with no '%ls' or  '%ls' attributes",
+                                    AsString().c_str(),
+                                    PrimitiveFunction::AttributeNameAxis.c_str(),
+                                    PrimitiveFunction::AttributeNameAxisVec.c_str()
+                                );
+                            }
+
+                            std::vector<Axis> staticAxesToReduce;
+                            std::vector<Axis> batchAxesToReduce;
+                            std::vector<Axis> dynamicAxesToReduce;
+                            bool  isAllAxesReduced;
+
+                            CollectReduceOutputAxesForOutputShape(staticAxesToReduce, batchAxesToReduce, dynamicAxesToReduce, isAllAxesReduced);
+                            if (isAllAxesReduced) {
+                                outputShape = keepDimensions ? NDShape(m_inputs[0].Shape().Rank(), 1) : NDShape({});
+                            }
+                            else {
+                                //TODO for very far future: Handle reduction on (multiple) batches all in once: batchAxesToReduce 
+                                //TODO for very far future: Handle reduction on (multiple) sequences all in once: sequenceAxesToReduce
+                                if (!staticAxesToReduce.empty()) 
+                                {
+                                    std::vector<int> reductionAxesInIndcies(staticAxesToReduce.size());
+                                    for (auto i = 0; i < staticAxesToReduce.size(); ++i) 
+                                    {
+                                        reductionAxesInIndcies[i] = staticAxesToReduce[i].StaticAxisIndex();
+                                    }
+                                    outputShape = ReductionOpOutputShape(m_op, m_inputs[0].Shape(), reductionAxesInIndcies, /*preserveReductionAxes =*/ keepDimensions);
+                                }
+                                else
+                                    outputShape = m_inputs[0].Shape();
                             }
                             break;
                         }
@@ -983,6 +1078,68 @@ namespace CNTK
                     outputs.push_back(maskOutput);
                 }
             }
+        }
+    }
+
+    /**
+    * Collect output axes for reduce operation.
+    * @param staticAxesToReduce a list of static axes to reduce
+    * @param batchAxesToReduce a list of batch axes to reduce
+    * @param sequenceAxesToReduce a list of sequence axes to reduce
+    * @param isAllAxesReduced a flag which indicates whether all axes need to be reduced
+    */
+    void PrimitiveFunction::CollectReduceOutputAxesForOutputShape(
+        std::vector<Axis>& staticAxesToReduce,
+        std::vector<Axis>& batchAxesToReduce,
+        std::vector<Axis>& sequenceAxesToReduce,
+        bool & isAllAxesReduced)
+    {
+        isAllAxesReduced = false;
+
+        auto collect_axis = [&](const Axis& reductionAxis) {
+            if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
+                isAllAxesReduced = true;
+            else if (reductionAxis == Axis::DefaultBatchAxis())
+            {
+                auto dynamicAxes = m_inputs[0].DynamicAxes();
+                if (dynamicAxes != Axis::UnknownDynamicAxes())
+                {
+                    if (std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis()) == dynamicAxes.end())
+                        LogicError("ReduceElements: operand %S; No batch axis found during reduction along the batch axis.", m_inputs[0].AsString().c_str());
+
+                    if (dynamicAxes.size() > 1)
+                        LogicError("ReduceElements: operand %S; Reduction along the batch axis on input sequence is currently unsupported.", m_inputs[0].AsString().c_str());
+                }
+                batchAxesToReduce.push_back(reductionAxis);
+            }
+            else if (reductionAxis.IsSequenceAxis()) 
+            {
+                sequenceAxesToReduce.push_back(reductionAxis);
+            }
+            else
+            {
+                staticAxesToReduce.push_back(reductionAxis);
+            }
+        };
+        if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec))
+        {
+            const auto &axisDictionary = m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+            for (const auto& value : axisDictionary) {
+                collect_axis(value.Value<Axis>());
+            }
+
+        }
+        else if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxis))
+        {
+            collect_axis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
+        }
+        else
+        {
+            RuntimeError("Function '%ls': Reduce operation with no '%ls' or  '%ls' attributes",
+                AsString().c_str(),
+                PrimitiveFunction::AttributeNameAxis.c_str(),
+                PrimitiveFunction::AttributeNameAxisVec.c_str()
+            );
         }
     }
 
@@ -1192,7 +1349,7 @@ namespace CNTK
 
             // Unknown kernel shape valid only for pooling, however, the shape should have expanded before
             // this call.
-            if (kernelShape == NDShape::Unknown)
+            if (kernelShape.IsUnknown())
                 RuntimeError("Convolution: Kernel shape can't be Unknown.");
 
             // infer reduction dimensions if not given

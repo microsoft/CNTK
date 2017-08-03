@@ -15,15 +15,20 @@ dependencies:
 - pip=8.1.2=py35_0
 - python=3.5.2=0
 - pyyaml=3.12=py35_0
+- scikit-image=0.12.3=np111py35_1
+- scikit-learn=0.18.1=np111py35_0
 - scipy=0.18.1=np111py35_0
 - seaborn=0.7.1=py35_0
 - setuptools=27.2.0=py35_0
 - six=1.10.0=py35_0
 - wheel=0.29.0=py35_0
 - pip:
-  - pytest==3.0.3
-  - sphinx==1.5.4
-  - sphinx-rtd-theme==0.2.4
-  - twine==1.8.1
   - gym[atari]==0.8.1
+  - keras==2.0.6
   - pydot-ng==1.0.0
+  - pygame==1.9.3
+  - pytest==3.0.3
+  - sphinx-rtd-theme==0.2.4
+  - sphinx==1.5.4
+  - twine==1.8.1
+  - protobuf==3.2.0

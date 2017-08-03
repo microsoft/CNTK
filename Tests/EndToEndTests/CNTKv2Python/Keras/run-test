@@ -1,0 +1,58 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+export KERAS_TEST_VERSION=2.0.6
+
+export KERAS_BACKEND=cntk
+
+# Device ID is passed through $TEST_DEVICE
+# conftest.py transparently pulls in and extracts the Keras .zip
+
+# TODO look at getting fewer exclusions
+
+collection_ignores=(
+  # Insufficient dependencies
+  keras/backend/backend_test.py
+  # Not in scope
+  integration_tests
+  test_documentation.py
+)
+
+test_ignores=(
+    # Not in scope
+    test_tfoptimizer
+    # Needs newer NumPy version
+    test_convert_weights
+    # Fails on Python 3.4
+    test_has_arg_positional_only
+    # Fails on Python 3.x
+    test_warnings
+    # Fails tolerance sometimes
+    test_conv3d_transpose
+)
+
+# Windows needs a few more exclusions
+if [ "$OS" == "Windows_NT" ]; then
+  collection_ignores=(${collection_ignores[@]}
+    # Multiple processes / PicklingError on Windows
+    test_model_saving.py
+    test_multiprocessing.py
+  )
+
+  test_ignores=(${test_ignores[@]}
+    # Multiple processes / PicklingError on Windows
+    test_LambdaCallback
+    test_generator_enqueuer_fail_processes
+    test_generator_enqueuer_processes
+    test_generator_methods_interface
+    # Test teardown error (temporary directory not empty)
+    test_io_utils
+  )
+fi
+
+py.test \
+  --verbose \
+  $(printf -- "--ignore=keras-$KERAS_TEST_VERSION/tests/%s " ${collection_ignores[@]}) \
+  -k "not just_a_dummy $(printf "and not %s " ${test_ignores[@]})" \
+  keras-$KERAS_TEST_VERSION/tests && echo __COMPLETED__

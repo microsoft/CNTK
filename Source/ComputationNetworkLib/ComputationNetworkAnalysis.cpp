@@ -43,7 +43,7 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
     const list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
 
     // initialize the node state owned by us
-    // TODO: Verify that the other call to this function is unecessary, then inline this function here.
+    // TODO: Verify that the other call to this function is unnecessary, then inline this function here.
     for (auto& node : nodes)
         node->PurgeStateForFormingRecurrentLoops();
 
@@ -318,7 +318,7 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
             }
             }
             if (bFound)
-                fprintf(stderr, "\nDetermineSCCsR: %ls %ls operation was discovered multiple times as as loop participant", cur->NodeName().c_str(), cur->OperationName().c_str());
+                fprintf(stderr, "\nDetermineSCCsR: %ls %ls operation was discovered multiple times as loop participant", cur->NodeName().c_str(), cur->OperationName().c_str());
             // TODO: Once we forbid FormRecurrentLoops() from non-NULL, can we ever re-hit a loop here? If not, then turn bFound into a LogicError().
             if (!bFound)
             {

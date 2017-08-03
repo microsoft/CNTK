@@ -10,7 +10,7 @@ import numpy as np
 import yaml
 from utils.rpn.generate_anchors import generate_anchors
 from utils.rpn.bbox_transform import bbox_transform_inv, clip_boxes
-from utils.rpn.nms_wrapper import nms
+from utils.nms.nms_wrapper import nms
 
 try:
     from config import cfg
@@ -46,13 +46,10 @@ class ProposalLayer(UserFunction):
         # (n, x1, y1, x2, y2) specifying an image batch index n and a
         # rectangle (x1, y1, x2, y2)
         # for CNTK the proposal shape is [4 x roisPerImage], and mirrored in Python
-
-        # cfg_key = str(self.phase) # either 'TRAIN' or 'TEST' --> use FreeDimension and set output size in fwd
-        proposalShape = (cfg["TRAIN"].RPN_POST_NMS_TOP_N, 4)
-        #proposalShape = (FreeDimension, 4)
+        proposalShape = (FreeDimension, 4)
 
         return [output_variable(proposalShape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
-                                name="rpn_rois_raw", needs_gradient=False)] # , name="rpn_rois" | name="rpn_rois_raw"
+                            name="rpn_rois_raw", needs_gradient=False)]
 
     def forward(self, arguments, device=None, outputs_to_retain=None):
         # Algorithm:
@@ -68,8 +65,8 @@ class ProposalLayer(UserFunction):
         # take after_nms_topN proposals after NMS
         # return the top proposals (-> RoIs top, scores top)
 
-        # TODO: remove 'False and' once FreeDimension works
-        if False and len(outputs_to_retain) == 0:
+        # use potentially different number of proposals for training vs evaluation
+        if len(outputs_to_retain) == 0:
             # print("EVAL")
             pre_nms_topN = cfg["TEST"].RPN_PRE_NMS_TOP_N
             post_nms_topN = cfg["TEST"].RPN_POST_NMS_TOP_N
@@ -89,11 +86,14 @@ class ProposalLayer(UserFunction):
         # the second set are the fg probs, which we want
         scores = bottom[0][:, self._num_anchors:, :, :]
         bbox_deltas = bottom[1]
-        im_info = bottom[2]
+        im_info = bottom[2][0]
 
         if DEBUG:
+            # im_info = (pad_width, pad_height, scaled_image_width, scaled_image_height, orig_img_width, orig_img_height)
+            # e.g.(1000, 1000, 1000, 600, 500, 300) for an original image of 600x300 that is scaled and padded to 1000x1000
             print ('im_size: ({}, {})'.format(im_info[0], im_info[1]))
-            print ('scale: {}'.format(im_info[2]))
+            print ('scaled im_size: ({}, {})'.format(im_info[2], im_info[3]))
+            print ('original im_size: ({}, {})'.format(im_info[4], im_info[5]))
 
         # 1. Generate proposals from bbox deltas and shifted anchors
         height, width = scores.shape[-2:]
@@ -140,11 +140,12 @@ class ProposalLayer(UserFunction):
         proposals = bbox_transform_inv(anchors, bbox_deltas)
 
         # 2. clip predicted boxes to image
-        proposals = clip_boxes(proposals, im_info[:2])
+        proposals = clip_boxes(proposals, im_info)
 
         # 3. remove predicted boxes with either height or width < threshold
-        # (NOTE: convert min_size to input image scale stored in im_info[2])
-        keep = _filter_boxes(proposals, min_size * im_info[2])
+        # (NOTE: convert min_size to input image scale. Original size = im_info[4:6], scaled size = im_info[2:4])
+        cntk_image_scale = im_info[2] / im_info[4]
+        keep = _filter_boxes(proposals, min_size * cntk_image_scale)
         proposals = proposals[keep, :]
         scores = scores[keep]
 

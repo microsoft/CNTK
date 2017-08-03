@@ -6,3 +6,4 @@
 //
 #define BOOST_TEST_MODULE MathTests
 #include "stdafx.h"
+#include "V2Dependencies.h"

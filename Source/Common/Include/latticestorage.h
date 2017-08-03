@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <cstdio>
 
-#undef INITIAL_STRANGE // [v-hansu] intialize structs to strange values
+#undef INITIAL_STRANGE // [v-hansu] initialize structs to strange values
 #define PARALLEL_SIL   // [v-hansu] process sil on CUDA, used in other files, please search this
 #define LOGZERO -1e30f
 

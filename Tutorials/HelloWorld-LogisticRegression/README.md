@@ -11,4 +11,4 @@ We will start with a simple implementation of binary classification using the li
 
 ## Tutorial
 
-Please find a detailed tutorial that uses the data and configurations in this folder on out website at [https://github.com/Microsoft/CNTK/wiki/Tutorial](https://github.com/Microsoft/CNTK/wiki/Tutorial)
+Please find a detailed tutorial that uses the data and configurations in this folder on out website at https://docs.microsoft.com/en-us/cognitive-toolkit/Tutorials

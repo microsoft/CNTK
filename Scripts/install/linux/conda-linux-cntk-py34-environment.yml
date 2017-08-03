@@ -9,25 +9,29 @@ dependencies:
 - jupyter=1.0.0=py34_3
 - matplotlib=1.5.3=np111py34_0
 - numpy=1.11.2=py34_0
+- opencv=3.1.0=np111py34_1
 - pandas=0.19.1=np111py34_0
 - pandas-datareader=0.2.1=py34_0
 - pillow=3.4.2=py34_0
 - pip=8.1.2=py34_0
 - python=3.4.4=5
 - pyyaml=3.12=py34_0
+- scikit-image=0.12.3=np111py34_1
+- scikit-learn=0.18.1=np111py34_0
 - scipy=0.18.1=np111py34_0
 - seaborn=0.7.1=py34_0
 - setuptools=27.2.0=py34_0
 - six=1.10.0=py34_0
 - wheel=0.29.0=py34_0
-- opencv=3.1.0=np111py34_1
 - pip:
-  - pytest==3.0.3
-  - sphinx==1.5.4
-  - sphinx-rtd-theme==0.2.4
-  - twine==1.8.1
-  - gym[atari]==0.8.1
-  - pydot-ng==1.0.0
-  - future==0.16.0
   - easydict==1.6.0
-  - scikit-image==0.12.3
+  - future==0.16.0
+  - gym[atari]==0.8.1
+  - keras==2.0.6
+  - pydot-ng==1.0.0
+  - pygame==1.9.3
+  - pytest==3.0.3
+  - sphinx-rtd-theme==0.2.4
+  - sphinx==1.5.4
+  - twine==1.8.1
+  - protobuf==3.2.0

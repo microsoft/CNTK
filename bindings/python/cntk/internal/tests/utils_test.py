@@ -74,6 +74,12 @@ def test_get_data_type():
     assert get_data_type(pa64, n64) == np.float64
     assert get_data_type(pa32, pl, n64) == np.float32
     assert get_data_type(pa64, pl, n64) == np.float64
+    
+    assert get_data_type(np.float64(1)) == np.float64
+    assert get_data_type(np.float32(1)) == np.float32
+    assert get_data_type(np.int64(1)) == np.float32  # special case for cntk
+    assert get_data_type(1) == np.float32
+    assert get_data_type(1.0) == np.float32
 
 def test_sanitize_batch_sparse():
     batch = [csr([[1,0,2],[2,3,0]]),
