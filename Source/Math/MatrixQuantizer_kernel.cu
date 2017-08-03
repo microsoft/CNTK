@@ -89,30 +89,35 @@ __device__ void allreduce(T& var)
     {
         var = var + vBuf[threadIdx.x + 32];
         vBuf[threadIdx.x] = var;
+        __syncwarp(0xffffffff);
     }
 
     if ((BLOCKSIZE >= 32) && (threadIdx.x < 16))
     {
         var = var + vBuf[threadIdx.x + 16];
         vBuf[threadIdx.x] = var;
+        __syncwarp(0xffff);
     }
 
     if ((BLOCKSIZE >= 16) && (threadIdx.x < 8))
     {
         var = var + vBuf[threadIdx.x + 8];
         vBuf[threadIdx.x] = var;
+        __syncwarp(0xff);
     }
 
     if ((BLOCKSIZE >= 8) && (threadIdx.x < 4))
     {
         var = var + vBuf[threadIdx.x + 4];
         vBuf[threadIdx.x] = var;
-    }
+        __syncwarp(0xf);
+   }
 
     if ((BLOCKSIZE >= 4) && (threadIdx.x < 2))
     {
         var = var + vBuf[threadIdx.x + 2];
         vBuf[threadIdx.x] = var;
+        __syncwarp(0x3);
     }
 
     if ((BLOCKSIZE >= 2) && (threadIdx.x == 0))

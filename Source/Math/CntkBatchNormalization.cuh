@@ -107,12 +107,16 @@ __device__ __forceinline__ void StoreValues<4, float>(const float src[4], float*
 }
 
 template <typename T>
-__device__ __forceinline__ T Shuffle(T input, int srcLane)
+__device__ __forceinline__ T Shuffle(T input, int srcLane, unsigned int mask)
 {
 #ifdef __CUDA_ARCH__
     // shfl is supported only on Kepler+
     static_assert(__CUDA_ARCH__ >= 300, "CNTK only supports only Kepler GPU architecture or newer.");
+#if CUDA_VERSION >= 9000
+    return cub::ShuffleIndex(input, srcLane, CUB_PTX_WARP_THREADS, mask); // Need cub > 1.7.0
+#else
     return cub::ShuffleIndex(input, srcLane);
+#endif
 #else
     assert(false);
     return input; // keep compiler happy
@@ -253,6 +257,12 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
         // now reduce minibatch mean/variance across threads
         const int tid = threadIdx.y * BlockDimX + threadIdx.x;
         const int laneId = tid & 0x1f;
+
+        unsigned int mask;
+#if CUDA_VERSION >= 9000
+        mask = __ballot_sync(0xffffffff, n);
+#endif
+
         // First, reduce within warp using shuffle.
         if (n > 0)
         {
@@ -260,16 +270,16 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
             for (int i = 1; i < CUB_PTX_WARP_THREADS / BlockDimX; i *= 2)
             {
                 int srcLane = laneId + BlockDimX * i;
-                int n2 = Shuffle(n, srcLane);
+                int n2 = Shuffle(n, srcLane, mask);
                 int nsum = n + n2;
                 ElemType d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
-                    d[k] = Shuffle(mean[k], srcLane) - mean[k];
+                    d[k] = Shuffle(mean[k], srcLane, mask) - mean[k];
                     ElemType dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
-                    m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
+                    m2[k] += Shuffle(m2[k], srcLane, mask) + d[k] * n * dScaled;
                 }
                 n = nsum;
             }
@@ -448,22 +458,26 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
         const int tid = threadIdx.y * BlockDimX + threadIdx.x;
         const int laneId = tid & 0x1f;
         // First, reduce within warp using shuffle.
+        unsigned int mask;
+#if CUDA_VERSION >= 9000
+        mask = __ballot_sync(0xffffffff, n);
+#endif
         if (n > 0)
         {
 #pragma unroll
             for (int i = 1; i < CUB_PTX_WARP_THREADS; i *= 2)
             {
                 int srcLane = laneId + i;
-                int n2 = Shuffle(n, srcLane);
+                int n2 = Shuffle(n, srcLane, mask);
                 int nsum = n + n2;
                 ElemType d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
-                    d[k] = Shuffle(mean[k], srcLane) - mean[k];
+                    d[k] = Shuffle(mean[k], srcLane, mask) - mean[k];
                     ElemType dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
-                    m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
+                    m2[k] += Shuffle(m2[k], srcLane, mask) + d[k] * n * dScaled;
                 }
                 n = nsum;
             }
