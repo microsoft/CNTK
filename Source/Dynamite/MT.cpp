@@ -81,7 +81,7 @@ TernaryModel AttentionModel(size_t attentionDim1)
         let u = TransposeTimes(tanh, v, L"vProj"); // [T] col vector            // [128 x 4 x 7]' * [128] = [7 x 4]         [128] * [128 x 4 x 7] -> [4 x 7]
         //LOG(tanh);
         //LOG(v);
-        LOG(u);
+        //LOG(u);
         let w = Dynamite::Softmax(u);                                           // [7 x 4]                                  [4 x 7]
         LOG(w);
         let res = Times(data, w, L"att"); // [A]                                // [128 x 4 x 7] * [7 x 4]                  [128 x 4 x 7] * [4 x 7]
@@ -135,12 +135,12 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
             // TODO: Why not learn the output of the first step, and skip the <s> and funky initial attention context?
             let input = Splice({ history[t], attentionContext }, Axis(0), L"augInput");
             state = lstms[0](state, input);
-            LOG(state);
+            //LOG(state);
             // compute attention vector
             attentionContext = attentionModel(state, /*keys=*/hEncsTensor, /*data=*/hEncsTensor);
             // compute an enhanced hidden state with attention value merged in
             let m = Tanh(merge(Splice({ state, attentionContext }, Axis(0))));
-            LOG(m);
+            //LOG(m);
             // compute output
             let z = dense(m);
             res[t] = z;
@@ -166,7 +166,7 @@ BinarySequenceModel CreateModelFunction()
     {
         // encoder
         embed(e, x);
-        LOG(e);
+        //LOG(e);
         encode(h, e);
         // decoder (outputting logprobs of words)
         decode(res, history, h);

@@ -32,7 +32,7 @@ namespace Dynamite {
 static inline NDArrayViewPtr GetValueAsTensor(const Variable& var) { return var.Value(); }
 static inline NDArrayViewPtr GetValueAsTensor(const FunctionPtr & fun) { return fun->Output().Value(); }
 static inline NDArrayViewPtr GetValueAsTensor(const vector<Variable>& vec) { return (Splice(vec, Axis((int)vec[0].Shape().Rank())))->Output().Value(); }
-#define LOG(var) (GetValueAsTensor(var)->LogToFile(L#var, stderr, 37)) // helper to log a value
+#define LOG(var) (GetValueAsTensor(var)->LogToFile(L#var, stderr, 10)) // helper to log a value
 
 struct ModelParameters
 {
@@ -250,7 +250,7 @@ static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
     auto b = Parameter({ outputDim }, 0.0f, device, L"b");
     return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
     {
-        return ReLU(Times(W, input) + b + Times(R, prevOutput), L"RNNStep.h");
+        return Sigmoid/*ReLU*/(Times(W, input) + b + Times(R, prevOutput), L"RNNStep.h");
     });
 }
 
@@ -396,15 +396,15 @@ struct Sequence
 // built-in Softmax requires temp memory, so we use an explicit expression instead
 static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes())
 {
-    LOG(z);
-    LOG(ReduceLogSum(z, axis, L"smLogDenom"));
+    //LOG(z);
+    //LOG(ReduceLogSum(z, axis, L"smLogDenom"));
     return z - ReduceLogSum(z, axis, L"smLogDenom");
 }
 
 // built-in Softmax requires temp memory, so we use an explicit expression instead
 static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes())
 {
-    LOG(LogSoftmax(z, axis));
+    //LOG(LogSoftmax(z, axis));
     return Exp(LogSoftmax(z, axis), L"sm");
 }
 
