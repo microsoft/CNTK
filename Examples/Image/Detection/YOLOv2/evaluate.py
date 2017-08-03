@@ -25,7 +25,7 @@ LIMIT_TO_FIRST = 10
 NMS_IOU_THRESHOLD = .5 # 0.7
 cls_map = ClassMap(r"../../DataSets/Pascal/mappings/class_map.txt")
 DATA_SET = "Pascal_VOC_2007"
-CONF_THRESHOLD = 0.25 # 0.015
+CONF_THRESHOLD = 0.5 # 0.015
 cls_map = ClassMap(r"../../DataSets/Pascal/mappings/class_map.txt") if DATA_SET == "Pascal_VOC_2007" or DATA_SET=="Overfit"\
     else ClassMap(r"../../DataSets/Grocery/Class_map.txt")
 
@@ -131,8 +131,8 @@ def prepare_ground_truth_boxes(gtbs, classes, image_width, image_height):
         original_labels = image_gtbs[:, -1:]
 
         coords = xywh_to_point(coords)
-        coords[[0,2]] *= image_width
-        coords[[1,3]] *= image_height
+        coords[:,[0,2]] *= image_width
+        coords[:,[1,3]] *= image_height
 
         all_gt_boxes = np.concatenate([coords, original_labels], axis=1)
 
@@ -159,16 +159,19 @@ def prepare_predictions(outputs, classes,  image_width, image_height):
 
     for img_i in range(num_test_images):
         output = outputs[img_i]
-        coords = output[:4]
-        objs = output [4:5]
-        cls_preds = output[5:]
-        labels = np.argmax(cls_preds, axis=1)
+        #output = output[0]
+        coords = output[:,:4]
+        objs = output [:,4:5]
+        cls_preds = output[:,5:]
+        labels = np.argmax(cls_preds, axis=1) + 1
         labels.shape += (1,)
 
         coords = xywh_to_point(coords)
-        coords[[0, 2]] *= image_width
-        coords[[1, 3]] *= image_height
+        coords[:,[0, 2]] *= image_width
+        coords[:,[1, 3]] *= image_height
 
+
+        print(coords.shape, objs.shape, labels.shape)
         preds_for_img = np.concatenate([coords, objs, labels], axis=1)  # (nr_of_rois x 6) --> coords_score_label
 
         for cls_j in range(1, len(classes)):
@@ -190,15 +193,16 @@ def eval_map(model, img_file, gtb_file, num_images_to_eval):
     img_width = data_input.shape[2]
     img_height = data_input.shape[1]
 
-    mb_source = create_mb_source(img_height=img_height, img_width=img_width, img_channels=3, output_size=7, image_file=img_file, roi_file=gtb_file, is_training=False, max_samples=num_images_to_eval)
+    mb_source = create_mb_source(img_height=img_height, img_width=img_width, img_channels=3, output_size=rois_per_image*5, image_file=img_file, roi_file=gtb_file, is_training=False, max_samples=num_images_to_eval)
 
     image_input = input_variable((3, img_height, img_width),
                                  dynamic_axes=[Axis.default_batch_axis()])
-    gt_input = input_variable((rois_per_image * 5,))
+    gt_input = input_variable((rois_per_image*5,))
     input_map = {  # add real gtb
         image_input: mb_source.streams.features,
         gt_input: mb_source.streams.label,
     }
+    model = model(image_input)
 
     all_raw_gt_boxes = []
     all_raw_outputs = []
@@ -227,7 +231,9 @@ def eval_map(model, img_file, gtb_file, num_images_to_eval):
             all_raw_imgs.append(img)
 
         output = model.eval({image_input: mb_data[image_input]})
-        all_raw_outputs.append(output.copy())
+        #import ipdb;ipdb.set_trace()
+        output = output[0]
+        all_raw_outputs.append(output[np.where(output[:, 4] > CONF_THRESHOLD )].copy())
 
         if img_i % 1000 == 0 and img_i != 0:
             print("Images processed: " + str(img_i))
@@ -262,37 +268,43 @@ if __name__ == "__main__":
     img_height= data_input.shape[1]
 
     if DATA_SET == "Pascal_VOC_2007":
-        obj_min, obj_max=1, 0
-        data_path= r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\JPEGImages"
-        img_list = [18,118,1118,27,2118,4118,1,2,3,4,5,6,7,8,9,10]
-        # img_list = open(r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\ImageSets\Main\test.txt").read().split()
-        save_path = os.path.join(".", "outputdir", "results", "pvoc2007")
-        if not os.path.exists(save_path):
-            os.mkdir(save_path)
+        # obj_min, obj_max=1, 0
+        # data_path= r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\JPEGImages"
+        # img_list = [18,118,1118,27,2118,4118,1,2,3,4,5,6,7,8,9,10]
+        # # img_list = open(r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\ImageSets\Main\test.txt").read().split()
+        # save_path = os.path.join(".", "outputdir", "results", "pvoc2007")
+        # if not os.path.exists(save_path):
+        #     os.mkdir(save_path)
+        #
+        # for i in range(len(img_list)):
+        #     img_name =  "{:06}.jpg".format(img_list[i])
+        #     img = load_image(os.path.join(data_path, img_name))
+        #
+        #     preds = predictions_for_image(img, model, img_width, img_height)
+        #     preds_nms = do_nms(preds)
+        #     #import ipdb;ipdb.set_trace()
+        #     color_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        #
+        #     draw_bb_on_image(color_image, preds_nms)
+        #
+        #     if i<0:
+        #         plot_image(color_image)
+        #
+        #     out_img = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
+        #
+        #     save_image(out_img, save_path, "bb_"+img_name)
+        #
+        #     import math
+        #     objectnesses = preds[:,4]
+        #     obj_min = np.minimum(obj_min, np.minimum.reduce(objectnesses))
+        #     obj_max = np.maximum(obj_max, np.maximum.reduce(objectnesses))
+        # print((obj_min,obj_max))
 
-        for i in range(len(img_list)):
-            img_name =  "{:06}.jpg".format(img_list[i])
-            img = load_image(os.path.join(data_path, img_name))
-
-            preds = predictions_for_image(img, model, img_width, img_height)
-            preds_nms = do_nms(preds)
-            #import ipdb;ipdb.set_trace()
-            color_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-            draw_bb_on_image(color_image, preds_nms)
-
-            if i<0:
-                plot_image(color_image)
-
-            out_img = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
-
-            save_image(out_img, save_path, "bb_"+img_name)
-
-            import math
-            objectnesses = preds[:,4]
-            obj_min = np.minimum(obj_min, np.minimum.reduce(objectnesses))
-            obj_max = np.maximum(obj_max, np.maximum.reduce(objectnesses))
-        print((obj_min,obj_max))
+        dataset_path = os.path.join("..", "..", "DataSets", "Pascal", "mappings")
+        img_file = os.path.join(dataset_path, "test2007.txt")
+        gtb_file = os.path.join(dataset_path, "test2007_rois_rel-ctr-wh_noPad_skipDif.txt")
+        num_images_to_eval = 4952
+        eval_map(model, img_file, gtb_file, num_images_to_eval)
 
 
     elif DATA_SET == "Grocery":
