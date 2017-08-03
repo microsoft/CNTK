@@ -498,6 +498,11 @@ def predict_image(model, path, par, conf_threshold = 0.5, show=True):
 def create_mb_source(img_height, img_width, img_channels, output_size, image_file, roi_file, is_training = False, multithreaded_deserializer=False, max_samples=io.INFINITELY_REPEAT, max_epochs = io.INFINITELY_REPEAT):
     transforms = []
 
+    if is_training:
+        transforms += [
+            xforms.color(0.5,0.0,0.5) # random color-shifts
+        ]
+
     if False and is_training:
         transforms += [
             xforms.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio') # train uses jitter
