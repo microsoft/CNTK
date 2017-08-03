@@ -39,12 +39,6 @@
       <Filter>CPU</Filter>
     </ClCompile>
     <ClCompile Include="RNGHandle.cpp" />
-    <ClCompile Include="BlockHandlerAVX.cpp">
-      <Filter>CPU</Filter>
-    </ClCompile>
-    <ClCompile Include="BlockHandlerSSE.cpp">
-      <Filter>CPU</Filter>
-    </ClCompile>
     <ClCompile Include="DataTransferer.cpp" />
     <ClCompile Include="CPUMatrixDouble.cpp">
       <Filter>CPU</Filter>
@@ -118,21 +112,8 @@
     <ClInclude Include="RNNCommon.h">
       <Filter>RNN</Filter>
     </ClInclude>
-    <ClInclude Include="BlockHandlerAVX.h">
-      <Filter>CPU</Filter>
-    </ClInclude>
-    <ClInclude Include="BlockHandlerSSE.h">
-      <Filter>CPU</Filter>
-    </ClInclude>
-    <ClInclude Include="BlockMultiplier.h">
-      <Filter>CPU</Filter>
-    </ClInclude>
-    <ClInclude Include="BlockMultiplierPlatform.h">
-      <Filter>CPU</Filter>
-    </ClInclude>
     <ClInclude Include="Quantizers.h" />
     <ClInclude Include="QuantizedOperations.h" />
-    <ClInclude Include="BlockMultiplierMatrixUtil.h" />
     <ClInclude Include="DataTransferer.h" />
     <ClInclude Include="CPUMatrixImpl.h">
       <Filter>CPU</Filter>

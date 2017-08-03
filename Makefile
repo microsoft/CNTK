@@ -370,7 +370,6 @@ COMMON_SRC =\
 
 MATH_SRC =\
 	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
-	$(SOURCEDIR)/Math/BlockHandlerSSE.cpp \
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/CPUMatrixFloat.cpp \
 	$(SOURCEDIR)/Math/CPUMatrixDouble.cpp \
@@ -385,12 +384,6 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/RNGHandle.cpp \
 	$(SOURCEDIR)/Math/TensorView.cpp \
 	$(SOURCEDIR)/Math/NcclComm.cpp \
-
-ifdef SUPPORT_AVX2
-MATH_SRC +=\
-	$(SOURCEDIR)/Math/BlockHandlerAVX.cpp \
-
-endif
 
 ifdef CUDA_PATH
 MATH_SRC +=\
@@ -1243,7 +1236,6 @@ $(UNITTEST_NETWORK): $(UNITTEST_NETWORK_OBJ) | $(READER_LIBS) $(CNTKTEXTFORMATRE
 
 UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/BatchNormalizationEngineTests.cpp \
-	$(SOURCEDIR)/../Tests/UnitTests/MathTests/BlockMultiplierTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/constants.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/ConvolutionEngineTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/CPUMatrixTests.cpp \
