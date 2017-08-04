@@ -821,15 +821,8 @@ namespace CNTK
         template <typename ElementType>
         std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);
 
-
         template <typename ElementType>
-        inline const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView() const
-        {
-            if (AsDataType<ElementType>() != m_dataType)
-                LogicError("NDArrayView::GetTensorView: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
-
-            return (const Microsoft::MSR::CNTK::TensorView<ElementType>*)(m_tensorView.get());
-        }
+        const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView() const;
 
         template <typename ElementType>
         Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorView();

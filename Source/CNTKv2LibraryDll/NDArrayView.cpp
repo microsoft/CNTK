@@ -205,6 +205,14 @@ namespace CNTK
         return GetMatrixImpl<ElementType>(GetWritableTensorView<ElementType>(), rowColSplitPoint);
     }
 
+    template <typename ElementType>
+    const TensorView<ElementType>* NDArrayView::GetTensorView() const
+    {
+        if (AsDataType<ElementType>() != m_dataType)
+            LogicError("NDArrayView::GetTensorView: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
+
+        return (const TensorView<ElementType>*)(m_tensorView.get());
+    }
 
     template <typename ElementType>
     TensorView<ElementType>* NDArrayView::GetWritableTensorView()
@@ -512,6 +520,9 @@ namespace CNTK
 
     template CNTK_API const float* NDArrayView::DataBuffer<float>() const;
     template CNTK_API const double* NDArrayView::DataBuffer<double>() const;
+
+    template CNTK_API const TensorView<float>* NDArrayView::GetTensorView<float>() const;
+    template CNTK_API const TensorView<double>* NDArrayView::GetTensorView<double>() const;
 
     template CNTK_API float* NDArrayView::WritableDataBuffer<float>();
     template CNTK_API double* NDArrayView::WritableDataBuffer<double>();
