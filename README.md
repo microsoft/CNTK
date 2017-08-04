@@ -2,7 +2,7 @@
 
 ## Latest news 
 
-***2017-08-04.*** CNTK July interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2194). 
+***2017-08-04.*** CNTK August interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2194). 
 
 ***2017-07-31.* CNTK 2.1**  
 Release of Cognitive Toolkit v.2.1.
