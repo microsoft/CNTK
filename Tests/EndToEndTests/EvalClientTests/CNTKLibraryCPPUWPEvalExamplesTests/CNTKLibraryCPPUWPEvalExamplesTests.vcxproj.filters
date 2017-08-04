@@ -16,7 +16,8 @@
     <ClCompile Include="UnitTestApp.xaml.cpp" />
     <ClCompile Include="UnitTest.cpp" />
     <ClCompile Include="pch.cpp" />
-    <ClCompile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalCPUOnlyExamples\EvalMultithreads.cpp" />
+    <ClCompile Include="..\CNTKLibraryCPPEvalExamplesTest\EvalMultithreads.cpp" />
+    <ClCompile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalCPUOnlyExamples\CNTKLibraryCPPEvalExamples.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />

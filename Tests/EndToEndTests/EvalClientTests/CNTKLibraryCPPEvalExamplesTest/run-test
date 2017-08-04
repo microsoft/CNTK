@@ -12,34 +12,27 @@ if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_T
 fi
 
 if [ "$OS" == "Windows_NT" ]; then
-    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image
+    TEST_DATA_DIR=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`
 else
-    DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image
+    TEST_DATA_DIR=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 fi
 
 # Copy the test data to the test run directory
-TestDataDir=$TEST_RUN_DIR/TestData
-mkdir $TestDataDir
-
-# Setup predefined variables $DataDir, $ConfigDir, and $OutputDir that are required by cntkrun
-ConfigDir=$TEST_ROOT_DIR/../../Examples/Image/GettingStarted
-OutputDir=$ConfigDir/Output
-DataDir=$ConfigDir/../DataSets/MNIST
-
-cp $DataSourceDir/MNIST/v0/Train-28x28_cntk_text.txt $DataDir || exit $?
-
-# Train model that is needed by evaluation
-[ -d $OutputDir ] || mkdir $OutputDir || exit $?
-[ -d $OutputDir/Models ] && rm -rf $OutputDir/Models
-DeleteModelsAfterTest=0
-[ -f $ConfigDir/01_OneHidden.cntk ] || exit 1
-cntkrun 01_OneHidden.cntk "stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit $?
-cp $OutputDir/Models/01_OneHidden $TestDataDir/01_OneHidden.model || exit $?
+LocalTestDir=$TEST_RUN_DIR/TestData
+mkdir $LocalTestDir
 
 # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
 [ "$TEST_DEVICE" == "cpu" ] && export CUDA_VISIBLE_DEVICES=-1
 
-pushd $TestDataDir
+# use pre-trained models and data files for cpp eval examples test
+echo Use pre-trained eval models in $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY for cpp eval tests.
+cp $TEST_DATA_DIR/PreTrainedModels/EvalModels/01_OneHidden.model $LocalTestDir/01_OneHidden.model || exit $?
+cp $TEST_DATA_DIR/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn $LocalTestDir/resnet20.dnn || exit $?
+cp $TEST_DATA_DIR/PreTrainedModels/EvalModels/atis.dnn $LocalTestDir/atis.dnn || exit $?
+cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/query.wl $LocalTestDir/query.wl || exit $?
+cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/slots.wl $LocalTestDir/slots.wl || exit $?
+
+pushd $LocalTestDir
 
 if [ "$OS" == "Windows_NT" ]; then
   $TEST_BIN_DIR/CNTKLibraryCPPEvalExamplesTest.exe
@@ -51,6 +44,6 @@ ExitCode=$?
 
 # Delete the test data
 popd
-rm -rf $TestDataDir
+rm -rf $LocalTestDir
 
 exit $ExitCode

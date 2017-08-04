@@ -1,35 +1,58 @@
 CPU info:
-    CPU Model Name: Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
-    Hardware threads: 8
-    Total Memory: 33417320 kB
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 12
+    Total Memory: 33497376 kB
 -------------------------------------------------------------------
 + '[' Windows_NT '!=' Windows_NT ']'
-+ [[ C:\CNTKTestData == '' ]]
-+ [[ ! -d C:\CNTKTestData ]]
-++ cygpath -au 'C:\CNTKTestData'
-+ TEST_DATA_DIR=/cygdrive/c/CNTKTestData
++ [[ c:\Data\CNTKTestData == '' ]]
++ [[ ! -d c:\Data\CNTKTestData ]]
+++ cygpath -au 'c:\Data\CNTKTestData'
++ TEST_DATA_DIR=/cygdrive/c/Data/CNTKTestData
 ++ cygpath -au 'C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\Tools\\..\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe'
 + VSTEST_CONSOLE='/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe'
 + test -x '/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe'
-++ cygpath -au 'C:\Users\zhouwang\Documents\01_OneHidden.model'
-+ MODEL_FILE=/cygdrive/c/Users/zhouwang/Documents/01_OneHidden.model
-+ cp /cygdrive/c/CNTKTestData/PreTrainedModels/EvalModels/01_OneHidden /cygdrive/c/Users/zhouwang/Documents/01_OneHidden.model
+++ cygpath -au 'C:\Users\svcphil\Documents'
++ MODEL_DIR=/cygdrive/c/Users/svcphil/Documents
++ cp /cygdrive/c/Data/CNTKTestData/PreTrainedModels/EvalModels/01_OneHidden.model /cygdrive/c/Users/svcphil/Documents/01_OneHidden.model
++ cp /cygdrive/c/Data/CNTKTestData/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn /cygdrive/c/Users/svcphil/Documents/resnet20.model
++ cp /cygdrive/c/Data/CNTKTestData/PreTrainedModels/EvalModels/atis.dnn /cygdrive/c/Users/svcphil/Documents/atis.model
++ cp /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/../../Examples/LanguageUnderstanding/ATIS/BrainScript/query.wl /cygdrive/c/Users/svcphil/Documents/query.wl
++ cp /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/../../Examples/LanguageUnderstanding/ATIS/BrainScript/slots.wl /cygdrive/c/Users/svcphil/Documents/slots.wl
 + '[' cpu == cpu ']'
 + export CUDA_VISIBLE_DEVICES=-1
 + CUDA_VISIBLE_DEVICES=-1
-++ cygpath -aw /cygdrive/c/repos/cntk/x64/release_UWP/CNTKLibraryCPPUWPEvalExamplesTests/AppPackages/CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP_Test/CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP.appx
-+ '/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe' /inIsolation /Platform:x64 'C:\repos\cntk\x64\release_UWP\CNTKLibraryCPPUWPEvalExamplesTests\AppPackages\CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP_Test\CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP.appx'
+++ cygpath -aw /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release_UWP/CNTKLibraryCPPUWPEvalExamplesTests/AppPackages/CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP_Test/CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP.appx
++ '/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe' /inIsolation /Platform:x64 'C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release_UWP\CNTKLibraryCPPUWPEvalExamplesTests\AppPackages\CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP_Test\CNTKLibraryCPPUWPEvalExamplesTests_1.0.0.0_x64_release_UWP.appx'
 Microsoft (R) Test Execution Command Line Tool Version 14.0.25420.1
 Copyright (c) Microsoft Corporation.  All rights reserved.
 
 Starting test execution, please wait...
 Passed   UWPTestSanity
 Passed   UWPTestModelLoad
-Passed   UWPTestEval
+Passed   UWPTestMultiThreadsEvaluationTests
+Passed   UWPTestEvaluationSingleSampleUsingDense
+Passed   UWPTestEvaluationBatchUsingDense
+Passed   UWPTestParallelEvaluationExample
+Passed   UWPTestEvaluationSingleSequenceUsingOneHot
+Passed   UWPTestEvaluationBatchOfSequencesUsingOneHot
+Passed   UWPTestEvaluationSingleSequenceUsingSparse
 
-Total tests: 3. Passed: 3. Failed: 0. Skipped: 0.
+Total tests: 9. Passed: 9. Failed: 0. Skipped: 0.
 Test Run Successful.
-Test execution time: 6.7880 Seconds
-+ rm -rf /cygdrive/c/Users/zhouwang/Documents/01_OneHidden.model
-+ [[ -f /cygdrive/c/Users/zhouwang/Documents/01_OneHidden.model ]]
+Test execution time: 7.7452 Seconds
++ for fn in 01_OneHidden.model resnet20.model.model atis.model query.wl slots.wl
++ rm -rf /01_OneHidden.model
++ [[ -f /01_OneHidden.model ]]
++ for fn in 01_OneHidden.model resnet20.model.model atis.model query.wl slots.wl
++ rm -rf /resnet20.model.model
++ [[ -f /resnet20.model.model ]]
++ for fn in 01_OneHidden.model resnet20.model.model atis.model query.wl slots.wl
++ rm -rf /atis.model
++ [[ -f /atis.model ]]
++ for fn in 01_OneHidden.model resnet20.model.model atis.model query.wl slots.wl
++ rm -rf /query.wl
++ [[ -f /query.wl ]]
++ for fn in 01_OneHidden.model resnet20.model.model atis.model query.wl slots.wl
++ rm -rf /slots.wl
++ [[ -f /slots.wl ]]
 + exit 0

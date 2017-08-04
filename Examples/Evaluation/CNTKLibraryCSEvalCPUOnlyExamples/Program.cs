@@ -30,11 +30,18 @@ namespace CNTKLibraryCSEvalExamples
             // Evaluate multiple sample requests in parallel
             CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.CPUDevice);
 
-            // Evaluate a single sequence with one-hot vector
+            // Evaluate a single sequence using one-hot vector input.
             CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
 
-            // Evalaute a batch of variable length sequences with one-hot vector
+            // Evalaute a batch of variable length sequences using one-hot vector input.
             CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.CPUDevice);
+
+            // Evaluate a sequence using sparse input.
+            CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingSparse(DeviceDescriptor.CPUDevice);
+
+            // Load model from memory buffer.
+            CNTKLibraryManagedExamples.LoadModelFromMemory(DeviceDescriptor.CPUDevice);
+
 
             Console.WriteLine("======== Evaluation completes. ========");
         }

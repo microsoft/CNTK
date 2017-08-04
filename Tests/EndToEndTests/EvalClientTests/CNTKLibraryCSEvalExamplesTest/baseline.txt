@@ -1,11 +1,11 @@
 CPU info:
-    CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 0 @ 2.00GHz
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz
     Hardware threads: 24
-    Total Memory: 201250396 kB
+    Total Memory: 33474756 kB
 -------------------------------------------------------------------
-++ python -c 'import sys; print(sys.version_info[0])'
-+ PythonVer=$'2\r'
-+ '[' $'2\r' == 3 ']'
+++ python -c 'import sys; sys.stdout.write(str(sys.version_info[0])); sys.stdout.flush()'
++ PythonVer=2
++ '[' 2 == 3 ']'
 + [[ c:\Data\CNTKTestData == '' ]]
 + [[ ! -d c:\Data\CNTKTestData ]]
 + '[' Windows_NT == Windows_NT ']'
@@ -14,72 +14,223 @@ CPU info:
 + '[' cpu == cpu ']'
 + export CUDA_VISIBLE_DEVICES=-1
 + CUDA_VISIBLE_DEVICES=-1
-+ python train_models_for_evaluation.py -d cpu
-the output_dir is C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Tests\EndToEndTests\EvalClientTests\CNTKLibraryCSEvalExamplesTest.
-the test_device is cpu.
-Training 721479 parameters in 6 parameter tensors.
-
-the  current_work_dir is C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Tests\EndToEndTests\EvalClientTests\CNTKLibraryCSEvalExamplesTest
-the model dir is C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Tests\EndToEndTests\EvalClientTests\CNTKLibraryCSEvalExamplesTest
- Minibatch[   1-   1]: loss = 4.857260 * 67, metric = 100.0% * 67;
- Minibatch[   2-   2]: loss = 4.835443 * 63, metric = 60.3% * 63;
- Minibatch[   3-   3]: loss = 4.798551 * 68, metric = 36.8% * 68;
- Minibatch[   4-   4]: loss = 4.751775 * 70, metric = 35.7% * 70;
- Minibatch[   5-   5]: loss = 4.678326 * 65, metric = 30.8% * 65;
- Minibatch[   6-   6]: loss = 4.557597 * 62, metric = 27.4% * 62;
- Minibatch[   7-   7]: loss = 4.439564 * 58, metric = 31.0% * 58;
- Minibatch[   8-   8]: loss = 4.231087 * 70, metric = 28.6% * 70;
- Minibatch[   9-   9]: loss = 4.000700 * 59, metric = 33.9% * 59;
- Minibatch[  10-  10]: loss = 3.475156 * 64, metric = 28.1% * 64;
- Minibatch[  11- 100]: loss = 1.457498 * 5654, metric = 27.8% * 5654;
- Minibatch[ 101- 200]: loss = 0.840829 * 6329, metric = 17.8% * 6329;
- Minibatch[ 201- 300]: loss = 0.656662 * 6259, metric = 14.5% * 6259;
- Minibatch[ 301- 400]: loss = 0.525372 * 6229, metric = 11.7% * 6229;
- Minibatch[ 401- 500]: loss = 0.466354 * 6289, metric = 10.3% * 6289;
-Finished Epoch[1 of 1]: [Training] loss = 0.790053 * 36007, metric = 15.6% * 36007 58.379s (616.8 samples per second);
-train cifar_resnet only on GPU device. Use pre-trained models.
--------------------------------------------------------------------
-Build info: 
-
-		Built time: Feb 19 2017 10:36:35
-		Last modified date: Sun Feb 19 08:12:34 2017
-		Build type: Release
-		Build target: CPU-only
-		With 1bit-SGD: no
-		With ASGD: yes
-		Math lib: mkl
-		Build Branch: HEAD
-		Build SHA1: 52e94dc946c9978b4552472975dfbb7b86f6de76
-		Built by svcphil on LIANA-09-w
-		Build Path: C:\jenkins\workspace\CNTK-Build-Windows\Source\CNTKv2LibraryDll\
-		MPI distribution: Microsoft MPI
-		MPI version: 7.0.12437.6
--------------------------------------------------------------------
 + '[' cpu == cpu ']'
-+ echo Use pre-trained resnet_20_cifar_10 model in 'c:\Data\CNTKTestData' for tests on CPU device.
-Use pre-trained resnet_20_cifar_10 model in c:\Data\CNTKTestData for tests on CPU device.
++ echo Use pre-trained resnet_20_cifar_10 model and atis.dnn in 'c:\Data\CNTKTestData' for tests on CPU device.
+Use pre-trained resnet_20_cifar_10 model and atis.dnn in c:\Data\CNTKTestData for tests on CPU device.
++ python train_models_for_evaluation.py -u -d cpu
+the output_dir is C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\EvalClientTests\CNTKLibraryCSEvalExamplesTest.
+the test_device is cpu.
+unzip_only is True
 + cp /cygdrive/c/Data/CNTKTestData/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn resnet20.dnn
++ cp /cygdrive/c/Data/CNTKTestData/PreTrainedModels/EvalModels/atis.dnn atis.dnn
 + mv data/train/00000.png data/train/00001.png data/train/00002.png data/train/00003.png data/train/00004.png data/train/00005.png .
-+ mv atis_0.dnn atis.dnn
-+ cp /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-SlaveTest/Tests/EndToEndTests/../../Examples/LanguageUnderstanding/ATIS/BrainScript/query.wl .
-+ cp /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-SlaveTest/Tests/EndToEndTests/../../Examples/LanguageUnderstanding/ATIS/BrainScript/slots.wl .
++ cp /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/../../Examples/LanguageUnderstanding/ATIS/BrainScript/query.wl .
++ cp /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/../../Examples/LanguageUnderstanding/ATIS/BrainScript/slots.wl .
 + '[' Windows_NT == Windows_NT ']'
-+ /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-SlaveTest/x64/release_CpuOnly/CNTKLibraryCSEvalExamplesTest.exe
++ /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release_CpuOnly/CNTKLibraryCSEvalExamplesTest.exe
+Test Utils
+MaxNumCPUThreads: before: 24, after 2
+reset MaxNumCPuThreads to 24
+TraceLevel: before: Warning, after Info
+reset TraceLevel to Warning
+Float
+8
+CPU
+GPU
+False
+True
+True
+Constant
+Placeholder
+Input
+Output
+Parameter
 ======== Evaluate model on CPU using CPUOnly build ========
 
 ===== Evaluate single image =====
 The number of sequences in the batch: 1
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31294,8.391854,-3.66395,-4.814901,-6.400898,1.237086.
+    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31293,8.391853,-3.66395,-4.814896,-6.400897,1.237085.
+
+===== Setup memory tests using Resnet Model =====
+
+Test object reference inside SetupUsingResetModel.
+
+
+Print out saved object references.
+Device0: CPU, Type: CPU
+Axis0: defaultDynamicAxis, IsStaticAxis: False
+OutputVar: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+OutputVar0: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+InputVar0: Parameter('W', [10 x 1 x 1 x 64], []), Name: W, Kind: Output, Shape: [10 x 1 x 1 x 64]
+ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Shape: [32 x 32 x 3]
+OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
+The number of sequences in the batch: 2
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+Sequence 1 contains 1 samples.
+    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+
+All saved object references are printed.
+Test creating NDArrayView on devices.
+n1: on CPU, Storage:Dense, Shape:[10]
+n1Clone: on CPU, Storage:Dense, Shape:[10]
+n1CloneCPU: on CPU, Storage:Dense, Shape:[10]
+s1: on CPU, Storage:SparseCSC, Shape:[4 x 5]
+s1Clone: on CPU, Storage:SparseCSC, Shape:[4 x 5]
+s1DenseCPU: on CPU, Storage:Dense, Shape:[4 x 5]
+
+1. Run: Test saved object references.
+
+
+Print out saved object references.
+Device0: CPU, Type: CPU
+Axis0: defaultDynamicAxis, IsStaticAxis: False
+OutputVar: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+OutputVar0: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+InputVar0: Parameter('W', [10 x 1 x 1 x 64], []), Name: W, Kind: Output, Shape: [10 x 1 x 1 x 64]
+ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Shape: [32 x 32 x 3]
+OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
+The number of sequences in the batch: 2
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+Sequence 1 contains 1 samples.
+    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+
+All saved object references are printed.
+
+2. Run: Test saved object references.
+
+
+Print out saved object references.
+Device0: CPU, Type: CPU
+Axis0: defaultDynamicAxis, IsStaticAxis: False
+OutputVar: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+OutputVar0: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+InputVar0: Parameter('W', [10 x 1 x 1 x 64], []), Name: W, Kind: Output, Shape: [10 x 1 x 1 x 64]
+ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Shape: [32 x 32 x 3]
+OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
+The number of sequences in the batch: 2
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+Sequence 1 contains 1 samples.
+    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+
+All saved object references are printed.
 
 ===== Evaluate batch of images =====
 The number of sequences in the batch: 3
 Sequence 0 contains 1 samples.
-    sample 0: 3.671571,10.78319,1.988011,5.738439,-14.31294,8.391855,-3.663951,-4.814902,-6.400897,1.237085.
+    sample 0: 3.671572,10.78319,1.988011,5.738438,-14.31294,8.391853,-3.663949,-4.814899,-6.400896,1.237086.
 Sequence 1 contains 1 samples.
-    sample 0: 4.303904,13.21089,-0.8425701,4.726829,-15.50982,8.401516,-6.299431,-5.432626,-6.179281,3.591689.
+    sample 0: 4.303904,13.21089,-0.8425705,4.726829,-15.50982,8.401515,-6.29943,-5.432628,-6.179279,3.591688.
 Sequence 2 contains 1 samples.
-    sample 0: 3.015126,13.67295,-0.9818162,4.864452,-17.13536,9.498628,-7.311455,-5.238921,-5.336009,3.496726.
+    sample 0: 3.015125,13.67296,-0.9818174,4.86445,-17.13536,9.49863,-7.311455,-5.238921,-5.33601,3.496729.
+
+Print out saved object references.
+Device0: CPU, Type: CPU
+Axis0: defaultDynamicAxis, IsStaticAxis: False
+OutputVar: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+OutputVar0: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+InputVar0: Parameter('W', [10 x 1 x 1 x 64], []), Name: W, Kind: Output, Shape: [10 x 1 x 1 x 64]
+ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Shape: [32 x 32 x 3]
+OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
+The number of sequences in the batch: 2
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+Sequence 1 contains 1 samples.
+    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+
+All saved object references are printed.
+
+===== Evaluate multiple images in parallel =====
+Evaluate 5 images in parallel using 3 model instances.
+Evaluation result for 00000.png:
+The number of sequences in the batch: 1
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31293,8.391853,-3.66395,-4.814896,-6.400897,1.237085.
+Evaluation result for 00001.png:
+The number of sequences in the batch: 1
+Sequence 0 contains 1 samples.
+    sample 0: 4.303905,13.21089,-0.8425702,4.72683,-15.50982,8.401517,-6.29943,-5.432628,-6.179279,3.591688.
+Evaluation result for 00004.png:
+The number of sequences in the batch: 1
+Sequence 0 contains 1 samples.
+    sample 0: 4.438151,11.45382,-1.536682,3.79481,-12.95914,6.748141,-6.049223,-3.740803,-3.317488,2.693587.
+Evaluation result for 00002.png:
+The number of sequences in the batch: 1
+Sequence 0 contains 1 samples.
+    sample 0: 3.015125,13.67295,-0.9818163,4.86445,-17.13536,9.498627,-7.311455,-5.238923,-5.336008,3.496728.
+Evaluation result for 00003.png:
+The number of sequences in the batch: 1
+Sequence 0 contains 1 samples.
+    sample 0: 3.043734,7.514874,1.213817,4.0596,-8.89024,5.667706,-2.830906,-2.716698,-3.927397,0.875487.
+
+===== Setup memory tests using Resnet Model =====
+
+Test object reference inside SetupUsingResetModel.
+
+
+Print out saved object references.
+Device0: CPU, Type: CPU
+Axis0: defaultDynamicAxis, IsStaticAxis: False
+OutputVar: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+OutputVar0: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+InputVar0: Parameter('W', [10 x 1 x 1 x 64], []), Name: W, Kind: Output, Shape: [10 x 1 x 1 x 64]
+ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Shape: [32 x 32 x 3]
+OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
+The number of sequences in the batch: 2
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+Sequence 1 contains 1 samples.
+    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+
+All saved object references are printed.
+Test creating NDArrayView on devices.
+n1: on CPU, Storage:Dense, Shape:[10]
+n1Clone: on CPU, Storage:Dense, Shape:[10]
+n1CloneCPU: on CPU, Storage:Dense, Shape:[10]
+s1: on CPU, Storage:SparseCSC, Shape:[4 x 5]
+s1Clone: on CPU, Storage:SparseCSC, Shape:[4 x 5]
+s1DenseCPU: on CPU, Storage:Dense, Shape:[4 x 5]
+
+1. Run: Test saved object references.
+
+
+Print out saved object references.
+Device0: CPU, Type: CPU
+Axis0: defaultDynamicAxis, IsStaticAxis: False
+OutputVar: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+OutputVar0: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+InputVar0: Parameter('W', [10 x 1 x 1 x 64], []), Name: W, Kind: Output, Shape: [10 x 1 x 1 x 64]
+ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Shape: [32 x 32 x 3]
+OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
+The number of sequences in the batch: 2
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+Sequence 1 contains 1 samples.
+    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+
+All saved object references are printed.
+
+2. Run: Test saved object references.
+
+
+Print out saved object references.
+Device0: CPU, Type: CPU
+Axis0: defaultDynamicAxis, IsStaticAxis: False
+OutputVar: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+OutputVar0: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+InputVar0: Parameter('W', [10 x 1 x 1 x 64], []), Name: W, Kind: Output, Shape: [10 x 1 x 1 x 64]
+ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Shape: [32 x 32 x 3]
+OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
+The number of sequences in the batch: 2
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+Sequence 1 contains 1 samples.
+    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+
+All saved object references are printed.
 
 ===== Evaluate single sequence using one-hot vector =====
             BOS ---- O
@@ -140,8 +291,51 @@ Sequence 1:
         seattle ---- B-toloc.city_name
             EOS ---- O
 
+
+===== Evaluate single sequence using sparse input =====
+            BOS ---- O
+              i ---- O
+          would ---- O
+           like ---- O
+             to ---- O
+           find ---- O
+              a ---- O
+         flight ---- O
+           from ---- O
+      charlotte ---- B-fromloc.city_name
+             to ---- O
+            las ---- B-toloc.city_name
+          vegas ---- I-toloc.city_name
+           that ---- O
+          makes ---- O
+              a ---- O
+           stop ---- O
+             in ---- O
+            st. ---- B-stoploc.city_name
+          louis ---- B-arrive_time.time_relative
+            EOS ---- O
+
+
+===== Load model from memory buffer =====
+The number of sequences in the batch: 1
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31293,8.391853,-3.66395,-4.814896,-6.400897,1.237085.
+
+Print out saved object references.
+Device0: CPU, Type: CPU
+Axis0: defaultDynamicAxis, IsStaticAxis: False
+OutputVar: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+OutputVar0: Output('Block5110_Output_0', [10], [*, #]), Name: , Kind: Output, Shape: [10]
+InputVar0: Parameter('W', [10 x 1 x 1 x 64], []), Name: W, Kind: Output, Shape: [10 x 1 x 1 x 64]
+ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Shape: [32 x 32 x 3]
+OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
+The number of sequences in the batch: 2
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+Sequence 1 contains 1 samples.
+    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+
+All saved object references are printed.
 ======== Evaluation completes. ========
 + ExitCode=0
-+ '[' cpu == cpu ']'
-+ unset CUDA_VISIBLE_DEVICES
 + exit 0
