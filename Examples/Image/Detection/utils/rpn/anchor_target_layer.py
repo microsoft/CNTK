@@ -94,6 +94,8 @@ class AnchorTargetLayer(UserFunction):
 
         bottom = arguments
 
+        import pdb; pdb.set_trace()
+
         # map of shape (..., H, W)
         height, width = bottom[0].shape[-2:]
         # GT boxes (x1, y1, x2, y2, label)

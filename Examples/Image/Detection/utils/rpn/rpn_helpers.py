@@ -57,7 +57,7 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, add_loss_functions=True,
 
     # apply softmax to get (bg, fg) probabilities and reshape predictions back to grid of (18, H, W)
     num_predictions = int(rpn_cls_score.shape[0] / 2)
-    rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions, rpn_cls_score.shape[1], rpn_cls_score.shape[2]), name="rpn_cls_score_rshp")
+    rpn_cls_score_rshp = reshape(rpn_cls_score, (-1, 2, num_predictions, rpn_cls_score.shape[1], rpn_cls_score.shape[2]), name="rpn_cls_score_rshp")
     p_rpn_cls_score_rshp = cntk.placeholder()
     rpn_cls_sm = softmax(p_rpn_cls_score_rshp, axis=0)
     rpn_cls_prob = cntk.as_block(rpn_cls_sm, [(p_rpn_cls_score_rshp, rpn_cls_score_rshp)], 'Softmax', 'rpn_cls_prob')

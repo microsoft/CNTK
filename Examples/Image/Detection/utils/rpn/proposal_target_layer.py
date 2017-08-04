@@ -89,8 +89,9 @@ class ProposalTargetLayer(UserFunction):
         all_rois = np.hstack((zeros, all_rois))
 
         # Sanity check: single batch only
-        assert np.all(all_rois[:, 0] == 0), \
-                'Only single item batches are supported'
+        import pdb;
+        pdb.set_trace()
+        assert np.all(all_rois[:, 0] == 0), 'Only single item batches are supported'
 
         rois_per_image = cfg.TRAIN.BATCH_SIZE
         fg_rois_per_image = np.round(cfg["TRAIN"].FG_FRACTION * rois_per_image).astype(int)
@@ -134,9 +135,9 @@ class ProposalTargetLayer(UserFunction):
 
         # for CNTK: get rid of batch ind zeros and add batch axis
         rois = rois[:,1:]
+        rois.shape = (1,) + rois.shape
 
         # sampled rois
-        rois.shape = (1,) + rois.shape
         outputs[self.outputs[0]] = np.ascontiguousarray(rois)
 
         # classification labels

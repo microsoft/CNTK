@@ -37,7 +37,7 @@ from cntk_helpers import regress_rois
 
 ###############################################################
 ###############################################################
-mb_size = 1
+mb_size = 2
 image_width = cfg["CNTK"].IMAGE_WIDTH
 image_height = cfg["CNTK"].IMAGE_HEIGHT
 num_channels = 3
@@ -377,10 +377,10 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             data, proposals = od_minibatch_source.next_minibatch_with_proposals(min(mb_size, epoch_size-sample_count), input_map=input_map)
             if use_buffered_proposals:
-                data[rpn_rois_input] = MinibatchData(Value(batch=np.asarray(proposals, dtype=np.float32)), 1, 1, False)
+                data[rpn_rois_input] = MinibatchData(Value(batch=np.asarray(proposals, dtype=np.float32)), 1, mb_size, False)
                 # remove dims input if no rpn is required to avoid warnings
                 del data[[k for k in data if '[6]' in str(k)][0]]
-
+            #import pdb; pdb.set_trace()
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
@@ -436,6 +436,9 @@ def train_faster_rcnn_e2e(base_model_file_name, debug_output=False):
     image_input = input_variable((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis()], name=feature_node_name)
     roi_input = input_variable((cfg["CNTK"].INPUT_ROIS_PER_IMAGE, 5), dynamic_axes=[Axis.default_batch_axis()])
     dims_input = input_variable((6), dynamic_axes=[Axis.default_batch_axis()])
+    #image_input = input_variable((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis(),Axis.default_dynamic_axis()], name=feature_node_name)
+    #roi_input = input_variable((cfg["CNTK"].INPUT_ROIS_PER_IMAGE, 5), dynamic_axes=[Axis.default_batch_axis(),Axis.default_dynamic_axis()])
+    #dims_input = input_variable((6), dynamic_axes=[Axis.default_batch_axis(),Axis.default_dynamic_axis()])
     dims_node = alias(dims_input, name='dims_input')
 
     # Instantiate the Faster R-CNN prediction model and loss function

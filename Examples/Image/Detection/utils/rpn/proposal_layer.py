@@ -79,8 +79,9 @@ class ProposalLayer(UserFunction):
             min_size = cfg["TRAIN"].RPN_MIN_SIZE
 
         bottom = arguments
-        assert bottom[0].shape[0] == 1, \
-            'Only single item batches are supported'
+        import pdb;
+        pdb.set_trace()
+        assert bottom[0].shape[0] == 1, 'Only single item batches are supported'
 
         # the first set of _num_anchors channels are bg probs
         # the second set are the fg probs, which we want
