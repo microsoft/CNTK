@@ -29,7 +29,7 @@ If you require other versions please follow the instructions at [https://github.
 
 We use a toy dataset of images captured from a refrigerator to demonstrate Faster R-CNN. Both the dataset and the pre-trained AlexNet model can be downloaded by running the following Python command:
 
-`python install_data-and-model.py`
+`python install_data_and_model.py`
 
 After running the script, the toy dataset will be installed under the `Image/DataSets/Grocery` folder. And the AlexNet model will be downloaded to the `Image/PretrainedModels` folder. 
 We recommend you to keep the downloaded data in the respective folder while downloading, as the configuration files in this folder assumes that by default.
