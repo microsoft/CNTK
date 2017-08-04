@@ -898,7 +898,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     }
 
     if (!isEnabled(ConvolutionEngineKind::Reference))
-        RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
+        RuntimeError("Reference convolution is disabled and no other engine supports such configuration (or disabled).");
 
     if (GetMathLibTraceLevel() > 0)
         fprintf(stderr, "%lsusing reference convolution engine for geometry, could be VERY SLOW: %s.\n", logPrefix.c_str(), engStr.c_str());

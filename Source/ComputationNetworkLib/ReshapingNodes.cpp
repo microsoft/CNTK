@@ -87,7 +87,7 @@ template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
 {
     // We are mixing two kinds of operations here; elementwise and whole-batch or sequence reduction (ReduceAllAxes()).
-    // In the latter case, we must mimic the behaviour of ComputationNodeNonLooping.
+    // In the latter case, we must mimic the behavior of ComputationNodeNonLooping.
     if ((ReduceAllAxes() || ReduceSequenceAxis() || ReduceBatchAxis()) && !fr.IsAllFrames())
         LogicError("%ls: %s node should never be in a loop when reducing over all static and dynamic axes or just the sequence axis.", Base::NodeDescription().c_str(), typeid(*this).name());
 

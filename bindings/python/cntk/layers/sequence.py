@@ -565,7 +565,7 @@ def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name
       a tuple of N+1 outputs, where the first output is the value to emit, while the others are the state.
      until_predicate (:class:`~cntk.ops.functions.Function` or equivalent Python function):
       A function that denotes when the last element of the unfold has been emitted.
-      It takes the same number of argments as the generator, and returns a scalar that must be 1
+      It takes the same number of arguments as the generator, and returns a scalar that must be 1
       for the last element of the sequence, and 0 otherwise.
       This is subject to the maximum length as determined by the input sequence and ``length_increase``.
       If this parameter is not provided, the output length will be equal to the specified maximum length.
