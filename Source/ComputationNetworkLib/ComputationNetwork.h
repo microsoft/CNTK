@@ -212,6 +212,7 @@ public:
 
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
     void ResetEvalTimeStamps();
+    void SetEvalTimeStampsOutdatedWithRegardToAll();
 
     // and for a set of nodes
     void StartEvaluateMinibatchLoop(const ComputationNodeBasePtr& rootNode) // (ugly name; meant to be unique so we can rename if needed)

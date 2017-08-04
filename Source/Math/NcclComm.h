@@ -82,8 +82,8 @@ public:
         RuntimeError("NcclComm: CNTK was built without NCCL support.");
 #endif
     }
-};
 
 #pragma warning( pop )
+};
 
 }}}

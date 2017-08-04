@@ -520,6 +520,28 @@ def sanitize_axis_list(axes):
         retAxes.append(sanitize_axis(ax))
     return retAxes
 
+def sanitize_multi_axis_reduction_list(axes):
+    '''
+    Sanitizes a list of axes for multi-axis reduction which can not contain sequence axis.
+
+    Args:
+        axes (list of :class:`~cntk.axis.Axis` or int or None): the axes to be used.
+
+          * :class:`~cntk.axis.Axis`: use axis instance directly (will convert
+            row- to col-major in case of static axis).
+          * int: if positive, use it as static axis. If negative, count from
+            last to first axis
+          * None: denote all available axes
+    '''
+    if not type(axes) in (list, tuple):
+        axes = [axes]
+    retAxes = []
+    for ax in axes:
+        if (isinstance(ax, Axis)) and (ax.is_sequence_axis):
+            raise ValueError('Reduction operation over multiple axes can not contain sequence axis: %s' % ax)
+        retAxes.append(sanitize_axis(ax))
+    return retAxes
+
 def sanitize_dynamic_axes(axes):
     if not type(axes) in (list, tuple):
         axes = [axes]

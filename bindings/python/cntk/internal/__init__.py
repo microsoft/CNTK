@@ -64,3 +64,11 @@ class _UDFDeserializeCallbackWrapper(cntk_py.UDFDeserializeCallbackWrapper):
             "It neither has a static 'deserialize' method, "
             "nor a factory callback was provided for the '{}' op name."
             .format(module, cls, op_name))
+
+class _DeserializerFactory(cntk_py.DeserializerFactory):
+    def __init__(self, callback):
+        super(_DeserializerFactory, self).__init__()
+        self.callback = callback
+
+    def __call__(self, id):
+        return self.callback(id)

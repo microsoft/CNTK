@@ -53,6 +53,9 @@ Tutorials
 #.  *Training with Sampled Softmax*
      CNTK 207: :cntktut:`Training with Sampled Softmax <CNTK_207_Training_with_Sampled_Softmax>`
 
+#.  *Training with Connectionist Temporal Classification*
+     CNTK 208: :cntktut:`Training with Connectionist Temporal Classification <CNTK_208_Speech_Connectionist_Temporal_Classification>`
+
 #.  *Recognize flowers and animals in natural scene images using deep transfer learning*
      CNTK 301: :cntktut:`Deep transfer learning with pre-trained ResNet model <CNTK_301_Image_Recognition_with_Deep_Transfer_Learning>`
 

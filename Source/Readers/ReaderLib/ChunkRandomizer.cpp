@@ -8,17 +8,17 @@
 #include <random>
 #include "RandomOrdering.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
-    ChunkRandomizer::ChunkRandomizer(IDataDeserializerPtr deserializer, 
+    ChunkRandomizer::ChunkRandomizer(DataDeserializerPtr deserializer, 
         size_t randomizationRange,
         bool sampleBasedRandomizationWindow) :
         m_deserializer(deserializer), 
         m_randomizationRange(randomizationRange),
         m_sampleBasedRandomizationWindow(sampleBasedRandomizationWindow)
     {
-        m_originalChunks = m_deserializer->GetChunkDescriptions();
-        assert(m_originalChunks.size() < CHUNKID_MAX);
+        m_originalChunks = m_deserializer->ChunkInfos();
+        assert(m_originalChunks.size() < ChunkIdMax);
     }
 
     // Gets randomized chunks.
@@ -38,7 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         m_rng.seed((unsigned long)seed);
-        RandomShuffleMT(randomizedChunkIndices, m_rng);
+        Microsoft::MSR::CNTK::RandomShuffleMT(randomizedChunkIndices, m_rng);
 
         // Place randomized chunks on the timeline
         m_randomizedChunks.clear();
@@ -52,12 +52,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // about samples. If we get rid of sample-based randomization, we could do away
             // with this sample counting altogether.
             const size_t originalChunkIndex = randomizedChunkIndices.at(chunkIndex);
-            const size_t numberOfSamples = m_originalChunks[originalChunkIndex]->m_numberOfSamples;
-            const size_t numberOfSequences = m_originalChunks[originalChunkIndex]->m_numberOfSequences;
+            const size_t numberOfSamples = m_originalChunks[originalChunkIndex].m_numberOfSamples;
+            const size_t numberOfSequences = m_originalChunks[originalChunkIndex].m_numberOfSequences;
 
             RandomizedChunk randomizedChunk;
             randomizedChunk.m_chunkId = chunkIndex;
-            randomizedChunk.m_original = m_originalChunks[originalChunkIndex].get();
+            randomizedChunk.m_original = &m_originalChunks[originalChunkIndex];
             randomizedChunk.m_samplePositionStart = samplePosition;
             randomizedChunk.m_sequencePositionStart = sequencePosition;
             m_randomizedChunks.push_back(randomizedChunk);
@@ -137,4 +137,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     }
-}}}
+}

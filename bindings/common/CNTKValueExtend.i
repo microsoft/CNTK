@@ -149,4 +149,22 @@
     {
         return self->CopyVariableValueTo<double>(outputVariable, sequences);
     }
+
+    void CNTK::Value::CopyVariableValueToFloat(const Variable& outputVariable, int* sequenceLength, std::vector<SparseIndexType>& colStarts, 
+        std::vector<SparseIndexType>& rowIndices, std::vector<float>& nonZeroValues, int* numNonZeroValues)
+    {
+        size_t sequenceLengthSizeT, numNonZeroValuesSizeT;
+        self->CopyVariableValueTo<float>(outputVariable, sequenceLengthSizeT, colStarts, rowIndices, nonZeroValues, numNonZeroValuesSizeT);
+        *sequenceLength = (int)sequenceLengthSizeT;
+        *numNonZeroValues = (int)numNonZeroValuesSizeT;
+    }
+
+    void CNTK::Value::CopyVariableValueToDouble(const Variable& outputVariable, int* sequenceLength, std::vector<SparseIndexType>& colStarts, 
+        std::vector<SparseIndexType>& rowIndices, std::vector<double>& nonZeroValues, int* numNonZeroValues)
+    {
+        size_t sequenceLengthSizeT, numNonZeroValuesSizeT;
+        self->CopyVariableValueTo<double>(outputVariable, sequenceLengthSizeT, colStarts, rowIndices, nonZeroValues, numNonZeroValuesSizeT);
+        *sequenceLength = (int)sequenceLengthSizeT;
+        *numNonZeroValues = (int)numNonZeroValuesSizeT;
+    }
 }

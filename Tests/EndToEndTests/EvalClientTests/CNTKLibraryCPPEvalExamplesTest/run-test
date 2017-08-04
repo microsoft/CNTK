@@ -34,7 +34,7 @@ cp $DataSourceDir/MNIST/v0/Train-28x28_cntk_text.txt $DataDir || exit $?
 DeleteModelsAfterTest=0
 [ -f $ConfigDir/01_OneHidden.cntk ] || exit 1
 cntkrun 01_OneHidden.cntk "stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit $?
-cp $OutputDir/Models/01_OneHidden $TestDataDir || exit $?
+cp $OutputDir/Models/01_OneHidden $TestDataDir/01_OneHidden.model || exit $?
 
 # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
 [ "$TEST_DEVICE" == "cpu" ] && export CUDA_VISIBLE_DEVICES=-1

@@ -54,14 +54,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="$(DebugBuild)">
-    <CudaCodeGen>$(CNTK_CUDA_CODEGEN_DEBUG)</CudaCodeGen>
-    <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_30,sm_30</CudaCodeGen>
-  </PropertyGroup>
-  <PropertyGroup Condition="$(ReleaseBuild)">
-    <CudaCodeGen>$(CNTK_CUDA_CODEGEN_RELEASE)</CudaCodeGen>
-    <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;</CudaCodeGen>
-  </PropertyGroup>
   <PropertyGroup>
     <TargetName>Cntk.Math.Cuda-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
@@ -86,7 +78,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <GenerateLineInfo>true</GenerateLineInfo>
       <AdditionalCompilerOptions>/WX</AdditionalCompilerOptions>
-      <CodeGeneration>$(CudaCodeGen)</CodeGeneration>
+      <CodeGeneration>$(NvidiaCompute)</CodeGeneration>
       <FastMath>true</FastMath>
       <GPUDebugInfo>false</GPUDebugInfo>
       <GPUDebugInfo Condition="'$(CNTK_CUDA_DEVICE_DEBUGINFO)'=='1'">true</GPUDebugInfo>

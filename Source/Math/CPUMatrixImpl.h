@@ -2726,6 +2726,114 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNegativeSineOf(const CPUMatrix<E
     return *this;
 }
 
+//[this]=acos([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceAcos()
+{
+    return AssignAcosOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAcosOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAcosOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord (i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = acos(v);
+    }
+
+    return *this;
+}
+
+//[this]=asin([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceAsin()
+{
+    return AssignAsinOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAsinOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAsinOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord (i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = asin(v);
+    }
+
+    return *this;
+}
+
+//[this]=cosh([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceCosh()
+{
+    return AssignCoshOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCoshOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignCoshOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord (i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = cosh(v);
+    }
+
+    return *this;
+}
+
+//[this]=sinh([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceSinh()
+{
+    return AssignSinhOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSinhOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignSinhOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord (i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = sinh(v);
+    }
+
+    return *this;
+}
+
 //Threshold truncating: this[i] = max( this[i], threshold )
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)
@@ -4465,8 +4573,11 @@ void CPUMatrix<ElemType>::MaxPoolingForward(const CPUMatrix<int>& mpRowCol, cons
 template <class ElemType>
 void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, const CPUMatrix<ElemType>& in,
                                              const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
-                                             CPUMatrix<ElemType>& grad) const
+                                             CPUMatrix<ElemType>& grad, bool accumulateGradient) const
 {
+    if (!accumulateGradient)
+        grad.SetValue((ElemType)0);
+
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
     {
@@ -4505,11 +4616,12 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
 // roiData: ROIs            [4 x numROIs x N], 
 // dst: Pooled ROIs         [PW x PH x C x numROIs x N]
 // argmax: max positions    [PW x PH x C x numROIs x N]
+// spatialScale             ratio of input feature map to the original image.
 // where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
 template <class ElemType>
-void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                            const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, 
-                                            CPUMatrix<ElemType>& argmax) const
+void CPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                              const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, 
+                                              CPUMatrix<ElemType>& argmax, double spatialScale) const
 {
     size_t roiOutputSize = pooledHeight * pooledWidth * channels;
 
@@ -4524,18 +4636,21 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
             // each ROI is 4 elements: (x, y, w, h).
             int base = roiIdx * 4;
 
-            // scaled ROI numbers (relative to original image size)
-            // roi points are doubles that represent location relative to image
-            ElemType scX = rois(base, (ElemType)0);
-            ElemType scY = rois(base + (ElemType)1, (ElemType)0);
-            ElemType scW = rois(base + (ElemType)2, (ElemType)0);
-            ElemType scH = rois(base + (ElemType)3, (ElemType)0);
+            // roi points represent the absolute location of the roi
+            // in the original image.
+            ElemType scX1 = rois(base, (ElemType)0);
+            ElemType scY1 = rois(base + (ElemType)1, (ElemType)0);
+            ElemType scX2 = rois(base + (ElemType)2, (ElemType)0);
+            ElemType scY2 = rois(base + (ElemType)3, (ElemType)0);
 
             // compute actual spatial location of the ROI in our featuremap.
-            size_t x = (size_t)round(scX * width);
-            size_t y = (size_t)round(scY * height);
-            ElemType roiW = (ElemType)max(round(scW * width),  (ElemType)1);
-            ElemType roiH = (ElemType)max(round(scH * height), (ElemType)1);
+            size_t x1 = (size_t)round(scX1 * spatialScale);
+            size_t y1 = (size_t)round(scY1 * spatialScale);
+            size_t x2 = (size_t)round(scX2 * spatialScale);
+            size_t y2 = (size_t)round(scY2 * spatialScale);
+
+            ElemType roiW = (ElemType)max(x2 - x1 + 1, (size_t)1);
+            ElemType roiH = (ElemType)max(y2 - y1 + 1, (size_t)1);
 
             const ElemType winW = roiW / (ElemType)pooledWidth;
             const ElemType winH = roiH / (ElemType)pooledHeight;
@@ -4558,14 +4673,14 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
 
                     // offset window based on ROI top left corner.
                     // these indices are into the input slice.
-                    hstart = min(max(hstart + y, (size_t)0), height);
-                    wstart = min(max(wstart + x, (size_t)0), width);
-                    hend   = min(max(hend + y,   (size_t)0), height);
-                    wend   = min(max(wend + x,   (size_t)0), width);
+                    hstart = min(max(hstart + y1, (size_t)0), height);
+                    wstart = min(max(wstart + x1, (size_t)0), width);
+                    hend = min(max(hend + y1, (size_t)0), height);
+                    wend = min(max(wend + x1, (size_t)0), width);
 
                     bool isempty = (hend <= hstart) || (wend <= wstart);
 
-                    for (size_t c = 0; c < channels; c++) 
+                    for (size_t c = 0; c < channels; c++)
                     {
                         // [W x H x C x R x N]; R = ROIs per image
                         size_t outputIdx = roiIdx * roiOutputSize + outw + outh * pooledWidth + c * pooledHeight * pooledWidth;
@@ -4600,13 +4715,13 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
 // in their output. For each ROI, it checks the argmax data to see if that ROI indeed chose
 // this pixel location as the maximum. If so, it increments the gradient term for the input location.
 template <class ElemType>
-void CPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                             const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, 
-                                             CPUMatrix<ElemType>& argmax) const
+void CPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                                const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, 
+                                                CPUMatrix<ElemType>& argmax, double spatialScale) const
 {
     // loop over images in the batch.
 #pragma omp parallel for
-    for (int imgIdx = 0; imgIdx < numImg; imgIdx++) 
+    for (int imgIdx = 0; imgIdx < numImg; imgIdx++)
     {
         // ROIs for this image. length 4*numRois;
         auto rois = roiData.ColumnSlice(imgIdx, 1).Data();
@@ -4616,44 +4731,48 @@ void CPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
 
         // loop over spatial locations in the image.
 #pragma omp parallel for
-        for (int w = 0; w < width; w++) 
+        for (int w = 0; w < width; w++)
         {
 #pragma omp parallel for
-            for (int h = 0; h < width; h++) 
+            for (int h = 0; h < width; h++)
             {
                 // loop over the ROIs seeing which ones contain this location.
-                for (int roiN = 0; roiN < numRois; roiN++) 
+                for (int roiN = 0; roiN < numRois; roiN++)
                 {
                     // each ROI is 4 elements: (x, y, w, h).
                     int roiOffset = roiN * 4;
 
-                    // ROI data is relative to original image size
-                    size_t roiStartW =     (size_t)round(rois[roiOffset + 0] * width);
-                    size_t roiStartH =     (size_t)round(rois[roiOffset + 1] * height);
-                    size_t roiWidth  = max((size_t)round(rois[roiOffset + 2] * width),  (size_t)1);
-                    size_t roiHeight = max((size_t)round(rois[roiOffset + 3] * height), (size_t)1);
+                    // ROI data points represent the absolute location of the roi
+                    // in the original image.
+                    size_t roiStartW = (size_t)round(rois[roiOffset + 0] * spatialScale);
+                    size_t roiStartH = (size_t)round(rois[roiOffset + 1] * spatialScale);
+                    size_t roiEndW = (size_t)round(rois[roiOffset + 2] * spatialScale);
+                    size_t roiEndH = (size_t)round(rois[roiOffset + 3] * spatialScale);
+
+                    size_t roiWidth = max(roiEndW - roiStartW + 1, (size_t)1);
+                    size_t roiHeight = max(roiEndH - roiStartH + 1, (size_t)1);
 
                     // skip this ROI if it doesn't contain the current input location.
                     const bool inROI = (w >= roiStartW && w < roiStartW + roiWidth &&
-                                        h >= roiStartH && h < roiStartH + roiHeight);
+                        h >= roiStartH && h < roiStartH + roiHeight);
                     if (!inROI)
                         continue;
 
                     ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
-                    ElemType winW = (ElemType)roiWidth  / (ElemType)pooledWidth;
+                    ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
 
                     // what pooled nodes in the output for this ROI could have pooled this input location?
                     size_t phstart = (size_t)((h - roiStartH) / winH);
                     size_t pwstart = (size_t)((w - roiStartW) / winW);
-                    size_t phend   = (size_t)(ceil((h - roiStartH + 1) / winH));
-                    size_t pwend   = (size_t)(ceil((w - roiStartW + 1) / winW));
+                    size_t phend = (size_t)(ceil((h - roiStartH + 1) / winH));
+                    size_t pwend = (size_t)(ceil((w - roiStartW + 1) / winW));
 
                     phstart = min(max(phstart, (size_t)0), pooledHeight);
-                    phend   = min(max(phend,   (size_t)0), pooledHeight);
+                    phend = min(max(phend, (size_t)0), pooledHeight);
                     pwstart = min(max(pwstart, (size_t)0), pooledWidth);
-                    pwend   = min(max(pwend,   (size_t)0), pooledWidth);
+                    pwend = min(max(pwend, (size_t)0), pooledWidth);
 
-                    for (size_t c = 0; c < channels; c++) 
+                    for (size_t c = 0; c < channels; c++)
                     {
                         ElemType gradient = 0;
                         // [W x H x C x N]
@@ -4667,10 +4786,14 @@ void CPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
                             for (size_t pw = pwstart; pw < pwend; pw++)
                             {
                                 if ((size_t)offsetArgmax[ph * pooledWidth + pw] == (w + h * width))
+                                {
                                     gradient += offsetPoolGrad[ph * pooledWidth + pw];
+                                }
                             }
                         }
-                        grad(index, imgIdx) = gradient;
+
+#pragma omp atomic
+                        grad(index, imgIdx) += gradient;
                     }
                 }
             }
@@ -4755,8 +4878,11 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad, const bool poolIncludePad) const
+void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const
 {
+    if (!accumulateGradient)
+        grad.SetValue((ElemType)0);
+
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
     {
@@ -4995,9 +5121,13 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
         W.RequireSize(lwork, 1);
         dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.Data()), &lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), &ldu, reinterpret_cast<double*>(VT.Data()), &ldvt, reinterpret_cast<double*>(W.Data()), &lwork, &info);
 #else
+#if CNTK_UWP
+        RuntimeError("Error, LAPACKE_dgesvd is not supported for UWP.\n");
+#else
         std::vector<double> superb(std::max(std::min(m, n) - 1, 1));
         info = LAPACKE_dgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()),
             reinterpret_cast<double*>(U.Data()), (int) ldu, reinterpret_cast<double*>(VT.Data()), (int) ldvt, &superb[0]);
+#endif
 #endif
     }
     else
@@ -5010,9 +5140,13 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
         W.RequireSize(lwork, 1);
         sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.Data()), &lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), &ldu, reinterpret_cast<float*>(VT.Data()), &ldvt, reinterpret_cast<float*>(W.Data()), &lwork, &info);
 #else
+#if CNTK_UWP
+        RuntimeError("Error, LAPACKE_sgesvd is not supported for UWP.\n");
+#else
         std::vector<float> superb(std::max(std::min(m, n) - 1, 1));
         info = LAPACKE_sgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()),
             reinterpret_cast<float*>(U.Data()), (int) ldu, reinterpret_cast<float*>(VT.Data()), (int) ldvt, &superb[0]);
+#endif
 #endif
     }
 
@@ -5966,7 +6100,7 @@ void CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const CPUMatrix<Ele
     if (m != 1 || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
-    c.RequireSize(k, l); // c must the the same size of b
+    c.RequireSize(k, l); // c must the same size of b
 
     if (bFirstmatrixfixed)
     {
@@ -6078,7 +6212,7 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
 // phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
 // uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
 // uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
-// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
 // uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
 // numChannels (input): channel number in this minibatch
 // uttNum (input): number of utterances
@@ -7006,6 +7140,9 @@ static void TensorOpWithFnAndReduction(ElemType beta, array<ElemType*, N> pointe
     size_t dims = regularOpDims.size();
     switch (dims)
     {
+    // N.B. consider code size impact when adding more cases.
+    case 5:
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 4>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 4:
         return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 3>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 3:

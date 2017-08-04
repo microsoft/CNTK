@@ -10,19 +10,22 @@
 #include "Base64ImageDeserializer.h"
 #include "ImageTransformers.h"
 #include "ReaderUtil.h"
+#include "Index.h"
+#include "IndexBuilder.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+    using namespace Microsoft::MSR::CNTK;
 
-    class Base64ImageDeserializer::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
+    class Base64ImageDeserializerImpl::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
     {
         ChunkDescriptor m_descriptor;
         size_t m_chunkOffset;
-        Base64ImageDeserializer& m_deserializer;
+        Base64ImageDeserializerImpl& m_deserializer;
         // TODO: Could probably be a memory mapped region.
         std::vector<char> m_buffer;
 
     public:
-        ImageChunk(const ChunkDescriptor& descriptor, Base64ImageDeserializer& parent)
+        ImageChunk(const ChunkDescriptor& descriptor, Base64ImageDeserializerImpl& parent)
             : m_descriptor(descriptor), m_deserializer(parent)
         {
             // Let's see if the open descriptor has problems.
@@ -36,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // Make sure we always have 0 at the end for buffer overrun.
             m_buffer[descriptor.SizeInBytes()] = 0;
-            m_chunkOffset = descriptor.m_offset;
+            m_chunkOffset = descriptor.StartOffset();
 
             // Read chunk into memory.
             int rc = _fseeki64(m_deserializer.m_dataFile.get(), m_chunkOffset, SEEK_SET);
@@ -62,8 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // m_buffer always end on 0, so no overrun can happen.
             const char* currentSequence = &m_buffer[0] + offset;
 
-            bool hasSequenceKey = m_deserializer.m_indexer->HasSequenceIds();
-            if (hasSequenceKey) // Skip sequence key.
+            if (m_deserializer.m_hasSequenceIds) // Skip sequence key.
             {
                 currentSequence = strchr(currentSequence, '\t');
 
@@ -138,51 +140,55 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return true;
     }
 
-    Base64ImageDeserializer::Base64ImageDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary) : ImageDeserializerBase(corpus, config, primary)
+    Base64ImageDeserializerImpl::Base64ImageDeserializerImpl(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary) : ImageDeserializerBase(corpus, config, primary)
     {
         auto mapFile = config(L"file");
-        bool hasSequenceKeys = HasSequenceKeys(mapFile);
+        m_hasSequenceIds = HasSequenceKeys(mapFile);
         m_fileName.assign(mapFile.begin(), mapFile.end());
 
-        attempt(5, [this, hasSequenceKeys, corpus]()
+        bool cacheIndex = config(L"cacheIndex", false);
+
+        attempt(5, [this, cacheIndex, corpus]()
         {
             if (!m_dataFile || ferror(m_dataFile.get()) != 0)
                 m_dataFile.reset(fopenOrDie(m_fileName, L"rbS"), [](FILE* f) { if (f) fclose(f); });
 
-            m_indexer = make_unique<Indexer>(m_dataFile.get(), m_primary, !hasSequenceKeys);
-            m_indexer->Build(corpus);
+            m_index = TextInputIndexBuilder(FileWrapper(m_fileName, m_dataFile.get()))
+                .SetSkipSequenceIds(!m_hasSequenceIds)
+                .SetPrimary(m_primary)
+                .SetCorpus(corpus)
+                .SetCachingEnabled(cacheIndex)
+                .Build();
         });
     }
 
-    ChunkDescriptions Base64ImageDeserializer::GetChunkDescriptions()
+    std::vector<ChunkInfo> Base64ImageDeserializerImpl::ChunkInfos()
     {
-        const auto& index = m_indexer->GetIndex();
         // In case of multi crop the deserializer provides the same sequence NumMultiViewCopies times.
         size_t sequencesPerInitialSequence = m_multiViewCrop ? ImageDeserializerBase::NumMultiViewCopies : 1;
-        ChunkDescriptions result;
-        result.reserve(index.Chunks().size() * sequencesPerInitialSequence);
-        for(uint32_t i = 0; i < index.Chunks().size(); ++i)
+        std::vector<ChunkInfo> result;
+        result.reserve(m_index->NumberOfChunks() * sequencesPerInitialSequence);
+        for(uint32_t i = 0; i < m_index->NumberOfChunks(); ++i)
         {
-            const auto& chunk = index.Chunks()[i];
-            auto c = std::make_shared<ChunkDescription>();
-            c->m_id = i;
-            assert(chunk.NumSamples() == chunk.Sequences().size());
-            c->m_numberOfSamples = c->m_numberOfSequences = chunk.Sequences().size() * sequencesPerInitialSequence;
+            const auto& chunk = m_index->Chunks()[i];
+            ChunkInfo c;
+            c.m_id = i;
+            assert(chunk.NumberOfSamples() == chunk.NumberOfSequences());
+            c.m_numberOfSamples = c.m_numberOfSequences = chunk.NumberOfSequences() * sequencesPerInitialSequence;
             result.push_back(c);
         }
         return result;
     }
 
-    void Base64ImageDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result)
+    void Base64ImageDeserializerImpl::SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result)
     {
-        const auto& index = m_indexer->GetIndex();
-        const auto& chunk = index.Chunks()[chunkId];
+        const auto& chunk = m_index->Chunks()[chunkId];
         size_t sequenceCopies = m_multiViewCrop ? NumMultiViewCopies : 1;
-        result.reserve(sequenceCopies * chunk.Sequences().size());
+        result.reserve(sequenceCopies * chunk.NumberOfSequences());
         size_t currentId = 0;
-        for (uint32_t indexInChunk = 0; indexInChunk < chunk.Sequences().size(); ++indexInChunk)
+        for (uint32_t indexInChunk = 0; indexInChunk < chunk.NumberOfSequences(); ++indexInChunk)
         {
-            auto const& s = chunk.Sequences()[indexInChunk];
+            auto const& s = chunk[indexInChunk];
             assert(currentId / sequenceCopies == indexInChunk);
             for (size_t i = 0; i < sequenceCopies; ++i)
             {
@@ -199,14 +205,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    ChunkPtr Base64ImageDeserializer::GetChunk(ChunkIdType chunkId)
+    ChunkPtr Base64ImageDeserializerImpl::GetChunk(ChunkIdType chunkId)
     {
-        const auto& chunkDescriptor = m_indexer->GetIndex().Chunks()[chunkId];
+        const auto& chunkDescriptor = m_index->Chunks()[chunkId];
         return make_shared<ImageChunk>(chunkDescriptor, *this);
     }
 
-    bool Base64ImageDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& r)
+    bool Base64ImageDeserializerImpl::GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo& r)
     {
-        return DataDeserializerBase::GetSequenceDescriptionByKey(m_indexer->GetIndex(), key, r);
+        return DataDeserializerBase::GetSequenceInfoByKey(*m_index, key, r);
     }
-}}}
+}

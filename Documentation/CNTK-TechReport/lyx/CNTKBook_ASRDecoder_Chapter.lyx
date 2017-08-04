@@ -860,7 +860,7 @@ The decoder uses a Viterbi beam search algorithm, in which unlikely hypotheses
  are pruned at each frame.
  The -beam parameter prevents unlikely hypotheses from being pursued.
  Any hypothesis that differs from the best hypothesis by more than this
- amount will be be discarded.
+ amount will be discarded.
  The -max-tokens parameter controls the number of active hypotheses.
  If the -beam parameter causes more than max-tokens hypotheses to be generated,
  then only this many of the best hypotheses will be retained.

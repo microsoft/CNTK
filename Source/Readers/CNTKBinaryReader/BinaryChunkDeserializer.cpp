@@ -11,7 +11,9 @@
 #include "FileHelper.h"
 #include <vector>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 enum class MatrixEncodingType : unsigned char
 {
@@ -35,16 +37,16 @@ void BinaryChunkDeserializer::ReadChunkTable(FILE* infile, uint32_t firstChunkId
             firstChunkIdx, (firstChunkIdx + numChunks - 1), m_numChunks);
     }
 
-    uint64_t firstChunkOffset = firstChunkIdx * sizeof(ChunkInfo) + m_chunkTableOffset;
+    uint64_t firstChunkOffset = firstChunkIdx * sizeof(BinaryChunkInfo) + m_chunkTableOffset;
 
     // Seek to the start of the offset info for the first requested chunk 
     CNTKBinaryFileHelper::SeekOrDie(infile, firstChunkOffset, SEEK_SET);
 
     // Note we create numChunks + 1 since we want to be consistent with determining the size of each chunk.
-    ChunkInfo* chunks = new ChunkInfo[numChunks + 1];
+    BinaryChunkInfo* chunks = new BinaryChunkInfo[numChunks + 1];
 
     // Read in all of the offsets for the chunks of interest
-    CNTKBinaryFileHelper::ReadOrDie(chunks, sizeof(ChunkInfo), numChunks, infile);
+    CNTKBinaryFileHelper::ReadOrDie(chunks, sizeof(BinaryChunkInfo), numChunks, infile);
 
     // Now read the final entry. It is either the next offset entry (if we're reading a subset and the
     // entry exists), or we just fill it with the correct information based on file size if it doesn't
@@ -56,7 +58,7 @@ void BinaryChunkDeserializer::ReadChunkTable(FILE* infile, uint32_t firstChunkId
         chunks[numChunks].numSequences = 0;
     }
     else
-        CNTKBinaryFileHelper::ReadOrDie(chunks + numChunks, sizeof(ChunkInfo), 1, infile);
+        CNTKBinaryFileHelper::ReadOrDie(chunks + numChunks, sizeof(BinaryChunkInfo), 1, infile);
 
     m_chunkTable = make_unique<ChunkTable>(numChunks, chunks);
 
@@ -88,7 +90,7 @@ BinaryChunkDeserializer::~BinaryChunkDeserializer()
 }
 
 
-void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstring>& rename, ElementType precision)
+void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstring>& rename, DataType precision)
 {
     if (m_file)
         CNTKBinaryFileHelper::CloseOrDie(m_file);
@@ -132,12 +134,12 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
             RuntimeError("Unknown encoding type %u requested.", (unsigned int)type);
 
         auto description = m_deserializers[i]->GetStreamDescription();
-        description->m_id = i;
+        description.m_id = i;
         // Check if we should rename this input based on the config
-        auto it = rename.find(description->m_name);
+        auto it = rename.find(description.m_name);
         if (it != rename.end()) 
         {
-            description->m_name = it->second;
+            description.m_name = it->second;
         }
 
         m_streams[i] = description;
@@ -152,23 +154,22 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
     ReadChunkTable(m_file);
 }
 
-ChunkDescriptions BinaryChunkDeserializer::GetChunkDescriptions()
+std::vector<ChunkInfo> BinaryChunkDeserializer::ChunkInfos()
 {
     assert(m_chunkTable);
 
-    ChunkDescriptions result;
+    std::vector<ChunkInfo> result;
     result.reserve(m_numChunks);
 
     for (ChunkIdType i = 0; i < m_numChunks; i++ ) 
     {
-        result.push_back(shared_ptr<ChunkDescription>(
-            new ChunkDescription{ i, m_chunkTable->GetNumSamples(i), m_chunkTable->GetNumSequences(i) }));
+        result.push_back(ChunkInfo{ i, m_chunkTable->GetNumSamples(i), m_chunkTable->GetNumSequences(i) });
     }
 
     return result;
 }
 
-void BinaryChunkDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result)
+void BinaryChunkDeserializer::SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result)
 {
     // Reserve space for each sequence
     result.reserve(m_chunkTable->GetNumSequences(chunkId));
@@ -185,7 +186,7 @@ void BinaryChunkDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vec
     auto startId = m_chunkTable->GetStartIndex(chunkId);
     for (decltype(numberOfSequences) i = 0; i < numberOfSequences; i++)
     {
-        SequenceDescription sd = {};
+        SequenceInfo sd = {};
         sd.m_indexInChunk = i;
         sd.m_numberOfSamples = numSamplesPerSequence[i];
         sd.m_chunkId = chunkId;
@@ -228,4 +229,4 @@ void BinaryChunkDeserializer::SetTraceLevel(unsigned int traceLevel)
     m_traceLevel = traceLevel;
 }
 
-}}}
+}

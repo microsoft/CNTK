@@ -40,7 +40,7 @@
 
 // temaplate definitions
 #ifdef SWIGCSHARP
-// bool/double/float are already enabled with SWIG_STD_VECTOR_ENHANCED in std_vector.i
+// int/bool/double/float are already enabled with SWIG_STD_VECTOR_ENHANCED in std_vector.i
 SWIG_STD_VECTOR_ENHANCED(size_t)
 SWIG_STD_VECTOR_ENHANCED(std::shared_ptr<CNTK::NDArrayView>)
 SWIG_STD_VECTOR_ENHANCED(CNTK::Variable)
@@ -48,6 +48,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::Axis)
 SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 #endif //SWIGCSHARP
 
+%template(IntVector) std::vector<int>;
 %template(SizeTVector) std::vector<size_t>;
 %template(DoubleVector) std::vector<double>;
 %template(FloatVector) std::vector<float>;
@@ -152,6 +153,10 @@ IGNORE_FUNCTION CNTK::Sigmoid;
 IGNORE_FUNCTION CNTK::Tanh;
 IGNORE_FUNCTION CNTK::Sin;
 IGNORE_FUNCTION CNTK::Cos;
+IGNORE_FUNCTION CNTK::Acos;
+IGNORE_FUNCTION CNTK::Asin;
+IGNORE_FUNCTION CNTK::Cosh;
+IGNORE_FUNCTION CNTK::Sinh;
 IGNORE_FUNCTION CNTK::ReLU;
 IGNORE_FUNCTION CNTK::Exp;
 IGNORE_FUNCTION CNTK::Log;
@@ -221,6 +226,7 @@ IGNORE_FUNCTION CNTK::Splice;
 IGNORE_FUNCTION CNTK::StopGradient;
 IGNORE_FUNCTION CNTK::Assign;
 IGNORE_FUNCTION CNTK::ELU;
+IGNORE_FUNCTION CNTK::SELU;
 IGNORE_FUNCTION CNTK::LeakyReLU;
 IGNORE_FUNCTION CNTK::PReLU;
 IGNORE_FUNCTION CNTK::Softplus;
@@ -236,6 +242,7 @@ IGNORE_FUNCTION CNTK::ReaderColor;
 IGNORE_FUNCTION CNTK::ImageDeserializer;
 IGNORE_FUNCTION CNTK::Base64ImageDeserializer;
 IGNORE_FUNCTION CNTK::CTFDeserializer;
+IGNORE_FUNCTION CNTK::CBFDeserializer;
 IGNORE_FUNCTION CNTK::HTKFeatureDeserializer;
 IGNORE_FUNCTION CNTK::HTKMLFDeserializer;
 
@@ -552,7 +559,9 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindByName);
 #endif  // SWIGJAVA
 
 // class Varaiable
+#ifndef SWIGCSHARP
 %ignore CNTK::Variable::Variable;
+#endif
 %ignore CNTK::Variable::operator FunctionPtr;
 %rename ("%s") CNTK::Variable::Variable(const FunctionPtr& function);
 
@@ -683,6 +692,8 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 %apply int INPUT[]  { int *rowIndices }
 %apply float INPUT[]  { float *nonZeroValues }
 %apply double INPUT[]  { double *nonZeroValues }
+%apply int OUTPUT[]  { int *sequenceLength }
+%apply int OUTPUT[]  { int *numNonZeroValues }
 #endif
 
 #ifdef SWIGJAVA

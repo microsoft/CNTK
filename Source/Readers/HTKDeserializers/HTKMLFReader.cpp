@@ -17,9 +17,10 @@
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+using namespace Microsoft::MSR::CNTK;
 
-std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& readerConfig)
+std::vector<DataDeserializerPtr> CreateDeserializers(const ConfigParameters& readerConfig)
 {
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
@@ -35,8 +36,8 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
     bool useNumericSequenceKeys = readerConfig(L"useNumericSequenceKeys", false);
     CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
 
-    std::vector<IDataDeserializerPtr> featureDeserializers;
-    std::vector<IDataDeserializerPtr> labelDeserializers;
+    std::vector<DataDeserializerPtr> featureDeserializers;
+    std::vector<DataDeserializerPtr> labelDeserializers;
 
     bool primary = true;
     // The first deserializer is the driving one, it defines chunking.
@@ -55,7 +56,7 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
         labelDeserializers.push_back(deserializer);
     }
 
-    std::vector<IDataDeserializerPtr> deserializers;
+    std::vector<DataDeserializerPtr> deserializers;
     deserializers.insert(deserializers.end(), featureDeserializers.begin(), featureDeserializers.end());
     deserializers.insert(deserializers.end(), labelDeserializers.begin(), labelDeserializers.end());
 
@@ -132,16 +133,15 @@ HTKMLFReader::HTKMLFReader(const ConfigParameters& readerConfig)
     // Create output stream descriptions (all dense)
     for (auto d : deserializers)
     {
-        for (auto i : d->GetStreamDescriptions())
+        for (auto stream : d->StreamInfos())
         {
-            StreamDescriptionPtr stream = std::make_shared<StreamDescription>(*i);
             if (m_packingMode == PackingMode::truncated)
             {
                 // TODO: Currently BPTT does not support sparse format as output.
                 // We always require dense.
-                stream->m_storageType = StorageType::dense;
+                stream.m_storageFormat = StorageFormat::Dense;
             }
-            stream->m_id = m_streams.size();
+            stream.m_id = m_streams.size();
             m_streams.push_back(stream);
         }
     }
@@ -170,7 +170,7 @@ HTKMLFReader::HTKMLFReader(const ConfigParameters& readerConfig)
     }
 }
 
-std::vector<StreamDescriptionPtr> HTKMLFReader::GetStreamDescriptions()
+std::vector<StreamInformation> HTKMLFReader::GetStreamDescriptions()
 {
     assert(!m_streams.empty());
     return m_streams;
@@ -201,4 +201,4 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config, const std::map<s
     ReaderBase::StartEpoch(cfg, requiredStreams);
 }
 
-}}}
+}
