@@ -166,6 +166,8 @@ Conditions (stacking):
 When batching, rank parameters that count from the right (mapRank?--TODO: track it down) must be
 adjusted or resolved into absolute ones (that counts from the left).
 
+TODO: We should investigate strided SGEMM. Then we can batch everything.
+
 Convolition/pooling
 -------------------
 
@@ -183,6 +185,9 @@ Conditions (unary):
 
 This requires additional TensorView operation. Besides that, it can share code with matrix and unary.
 The batch dimension just goes into the N dimension as usual.
+Global pooling cannot be parameterized to exclude the batching/stacking axis.
+So instead, Dynamite does not use the global flag (engine must throw an error); instead, it reshapes the value to a vector first.
+TODO: double check what global pooling does. It goes to a scalar, right?
 TODO: Are there additional arguments in the dict that are relative to the end? mapRank? That must be resolved first, or updated when batching.
 
 Slice()
