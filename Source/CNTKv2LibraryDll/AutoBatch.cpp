@@ -61,7 +61,12 @@ If all args have this property, then the operation is computed unbatched but onl
 When comparing dimensions, trailing singleton dimensions can be ignored if possible.
 This is not implemented presently, since it makes the comparison operation more complex.
 
+The batching operation happens after output and Parameter shapes have been fully determined, as that
+happens during graph building, before the computation kicks in. The already determined
+shapes can directly drive reduction and reshape operations.
+
 The following will go through every single operation and specify how it is batched.
+This is designed in a way that even multiple batching, with multiple added batch axes, will behave correctly.
 TODO: This is a TODO list for now with intent to be implemented this way.
 
 TODO: Needed redesign:
@@ -94,6 +99,12 @@ The same code works for both element-wise and reduction ops, as follows:
  - the batched output shape is equal to the unbatched one plus the batch axis (unless we are stacking)
  - hence, reductions will be done as expected by TensorView.
 
+The forward and backward code for reductions does not consider the axis properties, but instead relies
+on the already determined output shape. This way it works after batching (whereas if it were to consult
+the axis and found AllStaticAxes, it would reduce wrongly).
+TODO: check all compute/backward code that it does not check/determines the shapes (but possibly checks them
+where it does not conflict with batching).
+
 No-ops
 ------
 
@@ -109,7 +120,18 @@ Reshape()
 Op:
   Reshape,
 
-...
+Conditions:
+  All input items must be consecutive in memory.
+  All output shapes must match.
+  (The input shapes do not need to match. It is already guaranteed that they are all reshapable into the same output shape.)
+
+If all items are already consecutive in memory, then we just slice-view and reshape it, and generate the individual lazy slices into that.
+(TODO: check that gather does not fail if input shapes do not fullt match.)
+This way the reshaped outputs will still be recognizable as consecutive by the next op.
+If they are not consecutive, then don't gather them, but instead reshape them individually (i.e. don't consider them batchable).
+This is done because reshaping does not involve the GPU, only meta information, and since they are not consecutive,
+reshaping them individually will not prevent a consecutive set from being recognized.
+
 TODO: Can this be merged with No-ops? Can it be see-through?
 
 Binary/ternary element-wise ops
@@ -121,6 +143,11 @@ Ops (binary):
 Ops (ternary):
   Clip, Select,
 
+Conditions:
+  Same conditions as for unary element-wise ops must hold for all inputs.
+
+When batching, all inputs must be padded with singleton dimensions to have the same
+rank, so that the batching/stacking dimension is at a matching position.
 
 Matrix products
 ---------------
@@ -128,12 +155,35 @@ Matrix products
 Ops:
   Times, TransposeTimes,
 
+Conditions (batching):
+  The first input (the matrix) must be the same for all items.
+  The second one has the same conditions as for unary element-wise ops.
+
+Conditions (stacking):
+  First input (matrix) like batching.
+  Second one must match in all but the last dimension.
+
+When batching, rank parameters that count from the right (mapRank?--TODO: track it down) must be
+adjusted or resolved into absolute ones (that counts from the left).
 
 Convolition/pooling
 -------------------
 
-Ops:
-  Convolution, Pooling, Unpooling,
+Ops (binary):
+  Convolution, Deconvolution (TODO: what's the name??)
+
+Ops (unary):
+  Pooling, Unpooling,
+
+Conditions (binary):
+  Same as for Matrix product.
+
+Conditions (unary):
+  Same as for unary element-wise ops.
+
+This requires additional TensorView operation. Besides that, it can share code with matrix and unary.
+The batch dimension just goes into the N dimension as usual.
+TODO: Are there additional arguments in the dict that are relative to the end? mapRank? That must be resolved first, or updated when batching.
 
 Slice()
 -------
@@ -141,11 +191,33 @@ Slice()
 Op:
   Slice,
 
+Conditions (batching):
+  All dimensions must match.
+
+Conditions (stacking):
+  All except the last dimensions must match.
+  Must not slice along the last dimension.
+  Must actually slice (and not be a no-op). TODO: Should we see-through no-op slice ops?
+
+Unlike Reshape(), Slice() currently always involves a copy (since CNTK does not generally support
+strided views at present). Hence, an optimization like for Reshape() does not apply.
+This makes Slice() similar to a unary op, with the exception that Slice() still uses
+additional arguments from the dictionary. These remain valid also for the batched/stacked op.
+
 Splice()
 --------
 
 Op:
   Splice,
+
+Conditions (batching)):
+  WRONG
+  All inputs must have matching shapes, respectively (this is like an N-nary elementwise op).
+
+Conditions (stacking):
+  WRONG
+  Must not splice along stacking dimension.
+   Stacking dimension must have matching shapes across items.
 
 TransposeAxes()
 ---------------
@@ -153,7 +225,16 @@ TransposeAxes()
 Ops:
   TransposeAxes,
 
-TODO: we must make sure we don't mix up the axis specification.
+Conditions (batching)):
+  All inputs must have matching shapes.
+
+Conditions (stacking):
+  All inputs must have matching shapes except for last axis.
+  Must not transpose in stacking dimension.
+
+This is like a unary element-wise op, except that the additional attributes dictionary
+will be consulted for the axes to swap. The conditions guaranteed that the arguments
+remain valid after batching/stacking.
 
 Barrier()
 ---------
@@ -174,7 +255,7 @@ Op:
   BatchNormalization
 
 Condition (batching/stacking):
-  A unique op identifier must match. (Dimensions are then verified to match fully as well.)
+  A unique op identifier must match. (Dimensions are then required to match fully as well, otherwise it's an error.)
 
 The items that belong together are identifed by a unique identifier that is owned by the batch-normalization Layer.
 Each new layer gets a new id.
@@ -210,6 +291,7 @@ Condition:
 This is always batched, independent of dimensions, because all elements are independent.
 
 Each invocation gives rise to a new set of random numbers. This is used to implement Dropout.
+This operation returns a Constant upon each invocation.
 
 To share random numbers, e.g. across all time steps of a sequence for Dropout, users must manually compute it once.
 Random numbers cannot be shared across batch items unless users explicitly compute them outside of Batch::Map().
