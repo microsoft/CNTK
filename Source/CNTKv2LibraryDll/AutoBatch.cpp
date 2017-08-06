@@ -21,7 +21,7 @@
 #include <string>
 
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
-//#define LOG_STATS     // if defined, log statistics (#operations)
+#define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
@@ -1240,26 +1240,27 @@ class Variable::AutoBatch
                 if (allSame) // optimized case: all ops share the same operand: no need to batch them
                     // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
                     m_batchedInputs[i] = spliceInputs[0];
-                else
-                if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
+                else if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
                 {
                     let& from  = lazyIndex0.first;
                     let  begin = lazyIndex0.second;
                     let& output = from->m_outputs[0];
                     fail_if(!output.m_dataFields->m_value, "value not yet available??");
                     let& fromDims = output.Shape().Dimensions();
+                    fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
                     let axis = fromDims.size() - 1;
                     if (begin == 0 && j == fromDims[axis]) // full range: just take it
                         m_batchedInputs[i] = output; // note: graph already has a strong ref to output elsewhere
                     else // sub-range: splice it by taking a slice view on the previously spliced batch
                     {
-                        // create a new PrimitiveFunction Splice()
+                        // create a new PrimitiveFunction Slice()
                         vector<size_t> outputShape = fromDims; // determine output shape
                         outputShape[axis] = j;
                         auto additionalProperties = Dictionary(); // create additional arguments
                         additionalProperties[L"axis"      /*PrimitiveFunction::AttributeNameAxis*/      ] = Axis((int)axis);
                         additionalProperties[L"beginIndex"/*PrimitiveFunction::AttributeNameBeginIndex*/] = (int)begin;
                         additionalProperties[L"endIndex"  /*PrimitiveFunction::AttributeNameEndIndex*/  ] = (int)(begin + j);
+                        // TODO: ^^ reinsert all those PrimitiveFunction:: symbols, since we have access to those now
                         let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties));
 #ifdef LOG_DETAILS
                         spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
@@ -1270,6 +1271,29 @@ class Variable::AutoBatch
                         //m_batchedInputs[i] = output.CompositePreservingCopy(spliceOp);
                         m_batchedInputs[i] = output;
                         m_batchedInputs[i].m_outputComposite = spliceOp;
+                    }
+                    // if this op has a higher maxRank than the re-batched view, we must move the axis
+                    if (axis != maxRank)
+                    {
+                        let batchedInput = m_batchedInputs[i];
+                        vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
+                        outputShape.insert(outputShape.end() - 1, maxRank - axis, 1);
+                        // insert a Reshape() op
+                        auto additionalProperties = Dictionary(); // create additional arguments
+                        // we don't need the properties at this level anymore; output shape is sufficient
+                        //additionalProperties[PrimitiveFunction::AttributeNameNewShape]  = NDShape(outputShape);
+                        //additionalProperties[PrimitiveFunction::AttributeNameBeginAxis] = Axis((int)0);
+                        //additionalProperties[PrimitiveFunction::AttributeNameEndAxis]   = Axis((int)axis);
+                        let reshapeOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape, move(additionalProperties));
+#ifdef LOG_DETAILS
+                        reshapeOp->m_uid = L"#," + spliceInputs[0].Uid();
+#endif
+                        // and execute it
+                        let& output = MemoizeKnowableValueInArena(*reshapeOp, /*isFree=*/true);
+                        // and that's now really our input to the batched operation
+                        //m_batchedInputs[i] = output.CompositePreservingCopy(reshapeOp);
+                        m_batchedInputs[i] = output;
+                        m_batchedInputs[i].m_outputComposite = reshapeOp;
                     }
                     anyBatchedInputs = true;
                 }
@@ -1730,17 +1754,19 @@ public:
         for (auto& c : consumers)
             BackpropToUnbatched(c.first, c.second);
 #else
+        // batch all outGrads, and batch all right inputs
+        let numBatchItems = consumers.size();
+        if (numBatchItems == 1) // fast path if only one (and the last dim is not guaranteed to be a batch dim)
+            // ^^ This comment makes no sense. The batching condition is hosed (too restrictive).
+            return BackpropToUnbatched(consumers.front().first, consumers.front().second);
         // We compute
         //  leftGrad += sum_i outGrad_i @ right_i^T
         //            = (concat_i outGrad_i) @ (concat_i right_i)^T
         // where concat_i means to concatenate matrices along their trailing (batch) axis.
         // It has already been verified that all i have the same rank and dimensions except for a single reduction dimension.
-
-        // batch all outGrads, and batch all right inputs
-        let numBatchItems = m_matrixWeightConsumers.size();
         auto& timesOutGrads        = BorrowBuffer(m_inputValuesBuffer,     numBatchItems);
         auto& timesDataRightInputs = BorrowBuffer(m_outputGradientsBuffer, numBatchItems);
-        let& f0 = *m_matrixWeightConsumers.front().first;
+        let& f0 = *consumers.front().first;
 #ifdef LOG_DETAILS
         LogFunction(f0, "[bb*] ", 0);
 #endif
@@ -1748,7 +1774,7 @@ public:
         size_t batchDim = 0;
         for (size_t i = 0; i < numBatchItems; i++)
         {
-            let &c = m_matrixWeightConsumers[i];
+            let &c = consumers[i];
             fail_if(c.second != 0, "wrong input??");
             let& outGrad = c.first->m_outputs[0].m_dataFields->m_gradient;
             let& right = SeeThroughNoOps(c.first->m_inputs, 1).m_dataFields->m_value;
