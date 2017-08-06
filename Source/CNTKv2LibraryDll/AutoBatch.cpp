@@ -143,8 +143,7 @@ namespace CNTK
     {
         // unary element-wise TensorView operations; reduction TensorView operations
         // -------------------------------------------------------------------------
-        // 
-        // Ops (unary element-wise):
+        //
         { OpSpecificConditionKind::UnaryElementWise, {
             PrimitiveOpType::Negate, PrimitiveOpType::Sigmoid, PrimitiveOpType::Tanh,
             PrimitiveOpType::ReLU, PrimitiveOpType::Exp, PrimitiveOpType::Log, PrimitiveOpType::Sqrt,
@@ -152,8 +151,6 @@ namespace CNTK
             PrimitiveOpType::Sin, PrimitiveOpType::Cos, PrimitiveOpType::ELU,
             PrimitiveOpType::StableSigmoid
         }},
-        // 
-        // Ops (reduction):
         { OpSpecificConditionKind::Reducing, {
             PrimitiveOpType::ReduceElements /*(=ReduceSum, ReduceLogSum, etc.)*/
         }},
@@ -177,7 +174,7 @@ namespace CNTK
         // the axis and found AllStaticAxes, it would reduce wrongly).
         // TODO: check all compute/backward code that it does not check/determines the shapes (but possibly checks them
         // where it does not conflict with batching).
-        // 
+
         // No-ops
         // ------
         // 
@@ -188,7 +185,7 @@ namespace CNTK
         // 
         // No-ops are see-through in the code.
         // ... TODO: Detail here what that means.
-        // 
+
         // Reshape()
         // ---------
         // 
@@ -209,18 +206,15 @@ namespace CNTK
         // reshaping them individually will not prevent a consecutive set from being recognized.
         // 
         // TODO: Can this be merged with No-ops? Can it be see-through?
-        // 
+
         // Binary/ternary element-wise ops
         // -------------------------------
         // 
-        // Ops (binary):
         { OpSpecificConditionKind::BinaryElementWise, {
             PrimitiveOpType::Plus, PrimitiveOpType::Minus, PrimitiveOpType::ElementTimes, PrimitiveOpType::LogPlus, PrimitiveOpType::Pow,
             PrimitiveOpType::Equal, PrimitiveOpType::NotEqual, PrimitiveOpType::Less,
             PrimitiveOpType::LessEqual, PrimitiveOpType::Greater, PrimitiveOpType::GreaterEqual
         }},
-        // 
-        // Ops (ternary):
         { OpSpecificConditionKind::TernaryElementWise, {
             PrimitiveOpType::Clip, PrimitiveOpType::Select
         }},
@@ -230,7 +224,7 @@ namespace CNTK
         // 
         // When batching, all inputs must be padded with singleton dimensions to have the same
         // rank, so that the batching/stacking dimension is at a matching position.
-        // 
+
         // Matrix products
         // ---------------
         // 
@@ -250,7 +244,7 @@ namespace CNTK
         // adjusted or resolved into absolute ones (that counts from the left).
         // 
         // TODO: We should investigate strided SGEMM. Then we can batch everything.
-        // 
+
         // Convolution/pooling
         // -------------------
         // 
@@ -275,7 +269,7 @@ namespace CNTK
         // TODO: Are there additional arguments in the dict that are relative to the end? mapRank? That must be resolved first, or updated when batching.
         // 
         // TODO: How to hold the auto-tune state? Cache it indexed by shape except batch dim? Can be problematic for truly dynamic image stuff --check with Cha
-        // 
+
         // Slice()
         // -------
         // 
@@ -295,7 +289,7 @@ namespace CNTK
         // strided views at present). Hence, an optimization like for Reshape() does not apply.
         // This makes Slice() similar to a unary op, with the exception that Slice() still uses
         // additional arguments from the dictionary. These remain valid also for the batched/stacked op.
-        // 
+
         // Splice()
         // --------
         // 
@@ -311,7 +305,7 @@ namespace CNTK
         //   WRONG
         //   Must not splice along stacking dimension.
         //   Stacking dimension must have matching shapes across items.
-        // 
+
         // TransposeAxes()
         // ---------------
         // 
@@ -329,7 +323,7 @@ namespace CNTK
         // This is like a unary element-wise op, except that the additional attributes dictionary
         // will be consulted for the axes to swap. The conditions guaranteed that the arguments
         // remain valid after batching/stacking.
-        // 
+
         // Barrier()
         // ---------
         // 
@@ -342,7 +336,7 @@ namespace CNTK
         // 
         // A barrier means that all other ops available for batching get executed first, as long as there
         // is a barrier pending.
-        // 
+
         // BatchNormalization()
         // --------------------
         // 
@@ -363,11 +357,10 @@ namespace CNTK
         // Note: This makes the threaded parallelization of batch ops mandatory.
         // 
         // TODO: We may want to support BN along the last axis, to reduce overhead.
-        // 
+
         // OptimizedRNNStack()
         // -------------------
         // 
-        // Op:
         { OpSpecificConditionKind::OptimizedRNNStack, {
             PrimitiveOpType::OptimizedRNNStack
         }},
@@ -376,7 +369,7 @@ namespace CNTK
         //   Dimensions must match except for the last dimension (=the time axis).
         // 
         // Batching is done according to NVidia's data format.
-        // 
+
         // RandomDistribution()
         // --------------------
         // 
@@ -401,7 +394,7 @@ namespace CNTK
         // The random numbers are lazily computed upon first Value() call, to allow for batching.
         // 
         // TODO: Does this need to hold on to a RNG state? How to do that?
-        // 
+
         // not supported: primitives that involve dynamic axes
         // ---------------------------------------------------
         // 
@@ -415,7 +408,7 @@ namespace CNTK
         // These operations are specifically meant for objects with dynamic axes.
         // Dynamite Variables cannot have dynamic axes. Dynamite does not support
         // these ops, or implements them with explicit loop unrolling.
-        // 
+
         // not supported: primitives that require temporary memory: not supported as primitives
         // -------------------------------------------------------
         // 
@@ -727,7 +720,7 @@ class Variable::AutoBatch
     }
 
     // predicate whether an op just passes through its input
-    // This is used to decide whether we can short-circuit it in Unalias().
+    // This is used to decide whether we can short-circuit it in SeeThroughNoOps().
     static bool IsAlias(PrimitiveOpType op)
     {
         // if really needed, this can be done as a bit-test
@@ -755,7 +748,7 @@ class Variable::AutoBatch
 
     // see through no-ops, such as barrier, Pass, or StopGradient
     // Use this for ANY access to PrimitiveFunction::m_inputs EXCEPT when directly getting the shape.
-    static const Variable& Unalias(const vector<Variable>& inputs, size_t index)
+    static const Variable& SeeThroughNoOps(const vector<Variable>& inputs, size_t index)
     {
         let& input = inputs[index];
         let& fields = *input.m_dataFields;
@@ -770,7 +763,7 @@ class Variable::AutoBatch
         if (!IsAlias(f->m_op))
             return input;
         // it is an alias: see right through
-        return Unalias(f->m_inputs, 0); // (all aliases are unary functions)
+        return SeeThroughNoOps(f->m_inputs, 0); // (all aliases are unary functions)
     }
 
     // class to manage the set of ready operations (the schedule)
@@ -806,7 +799,7 @@ class Variable::AutoBatch
                     // for Times, the first arg must be the same object, not just the same shape
                     // TODO: a special case is a dot product, which we can write as ReduceSum(ElementTimes(a,b))
                     //       This would require to rewrite the graph though; can we do that?
-                    if (Unalias(a->m_inputs, i).m_dataFields != Unalias(b->m_inputs, i).m_dataFields)
+                    if (SeeThroughNoOps(a->m_inputs, i).m_dataFields != SeeThroughNoOps(b->m_inputs, i).m_dataFields)
                         return false;
                 }
                 else
@@ -946,7 +939,7 @@ class Variable::AutoBatch
         let& inputs = f.m_inputs;
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            let& input = Unalias(inputs, i);
+            let& input = SeeThroughNoOps(inputs, i);
             auto& fields = *input.m_dataFields;
             // recursively traverse
             if (!fields.m_value)
@@ -1004,7 +997,7 @@ class Variable::AutoBatch
         fprintf(stderr, "%s%S%S = %S (", prefix, uid.c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            let& input = Unalias(inputs, i);
+            let& input = SeeThroughNoOps(inputs, i);
             let& fields = *input.m_dataFields;
             // little helper function to fix up variable names by removing _Output_0
             // TODO: Once we support >1 output, this needs a bit more code.
@@ -1043,7 +1036,7 @@ class Variable::AutoBatch
         let& inputs = f.m_inputs;
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
-            inputValues[i] = LazilyIndexedValue(Unalias(inputs, i)); // (if this is a lazy slice, then now we must resolve it)\
+            inputValues[i] = LazilyIndexedValue(SeeThroughNoOps(inputs, i)); // (if this is a lazy slice, then now we must resolve it)\
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
@@ -1170,7 +1163,7 @@ class Variable::AutoBatch
         //  - a PrimitiveFunction that is the op itself
         //  - m_lazyIndex entries that represent a "virtual" Slice() that is never created as a PrimitiveFunction object to saved mallocs.
         // As for resource management, m_lazyIndex will hold a strong ref to the PrimitiveFunction;
-        // and we will hack its Unalias(m_inputs,i).m_outputComposite to hold a strong reference to the Splice() or Slice().
+        // and we will hack its SeeThroughNoOps(m_inputs,i).m_outputComposite to hold a strong reference to the Splice() or Slice().
         // (This is a little ugly since m_outputComposite is meant to hold a CompositeFunction, but we misuse it
         // to hold a PrimitiveFunction.)
         else
@@ -1189,7 +1182,7 @@ class Variable::AutoBatch
             }
             bool anyBatchedInputs = false;
             if (i0 == 1) // Times(): matrix must be identical
-                m_batchedInputs[0] = Unalias(f0.m_inputs, 0);
+                m_batchedInputs[0] = SeeThroughNoOps(f0.m_inputs, 0);
             for (size_t i = i0; i < numArgs; i++)
             {
                 // create splice args for this argument
@@ -1199,7 +1192,7 @@ class Variable::AutoBatch
                 if (spliceInputs.capacity() < batchSize)
                     spliceInputs.reserve(max(batchSize, 2 * spliceInputs.capacity()));
                 // optimization: if all args are consecutive slices, then use a slice view instead
-                let* pfields0 = Unalias(f0.m_inputs, i).m_dataFields.get();
+                let* pfields0 = SeeThroughNoOps(f0.m_inputs, i).m_dataFields.get();
                 let& lazyIndex0 = pfields0->m_lazyIndex; // for 'allConsecutiveSlices' test
                 let is0LazyIndex = (bool)lazyIndex0.first;
                 // loop over all batched ops
@@ -1210,7 +1203,7 @@ class Variable::AutoBatch
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
-                    let& input = Unalias(op->m_inputs, i);
+                    let& input = SeeThroughNoOps(op->m_inputs, i);
                     let* pfields = input.m_dataFields.get();
                     let& lazyIndex = pfields->m_lazyIndex;
                     // optimization: if all args are the same, then don't batch
@@ -1485,14 +1478,14 @@ public:
     }
 
     // determine the input to backprop a gradient into
-    // Normally that is Unalias(f.m_inputs, index).
+    // Normally that is SeeThroughNoOps(f.m_inputs, index).
     // However, some gradients are just copies, so we can see through them.
     // This saves memory and allows easier discovery of optimizable patterns.
     // Note that every single time one iterates over m_inputs for gradients, this function must be used.
     // Note: THIS IS NOT LEVERAGED YET, and could be removed if we don't leverage it.
     const Variable& GetShortCircuitedGradientInput(const PrimitiveFunction& f, size_t index)
     {
-        let& input = Unalias(f.m_inputs, index);
+        let& input = SeeThroughNoOps(f.m_inputs, index);
 #ifndef NO_BATCHED_BACKPROP
         // if the input is a result of a batched operation, then traverse into that instead
         if (input.m_dataFields->m_lazyIndex.first)
@@ -1552,7 +1545,7 @@ public:
             // it came from.
             let& input = GetShortCircuitedGradientInput(f, i);
 #else
-            let* inputp = &Unalias(inputs, i);
+            let* inputp = &SeeThroughNoOps(inputs, i);
 #ifndef NO_BATCHED_BACKPROP
             // if the input is a result of a batched operation, then traverse into that instead
             if (inputp->m_dataFields->m_lazyIndex.first)
@@ -1612,7 +1605,7 @@ public:
         LogFunction(*f, "[bb] ", index);
 #endif
         let& inputs =  f->m_inputs;
-        auto& input = Unalias(inputs, index);
+        auto& input = SeeThroughNoOps(inputs, index);
         auto& fields = *input.m_dataFields;
         fail_if(!fields.m_needsGradient, "function unexpectedly does not need a gradient");
         // get the TensorViews for everything we may compute the gradient from
@@ -1631,7 +1624,7 @@ public:
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, numInputs);
         for (size_t i = 0; i < numInputs; i++)
         {
-            let& input1 = Unalias(inputs, i);
+            let& input1 = SeeThroughNoOps(inputs, i);
             let& fields = *input1.m_dataFields;
             fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
             inputValues[i] = fields.m_value.get();
@@ -1695,7 +1688,7 @@ public:
         bool allBetasZero = true;
         for (size_t i = 0; i < numInputs; i++)
         {
-            let& input = Unalias(inputs, i);
+            let& input = SeeThroughNoOps(inputs, i);
             // create the gradient memory for this input
             let beta = LazilyCreateLazilyIndexedGradient(input);
             let& fields = *input.m_dataFields;
@@ -1706,7 +1699,7 @@ public:
                 // We were running under the assumption that all betas are zero, so we can use beta=0 below.
                 // Now we must run with beta 1, and therefore manually reset all pevious ones.
                 for (size_t i1 = 0; i1 < i; i1++) // these were all beta=0
-                    Unalias(inputs, i1).m_dataFields->m_gradient->SetValue(0.0f);
+                    SeeThroughNoOps(inputs, i1).m_dataFields->m_gradient->SetValue(0.0f);
                 allBetasZero = false;
             }
             else if (beta == 0 && !allBetasZero)
@@ -1720,7 +1713,7 @@ public:
         m_stats.numBackpropScatters++;
     }
 
-    // backprop into weight parameter of a Times op (Unalias(inputs, 0))
+    // backprop into weight parameter of a Times op (SeeThroughNoOps(inputs, 0))
     // This can be batched into a single matrix product.
     void BackpropToMatrixWeight(vector<pair<PrimitiveFunction*, size_t>>& consumers)
     {
@@ -1742,14 +1735,14 @@ public:
 #ifdef LOG_DETAILS
         LogFunction(f0, "[bb*] ", 0);
 #endif
-        let& input0 = Unalias(f0.m_inputs, 0);
+        let& input0 = SeeThroughNoOps(f0.m_inputs, 0);
         size_t batchDim = 0;
         for (size_t i = 0; i < numBatchItems; i++)
         {
             let &c = m_matrixWeightConsumers[i];
             fail_if(c.second != 0, "wrong input??");
             let& outGrad = c.first->m_outputs[0].m_dataFields->m_gradient;
-            let& right = Unalias(c.first->m_inputs, 1).m_dataFields->m_value;
+            let& right = SeeThroughNoOps(c.first->m_inputs, 1).m_dataFields->m_value;
             timesOutGrads       [i] = outGrad;
             timesDataRightInputs[i] = right;
             let numItems = outGrad->Shape().Dimensions().back();
