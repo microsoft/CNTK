@@ -84,17 +84,21 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
     BinaryModel criterion = [=](const Variable& feature, const Variable& label) -> Variable
     {
         let z = model(feature);
-        return Dynamite::CrossEntropyWithSoftmax(z, label);
+        let ce = Dynamite::CrossEntropyWithSoftmax(z, label);
+        LOG(ce);
+        return ce;
     };
     // create a batch mapper (which will eventually allow suspension)
-    let batchModel = Batch::Map(criterion);
+    let batchCriterion = Batch::Map(criterion);
     // for final summation, we create a new lambda (featBatch, labelBatch) -> mbLoss
     vector<Variable> losses;
     return [=](const vector<Variable>& features, const vector<Variable>& labels) mutable
     {
-        batchModel(losses, features, labels);             // batch-compute the criterion
+        batchCriterion(losses, features, labels);         // batch-compute the criterion
         let collatedLosses = Splice(losses, Axis(0));     // collate all seq losses
+        LOG(collatedLosses);
         let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
+        LOG(mbLoss);
         losses.clear();
         return mbLoss;
     };
@@ -337,16 +341,17 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         unordered_map<Parameter, NDArrayViewPtr> gradients;
         for (let& p : d_parameters)
             gradients[p] = nullptr; // TryGetGradient(p); // TODO: get the existing gradient matrix from the parameter
+        let mbSizeForUpdate = minibatchData[labelStreamInfo].numberOfSamples;
         double loss1;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "/// ### CNTK Dynamite:  %.6f sec\n");
 #if 1       // model update with Dynamite
             mbLoss.Backward(gradients);
-            d_learner->Update(gradients, minibatchData[labelStreamInfo].numberOfSamples);
+            d_learner->Update(gradients, mbSizeForUpdate);
 #endif
             loss1 = mbLoss.Value()->AsScalar<float>(); // note: this does the GPU sync
         }
-        fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[labelStreamInfo].numberOfSamples);
+        fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / mbSizeForUpdate);
 #endif
 #if 1   // static CNTK
         double crit;// = trainer->PreviousMinibatchLossAverage();
@@ -364,7 +369,7 @@ extern int mt_main(int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
-#if 1
+#if 0
     return mt_main(argc, argv);
 #else
     argc; argv;

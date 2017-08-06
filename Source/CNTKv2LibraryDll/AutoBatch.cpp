@@ -120,6 +120,8 @@ namespace CNTK
     //   All args must match except for their last dimension. The key for comparison is the shape less the last dimension.
     //   Reduction dimensions may not reduce along the last dimension (otherwise fall back to batching).
     //
+    // The conditions are tested in Schedule() and ExecuteBatchedOpAndSchedule().
+    //
     // The op-specific conditions are specified in the following initializer.
     // 
     // TODO: implement these V1 nodes somehow via TensorView
@@ -183,8 +185,7 @@ namespace CNTK
             PrimitiveOpType::Pass, PrimitiveOpType::StopGradient
         }},
         // 
-        // No-ops are see-through in the code.
-        // ... TODO: Detail here what that means.
+        // No-ops are see-through in the code. They are short-circuited for auto-batching and therefore never be batched.
 
         // Reshape()
         // ---------
@@ -710,6 +711,8 @@ class Variable::AutoBatch
     static bool IsViewOp(PrimitiveOpType op)
     {
         // if really needed, this can be done as a bit-test
+        // TODO: The NoOps should never be tested here, right?
+        fail_if(IsAlias(op), "IsViewOp should never be asked about a no-op, should be short-circuited before");
         return
             op == PrimitiveOpType::StopGradient ||
             op == PrimitiveOpType::Pass         ||
@@ -743,7 +746,8 @@ class Variable::AutoBatch
             op == PrimitiveOpType::BarrierOp    ||
             //op == PrimitiveOpType::Reshape      ||
             op == PrimitiveOpType::Plus         ||
-            (op == PrimitiveOpType::Plus && inputIndex == 0);
+            (op == PrimitiveOpType::Minus && inputIndex == 0);
+            //(op == PrimitiveOpType::Plus && inputIndex == 0);
     }
 
     // see through no-ops, such as barrier, Pass, or StopGradient
@@ -824,7 +828,7 @@ class Variable::AutoBatch
             // we manage three ready sets, since two common kinds are very simple
             if (op == PrimitiveOpType::BarrierOp)
                 // BUGBUG: We never get here since we now see through barriers for efficiency...
-                m_barrierOps.push_back(f);
+                LogicError("m_barrierOps.push_back(f) should no longer be done"); // m_barrierOps.push_back(f);
             else if (IsViewOp(op))
                 m_viewOps.push_back(f);
             else
@@ -1107,6 +1111,9 @@ class Variable::AutoBatch
             LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of OptimizedRNNStack() not implemented yet.");
         case OpSpecificConditionKind::RandomDistribution:
             LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of RandomDistribution ops not implemented yet.");
+        case OpSpecificConditionKind::NoOp:
+        case OpSpecificConditionKind::Barrier:
+            LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of No-op attempted, should have been short-circuited before getting here.");
         case OpSpecificConditionKind::NotSupportedDynamicAxis:
             LogicError("ExecuteBatchedOpAndUpdateSchedule: Operations involving dynamic axes are not allowed in Dynamite (%S).", PrimitiveOpTypeName(op).c_str());
         case OpSpecificConditionKind::NotSupportedStaticGraph:
@@ -1123,6 +1130,7 @@ class Variable::AutoBatch
             m_numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
         // perform the op
+        //let isTimes = op == PrimitiveOpType::TransposeTimes;
         let isTimes = opClass == OpSpecificConditionKind::MatrixProduct; // is special-cased
 #ifdef NO_BATCHED_FORWARD
         auto doNaively = true;
