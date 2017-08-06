@@ -3,378 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-// The functions for automatically-batched evaluation of dynamic graphs (forward and backward) is contained here.
-
-/*
-
-Auto-batching merges operations with matching operations for saving GPU launches and boosting GPU occupancy.
-Example: We have a batch of 2, and for each batch item, we compute c = a + b:
-
-  c1 = a1 + b1
-  c2 = a2 + b2
-
-Assuming matching dimensions this is batched as
-
-  c1_c2 = [a1, a2] + [b1, b2]
-  c1 = c1_c2[0]
-  c2 = c1_c2[1]
-
-where an and bn, respectively, are batched along a new batch dimension. Alternatively, they could be batched like this:
-
-  c1_c2 = [a1  + [b1
-           a2]    b2]
-  c1 = c1_c2[0:dim]
-  c2 = c1_c2[dim:2*dim]
-
-We call the first "batching" and the second "stacking."
-a and b are the "args" of the + "op", and a1 and a2 are (arg batch) items of the first arg of the (batched) op.
-
-The batching/stacking operation involves a memory copy to collate all arg batch items into a memory-consecutive
-dense tensor. (This will generate a "gather" op under the hood, and the back-prop is handled by a "scatter" op.)
-As an optimization, the gather op is skipped if all items are already consecutive in memory.
-This is often the case when they themselves are the result of a batched computation.
-
-The concatenation axis is always last (slowest-changing) axis of the batched data; either a new one (batching) or the last one (stacking).
-
-For now, we use batching and not stacking, since the Index proxy only stores an index and not a range.
-I.e. all args must have identical shapes including the last axis. To support stacking along the last axis,
-we'd need to store a range. This will allow mismatching last dimensions (e.g. stacking vectors of different
-dimensions), but not all primitive operations can handle such changed dimensions.
-One can also imagine more elaborate stacking in different dimensions, and even in multiple dimensions
-(like current CNTK MBLayout).
-
-If all args to be batched are identical (all items are the same object), then, if possible, the item
-is not copied, but instead virtually duplicated by means of broadcasting. E.g. if "b1 is b2" (in Python parlance),
-then we can avoid one copy operation and write:
-
-  c1_c2 = [a1, a2] + b1
-
-where b1 will automatically be broadcast into the second dimension by the "+" operation.
-This happens, for example, when adding a bias to each step of a sequence.
-This optimization can only be done for operators that support broadcasting.
-
-If all args have this property, then the operation is computed unbatched but only once, and the result is shared:
-
-  c1_c2 = a1 + b1
-  c1 = c2 = c1_c2
-
-When comparing dimensions, trailing singleton dimensions can be ignored if possible.
-This is not implemented presently, since it makes the comparison operation more complex.
-
-The batching operation happens after output and Parameter shapes have been fully determined, as that
-happens during graph building, before the computation kicks in. The already determined
-shapes can directly drive reduction and reshape operations.
-
-The following will go through every single operation and specify how it is batched.
-This is designed in a way that even multiple batching, with multiple added batch axes, will behave correctly.
-TODO: This is a TODO list for now with intent to be implemented this way.
-
-TODO: Needed redesign:
- - Lazy index must contain a range. So it cannot be a pair<>... which is better anyway.
- - Lazy index must contain an optional built-in reshape.
-   This may be possible without actually storing the shape (which would be a malloc()),
-   since the target dimension is already known when we have access to the unbatched result.
-   We should add NDArrayView::SliceViewAsShape(), and always use that.
-
-unary element-wise TensorView operations; reduction TensorView operations
--------------------------------------------------------------------------
-
-Ops (unary element-wise):
-  Negate, Sigmoid, Tanh, ReLU, Exp, Log, Sqrt, Floor, Abs, Reciprocal, LogPlus, Sin, Cos, ELU, StableSigmoid
-
-Ops (reduction):
-  SumAll, ReduceElements (=ReduceSum, ReduceLogSum, etc.),
-
-Conditions for batching:
-  All arg arguments must completely match in dimensions. The key for comparison is the full shape.
-
-Conditions for stacking:
-  All args must match except for their last dimension. The key for comparison is the shape less the last dimension.
-  Reduction dimensions may not reduce along the last dimension (otherwise fall back to batching).
-
-If all args are the same object, the op is executed only once, and the result is shared across the batch.
-
-The same code works for both element-wise and reduction ops, as follows:
- - the output shape for the unbatched operations is known (and they are all identical across the batch)
- - the batched output shape is equal to the unbatched one plus the batch axis (unless we are stacking)
- - hence, reductions will be done as expected by TensorView.
-
-The forward and backward code for reductions does not consider the axis properties, but instead relies
-on the already determined output shape. This way it works after batching (whereas if it were to consult
-the axis and found AllStaticAxes, it would reduce wrongly).
-TODO: check all compute/backward code that it does not check/determines the shapes (but possibly checks them
-where it does not conflict with batching).
-
-No-ops
-------
-
-Ops:
-  NoOp (=Alias), Pass, StopGradient,
-
-No-ops are see-through in the code.
-... TODO: Detail here what that means.
-
-Reshape()
----------
-
-Op:
-  Reshape,
-
-Conditions:
-  All input items must be consecutive in memory.
-  All output shapes must match.
-  (The input shapes do not need to match. It is already guaranteed that they are all reshapable into the same output shape.)
-
-If all items are already consecutive in memory, then we just slice-view and reshape it, and generate the individual lazy slices into that.
-(TODO: check that gather does not fail if input shapes do not fullt match.)
-This way the reshaped outputs will still be recognizable as consecutive by the next op.
-If they are not consecutive, then don't gather them, but instead reshape them individually (i.e. don't consider them batchable).
-This is done because reshaping does not involve the GPU, only meta information, and since they are not consecutive,
-reshaping them individually will not prevent a consecutive set from being recognized.
-
-TODO: Can this be merged with No-ops? Can it be see-through?
-
-Binary/ternary element-wise ops
--------------------------------
-
-Ops (binary):
-  Plus, Minus, ElementTimes, Equal, NotEqual, Less, LessEqual, Greater, GreaterEqual, Pow,
-
-Ops (ternary):
-  Clip, Select,
-
-Conditions:
-  Same conditions as for unary element-wise ops must hold for all inputs.
-
-When batching, all inputs must be padded with singleton dimensions to have the same
-rank, so that the batching/stacking dimension is at a matching position.
-
-Matrix products
----------------
-
-Ops:
-  Times, TransposeTimes,
-
-Conditions (batching):
-  The first input (the matrix) must be the same for all items.
-  The second one has the same conditions as for unary element-wise ops.
-
-Conditions (stacking):
-  First input (matrix) like batching.
-  Second one must match in all but the last dimension.
-
-When batching, rank parameters that count from the right (mapRank?--TODO: track it down) must be
-adjusted or resolved into absolute ones (that counts from the left).
-
-TODO: We should investigate strided SGEMM. Then we can batch everything.
-
-Convolution/pooling
--------------------
-
-Ops (binary):
-  Convolution, Deconvolution (TODO: what's the name??)
-
-Ops (unary):
-  Pooling, Unpooling,
-
-Conditions (binary):
-  Same as for Matrix product.
-
-Conditions (unary):
-  Same as for unary element-wise ops.
-
-This requires additional TensorView operation. Besides that, it can share code with matrix and unary.
-The batch dimension just goes into the N dimension as usual.
-Global pooling cannot be parameterized to exclude the batching/stacking axis.
-So instead, Dynamite does not use the global flag (engine must throw an error); instead, it reshapes the value to a vector first.
-TODO: double check what global pooling does. It goes to a scalar, right?
-TODO: Are there additional arguments in the dict that are relative to the end? mapRank? That must be resolved first, or updated when batching.
-
-TODO: How to hold the auto-tune state? Cache it indexed by shape except batch dim? Can be problematic for truly dynamic image stuff --check with Cha
-
-Slice()
--------
-
-Op:
-  Slice,
-
-Conditions (batching):
-  All dimensions must match.
-
-Conditions (stacking):
-  All except the last dimensions must match.
-  Must not slice along the last dimension.
-  Must actually slice (and not be a no-op). TODO: Should we see-through no-op slice ops?
-
-Unlike Reshape(), Slice() currently always involves a copy (since CNTK does not generally support
-strided views at present). Hence, an optimization like for Reshape() does not apply.
-This makes Slice() similar to a unary op, with the exception that Slice() still uses
-additional arguments from the dictionary. These remain valid also for the batched/stacked op.
-
-Splice()
---------
-
-Op:
-  Splice,
-
-Conditions (batching)):
-  WRONG
-  All inputs must have matching shapes, respectively (this is like an N-nary elementwise op).
-
-Conditions (stacking):
-  WRONG
-  Must not splice along stacking dimension.
-  Stacking dimension must have matching shapes across items.
-
-TransposeAxes()
----------------
-
-Ops:
-  TransposeAxes,
-
-Conditions (batching)):
-  All inputs must have matching shapes.
-
-Conditions (stacking):
-  All inputs must have matching shapes except for last axis.
-  Must not transpose in stacking dimension.
-
-This is like a unary element-wise op, except that the additional attributes dictionary
-will be consulted for the axes to swap. The conditions guaranteed that the arguments
-remain valid after batching/stacking.
-
-Barrier()
----------
-
-Op:
-  Alias (currently misused to denote Barrier)
-
-Condition:
-  true
-
-A barrier means that all other ops available for batching get executed first, as long as there
-is a barrier pending.
-
-BatchNormalization()
---------------------
-
-Op:
-  BatchNormalization
-
-Condition (batching/stacking):
-  A unique op identifier must match. (Dimensions are then required to match fully as well, otherwise it's an error.)
-
-The items that belong together are identifed by a unique identifier that is owned by the batch-normalization Layer.
-Each new layer gets a new id.
-  
-Unlike other ops, this operation is *required* to have all batch items available, similar
-to Barrier(). If for some reason an operation with the same id gets broken into multiple
-invocations within the same Batch::Map() call, an error is thrown (i.e. the full unique
-id is (user id, Batch::Map invocation id)).
-Note: This makes the threaded parallelization of batch ops mandatory.
-
-TODO: We may want to support BN along the last axis, to reduce overhead.
-
-OptimizedRNNStack()
--------------------
-
-Op:
-  OptimizedRNNStack
-
-Condition:
-  Dimensions must match except for the last dimension (=the time axis).
-
-Batching is done according to NVidia's data format.
-
-RandomDistribution()
---------------------
-
-Op:
-  RandomDistribution, the "-like" version
-
-Condition:
-  true.
-
-This is always batched, independent of dimensions, because all elements are independent.
-
-Each invocation gives rise to a new set of random numbers. This is used to implement Dropout.
-This operation returns a Constant upon each invocation.
-
-To share random numbers, e.g. across all time steps of a sequence for Dropout, users must manually compute it once.
-Random numbers cannot be shared across batch items unless users explicitly compute them outside of Batch::Map().
-The random numbers are lazily computed upon first Value() call, to allow for batching.
-
-TODO: Does this need to hold on to a RNG state? How to do that?
-
-not supported: primitives that involve dynamic axes
----------------------------------------------------
-
-Ops:
-  Where, PackedIndex, GatherPacked, ScatterPacked, PastValue, FutureValue, ToSequence, ToSequenceLike, UnpackSequence, Gather, ReconcileDynamicAxis,
-
-Conditions for batching/stacking:
-  false. Operation not supported via the Value() interface.
-
-These operations are specifically meant for objects with dynamic axes.
-Dynamite Variables cannot have dynamic axes. Dynamite does not support
-these ops, or implements them with explicit loop unrolling.
-
-not supported: primitives that require temporary memory: not supported as primitives
--------------------------------------------------------
-
-Ops:
-  Softmax, Dropout, CrossEntropyWithSoftmax, ClassificationError, Logistic, SquaredError, LogSoftmax, CosDistance, Hardmax,
-
-Conditions for batching/stacking:
-  false. Operation not supported via the Value() interface.
-
-These operations exist as CNTK V2 PrimitiveOps, but cannot easily be realized in Dynamite since they
-require temporary memory. For example, Softmax requires a temporary buffer, and Dropout requires to store the random mask.
-Dynamite implements these operations on a higher level by explicit calls to other primitives
-(e.g. LogSoftmax(x) = x - ReduceLogSum(x))
-
-TODO: Dropout(x) = x * (BernoulliRandomLike(x, mean=p) * 1/(1-prob))
-TODO: We critically need a way to express Hardmax. Is it ArgMax>>OneHot?
-
-not supported: primitives that are specific to static graphs
-------------------------------------------------------------
-
-Ops:
-  Combine, Block, Assign,
-
-These are specific to static graphs, and therefore do not apply to Dynamite.
-As a consequence, all Dynamite operations have only one output. Code leverages that for now.
-TODO: Is there value in having primitives with >1 output? E.g. an LSTM node?
-
-Note: Block may be supported in the future, to inline static graphs into the dynamic graph.
-This would allow to move some overhead for standard structures (e.g. GRU) from the user-side
-code to Clone(), where we can optimize.
-
-TODO: Maybe Block already works (but inefficiently); to be tested.
-
-unclassified so far
--------------------
-
-Ops:
-  RandomSample, RandomSampleInclusionFrequency,
-  ROIPooling,   // need to find out how it works precisely--is it just like pooling?
-  LambdaRank,
-  NDCG,
-  EditDistanceError,
-  LabelsToGraph,
-  ForwardBackward,
-  CosDistanceWithNegativeSamples,
-  OneHot,  // find out whether this is valuable, e.g. for Hardmax
-
-TODO: implement these V1 nodes somehow via TensorView
- - Convolution, Pooling, Unpooling
- - RandomDistribution  // for dropout
- - BatchNormalization  // for MT
- - OptimizedRNNStack   // for MT
-
-TODO:
- - figure out Hardmax. Can we have a OneHot-like op in TensorView?
-*/
+// The functions for automatically-batched evaluation of dynamic graphs (forward and backward) are contained here.
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -409,6 +38,446 @@ using namespace std;
 
 namespace CNTK
 {
+    // Auto-batching merges operations with matching operations for saving GPU launches and boosting GPU occupancy.
+    // Example: We have a batch of 2, and for each batch item, we compute c = a + b:
+    // 
+    //   c1 = a1 + b1
+    //   c2 = a2 + b2
+    // 
+    // Assuming matching dimensions this is batched as
+    // 
+    //   c1_c2 = [a1, a2] + [b1, b2]
+    //   c1 = c1_c2[0]
+    //   c2 = c1_c2[1]
+    // 
+    // where an and bn, respectively, are batched along a new batch dimension. Alternatively, they could be batched like this:
+    // 
+    //   c1_c2 = [a1  + [b1
+    //            a2]    b2]
+    //   c1 = c1_c2[0:dim]
+    //   c2 = c1_c2[dim:2*dim]
+    // 
+    // We call the first "batching" and the second "stacking."
+    // a and b are the "args" of the + "op", and a1 and a2 are (arg batch) items of the first arg of the (batched) op.
+    // 
+    // The batching/stacking operation involves a memory copy to collate all arg batch items into a memory-consecutive
+    // dense tensor. (This will generate a "gather" op under the hood, and the back-prop is handled by a "scatter" op.)
+    // As an optimization, the gather op is skipped if all items are already consecutive in memory.
+    // This is often the case when they themselves are the result of a batched computation.
+    // 
+    // The concatenation axis is always last (slowest-changing) axis of the batched data; either a new one (batching) or the last one (stacking).
+    // 
+    // For now, we use batching and not stacking, since the Index proxy only stores an index and not a range.
+    // I.e. all args must have identical shapes including the last axis. To support stacking along the last axis,
+    // we'd need to store a range. This will allow mismatching last dimensions (e.g. stacking vectors of different
+    // dimensions), but not all primitive operations can handle such changed dimensions.
+    // One can also imagine more elaborate stacking in different dimensions, and even in multiple dimensions
+    // (like current CNTK MBLayout).
+    // 
+    // If all args to be batched are identical (all items are the same object), then, if possible, the item
+    // is not copied, but instead virtually duplicated by means of broadcasting. E.g. if "b1 is b2" (in Python parlance),
+    // then we can avoid one copy operation and write:
+    // 
+    //   c1_c2 = [a1, a2] + b1
+    // 
+    // where b1 will automatically be broadcast into the second dimension by the "+" operation.
+    // This happens, for example, when adding a bias to each step of a sequence.
+    // This optimization can only be done for operators that support broadcasting.
+    // 
+    // If all args have this property, then the operation is computed unbatched but only once, and the result is shared:
+    // 
+    //   c1_c2 = a1 + b1
+    //   c1 = c2 = c1_c2
+    // 
+    // When comparing dimensions, trailing singleton dimensions can be ignored if possible.
+    // This is not implemented presently, since it makes the comparison operation more complex.
+    // 
+    // The batching operation happens after output and Parameter shapes have been fully determined, as that
+    // happens during graph building, before the computation kicks in. The already determined
+    // shapes can directly drive reduction and reshape operations.
+    // 
+    // The following will go through every single operation and specify how it is batched.
+    // This is designed in a way that even multiple batching, with multiple added batch axes, will behave correctly.
+    // TODO: This is a TODO list for now with intent to be implemented this way.
+    // 
+    // TODO: Needed redesign:
+    //  - Lazy index must contain a range. So it cannot be a pair<>... which is better anyway.
+    //  - Lazy index must contain an optional built-in reshape.
+    //    This may be possible without actually storing the shape (which would be a malloc()),
+    //    since the target dimension is already known when we have access to the unbatched result.
+    //    We should add NDArrayView::SliceViewAsShape(), and always use that.
+    // 
+    // general condition
+    // -----------------
+    // 
+    // This condition applies to all operations, and will be modified with additional op-specific conditions.
+    // There is only one condition that is not an AND with these; which is a relaxation of shape match for Reshape().
+    // 
+    // Conditions for batching:
+    //   All arg arguments must completely match in dimensions. The key for comparison is the full shape.
+    // 
+    // Conditions for stacking:
+    //   All args must match except for their last dimension. The key for comparison is the shape less the last dimension.
+    //   Reduction dimensions may not reduce along the last dimension (otherwise fall back to batching).
+    //
+    // The op-specific conditions are specified in the following initializer.
+    // 
+    // TODO: implement these V1 nodes somehow via TensorView
+    //  - Convolution, Pooling, Unpooling
+    //  - RandomDistribution  // for dropout
+    //  - BatchNormalization  // for MT
+    //  - OptimizedRNNStack   // for MT
+    // 
+    // TODO:
+    //  - figure out Hardmax. Can we have a OneHot-like op in TensorView?
+
+    enum class OpSpecificConditionKind  :  size_t // the meanings of these are specified below
+    {
+        UnaryElementWise, Reducing, NoOp, Reshape, BinaryElementWise, TernaryElementWise, Pooling,
+        Slice, Splice, Transpose,
+        MatrixProduct, Convolution,
+        Barrier, BatchNormalization, OptimizedRNNStack, RandomDistribution,
+        NotSupportedDynamicAxis, NotSupportedTempMem, NotSupportedStaticGraph, ToDo, Undefined
+    };
+    static map<OpSpecificConditionKind, vector<PrimitiveOpType>> opSpecificConditionInitializer
+    {
+        // unary element-wise TensorView operations; reduction TensorView operations
+        // -------------------------------------------------------------------------
+        // 
+        // Ops (unary element-wise):
+        { OpSpecificConditionKind::UnaryElementWise, {
+            PrimitiveOpType::Negate, PrimitiveOpType::Sigmoid, PrimitiveOpType::Tanh,
+            PrimitiveOpType::ReLU, PrimitiveOpType::Exp, PrimitiveOpType::Log, PrimitiveOpType::Sqrt,
+            PrimitiveOpType::Floor, PrimitiveOpType::Abs, PrimitiveOpType::Reciprocal,
+            PrimitiveOpType::LogPlus, PrimitiveOpType::Sin, PrimitiveOpType::Cos, PrimitiveOpType::ELU,
+            PrimitiveOpType::StableSigmoid
+        }},
+        // 
+        // Ops (reduction):
+        { OpSpecificConditionKind::Reducing, {
+            PrimitiveOpType::SumAll, PrimitiveOpType::ReduceElements /*(=ReduceSum, ReduceLogSum, etc.)*/
+        }},
+        // 
+        // Conditions for batching:
+        //   All arg arguments must completely match in dimensions. The key for comparison is the full shape.
+        // 
+        // Conditions for stacking:
+        //   All args must match except for their last dimension. The key for comparison is the shape less the last dimension.
+        //   Reduction dimensions may not reduce along the last dimension (otherwise fall back to batching).
+        // 
+        // If all args are the same object, the op is executed only once, and the result is shared across the batch.
+        // 
+        // The same code works for both element-wise and reduction ops, as follows:
+        //  - the output shape for the unbatched operations is known (and they are all identical across the batch)
+        //  - the batched output shape is equal to the unbatched one plus the batch axis (unless we are stacking)
+        //  - hence, reductions will be done as expected by TensorView.
+        // 
+        // The forward and backward code for reductions does not consider the axis properties, but instead relies
+        // on the already determined output shape. This way it works after batching (whereas if it were to consult
+        // the axis and found AllStaticAxes, it would reduce wrongly).
+        // TODO: check all compute/backward code that it does not check/determines the shapes (but possibly checks them
+        // where it does not conflict with batching).
+        // 
+        // No-ops
+        // ------
+        // 
+        { OpSpecificConditionKind::NoOp, {
+            /// PrimitiveOpType::NoOp, // NoOp currently used for Barrier
+            PrimitiveOpType::Pass, PrimitiveOpType::StopGradient
+        }},
+        // 
+        // No-ops are see-through in the code.
+        // ... TODO: Detail here what that means.
+        // 
+        // Reshape()
+        // ---------
+        // 
+        { OpSpecificConditionKind::Reshape, {
+            PrimitiveOpType::Reshape
+        }},
+        // 
+        // Conditions:
+        //   All input items must be consecutive in memory.
+        //   All output shapes must match.
+        //   (The input shapes do not need to match. It is already guaranteed that they are all reshapable into the same output shape.)
+        // 
+        // If all items are already consecutive in memory, then we just slice-view and reshape it, and generate the individual lazy slices into that.
+        // (TODO: check that gather does not fail if input shapes do not fullt match.)
+        // This way the reshaped outputs will still be recognizable as consecutive by the next op.
+        // If they are not consecutive, then don't gather them, but instead reshape them individually (i.e. don't consider them batchable).
+        // This is done because reshaping does not involve the GPU, only meta information, and since they are not consecutive,
+        // reshaping them individually will not prevent a consecutive set from being recognized.
+        // 
+        // TODO: Can this be merged with No-ops? Can it be see-through?
+        // 
+        // Binary/ternary element-wise ops
+        // -------------------------------
+        // 
+        // Ops (binary):
+        { OpSpecificConditionKind::BinaryElementWise, {
+            PrimitiveOpType::Plus, PrimitiveOpType::Minus, PrimitiveOpType::ElementTimes, PrimitiveOpType::Pow,
+            PrimitiveOpType::Equal, PrimitiveOpType::NotEqual, PrimitiveOpType::Less,
+            PrimitiveOpType::LessEqual, PrimitiveOpType::Greater, PrimitiveOpType::GreaterEqual
+        }},
+        // 
+        // Ops (ternary):
+        { OpSpecificConditionKind::TernaryElementWise, {
+            PrimitiveOpType::Clip, PrimitiveOpType::Select
+        }},
+        // 
+        // Conditions:
+        //   Same conditions as for unary element-wise ops must hold for all inputs.
+        // 
+        // When batching, all inputs must be padded with singleton dimensions to have the same
+        // rank, so that the batching/stacking dimension is at a matching position.
+        // 
+        // Matrix products
+        // ---------------
+        // 
+        { OpSpecificConditionKind::MatrixProduct, {
+            PrimitiveOpType::Times, PrimitiveOpType::TransposeTimes
+        }},
+        // 
+        // Conditions (batching):
+        //   The first input (the matrix) must be the same for all items.
+        //   The second one has the same conditions as for unary element-wise ops.
+        // 
+        // Conditions (stacking):
+        //   First input (matrix) like batching.
+        //   Second one must match in all but the last dimension.
+        // 
+        // When batching, rank parameters that count from the right (mapRank?--TODO: track it down) must be
+        // adjusted or resolved into absolute ones (that counts from the left).
+        // 
+        // TODO: We should investigate strided SGEMM. Then we can batch everything.
+        // 
+        // Convolution/pooling
+        // -------------------
+        // 
+        // Ops (binary):
+        { OpSpecificConditionKind::Convolution, {
+            PrimitiveOpType::Convolution
+            // PrimitiveOpType::Deconvolution (TODO: what's the name??)
+        }},
+        // 
+        // Ops (unary):
+        { OpSpecificConditionKind::Pooling, {
+            PrimitiveOpType::Pooling, PrimitiveOpType::Unpooling
+        }},
+        //
+        // Conditions (binary):
+        //   Same as for Matrix product.
+        // 
+        // Conditions (unary):
+        //   Same as for unary element-wise ops.
+        // 
+        // This requires additional TensorView operation. Besides that, it can share code with matrix and unary.
+        // The batch dimension just goes into the N dimension as usual.
+        // Global pooling cannot be parameterized to exclude the batching/stacking axis.
+        // So instead, Dynamite does not use the global flag (engine must throw an error); instead, it reshapes the value to a vector first.
+        // TODO: double check what global pooling does. It goes to a scalar, right?
+        // TODO: Are there additional arguments in the dict that are relative to the end? mapRank? That must be resolved first, or updated when batching.
+        // 
+        // TODO: How to hold the auto-tune state? Cache it indexed by shape except batch dim? Can be problematic for truly dynamic image stuff --check with Cha
+        // 
+        // Slice()
+        // -------
+        // 
+        { OpSpecificConditionKind::Slice, {
+            PrimitiveOpType::Slice
+        }},
+        // 
+        // Conditions (batching):
+        //   All dimensions must match.
+        // 
+        // Conditions (stacking):
+        //   All except the last dimensions must match.
+        //   Must not slice along the last dimension.
+        //   Must actually slice (and not be a no-op). TODO: Should we see-through no-op slice ops?
+        // 
+        // Unlike Reshape(), Slice() currently always involves a copy (since CNTK does not generally support
+        // strided views at present). Hence, an optimization like for Reshape() does not apply.
+        // This makes Slice() similar to a unary op, with the exception that Slice() still uses
+        // additional arguments from the dictionary. These remain valid also for the batched/stacked op.
+        // 
+        // Splice()
+        // --------
+        // 
+        { OpSpecificConditionKind::Splice, {
+            PrimitiveOpType::Splice
+        }},
+        // 
+        // Conditions (batching)):
+        //   WRONG
+        //   All inputs must have matching shapes, respectively (this is like an N-nary elementwise op).
+        // 
+        // Conditions (stacking):
+        //   WRONG
+        //   Must not splice along stacking dimension.
+        //   Stacking dimension must have matching shapes across items.
+        // 
+        // TransposeAxes()
+        // ---------------
+        // 
+        { OpSpecificConditionKind::Transpose, {
+            PrimitiveOpType::TransposeAxes
+        }},
+        // 
+        // Conditions (batching)):
+        //   All inputs must have matching shapes.
+        // 
+        // Conditions (stacking):
+        //   All inputs must have matching shapes except for last axis.
+        //   Must not transpose in stacking dimension.
+        // 
+        // This is like a unary element-wise op, except that the additional attributes dictionary
+        // will be consulted for the axes to swap. The conditions guaranteed that the arguments
+        // remain valid after batching/stacking.
+        // 
+        // Barrier()
+        // ---------
+        // 
+        { OpSpecificConditionKind::Barrier, {
+            PrimitiveOpType::BarrierOp
+        }},
+        //
+        // Condition:
+        //   true
+        // 
+        // A barrier means that all other ops available for batching get executed first, as long as there
+        // is a barrier pending.
+        // 
+        // BatchNormalization()
+        // --------------------
+        // 
+        { OpSpecificConditionKind::BatchNormalization, {
+            PrimitiveOpType::BatchNormalization
+        }},
+        // 
+        // Condition (batching/stacking):
+        //   A unique op identifier must match. (Dimensions are then required to match fully as well, otherwise it's an error.)
+        // 
+        // The items that belong together are identifed by a unique identifier that is owned by the batch-normalization Layer.
+        // Each new layer gets a new id.
+        //   
+        // Unlike other ops, this operation is *required* to have all batch items available, similar
+        // to Barrier(). If for some reason an operation with the same id gets broken into multiple
+        // invocations within the same Batch::Map() call, an error is thrown (i.e. the full unique
+        // id is (user id, Batch::Map invocation id)).
+        // Note: This makes the threaded parallelization of batch ops mandatory.
+        // 
+        // TODO: We may want to support BN along the last axis, to reduce overhead.
+        // 
+        // OptimizedRNNStack()
+        // -------------------
+        // 
+        // Op:
+        { OpSpecificConditionKind::OptimizedRNNStack, {
+            PrimitiveOpType::OptimizedRNNStack
+        }},
+        // 
+        // Condition:
+        //   Dimensions must match except for the last dimension (=the time axis).
+        // 
+        // Batching is done according to NVidia's data format.
+        // 
+        // RandomDistribution()
+        // --------------------
+        // 
+        { OpSpecificConditionKind::RandomDistribution,{
+            PrimitiveOpType::RandomDistribution // covers also the -Like version
+        }},
+        //
+        // Condition (stacking):
+        //   Initially: general.
+        //   Future: true.
+        //
+        // This op is either nullary or unary (-Like() version).
+        // 
+        // FutureL This can always be stacked, independent of shapes, because all elements are independent.
+        // The stacked operation must be followed by a reshape. TODO: That's why we won't stack all, since reshapes block re-batching.
+        //
+        // Each invocation gives rise to a new set of random numbers. This is used to implement Dropout.
+        // This operation returns a Constant upon each invocation.
+        // 
+        // To share random numbers, e.g. across all time steps of a sequence for Dropout, users must manually compute it once.
+        // Random numbers cannot be shared across batch items unless users explicitly compute them outside of Batch::Map().
+        // The random numbers are lazily computed upon first Value() call, to allow for batching.
+        // 
+        // TODO: Does this need to hold on to a RNG state? How to do that?
+        // 
+        // not supported: primitives that involve dynamic axes
+        // ---------------------------------------------------
+        // 
+        { OpSpecificConditionKind::NotSupportedDynamicAxis, {
+            PrimitiveOpType::Gather, PrimitiveOpType::Where, PrimitiveOpType::PackedIndex, PrimitiveOpType::GatherPacked, PrimitiveOpType::ScatterPacked,
+            PrimitiveOpType::PastValue, PrimitiveOpType::FutureValue,
+            PrimitiveOpType::ToSequence, PrimitiveOpType::ToSequenceLike, PrimitiveOpType::UnpackSequence, PrimitiveOpType::ReconcileDynamicAxis
+        }},
+        // 
+        // Conditions for batching/stacking:
+        //   false. Operation not supported via the Value() interface.
+        // 
+        // These operations are specifically meant for objects with dynamic axes.
+        // Dynamite Variables cannot have dynamic axes. Dynamite does not support
+        // these ops, or implements them with explicit loop unrolling.
+        // 
+        // not supported: primitives that require temporary memory: not supported as primitives
+        // -------------------------------------------------------
+        // 
+        { OpSpecificConditionKind::NotSupportedTempMem, {
+            PrimitiveOpType::Softmax, PrimitiveOpType::LogSoftmax, PrimitiveOpType::Hardmax,
+            PrimitiveOpType::Dropout,
+            PrimitiveOpType::CrossEntropyWithSoftmax, PrimitiveOpType::ClassificationError, PrimitiveOpType::Logistic,
+            PrimitiveOpType::SquaredError, PrimitiveOpType::CosDistance
+        }},
+        // 
+        // Conditions for batching/stacking:
+        //   false. Operation not supported via the Value() interface.
+        // 
+        // These operations exist as CNTK V2 PrimitiveOps, but cannot easily be realized in Dynamite since they
+        // require temporary memory. For example, Softmax requires a temporary buffer, and Dropout requires to store the random mask.
+        // Dynamite implements these operations on a higher level by explicit calls to other primitives
+        // (e.g. LogSoftmax(x) = x - ReduceLogSum(x))
+        // 
+        // TODO: Dropout(x) = x * (BernoulliRandomLike(x, mean=p) * 1/(1-prob))
+        // TODO: We critically need a way to express Hardmax. Is it ArgMax>>OneHot?
+        // 
+        // not supported: primitives that are specific to static graphs
+        // ------------------------------------------------------------
+        // 
+        // Ops:
+        { OpSpecificConditionKind::NotSupportedStaticGraph, {
+            PrimitiveOpType::Combine, PrimitiveOpType::Block, PrimitiveOpType::Assign
+        }},
+        // 
+        // These are specific to static graphs, and therefore do not apply to Dynamite.
+        // As a consequence, all Dynamite operations have only one output. Code leverages that for now.
+        // TODO: Is there value in having primitives with >1 output? E.g. an LSTM node?
+        // 
+        // Note: Block may be supported in the future, to inline static graphs into the dynamic graph.
+        // This would allow to move some overhead for standard structures (e.g. GRU) from the user-side
+        // code to Clone(), where we can optimize.
+        // 
+        // TODO: Maybe Block already works (but inefficiently); to be tested.
+        // 
+        // unclassified so far
+        // -------------------
+        // 
+        { OpSpecificConditionKind::ToDo, {
+            PrimitiveOpType::ROIPooling,   // need to find out how it works precisely--is it just like pooling?
+            PrimitiveOpType::LambdaRank,
+            PrimitiveOpType::NDCG,
+            PrimitiveOpType::EditDistanceError,
+            PrimitiveOpType::LabelsToGraph,
+            PrimitiveOpType::ForwardBackward,
+            PrimitiveOpType::CosDistanceWithNegativeSamples,
+            PrimitiveOpType::OneHot,  // find out whether this is valuable, e.g. for Hardmax
+            PrimitiveOpType::RandomSample,
+            PrimitiveOpType::RandomSampleInclusionFrequency
+        }}
+    };
+
     // how graphs work in CNTK V2:
     //  - nodes := PrimitiveFunctions (incl. BlockFunction)
     //  - edges := Variables
@@ -437,6 +506,32 @@ namespace CNTK
 // ===========================================================================
 // helper classes
 // ===========================================================================
+
+// ---------------------------------------------------------------------------
+// OpSpecificConditionKindTable -- singleton lookup table for the OSC codes
+// ---------------------------------------------------------------------------
+
+static const class OpSpecificConditionKindTable
+{
+    vector<OpSpecificConditionKind> oscTable; // [PrimitiveOpType]
+public:
+    OpSpecificConditionKindTable(const map<OpSpecificConditionKind, vector<PrimitiveOpType>>& init = opSpecificConditionInitializer) :
+        oscTable((size_t)PrimitiveOpType::UnknownOP, OpSpecificConditionKind::Undefined)
+    {
+        // transfer the initializer table into a lookup table
+        // Check for dups and missing entries.
+        for (let& kv : init)
+            for (let& op : kv.second)
+                if (oscTable[(size_t)op] != OpSpecificConditionKind::Undefined)
+                    LogicError("OpSpecificConditionKindTable: Duplicate entry for op %d", (int)op);
+                else
+                    oscTable[(size_t)op] = kv.first;
+        for (size_t op = 0; op < oscTable.size(); op++)
+            if (oscTable[op] == OpSpecificConditionKind::Undefined)
+                LogicError("OpSpecificConditionKindTable: Must be updated to cover op %d", (int)op);
+    }
+    OpSpecificConditionKind operator[](PrimitiveOpType op) const { return oscTable[(size_t)op]; }
+} g_oscTable;
 
 // ---------------------------------------------------------------------------
 // NDArrayViewArena -- helper class that implements efficient arena allocation for NDArrayView objects
