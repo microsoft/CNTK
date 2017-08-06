@@ -18,6 +18,11 @@ using namespace std;
 
 namespace CNTK
 {
+    // Note: To support auto-batching, this function must only consider attributes when presence of an additional
+    // batch axis makes no difference. That is, for example, not the case for ReduceElements over AllStaticAxes().
+    // This is addressed as:
+    //  - All relative axis arguments must have been normalized already in InferOutputs. Can't call NormalizeStaticAxis() here.
+    //  - All reduction axes are already completely specified by the output shape. Can't look at the axis parameter.
     /*static*/ NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp,  // execute this op
                      const vector<NDArrayViewPtr>& args, const Dictionary& attributes, // on these inputs --TODO: move attributes up
                      const NDShape& outputShape, NDArrayViewPtr&& out, // into this output (if null then create a new one)
@@ -50,7 +55,7 @@ namespace CNTK
                     auto axis       = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
                     auto beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
                     auto endIndex   = attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
-                    NormalizeStaticAxis(axis, args[0]->Shape());
+                    //NormalizeStaticAxis(axis, args[0]->Shape()); // axis must already have been normalized in InferOutputs()
                     auto extent = out->Shape().Dimensions();
                     auto startOffset = vector<size_t>(extent.size(), 0);
                     auto axisIndex = axis.StaticAxisIndex();
@@ -87,9 +92,17 @@ namespace CNTK
         switch (primitiveOp)
         {
             // binary elementwise ops are done outside, we just set the opcode
-        case PrimitiveOpType::Plus:         op = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;                   break;
-        case PrimitiveOpType::Minus:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opDifference;            break;
-        case PrimitiveOpType::ElementTimes: op = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct;    break;
+        case PrimitiveOpType::Plus:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;                   break;
+        case PrimitiveOpType::Minus:         op = Microsoft::MSR::CNTK::ElementWiseOperator::opDifference;            break;
+        case PrimitiveOpType::ElementTimes:  op = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct;    break;
+        case PrimitiveOpType::LogPlus:       op = Microsoft::MSR::CNTK::ElementWiseOperator::opLogSum;                break; // this is LogAddExp()
+        case PrimitiveOpType::Pow:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opPow;                   break;
+        case PrimitiveOpType::Equal:         op = Microsoft::MSR::CNTK::ElementWiseOperator::opEqual;                 break;
+        case PrimitiveOpType::NotEqual:      op = Microsoft::MSR::CNTK::ElementWiseOperator::opNotEqual;              break;
+        case PrimitiveOpType::Less:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opLess;                  break;
+        case PrimitiveOpType::LessEqual:     op = Microsoft::MSR::CNTK::ElementWiseOperator::opLessEqual;             break;
+        case PrimitiveOpType::Greater:       op = Microsoft::MSR::CNTK::ElementWiseOperator::opGreater;               break;
+        case PrimitiveOpType::GreaterEqual:  op = Microsoft::MSR::CNTK::ElementWiseOperator::opGreaterEqual;          break;
             // unary elementwise ops as well are done outside, we just set the opcode
         case PrimitiveOpType::ReLU:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opLinearRectifier;       break;
         case PrimitiveOpType::Tanh:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opTanh;                  break;
@@ -108,7 +121,7 @@ namespace CNTK
             // reduction ops are also done outside, but set the reductionOp
         case PrimitiveOpType::ReduceElements:
             {
-                op = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
+                op = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; // note: reduction axes already fully specified via outputShape
                 const auto& reductionOpName = attributes[PrimitiveFunction::AttributeNameReductionOpName].Value<wstring>();
                 if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
                     reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
@@ -129,7 +142,7 @@ namespace CNTK
             break;
         case PrimitiveOpType::Splice:
             {
-                auto axis = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                let& axis = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
                 size_t maxInputRank = args[0]->Shape().Rank();
                 for (int i = 1; i < args.size(); i++)
                 {
@@ -137,7 +150,10 @@ namespace CNTK
                     if (maxInputRank < inputRank)
                         maxInputRank = inputRank;
                 }
-                NormalizeStaticAxis(axis, NDShape(maxInputRank));
+                //NormalizeStaticAxis(axis, NDShape(maxInputRank)); // already done in InferOutputs()
+                // BUGBUG: This can only splice along the last axis for now.
+                if (axis.StaticAxisIndex() != outputShape.Rank() - 1)
+                    LogicError("Variable '%S' Value(): Memoziation of splice along axis other than last is not implemented yet.", funcForErrMsg.AsString().c_str());
                 if (args.size() > 1)
                     NDArrayView::GatherBatch(args, axis.StaticAxisIndex(), out);
                 else // only one: do nothing or at best reshape if a new axis is added
@@ -151,32 +167,31 @@ namespace CNTK
             break;
             // the following N-nary operations should be easy, mostly a matter of writing tests
             // unary operations to be completed
-        case PrimitiveOpType::Pow:
-        case PrimitiveOpType::Softmax:
-        case PrimitiveOpType::Hardmax:
         case PrimitiveOpType::TransposeAxes:
-        case PrimitiveOpType::LogSoftmax:
-        case PrimitiveOpType::SumAll:
+            // This is not hard but different from the above ops, in that it requires manipulating the TensorShape.
+            // Basically we need to create a transposed view on the arg, and then do an opCopy to bring it into dense format again.
             LogicError("Variable '%S' Value(): Memoziation of unary operator %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
-            // binary operations to be completed
-        case PrimitiveOpType::Equal:
-        case PrimitiveOpType::NotEqual:
-        case PrimitiveOpType::Less:
-        case PrimitiveOpType::LessEqual:
-        case PrimitiveOpType::Greater:
-        case PrimitiveOpType::GreaterEqual:
-        case PrimitiveOpType::LogPlus:
-        case PrimitiveOpType::Logistic:
-        case PrimitiveOpType::CrossEntropyWithSoftmax:
-        case PrimitiveOpType::ClassificationError:
-        case PrimitiveOpType::SquaredError:
-        case PrimitiveOpType::Gather:
-                LogicError("Variable '%S' Value(): Memoziation of binary operator %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // ternary operations to be completed
+            // need to add the third arg, that's all
         case PrimitiveOpType::Clip:
         case PrimitiveOpType::Select:
             LogicError("Variable '%S' Value(): Memoziation of ternary operator %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            // the following operations are not TensorView, and may be implementable through relatively simple calls to Matrix
+        case PrimitiveOpType::BatchNormalization:
+        case PrimitiveOpType::OneHot:
+            LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            // the following operations are not TensorView, and hence should be routed through V1 ComputationNodes
+            // convolution family
+        case PrimitiveOpType::Convolution:  // TODO: route these through TensorView
+        case PrimitiveOpType::Pooling:
+        case PrimitiveOpType::Unpooling:
+        case PrimitiveOpType::ROIPooling:
+            // random family
+        case PrimitiveOpType::RandomSample:
+        case PrimitiveOpType::RandomSampleInclusionFrequency:
+            // --- ops below are those that do not apply to Dynamite and therefore are not supported for direct evaluation
             // dynamic-axis related operations are not supported as dynamic axes require Inputs and are therefore not applicable here
+        case PrimitiveOpType::Gather:
         case PrimitiveOpType::PackedIndex:
         case PrimitiveOpType::GatherPacked:
         case PrimitiveOpType::ScatterPacked:
@@ -193,22 +208,7 @@ namespace CNTK
         case PrimitiveOpType::Combine:  // TODO: should be trivial to support, just need a test
         case PrimitiveOpType::Block:    // TODO: recursively invoke, needs a test and investigation whether blocks are always singleton copies
         case PrimitiveOpType::Assign:
-            RuntimeError("Variable '%S' Value(): Memoziation of operation %S not applicable.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
-            // the following operations are not TensorView, and may be implementable through relatively simple calls to Matrix
-        case PrimitiveOpType::BatchNormalization:
-        case PrimitiveOpType::CosDistance:
-        case PrimitiveOpType::OneHot:
-            LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
-            // the following operations are not TensorView, and hence should be routed through V1 ComputationNodes
-            // convolution family
-        case PrimitiveOpType::Convolution:  // TODO: route these through TensorView
-        case PrimitiveOpType::Pooling:
-        case PrimitiveOpType::Unpooling:
-        case PrimitiveOpType::ROIPooling:
-            // random family
-        case PrimitiveOpType::Dropout:
-        case PrimitiveOpType::RandomSample:
-        case PrimitiveOpType::RandomSampleInclusionFrequency:
+            RuntimeError("Variable '%S' Value(): Memoziation of operation %S not applicable (applies only to static graphs).", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // special ops family
         case PrimitiveOpType::LambdaRank:
         case PrimitiveOpType::NDCG:
@@ -217,6 +217,17 @@ namespace CNTK
         case PrimitiveOpType::ForwardBackward:
         case PrimitiveOpType::CosDistanceWithNegativeSamples:
             LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+        case PrimitiveOpType::Softmax:
+        case PrimitiveOpType::LogSoftmax:
+        case PrimitiveOpType::Hardmax:
+        case PrimitiveOpType::Dropout:     // should generate as a mul with a random output
+        case PrimitiveOpType::CrossEntropyWithSoftmax:
+        case PrimitiveOpType::ClassificationError:
+        case PrimitiveOpType::Logistic:
+        case PrimitiveOpType::SquaredError:
+        case PrimitiveOpType::CosDistance: // should generate discretely
+        case PrimitiveOpType::SumAll:      // never generated by API
+            LogicError("Variable '%S' Value(): Memoziation of operation %S not supported on this level. This should be generated differently from the outer layer.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
         default:
             LogicError("Variable '%S' Value(): Memoziation of non-existent operation %S?", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
         }

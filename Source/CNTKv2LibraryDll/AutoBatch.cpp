@@ -149,13 +149,13 @@ namespace CNTK
             PrimitiveOpType::Negate, PrimitiveOpType::Sigmoid, PrimitiveOpType::Tanh,
             PrimitiveOpType::ReLU, PrimitiveOpType::Exp, PrimitiveOpType::Log, PrimitiveOpType::Sqrt,
             PrimitiveOpType::Floor, PrimitiveOpType::Abs, PrimitiveOpType::Reciprocal,
-            PrimitiveOpType::LogPlus, PrimitiveOpType::Sin, PrimitiveOpType::Cos, PrimitiveOpType::ELU,
+            PrimitiveOpType::Sin, PrimitiveOpType::Cos, PrimitiveOpType::ELU,
             PrimitiveOpType::StableSigmoid
         }},
         // 
         // Ops (reduction):
         { OpSpecificConditionKind::Reducing, {
-            PrimitiveOpType::SumAll, PrimitiveOpType::ReduceElements /*(=ReduceSum, ReduceLogSum, etc.)*/
+            PrimitiveOpType::ReduceElements /*(=ReduceSum, ReduceLogSum, etc.)*/
         }},
         // 
         // Conditions for batching:
@@ -215,7 +215,7 @@ namespace CNTK
         // 
         // Ops (binary):
         { OpSpecificConditionKind::BinaryElementWise, {
-            PrimitiveOpType::Plus, PrimitiveOpType::Minus, PrimitiveOpType::ElementTimes, PrimitiveOpType::Pow,
+            PrimitiveOpType::Plus, PrimitiveOpType::Minus, PrimitiveOpType::ElementTimes, PrimitiveOpType::LogPlus, PrimitiveOpType::Pow,
             PrimitiveOpType::Equal, PrimitiveOpType::NotEqual, PrimitiveOpType::Less,
             PrimitiveOpType::LessEqual, PrimitiveOpType::Greater, PrimitiveOpType::GreaterEqual
         }},
@@ -408,7 +408,8 @@ namespace CNTK
         { OpSpecificConditionKind::NotSupportedDynamicAxis, {
             PrimitiveOpType::Gather, PrimitiveOpType::Where, PrimitiveOpType::PackedIndex, PrimitiveOpType::GatherPacked, PrimitiveOpType::ScatterPacked,
             PrimitiveOpType::PastValue, PrimitiveOpType::FutureValue,
-            PrimitiveOpType::ToSequence, PrimitiveOpType::ToSequenceLike, PrimitiveOpType::UnpackSequence, PrimitiveOpType::ReconcileDynamicAxis
+            PrimitiveOpType::ToSequence, PrimitiveOpType::ToSequenceLike, PrimitiveOpType::UnpackSequence, PrimitiveOpType::ReconcileDynamicAxis,
+            PrimitiveOpType::SumAll
         }},
         // 
         // These operations are specifically meant for objects with dynamic axes.
