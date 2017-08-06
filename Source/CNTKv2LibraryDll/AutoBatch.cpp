@@ -254,13 +254,9 @@ namespace CNTK
         // Convolution/pooling
         // -------------------
         // 
-        // Ops (binary):
         { OpSpecificConditionKind::Convolution, {
-            PrimitiveOpType::Convolution
-            // PrimitiveOpType::Deconvolution (TODO: what's the name??)
+            PrimitiveOpType::Convolution // includes ConvolutionTranspose()
         }},
-        // 
-        // Ops (unary):
         { OpSpecificConditionKind::Pooling, {
             PrimitiveOpType::Pooling, PrimitiveOpType::Unpooling
         }},
@@ -415,9 +411,6 @@ namespace CNTK
             PrimitiveOpType::ToSequence, PrimitiveOpType::ToSequenceLike, PrimitiveOpType::UnpackSequence, PrimitiveOpType::ReconcileDynamicAxis
         }},
         // 
-        // Conditions for batching/stacking:
-        //   false. Operation not supported via the Value() interface.
-        // 
         // These operations are specifically meant for objects with dynamic axes.
         // Dynamite Variables cannot have dynamic axes. Dynamite does not support
         // these ops, or implements them with explicit loop unrolling.
@@ -432,9 +425,6 @@ namespace CNTK
             PrimitiveOpType::SquaredError, PrimitiveOpType::CosDistance
         }},
         // 
-        // Conditions for batching/stacking:
-        //   false. Operation not supported via the Value() interface.
-        // 
         // These operations exist as CNTK V2 PrimitiveOps, but cannot easily be realized in Dynamite since they
         // require temporary memory. For example, Softmax requires a temporary buffer, and Dropout requires to store the random mask.
         // Dynamite implements these operations on a higher level by explicit calls to other primitives
@@ -446,7 +436,6 @@ namespace CNTK
         // not supported: primitives that are specific to static graphs
         // ------------------------------------------------------------
         // 
-        // Ops:
         { OpSpecificConditionKind::NotSupportedStaticGraph, {
             PrimitiveOpType::Combine, PrimitiveOpType::Block, PrimitiveOpType::Assign
         }},
@@ -1110,18 +1099,42 @@ class Variable::AutoBatch
         auto& f0 = *ops.front();
         let op = f0.m_op;
         let batchSize = ops.size();
+        let opClass = g_oscTable[op]; // operation-specific auto-batching class
+        // fail on unsupported classes
+        switch (opClass)
+        {
+        case OpSpecificConditionKind::Convolution:
+            LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of Convolution() not implemented yet.");
+        case OpSpecificConditionKind::Pooling:
+            LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of Pooling ops not implemented yet.");
+        case OpSpecificConditionKind::BatchNormalization:
+            LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of BatchNormalization() not implemented yet.");
+        case OpSpecificConditionKind::OptimizedRNNStack:
+            LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of OptimizedRNNStack() not implemented yet.");
+        case OpSpecificConditionKind::RandomDistribution:
+            LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of RandomDistribution ops not implemented yet.");
+        case OpSpecificConditionKind::NotSupportedDynamicAxis:
+            LogicError("ExecuteBatchedOpAndUpdateSchedule: Operations involving dynamic axes are not allowed in Dynamite (%S).", PrimitiveOpTypeName(op).c_str());
+        case OpSpecificConditionKind::NotSupportedStaticGraph:
+            LogicError("ExecuteBatchedOpAndUpdateSchedule: Operations specific for static graphs are not allowed in Dynamite (%S).", PrimitiveOpTypeName(op).c_str());
+        case OpSpecificConditionKind::ToDo:
+            LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of this op not yet implemented (%S).", PrimitiveOpTypeName(op).c_str());
+        case OpSpecificConditionKind::NotSupportedTempMem:
+            LogicError("ExecuteBatchedOpAndUpdateSchedule: Primitive operations involving temp memory not supported in Dynamite. This op should have been implemented in a different way (%S).", PrimitiveOpTypeName(op).c_str());
+        case OpSpecificConditionKind::Undefined:
+            LogicError("ExecuteBatchedOpAndUpdateSchedule: Unexpected Undefined batching kind? (%S)", PrimitiveOpTypeName(op).c_str());
+        }
         let isFree = IsViewOp(op);
         if (!isFree)
             m_numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
         // perform the op
-        let isTimes = (op == PrimitiveOpType::Times || op == PrimitiveOpType::TransposeTimes); // is special-cased
+        let isTimes = opClass == OpSpecificConditionKind::MatrixProduct; // is special-cased
 #ifdef NO_BATCHED_FORWARD
         auto doNaively = true;
 #else
         let doNaively =
             isFree ||
-            //(isTimes && f0.m_inputs[1].m_dataFields->m_value && f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
             op == PrimitiveOpType::Splice ||
             batchSize == 1;
 #endif
