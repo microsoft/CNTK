@@ -1138,6 +1138,7 @@ class Variable::AutoBatch
         let doNaively =
             isFree ||
             op == PrimitiveOpType::Splice ||
+            op == PrimitiveOpType::Slice || // TODO: broken for Index()
             batchSize == 1;
 #endif
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
