@@ -85,7 +85,7 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
     {
         let z = model(feature);
         let ce = Dynamite::CrossEntropyWithSoftmax(z, label);
-        LOG(ce);
+        //LOG(ce);
         return ce;
     };
     // create a batch mapper (which will eventually allow suspension)
@@ -96,9 +96,9 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
     {
         batchCriterion(losses, features, labels);         // batch-compute the criterion
         let collatedLosses = Splice(losses, Axis(0));     // collate all seq losses
-        LOG(collatedLosses);
+        //LOG(collatedLosses);
         let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
-        LOG(mbLoss);
+        //LOG(mbLoss);
         losses.clear();
         return mbLoss;
     };

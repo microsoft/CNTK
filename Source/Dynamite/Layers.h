@@ -255,7 +255,7 @@ static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
     auto b = Parameter({ outputDim }, 0.0f, device, L"b");
     return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
     {
-        return Sigmoid/*ReLU*/(Times(W, input) + b + Times(R, prevOutput), L"RNNStep.h");
+        return /*Sigmoid*/ReLU(Times(W, input) + b + Times(R, prevOutput), L"RNNStep.h");
     });
 }
 
