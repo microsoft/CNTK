@@ -1764,6 +1764,7 @@ public:
         //            = (concat_i outGrad_i) @ (concat_i right_i)^T
         // where concat_i means to concatenate matrices along their trailing (batch) axis.
         // It has already been verified that all i have the same rank and dimensions except for a single reduction dimension.
+        // ^^ This may be bogus.
         auto& timesOutGrads        = BorrowBuffer(m_inputValuesBuffer,     numBatchItems);
         auto& timesDataRightInputs = BorrowBuffer(m_outputGradientsBuffer, numBatchItems);
         let& f0 = *consumers.front().first;

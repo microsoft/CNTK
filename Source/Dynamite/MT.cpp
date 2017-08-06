@@ -269,7 +269,8 @@ void Train()
     //  - numer should be /32
     //  - denom should be /sqrt(32)
     let f = 1/sqrt(32.0)/*AdaGrad correction-correction*/;
-    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*f, 0.0001*f, 0.0001*f, 0.0001*f, 0.00005*f, 0.00005*f, 0.00005*f, 0.000025*f, 0.000025*f, 0.000025*f, 0.00001*f }, epochSize), MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000));
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*f, 0.00005*f, 0.000025*f, 0.000025*f, 0.000025*f, 0.00001*f }, epochSize),
+                               MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000));
     unordered_map<Parameter, NDArrayViewPtr> gradients;
     for (let& p : parameters)
         gradients[p] = nullptr;
