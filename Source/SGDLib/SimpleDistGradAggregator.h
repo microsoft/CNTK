@@ -363,7 +363,7 @@ private:
                 currentGradientIndex = i;
             }
             // If currentGradientIndex == -2, it means no gradient index from m_gradientIndexToAggregate
-            if (currentGradientIndex == -2)
+            if (currentGradientIndex != -2)
             {
                 //for last copy
                 if (allReduceIndex != 0)
@@ -390,7 +390,7 @@ private:
                 allReduceRequests.push_back(MPI_Request());
                 reductionBuffer = (i == -1)? m_aggregationBuffer->Data() : gradients[i]->Data();
                 // CPU
-                if (m_mpi->UseGpuGdr() ==0)
+                if (m_mpi->UseGpuGdr() == 0)
                 {
                     m_mpi->Iallreduce(MPI_IN_PLACE, reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(),
                         MPIWrapper::GetDataType(reductionBuffer), MPI_SUM, &allReduceRequests.back()) || MpiFail("MPI_Iallreduce");
