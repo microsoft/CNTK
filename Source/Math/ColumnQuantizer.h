@@ -132,6 +132,7 @@ public:
                 // quantize
                 size_t ij = ColMIDX(i, colIdx, M);
                 ElemType val = inMat[ij] + inResidual[ij];
+
                 // 'template' keyword to compile with GCC
                 QWordVal qval = valQ.template Quantize<ZeroThresholdFor1Bit>(val);
 
