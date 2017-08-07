@@ -147,7 +147,7 @@ private:
     // have been swallowed.
     void PrintWarningNotification();
 
-    int64_t GetFileOffset() const { return m_fileReader->GetFileOffset(); }
+    int64_t GetFileOffset() const;
 
     void SkipToNextInput(size_t& bytesToRead);
 
@@ -176,7 +176,7 @@ private:
     bool TryReadRow(SequenceBuffer& sequence, size_t& bytesToRead);
 
     // Returns true if there's still data available.
-    bool inline CanRead() { return !m_fileReader->Empty(); }
+    bool inline CanRead();
 
     // Returns true if the trace level is greater or equal to 'Warning'
     bool inline ShouldWarn() { m_hadWarnings = true; return m_traceLevel >= Warning; }

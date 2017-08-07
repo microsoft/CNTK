@@ -5,7 +5,6 @@
 
 #include "stdafx.h"
 #define __STDC_FORMAT_MACROS
-#include <algorithm>
 #include <inttypes.h>
 #include <cfloat>
 #include "BufferedFileReader.h"
@@ -146,9 +145,7 @@ TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring&
 }
 
 template <class ElemType>
-TextParser<ElemType>::~TextParser()
-{
-}
+TextParser<ElemType>::~TextParser() = default;
 
 template <class ElemType>
 void TextParser<ElemType>::PrintWarningNotification()
@@ -173,7 +170,9 @@ void TextParser<ElemType>::Initialize()
     {
         m_file = std::make_shared<FileWrapper>(m_filename, L"rbS");
 
-        if (funicode(m_file->File()))
+        m_file->CheckIsOpenOrDie();
+
+        if (m_file->CheckUnicode())
         {
             // Retrying won't help here, the file is UTF-16 encoded.
             m_numRetries = 0;
@@ -199,7 +198,7 @@ void TextParser<ElemType>::Initialize()
 
         m_index = builder.Build();
 
-        m_fileReader = std::make_shared<BufferedFileReader>(BUFFER_SIZE + 1, *m_file);
+        m_fileReader = std::make_shared<BufferedFileReader>(BUFFER_SIZE, *m_file);
     });
 
     assert(m_index != nullptr);
@@ -267,9 +266,10 @@ ChunkPtr TextParser<ElemType>::GetChunk(ChunkIdType chunkId)
 
     attempt(m_numRetries, [this, &textChunk, &chunkDescriptor]()
     {
-        if (ferror(m_file->File()))
+        if (m_file->CheckError())
         {
-            m_file->OpenOrDie(m_filename, L"rbS");
+            m_file.reset(new FileWrapper(m_filename, L"rbS"));
+            m_file->CheckIsOpenOrDie();
         }
 
         LoadChunk(textChunk, chunkDescriptor);
@@ -307,8 +307,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
 {
     size_t fileOffset = sequenceDsc.OffsetInChunk() + chunkOffsetInFile;
 
-    m_file->SeekOrDie(fileOffset, SEEK_SET);
-    m_fileReader->Reset();
+    m_fileReader->SetFileOffset(fileOffset);
 
     size_t bytesToRead = sequenceDsc.SizeInBytes();
 
@@ -463,6 +462,7 @@ bool TextParser<ElemType>::TryReadRow(SequenceBuffer& sequence, size_t& bytesToR
     }
 
     size_t numSampleRead = 0;
+
     while (bytesToRead && CanRead())
     {
         char c = m_fileReader->Peek();
@@ -619,7 +619,7 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
 {
     char* scratchIndex = m_scratch.get();
 
-    while (bytesToRead && CanRead())
+    for (; bytesToRead && CanRead(); m_fileReader->Pop(), --bytesToRead)
     {
         unsigned char c = m_fileReader->Peek();
 
@@ -680,9 +680,6 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
             }
             return false;
         }
-
-        m_fileReader->Pop();
-        --bytesToRead;
     }
 
     if (ShouldWarn()) {
@@ -889,7 +886,7 @@ bool TextParser<ElemType>::TryReadSparseSample(std::vector<ElemType>& values, st
 template <class ElemType>
 void TextParser<ElemType>::SkipToNextInput(size_t& bytesToRead)
 {
-    while (bytesToRead && CanRead())
+    for (; bytesToRead && CanRead(); m_fileReader->Pop(), --bytesToRead)
     {
         char c = m_fileReader->Peek();
         // skip everything until we hit either an input marker or the end of row.
@@ -897,8 +894,6 @@ void TextParser<ElemType>::SkipToNextInput(size_t& bytesToRead)
         {
             return;
         }
-        m_fileReader->Pop();
-        --bytesToRead;
     }
 }
 
@@ -907,7 +902,7 @@ bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
 {
     value = 0;
     bool found = false;
-    while (bytesToRead && CanRead())
+    for (; bytesToRead && CanRead(); m_fileReader->Pop(), --bytesToRead)
     {
         char c = m_fileReader->Peek();
 
@@ -939,8 +934,6 @@ bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
             return false;
         }
 
-        m_fileReader->Pop();
-        --bytesToRead;
     }
 
     if (ShouldWarn())
@@ -979,7 +972,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
     double coefficient = .0, number = .0, divider = .0;
     bool negative = false;
 
-    while (bytesToRead && CanRead())
+    for (; bytesToRead && CanRead(); m_fileReader->Pop(), --bytesToRead)
     {
         char c = m_fileReader->Peek();
 
@@ -1154,9 +1147,6 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             return false;
         }
-
-        m_fileReader->Pop();
-        --bytesToRead;
     }
 
     // We've run out of input, see if we're in a valid state
@@ -1240,6 +1230,18 @@ template <class ElemType>
 void TextParser<ElemType>::SetCacheIndex(bool value)
 {
     m_cacheIndex = value;
+}
+
+template<class ElemType>
+inline bool TextParser<ElemType>::CanRead()
+{
+    return !m_fileReader->Empty();
+}
+
+template <class ElemType>
+int64_t TextParser<ElemType>::GetFileOffset() const
+{
+    return m_fileReader->GetFileOffset();
 }
 
 template <class ElemType>
