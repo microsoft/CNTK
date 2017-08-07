@@ -26,7 +26,6 @@ class ProposalLayer(UserFunction):
     '''
 
     def __init__(self, arg1, arg2, arg3, name='ProposalLayer', param_str=None):
-        super(ProposalLayer, self).__init__([arg1, arg2, arg3], name=name)
         self.param_str_ = param_str if param_str is not None else "'feat_stride': 16\n'scales':\n - 8 \n - 16 \n - 32"
 
         # parse the layer parameter string, which must be valid YAML
@@ -35,6 +34,10 @@ class ProposalLayer(UserFunction):
         anchor_scales = layer_params.get('scales', (8, 16, 32))
         self._anchors = generate_anchors(scales=np.array(anchor_scales))
         self._num_anchors = self._anchors.shape[0]
+
+        attributes = {'feat_stride' : self._feat_stride, 'scales' : anchor_scales}
+
+        super(ProposalLayer, self).__init__([arg1, arg2, arg3], attributes=attributes, name=name)
 
         if DEBUG:
             print ('feat_stride: {}'.format(self._feat_stride))

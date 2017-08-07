@@ -1621,8 +1621,12 @@ class UserFunction(Function):
         name (str): name of this function
     '''
 
-    def __init__(self, inputs, as_numpy=True, name=''):
-        super(UserFunction, self).__init__(inputs, name)
+    def __init__(self, inputs, as_numpy=True, attributes=None, name=''):
+        if  attributes is None:
+            super(UserFunction, self).__init__(inputs, name)
+        else:
+            attributes = _py_dict_to_cntk_dict(attributes)
+            super(UserFunction, self).__init__(inputs, attributes, name)
         self.set_native(False)
         self.as_numpy = as_numpy
 

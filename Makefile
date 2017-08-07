@@ -565,6 +565,27 @@ $(BINARY_CONVOLUTION_EXAMPLE_LIB): $(BINARY_CONVOLUTION_EXAMPLE_LIBRARY_OBJ) | $
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY) $(SOURCEDIR)/../Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.a
 
 
+##############################################
+# Native implementation of the Proposal Layer
+##############################################
+
+PROPOSAL_LAYER_LIBRARY_SRC =\
+	$(SOURCEDIR)/../Examples/Extensibility/ProposalLayer/ProposalLayerLib/ProposalLayerLib.cpp \
+
+PROPOSAL_LAYER_LIBRARY_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(PROPOSAL_LAYER_LIBRARY_SRC))
+
+PROPOSAL_LAYER_LIB:= $(LIBDIR)/Cntk.ProposalLayerLib-$(CNTK_COMPONENT_VERSION).so
+ALL_LIBS += $(PROPOSAL_LAYER_LIB)
+PYTHON_LIBS += $(PROPOSAL_LAYER_LIB)
+SRC += $(PROPOSAL_LAYER_LIBRARY_SRC)
+
+$(PROPOSAL_LAYER_LIB): $(PROPOSAL_LAYER_LIBRARY_OBJ) | $(CNTKLIBRARY_LIB)
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	@mkdir -p $(dir $@)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY)
+
+
 ########################################
 # LibEval
 ########################################
