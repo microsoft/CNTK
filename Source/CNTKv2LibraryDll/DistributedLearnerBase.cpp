@@ -49,6 +49,8 @@ namespace CNTK
         info.trainingLossValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::CPUDevice());
     }
 
+    // bring gradientValues (unordered) into a well-defined order
+    // also pre-process column-sparse gradients to dense for now
     void DistributedLearnerBase::ConvertToOrdered(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, std::vector<std::pair<Parameter, NDArrayViewPtr>>& result)
     {
         result.reserve(gradientValues.size());

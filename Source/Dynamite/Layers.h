@@ -248,6 +248,17 @@ static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescrip
     });
 }
 
+//static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device)
+//{
+//    auto scale = Parameter({ NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"scale");
+//    return UnaryModel({ scale }, [=](const Variable& x)
+//    {
+//        let len = Sqrt(ReduceSum(x * x));
+//        let len = Sqrt(TransposeTimes(x, x));
+//        return x / len;
+//    });
+//}
+
 static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");

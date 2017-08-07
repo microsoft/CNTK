@@ -2209,8 +2209,9 @@ private:
         /// Construct a parameter whose initial contents are a copy of the specified 'value'
         ///
         explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name = std::wstring())
-            : Parameter(value, name, std::wstring())//, Internal::GenerateUid(VariableKind::Parameter))
+            : Parameter(value, name, Internal::GenerateUid(VariableKind::Parameter))
         {}
+        // note: unlike other Variables, we must not generate the uid on demand for parameters, to ensure they are always the same
 
         // TODO: Constructor to move a specified NDArrayView value
 
