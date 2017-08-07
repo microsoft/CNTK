@@ -1,5 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 // This implements the elementwise tensor operations, including helper macros and some actual functions.
@@ -9,6 +10,7 @@
 
 #include "Basics.h"
 #include "CommonMatrix.h"
+#include <half.hpp>
 
 #pragma push_macro("TENSOR_OPS_DECL")
 #ifndef TENSOR_OPS_DECL // to make these accessible to CUDA kernels, say '#define TENSOR_OPS_DECL __device__ __host__'
@@ -54,6 +56,130 @@ OverloadUnaryMathFns(acos);
 OverloadUnaryMathFns(sinh);
 OverloadUnaryMathFns(cosh);
 
+#if defined(__CUDACC__)
+// Add overload for half math functions(Assume CUDA 9)
+// Only enable fp16 math for sm_60(P100) and sm_70+(V100)
+// Not using macro above because of unstable/lack of API
+static inline half __device__ exp_(half h) {
+#if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
+    return hexp(h);
+#else
+    return __float2half(expf(__half2float(h)));
+#endif
+}
+
+static inline half __device__ log_(half v) {
+#if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
+    return hlog(v);
+#else
+    return __float2half(logf(__half2float(v)));
+#endif
+}
+
+static inline half __device__ tanh_(half v) {
+    return __float2half(tanhf(__half2float(v)));
+}
+
+static inline half __device__ sqrt_(half v) {
+#if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
+    return hsqrt(v);
+#else
+    return __float2half(sqrtf(__half2float(v)));
+#endif
+}
+
+static inline half __device__ fabs_(half v) {
+    short t = *(short*)&v & 0x7FFF;    //TODO: Check this!
+    return *(half*)(&t);
+}
+
+// add int version to fabs_ overload
+static inline int __device__ fabs_(int v) {
+    return abs(v);
+}
+
+static inline half __device__ cos_(half v) {
+#if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
+    return hcos(v);
+#else
+    return __float2half(cosf(__half2float(v)));
+#endif
+}
+
+static inline half __device__ sin_(half v) {
+#if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
+    return hsin(v);
+#else
+    return __float2half(sinf(__half2float(v)));
+#endif
+}
+
+static inline half __device__ floor_(half v) {
+#if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
+    return hfloor(v);
+#else
+    return __float2half(floorf(__half2float(v)));
+#endif
+}
+
+static inline half __device__ log1p_(half v) {
+    return __float2half(log1pf(__half2float(v)));
+}
+
+static inline half __device__ rsqrt_(half v) {
+#if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
+    return hrsqrt(v);
+#else
+    return __float2half(rsqrtf(__half2float(v)));
+#endif
+}
+
+static inline float __device__ rsqrt_(float v) {
+    return rsqrtf(v);
+}
+static inline double __device__ rsqrt_(double v) {
+    return rsqrt(v);
+}
+
+// isnan
+static inline bool __device__ isnan_(float v) {
+    return ::isnan(v);
+}
+static inline bool __device__ isnan_(double v) {
+    return ::isnan(v);
+}
+static inline bool __device__ isnan_(half v) {
+#if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
+    return __hisnan(v);
+#else
+    return ::isnan(__half2float(v));
+#endif
+}
+
+// max/min
+static inline float __host__ __device__ max(float a, float b) {
+    return ::max(a,b);
+}
+static inline half __host__ __device__ max(half a, half b) {
+    return (float)a > (float)b ? a : b;
+}
+static inline float __host__ __device__ max(float a, half b) {
+    return a > (float)b ? a : (float)b;
+}
+static inline float __host__ __device__ max(half a, float b) {
+    return (float)a > b ? (float)a : b;
+}
+static inline float __host__ __device__ min(float a, float b) {
+    return ::min(a,b);
+}
+static inline half __host__ __device__ min(half a, half b) {
+    return (float)a < (float)b ? a : b;
+}
+
+
+#endif //(__CUDACC__)
+
+
 #pragma pop_macro("OverloadUnaryMathFns")
 
 #pragma push_macro("OverloadBinaryMathFns")
@@ -69,23 +195,28 @@ OverloadUnaryMathFns(cosh);
 
 // Because we compile with fast math the following produces nan for negative numbers raised to integer power.
 // To avoid this we define safepow_ further below.
-// Is there an nvcc pragma to disable fast math temporarily? Something like 
+// Is there an nvcc pragma to disable fast math temporarily? Something like
 // #pragma fast-math push
 // #pragma fast-math off
 // OverloadBinaryMathFns(pow);
 // #pragma fast-math pop
 OverloadBinaryMathFns(pow);
 
+#if defined(__CUDACC__)
+static inline half __device__ pow_(half v,  half e) {
+    return __float2half(powf(__half2float(v) , __half2float(e)));     //TODO: Improve efficiency?
+}
+#endif //(__CUDACC__)
 template<typename T>
-DECL T safepow_(T base, T exponent)        
+DECL T safepow_(T base, T exponent)
 {
-    if (exponent == 0) 
+    if (exponent == 0)
         return T(1);
     if (base == 0)
         return T(0);
     else if (base > 0)
         return pow_(base, exponent);
-    else 
+    else
     {
         int exp_as_int = static_cast<int>(exponent);
         if (exponent != exp_as_int)
@@ -93,7 +224,7 @@ DECL T safepow_(T base, T exponent)
         else
             return pow_(fabs_(base), exponent) * (1 - 2 * (exp_as_int & 1));
     }
-}                                    
+}
 
 #pragma pop_macro("OverloadBinaryMathFns")
 

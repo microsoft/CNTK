@@ -136,6 +136,15 @@ namespace Operations
         assert(::isfinite(a) && a > 0);
         return rsqrt(a);
     }
+
+    __device__ half RSqrt(half a)
+    {
+#if __CUDA_ARCH__ >= 600
+        return hrsqrt(a);
+#else
+        return __float2half(rsqrtf(__half2float(a)));
+#endif
+    }
 }
 
 // This function is used to select correct unroll factor.

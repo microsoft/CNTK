@@ -233,7 +233,7 @@ __device__ double round_(double a)
 // corresponding to the ROI and which pixels in that subset should go into the
 // output location, then takes the max value over that window.
 // src: Images              [W x H x C x N]
-// roiData: ROIs            [4 x numROIs x N], 
+// roiData: ROIs            [4 x numROIs x N],
 // dst: Pooled ROIs         [PW x PH x C x numROIs x N]
 // argmax: max positions    [PW x PH x C x numROIs x N]
 // spatialScale             ratio of input feature map to the original image.
@@ -286,7 +286,7 @@ __global__ void kMaxROIPoolingForward(const int totalIterations,
 
         bool isempty = (hend <= hstart) || (wend <= wstart);
         // Define an empty pooling region to be zero
-        ElemType maxval = isempty ? (ElemType)0 : -CUDART_INF_F;
+        ElemType maxval = isempty ? (ElemType)0 : (ElemType)-CUDART_INF_F;
         int maxidx = -1;
 
         int imgIdx = n / numROIs;
