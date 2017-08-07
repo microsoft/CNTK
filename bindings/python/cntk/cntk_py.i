@@ -233,29 +233,14 @@ def dynamic_axes(self):
 
         CNTK::DataType cntk_type = (*self).GetDataType();
 
-        NDArrayView* cpuView;
-        if ((*self).Device() != DeviceDescriptor::CPUDevice())
-        {
-            cpuView = new NDArrayView(cntk_type, (*self).Shape(), DeviceDescriptor::CPUDevice());
-            cpuView->CopyFrom((*self));
-        }
-        else
-        {
-            cpuView = const_cast<NDArrayView*>(&(*self));
-        }
-
         NPY_TYPES numpy_type;
-        void* buffer;
-
         if (cntk_type == CNTK::DataType::Float)
         {
             numpy_type = NPY_FLOAT;
-            buffer = (void*)cpuView->DataBuffer<float>();
         }
         else if (cntk_type == CNTK::DataType::Double)
         {
             numpy_type = NPY_DOUBLE;
-            buffer = (void*)cpuView->DataBuffer<double>();
         }
         else
         {
@@ -265,13 +250,32 @@ def dynamic_axes(self):
         PyObject* ndarray = PyArray_SimpleNew(static_cast<int>(dimensions.size()), shape, numpy_type);
         void *arr_data = PyArray_DATA((PyArrayObject*)ndarray);
 
-        memcpy(arr_data, buffer, PyArray_ITEMSIZE((PyArrayObject*) ndarray) * num_elements);
-
+        NDArrayView* cpuView;
         if ((*self).Device() != DeviceDescriptor::CPUDevice())
         {
-            delete cpuView;
+            cpuView = new NDArrayView(cntk_type, (*self).Shape(), arr_data, PyArray_ITEMSIZE((PyArrayObject*) ndarray) * num_elements, DeviceDescriptor::CPUDevice());
+            cpuView->CopyFrom((*self));
         }
+        else
+        {
+            cpuView = const_cast<NDArrayView*>(&(*self));
 
+            void* buffer;
+            if (cntk_type == CNTK::DataType::Float)
+            {
+                buffer = (void*)cpuView->DataBuffer<float>();
+            }
+            else if (cntk_type == CNTK::DataType::Double)
+            {
+                buffer = (void*)cpuView->DataBuffer<double>();
+            }
+            else
+            {
+                throw std::invalid_argument("unknown CNTK data type");
+            }
+
+            memcpy(arr_data, buffer, PyArray_ITEMSIZE((PyArrayObject*) ndarray) * num_elements);
+        }
         return ndarray;
     }
 }
