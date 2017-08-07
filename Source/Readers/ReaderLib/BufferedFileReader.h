@@ -73,6 +73,16 @@ public:
     // Returns true if no more data is available (reached EOF).
     inline bool Empty() const { return m_done; }
 
+    // Reset the buffer
+    inline void Reset()
+    {
+        m_fileOffset = m_file.TellOrDie();
+        m_buffer.clear();
+        m_index = 0;
+        m_done = false;
+        Refill();
+    }
+
 private:
     // Read up to m_maxSize bytes from file into the buffer.
     void Refill();
