@@ -9,7 +9,7 @@
 // use the BlockHandlerSSE implementation no ARM64.
 // Therefore, exclude the implementation on ARM64 builds for now.
 // TODO: In the future, we should provide a NEON based implementation instead.
-#if !defined(__aarch64__)
+#if !defined(__aarch64__) && !defined(__PPC64__)
 
 #include <xmmintrin.h>
 #include <emmintrin.h>

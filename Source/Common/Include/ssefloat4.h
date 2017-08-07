@@ -11,7 +11,7 @@
 #include <intrin.h> // for intrinsics
 #endif
 #ifdef __unix__
-#if !defined(__aarch64__)
+#if !defined(__aarch64__) && !defined(__PPC64__)
 #include <x86intrin.h>
 #else
 #define _mm_free(p) free(p)
@@ -36,7 +36,7 @@ namespace msra { namespace math {
 // Since we don't have SSE on ARM64 (NEON has similar functionality but is not identical) we cannot
 // use the SSE implementation on ARM64.
 // TODO: In the future, we should provide a NEON based implementation instead.
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__PPC64__)
 typedef struct __m128_t
 {
     float f[4];
