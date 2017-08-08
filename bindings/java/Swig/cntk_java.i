@@ -704,9 +704,436 @@
         return createDouble(dimension, sequences, sequenceStartFlags, device, false);
     }
 
+    // create Value object from sparse input as sequence data with sequenceStartFlag, for N-dimensional tensor. Only createSequence() for now.
+    public static Value createSequenceFloat(NDShape sampleShape, int sequenceLength,
+                                            int[] colStarts, int[] rowIndices, float[] nonZeroValues,
+                                            boolean sequenceStartFlag,
+                                            DeviceDescriptor device,
+                                            boolean readOnly) {
+        if (nonZeroValues.length != rowIndices.length) {
+            throw new java.lang.IllegalArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+        }
+        if (colStarts.length != sequenceLength + 1) {
+            throw new java.lang.IllegalArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+        }
+        long numNonZeroValues = (long)nonZeroValues.length;
+
+        return Value._CreateSequenceFloat(sampleShape, (long)sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues, sequenceStartFlag, device, readOnly);
+    }
+
+    public static Value createSequenceFloat(NDShape sampleShape, int sequenceLength,
+                                            int[] colStarts, int[] rowIndices, float[] nonZeroValues,
+                                            boolean sequenceStartFlag,
+                                            DeviceDescriptor device) {
+        return createSequenceFloat(sampleShape, sequenceLength, colStarts, rowIndices, nonZeroValues, sequenceStartFlag, device, false);
+    }
+
+    // create Value object from sparse input as sequence data, for 1D tensor. Only createSequence() for now.
+    public static Value createSequenceFloat(int dimension, int sequenceLength,
+                                            int[] colStarts, int[] rowIndices, float[] nonZeroValues,
+                                            DeviceDescriptor device,
+                                            boolean readOnly) {
+        if (nonZeroValues.length != rowIndices.length) {
+            throw new java.lang.IllegalArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+        }
+        if (colStarts.length != sequenceLength + 1) {
+            throw new java.lang.IllegalArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+        }
+        long numNonZeroValues = (long)nonZeroValues.length;
+
+        return Value._CreateSequenceFloat(dimension, sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues, true, device, readOnly);
+    }
+
+    public static Value createSequenceFloat(int dimension, int sequenceLength,
+                                            int[] colStarts, int[] rowIndices, float[] nonZeroValues,
+                                            DeviceDescriptor device) {
+        return createSequenceFloat(dimension, sequenceLength, colStarts, rowIndices, nonZeroValues, device, false);
+    }
+
+    public static Value createSequenceDouble(NDShape sampleShape, int sequenceLength,
+                                            int[] colStarts, int[] rowIndices, double[] nonZeroValues,
+                                            boolean sequenceStartFlag,
+                                            DeviceDescriptor device,
+                                            boolean readOnly) {
+        if (nonZeroValues.length != rowIndices.length) {
+            throw new java.lang.IllegalArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+        }
+        if (colStarts.length != sequenceLength + 1) {
+            throw new java.lang.IllegalArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+        }
+        long numNonZeroValues = (long)nonZeroValues.length;
+
+        return Value._CreateSequenceDouble(sampleShape, (long)sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues, sequenceStartFlag, device, readOnly);
+    }
+
+    public static Value createSequenceDouble(NDShape sampleShape, int sequenceLength,
+                                            int[] colStarts, int[] rowIndices, double[] nonZeroValues,
+                                            boolean sequenceStartFlag,
+                                            DeviceDescriptor device) {
+        return createSequenceDouble(sampleShape, sequenceLength, colStarts, rowIndices, nonZeroValues, sequenceStartFlag, device, false);
+    }
+
+    // create Value object from sparse input as sequence data, for 1D tensor. Only createSequence() for now.
+    public static Value createSequenceDouble(int dimension, int sequenceLength,
+                                            int[] colStarts, int[] rowIndices, double[] nonZeroValues,
+                                            DeviceDescriptor device,
+                                            boolean readOnly) {
+        if (nonZeroValues.length != rowIndices.length) {
+            throw new java.lang.IllegalArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+        }
+        if (colStarts.length != sequenceLength + 1) {
+            throw new java.lang.IllegalArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+        }
+        long numNonZeroValues = (long)nonZeroValues.length;
+
+        return Value._CreateSequenceDouble(dimension, sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues, true, device, readOnly);
+    }
+
+    public static Value createSequenceDouble(int dimension, int sequenceLength,
+                                            int[] colStarts, int[] rowIndices, double[] nonZeroValues,
+                                            DeviceDescriptor device) {
+        return createSequenceDouble(dimension, sequenceLength, colStarts, rowIndices, nonZeroValues, device, false);
+    }
+
+    // create Value object from NDArrayViews.
+    public static Value create(NDShape sampleShape,
+                               java.lang.Iterable<NDArrayView> sequences,
+                               DeviceDescriptor device,
+                               boolean readOnly) {
+        return create(sampleShape, sequences, new boolean[] {false}, device, readOnly);
+    }
+
+    // create Value object from NDArrayViews with sequenceStartFlags
+    public static Value create(NDShape sampleShape,
+                               java.lang.Iterable<NDArrayView> sequences,
+                               boolean[] sequenceStartFlags,
+                               DeviceDescriptor device,
+                               boolean readOnly) {
+        return create(sampleShape, sequences, sequenceStartFlags, device, readOnly, false);
+    }
+
+    // create Value object from NDArrayViews with sequenceStartFlags
+    public static Value create(NDShape sampleShape,
+                               java.lang.Iterable<NDArrayView> sequences,
+                               boolean[] sequenceStartFlags,
+                               DeviceDescriptor device,
+                               boolean readOnly,
+                               boolean createNewCopy) {
+        NDArrayViewPtrVector seqVector = new NDArrayViewPtrVector();
+        for (NDArrayView element : sequences) {
+            seqVector.add(element);
+        }
+        BoolVector startFlags = Helper.AsBoolVector(sequenceStartFlags);
+        return create(sampleShape, seqVector, startFlags, device, readOnly, createNewCopy);
+    }
+
+    /*//*/
+    /*// Return the data of the Value object as a list of sequences with variable length.*/
+    /*// This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.*/
+    /*// Each sequence, represented by IList<T>, contains a variable number of samples.*/
+    /*// Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.*/
+    /*// The number of samples = (the count of elements in IList<T>)/(the count of elements of the sample)*/
+    /*// The shape of the variable should match the shape of the Value object.*/
+    /*//*/
+    /*public System.Collections.Generic.IList<System.Collections.Generic.IList<T>> GetDenseData<T>(Variable outputVariable)*/
+    /*{*/
+        /*var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<T>>();*/
+        /*if (typeof(T).Equals(typeof(float)))*/
+        /*{*/
+            /*if (_GetDataType() != DataType.Float)*/
+            /*{*/
+                /*throw new System.ArgumentException("The value type does not match the list type.");*/
+            /*}*/
+
+            /*var seqVec = new FloatVectorVector();*/
+            /*_CopyVariableValueToFloat(outputVariable, seqVec);*/
+
+            /*foreach (var seq in seqVec)*/
+            /*{*/
+                /*var seqList = seq as System.Collections.Generic.IList<T>;*/
+                /*if (seqList == null)*/
+                    /*throw new System.TypeAccessException("Cannot convert to the value type.");*/
+                /*// It is required to create a new List from seq, since seq is dependent on the life cycle of seqVec.*/
+                /*sequences.Add(new System.Collections.Generic.List<T>(seqList));*/
+            /*}*/
+        /*}*/
+        /*else if (typeof(T).Equals(typeof(double)))*/
+        /*{*/
+            /*if (_GetDataType() != DataType.Double)*/
+            /*{*/
+                /*throw new System.ArgumentException("The value type does not match the list type.");*/
+            /*}*/
+
+            /*var seqVec = new DoubleVectorVector();*/
+            /*_CopyVariableValueToDouble(outputVariable, seqVec);*/
+            /*foreach (var seq in seqVec)*/
+            /*{*/
+                /*var seqList = seq as System.Collections.Generic.IList<T>;*/
+                /*if (seqList == null)*/
+                    /*throw new System.TypeAccessException("Cannot convert to the value type.");*/
+                /*// It is required to create a new List from seq, since seq is dependent on the life cycle of seqVec.*/
+                /*sequences.Add(new System.Collections.Generic.List<T>(seqList));*/
+            /*}*/
+        /*}*/
+        /*else*/
+        /*{*/
+            /*throw new System.ArgumentException("The value type does not match the list type.");*/
+        /*}*/
+        /*return sequences;*/
+    /*}*/
+
+    /*//*/
+    /*// Return the data of the Value object as a list of sequences with variable length.*/
+    /*// This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.*/
+    /*// Each sequence, represented by List<int>, contains a variable number of samples.*/
+    /*// Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable.*/
+    /*// The number of samples = the count of elements in List<int>.*/
+    /*//*/
+    /*public System.Collections.Generic.IList<System.Collections.Generic.IList<int>> GetOneHotData(Variable outputVariable)*/
+    /*{*/
+        /*var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<int>>();*/
+        /*var seqVec = new SizeTVectorVector();*/
+        /*_CopyVariableValueTo(outputVariable, seqVec);*/
+        /*foreach(var seq in seqVec)*/
+        /*{*/
+            /*var seqList = new System.Collections.Generic.List<int>(seq.Count);*/
+            /*foreach (var element in seq)*/
+            /*{*/
+                /*seqList.Add((int)element);*/
+            /*}*/
+            /*sequences.Add(seqList);*/
+        /*}*/
+        /*return sequences;*/
+    /*}*/
+
+    /*//*/
+    /*// Copy the data of the Value object into the buffer provided by 'sequences'.*/
+    /*// The 'sequences' is a list of sequences with variable length. */
+    /*// The number of items contained in the outer list of 'sequences' is the number of sequences in the Value object.*/
+    /*// Each element of the outer list represents a sequence.*/
+    /*// Each sequence, represented by List<T>, contains a variable number of samples. */
+    /*// Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.*/
+    /*// The number of samples = the count of elements in List<T> / the count of elements of the sample*/
+    /*// The shape of the variable should match the shape of the Value object.*/
+    /*//*/
+    /*[System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetDenseData() instead.")]*/
+    /*public void CopyVariableValueTo<T>(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences)*/
+    /*{*/
+        /*sequences.Clear();*/
+        /*if (typeof(T).Equals(typeof(float)))*/
+        /*{*/
+            /*if (_GetDataType() != DataType.Float)*/
+            /*{*/
+                /*throw new System.ArgumentException("The value type does not match the list type.");*/
+            /*}*/
+
+            /*var seqVec = new FloatVectorVector();*/
+            /*_CopyVariableValueToFloat(outputVariable, seqVec);*/
+
+            /*foreach (var seq in seqVec)*/
+            /*{*/
+                /*var seqList = seq as System.Collections.Generic.IList<T>;*/
+                /*if (seqList == null)*/
+                    /*throw new System.TypeAccessException("Cannot convert to the value type.");*/
+                /*sequences.Add(new System.Collections.Generic.List<T>(seqList));*/
+            /*}*/
+        /*}*/
+        /*else if (typeof(T).Equals(typeof(double)))*/
+        /*{*/
+            /*if (_GetDataType() != DataType.Double)*/
+            /*{*/
+                /*throw new System.ArgumentException("The value type does not match the list type.");*/
+            /*}*/
+
+            /*var seqVec = new DoubleVectorVector();*/
+            /*_CopyVariableValueToDouble(outputVariable, seqVec);*/
+            /*foreach (var seq in seqVec)*/
+            /*{*/
+                /*var seqList = seq as System.Collections.Generic.IList<T>;*/
+                /*if (seqList == null)*/
+                    /*throw new System.TypeAccessException("Cannot convert to the value type.");*/
+                /*sequences.Add(new System.Collections.Generic.List<T>(seqList));*/
+            /*}*/
+        /*}*/
+        /*else*/
+        /*{*/
+            /*throw new System.ArgumentException("The value type does not match the list type.");*/
+        /*}*/
+    /*}*/
+
+    /*//*/
+    /*// Copy the data of the Value object into the buffer provided by 'sequences'.*/
+    /*// The 'sequences' is a list of sequences with variable length.*/
+    /*// The number of items contained in the outer list of 'sequences' is the number of sequences in the Value object.*/
+    /*// Each element of the outer list represents a sequence.*/
+    /*// Each sequence, represented by List<int>, contains a variable number of samples.*/
+    /*// Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable. */
+    /*// The number of samples = the count of elements in List<int>.*/
+    /*//*/
+    /*[System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetOneHotData() instead.")]*/
+    /*public void CopyVariableValueTo(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences)*/
+    /*{*/
+        /*var seqVec = new SizeTVectorVector();*/
+        /*_CopyVariableValueTo(outputVariable, seqVec);*/
+
+        /*sequences.Clear();*/
+        /*foreach(var seq in seqVec)*/
+        /*{*/
+            /*var seqList = new System.Collections.Generic.List<int>(seq.Count);*/
+            /*foreach (var element in seq)*/
+            /*{*/
+                /*seqList.Add((int)element);*/
+            /*}*/
+            /*sequences.Add(seqList);*/
+        /*}*/
+        /*return;*/
+    /*}*/
+
+    /*public void GetSparseData<T>( Variable outputVariable,*/
+                                    /*out int sequenceLength,*/
+                                    /*out System.Collections.Generic.IList<int> colStarts,*/
+                                    /*out System.Collections.Generic.IList<int> rowIndices,*/
+                                    /*out System.Collections.Generic.IList<T> nonZeroValues,*/
+                                    /*out int numNonZeroValues) */
+    /*{*/
+        /*var colStartVec = new IntVector();*/
+        /*var rowIndicesVec = new IntVector();*/
+
+        /*int[] n1 = new int[1];*/
+        /*int[] n2 = new int[1];*/
+
+        /*if (typeof(T).Equals(typeof(float)))*/
+        /*{*/
+            /*if (_GetDataType() != DataType.Float)*/
+            /*{*/
+                /*throw new System.ArgumentException("The value type does not match the list type.");*/
+            /*}*/
+
+            /*var nonZeroValuesVec = new FloatVector();*/
+            /*_CopyVariableValueToFloat(outputVariable, n1,  colStartVec,   */
+                /*rowIndicesVec, nonZeroValuesVec, n2);*/
+            /*nonZeroValues = nonZeroValuesVec as System.Collections.Generic.IList<T>;*/
+        /*}*/
+        /*else if (typeof(T).Equals(typeof(double)))*/
+        /*{*/
+            /*if (_GetDataType() != DataType.Double)*/
+            /*{*/
+                /*throw new System.ArgumentException("The value type does not match the list type.");*/
+            /*}*/
+
+            /*var nonZeroValuesVec = new DoubleVector();*/
+            /*_CopyVariableValueToDouble(outputVariable, n1, colStartVec,*/
+                /*rowIndicesVec, nonZeroValuesVec, n2);*/
+            /*nonZeroValues = nonZeroValuesVec as System.Collections.Generic.IList<T>;*/
+        /*}*/
+        /*else*/
+        /*{*/
+            /*throw new System.ArgumentException("The value type does not match the list type.");*/
+        /*}*/
+
+        /*sequenceLength = n1[0];*/
+        /*numNonZeroValues = n2[0];*/
+        /*colStarts = colStartVec;*/
+        /*rowIndices = rowIndicesVec;*/
+    /*}*/
+
+
+    /*// creates a new Value which is an alias of this Value.*/
+    /*public Value Alias(boolean readOnly = false)*/
+    /*{*/
+        /*return _Alias(readOnly);*/
+    /*}*/
+
 %}
 
 %typemap(javacode) CNTK::NDArrayView %{
+    /*// Constructor using float dense input.*/
+    /*public NDArrayView(NDShape viewShape, float[] dataBuffer, DeviceDescriptor device, boolean readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.length, device, readOnly)*/
+    /*{*/
+    /*}*/
+
+    /*// Constructor using double dense input.*/
+    /*public NDArrayView(NDShape viewShape, double[] dataBuffer, DeviceDescriptor device, boolean readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.length, device, readOnly)*/
+    /*{*/
+    /*}*/
+
+    /*// Constructor using float sparse input.*/
+    /*public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, float[] nonZeroValues, DeviceDescriptor device, boolean readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)nonZeroValues.length, device, readOnly)*/
+    /*{*/
+        /*if (rowIndices.length != nonZeroValues.length)*/
+        /*{*/
+            /*throw new System.ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");*/
+        /*}*/
+        /*if (viewShape[viewShape.Rank-1] + 1 != colStarts.length)*/
+        /*{*/
+            /*throw new System.ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");*/
+        /*}*/
+    /*}*/
+
+    /*// Constructor using double sparse input.*/
+    /*public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, double[] nonZeroValues, DeviceDescriptor device, boolean readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)nonZeroValues.length, device, readOnly)*/
+    /*{*/
+        /*if (rowIndices.length != nonZeroValues.length)*/
+        /*{*/
+            /*throw new System.ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");*/
+        /*}*/
+        /*if (viewShape[viewShape.Rank-1] + 1 != colStarts.length)*/
+        /*{*/
+            /*throw new System.ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");*/
+        /*}*/
+    /*}*/
+
+    /*// Property Device.*/
+    /*public DeviceDescriptor Device*/
+    /*{*/
+        /*get { return _Device(); }*/
+    /*}*/
+
+    /*// Property DataType.*/
+    /*public DataType DataType*/
+    /*{*/
+        /*get { return _GetDataType(); }*/
+    /*}*/
+
+    /*// Property Shape.*/
+    /*public NDShape Shape*/
+    /*{*/
+        /*get { return _Shape(); }*/
+    /*}*/
+
+    /*// Property StorageFormat.*/
+    /*public StorageFormat StorageFormat*/
+    /*{*/
+        /*get { return _GetStorageFormat(); }*/
+    /*}*/
+
+    /*// Property IsSparse.*/
+    /*public boolean IsSparse*/
+    /*{*/
+        /*get { return _IsSparse(); }*/
+    /*}*/
+
+    /*// Property IsReadOnly.*/
+    /*public boolean IsReadOnly*/
+    /*{*/
+        /*get { return _IsReadOnly(); }*/
+    /*}*/
+
+    /*// Returns a slice view.*/
+    /*public NDArrayView SliceView(System.Collections.Generic.IEnumerable<int> startOffset, System.Collections.Generic.IEnumerable<int> extent, boolean readOnly = false)*/
+    /*{*/
+        /*var startOffsetVector = Helper.AsSizeTVector(startOffset);*/
+
+        /*var extentVector = Helper.AsSizeTVector(extent);*/
+
+        /*return _SliceView(startOffsetVector, extentVector, readOnly);*/
+    /*}*/
+
+    /*// creates a new NDArrayView which is an alias of this NDArrayView.*/
+    /*public NDArrayView Alias(boolean readOnly = false)*/
+    /*{*/
+        /*return _Alias(readOnly);*/
+    /*}*/
 %}
 
 %include "CNTKLibraryInternals.h"
