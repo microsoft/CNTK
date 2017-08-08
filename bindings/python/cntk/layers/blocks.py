@@ -196,7 +196,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
     return stabilize
 
 
-def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
+def _RecurrentBlock(type, shape, cell_shape, activation, cell_activation, use_peepholes,
                     init, init_bias,
                     enable_self_stabilization,
                     name=''):
@@ -276,16 +276,16 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         def peep(x, c, C):
             return x + C * c if use_peepholes else x
 
-        it = sigmoid (peep (it_proj, dcs, Ci))        # input gate(t)
+        it = cell_activation (peep (it_proj, dcs, Ci))        # input gate(t)
         # TODO: should both activations be replaced?
         bit = it * activation (bit_proj)              # applied to tanh of input network
 
-        ft = sigmoid (peep (ft_proj, dcs, Cf))        # forget-me-not gate(t)
+        ft = cell_activation (peep (ft_proj, dcs, Cf))        # forget-me-not gate(t)
         bft = ft * dc                                 # applied to cell(t-1)
 
         ct = bft + bit                                # c(t) is sum of both
 
-        ot = sigmoid (peep (ot_proj, Sct(ct), Co))    # output gate(t)
+        ot = cell_activation (peep (ot_proj, Sct(ct), Co))    # output gate(t)
         ht = ot * activation (ct)                     # applied to tanh(cell(t))
 
         c = ct                                        # cell value
@@ -353,7 +353,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     return BlockFunction(type, name)(function)
 
 
-def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peepholes=default_override_or(False),
+def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), cell_activation=default_override_or(sigmoid),
+         use_peepholes=default_override_or(False),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
          enable_self_stabilization=default_override_or(False),
          name=''):
@@ -387,12 +388,14 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
     '''
 
     activation                = get_default_override(LSTM, activation=activation)
+    cell_activation           = get_default_override(LSTM, cell_activation=cell_activation)
     use_peepholes             = get_default_override(LSTM, use_peepholes=use_peepholes)
     init                      = get_default_override(LSTM, init=init)
     init_bias                 = get_default_override(LSTM, init_bias=init_bias)
     enable_self_stabilization = get_default_override(LSTM, enable_self_stabilization=enable_self_stabilization)
 
-    return _RecurrentBlock('LSTM', shape, cell_shape, activation=activation, use_peepholes=use_peepholes,
+    return _RecurrentBlock('LSTM', shape, cell_shape, activation=activation, cell_activation=cell_activation,
+                           use_peepholes=use_peepholes,
                            init=init, init_bias=init_bias,
                            enable_self_stabilization=enable_self_stabilization, name=name)
 

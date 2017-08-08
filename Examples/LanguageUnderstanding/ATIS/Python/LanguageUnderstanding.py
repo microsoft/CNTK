@@ -11,6 +11,7 @@ import math
 import cntk
 from cntk.layers import *  # Layers library
 from cntk.layers.typing import *
+from cntk.ops import relu
 
 ########################
 # variables and stuff  #
@@ -42,6 +43,18 @@ def create_reader(path, is_training):
 # define the model     #
 ########################
 
+def f(x):
+    if x <= 0:
+        return 0
+    else:
+        return x
+
+def lin_tanh(x):
+    return relu(x + 1) - relu(x - 1) - 1
+
+def lin_sigmoid(x):
+    return relu(x) - relu(x - 1)
+
 # TODO: separate slot and intent tagging; maybe do multi-task learning
 def create_model_function():
   from cntk.ops.sequence import last
@@ -51,7 +64,7 @@ def create_model_function():
         Embedding(emb_dim, name='embed'),
         Label('embedded_input'),
         Stabilizer(),
-        Recurrence(LSTM(hidden_dim)),
+        Recurrence(LSTM(hidden_dim, activation=lin_tanh, cell_activation=lin_sigmoid)),
         # For illustration, variations of Recurrence(LSTM(...)) include
         #  - GRU
         #  - RNN
@@ -137,7 +150,7 @@ def train(reader, model, max_epochs):
     minibatch_size = 70
 
     # SGD parameters
-    learner = cntk.learners.fsadagrad(criterion.parameters,
+    learner = cntk.learners.adam(criterion.parameters,
                         lr = cntk.learners.learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], cntk.learners.UnitType.sample, epoch_size),
                         momentum = cntk.learners.momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
                         gradient_clipping_threshold_per_sample = 15,
@@ -184,6 +197,7 @@ def evaluate(reader, model):
 #############################
 
 if __name__=='__main__':
+    # input ('Press any key to debug.')
     parser = argparse.ArgumentParser()
     parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='8')
     parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir',
