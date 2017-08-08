@@ -857,29 +857,51 @@
         return sequences;
     }
 
-    /*//*/
-    /*// Return the data of the Value object as a list of sequences with variable length.*/
-    /*// This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.*/
-    /*// Each sequence, represented by List<int>, contains a variable number of samples.*/
-    /*// Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable.*/
-    /*// The number of samples = the count of elements in List<int>.*/
-    /*//*/
-    /*public System.Collections.Generic.IList<System.Collections.Generic.IList<int>> GetOneHotData(Variable outputVariable)*/
-    /*{*/
-        /*var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<int>>();*/
-        /*var seqVec = new SizeTVectorVector();*/
-        /*_CopyVariableValueTo(outputVariable, seqVec);*/
-        /*foreach(var seq in seqVec)*/
-        /*{*/
-            /*var seqList = new System.Collections.Generic.List<int>(seq.Count);*/
-            /*foreach (var element in seq)*/
-            /*{*/
-                /*seqList.Add((int)element);*/
-            /*}*/
-            /*sequences.Add(seqList);*/
-        /*}*/
-        /*return sequences;*/
-    /*}*/
+    public double[][] getDenseDataDouble(Variable outputVariable) {
+        double[][] sequences = new double[][] {{}};
+        if (getDataType() != DataType.Double) {
+            throw new java.lang.IllegalArgumentException("The value type does not match the list type.");
+        }
+
+        DoubleVectorVector seqVec = new DoubleVectorVector();
+        _CopyVariableValueToDouble(outputVariable, seqVec);
+
+        for (int i = 0; i < seqVec.size(); ++i) {
+            DoubleVector innerVec = seqVec.get(i);
+
+            double[] valArray = new double[(int)innerVec.size()];
+            for (int j = 0; j < innerVec.size(); ++j) {
+                valArray[j] = innerVec.get(j);
+            }
+
+            sequences[i] = valArray;
+        }
+        return sequences;
+    }
+
+    //
+    // Return the data of the Value object as a list of sequences with variable length.
+    // This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.
+    // Each sequence, represented by List<int>, contains a variable number of samples.
+    // Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable.
+    // The number of samples = the count of elements in List<int>.
+    //
+    public int[][] GetOneHotData(Variable outputVariable) {
+        int[][] sequences = new int[][] {{}};
+        SizeTVectorVector seqVec = new SizeTVectorVector();
+        _CopyVariableValueTo(outputVariable, seqVec);
+        for (int i = 0; i < seqVec.size(); ++i) {
+            SizeTVector innerVec = seqVec.get(i);
+
+            int[] valArray = new int[(int)innerVec.size()];
+            for (int j = 0; j < innerVec.size(); ++j) {
+                valArray[j] = (int)innerVec.get(j);
+            }
+
+            sequences[i] = valArray;
+        }
+        return sequences;
+    }
 
     /*//*/
     /*// Copy the data of the Value object into the buffer provided by 'sequences'.*/
