@@ -183,7 +183,7 @@
         }
     }
 
-    // Creates a new Function from specified operands.
+    // creates a new Function from specified operands.
     public static Function combine(java.util.ArrayList<Variable> outputVariable) {
         VariableVector varVect = new VariableVector();
         for (int i = 0; i < outputVariable.size(); ++i) {
@@ -192,7 +192,7 @@
         return CNTKLib.Combine(varVect);
     }
 
-    // Creates a composite function from the rootFunction.
+    // creates a composite function from the rootFunction.
     public static Function asComposite(Function rootFunction, String name) {
         return CNTKLib.AsComposite(rootFunction, name);
     }
@@ -201,7 +201,7 @@
         return CNTKLib.AsComposite(rootFunction, "");
     }
 
-    // Create a new Function which is the alias of operand.
+    // create a new Function which is the alias of operand.
     public static Function alias(Variable operand, String name) {
         return CNTKLib.Alias(operand, name);
     }
@@ -260,7 +260,7 @@
         return ret;
     }
 
-    // Creates a new NDShape.
+    // creates a new NDShape.
     public static NDShape createNDShape(long[] dimensions) {
         SizeTVector dimVector = new SizeTVector();
         for (long element : dimensions) {
@@ -315,7 +315,7 @@
 
 %typemap(javacode) CNTK::Value %{
 
-    // Create Value object from dense input as batch data.
+    // create Value object from dense input as batch data.
     public static Value createBatch(NDShape sampleShape, float[] batch, DeviceDescriptor device, boolean readOnly) {
         FloatVector inputVector = Helper.AsFloatVector(batch);
         return _CreateBatchFloat(sampleShape, inputVector, device, readOnly);
@@ -334,22 +334,22 @@
         return createBatch(sampleShape, batch, device, false);
     }
 
-    // Create Value object from dense input as sequence data.
-    public static Value CreateSequence(NDShape sampleShape,
+    // create Value object from dense input as sequence data.
+    public static Value createSequence(NDShape sampleShape,
                                        float[] sequence,
                                        DeviceDescriptor device,
                                        boolean readOnly) {
-        return CreateSequence(sampleShape, sequence, true, device, readOnly);
+        return createSequence(sampleShape, sequence, true, device, readOnly);
     }
 
-    public static Value CreateSequence(NDShape sampleShape,
+    public static Value createSequence(NDShape sampleShape,
                                        float[] sequence,
                                        DeviceDescriptor device) {
-        return CreateSequence(sampleShape, sequence, device, false);
+        return createSequence(sampleShape, sequence, device, false);
     }
 
-    // Create Value object from dense input as sequence data with sequenceStartFlag.
-    public static Value CreateSequence(NDShape sampleShape,
+    // create Value object from dense input as sequence data with sequenceStartFlag.
+    public static Value createSequence(NDShape sampleShape,
                                        float[] sequence,
                                        boolean sequenceStartFlag,
                                        DeviceDescriptor device,
@@ -358,28 +358,28 @@
         return _CreateSequenceFloat(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
     }
 
-    public static Value CreateSequence(NDShape sampleShape,
+    public static Value createSequence(NDShape sampleShape,
                                        float[] sequence,
                                        boolean sequenceStartFlag,
                                        DeviceDescriptor device) {
-        return CreateSequence(sampleShape, sequence, sequenceStartFlag, device, false);
+        return createSequence(sampleShape, sequence, sequenceStartFlag, device, false);
     }
 
-    public static Value CreateSequence(NDShape sampleShape,
+    public static Value createSequence(NDShape sampleShape,
                                        double[] sequence,
                                        DeviceDescriptor device,
                                        boolean readOnly) {
-        return CreateSequence(sampleShape, sequence, true, device, readOnly);
+        return createSequence(sampleShape, sequence, true, device, readOnly);
     }
 
-    public static Value CreateSequence(NDShape sampleShape,
+    public static Value createSequence(NDShape sampleShape,
                                        double[] sequence,
                                        DeviceDescriptor device) {
-        return CreateSequence(sampleShape, sequence, device, false);
+        return createSequence(sampleShape, sequence, device, false);
     }
 
-    // Create Value object from dense input as sequence data with sequenceStartFlag.
-    public static Value CreateSequence(NDShape sampleShape,
+    // create Value object from dense input as sequence data with sequenceStartFlag.
+    public static Value createSequence(NDShape sampleShape,
                                        double[] sequence,
                                        boolean sequenceStartFlag,
                                        DeviceDescriptor device,
@@ -388,75 +388,75 @@
         return _CreateSequenceDouble(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
     }
 
-    public static Value CreateSequence(NDShape sampleShape,
+    public static Value createSequence(NDShape sampleShape,
                                        double[] sequence,
                                        boolean sequenceStartFlag,
                                        DeviceDescriptor device) {
-        return CreateSequence(sampleShape, sequence, sequenceStartFlag, device, false);
+        return createSequence(sampleShape, sequence, sequenceStartFlag, device, false);
     }
 
-    // Create Value object from dense input as batch of sequences data.
-    public static Value CreateBatchOfSequences(NDShape sampleShape,
+    // create Value object from dense input as batch of sequences data.
+    public static Value createBatchOfSequences(NDShape sampleShape,
                                                float[][] batchOfSequences,
                                                DeviceDescriptor device,
                                                boolean readOnly) {
-        return Create(sampleShape, batchOfSequences, new boolean[] {false}, device, readOnly);
+        return create(sampleShape, batchOfSequences, new boolean[] {false}, device, readOnly);
     }
 
-    public static Value CreateBatchOfSequences(NDShape sampleShape,
+    public static Value createBatchOfSequences(NDShape sampleShape,
                                                float[][] batchOfSequences,
                                                DeviceDescriptor device) {
-        return Create(sampleShape, batchOfSequences, new boolean[] {false}, device, false);
+        return create(sampleShape, batchOfSequences, new boolean[] {false}, device, false);
     }
 
-    public static Value CreateBatchOfSequences(NDShape sampleShape,
+    public static Value createBatchOfSequences(NDShape sampleShape,
                                                double[][] batchOfSequences,
                                                DeviceDescriptor device,
                                                boolean readOnly) {
-        return Create(sampleShape, batchOfSequences, new boolean[] {false}, device, readOnly);
+        return create(sampleShape, batchOfSequences, new boolean[] {false}, device, readOnly);
     }
 
-    public static Value CreateBatchOfSequences(NDShape sampleShape,
+    public static Value createBatchOfSequences(NDShape sampleShape,
                                                double[][] batchOfSequences,
                                                DeviceDescriptor device) {
-        return Create(sampleShape, batchOfSequences, new boolean[] {false}, device, false);
+        return create(sampleShape, batchOfSequences, new boolean[] {false}, device, false);
     }
 
-    // Create Value object from dense input as batch of sequences data with sequenceStartFlags.
-    public static Value CreateBatchOfSequences(NDShape sampleShape,
+    // create Value object from dense input as batch of sequences data with sequenceStartFlags.
+    public static Value createBatchOfSequences(NDShape sampleShape,
                                                float[][] batchOfSequences,
                                                boolean[] sequenceStartFlags,
                                                DeviceDescriptor device,
                                                boolean readOnly) {
-        return Create(sampleShape, batchOfSequences, sequenceStartFlags, device, readOnly);
+        return create(sampleShape, batchOfSequences, sequenceStartFlags, device, readOnly);
     }
 
-    // Create Value object from dense input as batch of sequences data with sequenceStartFlags.
-    public static Value CreateBatchOfSequences(NDShape sampleShape,
+    // create Value object from dense input as batch of sequences data with sequenceStartFlags.
+    public static Value createBatchOfSequences(NDShape sampleShape,
                                                float[][] batchOfSequences,
                                                boolean[] sequenceStartFlags,
                                                DeviceDescriptor device) {
-        return Create(sampleShape, batchOfSequences, sequenceStartFlags, device, false);
+        return create(sampleShape, batchOfSequences, sequenceStartFlags, device, false);
     }
 
-    public static Value CreateBatchOfSequences(NDShape sampleShape,
+    public static Value createBatchOfSequences(NDShape sampleShape,
                                                double[][] batchOfSequences,
                                                boolean[] sequenceStartFlags,
                                                DeviceDescriptor device,
                                                boolean readOnly) {
-        return Create(sampleShape, batchOfSequences, sequenceStartFlags, device, readOnly);
+        return create(sampleShape, batchOfSequences, sequenceStartFlags, device, readOnly);
     }
 
-    // Create Value object from dense input as batch of sequences data with sequenceStartFlags.
-    public static Value CreateBatchOfSequences(NDShape sampleShape,
+    // create Value object from dense input as batch of sequences data with sequenceStartFlags.
+    public static Value createBatchOfSequences(NDShape sampleShape,
                                                double[][] batchOfSequences,
                                                boolean[] sequenceStartFlags,
                                                DeviceDescriptor device) {
-        return Create(sampleShape, batchOfSequences, sequenceStartFlags, device, false);
+        return create(sampleShape, batchOfSequences, sequenceStartFlags, device, false);
     }
 
-    // Create Value object from dense input as batch of sequences data with sequenceStartFlags.
-    public static Value Create(NDShape sampleShape,
+    // create Value object from dense input as batch of sequences data with sequenceStartFlags.
+    public static Value create(NDShape sampleShape,
                                float[][] sequences,
                                boolean[] sequenceStartFlags,
                                DeviceDescriptor device,
@@ -471,15 +471,15 @@
         return _CreateDenseFloat(sampleShape, inputAsSequencesVector, seqFlags, device, readOnly);
     }
 
-    public static Value Create(NDShape sampleShape,
+    public static Value create(NDShape sampleShape,
                                float[][] sequences,
                                boolean[] sequenceStartFlags,
                                DeviceDescriptor device) {
-        return Create(sampleShape, sequences, sequenceStartFlags, device, false);
+        return create(sampleShape, sequences, sequenceStartFlags, device, false);
     }
 
-    // Create Value object from dense input as batch of sequences data with sequenceStartFlags.
-    public static Value Create(NDShape sampleShape,
+    // create Value object from dense input as batch of sequences data with sequenceStartFlags.
+    public static Value create(NDShape sampleShape,
                                double[][] sequences,
                                boolean[] sequenceStartFlags,
                                DeviceDescriptor device,
@@ -494,15 +494,15 @@
         return _CreateDenseDouble(sampleShape, inputAsSequencesVector, seqFlags, device, readOnly);
     }
 
-    public static Value Create(NDShape sampleShape,
+    public static Value create(NDShape sampleShape,
                                double[][] sequences,
                                boolean[] sequenceStartFlags,
                                DeviceDescriptor device) {
-        return Create(sampleShape, sequences, sequenceStartFlags, device, false);
+        return create(sampleShape, sequences, sequenceStartFlags, device, false);
     }
 
-    // Create Value object from OneHotVector input, for N-dimenstional tensor. Only Create() method for now.
-    public static Value Create(NDShape sampleShape,
+    // create Value object from OneHotVector input, for N-dimenstional tensor. Only create() method for now.
+    public static Value create(NDShape sampleShape,
                                long[][] sequences,
                                boolean[] sequenceStartFlags,
                                DeviceDescriptor device,
@@ -516,34 +516,34 @@
         return _CreateOneHotFloat(sampleShape, inputSeqVector, seqFlags, device, readOnly);
     }
 
-    public static Value Create(NDShape sampleShape,
+    public static Value create(NDShape sampleShape,
                                long[][] sequences,
                                boolean[] sequenceStartFlags,
                                DeviceDescriptor device) {
-        return Create(sampleShape, sequences, sequenceStartFlags, device, false);
+        return create(sampleShape, sequences, sequenceStartFlags, device, false);
     }
 
-    // Create Value object from OneHotVector input as batch data, for 1D tensor only.
-    public static Value CreateBatchFloat(long dimension, long[] batch, DeviceDescriptor device, boolean readOnly) {
+    // create Value object from OneHotVector input as batch data, for 1D tensor only.
+    public static Value createBatchFloat(long dimension, long[] batch, DeviceDescriptor device, boolean readOnly) {
         SizeTVector inputVector = Helper.AsSizeTVector(batch);
         return Value._CreateBatchFloat(dimension, inputVector, device, readOnly);
     }
 
-    public static Value CreateBatchFloat(long dimension, long[] batch, DeviceDescriptor device) {
-        return CreateBatchFloat(dimension, batch, device, false);
+    public static Value createBatchFloat(long dimension, long[] batch, DeviceDescriptor device) {
+        return createBatchFloat(dimension, batch, device, false);
     }
 
-    public static Value CreateBatchDouble(long dimension, long[] batch, DeviceDescriptor device, boolean readOnly) {
+    public static Value createBatchDouble(long dimension, long[] batch, DeviceDescriptor device, boolean readOnly) {
         SizeTVector inputVector = Helper.AsSizeTVector(batch);
         return Value._CreateBatchDouble(dimension, inputVector, device, readOnly);
     }
 
-    public static Value CreateBatchDouble(long dimension, long[] batch, DeviceDescriptor device) {
-        return CreateBatchDouble(dimension, batch, device, false);
+    public static Value createBatchDouble(long dimension, long[] batch, DeviceDescriptor device) {
+        return createBatchDouble(dimension, batch, device, false);
     }
 
-    // Create Value object from OneHotVector input as sequence data with sequenceStartFlag, for 1D tensor only.
-    public static Value CreateSequenceFloat(long dimension,
+    // create Value object from OneHotVector input as sequence data with sequenceStartFlag, for 1D tensor only.
+    public static Value createSequenceFloat(long dimension,
                                             long[] sequence,
                                             boolean sequenceStartFlag,
                                             DeviceDescriptor device,
@@ -552,28 +552,28 @@
         return Value._CreateSequenceFloat(dimension, inputVector, sequenceStartFlag, device, readOnly);
     }
 
-    // Create Value object from OneHotVector input as sequence data, for 1D tensor only.
-    public static Value CreateSequenceFloat(long dimension,
+    // create Value object from OneHotVector input as sequence data, for 1D tensor only.
+    public static Value createSequenceFloat(long dimension,
                                           long[] sequence,
                                           DeviceDescriptor device,
                                           boolean readOnly) {
-        return CreateSequenceFloat(dimension, sequence, true, device, readOnly);
+        return createSequenceFloat(dimension, sequence, true, device, readOnly);
     }
 
-    public static Value CreateSequenceFloat(long dimension,
+    public static Value createSequenceFloat(long dimension,
                                             long[] sequence,
                                             boolean sequenceStartFlag,
                                             DeviceDescriptor device) {
-        return CreateSequenceFloat(dimension, sequence, sequenceStartFlag, device, false);
+        return createSequenceFloat(dimension, sequence, sequenceStartFlag, device, false);
     }
 
-    public static Value CreateSequenceFloat(long dimension,
+    public static Value createSequenceFloat(long dimension,
                                           long[] sequence,
                                           DeviceDescriptor device) {
-        return CreateSequenceFloat(dimension, sequence, device, false);
+        return createSequenceFloat(dimension, sequence, device, false);
     }
 
-    public static Value CreateSequenceDouble(long dimension,
+    public static Value createSequenceDouble(long dimension,
                                             long[] sequence,
                                             boolean sequenceStartFlag,
                                             DeviceDescriptor device,
@@ -582,87 +582,87 @@
         return Value._CreateSequenceDouble(dimension, inputVector, sequenceStartFlag, device, readOnly);
     }
 
-    // Create Value object from OneHotVector input as sequence data, for 1D tensor only.
-    public static Value CreateSequenceDouble(long dimension,
+    // create Value object from OneHotVector input as sequence data, for 1D tensor only.
+    public static Value createSequenceDouble(long dimension,
                                           long[] sequence,
                                           DeviceDescriptor device,
                                           boolean readOnly) {
-        return CreateSequenceDouble(dimension, sequence, true, device, readOnly);
+        return createSequenceDouble(dimension, sequence, true, device, readOnly);
     }
 
-    public static Value CreateSequenceDouble(long dimension,
+    public static Value createSequenceDouble(long dimension,
                                             long[] sequence,
                                             boolean sequenceStartFlag,
                                             DeviceDescriptor device) {
-        return CreateSequenceDouble(dimension, sequence, sequenceStartFlag, device, false);
+        return createSequenceDouble(dimension, sequence, sequenceStartFlag, device, false);
     }
 
-    public static Value CreateSequenceDouble(long dimension,
+    public static Value createSequenceDouble(long dimension,
                                           long[] sequence,
                                           DeviceDescriptor device) {
-        return CreateSequenceDouble(dimension, sequence, device, false);
+        return createSequenceDouble(dimension, sequence, device, false);
     }
 
-    // Create Value object from OneHotVector input as batch of sequences data, for 1D tensor only.
-    public static Value CreateBatchOfSequencesFloat(long dimension,
+    // create Value object from OneHotVector input as batch of sequences data, for 1D tensor only.
+    public static Value createBatchOfSequencesFloat(long dimension,
                                                long[][] batchOfSequences,
                                                DeviceDescriptor device,
                                                boolean readOnly) {
-        return CreateFloat(dimension, batchOfSequences, new boolean[] {false}, device, readOnly);
+        return createFloat(dimension, batchOfSequences, new boolean[] {false}, device, readOnly);
     }
 
-    public static Value CreateBatchOfSequencesFloat(long dimension,
+    public static Value createBatchOfSequencesFloat(long dimension,
                                                long[][] batchOfSequences,
                                                DeviceDescriptor device) {
-        return CreateFloat(dimension, batchOfSequences, new boolean[] {false}, device, false);
+        return createFloat(dimension, batchOfSequences, new boolean[] {false}, device, false);
     }
 
-    public static Value CreateBatchOfSequencesDouble(long dimension,
+    public static Value createBatchOfSequencesDouble(long dimension,
                                                long[][] batchOfSequences,
                                                DeviceDescriptor device,
                                                boolean readOnly) {
-        return CreateDouble(dimension, batchOfSequences, new boolean[] {false}, device, readOnly);
+        return createDouble(dimension, batchOfSequences, new boolean[] {false}, device, readOnly);
     }
 
-    public static Value CreateBatchOfSequencesDouble(long dimension,
+    public static Value createBatchOfSequencesDouble(long dimension,
                                                long[][] batchOfSequences,
                                                DeviceDescriptor device) {
-        return CreateDouble(dimension, batchOfSequences, new boolean[] {false}, device, false);
+        return createDouble(dimension, batchOfSequences, new boolean[] {false}, device, false);
     }
 
-    // Create Value object from OneHotVector input as batch of sequences data with sequenceStratFlags, for 1D tensor only.
-    public static Value CreateBatchOfSequencesFloat(long dimension,
+    // create Value object from OneHotVector input as batch of sequences data with sequenceStratFlags, for 1D tensor only.
+    public static Value createBatchOfSequencesFloat(long dimension,
                                                    long[][] batchOfSequences,
                                                    boolean[] sequenceStartFlags,
                                                    DeviceDescriptor device,
                                                    boolean readOnly) {
-        return CreateFloat(dimension, batchOfSequences, sequenceStartFlags, device, readOnly);
+        return createFloat(dimension, batchOfSequences, sequenceStartFlags, device, readOnly);
     }
 
-    public static Value CreateBatchOfSequencesFloat(long dimension,
+    public static Value createBatchOfSequencesFloat(long dimension,
                                                    long[][] batchOfSequences,
                                                    boolean[] sequenceStartFlags,
                                                    DeviceDescriptor device) {
-        return CreateFloat(dimension, batchOfSequences, sequenceStartFlags, device, false);
+        return createFloat(dimension, batchOfSequences, sequenceStartFlags, device, false);
     }
 
-    public static Value CreateBatchOfSequencesDouble(long dimension,
+    public static Value createBatchOfSequencesDouble(long dimension,
                                                    long[][] batchOfSequences,
                                                    boolean[] sequenceStartFlags,
                                                    DeviceDescriptor device,
                                                    boolean readOnly) {
-        return CreateDouble(dimension, batchOfSequences, sequenceStartFlags, device, readOnly);
+        return createDouble(dimension, batchOfSequences, sequenceStartFlags, device, readOnly);
     }
 
-    public static Value CreateBatchOfSequencesDouble(long dimension,
+    public static Value createBatchOfSequencesDouble(long dimension,
                                                    long[][] batchOfSequences,
                                                    boolean[] sequenceStartFlags,
                                                    DeviceDescriptor device) {
-        return CreateDouble(dimension, batchOfSequences, sequenceStartFlags, device, false);
+        return createDouble(dimension, batchOfSequences, sequenceStartFlags, device, false);
     }
 
-    // Create Value object from OneHotVector input as batch of sequences data with sequenceStratFlags, for 1D tensor only.
-    public static Value CreateFloat(long dimension,
+    // create Value object from OneHotVector input as batch of sequences data with sequenceStratFlags, for 1D tensor only.
+    public static Value createFloat(long dimension,
                                     long[][] sequences,
                                     boolean[] sequenceStartFlags,
                                     DeviceDescriptor device,
@@ -676,14 +676,14 @@
         return Value._CreateOneHotFloat(dimension, inputSeqVector, seqFlags, device, readOnly);
     }
 
-    public static Value CreateFloat(long dimension,
+    public static Value createFloat(long dimension,
                                     long[][] sequences,
                                     boolean[] sequenceStartFlags,
                                     DeviceDescriptor device) {
-        return CreateFloat(dimension, sequences, sequenceStartFlags, device, false);
+        return createFloat(dimension, sequences, sequenceStartFlags, device, false);
     }
 
-    public static Value CreateDouble(long dimension,
+    public static Value createDouble(long dimension,
                                      long[][] sequences,
                                      boolean[] sequenceStartFlags,
                                      DeviceDescriptor device,
@@ -697,11 +697,11 @@
         return Value._CreateOneHotDouble(dimension, inputSeqVector, seqFlags, device, readOnly);
     }
 
-    public static Value CreateDouble(long dimension,
+    public static Value createDouble(long dimension,
                                      long[][] sequences,
                                      boolean[] sequenceStartFlags,
                                      DeviceDescriptor device) {
-        return CreateDouble(dimension, sequences, sequenceStartFlags, device, false);
+        return createDouble(dimension, sequences, sequenceStartFlags, device, false);
     }
 
 %}
