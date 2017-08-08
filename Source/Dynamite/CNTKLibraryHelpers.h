@@ -116,7 +116,7 @@ namespace Dynamite {
                         CNTK::LogicError("FromCNTKMB: Streams declared as !isSequence must have a trailing dimension of 1.");
                     data = Index(data, 0); // slice off sample axis (the last in C++)
                 }
-#if 1 // needed for now since PlainTextDeserializer cannot deliver Dense data, and Dynamite metric blows up on Sparse
+#if 1 // needed for now since PlainTextDeserializer cannot deliver Linear data, and Dynamite metric blows up on Sparse
                 if (data->IsSparse())
                 {
                     // multiply with  an identity matrix

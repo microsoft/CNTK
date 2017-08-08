@@ -263,7 +263,7 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     {
 #if 1
         axis;
-        return x;
+        return x;// *scale;
 #else
         let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
         let x0 = x - mean;
@@ -273,9 +273,10 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
         //LOG(len);
         // Note: ^^ this parallelizes, while this vv does not
         //let len = Sqrt(TransposeTimes(x, x));
-        let res = x * (invLen /*+ eps*/) * scale;
+        //let res = x * (invLen /*+ eps*/) * scale;
         //LOG(scale);
         //LOG(res);
+        let res = x0 * scale;
         return res;
 #endif
     });
@@ -355,22 +356,24 @@ static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 
-static UnaryBroadcastingModel Dense(size_t outputDim, bool bias, const DeviceDescriptor& device)
+static UnaryBroadcastingModel Linear(size_t outputDim, bool bias, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
+    //auto scale = Parameter({ }, 1.0f, device, L"Wscale");
+    // BUGBUG: ^^ this causes it to no longer converge or budge, it seems
     if (bias)
     {
         auto b = Parameter({ outputDim }, 0.0f, device, L"b");
-        return UnaryModel({ W, b }, [=](const Variable& x) { return Times(W, x) + b; });
+        return UnaryModel({ W/*, scale*/, b }, [=](const Variable& x) { return Times(W, x /* * scale*/) + b; });
     }
     else
-        return UnaryModel({ W }, [=](const Variable& x) { return Times(W, x); });
+        return UnaryModel({ W/*, scale*/ }, [=](const Variable& x) { return Times(W, x /* * scale*/); });
 }
 
 // by default we have a bias
-static UnaryBroadcastingModel Dense(size_t outputDim, const DeviceDescriptor& device)
+static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
 {
-    return Dense(outputDim, true, device);
+    return Linear(outputDim, true, device);
 }
 
 // create a Barrier function

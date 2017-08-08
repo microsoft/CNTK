@@ -364,6 +364,9 @@ namespace CNTK
                     // backprop into a slice of 'gradient'
                     if (beta == 0) // if beta = 0 then we must explicitly initialize the entire gradient matrix, not just the slice
                         gradient->SetValue(0.0f);
+                    // ^^ this is not correct. Can only reset the first.
+                    //if (beta == 0)
+                    //    LogicError("Variable '%S' Value(): Backpropagation for operation %S with beta=0 not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
                     startOffset[axisIndex] = beginIndex;
                     extent[axisIndex] = endIndex - beginIndex;
                     NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,

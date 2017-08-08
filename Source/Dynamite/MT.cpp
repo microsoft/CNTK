@@ -28,15 +28,16 @@ const DeviceDescriptor device(DeviceDescriptor::UseDefaultDevice());
 //const DeviceDescriptor device(DeviceDescriptor::CPUDevice());
 const size_t srcVocabSize = 27579 + 3; // 2330;
 const size_t tgtVocabSize = 21163 + 3; // 2330;
-const size_t embeddingDim = 300;
+const size_t embeddingDim = 300;// 512;// 300;
 const size_t attentionDim = 128;
-const size_t numEncoderLayers = 1;
-const size_t encoderHiddenDim = 128;
+const size_t numEncoderLayers = 2;// 2;
+const size_t encoderHiddenDim = 128;// 256;// 128;
 const size_t numDecoderLayers = 1;
-const size_t decoderHiddenDim = 128;
+const size_t decoderHiddenDim = 128;// 512;// 128;
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
-#define DOLOG(var) ((mbCount % 50 == 49) ? LOG(var) : 0)
+#define DOLOG(var) (var)
+                    // ((mbCount % 50 == 49) ? LOG(var) : 0)
 
 UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
 {
@@ -54,6 +55,10 @@ UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, 
             const vector<Variable>& in = (i == 0) ? x : hs[i % 2];
             vector<Variable>& out = (i == numLayers - 1) ? res : hs[(i+1) % 2];
             layers[i](out, in);
+            // skip connection
+            if (i > 0)
+                for (size_t t = 0; t < out.size(); t++)
+                    out[t] = out[t] + in[t];
         }
         hs[0].clear(); hs[1].clear();
     });
@@ -71,7 +76,7 @@ TernaryModel AttentionModel(size_t attentionDim1)
     auto v = Parameter({ attentionDim1 }, DataType::Float, GlorotUniformInitializer(), device, L"v"); // tanh projection
     auto scale = Parameter({ }, 1.0f, device, L"scale");
     let normQ = LengthNormalization(device);
-    return TernaryModel({ Q, /*K,*/ v, scale }, { { L"normQ", normQ }  },
+    return TernaryModel({ Q, /*K,*/ v, scale }, { { L"normQ", normQ } },
     [=](const Variable& query, const Variable& projectedKeys/*keys*/, const Variable& data) -> Variable
     {
         // compute attention weights
@@ -105,14 +110,17 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     dropoutInputKeepProb;
     // create all the layer objects
     let initialState = Constant({ hiddenDim }, 0.0f, device, L"initialState");
-    let initialContext = Constant({ 2 * hiddenDim }, 0.0f, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
+    let initialContext = Constant({ 2 * encoderHiddenDim }, 0.0f, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     vector<BinaryModel> lstms;
     for (size_t i = 0; i < numLayers; i++)
         lstms.push_back(GRU(hiddenDim, device));
     let attentionModel = AttentionModel(attentionDim); // (state, encoding) -> interpolated encoding
     let barrier = Barrier();
-    auto merge = Dense(hiddenDim, device); // one additional transform to merge attention into hidden state
-    auto dense = Dense(tgtVocabSize, device); // dense layer without non-linearity
+    auto merge = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
+    auto linear1 = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
+    auto linear2 = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
+    auto linear3 = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
+    auto dense = Linear(tgtVocabSize, device); // dense layer without non-linearity
     auto embed = Embedding(embeddingDim, device); // target embeddding
     auto K = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"K"); // keys projection
     let normK = LengthNormalization(device);
@@ -156,12 +164,12 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
             let pred = embed(history[t]);
             let input = Splice({ pred, attentionContext }, Axis(0), L"augInput");
             state = lstms[0](state, input);
-            //LOG(state);
+            DOLOG(state);
             // compute attention vector
             attentionContext = attentionModel(state, projectedKeys/*keys*/, /*data=*/hEncsTensor);
             // compute an enhanced hidden state with attention value merged in
-            //let m = Tanh(merge(Splice({ state, attentionContext }, Axis(0))));
-            let m = state; // normal s2s: predict from hidden state
+            let m = Tanh(merge(Splice({ state, attentionContext }, Axis(0)))) + state;
+            //let m = state; // normal s2s: predict from hidden state
             DOLOG(m);
             // compute output
             let z = dense(m);
@@ -280,7 +288,7 @@ void Train()
     //  - denom should be /sqrt(32)
     let f = 1/sqrt(32.0)/*AdaGrad correction-correction*/;
     AdditionalLearningOptions learnerOptions;
-    learnerOptions.gradientClippingThresholdPerSample = 1;
+    learnerOptions.gradientClippingThresholdPerSample = 2;
     auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*f, 0.00005*f, 0.000025*f, 0.000025*f, 0.000025*f, 0.00001*f }, epochSize),
                                    MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000), /*eps=*/1e-8, /*adamax=*/false,
                                    learnerOptions);

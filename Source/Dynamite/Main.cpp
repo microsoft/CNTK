@@ -33,7 +33,7 @@ UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, siz
     return StaticSequential({
         Embedding(embeddingDim, device),
         StaticSequence::Fold(RNNStep(hiddenDim, device)),
-        Dense(numOutputClasses, device)
+        Linear(numOutputClasses, device)
     });
 }
 
@@ -59,7 +59,7 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
     auto step    = RNNStep(hiddenDim, device);
     auto zero = Constant({ hiddenDim }, 0.0f, device);
     auto fold = Dynamite::Sequence::Fold(step, zero);
-    auto linear  = Dense(numOutputClasses, device);
+    auto linear  = Linear(numOutputClasses, device);
     vector<Variable> xvec;
     vector<Variable> evec;
     return UnaryModel({},
@@ -156,7 +156,7 @@ BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t em
     let bos = Constant({ numOutputClasses }, 0.0f, device); // one-hot representation of BOS symbol --TODO currently using zero for simplicity
     let fwdDec = RNNStep(hiddenDim, device);
     let attentionModel = AttentionModel(attentionDim, device);
-    let outProj = Dense(numOutputClasses, device);
+    let outProj = Linear(numOutputClasses, device);
     let decode = [=](const vector<Variable>& encoded, const Variable& recurrenceState, const Variable& prevWord)
     {
         // compute the attention state
