@@ -9,6 +9,7 @@
 #include "CNTKLibraryHelpers.h"
 #include "PlainTextDeseralizer.h"
 #include "Layers.h"
+#include "TimerUtility.h"
 
 #include <cstdio>
 #include <map>
@@ -69,11 +70,12 @@ TernaryModel AttentionModel(size_t attentionDim1)
     //auto K = Parameter({ attentionDim1, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"K"); // keys projection
     auto v = Parameter({ attentionDim1 }, DataType::Float, GlorotUniformInitializer(), device, L"v"); // tanh projection
     auto scale = Parameter({ }, 1.0f, device, L"scale");
-    return TernaryModel({ Q, /*K,*/ v, scale },
+    let normQ = LengthNormalization(device);
+    return TernaryModel({ Q, /*K,*/ v, scale }, { { L"normQ", normQ }  },
     [=](const Variable& query, const Variable& projectedKeys/*keys*/, const Variable& data) -> Variable
     {
         // compute attention weights
-        let projectedQuery = Times(Q, query); // [A x 1]
+        let projectedQuery = normQ(Times(Q, query)); // [A x 1]
         DOLOG(projectedQuery);
         //let projectedKeys  = Times(K, keys);  // [A x T]
         //LOG(projectedKeys);
@@ -113,6 +115,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     auto dense = Dense(tgtVocabSize, device); // dense layer without non-linearity
     auto embed = Embedding(embeddingDim, device); // target embeddding
     auto K = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"K"); // keys projection
+    let normK = LengthNormalization(device);
 
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
     // decode from a top layer of an encoder, using history as history
@@ -123,6 +126,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
         nestedLayers[L"lstm[" + std::to_wstring(nestedLayers.size()) + L"]"] = lstm;
     nestedLayers.insert(
     {
+        { L"normK", normK },
         { L"attentionModel", attentionModel },
         //{ L"merge", merge },
         { L"dense", dense },
@@ -142,7 +146,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
         // common subexpression of attention
         let keys = hEncsTensor;
         DOLOG(K);
-        let projectedKeys = Times(K, keys);  // [A x T]
+        let projectedKeys = normK(Times(K, keys));  // [A x T]
         for (size_t t = 0; t < history.size(); t++)
         {
             // do recurrent step
@@ -275,8 +279,11 @@ void Train()
     //  - numer should be /32
     //  - denom should be /sqrt(32)
     let f = 1/sqrt(32.0)/*AdaGrad correction-correction*/;
+    AdditionalLearningOptions learnerOptions;
+    learnerOptions.gradientClippingThresholdPerSample = 1;
     auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*f, 0.00005*f, 0.000025*f, 0.000025*f, 0.000025*f, 0.00001*f }, epochSize),
-                                   MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000));
+                                   MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000), /*eps=*/1e-8, /*adamax=*/false,
+                                   learnerOptions);
     let communicator = MPICommunicator();
     let& learner = CreateDataParallelDistributedLearner(communicator, baseLearner, /*distributeAfterSamples =*/ 0, /*useAsyncBufferedParameterUpdate =*/ false);
     unordered_map<Parameter, NDArrayViewPtr> gradients;
@@ -302,8 +309,10 @@ void Train()
             return smoothedNumer / smoothedDenom;
         }
     } smoothedLoss;
+    Microsoft::MSR::CNTK::Timer timer;
     for (mbCount = 0; true; mbCount++)
     {
+        timer.Restart();
         // get next minibatch
         auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, (size_t)minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);
         if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
@@ -323,8 +332,9 @@ void Train()
         let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
         totalLabels += info.numberOfSamples;
         let smoothedLossVal = smoothedLoss.Update(lossPerLabel, info.numberOfSamples);
-        fprintf(stderr, "%d: CrossEntropy loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d\n",
-                        (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels);
+        fprintf(stderr, "%d: CrossEntropy loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d, word/sec=%.1f\n",
+                        (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
+                        info.numberOfSamples / timer.ElapsedSeconds());
         // log
         // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
         if (mbCount < 400 || mbCount % 5 == 0)

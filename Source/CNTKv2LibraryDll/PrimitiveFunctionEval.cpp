@@ -89,6 +89,7 @@ namespace CNTK
         // perform the operation
         auto op = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
         auto reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
+        double alpha = 1; // changed in ReduceMean()
         switch (primitiveOp)
         {
             // binary elementwise ops are done outside, we just set the opcode
@@ -127,8 +128,12 @@ namespace CNTK
                     reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
                 else if (reductionOpName == PrimitiveFunction::InternalLogSumReductionOpName)
                     reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opLogSum;
+                else if (reductionOpName == PrimitiveFunction::InternalMeanReductionOpName)
+                {
+                    reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
+                    alpha = (double)outputShape.TotalSize() / (double)args[0]->Shape().TotalSize();
+                }
                 else
-                    //  PrimitiveFunction::InternalMeanReductionOpName
                     //  PrimitiveFunction::InternalMaxReductionOpName
                     //  PrimitiveFunction::InternalMinReductionOpName
                     //  PrimitiveFunction::InternalProdReductionOpName
@@ -233,7 +238,7 @@ namespace CNTK
         }
         // most common case: elementwise ops are done here instead
         if (op != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
-            NDArrayView::NumericOperation(args, 1.0, op, out, 0.0, reductionOp);
+            NDArrayView::NumericOperation(args, alpha, op, out, 0.0, reductionOp);
         return out;
     }
 
@@ -248,17 +253,12 @@ namespace CNTK
                               const NDArrayViewPtr& gradient, double beta,                                   // ...into here. (Despite 'const', *gradient is the output.)
                               const PrimitiveFunction& funcForErrMsg)
     {
-    #if 0   // TODO: bring this back once we have gradient functions that do not support beta
-        if (beta == 0) // TODO: limit this to those ops that do not support beta
-        {
-            gradient->SetValue(0.0f);
-            beta = 1;
-        }
-    #endif
         auto op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // this gets set for 1-argument TensorView ops for execution after the switch()
-        auto op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // and this for 2-arg ops; all others execute inside the switch()
+        auto op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // and this for 2-arg ops
+        auto op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // and this for 3-arg ops; all others execute inside the switch()
         const NDArrayView* arg1 = outputGradient;
         const NDArrayView* arg2 = nullptr;
+        const NDArrayView* arg3 = nullptr;
         double alpha = 1;
         // NOTE: For now, this only implements the operators needed for the prototype
         switch (primitiveOp)
@@ -267,6 +267,22 @@ namespace CNTK
         case PrimitiveOpType::Plus:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
         case PrimitiveOpType::Minus:          op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; alpha = i == 0 ? 1 : -1; break;
         case PrimitiveOpType::ElementTimes:   op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct; arg2 = inputValues[1 - i]; break;
+        case PrimitiveOpType::Pow:
+            {
+                if (i == 0)
+                {
+                    op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithPowBaseDerivative;
+                    arg2 = inputValues[0];
+                    arg3 = inputValues[1];
+                }
+                else
+                {
+                    op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithPowExponentDerivative;
+                    arg2 = outputValue;
+                    arg3 = inputValues[0];
+                }
+                break;
+            }
             // Times family
         case PrimitiveOpType::Times:
         case PrimitiveOpType::TransposeTimes:
@@ -301,18 +317,22 @@ namespace CNTK
             // gradients that are copies with broadcasting
         case PrimitiveOpType::ReduceElements:
             {
-                const auto& reductionOpName = attributes[L"reductionOpName"/*PrimitiveFunction::AttributeNameReductionOpName*/].Value<wstring>();
-                if (reductionOpName == L"Sum"/*PrimitiveFunction::InternalSumReductionOpName*/) // TODO: uncomment these symbols once we have access
+                const auto& reductionOpName = attributes[PrimitiveFunction::AttributeNameReductionOpName].Value<wstring>();
+                if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
                     op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
-                else if (reductionOpName == L"LogSum"/*PrimitiveFunction::InternalLogSumReductionOpName*/)
+                else if (reductionOpName == PrimitiveFunction::InternalLogSumReductionOpName)
                     NDArrayView::NumericOperation({ const_cast<NDArrayView*>(outputGradient )->shared_from_this(),
                                                     const_cast<NDArrayView*>( inputValues[0])->shared_from_this(),
                                                     const_cast<NDArrayView*>(outputValue    )->shared_from_this() }, alpha,
                                                   Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExpOfDiff,
                                                   gradient, beta,
                                                   Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                else if (reductionOpName == PrimitiveFunction::InternalMeanReductionOpName)
+                {
+                    op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
+                    alpha = (double)outputValue->Shape().TotalSize() / (double)inputValues[0]->Shape().TotalSize();
+                }
                 else
-                    //  PrimitiveFunction::InternalMeanReductionOpName
                     //  PrimitiveFunction::InternalMaxReductionOpName
                     //  PrimitiveFunction::InternalMinReductionOpName
                     //  PrimitiveFunction::InternalProdReductionOpName
@@ -356,8 +376,7 @@ namespace CNTK
             break;
             // primitives that have zero gradient (piecewise constants)
         case PrimitiveOpType::Floor:
-            if (beta == 0)
-                gradient->SetValue(0.0f);
+            // will be set to zero below
             break;
         default:
             //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());
@@ -374,6 +393,14 @@ namespace CNTK
             NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(), const_cast<NDArrayView*>(arg2)->shared_from_this() }, alpha,
                                           op2Args, gradient, beta,
                                           Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+        else if (op3Args != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
+            NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(), const_cast<NDArrayView*>(arg2)->shared_from_this(), const_cast<NDArrayView*>(arg3)->shared_from_this() }, alpha,
+                                          op3Args, gradient, beta,
+                                          Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+        else if (beta == 0)
+            gradient->SetValue(0.0f);
+        else if (beta != 1) // will this ever be needed?
+            LogicError("Variable '%S' Value(): Backpropagation with beta != 0 or 1 not implemented yet (operation %S).", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
     }
 
 }

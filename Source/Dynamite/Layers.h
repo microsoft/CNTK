@@ -39,6 +39,11 @@ static inline FunctionPtr operator*(const Variable& leftOperand, const Variable&
     return ElementTimes(leftOperand, rightOperand);
 }
 
+static inline FunctionPtr operator/(const Variable& leftOperand, const Variable& rightOperand)
+{
+    return ElementDivide(leftOperand, rightOperand);
+}
+
 struct ModelParameters
 {
     map<wstring, Parameter> m_parameters;
@@ -248,16 +253,28 @@ static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescrip
     });
 }
 
-//static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device)
-//{
-//    auto scale = Parameter({ NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"scale");
-//    return UnaryModel({ scale }, [=](const Variable& x)
-//    {
-//        let len = Sqrt(ReduceSum(x * x));
-//        let len = Sqrt(TransposeTimes(x, x));
-//        return x / len;
-//    });
-//}
+// layer normalization without bias term (which makes not much sense since we have a bias outside anyway in many cases)
+static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device, const Axis& axis = Axis(0))
+{
+    auto scale = Parameter({ }, 1.0f, device, L"scale");
+    let eps = Constant::Scalar(1e-16f, device);
+    let minusHalf = Constant::Scalar(-0.5f, device);
+    return UnaryModel({ scale }, [=](const Variable& x)
+    {
+        let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
+        let x0 = x - mean;
+        //LOG(x0);
+        // BUGBUG: Sqrt() seems hosed!!
+        let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf);
+        //LOG(len);
+        // Note: ^^ this parallelizes, while this vv does not
+        //let len = Sqrt(TransposeTimes(x, x));
+        let res = x * (invLen /*+ eps*/) * scale;
+        //LOG(scale);
+        //LOG(res);
+        return res;
+    });
+}
 
 static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
 {
@@ -278,16 +295,25 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     auto R  = Parameter({ outputDim * 2, outputDim }, DataType::Float, GlorotUniformInitializer(), device, L"R");
     auto R1 = Parameter({ outputDim    , outputDim }, DataType::Float, GlorotUniformInitializer(), device, L"R1");
     auto b  = Parameter({ outputDim * 3 }, 0.0f, device, L"b");
+    let normW = LengthNormalization(device);
+    let normR = LengthNormalization(device);
+    let normR1 = LengthNormalization(device);
     let stackAxis = vector<Axis>{ Axis(0) };
     let stackedDim = (int)outputDim;
     let one = Constant::Scalar(1.0f, device); // for "1 -"...
     // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
-    return BinaryModel({ W, R, R1, b }, [=](const Variable& dh, const Variable& x)
+    return BinaryModel({ W, R, R1, b },
+    {
+        { L"normW",  normW  },
+        { L"normR",  normR  },
+        { L"normR1", normR1 }
+    },
+    [=](const Variable& dh, const Variable& x)
     {
         let& dhs = dh;
         // projected contribution from input(s), hidden, and bias
-        let projx3 = b + Times(W, x);
-        let projh2 = Times(R, dh);
+        let projx3 = b + normW(Times(W, x));
+        let projh2 = normR(Times(R, dh));
         let zt_proj = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim) + Slice(projh2, stackAxis, 0 * stackedDim, 1 * stackedDim);
         let rt_proj = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim) + Slice(projh2, stackAxis, 1 * stackedDim, 2 * stackedDim);
         let ct_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim);
@@ -297,7 +323,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         let rt = Sigmoid(rt_proj);                  // reset gate r(t)
 
         let rs = dhs * rt;                          // "cell" c
-        let ct = activation(ct_proj + Times(R1, rs));
+        let ct = activation(ct_proj + normR1(Times(R1, rs)));
 
         let ht = (one - zt) * ct + zt * dhs; // hidden state ht / output
 
