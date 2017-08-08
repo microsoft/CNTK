@@ -22,6 +22,8 @@ using namespace CNTK;
 using namespace std;
 
 #define BarrierOp Alias
+//#define DTYPE DataType::Float
+#define DTYPE DataType::Double
 
 #pragma warning(push)
 #pragma warning(disable: 4505) // unreferenced function was removed --TODO: use push/pop
@@ -97,7 +99,7 @@ public:
         for (let& kv : m_parameters) // log parameters defined right here
         {
             let name = prefix + kv.first;
-            fprintf(stderr, "%S : %S\n", name.c_str(), kv.second.Shape().AsString().c_str());
+            fprintf(stderr, "%S : %S\n", name.c_str(), kv.second.AsString().c_str());
             // for debugging, implant the full name. This way, the full name will show up in AutoBatch log output.
             const_cast<Parameter&>(kv.second).DebugUpdateName(name);
         }
@@ -246,7 +248,7 @@ struct UnaryBroadcastingModel : public UnaryModel
 
 static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
-    auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"E");
+    auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"E");
     return UnaryModel({ E }, [=](const Variable& x)
     {
         return Times(E, x);
@@ -256,9 +258,9 @@ static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescrip
 // layer normalization without bias term (which makes not much sense since we have a bias outside anyway in many cases)
 static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device, const Axis& axis = Axis(0))
 {
-    auto scale = Parameter({ }, 1.0f, device, L"scale");
-    let eps = Constant::Scalar(1e-16f, device);
-    let minusHalf = Constant::Scalar(-0.5f, device);
+    auto scale = Parameter({ }, DTYPE, 1.0, device, L"scale");
+    let eps = Constant::Scalar(DTYPE, 1e-16, device);
+    let minusHalf = Constant::Scalar(DTYPE, -0.5, device);
     return UnaryModel(vector<Parameter>{ /*scale*/ }, [=](const Variable& x)
     {
 #if 1
@@ -284,9 +286,9 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
 
 static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
 {
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
-    auto R = Parameter({ outputDim, outputDim                  }, DataType::Float, GlorotUniformInitializer(), device, L"R");
-    auto b = Parameter({ outputDim }, 0.0f, device, L"b");
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
+    auto R = Parameter({ outputDim, outputDim                  }, DTYPE, GlorotUniformInitializer(), device, L"R");
+    auto b = Parameter({ outputDim }, DTYPE, 0.0, device, L"b");
     return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
     {
         return /*Sigmoid*/ReLU(Times(W, input) + b + Times(R, prevOutput), L"RNNStep.h");
@@ -297,16 +299,16 @@ static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
 static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 {
     let activation = [](const Variable& x) { return Tanh(x); };
-    auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
-    auto R  = Parameter({ outputDim * 2, outputDim }, DataType::Float, GlorotUniformInitializer(), device, L"R");
-    auto R1 = Parameter({ outputDim    , outputDim }, DataType::Float, GlorotUniformInitializer(), device, L"R1");
-    auto b  = Parameter({ outputDim * 3 }, 0.0f, device, L"b");
+    auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
+    auto R  = Parameter({ outputDim * 2, outputDim }, DTYPE, GlorotUniformInitializer(), device, L"R");
+    auto R1 = Parameter({ outputDim    , outputDim }, DTYPE, GlorotUniformInitializer(), device, L"R1");
+    auto b  = Parameter({ outputDim * 3 }, DTYPE, 0.0f, device, L"b");
     let normW = LengthNormalization(device);
     let normR = LengthNormalization(device);
     let normR1 = LengthNormalization(device);
     let stackAxis = vector<Axis>{ Axis(0) };
     let stackedDim = (int)outputDim;
-    let one = Constant::Scalar(1.0f, device); // for "1 -"...
+    let one = Constant::Scalar(DTYPE, 1.0, device); // for "1 -"...
     // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
     return BinaryModel({ W, R, R1, b },
     {
@@ -345,9 +347,9 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 
 static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
 {
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
-    auto R = Parameter({ outputDim, outputDim }, DataType::Float, GlorotUniformInitializer(), device, L"R");
-    auto b = Parameter({ outputDim }, 0.0f, device, L"b");
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
+    auto R = Parameter({ outputDim, outputDim }, DTYPE, GlorotUniformInitializer(), device, L"R");
+    auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
     return TernaryModel({ W, R, b }, [=](const Variable& prevH, const Variable& prevC, const Variable& input)
     {
         // TODO: complete this
@@ -358,12 +360,12 @@ static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
 
 static UnaryBroadcastingModel Linear(size_t outputDim, bool bias, const DeviceDescriptor& device)
 {
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
-    //auto scale = Parameter({ }, 1.0f, device, L"Wscale");
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
+    //auto scale = Parameter({ }, DTYPE, 1.0, device, L"Wscale");
     // BUGBUG: ^^ this causes it to no longer converge or budge, it seems
     if (bias)
     {
-        auto b = Parameter({ outputDim }, 0.0f, device, L"b");
+        auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
         return UnaryModel({ W/*, scale*/, b }, [=](const Variable& x) { return Times(W, x /* * scale*/) + b; });
     }
     else

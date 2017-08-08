@@ -77,7 +77,7 @@ namespace Dynamite {
 
     // returns vector[numArgs] OF vector[numBatchItems] OF Constant[seqLen,sampleShape]
     // or no seqLen if isSequence is false for the respective stream
-    static void FromCNTKMB(vector<vector<Variable>>& res, const vector<ValuePtr>& inputs, const vector<bool>& isSequence, const DeviceDescriptor& device) // variables needed for axis info only
+    static void FromCNTKMB(vector<vector<Variable>>& res, const vector<ValuePtr>& inputs, const vector<bool>& isSequence, DataType dataType, const DeviceDescriptor& device) // variables needed for axis info only
     {
         let numArgs = inputs.size();
         res.resize(numArgs);
@@ -124,11 +124,13 @@ namespace Dynamite {
                     data = NDArrayView::MatrixProduct(false, eye, false, data, false, 1.0, 1);
                 }
 #endif
-                arg[s] = Constant(data); // TODO: does this make a copy?
+                auto c = Constant(data);
+                if (c.GetDataType() != dataType)
+                    c = c.CloneAs(dataType); // note: This is expensive and involves a GPU sync; so only do this for debugging (gradient check)
+                arg[s] = c;
                 //data = data->AsShape(data->Shape()); // (for debugging)
             }
         }
     }
 
 }; // namespace
-

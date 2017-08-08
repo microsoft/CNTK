@@ -124,9 +124,9 @@ void Flush(const FunctionPtr& f)
 
 function<Variable(const vector<Variable>&, const Variable&)> AttentionModel(size_t attentionDim, const DeviceDescriptor& device)
 {
-    auto Wenc = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
-    auto Wdec = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
-    auto v    = Parameter({ attentionDim }, DataType::Float, GlorotUniformInitializer(), device);
+    auto Wenc = Parameter({ attentionDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device);
+    auto Wdec = Parameter({ attentionDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device);
+    auto v    = Parameter({ attentionDim }, DTYPE, GlorotUniformInitializer(), device);
     return [=](const vector<Variable>& hEncs, const Variable& hDec)
     {
         // BUGBUG: suboptimal, redoing attention projection for inputs over again; need CSE
@@ -256,8 +256,8 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     // build the graph
     useSparseLabels;
-    auto features = InputVariable({ inputDim },         true/*false*/ /*isSparse*/, DataType::Float, featuresName);
-    auto labels   = InputVariable({ numOutputClasses }, false/*useSparseLabels*/,   DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
+    auto features = InputVariable({ inputDim },         true/*false*/ /*isSparse*/, DTYPE, featuresName);
+    auto labels   = InputVariable({ numOutputClasses }, false/*useSparseLabels*/,   DTYPE, labelsName, { Axis::DefaultBatchAxis() });
 
     auto criterion = criterion_fn(features, labels); // this sets the shapes and initializes all parameters
     auto loss   = criterion;
@@ -293,9 +293,9 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     // This is a hack for profiling only.
     // Without this, an expensive CUDA call will show up as part of the GatherBatch kernel
     // and distort the measurement.
-    auto t1 = make_shared<NDArrayView>(DataType::Float, NDShape({  1,42 }), device);
-    auto t2 = make_shared<NDArrayView>(DataType::Float, NDShape({ 13,42 }), device);
-    auto t3 = make_shared<NDArrayView>(DataType::Float, NDShape({ 13,42 }), device);
+    auto t1 = make_shared<NDArrayView>(DTYPE, NDShape({  1,42 }), device);
+    auto t2 = make_shared<NDArrayView>(DTYPE, NDShape({ 13,42 }), device);
+    auto t3 = make_shared<NDArrayView>(DTYPE, NDShape({ 13,42 }), device);
     t3->NumericOperation({ t1, t2 }, 1.0, 26/*PrimitiveOpType::Plus*/);
 
     const size_t minibatchSize = 200;  // use 10 for ~3 sequences/batch
@@ -317,7 +317,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         Variable mbLoss;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "FromCNTKMB:     %.6f sec\n");
-            FromCNTKMB(args, { minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, { true, false }, device);
+            FromCNTKMB(args, { minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, { true, false }, DataType::Float, device);
         }
         //vector<vector<vector<Variable>>> vargs(args.size());
         //for (size_t i = 0; i < args.size(); i++)

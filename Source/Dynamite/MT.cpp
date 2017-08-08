@@ -30,7 +30,7 @@ const size_t srcVocabSize = 27579 + 3; // 2330;
 const size_t tgtVocabSize = 21163 + 3; // 2330;
 const size_t embeddingDim = 300;// 512;// 300;
 const size_t attentionDim = 128;
-const size_t numEncoderLayers = 2;// 2;
+const size_t numEncoderLayers = 1;// 2;
 const size_t encoderHiddenDim = 128;// 256;// 128;
 const size_t numDecoderLayers = 1;
 const size_t decoderHiddenDim = 128;// 512;// 128;
@@ -44,8 +44,8 @@ UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, 
     dropoutInputKeepProb;
     vector<UnarySequenceModel> layers;
     for (size_t i = 0; i < numLayers; i++)
-        layers.push_back(Dynamite::Sequence::BiRecurrence(GRU(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device, L"fwdInitialValue"),
-                                                          GRU(hiddenDim, device), Constant({ hiddenDim }, 0.0f, device, L"fwdInitialValue")));
+        layers.push_back(Dynamite::Sequence::BiRecurrence(GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"fwdInitialValue"),
+                                                          GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"fwdInitialValue")));
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
     return UnarySequenceModel(vector<ModelParametersPtr>(layers.begin(), layers.end()),
     [=](vector<Variable>& res, const vector<Variable>& x) mutable
@@ -71,12 +71,12 @@ UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, 
 // Here they are the same.
 TernaryModel AttentionModel(size_t attentionDim1)
 {
-    auto Q = Parameter({ attentionDim1, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"Q"); // query projection
-    //auto K = Parameter({ attentionDim1, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"K"); // keys projection
-    auto v = Parameter({ attentionDim1 }, DataType::Float, GlorotUniformInitializer(), device, L"v"); // tanh projection
-    auto scale = Parameter({ }, 1.0f, device, L"scale");
+    auto Q = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
+    //auto K = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"K"); // keys projection
+    auto v = Parameter({ attentionDim1 }, DTYPE, GlorotUniformInitializer(), device, L"v"); // tanh projection
+    auto scale = Parameter({ }, DTYPE, 1.0, device, L"scale");
     let normQ = LengthNormalization(device);
-    return TernaryModel({ Q, /*K,*/ v, scale }, { { L"normQ", normQ } },
+    return TernaryModel({ Q, /*K,*/ v /*,scale*/ }, { { L"normQ", normQ } },
     [=](const Variable& query, const Variable& projectedKeys/*keys*/, const Variable& data) -> Variable
     {
         // compute attention weights
@@ -84,7 +84,7 @@ TernaryModel AttentionModel(size_t attentionDim1)
         DOLOG(projectedQuery);
         //let projectedKeys  = Times(K, keys);  // [A x T]
         //LOG(projectedKeys);
-        let tanh = Tanh((projectedQuery + projectedKeys) * scale); // [A x T]
+        let tanh = Tanh((projectedQuery + projectedKeys) /** scale*/); // [A x T]
 #if 0 // this fails auto-batching
         let u = Times(v, tanh, L"vProj"); // [T] vector                         // [128] * [128 x 4 x 7] -> [4 x 7]
         let w = Dynamite::Softmax(u);                                           // [4 x 7]
@@ -109,8 +109,8 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
 {
     dropoutInputKeepProb;
     // create all the layer objects
-    let initialState = Constant({ hiddenDim }, 0.0f, device, L"initialState");
-    let initialContext = Constant({ 2 * encoderHiddenDim }, 0.0f, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
+    let initialState = Constant({ hiddenDim }, DTYPE, 0.0, device, L"initialState");
+    let initialContext = Constant({ 2 * encoderHiddenDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     vector<BinaryModel> lstms;
     for (size_t i = 0; i < numLayers; i++)
         lstms.push_back(GRU(hiddenDim, device));
@@ -122,7 +122,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     auto linear3 = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
     auto dense = Linear(tgtVocabSize, device); // dense layer without non-linearity
     auto embed = Embedding(embeddingDim, device); // target embeddding
-    auto K = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"K"); // keys projection
+    auto K = Parameter({ attentionDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"K"); // keys projection
     let normK = LengthNormalization(device);
 
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
@@ -268,30 +268,32 @@ void Train()
     // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep in a single expression
 
     // run something through to get the parameter matrices shaped --ugh!
-    vector<Variable> d1{ Constant({ srcVocabSize }, 0.0f, device) };
-    vector<Variable> d2{ Constant({ tgtVocabSize }, 0.0f, device) };
+    vector<Variable> d1{ Constant({ srcVocabSize }, DTYPE, 0.0, device) };
+    vector<Variable> d2{ Constant({ tgtVocabSize }, DTYPE, 0.0, device) };
     vector<Variable> d3;
     model_fn(d3, d1, d2);
 
     model_fn.LogParameters();
 
     let parameters = model_fn.Parameters();
-    //auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005));
     //let epochSize = 100000; // it's a small corpus, ~50k samples
     let epochSize = 10000000; // this is maybe half a true epoch
     let minibatchSize = 1384;// 50;  // 384 is 32 sequences, assuming av. length ~12
-    let minibatchSizeAtStart = 50; // start smaller for stability  --TODO: This is wrong with current Adam implementation
     //auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001 * sqrt(minibatchSize), 0.00005 * sqrt(minibatchSize), 0.000025 * sqrt(minibatchSize), 0.00001 * sqrt(minibatchSize) }, epochSize), MomentumAsTimeConstantSchedule(1000), true, MomentumAsTimeConstantSchedule(10000));
     // correction:
     //  - LR is specified for av gradient
     //  - numer should be /32
     //  - denom should be /sqrt(32)
-    let f = 1/sqrt(32.0)/*AdaGrad correction-correction*/;
     AdditionalLearningOptions learnerOptions;
     learnerOptions.gradientClippingThresholdPerSample = 2;
+#if 0
+    auto baseLearner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005), learnerOptions);
+#else
+    let f = 1 / sqrt(32.0)/*AdaGrad correction-correction*/;
     auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*f, 0.00005*f, 0.000025*f, 0.000025*f, 0.000025*f, 0.00001*f }, epochSize),
                                    MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000), /*eps=*/1e-8, /*adamax=*/false,
                                    learnerOptions);
+#endif
     let communicator = MPICommunicator();
     let& learner = CreateDataParallelDistributedLearner(communicator, baseLearner, /*distributeAfterSamples =*/ 0, /*useAsyncBufferedParameterUpdate =*/ false);
     unordered_map<Parameter, NDArrayViewPtr> gradients;
@@ -330,7 +332,7 @@ void Train()
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences,
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples,
                 learner->LearningRate());
-        Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, device);
+        Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
         // train minibatch
         let mbLoss = criterion_fn(args[0], args[1]);
         // backprop and model update
