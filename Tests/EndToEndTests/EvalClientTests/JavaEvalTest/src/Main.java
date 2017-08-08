@@ -80,8 +80,7 @@ public class Main {
         modelFunc.evaluate(inputDataMap, outputDataMap, device);
 
         // get evaluate result as dense output
-        FloatVectorVector outputBuffer = new FloatVectorVector();
-        outputDataMap.get(outputVar).copyVariableValueToFloat(outputVar, outputBuffer);
+        float[][] outputBuffer = outputDataMap.get(outputVar).getDenseDataFloat(outputVar);
 
 
         float[] expectedResults = {
@@ -96,10 +95,10 @@ public class Main {
                 -4.393841f,
                 1.4517201f};
 
-        FloatVector results = outputBuffer.get(0);
-        for (int j = 0; j < results.size(); j++) {
-            System.out.println(results.get(j) + " ");
-            if (!equals(expectedResults[j], results.get(j))) {
+        float[] results = outputBuffer[0];
+        for (int j = 0; j < results.length; j++) {
+            System.out.println(results[j] + " ");
+            if (!equals(expectedResults[j], results[j])) {
                 throw new RuntimeException("Test Failed on output " + j);
             }
         }

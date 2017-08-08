@@ -827,60 +827,35 @@
         return create(sampleShape, seqVector, startFlags, device, readOnly, createNewCopy);
     }
 
-    /*//*/
-    /*// Return the data of the Value object as a list of sequences with variable length.*/
-    /*// This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.*/
-    /*// Each sequence, represented by IList<T>, contains a variable number of samples.*/
-    /*// Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.*/
-    /*// The number of samples = (the count of elements in IList<T>)/(the count of elements of the sample)*/
-    /*// The shape of the variable should match the shape of the Value object.*/
-    /*//*/
-    /*public System.Collections.Generic.IList<System.Collections.Generic.IList<T>> GetDenseData<T>(Variable outputVariable)*/
-    /*{*/
-        /*var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<T>>();*/
-        /*if (typeof(T).Equals(typeof(float)))*/
-        /*{*/
-            /*if (_GetDataType() != DataType.Float)*/
-            /*{*/
-                /*throw new System.ArgumentException("The value type does not match the list type.");*/
-            /*}*/
+    //
+    // Return the data of the Value object as a list of sequences with variable length.
+    // This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.
+    // Each sequence, represented by IList<T>, contains a variable number of samples.
+    // Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.
+    // The number of samples = (the count of elements in IList<T>)/(the count of elements of the sample)
+    // The shape of the variable should match the shape of the Value object.
+    //
+    public float[][] getDenseDataFloat(Variable outputVariable) {
+        float[][] sequences = new float[][] {{}};
+        if (getDataType() != DataType.Float) {
+            throw new java.lang.IllegalArgumentException("The value type does not match the list type.");
+        }
 
-            /*var seqVec = new FloatVectorVector();*/
-            /*_CopyVariableValueToFloat(outputVariable, seqVec);*/
+        FloatVectorVector seqVec = new FloatVectorVector();
+        _CopyVariableValueToFloat(outputVariable, seqVec);
 
-            /*foreach (var seq in seqVec)*/
-            /*{*/
-                /*var seqList = seq as System.Collections.Generic.IList<T>;*/
-                /*if (seqList == null)*/
-                    /*throw new System.TypeAccessException("Cannot convert to the value type.");*/
-                /*// It is required to create a new List from seq, since seq is dependent on the life cycle of seqVec.*/
-                /*sequences.Add(new System.Collections.Generic.List<T>(seqList));*/
-            /*}*/
-        /*}*/
-        /*else if (typeof(T).Equals(typeof(double)))*/
-        /*{*/
-            /*if (_GetDataType() != DataType.Double)*/
-            /*{*/
-                /*throw new System.ArgumentException("The value type does not match the list type.");*/
-            /*}*/
+        for (int i = 0; i < seqVec.size(); ++i) {
+            FloatVector innerVec = seqVec.get(i);
 
-            /*var seqVec = new DoubleVectorVector();*/
-            /*_CopyVariableValueToDouble(outputVariable, seqVec);*/
-            /*foreach (var seq in seqVec)*/
-            /*{*/
-                /*var seqList = seq as System.Collections.Generic.IList<T>;*/
-                /*if (seqList == null)*/
-                    /*throw new System.TypeAccessException("Cannot convert to the value type.");*/
-                /*// It is required to create a new List from seq, since seq is dependent on the life cycle of seqVec.*/
-                /*sequences.Add(new System.Collections.Generic.List<T>(seqList));*/
-            /*}*/
-        /*}*/
-        /*else*/
-        /*{*/
-            /*throw new System.ArgumentException("The value type does not match the list type.");*/
-        /*}*/
-        /*return sequences;*/
-    /*}*/
+            float[] valArray = new float[(int)innerVec.size()];
+            for (int j = 0; j < innerVec.size(); ++j) {
+                valArray[j] = innerVec.get(j);
+            }
+
+            sequences[i] = valArray;
+        }
+        return sequences;
+    }
 
     /*//*/
     /*// Return the data of the Value object as a list of sequences with variable length.*/

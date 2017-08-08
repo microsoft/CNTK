@@ -670,6 +670,8 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateDenseFloat);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateDenseDouble);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateOneHotFloat);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateOneHotDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 
 // TODO: make the following methods also private in Java, after CreateBatch/CreateSequence/... methods are implemented there.
 #ifdef SWIGCSHARP
@@ -681,8 +683,6 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, Create);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, GetDataType);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, GetStorageFormat);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueTo);
-RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToFloat);
-RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 #endif // SWIGCSHARP
 
 %apply int[] { int *colStarts }
@@ -704,8 +704,6 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 %rename (copyFrom) CNTK::Value::CopyFrom;
 %rename (erase) CNTK::Value::Erase;
 %rename (copyVariableValueTo) CNTK::Value::CopyVariableValueTo;
-%rename (copyVariableValueToFloat) CNTK::Value::CopyVariableValueToFloat;
-%rename (copyVariableValueToDouble) CNTK::Value::CopyVariableValueToDouble;
 %rename (toString) CNTK::Value::AsString;
 #endif // SWIGJAVA
 
