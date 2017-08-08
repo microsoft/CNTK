@@ -23,6 +23,10 @@
 %include <arrays_csharp.i>
 #endif
 
+#ifdef SWIGJAVA
+%include <arrays_java.i>
+#endif
+
 %{
     #include "CNTKLibrary.h"
     #pragma warning(disable : 4100) //unreferenced formal parameter
@@ -681,14 +685,12 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToFloat);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 #endif // SWIGCSHARP
 
-#ifdef SWIGCSHARP
-%apply int INPUT[]  { int *colStarts }
-%apply int INPUT[]  { int *rowIndices }
-%apply float INPUT[]  { float *nonZeroValues }
-%apply double INPUT[]  { double *nonZeroValues }
-%apply int OUTPUT[]  { int *sequenceLength }
-%apply int OUTPUT[]  { int *numNonZeroValues }
-#endif
+%apply int[] { int *colStarts }
+%apply int[] { int *rowIndices }
+%apply float[] { float *nonZeroValues }
+%apply double[] { double *nonZeroValues }
+%apply int[] { int *sequenceLength }
+%apply int[] { int *numNonZeroValues }
 
 #ifdef SWIGJAVA
 %rename (isValid) CNTK::Value::IsValid;
@@ -705,12 +707,6 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 %rename (copyVariableValueToFloat) CNTK::Value::CopyVariableValueToFloat;
 %rename (copyVariableValueToDouble) CNTK::Value::CopyVariableValueToDouble;
 %rename (toString) CNTK::Value::AsString;
-
-// TODO: make Java binding deal with double*, float * and int * correctly.
-%ignore CNTK::Value::CreateSequenceFloat(const CNTK::NDShape& sampleShape, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
-%ignore CNTK::Value::CreateSequenceDouble(const CNTK::NDShape& sampleShape, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
-%ignore CNTK::Value::CreateSequenceFloat(size_t dimension, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
-%ignore CNTK::Value::CreateSequenceDouble(size_t dimension, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
 #endif // SWIGJAVA
 
 %include "CNTKValueExtend.i"
