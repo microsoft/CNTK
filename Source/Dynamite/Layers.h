@@ -259,13 +259,17 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     auto scale = Parameter({ }, 1.0f, device, L"scale");
     let eps = Constant::Scalar(1e-16f, device);
     let minusHalf = Constant::Scalar(-0.5f, device);
-    return UnaryModel({ scale }, [=](const Variable& x)
+    return UnaryModel(vector<Parameter>{ /*scale*/ }, [=](const Variable& x)
     {
+#if 1
+        axis;
+        return x;
+#else
         let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
         let x0 = x - mean;
         //LOG(x0);
         // BUGBUG: Sqrt() seems hosed!!
-        let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf);
+        let invLen = Pow(ReduceMean(x0 * x0, axis) + eps, minusHalf);
         //LOG(len);
         // Note: ^^ this parallelizes, while this vv does not
         //let len = Sqrt(TransposeTimes(x, x));
@@ -273,6 +277,7 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
         //LOG(scale);
         //LOG(res);
         return res;
+#endif
     });
 }
 
