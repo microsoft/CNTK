@@ -154,6 +154,10 @@
     <CudaLibs>cudart.lib;cublas.lib;cusparse.lib;curand.lib</CudaLibs>
     <CudaInclude>$(CudaPath)\include</CudaInclude>
     <CudaLibPath>$(CudaPath)\lib\$(Platform)</CudaLibPath>
+
+    <CudaMsbuildPath Condition="'$(CudaMsbuildPath)' == ''">$(VCTargetsPath)\BuildCustomizations</CudaMsbuildPath>
+    <CudaPropsPath>$(CudaMsbuildPath)\CUDA $(CudaVersion).props</CudaPropsPath>
+    <CudaTargetsPath>$(CudaMsbuildPath)\CUDA $(CudaVersion).targets</CudaTargetsPath>
   </PropertyGroup>
 
   <!-- TODO warn if ConfigurationType not (yet) defined -->
