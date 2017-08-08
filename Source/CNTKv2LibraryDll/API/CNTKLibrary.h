@@ -3725,14 +3725,14 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr UnpackBatch(const Variable& operand, const std::wstring& name);
 
-    enum : int
+    enum class PaddingMode
     {
-        CONSTANTPAD = 0,                        // the default, fill the padding cells with 0
+        CONSTANTPAD = 0, // the default, fill the padding cells with 0
         REFLECTPAD = 1, // Padding with reflect mode
         SYMMETRICPAD = 2, // Padding with symmetric mode
     };
 
-    CNTK_API FunctionPtr Pad(const Variable& operand, const std::wstring& name, const std::vector<size_t>& head, const std::vector<size_t>& foot, size_t mode);
+    CNTK_API FunctionPtr Pad(const Variable& operand, PaddingMode mode, const std::vector<size_t>& head, const std::vector<size_t>& foot, double constantValue = 0, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the random_sample operation on specified sampling weights input vector

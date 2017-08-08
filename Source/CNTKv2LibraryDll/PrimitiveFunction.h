@@ -278,6 +278,7 @@ namespace CNTK
         static const std::wstring AttributeNamePaddingHead;
         static const std::wstring AttributeNamePaddingFoot;
         static const std::wstring AttributeNamePaddingMode;
+        static const std::wstring AttributeNamePaddingConstantValue;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)

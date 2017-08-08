@@ -1312,32 +1312,13 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::UnpackBatch, operand, Dictionary(), name);
     }
 
-    FunctionPtr Pad(const Variable& operand, const std::wstring& name, const std::vector<size_t>& head, const std::vector<size_t>& foot, size_t mode)
+    FunctionPtr Pad(const Variable& operand, PaddingMode mode, const std::vector<size_t>& head, const std::vector<size_t>& foot, double constantValue, const std::wstring& name)
     {
-        auto dims = operand.Shape().Dimensions();
-        if (head.size() != dims.size() || head.size() != foot.size())
-            LogicError("Pad: the length of head and foot does not match input operand's dimension.");
-
-        if (!operand.Shape().HasUnboundDimension())
-        {
-            if (mode == REFLECTPAD)
-            {
-                for (int i = 0; i < dims.size(); i++)
-                    if (head[i] > dims[i] - 1 || foot[i] > dims[i] - 1)
-                        LogicError("Pad: with REFLECTPAD mode, the head and foot length must be no greater than input dimension - 1.");
-            }
-            else if (mode == SYMMETRICPAD)
-            {
-                for (int i = 0; i < dims.size(); i++)
-                    if (head[i] > dims[i] || foot[i] > dims[i])
-                        LogicError("Pad: with SYMMETRICPAD mode, the head and foot length must be no greater than input dimension.");
-            }
-        }
-        
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNamePaddingHead] = AsDictionaryValueVector(head);
         additionalProperties[PrimitiveFunction::AttributeNamePaddingFoot] = AsDictionaryValueVector(foot);
-        additionalProperties[PrimitiveFunction::AttributeNamePaddingMode] = mode;
+        additionalProperties[PrimitiveFunction::AttributeNamePaddingMode] = (size_t)mode;
+        additionalProperties[PrimitiveFunction::AttributeNamePaddingConstantValue] = constantValue;
         return UnaryOp(PrimitiveOpType::Pad, operand, std::move(additionalProperties), name);
     }
 

@@ -881,6 +881,13 @@ private:
 template class SliceNode<float>;
 template class SliceNode<double>;
 
+enum class PaddingType
+{
+    CONSTANTPAD = 0, // the default, fill the padding cells with 0
+    REFLECTPAD = 1, // Padding with reflect mode
+    SYMMETRICPAD = 2, // Padding with symmetric mode
+};
+
 template <class ElemType>
 class PaddingNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
@@ -891,16 +898,11 @@ class PaddingNode : public ComputationNode<ElemType>, public NumInputs<1>
         return L"Padding";
     }
 public:
-    enum : size_t
-    {
-        CONSTANTPAD = 0,                        // the default, fill the padding cells with 0
-        REFLECTPAD = 1, // Padding with reflect mode
-        SYMMETRICPAD = 2, // Padding with symmetric mode
-    };
+    
 
 public:
-    PaddingNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<size_t> head, std::vector<size_t> foot, size_t mode = CONSTANTPAD)
-        : Base(deviceId, name), m_head(head), m_foot(foot), m_mode(mode)
+    PaddingNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<size_t> head, std::vector<size_t> foot, PaddingType mode = PaddingType::CONSTANTPAD, ElemType constantValue = 0)
+        : Base(deviceId, name), m_head(head), m_foot(foot), m_mode(mode), m_constant_value(constantValue)
     {
     }
 
@@ -923,22 +925,25 @@ public:
             outputSubSlice.NarrowTo(index, m_head[index], dims[index] + m_head[index]);
         }
 
-        if (m_mode == CONSTANTPAD)
+        if (m_mode == PaddingType::CONSTANTPAD)
         {
-            Value().SetValue(0);
+            Value().SetValue(m_constant_value);
         }
 
         auto output = TensorView<ElemType>(ValuePtr(), outputSubSlice);
         output.AssignCopyOf(input);
 
-        for (int index = maxRank - 1; index >= 0; index--)
+        if (m_mode == PaddingType::REFLECTPAD)
         {
-            if (m_mode == REFLECTPAD) // reflect
+            for (int index = maxRank - 1; index >= 0; index--)
             {
                 FillPaddingCells(fr, rank, index, 0, m_head[index] + 1, m_head[index], false);
                 FillPaddingCells(fr, rank, index, outputDims[index] - m_foot[index], outputDims[index] - 2 * m_foot[index] - 1, m_foot[index], true);
             }
-            else if (m_mode == SYMMETRICPAD)
+        }
+        else if (m_mode == PaddingType::SYMMETRICPAD)
+        {
+            for (int index = maxRank - 1; index >= 0; index--)
             {
                 FillPaddingCells(fr, rank, index, 0, m_head[index], m_head[index], false);
                 FillPaddingCells(fr, rank, index, outputDims[index] - m_foot[index], outputDims[index] - 2 * m_foot[index], m_foot[index], true);
@@ -990,13 +995,13 @@ public:
 
         if (isFinalValidationPass)
         {
-            if (m_mode == REFLECTPAD)
+            if (m_mode == PaddingType::REFLECTPAD)
             {
                 for (int i = 0; i < outDims.size(); i++)
                     if (m_head[i] > outDims[i] - 1 || m_foot[i] > outDims[i] - 1)
                         LogicError("Pad: with REFLECTPAD mode, the head and foot length must be no greater than input dimension - 1.");
             }
-            else if (m_mode == SYMMETRICPAD)
+            else if (m_mode == PaddingType::SYMMETRICPAD)
             {
                 for (int i = 0; i < outDims.size(); i++)
                     if (m_head[i] > outDims[i] || m_foot[i] > outDims[i])
@@ -1026,7 +1031,8 @@ private:
 
     std::vector<size_t> m_head;
     std::vector<size_t> m_foot;
-    size_t m_mode;
+    PaddingType m_mode;
+    ElemType m_constant_value;
 };
 
 template class PaddingNode<float>;
