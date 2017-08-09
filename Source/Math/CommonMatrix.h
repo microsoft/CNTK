@@ -600,10 +600,10 @@ protected:
 
     size_t m_numRows;
     size_t m_numCols;
-    // TODO: m_sliceViewOffset has a different meaning in sparse (column offset) versus dense (byte offset to start of pointer). This should perhaps be fixed.
-    size_t m_sliceViewOffset; // this is the slice view of a matrix
+    // TODO: m_sliceViewOffset has a different meaning in sparse (column offset) versus dense (offset in elements to start of pointer). This should perhaps be fixed.
+    size_t m_sliceViewOffset; // slice view: dense: pArray[m_sliceViewOffset] is top-left element; sparse: index of first column
     // TODO: implement m_colStride
-    size_t m_colStride;
+    size_t m_colStride; // TODO: This is not implemented at all.
 
     // Storage OBject containing the underlying data used by this matrix
     shared_ptr<BaseMatrixStorage<ElemType>> m_sob;

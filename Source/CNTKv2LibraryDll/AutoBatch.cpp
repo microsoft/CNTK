@@ -21,7 +21,7 @@
 #include <string>
 
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
-#define LOG_STATS     // if defined, log statistics (#operations)
+//#define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
@@ -784,6 +784,7 @@ class Variable::AutoBatch
         {
             // first it must be the same operation
             let op = a->m_op;
+            let opClass = g_oscTable[op]; // operation-specific auto-batching class
             // free ops always get batched; even if they have different op-codes
             if (IsViewOp(op) && op != PrimitiveOpType::BarrierOp)
                 LogicError("should not get here for view ops or barrier ops");
@@ -800,7 +801,7 @@ class Variable::AutoBatch
             for (size_t i = 0; i < a->m_inputs.size(); i++)
             {
                 // there are a few special cases
-                if (op == PrimitiveOpType::Times && i == 0)
+                if (opClass == OpSpecificConditionKind::MatrixProduct && i == 0)
                 {
                     // for Times, the first arg must be the same object, not just the same shape
                     // TODO: a special case is a dot product, which we can write as ReduceSum(ElementTimes(a,b))
@@ -1132,7 +1133,6 @@ class Variable::AutoBatch
             m_numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
         // perform the op
-        //let isTimes = op == PrimitiveOpType::TransposeTimes;
         let isTimes = opClass == OpSpecificConditionKind::MatrixProduct; // is special-cased
 #ifdef NO_BATCHED_FORWARD
         auto doNaively = true;
@@ -1860,12 +1860,13 @@ public:
 #endif
         };
 #ifndef NO_BATCHED_FORWARD
+        let opClass = g_oscTable[f->m_op]; // operation-specific auto-batching class
         // splice operation must use scatter
-        if (f->m_op == PrimitiveOpType::Splice)
+        if (opClass == OpSpecificConditionKind::Splice)
             m_spliceConsumers.push_back(c);
         // matrix product
         // We only collect matrix products with fully matching dimensions.
-        else if (f->m_op == PrimitiveOpType::Times && index == 0 &&
+        else if (opClass == OpSpecificConditionKind::MatrixProduct && index == 0 &&
             (m_matrixWeightConsumers.empty() || (IsMatrixGradient0Batchable(*f, *m_matrixWeightConsumers.back().first))))
             m_matrixWeightConsumers.push_back(c);
         // backprop into either of Plus' arguments

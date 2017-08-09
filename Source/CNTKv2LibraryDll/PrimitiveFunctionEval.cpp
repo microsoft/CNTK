@@ -238,6 +238,7 @@ namespace CNTK
         // most common case: elementwise ops are done here instead
         if (op != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
             NDArrayView::NumericOperation(args, alpha, op, out, 0.0, reductionOp);
+        //out->LogToFile(PrimitiveOpTypeName(primitiveOp), stderr);
         return out;
     }
 

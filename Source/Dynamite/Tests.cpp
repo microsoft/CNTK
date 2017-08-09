@@ -60,11 +60,11 @@ using namespace std;
 
 using namespace Dynamite;
 
-#define Op(opCode) (pair<ElementWiseOperator, const char*>(op##opCode, #opCode))
+#define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, op##opCode); }, #opCode))
 
 struct TensorViewTest
 {
-    pair<ElementWiseOperator, const char*> op;
+    pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*> op;
     function<Variable(const vector<Variable>& args)> f;
     vector<NDShape> shapes;
 };
@@ -73,8 +73,21 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 {
     size_t numFailed = 0;
     unsigned long seed = 1;
+    // for testing batching of the matrix product, we need a shared matrix
+    let sharedMatrix = (dataType == DataType::Float)
+                        ? NDArrayView::RandomNormal<float> (NDShape{ 13, 42 }, /*mean=*/0., /*stdDev=*/0.3, seed++, device)
+                        : NDArrayView::RandomNormal<double>(NDShape{ 13, 42 }, /*mean=*/0., /*stdDev=*/0.3, seed++, device);
+    let sharedMatrixVar = Constant(sharedMatrix);
     vector<TensorViewTest> tests =
     {
+        // matrix product
+        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, sharedMatrix, false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times (sharedMatrixVar, args[1]); },{ { 13, 42 },{ 42, 9 } } },
+        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]); },{ { 13, 42 },{ 42, 9 } } },
+        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]); },{ { 13, 42 },{ 42 } } },
+        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]); },{ { 13, 42 },{ 42, 9, 5 } } },
+        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1); }, "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]); },{ { 42, 13 },{ 42, 9 } } },
+        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1); }, "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]); },{ { 42, 13 },{ 42 } } },
+        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1); }, "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]); },{ { 42, 13 },{ 42, 9, 3 } } },
         // ternary
         { Op(Clip                 ), [](const vector<Variable>& args) { return CNTK::Clip         (args[0], args[1], args[2]); }, { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
         { Op(Cond                 ), [](const vector<Variable>& args) { return CNTK::ElementSelect(args[0], args[1], args[2]); }, { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
@@ -116,15 +129,21 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             vector<NDArrayViewPtr> argValues;
             for (let& shape : test.shapes)
                 if (dataType == DataType::Float)
-                    argValues.push_back(NDArrayView::RandomNormal<float>(shape, /*mean=*/0., /*stdDev=*/0.3, seed++, device));
+                    argValues.push_back(NDArrayView::RandomNormal<float> (shape, /*mean=*/0., /*stdDev=*/0.3, seed++, device));
                 else
                     argValues.push_back(NDArrayView::RandomNormal<double>(shape, /*mean=*/0., /*stdDev=*/0.3, seed++, device));
             // reference: TensorView op directly
-            let refVal1 = NDArrayView::NumericOperation(argValues, 1.0, test.op.first);
+            let refVal1 = test.op.first(argValues);
             if (n > 0)
                 refVal = NDArrayView::NumericOperation({ refVal, refVal1 }, 1.0, ElementWiseOperator::opSum);
             else
                 refVal = refVal1;
+#if 0
+            for (let& arg : argValues)
+                arg->LogToFile(L"argVal", stderr);
+            refVal1->LogToFile(L"resVal", stderr);
+            refVal->LogToFile(L"sumVal", stderr);
+#endif
             // Dynamite:
             vector<Variable> args;
             for (let& argValue : argValues)
@@ -157,12 +176,12 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 void RunDynamiteTests()
 {
     size_t numFailed = 0;
+    numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(3, DataType::Float, DeviceDescriptor::GPUDevice(0));
-    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::CPUDevice());
+    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Float, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Float, DeviceDescriptor::CPUDevice());
-    numFailed += DynamiteTest(3, DataType::Float, DeviceDescriptor::CPUDevice());
     if (numFailed > 0)
         LogicError("RunDynamiteTests: %d tests failed.", (int)numFailed);
     exit(0);

@@ -485,20 +485,28 @@ namespace CNTK
             const auto& shapeB = inputB->Shape();
             if (shapeA.Rank() != 2 && shapeA.Rank() != 1)
                 LogicError("NDArrayView::MatrixProduct: For now only vectors and 2D matrices are supported, invalid shape '%S'.", shapeA.AsString().c_str());
-            if (shapeB.Rank() != 2 && shapeB.Rank() != 1)
-                LogicError("NDArrayView::MatrixProduct: For now only vectors and 2D matrices are supported, invalid shape '%S'.", shapeB.AsString().c_str());
+            if (shapeB.Rank() == 0 || (shapeB.Rank() > 2 && transB))
+                LogicError("NDArrayView::MatrixProduct: For now only vectors and 2D matrices are supported when transposed, invalid shape '%S'.", shapeB.AsString().c_str());
             const auto innerA = transA ? shapeA[0] : shapeA[shapeA.Rank() - 1]; // inner (dot-product) dimension
             const auto innerB = transB ? shapeB[shapeB.Rank() - 1] : shapeB[0];
             if (innerA != innerB)
                 LogicError("NDArrayView::MatrixProduct: Inner dimensions %d and %d don't match.", (int)innerA, (int)innerB);
             auto dimsC = std::vector<size_t>();  // TODO: use a different class here to avoid memory allocation?
             // assemble the output shape from the non-inner dimensions. Note that vec^t * vec will end up with a scalar (rank 0)
-            if (shapeA.Rank() == 2)
+            if (shapeA.Rank() == 2) // for A we only support 2D matrices for now
                 dimsC.push_back(transA ? shapeA[1] : shapeA[0]);
-            if (shapeB.Rank() == 2)
-                dimsC.push_back(transB ? shapeB[0] : shapeB[1]);
-            if (transC && dimsC.size() == 2)
-                std::swap(dimsC[0], dimsC[1]); // reverse
+            if (transB)
+            {
+                if (shapeB.Rank() == 2) // if transB then we only support ...do this right
+                    dimsC.push_back(shapeB[0]);
+            }
+            else
+                dimsC.insert(dimsC.end(), shapeB.Dimensions().begin() + 1, shapeB.Dimensions().end());
+            if (transC)
+                if (dimsC.size() == 2)
+                    std::swap(dimsC[0], dimsC[1]); // reverse
+                else if (dimsC.size() > 2)
+                    LogicError("NDArrayView::MatrixProduct: For now only vectors and 2D matrices are supported when result is transposed, invalid shape '%S'.", shapeB.AsString().c_str());
             const auto shapeC = NDShape(dimsC);
             // create result object; properties besides shape are inherited from input 0 for now
             out = MakeSharedObject<NDArrayView>(inputA->GetDataType(), inputA->GetStorageFormat(), shapeC, inputA->Device());
@@ -1011,7 +1019,7 @@ namespace CNTK
             break;
         }
         if (!name.empty())
-            fprintf(f, "%S =\n", name.c_str());
+            fprintf(f, "%S : %s%S =\n", name.c_str(), DataTypeName(GetDataType()), Shape().AsString().c_str());
         fprintf(f, "%s\n", asString.c_str());
     }
 
