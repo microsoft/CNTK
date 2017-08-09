@@ -30,7 +30,7 @@ class InsertNode:
     '''
     The Word Node,
     It include the sorted loss vector of row and col,
-    and the next great postion row or col for the curr word.
+    and the next great position row or col for the curr word.
     '''
     def __init__(self, prob_row, prob_col, word_id):
         self.prob_row = prob_row
