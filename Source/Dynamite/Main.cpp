@@ -366,22 +366,26 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 }
 
 extern int mt_main(int argc, char *argv[]);
+extern void RunDynamiteTests();
 
 int main(int argc, char *argv[])
 {
-#if 1
-    return mt_main(argc, argv);
-#else
     argc; argv;
     try
     {
+#if 1
+        RunDynamiteTests();
+#endif
+#if 1
+        return mt_main(argc, argv);
+#else
         TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
         //TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
         // BUGBUG: CPU currently outputs loss=0??
+#endif
     }
     catch (exception& e)
     {
         fprintf(stderr, "EXCEPTION caught: %s\n", e.what());
     }
-#endif
 }

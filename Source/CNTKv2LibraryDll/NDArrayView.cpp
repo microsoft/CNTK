@@ -382,10 +382,15 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(GetDataType(), Shape(), IsReadOnly() || readOnly, GetStorageObjectPtr());
     }
 
+    static DataType GetType(float)  { return DataType::Float; }
+    static DataType GetType(double) { return DataType::Double; }
+
     // TODO: one day, this just becomes GetTensorViewPtr
     template <typename ElementType>
     std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> NDArrayView::NativeTensorView() const
     {
+        if (GetType(ElementType(0)) != m_dataType)
+            LogicError("NativeTensorView: Called with wrong data type %s; is %s.", DataTypeName(GetType(ElementType(0))), DataTypeName(m_dataType));
 #ifndef LAZY_2D_PADDING
         if (m_viewShape.Rank() < 2) // m_tensorViewPtr has the wrong shape if rank < 2
             return make_shared<TensorView<ElementType>>(GetTensorViewPtr<ElementType>()->Reshaped(AsTensorShape(m_viewShape)));
@@ -396,6 +401,8 @@ namespace CNTK
     template <typename ElementType>
     std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> NDArrayView::WritableNativeTensorView()
     {
+        if (GetType(ElementType(0)) != m_dataType)
+            LogicError("WritableNativeTensorView: Called with wrong data type %s; is %s.", DataTypeName(GetType(ElementType(0))), DataTypeName(m_dataType));
 #ifndef LAZY_2D_PADDING
         if (m_viewShape.Rank() < 2) // m_tensorViewPtr has the wrong shape if rank < 2
             return make_shared<TensorView<ElementType>>(GetWritableTensorViewPtr<ElementType>()->Reshaped(AsTensorShape(m_viewShape)));

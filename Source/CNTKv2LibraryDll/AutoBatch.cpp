@@ -542,7 +542,8 @@ public:
         // This abandons the current m_arena. This will not cause a memory leak, however:
         // Since the slices into it that were returned before all hold a ref-count to that arena,
         // it will be deallocated automatically as soon the last slice goes away.
-        if (!s_currentArena || numElements > (ARENASIZE - s_currentArenaUsed))
+        // If the data type is different, we drop the current arena. We can't presently mix data types, so this is OK.
+        if (!s_currentArena || numElements > (ARENASIZE - s_currentArenaUsed) || dataType != s_currentArena->GetDataType())
         {
             s_currentArena = make_shared<NDArrayView>(dataType, StorageFormat::Dense, NDShape{ ARENASIZE }, device);
             s_currentArenaUsed = 0;
