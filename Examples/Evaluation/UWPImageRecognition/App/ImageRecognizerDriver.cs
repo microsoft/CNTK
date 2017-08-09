@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-using ImageRecognitionLib;
+using ImageRecognizerLib;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -29,27 +29,40 @@ namespace ImageRecognitionUtils
             this.console = console;
         }
 
-        public async Task Start()
+        public async Task LoadModelAsync()
         {
-            var sw = Stopwatch.StartNew();
-            console.ShowText("Loading CNTK Model... ");
-            console.ShowProgress(true);
+            var picker = new FileOpenPicker();
+            picker.ViewMode = PickerViewMode.Thumbnail;
+            picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+            picker.FileTypeFilter.Add(".model");
+            var pickedFile = await picker.PickSingleFileAsync();
+            if (pickedFile != null)
+            {
+                // The file cannot be read directly from the DocumentsLibrary, so copy the file into the local app folder
+                var localFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
+                var localFile = await pickedFile.CopyAsync(localFolder, pickedFile.Name, NameCollisionOption.ReplaceExisting);
 
-            try
-            {
-                this.cntkRecognizer = await CNTKImageRecognizer.Create("Assets\\ResNet18_ImageNet_CNTK.model", "Assets\\imagenet1000_clsid.txt");
-                sw.Stop();
-                console.ShowText($"Elapsed time: {sw.ElapsedMilliseconds} ms");
+                var sw = Stopwatch.StartNew();
+                console.ShowText("Loading CNTK Model... ");
+                console.ShowProgress(true);
+
+                try
+                {
+                    var path = localFile.Path;
+                    this.cntkRecognizer = CNTKImageRecognizer.Create(path, "Assets\\imagenet1000_clsid.txt");
+                    sw.Stop();
+                    console.ShowText($"Elapsed time: {sw.ElapsedMilliseconds} ms");
+                }
+                catch (Exception ex)
+                {
+                    console.ShowText($"error: {ex.Message}");
+                    sw.Stop();
+                }
+                console.ShowProgress(false);
             }
-            catch (Exception ex)
-            {
-                console.ShowText($"error: {ex.Message}");
-                sw.Stop();
-            }
-            console.ShowProgress(false);
         }
 
-        public async Task PickAndRecognizeImage()
+        public async Task PickAndRecognizeImageAsync()
         {
             var picker = new FileOpenPicker();
             picker.ViewMode = PickerViewMode.Thumbnail;
