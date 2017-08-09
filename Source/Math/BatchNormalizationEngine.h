@@ -38,7 +38,7 @@ public:
                  Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev);
 
     void Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& saveMean, const Mat& saveInvStdDev,
-                  Mat& scaleGrad, Mat& biasGrad);
+                  Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad);
 
     static std::unique_ptr<BatchNormEngine<ElemType>> Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
                                                              bool spatial, ImageLayoutKind imageLayout,
@@ -60,7 +60,7 @@ protected:
                  Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) = 0;
 
     virtual void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& saveMean, const Mat& saveInvStdDev,
-                  Mat& scaleGrad, Mat& biasGrad) = 0;
+                  Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad) = 0;
 
 protected:
     DEVICEID_TYPE m_deviceId;

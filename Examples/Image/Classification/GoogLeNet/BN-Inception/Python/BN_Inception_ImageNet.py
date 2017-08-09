@@ -50,7 +50,7 @@ def create_image_mb_source(map_file, mean_file, is_training, total_number_of_sam
     transforms = []
     if is_training:
         transforms += [
-            xforms.crop(crop_type='randomside', side_ratio=0.875, jitter_type='uniratio') # train uses jitter
+            xforms.crop(crop_type='randomside', side_ratio=(0.46666, 0.875), jitter_type='uniratio') # train uses jitter
         ]
     else: 
         transforms += [

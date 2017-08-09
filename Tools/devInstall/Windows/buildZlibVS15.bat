@@ -94,7 +94,7 @@ goto FIN
 
 :HELP
 @echo.
-@echo Use this script to build the the compression library used by the CNTK image reader
+@echo Use this script to build the compression library used by the CNTK image reader
 @echo The script requires three parameter
 @echo   Parameter 1: The complete path to the LibZip source directory 
 @echo                e.g C:\local\src\libzip-1.1.3

@@ -565,7 +565,7 @@ namespace
     BOOST_AUTO_TEST_CASE(ImageReader3DotsSyntaxInMapFile)
     {
         auto testDir = testDataPath();
-        std::wstring mapFileLocaton = std::wstring(testDir.begin(), testDir.end()) + L"/Data/ImageReader3Dots_map.txt";
+        std::wstring mapFileLocation = std::wstring(testDir.begin(), testDir.end()) + L"/Data/ImageReader3Dots_map.txt";
         HelperRunReaderTest<float>(
             testDataPath() + "/Config/ImageDeserializers.cntk",
             testDataPath() + "/Control/ImageReader3DotsSyntaxInMapFile_Control.txt",
@@ -582,7 +582,7 @@ namespace
             false,
             true,
             true,
-            { L"MapFile=\"" + mapFileLocaton + L"\"" });
+            { L"MapFile=\"" + mapFileLocation + L"\"" });
     }
 
     BOOST_AUTO_TEST_SUITE_END()

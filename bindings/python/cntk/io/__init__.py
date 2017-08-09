@@ -16,6 +16,7 @@ from cntk.internal import typemap, sanitize_dtype_cntk, is_string
 from cntk.device import use_default_device
 from cntk.logging import TraceLevel, get_trace_level
 from cntk.variables import Record
+from cntk.internal.utils import _py_dict_to_cntk_dict
 import cntk.io.transforms
 
 import numpy as np
@@ -64,13 +65,6 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         return self.data.as_sequences(variable)
 
     @property
-    def data(self):
-        '''
-        The Value representation of the minibatch.
-        '''
-        return super(MinibatchData, self).data()
-
-    @property
     def shape(self):
         '''
         The shape of the data in this minibatch as tuple.
@@ -92,7 +86,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         sequence, `1` marks a sequence element as valid, and `0` marks it as
         invalid.
         '''
-        return self.data.mask().to_ndarray()
+        return self.data.mask
 
     @property
     def end_of_sweep(self):
@@ -127,7 +121,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
           **Important:**
           Click :cntkwiki:`here <BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`
           for a description of input and label samples.
-        max_sweeps (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of of sweeps over
+        max_sweeps (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of sweeps over
           the input dataset After this number has been reached, the reader returns empty minibatches on
           subsequent calls to func:`next_minibatch`. `max_samples` and `max_sweeps` are mutually exclusive,
           an exception will be raised if both have non-default values.
@@ -157,6 +151,35 @@ class MinibatchSource(cntk_py.MinibatchSource):
         randomize (`bool`, defaults to `True`): Enables or disables randomization; use randomization_window_in_chunks or
           randomization_window_in_samples to specify the randomization range
     '''
+    _runtime_deserializer_table = {}
+    _deserializer_factory = None
+    _deserializer_counter = 0
+
+    @staticmethod
+    def _create_deserializer(id):
+        # Return previosly registred object to C++ side.
+        deserializer = MinibatchSource._runtime_deserializer_table[id]
+        del MinibatchSource._runtime_deserializer_table[id]
+        return deserializer
+
+    @staticmethod
+    def _get_config(deserializer):
+        # Create and register deserializer factory if does not exists.
+        from cntk.internal import _DeserializerFactory
+        if MinibatchSource._deserializer_factory is None:
+            MinibatchSource._deserializer_factory = _DeserializerFactory(MinibatchSource._create_deserializer)
+            cntk_py._register_deserializer_factory(MinibatchSource._deserializer_factory)
+
+        # Remember deserializer with a unique generated id
+        # to return it later when _create_deserializer is called from C++ side.
+        id = str(MinibatchSource._deserializer_counter)
+        MinibatchSource._deserializer_counter += 1
+        MinibatchSource._runtime_deserializer_table[id] = deserializer
+        # Currently UserDeserializer in python does not support composability
+        import _cntk_py
+        d = { 'type' : id, 'module': _cntk_py.__file__, 'composable': 'false' }
+        return cntk.utils._py_dict_to_cntk_dict(d)
+
     def __init__(self,
         deserializers,
         max_samples = INFINITELY_REPEAT,
@@ -172,6 +195,11 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [ deserializers ]
+
+        user_deserializers = [d for d in deserializers if isinstance(d, UserDeserializer)]
+        deserializers = [d if not isinstance(d, UserDeserializer) else MinibatchSource._get_config(d) for d in deserializers]
+        if len(user_deserializers) >= 1 and len(deserializers) != 1:
+            raise ValueError('Currently composition for user defined deserializers is not supported.')            
 
         config = cntk_py.MinibatchSourceConfig(deserializers)
         config.max_samples = max_samples
@@ -199,6 +227,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         # transplant into this class instance
         self.__dict__ = source.__dict__
         self._streams = None
+        self._last_mb_data = None
 
     def stream_infos(self):
         '''
@@ -281,6 +310,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
              be a mapping of :class:`~cntk.variables.Variable` to class:`MinibatchData`.
              When the maximum number of epochs/samples is exhausted, the return value is an empty dict.
         '''
+        if self._last_mb_data is not None:
+            self._last_mb_data.clear()
+
         if device is None:
             device = use_default_device()
 
@@ -302,16 +334,18 @@ class MinibatchSource(cntk_py.MinibatchSource):
         if not input_map:
             return mb
 
-        return {key: mb[value] for (key, value) in input_map.items()}
+        # We copy minibatch data here,
+        # we need to make sure it is cleaned when next_minibatch
+        # is called next time.       
+        self._last_mb_data = {key: mb[value] for (key, value) in input_map.items()}
+        return self._last_mb_data
 
     def get_checkpoint_state(self):
         '''
         Gets the checkpoint state of the MinibatchSource.
 
         Returns:
-            cntk.cntk_py.Dictionary:
-            A :class:`~cntk.cntk_py.Dictionary` that has the checkpoint state
-            of the MinibatchSource
+            A dict that has the checkpoint state of the MinibatchSource
         '''
         return super(MinibatchSource, self).get_checkpoint_state()
 
@@ -320,9 +354,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Restores the MinibatchSource state from the specified checkpoint.
 
         Args:
-            checkpoint (:class:`~cntk.cntk_py.Dictionary`): checkpoint to restore from
+            checkpoint (dict): checkpoint to restore from
         '''
-        super(MinibatchSource, self).restore_from_checkpoint(checkpoint)
+        super(MinibatchSource, self).restore_from_checkpoint(_py_dict_to_cntk_dict(checkpoint))
 
     @property
     def is_distributed(self):
@@ -372,12 +406,14 @@ class StreamInformation(cntk_py.StreamInformation):
         self.m_id = stream_id
         self.m_storage_format = StreamInformation._storage[storage_format]
         self.m_element_type = sanitize_dtype_cntk(dtype)
-        self.m_sample_layout = cntk_py.NDShape(shape)
+        # raw NDShape is column based, so we need to reverse dimensions.
+        self.m_sample_layout = cntk_py.NDShape(list(reversed(shape)))
+        self.sample_shape = shape
+        self.storage_format = storage_format
 
     @property
     def name(self):
         return self.m_name
-
 
 class UserMinibatchSource(cntk_py.SwigMinibatchSource):
     '''
@@ -419,6 +455,9 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
             num_samples (int): number of samples to return
             number_of_workers (int): number of workers in total
             worker_rank (int): worker for which the data is to be returned
+            device (`DeviceDescriptor`, defaults to `None`): the device
+             descriptor that contains the type and id of the device on which the
+             computation is performed. If `None`, the default device is used.
 
         Returns:
             mapping of :class:`StreamInformation` to :class:`MinibatchData`
@@ -478,6 +517,13 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
               :class:`StreamInformation` for
         '''
         return self.stream_info(name)
+
+    def is_infinite(self):
+        '''
+        Should return true if the user has not specified any limit on the number of sweeps and samples.
+        '''
+        return False
+
 
 class MinibatchSourceFromData(UserMinibatchSource):
     '''
@@ -564,7 +610,7 @@ class MinibatchSourceFromData(UserMinibatchSource):
         data_streams: name-value pairs
         max_samples (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of samples
           the reader can produce. If inputs are sequences, and the different streams have different
-          lengths, then each sequence counts with the the maximum length.
+          lengths, then each sequence counts with the maximum length.
           After this number has been reached, the reader
           returns empty minibatches on subsequent calls to :meth:`next_minibatch`.
           **Important:**
@@ -876,6 +922,23 @@ def CTFDeserializer(filename, streams):
         k, s.dim, s.is_sparse, s.stream_alias, s['defines_mb_size']) for k, s in streams.items()]
     return cntk_py.ctf_deserializer(filename, sc)
 
+def CBFDeserializer(filename, streams = {}):
+    '''
+    Configures the CNTK binary-format deserializer.
+
+    Args:
+        filename (str): file name containing the binary data
+        streams: any dictionary-like object that contains a mapping from stream
+          names to :class:`StreamDef` objects. Each StreamDef object configures
+          an input stream.
+
+    See also:
+        :cntkwiki:`CNTKBinaryReader format <BrainScript-CNTKBinary-Reader>`
+    '''
+    sc = [cntk_py.StreamConfiguration(
+        k, s.dim, s.is_sparse, s.stream_alias) for k, s in streams.items()]
+    return cntk_py.cbf_deserializer(filename, sc)
+
 # TODO: this should be a private class; use StreamDef instead
 
 
@@ -1059,3 +1122,87 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
         lines.append('%i\t|' % seq_idx + ' |'.join(line))
 
     return '\n'.join(lines)
+
+class UserDeserializer(cntk_py.SwigDataDeserializer):
+    '''
+    User deserializer is a base class for all user defined deserializers.
+    To support deserialization of a custom format, please implement the public
+    methods of this class and pass an instance of it to MinibatchSource.
+    A UserDeserializer is a plug-in to MinibatchSource for reading data in custom formats.
+    Reading data through this mechanism provides the following benefits:
+
+      * randomization of data too large to fit into RAM, through CNTK chunked paging algorithm
+
+      * distributed reading - only chunks needed by a particular worker are requested
+
+      * composability of transforms (currently composability of user deserializers is not yet supported)
+
+      * transparent support of sequence/frame/truncated BPTT modes
+
+      * automatic chunk and minibatch prefetch
+
+      * checkpointing
+
+    The MinibatchSource uses the information provided by this class to build the timeline and move
+    along it when the next minibatch is requested. The deserializer itself, however, is stateless.
+    '''
+    def __init__(self):
+        super(UserDeserializer, self).__init__()
+        self.__disown__()
+        self._last_chunk = None
+
+    def stream_infos(self):
+        '''
+        Should return a list of meta information :class:`StreamInformation` about all 
+        streams exposed by the deserializer.
+
+        Returns:
+            list of :class:`StreamInformation` exposed by the deserializer
+        '''
+        raise NotImplementedError('should return a list of StreamInformation for all streams')
+
+    def num_chunks(self):
+        '''
+        Should return the total number of chunks.
+        '''
+        raise NotImplementedError('should return the total number of chunks.')
+
+    def get_chunk(self, chunk_id):
+        '''
+        Should return a dictionary of stream name -> data of the chunk, where data is csr_matrix/numpy array in sample mode,
+        or a list of csr_matrix/numpy array in sequence mode.
+
+        Args:
+            chunk_id(int): id of the chunk to be read, 0 <= chunk_id < num_chunks
+
+        Returns:
+            dict containing the data
+        '''
+        raise NotImplementedError('should return data for the chunk.')
+
+    def _stream_infos(self, infos=None):
+        inner = self.stream_infos()
+        if len(inner) == 0:
+            raise ValueError('Deserializer must provide at least one stream')
+        infos.extend(inner)
+
+        streams = {si.m_name: si for si in inner}
+        self.streams = Record(**streams)
+
+    def _chunk_infos(self, infos=None):
+        total = self.num_chunks()
+        if total == 0:
+            raise ValueError('Deserializer must provide at least one chunk')
+        inner = []
+        for i in range(total):
+            t = cntk_py.ChunkInfo()
+            t.m_id = i
+            inner.append(t)
+        infos.extend(inner)
+
+    def _get_chunk(self, chunk_id):
+        # Make sure the python object exists
+        # till the next call, so that the copy in C++ can
+        # take place.
+        self._last_chunk = self.get_chunk(chunk_id=chunk_id)
+        return self._last_chunk;

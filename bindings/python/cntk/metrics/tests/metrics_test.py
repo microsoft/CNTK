@@ -141,7 +141,7 @@ EDIT_DISTANCE_ERROR_TEST_CASES = [
     ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 0, 0, False, [], 1.0),
     ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 1, 0, 0, False, [], 2.0),
     ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 1, 1, False, [], 1.0),
-    ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 1, 1, True, [1], 2.0),
+    ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 1, 1, True, [1], 1.0),
 ]
 
 @pytest.mark.parametrize("left_input, right_input, subPen, delPen, insPen, squashInputs, tokensToIgnore, result", EDIT_DISTANCE_ERROR_TEST_CASES)

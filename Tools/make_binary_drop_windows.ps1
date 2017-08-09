@@ -82,9 +82,13 @@ Foreach ($includeFile in $includeFiles)
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 
-# Copy Examples
+# Copy Tutorials
 Write-Verbose "Copying Tutorials ..."
 Copy-Item Tutorials -Recurse -Destination $baseDropPath\Tutorials
+
+# Copy Manual
+Write-Verbose "Copying Manual ..."
+Copy-Item Manual -Recurse -Destination $baseDropPath\Manual
 
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."

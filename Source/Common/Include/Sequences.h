@@ -503,6 +503,11 @@ public:
         return false;
     }
 
+    bool IsInFrameMode() const
+    {
+        return GetActualNumSamples() == GetNumParallelSequences();
+    }
+
     // -------------------------------------------------------------------
     // indexing
     // -------------------------------------------------------------------

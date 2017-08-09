@@ -119,7 +119,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     #  - by default, equal to the dimensions of the input passed to Dense()
     #  - if input_rank is given, then the last 'input_rank' dimensions of the input (all others are not reduced over)
     #  - if map_rank is given, then the all but the first 'map_rank' dimensions of the input (those are not reduced over)
-    # where input_rank and map_rank are mutuallly exclusive.
+    # where input_rank and map_rank are mutually exclusive.
 
     output_rank = len(output_shape)   # support outputs with tensor layouts
 
@@ -158,7 +158,7 @@ def Embedding(shape=None, init=default_override_or(C.glorot_uniform()), weights=
     Layer factory function to create a embedding layer.
 
     An embedding is conceptually a lookup table. For every input token (e.g. a word or any category label), the corresponding
-    entry in in the lookup table is returned.
+    entry in the lookup table is returned.
 
     In CNTK, discrete items such as words are represented as one-hot vectors.
     The table lookup is realized as a matrix product, with a matrix
@@ -413,7 +413,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     emulating_1D = False   # len(filter_shape) < 2 # TODO: 1D no longer needs emulation. Remove all related code once it passes Jenkins.
 
     actual_output_channels_shape = num_filters                if not emulating_output_depth else (1,)
-    actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # TODO: C++ suport for 1D
+    actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # TODO: C++ support for 1D
     actual_filter_shape          = (1,) * emulating_1D + filter_shape
 
     # add the dimension to the options as well
@@ -1012,7 +1012,7 @@ def GlobalMaxPooling(name=''):
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
     '''
-    return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False, op_name='GlobalMaxPooling', name=name)
+    return _Pooling(PoolingType_Max, NDShape.unknown().dimensions(), pad=False, op_name='GlobalMaxPooling', name=name)
 
 
 def GlobalAveragePooling(name=''):
@@ -1042,7 +1042,7 @@ def GlobalAveragePooling(name=''):
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
     '''
-    return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False, op_name='GlobalAveragePooling', name=name)
+    return _Pooling(PoolingType_Average, NDShape.unknown().dimensions(), pad=False, op_name='GlobalAveragePooling', name=name)
 
 
 # Create a max unpooling layer

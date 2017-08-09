@@ -574,3 +574,41 @@ def test_session_with_legacy_api(tmpdir, device_id):
     run_simple_training(
         tmpdir, device_id,
         test_config_factory = lambda mbs, input_map : C.TestConfig(source=mbs, mb_size=2, model_inputs_to_streams = input_map))
+
+def test_training_session_with_infinite_samples(tmpdir, device_id):
+    import pytest
+    device = cntk_device(device_id)
+    t, feature, label = create_sample_model(device)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
+
+    input_map = {
+        feature: mbs.streams.features,
+        label: mbs.streams.labels
+    }
+
+    with pytest.raises(ValueError) as info1:
+        C.training_session(
+            trainer=t, mb_source=mbs, 
+            mb_size=4, model_inputs_to_streams=input_map
+        ).train(device)
+    assert 'Train minibatch source must have a limited number of samples or sweeps' in str(info1.value)
+
+    with pytest.raises(ValueError) as info2:
+        mbs1 = mb_source(tmpdir, "test", max_samples=INFINITELY_REPEAT)
+        C.training_session(
+            trainer=t, mb_source=mbs, 
+            mb_size=4, model_inputs_to_streams=input_map,
+            max_samples = 10,
+            test_config = C.TestConfig(mbs1, minibatch_size=2),
+        ).train(device)
+    assert 'Test minibatch source must have a limited number of samples or sweeps' in str(info2.value)
+
+    with pytest.raises(ValueError) as info3:
+        mbs2 = mb_source(tmpdir, "cv", max_samples=INFINITELY_REPEAT)
+        C.training_session(
+            trainer=t, mb_source=mbs, 
+            mb_size=4, model_inputs_to_streams=input_map,
+            max_samples=20,
+            cv_config = C.CrossValidationConfig(mbs2)
+        ).train(device)
+    assert 'Cross validation minibatch source must have a limited number of samples or sweeps' in str(info3.value)

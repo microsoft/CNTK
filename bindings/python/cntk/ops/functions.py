@@ -226,7 +226,7 @@ class Function(cntk_py.Function):
 
             # verify that we got the parameter order right
             out_arg_names = [arg.name for arg in out.signature]
-            assert out_arg_names == arg_names
+            assert out_arg_names == arg_names, (out_arg_names, arg_names)
 
             if len(out.signature) != len(args):
                 unfulfilled_args = set(out.signature) - set(args)
@@ -391,7 +391,7 @@ class Function(cntk_py.Function):
         # numeric: evaluate
         outputs = self.outputs
         _, output_map = self.forward(arg_map, outputs)
-        assert len(output_map) == len(outputs)
+        assert len(output_map) == len(outputs), (output_map, outputs)
         if len(output_map) > 1: # tuple-valued: return tuple
             return tuple(output_map[output] for output in outputs)
         else: # single value: return numpy array and that's it
@@ -1305,7 +1305,7 @@ class Function(cntk_py.Function):
          >>> learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(0.1, cntk.UnitType.minibatch))
          >>> progress = criterion.train((X, Y), minibatch_size=25, max_epochs=2, epoch_size=125, parameter_learners=[learner])
          >>> print("%.2f" % progress.epoch_summaries[-1].loss) # get the final epoch's loss value
-         0.76
+         0.68
 
         Returns:
          An object `progress` with `progress.epoch_summaries` and `progress.updates` being the progressions of av loss, av metric, and number of labels
@@ -1422,6 +1422,9 @@ class Function(cntk_py.Function):
             ValueError('callbacks list must only contain objects of type ProgressWriter')
         progress_writers = callbacks or []
         evaluator = Evaluator(output, progress_writers + [collector])
+
+        if minibatch_source.is_infinite():
+            raise ValueError("minibatch_source must have a limited number of samples or sweeps.")
         # evaluation loop
         while True:
             data = minibatch_source.next_minibatch(minibatch_size) # fetch minibatch
@@ -1515,9 +1518,9 @@ class Function(cntk_py.Function):
             return cntk_py.Function.load_from_buffer(model, device)
 
         if is_file:
-            return cntk_py.Function.load(model, device)
+            return cntk_py.Function.load(str(model), device)
 
-        raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
+        raise ValueError('Cannot load the model {} that is neither a file nor a byte buffer.'.format(model))
 
     @staticmethod
     def with_signature(*args, **kwargs):

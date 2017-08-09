@@ -177,8 +177,12 @@ def test_op_reshape_parameter():
 
 SLICE_TEST_CASES_STATIC = [
     #(input_data, slice_params(beg_index, end_index, axis), expected_result)
-    ([[1, 2], [-3, 4]], (1, 2, 0), [[-3, 4]]),
-    ([[1,2],[-3,4]], (1,2,1), [[2],[4]]),
+    ([[1, 2], [-3, 4]], (1, 2, 0, 1), [[-3, 4]]),
+    ([[1,2],[-3,4]], (1,2,1, 1), [[2],[4]]),
+    ([[1,2],[-3,4]], (0,2,1, -1), [[2, 1],[4, -3]]),
+    ([[1,2],[-3,4]], (0,2,0, 2), [[1, 2]]),
+	([[1,2],[-3,4], [-2,5], [7,8], [-9,6]], (0,5,0,2), [[1,2],[-2,5],[-9,6]]),
+	([[1,2],[-3,4], [-2,5], [7,8], [-9,6]], (0,5,0,-2), [[-9,6],[-2,5],[1,2]])
 ]
 
 @pytest.mark.parametrize("input_data, slice_params, expected_result",
@@ -187,7 +191,7 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
 
     input_data = AA(input_data, dtype=PRECISION_TO_TYPE[precision])
 
-    def _ax_slices(x, beg_index, end_index, axis):
+    def _ax_slices(x, beg_index, end_index, axis, strides):
         '''
         Creates a NumPy slicing array from slice operator's arguments
         '''
@@ -195,9 +199,9 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
         for i in range(0, len(x.shape)):
             if i == axis:
                 if end_index >= x.shape[i]:
-                    ax_slices.append([beg_index, ])
+                    ax_slices.append(slice(beg_index, None, abs(strides)))
                 else:
-                    ax_slices.append([beg_index, end_index])
+                    ax_slices.append(slice(beg_index, end_index, abs(strides)))
             else:
                 ax_slices.append(slice(None))  # corresponds to ':'
         return ax_slices
@@ -208,9 +212,9 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
     # input tensor, having 1 for elements that were taken and 0 for elements
     # that were dropped.
 
-    def grad_slice(x, beg_index, end_index, axis):
+    def grad_slice(x, beg_index, end_index, axis, strides):
         res = np.zeros_like(x)
-        ax_slices = _ax_slices(x, beg_index, end_index, axis)
+        ax_slices = _ax_slices(x, beg_index, end_index, axis, strides)
         res[ax_slices] = x[ax_slices]
         res[res != 0] = 1
         return res
@@ -224,7 +228,8 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
                    expected_forward, expected_backward,
                    {'begin_index': slice_params[0],
                     'end_index': slice_params[1],
-                    'axis': slice_params[2]})
+                    'axis': slice_params[2],
+                    'strides': slice_params[3]})
 
 SLICE_OVERLOAD_TEST_CASES_STATIC = [
     # (input_data, slices, axis, expected_result)
@@ -479,3 +484,79 @@ def test_gather_op(device_id, precision):
     expectd2 = np.asarray([[[[0., 1.],[4.,5.]],[[2., 3.],[6., 7.]]],[[[4., 5.],[8.,9.]],[[6., 7.], [10., 11.]]]])
     assert np.array_equal(res2, expectd2)
 
+    #the following small model is to test the memory reuse issue of gather node.
+    x = C.input((3, 4))
+    x1 = C.to_sequence(x)
+    w = C.parameter((5, 6), init=1)
+    z = C.gather(w, x1)
+    assert z.shape == (4, 6)
+    #need the unpack node to trigger memory reuse.
+    f = C.sequence.unpack(z, 0, no_mask_output=True)
+    y = C.input((3, 4, 6))
+    loss = C.reduce_mean(C.square(f - y), axis=-1)
+    loss = C.reduce_mean(loss, axis=C.Axis.all_axes())
+
+    g = C.constant(0, shape=w.shape)
+    u = C.assign(w, g + 1)
+    learner = C.cntk_py.universal_learner([w], [g], u)
+    trainer = C.trainer.Trainer(loss, [loss], [learner])
+    indices = np.asarray([[[1, 2, 1, 2]]])
+    input = np.repeat(np.repeat(indices, 3, axis=1), 10, axis=0)
+    lable = np.full((10, 3, 4, 6), 2)
+    trainer.train_minibatch({x: input, y: lable})
+    # the 2nd and 3rd rows should be udpated by gradients.
+    assert np.mean(w.value[1, :]) < 1
+    assert np.mean(w.value[2, :]) < 1
+    # the other three rows should keep as 1
+    assert np.isclose(np.mean(w.value[0, :]), 1)
+    assert np.isclose(np.mean(w.value[3, :]), 1)
+    assert np.isclose(np.mean(w.value[4, :]), 1)
+
+def test_convert_dynamic_axis():
+    #test fix batch size
+    batch_size = 4
+    a = C.constant(shape=(batch_size, 2, 3), value=1)
+    dynamic_a = C.to_batch(a)
+    assert len(dynamic_a.dynamic_axes) == 1
+    assert dynamic_a.shape == (2, 3)
+
+    x = C.input_variable((2, 3))
+    y = x + dynamic_a
+
+    const_a = C.unpack_batch(y)
+    assert len(const_a.dynamic_axes) == 0
+    assert const_a.shape == (C.FreeDimension, 2, 3)
+
+    f = C.assign(a, const_a)
+    z = x + 1
+    data = np.arange(24).reshape(4, 2, 3).astype('f')
+    f.eval({x:data})
+    expected = z.eval({x:data})
+    assert np.array_equal(a.value, expected)
+
+    #test reshape with batch axis
+    x = C.input_variable((2,3))
+    const_x = C.unpack_batch(x)
+    assert len(const_x.dynamic_axes) == 0
+    assert const_x.shape == (C.FreeDimension, 2, 3)
+
+    const_y = C.reshape(const_x, (-1, 3))
+    assert const_y.shape == (C.FreeDimension, 3)
+    y = C.to_batch(const_y)
+    assert len(y.dynamic_axes) == 1
+    assert y.shape == (3,)
+
+    z = y * 2
+    expected = data.reshape((8, 3)) * 2
+    assert np.array_equal(z.eval({x:data}), expected)
+
+    #test inferred dimension
+    x = C.input_variable((C.InferredDimension, 3))
+    const_x = C.unpack_batch(x)
+    assert len(const_x.dynamic_axes) == 0
+    assert const_x.shape == (C.FreeDimension, C.InferredDimension, 3)
+
+    const_y = const_x * 2
+    y = C.to_batch(const_y)
+    assert len(y.dynamic_axes) == 1
+    assert y.shape == (C.InferredDimension, 3)

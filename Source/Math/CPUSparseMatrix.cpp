@@ -931,7 +931,7 @@ public:
         // Now do the actual multiplication.
         ElemType* valueBuffer = sparse.Buffer() + *sparse.SecondaryIndexLocation(); // Points to the value buffer of the current view (i.e. buffer containing values of non-zero elements).
         int* rowIndexBuffer = sparse.MajorIndexLocation();                          // Points to the index buffer of the current view (i.e. buffer containing indices of non-zero elements).
-        size_t iNonzero = 0;                                                           // Number of nonzero elements handled so far for curent slice view.
+        size_t iNonzero = 0;                                                           // Number of nonzero elements handled so far for current slice view.
         int numPreviosNonzero = sparse.SecondaryIndexLocation()[0];                 // Total number of nonzero values handled in previous slices.
 
         // Loop over columns of the sparse matrix

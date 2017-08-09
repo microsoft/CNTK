@@ -414,7 +414,7 @@ ROIPOOLING_OPERANDS = [
     ([[[1., 2., 3.],       # (1, 3, 3) input operand (conv feature map)
        [4., 5., 6.],
        [7., 8., 9.]]],
-     [[.33, .33, .66, .66]], # (4) input roi (x, y, w, h) relative to image width and height
+     [[1, 1, 2, 2]],       # (4) input roi (x1, y1, x2, y2), where (x1, y1) is top left coordinate and (x2, y2) bottom right coordinate.
      [[[5., 6., 6.],       # (1, 3, 3) expected forward output
        [8., 9., 9.],
        [8., 9., 9.]]],
@@ -424,7 +424,7 @@ ROIPOOLING_OPERANDS = [
 ]
 
 @pytest.mark.parametrize("input_map, input_rois, expected_fwd, expected_bkwd", ROIPOOLING_OPERANDS)
-def test_op_roipooling(input_map, input_rois, expected_fwd, expected_bkwd, device_id, precision):
+def test_op_maxroipooling(input_map, input_rois, expected_fwd, expected_bkwd, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
     # AA == as numpy array
@@ -453,7 +453,7 @@ def test_op_roipooling(input_map, input_rois, expected_fwd, expected_bkwd, devic
     roi_input.shape      = (1,) + roi_input.shape
 
     from cntk import roipooling
-    input_op = roipooling(a, b, (3,3))
+    input_op = roipooling(a, b, C.MAX_POOLING, (3,3), 1.)
 
     forward_input = {a: conv_input, b: roi_input}
     expected_backward = {a: exp_bkwd_value}

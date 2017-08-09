@@ -161,11 +161,27 @@ public:
     {
         auto gradient      =                      GradientFor(fr);
         auto inputGradient = InputRef(inputIndex).GradientFor(fr);
-        inputGradient += gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols());
+
+        if (Input(inputIndex)->IsGradientOptimized(this))
+        {
+            if (Input(inputIndex)->ParentGradientReused())
+            {
+                if (gradient.Data() != inputGradient.Data() ||
+                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
+                    gradient.GetNumCols() != inputGradient.GetNumCols())
+                    LogicError("Gradient should be reused");
+            }
+            else
+                inputGradient.AssignValuesOf(gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols()));
+        }
+        else
+            inputGradient += gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override { return ParentGradientOptimization::Reuse; }
 
 private:
     TensorShape m_replacementSampleLayout; // user-specified dimensions to replace dimensions [beginAxis, endAxis]
@@ -201,9 +217,14 @@ class ReduceElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
 
     void ValidateOp();
 
+    static inline bool Contains(const std::vector<int>& axes, int axis) { return std::find(axes.begin(), axes.end(), axis) != axes.end(); }
     static bool DefaultKeepDimensionsSetting(int axis)
     {
         return !((axis == CNTKInternalIdxValueForAllStaticAxes) || (axis == CNTKInternalIdxValueForAllAxes));
+    }
+    static bool DefaultKeepDimensionsSetting(const std::vector<int>& axis)
+    {
+        return !(Contains(axis, CNTKInternalIdxValueForAllStaticAxes) || Contains(axis, CNTKInternalIdxValueForAllAxes));
     }
 
 public:
@@ -243,19 +264,31 @@ public:
 
 public:
     ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, int axis, bool keepDimensions) :
-        Base(deviceId, name), m_operation(operation), m_axis(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/), m_keepDimensions(keepDimensions)
+        Base(deviceId, name), m_operation(operation), m_axes({ axis }), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/), m_keepDimensions(keepDimensions)
     {
         if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
             ValidateOp();
     }
 
     ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = CNTKInternalIdxValueForAllStaticAxes) :
+        ReduceElementsNode(deviceId, name, operation, { axis }, DefaultKeepDimensionsSetting(axis))
+    {
+    }
+
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, const std::vector<int>& axis, bool keepDimensions) :
+        Base(deviceId, name), m_operation(operation), m_axes(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/), m_keepDimensions(keepDimensions)
+    {
+        if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
+            ValidateOp();
+    }
+
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, const std::vector<int>& axis) :
         ReduceElementsNode(deviceId, name, operation, axis, DefaultKeepDimensionsSetting(axis))
     {
     }
 
     ReduceElementsNode(const ScriptableObjects::IConfigRecordPtr configp) :
-        ReduceElementsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"reductionOp"), configp->Get(L"axis"))
+        ReduceElementsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"reductionOp"), (int) configp->Get(L"axis"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -268,6 +301,11 @@ public:
     virtual bool /*ComputationNodeBase::*/ OutputUsedInComputingInputNodesGradients() const override;
     virtual bool /*ComputationNodeBase::*/ InputUsedInComputingInputNodesGradients(size_t childIndex) const override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        return ParentGradientOptimization::Overwrite;
+    }
 
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
@@ -297,7 +335,7 @@ public:
     }
 
     std::wstring ReductionOpName() const { return m_operation; }
-    int ReductionAxis() const { return m_axis; }
+    const std::vector<int>& ReductionAxis() const { return m_axes; }
 
     static const int  CNTKInternalIdxValueForAllStaticAxes = 0;
     static const int  CNTKInternalIdxValueForAllAxes = -1;
@@ -306,14 +344,14 @@ public:
 
 private:
     bool IsMean() const { return (m_operation == L"Mean"); }
-    bool ReduceAllStaticAxes() const { return m_axis == CNTKInternalIdxValueForAllStaticAxes; }
-    bool ReduceAllAxes() const { return m_axis == CNTKInternalIdxValueForAllAxes; }
-    bool ReduceSequenceAxis() const { return m_axis == CNTKInternalIdxValueForSequenceAxis; }
-    bool ReduceBatchAxis() const { return m_axis == CNTKInternalIdxValueForBatchAxis; }
+    bool ReduceAllStaticAxes() const { return Contains(m_axes, CNTKInternalIdxValueForAllStaticAxes); }
+    bool ReduceAllAxes() const { return Contains(m_axes, CNTKInternalIdxValueForAllAxes); }
+    bool ReduceSequenceAxis() const { return Contains(m_axes, CNTKInternalIdxValueForSequenceAxis); }
+    bool ReduceBatchAxis() const { return Contains(m_axes, CNTKInternalIdxValueForBatchAxis); }
 
 private:
     // operation attributes
-    int m_axis;
+    std::vector<int> m_axes;
     std::wstring m_operation;          // the operation as a string, e.g. "Sum", see ValidateOp()
     bool m_keepDimensions;
 
@@ -412,7 +450,7 @@ public:
                 inputGradient = Input(inputIndex)->GradientTensorFor(rank, FrameRange(InputRef(inputIndex).GetMBLayout(), 0));
             }
 
-            if (InputRef(inputIndex).ParentOverwritesGradient())
+            if (InputRef(inputIndex).IsGradientInitializedBy(this))
                 inputGradient.AssignCopyOf(gradient);
             else
                 inputGradient.AddCopyOf(gradient);
@@ -423,6 +461,10 @@ public:
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
+    {
+        return (Input(0).get() == input) ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None; // no gradient propagation to input1
+    }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -470,6 +512,205 @@ private:
 template class ReconcileDynamicAxisNode<float>;
 template class ReconcileDynamicAxisNode<double>;
 
+template <class ElemType>
+class ToBatchAxisNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() {
+        return L"ToBatchAxisNode";
+    }
+public:
+    ToBatchAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+
+    }
+    
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        auto& inputValue = InputRef(0).Value();
+        auto& outputValue = Value();
+
+        auto origin_rows = outputValue.GetNumRows();
+        auto origin_cols = outputValue.GetNumCols();
+        outputValue.AssignValuesOf(inputValue);
+        outputValue.Resize(origin_rows, origin_cols);
+    }
+
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
+    {
+        auto& gradient = Gradient();
+        auto& inputGradient = Input(0)->Gradient();
+
+        if (Input(0)->IsGradientOptimized(this))
+        {
+            if (Input(0)->ParentGradientReused())
+            {
+                if (gradient.Data() != inputGradient.Data() ||
+                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
+                    gradient.GetNumCols() != inputGradient.GetNumCols())
+                    LogicError("Gradient should be reused");
+            }
+            else
+                inputGradient.AssignValuesOf(gradient);
+        }
+        else
+            inputGradient += gradient;
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override 
+    {
+        return ParentGradientOptimization::Reuse;
+    }
+
+    bool ForceDynamicValidation() const override
+    {
+        return true;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        
+        if (!m_pMBLayout)
+        {
+            m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
+            m_pMBLayout->SetUniqueAxisName(ComputationNodeBase::DefaultNoSequenceAxisName);
+        }
+
+        auto sampleLayout = Input(0)->GetSampleLayout();
+        const auto& inputDims = sampleLayout.GetDims();
+        if (inputDims.size() == 0)
+            InvalidArgument("%ls %ls operation's input can't be scalar.", NodeName().c_str(), OperationName().c_str());
+
+        SmallVector<size_t> dims;
+        dims.append(inputDims.begin(), inputDims.end() - 1);
+
+        if (isFinalValidationPass)
+        {
+            // we generate its own MBLayout
+            auto inputMBLayout = InputRef(0).GetMBLayout();
+            if (inputMBLayout)
+                InvalidArgument("%ls %ls operation can only operate on tensor without minibatch data (no layout).", NodeName().c_str(), OperationName().c_str());
+
+            m_pMBLayout->InitAsFrameMode(inputDims.back());
+        }
+
+        SetDims(TensorShape(dims), HasMBLayout());
+    }
+};
+template class ToBatchAxisNode<float>;
+template class ToBatchAxisNode<double>;
+
+
+template <class ElemType>
+class UnpackBatchAixsNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() {
+        return L"UnpackBatchAixs";
+    }
+public:
+    UnpackBatchAixsNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        auto& inputValue = InputRef(0).Value();
+        auto& outputValue = Value();
+
+        auto origin_rows = outputValue.GetNumRows();
+        auto origin_cols = outputValue.GetNumCols();
+
+        outputValue.AssignValuesOf(inputValue);
+        outputValue.Resize(origin_rows, origin_cols);
+    }
+
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
+    {
+        auto& gradient = Gradient();
+        auto& inputGradient = Input(0)->Gradient();
+
+        if (Input(0)->IsGradientOptimized(this))
+        {
+            if (Input(0)->ParentGradientReused())
+            {
+                if (gradient.Data() != inputGradient.Data() ||
+                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
+                    gradient.GetNumCols() != inputGradient.GetNumCols())
+                    LogicError("Gradient should be reused");
+            }
+            else
+                inputGradient.AssignValuesOf(gradient);
+        }
+        else
+            inputGradient += gradient;
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override 
+    {
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override 
+    {
+        return false;
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
+    {
+        return ParentGradientOptimization::Reuse;
+    }
+
+    bool ForceDynamicValidation() const override 
+    {
+        return true;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr;
+
+        TensorShape inputShape = Input(0)->GetSampleLayout();
+        SmallVector<size_t> outDims = inputShape.GetDims();
+        outDims.resize(inputShape.GetRank() + 1, 1);
+
+        if (isFinalValidationPass)
+        {
+            // we generate its own MBLayout
+            auto inputMBLayout = InputRef(0).GetMBLayout();
+            if (!inputMBLayout)
+                InvalidArgument("%ls %ls operation can only operate on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
+
+            if (inputMBLayout->GetNumParallelSequences() == 0)
+                LogicError("%ls %ls operation's final validation pass must not be invoked before the input MBLayout has been initialized and populated.", NodeName().c_str(), OperationName().c_str());
+
+            if (!inputMBLayout->IsInFrameMode())
+                LogicError("%ls %ls operation's input must with MBLayout in frame mode (no sequence).", NodeName().c_str(), OperationName().c_str());
+
+            outDims[inputShape.GetRank()] = inputMBLayout->GetActualNumSamples();
+        }
+
+        SetDims(TensorShape(outDims), HasMBLayout());
+    }
+};
+
+template class UnpackBatchAixsNode<float>;
+template class UnpackBatchAixsNode<double>;
+
 // -----------------------------------------------------------------------
 // SliceNode (input)
 // This node extracts a slice of the first tensor dimension (row).
@@ -483,8 +724,8 @@ class SliceNode : public ComputationNode<ElemType>, public NumInputs<1>
     static const std::wstring TypeName() { return L"Slice"; }
 
 public:
-    SliceNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<int> beginIndex = { 0 }, std::vector<int> endIndex = { 0 }, std::vector<int> axis = { 1 })
-        : Base(deviceId, name), m_beginIndex(beginIndex), m_endIndex(endIndex), m_axis(axis)
+    SliceNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<int> beginIndex = {0}, std::vector<int> endIndex = {0}, std::vector<int> axis = {1}, std::vector<int> stride_multiplier = {1})
+        : Base(deviceId, name), m_beginIndex(beginIndex), m_endIndex(endIndex), m_axis(axis), m_stride_multiplier(stride_multiplier)
     {
         if (m_beginIndex.size() != m_endIndex.size() || m_beginIndex.size() != m_axis.size())
             InvalidArgument("%ls %ls operation: invalid size of beginIndex (%d), endIndx (%d) and axis (%d). They must agree.", NodeName().c_str(), OperationName().c_str(), (int)m_beginIndex.size(), (int)m_endIndex.size(), (int)m_axis.size());
@@ -511,12 +752,13 @@ public:
         node->m_beginIndex = m_beginIndex;
         node->m_endIndex   = m_endIndex;
         node->m_axis       = m_axis;
+        node->m_stride_multiplier = m_stride_multiplier;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        int num = 1, axis = 1;  // axis = 1 to emulate old RowSliceNode 
+        int num = 1, axis = 1, stride_multiplier = 1;  // axis = 1 to emulate old RowSliceNode 
         ptrdiff_t beginIndex, height;
         if (modelVersion >= CNTK_MODEL_VERSION_22)
             fstream >> num; 
@@ -526,6 +768,7 @@ public:
         m_beginIndex.clear(); 
         m_endIndex.clear();
         m_axis.clear(); 
+        m_stride_multiplier.clear();
         for (int i = 0; i < num; i++)
         {
             fstream >> beginIndex >> height; // legacy format stored (end-begin)
@@ -533,7 +776,10 @@ public:
             m_endIndex.push_back((int)(beginIndex + height));
             if (modelVersion >= CNTK_MODEL_VERSION_3)
                 fstream >> axis;
+            if (modelVersion >= CNTK_MODEL_VERSION_27)
+                fstream >> stride_multiplier;
             m_axis.push_back(axis); 
+            m_stride_multiplier.push_back(stride_multiplier);
         }
     }
 
@@ -546,6 +792,7 @@ public:
         {
             fstream << (ptrdiff_t)m_beginIndex[i] << (ptrdiff_t)(m_endIndex[i] - m_beginIndex[i]); // legacy file format stores (end-begin), we keep it that way
             fstream << m_axis[i];
+            fstream << m_stride_multiplier[i];
         }
     }
 
@@ -579,7 +826,7 @@ private:
     {
         auto inputSlice = InputRef(0).GetTensorSliceFor(rank, fr);    // input must be narrowed down
         for (int i = 0; i < (int)m_axis.size(); i++)  
-            inputSlice.NarrowTo(Axis(i)-1, BeginIndex(i), EndIndex(i));
+            inputSlice.NarrowTo(Axis(i)-1, BeginIndex(i), EndIndex(i), m_stride_multiplier[i]);
         return inputSlice;
     }
 
@@ -620,7 +867,7 @@ public:
 
             // propagate as much as we can
             if (isFinalValidationPass || (m_axis[i] - 1 < sampleLayout.GetRank() && 0 <= BeginIndex(i) && BeginIndex(i) <= EndIndex(i) && EndIndex(i) <= sampleLayout[m_axis[i] - 1])) // (the second condition guards against failing an out-of-bounds error if not isFinalValidationPass)
-                sampleLayout.NarrowTo(m_axis[i] - 1, BeginIndex(i), EndIndex(i));
+                sampleLayout.NarrowTo(m_axis[i] - 1, BeginIndex(i), EndIndex(i), m_stride_multiplier[i]);
         }
         SetDims(TensorShape(sampleLayout.GetDims()), HasMBLayout());
     }
@@ -628,6 +875,7 @@ public:
 private:
     std::vector<int> m_beginIndex, m_endIndex; // 'int' because negative indices are allowed, to index from end Python-style
     std::vector<int> m_axis;                   // note: axes are 1-based
+    std::vector<int> m_stride_multiplier;
 };
 
 template class SliceNode<float>;
@@ -1696,8 +1944,8 @@ public:
     virtual bool OutputUsedInComputingInputNodesGradients() const override {
         return false;
     }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {
-        return false;
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override {
+        return childIndex == 0;
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override

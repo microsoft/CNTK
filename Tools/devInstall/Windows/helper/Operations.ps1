@@ -171,30 +171,25 @@ function OpNvidiaCub141(
          } )
 }
 
-function OpNVidiaCudnn5180(
+function OpNVidiaCudnn6080(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "NVidia CUDNN 5.1 for CUDA 8.0"
-    $cudnnWin7 = "cudnn-8.0-windows7-x64-v5.1.zip"
-    $cudnnWin10 = "cudnn-8.0-windows10-x64-v5.1.zip"
+    $prodName = "NVidia CUDNN 6.0 for CUDA 8.0"
+    $cudnnWin = "cudnn-8.0-windows10-x64-v6.0.zip"
 
-    $prodSubDir =  "cudnn-8.0-v5.1"
+    $prodSubDir =  "cudnn-8.0-v6.0"
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "CUDNN_PATH"
     $envValue = join-path $targetPath "cuda"
-    $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v5.1"
-    $expectedHashWin7 = ""
-    $expectedHashWin10 = "BE75CA61365BACE03873B47C77930025FFEE7676FBEF0DC03D3E180700AF014B"
+    $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v6.0"
 
-    @( @{ShortName = "CUDNN5180"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
+    @( @{ShortName = "CUDNN6080"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyDirectory"; Path = $envValue },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{Function = "DownloadForPlatform"; Method = "WebRequest"; Platform = "^Microsoft Windows 7"; Source = "$downloadSource/$cudnnWin7"; Destination = "$cache\$cudnnWin7"; ExpectedHash = $expectedHashWin7 },
-                       @{Function = "DownloadForPlatform"; Method = "WebRequest"; Platform = "^Microsoft Windows (8|10|Server 2008 R2|Server 2012 R2)"; Source = "$downloadSource/$cudnnWin10"; Destination = "$cache\$cudnnWin10"; ExpectedHash = $expectedHashWin10 } );
-         Action = @( @{Function = "ExtractAllFromZipForPlatform"; Platform = "^Microsoft Windows 7"; zipFileName = "$cache\$cudnnWin10"; destination = $targetFolder; destinationFolder = $prodSubDir },
-                     @{Function = "ExtractAllFromZipForPlatform"; Platform = "^Microsoft Windows (8|10|Server 2008 R2|Server 2012 R2)"; zipFileName = "$cache\$cudnnWin10"; destination = $targetFolder; destinationFolder = $prodSubDir },
+         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = "$downloadSource/$cudnnWin"; Destination = "$cache\$cudnnWin" } );
+         Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$cudnnWin"; destination = $targetFolder; destinationFolder = $prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue } );
          })
 }

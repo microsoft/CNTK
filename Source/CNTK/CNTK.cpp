@@ -26,6 +26,7 @@
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
+#include "EnvironmentUtil.h"
 #include "Config.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
@@ -84,11 +85,12 @@ void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& con
     }
 }
 
-void RedirectStdErr(wstring logpath)
+void RedirectStdErr(wstring logpath, bool appendLogFile = false)
 {
     // TODO: if there is already a file, rename it
     LOGPRINTF(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
-    auto f = make_shared<File>(logpath.c_str(), fileOptionsWrite | fileOptionsText);
+    auto fileOption = appendLogFile ? fileOptionsAppend : fileOptionsWrite;
+    auto f = make_shared<File>(logpath.c_str(), fileOption | fileOptionsText);
     if (dup2(fileno(*f), 2) == -1)
     {
         RuntimeError("unexpected failure to redirect stderr to log file");
@@ -501,7 +503,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
     // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
     // 'false' otherwise.
-    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
+    bool paralleltrain = config(L"parallelTrain", (EnvironmentUtil::GetTotalNumberOfMPINodes() > 1));
 
     if (paralleltrain)
     {
@@ -520,7 +522,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         if (paralleltrain && mpi->CurrentNodeRank() != 0)
             logpath += msra::strfun::wstrprintf(L".rank%d", (int) mpi->CurrentNodeRank());
 
-        RedirectStdErr(logpath);
+        RedirectStdErr(logpath, config(L"appendLogFile", false));
         LOGPRINTF(stderr, "%ls\n", startupMessage.c_str());
         ::CNTK::Internal::PrintBuiltInfo();
     }
@@ -595,7 +597,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 2.0+ (");
+    fprintf(stderr, "CNTK 2.1+ (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
@@ -649,7 +651,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     
     // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
     // 'false' otherwise.
-    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
+    bool paralleltrain = config(L"parallelTrain", (EnvironmentUtil::GetTotalNumberOfMPINodes() > 1));
 
     if (paralleltrain)
     {
@@ -686,7 +688,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         // for MPI workers except main, append .rankN
         if (paralleltrain && mpi->CurrentNodeRank() != 0)
             logpath += msra::strfun::wstrprintf(L".rank%d", mpi->CurrentNodeRank());
-        RedirectStdErr(logpath);
+        RedirectStdErr(logpath, config(L"appendLogFile", false));
         if (traceLevel == 0)
             PrintBanner(argc, argv, timestamp); // repeat simple banner into log file
     }

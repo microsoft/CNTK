@@ -24,7 +24,7 @@
 #include <array>
 #include <ReaderUtil.h>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 using namespace std;
 
@@ -690,4 +690,4 @@ public:
     }
 };
 
-}}}; // namespaces
+}

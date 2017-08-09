@@ -18,7 +18,7 @@ example_dir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Speech
 sys.path.append(abs_path)
 sys.path.append(example_dir)
 
-from distributed_common import mpiexec_test
+from distributed_common import mpiexec_test, mpiexec_execute
 from prepare_test_data import an4_dataset_directory
 
 script_under_test = os.path.join(example_dir, "HTK_LSTM_Truncated_Distributed.py")
@@ -43,3 +43,20 @@ def test_htk_lstm_truncated_distributed_block_momentum(device_id):
                "-b", "1600",
                "-device", str(device_id) ]
     mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.76, False, 4)
+
+
+def test_htk_lstm_truncated_distributed_1bitsgd_with_cv(device_id):
+    # Make sure that full sequence cross validation
+    # works in the middle of bptt training
+    params = [ "-n", "2",
+               "-datadir", an4_dataset_directory(),
+               "-q", "1",
+               "-m", "640",
+               "-e", "1500",
+               "-cvfreq", "1000",
+               "-device", str(device_id) ]
+
+    output = mpiexec_execute(device_id=device_id, script=script_under_test, mpiexec_params=mpiexec_params, params=params)
+    results = re.findall("Finished Evaluation \[.+?\]: Minibatch\[.+?\]: metric = (.+?)%", output)
+    assert len(results) == 6, output
+
