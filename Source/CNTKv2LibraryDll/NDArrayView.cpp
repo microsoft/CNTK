@@ -475,10 +475,17 @@ namespace CNTK
         return out;
     }
 
-    // TODO: add - and * as well
     NDArrayViewPtr operator+(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand)
     {
         return NDArrayView::NumericOperation({ leftOperand, rightOperand }, 1.0, ElementWiseOperator::opSum);
+    }
+    NDArrayViewPtr operator-(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand)
+    {
+        return NDArrayView::NumericOperation({ leftOperand, rightOperand }, 1.0, ElementWiseOperator::opDifference);
+    }
+    NDArrayViewPtr operator*(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand)
+    {
+        return NDArrayView::NumericOperation({ leftOperand, rightOperand }, 1.0, ElementWiseOperator::opElementwiseProduct);
     }
 
     /*static*/ NDArrayViewPtr NDArrayView::MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank, NDArrayViewPtr out, double beta)

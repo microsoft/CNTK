@@ -962,6 +962,8 @@ namespace CNTK
     /// Binary addition operators for NDArrayView
     ///
     CNTK_API NDArrayViewPtr operator+(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
+    CNTK_API NDArrayViewPtr operator-(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
+    CNTK_API NDArrayViewPtr operator*(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
 
     enum class MaskKind : char
     {

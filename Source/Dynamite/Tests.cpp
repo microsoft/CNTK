@@ -69,15 +69,35 @@ struct TensorViewTest
     vector<NDShape> shapes;
 };
 
+// helper to create a random matrix
+static NDArrayViewPtr RandomTensor(const NDShape& shape, double scale, unsigned long& seed, DataType dataType, const DeviceDescriptor& device)
+{
+    if (dataType == DataType::Float)
+        return NDArrayView::RandomNormal<float> (shape, /*mean=*/0., /*stdDev=*/scale, seed++, device);
+    else
+        return NDArrayView::RandomNormal<double>(shape, /*mean=*/0., /*stdDev=*/scale, seed++, device);
+}
+
+// helper to compute average square error between two NDArrayViews
+static double AvSqrErr(const NDArrayViewPtr& resVal, const NDArrayViewPtr& refVal, DataType dataType, const DeviceDescriptor& device)
+{
+    let sqrErr = NDArrayView::NumericOperation({ resVal, refVal }, 1.0 / refVal->Shape().TotalSize(), ElementWiseOperator::opSqrOfDifference, make_shared<NDArrayView>(dataType, NDShape{}, device), 0, ElementWiseOperator::opSum);
+    return sqrErr->AsScalar<double>();
+}
+
+static double SumAll(const NDArrayViewPtr& x, DataType dataType, const DeviceDescriptor& device)
+{
+    let sum = NDArrayView::NumericOperation({ x }, 1.0, ElementWiseOperator::opCopy, make_shared<NDArrayView>(dataType, NDShape{}, device), 0, ElementWiseOperator::opSum);
+    return sum->AsScalar<double>();
+}
+
 size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 {
     size_t numFailed = 0;
     unsigned long seed = 1;
     // for testing batching of the matrix product, we need a shared matrix
-    let sharedMatrix = (dataType == DataType::Float)
-                        ? NDArrayView::RandomNormal<float> (NDShape{ 13, 42 }, /*mean=*/0., /*stdDev=*/0.3, seed++, device)
-                        : NDArrayView::RandomNormal<double>(NDShape{ 13, 42 }, /*mean=*/0., /*stdDev=*/0.3, seed++, device);
-    let sharedMatrixVar = Constant(sharedMatrix);
+    let sharedMatrix = RandomTensor(NDShape{ 13, 42 }, 0.3, seed, dataType, device);
+    let sharedMatrixVar = Parameter(sharedMatrix);
     vector<TensorViewTest> tests =
     {
         // matrix product
@@ -123,16 +143,14 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     for (let& test : tests)
     {
         NDArrayViewPtr refVal;
-        Variable resVar;
+        Variable resVar, resVar1;
         vector<vector<NDArrayViewPtr>> allArgValues(N);
+        vector<Variable> args;
         for (size_t n = 0; n < N; n++)
         {
             auto& argValues = allArgValues[n];
             for (let& shape : test.shapes)
-                if (dataType == DataType::Float)
-                    argValues.push_back(NDArrayView::RandomNormal<float> (shape, /*mean=*/0., /*stdDev=*/0.3, seed++, device));
-                else
-                    argValues.push_back(NDArrayView::RandomNormal<double>(shape, /*mean=*/0., /*stdDev=*/0.3, seed++, device));
+                argValues.push_back(RandomTensor(shape, 0.3, seed, dataType, device));
         }
         for (size_t n = 0; n < N; n++)
         {
@@ -154,7 +172,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         {
             let& argValues = allArgValues[n];
             // Dynamite:
-            vector<Variable> args;
+            args.clear();
             for (let& argValue : argValues)
                 args.push_back(Constant(argValue));
             if (n == 0)
@@ -163,20 +181,69 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                 for (let& arg : args)
                     fprintf(stderr, " %S ", arg.Shape().AsString().c_str());
             }
-            Variable resVar1 = test.f(args);
+            resVar1 = test.f(args);
             if (n > 0)
                 resVar = resVar + resVar1;// CNTK::Plus(resVar, resVar1);
             else
                 resVar = resVar1;
         }
-        let resVal = resVar.Value();
+        let resVal = resVar.Value(); // this triggers the batched evaluation
         fprintf(stderr, ") -> %S\n", resVal->AsString().c_str());
-        let sqrErr = NDArrayView::NumericOperation({ resVal, refVal }, 1.0 / refVal->Shape().TotalSize(), ElementWiseOperator::opSqrOfDifference, make_shared<NDArrayView>(dataType, NDShape{}, device), 0, ElementWiseOperator::opSum);
-        let avSqrErr = sqrErr->AsScalar<double>();
+        let avSqrErr = AvSqrErr(resVal, refVal, dataType, device);
         if (avSqrErr > 1e-5)
         {
             fprintf(stderr, "################# FAILED: avSqrErr = %.2f\n", avSqrErr);
             numFailed++;
+        }
+        // gradient check
+        if (dataType == DataType::Double)
+        {
+            let n = 0; // TODO: expand this to batching later
+            let& argValues = allArgValues[n];
+            let epsScale = 1e-4;
+            for (size_t i = 0; i < argValues.size(); i++)
+            {
+                // we test SumAll(f(x,y))
+                // compute original value
+                args.clear();
+                for (let& argValue : argValues)
+                    args.push_back(Parameter(argValue)); // TODO: does Backward() really need to take Parameters? Why not any Variable? Can Constants take a gradient??
+                let output = test.f(args);
+                let input = Parameter(output.Owner()->Inputs()[i]); // get actual input and cast as Parameter (args[] may differ from actual since the test-case's lambda may ignore args[])
+                if (output.Owner()->Inputs()[i] != args[i]) // lambda ignores this input
+                    continue;
+                let arg = Parameter(args[i]);
+                Variable sumAll = ReduceSum(output, Axis::AllStaticAxes());
+                let resVal = sumAll.Value(); // this triggers batched forward computation
+                // compute perturbed output
+                let eps = RandomTensor(arg.Shape(), epsScale /*/ arg.Shape().TotalSize()*/, seed, dataType, device);
+                //eps->LogToFile(L"eps", stderr);
+                auto perturbedArgs = args;
+                perturbedArgs[i] = Constant(perturbedArgs[i].Value() + eps);
+                Variable perturbedSumAll = ReduceSum(test.f(perturbedArgs), Axis::AllStaticAxes());
+                let perturbedResVal = perturbedSumAll.Value();
+                //resVal->LogToFile(L"resVal", stderr);
+                //perturbedResVal->LogToFile(L"perturbedResVal", stderr);
+                let perturbedDelta = (perturbedResVal - resVal)->AsScalar<double>();
+                // compute gradient of sum over all elements of test.f(args) (=backprop a 1.0 into every element)
+                unordered_map<Parameter, NDArrayViewPtr> gradients{ { arg, nullptr } };
+                try
+                {
+                    sumAll.Backward(gradients); // this triggers batched backward computation
+                }
+                catch (...)
+                {
+                    continue; // some don't have a gradient implementation yet (don't log anything here; user will crash when trying to use it)
+                }
+                let gradientWrtInput = gradients[arg]; // get gradient for arg
+                //gradientWrtInput->LogToFile(L"gradientWrtInput", stderr);
+                // compute expected perturbed output based on gradient
+                // gradientWrtInput[j,k] = slope of sum of all outputs w.r.t. changes of arg[j,k]
+                let gradientBasedDelta = SumAll(gradientWrtInput * eps, dataType, device);
+                let relErr = (perturbedDelta == gradientBasedDelta) ? 0 : fabs(((perturbedDelta - gradientBasedDelta) / perturbedDelta));
+                if (relErr > 1e-5)
+                    fprintf(stderr, "\t\t\t\tgradient[%d] err=%.10f%% (%.20f, %.20f)\n", (int)i, 100.0 * relErr, perturbedDelta, gradientBasedDelta);
+            }
         }
     }
     return numFailed;
@@ -185,14 +252,15 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 void RunDynamiteTests()
 {
     size_t numFailed = 0;
-    numFailed += DynamiteTest(3, DataType::Float, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::CPUDevice());
+    numFailed += DynamiteTest(3, DataType::Float, DeviceDescriptor::GPUDevice(0));
 #if 0 // do this not every time
     numFailed += DynamiteTest(1, DataType::Float, DeviceDescriptor::GPUDevice(0));
-    numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(1, DataType::Float, DeviceDescriptor::CPUDevice());
 #endif
     if (numFailed > 0)
         LogicError("RunDynamiteTests: %d tests failed.", (int)numFailed);
+    exit(0);
 }

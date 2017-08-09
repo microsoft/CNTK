@@ -1859,7 +1859,7 @@ public:
             return true;
 #endif
         };
-#ifndef NO_BATCHED_FORWARD
+#ifndef NO_BATCHED_FORWARDxxxx  // TODO: should this be backward?
         let opClass = g_oscTable[f->m_op]; // operation-specific auto-batching class
         // splice operation must use scatter
         if (opClass == OpSpecificConditionKind::Splice)
