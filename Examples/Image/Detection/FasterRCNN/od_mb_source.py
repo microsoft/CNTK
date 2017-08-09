@@ -16,7 +16,7 @@ class ObjectDetectionMinibatchSource(UserMinibatchSource):
 
         self.image_si = StreamInformation("image", 0, 'dense', np.float32, (3, pad_height, pad_width,))
         self.roi_si = StreamInformation("annotation", 1, 'dense', np.float32, (max_annotations_per_image, 5,))
-        self.dims_si = StreamInformation("dims", 1, 'dense', np.float32, (4,))
+        self.dims_si = StreamInformation("dims", 2, 'dense', np.float32, (4,))
 
         self.od_reader = ObjectDetectionReader(img_map_file, roi_map_file, max_annotations_per_image,
                  pad_width, pad_height, pad_value, randomize, use_flipping, max_images, buffered_rpn_proposals)
@@ -62,16 +62,18 @@ class ObjectDetectionMinibatchSource(UserMinibatchSource):
                 break
 
         if input_map is None:
-            result = {
-                self.image_si: MinibatchData(Value(batch=img_data_batch), 1, num_samples, sweep_end),
-                self.roi_si:   MinibatchData(Value(batch=roi_data_batch), 1, num_samples, sweep_end),
-                self.dims_si:  MinibatchData(Value(batch=np.asarray(img_dims_batch, dtype=np.float32)), 1, num_samples, sweep_end),
-            }
+            result = None
+            #result = {
+            #    self.image_si: MinibatchData(Value(batch=img_data_batch), 1, num_samples, sweep_end),
+            #    self.roi_si:   MinibatchData(Value(batch=roi_data_batch), 1, num_samples, sweep_end),
+            #    self.dims_si:  MinibatchData(Value(batch=np.asarray(img_dims_batch, dtype=np.float32)), 1, num_samples, sweep_end),
+            #}
         else:
+            #import pdb; pdb.set_trace()
             result = {
-                input_map[self.image_si]: MinibatchData(Value(batch=np.asarray(img_data_batch, dtype=np.float32)), num_samples, num_samples, sweep_end),
-                input_map[self.roi_si]:   MinibatchData(Value(batch=np.asarray(roi_data_batch, dtype=np.float32)), num_samples, num_samples, sweep_end),
-                input_map[self.dims_si]:  MinibatchData(Value(batch=np.asarray(img_dims_batch, dtype=np.float32)), num_samples, num_samples, sweep_end),
+                input_map[self.image_si]: MinibatchData(Value(batch=np.asarray(img_data_batch, dtype=np.float32)), 1, num_samples, sweep_end),
+                input_map[self.roi_si]:   MinibatchData(Value(batch=np.asarray(roi_data_batch, dtype=np.float32)), 1, num_samples, sweep_end),
+                input_map[self.dims_si]:  MinibatchData(Value(batch=np.asarray(img_dims_batch, dtype=np.float32)), 1, num_samples, sweep_end),
             }
 
         return result, buffered_proposals_batch

@@ -377,10 +377,10 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             data, proposals = od_minibatch_source.next_minibatch_with_proposals(min(mb_size, epoch_size-sample_count), input_map=input_map)
             if use_buffered_proposals:
-                data[rpn_rois_input] = MinibatchData(Value(batch=np.asarray(proposals, dtype=np.float32)), 1, mb_size, False)
+                data[rpn_rois_input] = MinibatchData(Value(batch=np.asarray(proposals, dtype=np.float32)), mb_size, mb_size, False)
                 # remove dims input if no rpn is required to avoid warnings
                 del data[[k for k in data if '[6]' in str(k)][0]]
-            #import pdb; pdb.set_trace()
+            import pdb; pdb.set_trace()
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress

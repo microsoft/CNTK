@@ -19,6 +19,8 @@ try:
     from config import cfg
 except ImportError:
     from utils.default_config import cfg
+from utils.cntk_debug_single import DebugLayerSingle
+
 
 # Please keep in sync with Readme.md
 def create_rpn(conv_out, scaled_gt_boxes, im_info, add_loss_functions=True,
@@ -55,13 +57,15 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, add_loss_functions=True,
     rpn_bbox_pred = Convolution((1, 1), 36, activation=None, name="rpn_bbox_pred",
                                 init = normal(scale=0.01), init_bias=conv_bias_init)(rpn_conv_3x3)  # 4(coords) * 9(anchors)
 
+    rpn_cls_score = user_function(DebugLayerSingle(rpn_cls_score, name='dummy'))
+
     # apply softmax to get (bg, fg) probabilities and reshape predictions back to grid of (18, H, W)
     num_predictions = int(rpn_cls_score.shape[0] / 2)
-    rpn_cls_score_rshp = reshape(rpn_cls_score, (-1, 2, num_predictions, rpn_cls_score.shape[1], rpn_cls_score.shape[2]), name="rpn_cls_score_rshp")
+    rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions, rpn_cls_score.shape[1], rpn_cls_score.shape[2])) #, name="rpn_cls_score_rshp")
     p_rpn_cls_score_rshp = cntk.placeholder()
     rpn_cls_sm = softmax(p_rpn_cls_score_rshp, axis=0)
     rpn_cls_prob = cntk.as_block(rpn_cls_sm, [(p_rpn_cls_score_rshp, rpn_cls_score_rshp)], 'Softmax', 'rpn_cls_prob')
-    rpn_cls_prob_reshape = reshape(rpn_cls_prob, rpn_cls_score.shape, name="rpn_cls_prob_reshape")
+    rpn_cls_prob_reshape = reshape(rpn_cls_prob, rpn_cls_score.shape) #, name="rpn_cls_prob_reshape")
 
     # proposal layer
     rpn_rois_raw = user_function(ProposalLayer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, param_str=proposal_layer_param_string))

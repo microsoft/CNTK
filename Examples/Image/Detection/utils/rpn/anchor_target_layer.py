@@ -94,7 +94,7 @@ class AnchorTargetLayer(UserFunction):
 
         bottom = arguments
 
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
 
         # map of shape (..., H, W)
         height, width = bottom[0].shape[-2:]
