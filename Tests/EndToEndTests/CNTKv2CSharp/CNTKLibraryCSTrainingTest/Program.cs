@@ -1,11 +1,13 @@
-﻿using CNTK;
+﻿//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+// Program.cs : Tests of CNTK Library C# model training examples.
+//
+using CNTK;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace CNTKLibraryCSTrainingExamplesTest
+namespace CNTK.CNTKLibraryCSTrainingTest
 {
     class Program
     {
@@ -40,9 +42,9 @@ namespace CNTKLibraryCSTrainingExamplesTest
             Console.WriteLine(Utils.VariableKindName(VariableKind.Parameter));
 
 #if CPUONLY
-            Console.WriteLine("======== Evaluate model on CPU using CPUOnly build ========");
+            Console.WriteLine("======== Train model on CPU using CPUOnly build ========");
 #else
-            Console.WriteLine("======== Evaluate model on CPU using GPU build ========");
+            Console.WriteLine("======== Train model on CPU using GPU build ========");
 #endif
 
             if (ShouldRunOnCpu())
@@ -54,13 +56,13 @@ namespace CNTKLibraryCSTrainingExamplesTest
 
             if (ShouldRunOnGpu())
             {
-                Console.WriteLine(" ====== Evaluate model on GPU =====");
+                Console.WriteLine(" ====== Train model on GPU =====");
                 var device = DeviceDescriptor.GPUDevice(0);
 
                 SimpleFeedForwardClassifierTest.TrainSimpleFeedForwardClassifier(device);
             }
 
-            Console.WriteLine("======== Evaluation completes. ========");
+            Console.WriteLine("======== Train completes. ========");
         }
 
         static bool ShouldRunOnGpu()

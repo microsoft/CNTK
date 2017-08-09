@@ -99,9 +99,6 @@
     <Compile Include="SwigProxyClasses\UnorderedMapStringDictionaryValue.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapVariableMinibatchData.cs" />
     <Compile Include="SwigProxyClasses\VectorPairSizeTDouble.cs" />
-    <Compile Include="Utils.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="SwigProxyClasses\Axis.cs" />
     <Compile Include="SwigProxyClasses\AxisVector.cs" />
     <Compile Include="SwigProxyClasses\BoolVector.cs" />
@@ -133,6 +130,7 @@
     <Compile Include="SwigProxyClasses\VariableKind.cs" />
     <Compile Include="SwigProxyClasses\VariableVector.cs" />
     <Compile Include="SwigProxyClasses\FunctionPtrVector.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup Condition="$(CpuOnlyBuild)">
     <Compile Include="CNTKLibraryManagedDll-CPUOnly-AssemblyInfo.cs" />

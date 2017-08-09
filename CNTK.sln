@@ -1606,7 +1606,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "V2LibraryCSTests", "Tests\U
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CNTKv2CSharp", "CNTKv2CSharp", "{B3B46744-DBB5-42C2-BAD7-9151D9486045}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKLibraryCSTrainingExamplesTest", "Tests\EndToEndTests\CNTKv2CSharp\CNTKLibraryCSTrainingExamplesTest\CNTKLibraryCSTrainingExamplesTest.csproj", "{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKLibraryCSTrainingTest", "Tests\EndToEndTests\CNTKv2CSharp\CNTKLibraryCSTrainingTest\CNTKLibraryCSTrainingTest.csproj", "{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}"
 	ProjectSection(ProjectDependencies) = postProject
 		{50EF9EE6-5018-453E-A063-F77044EF1A97} = {50EF9EE6-5018-453E-A063-F77044EF1A97}
 	EndProjectSection

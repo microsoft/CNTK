@@ -17,8 +17,8 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <ErrorReport>prompt</ErrorReport>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CNTKLibraryCSTrainingExamplesTest</RootNamespace>
-    <AssemblyName>CNTKLibraryCSTrainingExamplesTest</AssemblyName>
+    <RootNamespace>CNTK.CNTKLibraryCSTrainingTest</RootNamespace>
+    <AssemblyName>CNTKLibraryCSTrainingTest</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

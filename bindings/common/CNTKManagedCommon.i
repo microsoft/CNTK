@@ -783,7 +783,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDShape, SubShape);
 #endif
 
 #ifdef SWIGJAVA
-%rename (isUnknown) CNTK::NDShape::IsUnknown;
+%rename (isUnknown) CNTK::NDShape::IsUnknown;                                           
 %rename (hasInferredDimension) CNTK::NDShape::HasInferredDimension;
 %rename (hasFreeDimension) CNTK::NDShape::HasFreeDimension;
 %rename (hasUnboundDimension) CNTK::NDShape::HasUnboundDimension;
@@ -802,9 +802,10 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDShape, SubShape);
 
 #ifdef SWIGCSHARP
     // Swig generated .cxx code narrows size_t to unsigned long therefore special dimension values are lost.
-    // For example, InferredDimension (value of -1) when passed to Cpp side with default swig generated conversion 
-    // becomes 4,294,967,295 instead of 9,223,372,036,854,775,807.
-    // 64 bitness is maintained with this conversion.
+    // For example, InferredDimension (value of -1), when passed to Cpp side with Swig generated code, 
+    // becomes 4,294,967,295 instead of 9,223,372,036,854,775,807. This issue exists independent of whether
+    // int(32bit) or long(64bit) is used for shape dimension in CSharp API.
+    // This method is to bypass Swig generated code to maintain 64 bitness.
     static void CSharp_SizeTVector_AddExt(std::vector< size_t > *vectorSizeT, unsigned long long dim) 
     {
         (*vectorSizeT).push_back(dim);
