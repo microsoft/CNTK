@@ -279,7 +279,6 @@ void Train()
     //let epochSize = 100000; // it's a small corpus, ~50k samples
     let epochSize = 10000000; // this is maybe half a true epoch
     let minibatchSize = 1384;// 50;  // 384 is 32 sequences, assuming av. length ~12
-    //auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001 * sqrt(minibatchSize), 0.00005 * sqrt(minibatchSize), 0.000025 * sqrt(minibatchSize), 0.00001 * sqrt(minibatchSize) }, epochSize), MomentumAsTimeConstantSchedule(1000), true, MomentumAsTimeConstantSchedule(10000));
     // correction:
     //  - LR is specified for av gradient
     //  - numer should be /32

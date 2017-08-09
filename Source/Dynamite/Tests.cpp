@@ -124,18 +124,23 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     {
         NDArrayViewPtr refVal;
         Variable resVar;
+        vector<vector<NDArrayViewPtr>> allArgValues(N);
         for (size_t n = 0; n < N; n++)
         {
-            vector<NDArrayViewPtr> argValues;
+            auto& argValues = allArgValues[n];
             for (let& shape : test.shapes)
                 if (dataType == DataType::Float)
                     argValues.push_back(NDArrayView::RandomNormal<float> (shape, /*mean=*/0., /*stdDev=*/0.3, seed++, device));
                 else
                     argValues.push_back(NDArrayView::RandomNormal<double>(shape, /*mean=*/0., /*stdDev=*/0.3, seed++, device));
+        }
+        for (size_t n = 0; n < N; n++)
+        {
+            let& argValues = allArgValues[n];
             // reference: TensorView op directly
             let refVal1 = test.op.first(argValues);
             if (n > 0)
-                refVal = NDArrayView::NumericOperation({ refVal, refVal1 }, 1.0, ElementWiseOperator::opSum);
+                refVal = refVal + refVal1;// NDArrayView::NumericOperation({ refVal, refVal1 }, 1.0, ElementWiseOperator::opSum);
             else
                 refVal = refVal1;
 #if 0
@@ -144,6 +149,10 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             refVal1->LogToFile(L"resVal", stderr);
             refVal->LogToFile(L"sumVal", stderr);
 #endif
+        }
+        for (size_t n = 0; n < N; n++)
+        {
+            let& argValues = allArgValues[n];
             // Dynamite:
             vector<Variable> args;
             for (let& argValue : argValues)
@@ -156,7 +165,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             }
             Variable resVar1 = test.f(args);
             if (n > 0)
-                resVar = CNTK::Plus(resVar, resVar1);
+                resVar = resVar + resVar1;// CNTK::Plus(resVar, resVar1);
             else
                 resVar = resVar1;
         }
@@ -176,13 +185,14 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 void RunDynamiteTests()
 {
     size_t numFailed = 0;
-    numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(3, DataType::Float, DeviceDescriptor::GPUDevice(0));
-    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
+#if 0 // do this not every time
     numFailed += DynamiteTest(1, DataType::Float, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::CPUDevice());
+    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(1, DataType::Float, DeviceDescriptor::CPUDevice());
+#endif
     if (numFailed > 0)
         LogicError("RunDynamiteTests: %d tests failed.", (int)numFailed);
-    exit(0);
 }

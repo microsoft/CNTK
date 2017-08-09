@@ -77,7 +77,7 @@ namespace Dynamite {
 
     // returns vector[numArgs] OF vector[numBatchItems] OF Constant[seqLen,sampleShape]
     // or no seqLen if isSequence is false for the respective stream
-    static void FromCNTKMB(vector<vector<Variable>>& res, const vector<ValuePtr>& inputs, const vector<bool>& isSequence, DataType dataType, const DeviceDescriptor& device) // variables needed for axis info only
+    static inline void FromCNTKMB(vector<vector<Variable>>& res, const vector<ValuePtr>& inputs, const vector<bool>& isSequence, DataType dataType, const DeviceDescriptor& device) // variables needed for axis info only
     {
         let numArgs = inputs.size();
         res.resize(numArgs);

@@ -958,6 +958,11 @@ namespace CNTK
         std::shared_ptr<void> m_tensorViewPtr; // Microsoft::MSR::CNTK::TensorView<ElemType>*
     };
 
+    ///
+    /// Binary addition operators for NDArrayView
+    ///
+    CNTK_API NDArrayViewPtr operator+(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
+
     enum class MaskKind : char
     {
         Invalid = 0,
