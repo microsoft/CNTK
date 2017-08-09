@@ -588,3 +588,16 @@ def test_pad():
     expect5 = np.lib.pad([[[0, 1, 2], [3, 4, 5]], [[6, 7, 8], [9, 10, 11]]],
                          ((0, 0), (1, 1), (2, 2)), 'symmetric')
     assert np.array_equal(pad5, expect5)
+
+    #test grad
+    x = C.parameter(init=np.arange(6).reshape((2,3)))
+    p = C.pad(x, mode=C.ops.SYMMETRIC_PAD, pattern=[(1, 0), (2, 1)])
+    grad = p.grad({}, [x])
+    expect_grad = np.asarray([[4., 4., 4.],[2., 2., 2.]])
+    assert np.array_equal(grad, expect_grad)
+
+    p2 = C.pad(x, mode=C.ops.REFLECT_PAD, pattern=[(1, 1), (2, 2)])
+    grad2 = p2.grad({}, [x])
+    expect_grad2 = np.asarray([[4., 6., 4.], [4., 6., 4.]])
+    assert np.array_equal(grad2, expect_grad2)
+

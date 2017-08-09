@@ -953,18 +953,37 @@ public:
     
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        //todo
         size_t rank = DetermineElementwiseTensorRank();
         let outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
 
         auto inputGrad = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
         int maxRank = (int)(Input(inputIndex)->GetSampleLayout().GetRank());
         let dims = Input(inputIndex)->GetSampleLayout().GetDims();
+        let outputDims = GetSampleLayout().GetDims();
+        // first folder the gradients if its padding mode is reflect or symmetric
+        if (m_mode == PaddingType::REFLECTPAD)
+        {
+            for (int index = maxRank - 1; index >= 0; index--)
+            {
+                AddPaddingGradients(fr, rank, index, 0, m_head[index] + 1, m_head[index], false);
+                AddPaddingGradients(fr, rank, index, outputDims[index] - m_foot[index], outputDims[index] - 2 * m_foot[index] - 1, m_foot[index], true);
+            }
+        }
+        else if (m_mode == PaddingType::SYMMETRICPAD)
+        {
+            for (int index = maxRank - 1; index >= 0; index--)
+            {
+                AddPaddingGradients(fr, rank, index, 0, m_head[index], m_head[index], false);
+                AddPaddingGradients(fr, rank, index, outputDims[index] - m_foot[index], outputDims[index] - 2 * m_foot[index], m_foot[index], true);
+            }
+        }
+        // copy to input gradient
         auto outputSubSlice = outputSlice;
         for (int index = maxRank - 1; index >= 0; index--)
         {
             outputSubSlice.NarrowTo(index, m_head[index], dims[index] + m_head[index]);
         }
+
         let outputGrad = TensorView<ElemType>(GradientPtr(), outputSubSlice);
         inputGrad.AddCopyOf(outputGrad);
     }
@@ -1026,6 +1045,21 @@ private:
             auto outputTensor = TensorView<ElemType>(ValuePtr(), outputSlice);
             auto inputTensor = TensorView<ElemType>(ValuePtr(), inputSlice);
             outputTensor.AssignCopyOf(inputTensor);
+        }
+    }
+
+    void AddPaddingGradients(const FrameRange& fr, size_t rank, size_t axis, size_t outputIndex, size_t inputIndex, size_t size, bool reverse)
+    {
+        if (size > 0)
+        {
+            auto outputOriginSlice = GetTensorSliceFor(rank, fr);
+            auto outputSlice = outputOriginSlice.NarrowTo(axis, outputIndex, outputIndex + size, reverse ? 1 : -1);
+            auto inputOriginSlice = GetTensorSliceFor(rank, fr);
+            auto inputSlice = inputOriginSlice.NarrowTo(axis, inputIndex, inputIndex + size, reverse ? -1 : 1);
+
+            auto outputTensor = TensorView<ElemType>(GradientPtr(), outputSlice);
+            auto inputTensor = TensorView<ElemType>(GradientPtr(), inputSlice);
+            inputTensor.AssignSumOf(outputTensor, inputTensor);
         }
     }
 
