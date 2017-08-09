@@ -21,8 +21,8 @@
 #include <string>
 
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
-//#define LOG_STATS     // if defined, log statistics (#operations)
-#define NO_BATCHED_FORWARD  // if defined, don't batch forward
+#define LOG_STATS     // if defined, log statistics (#operations)
+//#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
 using namespace Microsoft::MSR::CNTK;
@@ -543,7 +543,8 @@ public:
         // Since the slices into it that were returned before all hold a ref-count to that arena,
         // it will be deallocated automatically as soon the last slice goes away.
         // If the data type is different, we drop the current arena. We can't presently mix data types, so this is OK.
-        if (!s_currentArena || numElements > (ARENASIZE - s_currentArenaUsed) || dataType != s_currentArena->GetDataType())
+        if (!s_currentArena || numElements > (ARENASIZE - s_currentArenaUsed) ||
+            dataType != s_currentArena->GetDataType() || device != s_currentArena->Device())
         {
             s_currentArena = make_shared<NDArrayView>(dataType, StorageFormat::Dense, NDShape{ ARENASIZE }, device);
             s_currentArenaUsed = 0;

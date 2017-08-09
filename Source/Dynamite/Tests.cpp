@@ -69,8 +69,9 @@ struct TensorViewTest
     vector<NDShape> shapes;
 };
 
-void DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
+size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 {
+    size_t numFailed = 0;
     unsigned long seed = 1;
     vector<TensorViewTest> tests =
     {
@@ -105,41 +106,64 @@ void DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         { Op(StableSigmoid        ), [](const vector<Variable>& args) { return CNTK::Sigmoid      (args[0]         ); }, { { 128 } } }
     };
 
-    fprintf(stderr, "%s on %S\n", CNTK::DataTypeName(dataType), device.AsString().c_str());
+    fprintf(stderr, "\n--- batch of %d. %s on %S\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str());
     for (let& test : tests)
     {
-        vector<NDArrayViewPtr> argValues;
-        for (let& shape : test.shapes)
-            if (dataType == DataType::Float)
-                argValues.push_back(NDArrayView::RandomNormal<float>(shape, /*mean=*/0., /*stdDev=*/0.3, seed++, device));
+        NDArrayViewPtr refVal;
+        Variable resVar;
+        for (size_t n = 0; n < N; n++)
+        {
+            vector<NDArrayViewPtr> argValues;
+            for (let& shape : test.shapes)
+                if (dataType == DataType::Float)
+                    argValues.push_back(NDArrayView::RandomNormal<float>(shape, /*mean=*/0., /*stdDev=*/0.3, seed++, device));
+                else
+                    argValues.push_back(NDArrayView::RandomNormal<double>(shape, /*mean=*/0., /*stdDev=*/0.3, seed++, device));
+            // reference: TensorView op directly
+            let refVal1 = NDArrayView::NumericOperation(argValues, 1.0, test.op.first);
+            if (n > 0)
+                refVal = NDArrayView::NumericOperation({ refVal, refVal1 }, 1.0, ElementWiseOperator::opSum);
             else
-                argValues.push_back(NDArrayView::RandomNormal<double>(shape, /*mean=*/0., /*stdDev=*/0.3, seed++, device));
-        // reference: TensorView op directly
-        let refVal = NDArrayView::NumericOperation(argValues, 1.0, test.op.first);
-        // Dynamite:
-        vector<Variable> args;
-        for (let& argValue : argValues)
-            args.push_back(Constant(argValue));
-        fprintf(stderr, "%25s(", test.op.second);
-        for (let& arg : args)
-            fprintf(stderr, " %S ", arg.Shape().AsString().c_str());
-        Variable resVar = test.f(args);
+                refVal = refVal1;
+            // Dynamite:
+            vector<Variable> args;
+            for (let& argValue : argValues)
+                args.push_back(Constant(argValue));
+            if (n == 0)
+            {
+                fprintf(stderr, "%25s(", test.op.second);
+                for (let& arg : args)
+                    fprintf(stderr, " %S ", arg.Shape().AsString().c_str());
+            }
+            Variable resVar1 = test.f(args);
+            if (n > 0)
+                resVar = CNTK::Plus(resVar, resVar1);
+            else
+                resVar = resVar1;
+        }
         let resVal = resVar.Value();
         fprintf(stderr, ") -> %S\n", resVal->AsString().c_str());
         let sqrErr = NDArrayView::NumericOperation({ resVal, refVal }, 1.0 / refVal->Shape().TotalSize(), ElementWiseOperator::opSqrOfDifference, make_shared<NDArrayView>(dataType, NDShape{}, device), 0, ElementWiseOperator::opSum);
         let avSqrErr = sqrErr->AsScalar<double>();
         if (avSqrErr > 1e-5)
-            fprintf(stderr, "FAILED: avSqrErr = %.2f\n", avSqrErr);
+        {
+            fprintf(stderr, "################# FAILED: avSqrErr = %.2f\n", avSqrErr);
+            numFailed++;
+        }
     }
+    return numFailed;
 }
 
 void RunDynamiteTests()
 {
-    DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
-    DynamiteTest(1, DataType::Double, DeviceDescriptor::CPUDevice());
-    DynamiteTest(1, DataType::Float, DeviceDescriptor::GPUDevice(0));
-    DynamiteTest(3, DataType::Float, DeviceDescriptor::GPUDevice(0));
-    DynamiteTest(1, DataType::Float, DeviceDescriptor::CPUDevice());
-    DynamiteTest(3, DataType::Float, DeviceDescriptor::CPUDevice());
+    size_t numFailed = 0;
+    numFailed += DynamiteTest(3, DataType::Float, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::CPUDevice());
+    numFailed += DynamiteTest(1, DataType::Float, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(1, DataType::Float, DeviceDescriptor::CPUDevice());
+    numFailed += DynamiteTest(3, DataType::Float, DeviceDescriptor::CPUDevice());
+    if (numFailed > 0)
+        LogicError("RunDynamiteTests: %d tests failed.", (int)numFailed);
     exit(0);
 }
