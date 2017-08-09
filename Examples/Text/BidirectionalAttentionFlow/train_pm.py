@@ -47,7 +47,7 @@ def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
     }
     return mb_source, input_map
 
-def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, misc={}):
+def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, misc=None):
     with open(tsv_file, 'r', encoding='utf-8') as f:
         eof = False
         while not eof:
@@ -205,6 +205,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
             for data in tsv_reader:
                 if (minibatch_count % C.Communicator.num_workers()) == C.Communicator.rank():
                     trainer.train_minibatch(data) # update model with it
+                    dummy.eval()
                 minibatch_count += 1
             if not post_epoch_work(epoch_stat):
                 break
