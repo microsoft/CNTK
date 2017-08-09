@@ -339,7 +339,7 @@ private:
                 cudaMemcpy(m_intermediateCPUBuffers[gpuToCpuIndex].get(), gpuCopyBuffer->Data(), gpuCopyBuffer->GetNumElements() * sizeof(ElemType), cudaMemcpyDeviceToHost);
                 gpuToCpuIndex++;
 
-                for (i = 1; i <= numGradientIndex; i ++)
+                for (size_t i = 1; i <= numGradientIndex; i ++)
                 {
                     // Get next gradient
                     if (i < numGradientIndex)
