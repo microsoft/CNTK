@@ -206,6 +206,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             refVal->LogToFile(L"sumVal", stderr);
 #endif
         }
+        bool testUsesAllArgs = true; // some tests ignore the arg; don't do gradient check on those
         for (size_t n = 0; n < N; n++)
         {
             let& argValues = allArgValues[n];
@@ -220,6 +221,11 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                     fprintf(stderr, " %S ", arg.Shape().AsString().c_str());
             }
             resVar1 = test.f(args);
+            {
+                // aside: as a courtesy for the gradient check, determine whether the test function actually uses all the args given to it
+                for (size_t i = 0; i < args.size(); i++)
+                    testUsesAllArgs &= (resVar1.Owner()->Inputs()[i] == args[i]); // test lambda ignores this input
+            }
             if (n > 0)
                 resVar = resVar + resVar1;// CNTK::Plus(resVar, resVar1);
             else
@@ -234,43 +240,70 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             numFailed++;
         }
         // gradient check
-        if (dataType == DataType::Double)
+        // we test BatchSum(f(x,y))
+        if (dataType == DataType::Double && testUsesAllArgs)
         {
-            let n = 0; // TODO: expand this to batching later
-            let& argValues = allArgValues[n];
             let epsScale = 1e-6;
-            for (size_t i = 0; i < argValues.size(); i++)
+            // gradient check for every input
+            for (size_t i = 0; i < allArgValues[0].size(); i++)
             {
-                // we test SumAll(f(x,y))
-                // compute original value
-                args.clear();
-                for (let& argValue : argValues)
-                    args.push_back(Parameter(argValue)); // TODO: does Backward() really need to take Parameters? Why not any Variable? Can Constants take a gradient??
-                let output = test.f(args);
-                let input = Parameter(output.Owner()->Inputs()[i]); // get actual input and cast as Parameter (args[] may differ from actual since the test-case's lambda may ignore args[])
-                if (output.Owner()->Inputs()[i] != args[i]) // lambda ignores this input
-                    continue;
-                let arg = Parameter(args[i]);
-                Variable sumAllVar = ReduceSum(output, Axis::AllStaticAxes());
-                let sumAll = sumAllVar.Value(); // this triggers batched forward computation
-                // compute perturbed output
-                let eps = RandomTestTensor(arg.Shape(), epsScale /*/ arg.Shape().TotalSize()*/, "eps", i, seed, dataType, device);
-                //eps->LogToFile(L"eps", stderr);
-                auto perturbedArgs = args;
-                perturbedArgs[i] = Constant(perturbedArgs[i].Value() + eps);
-                Variable perturbedSumAll = ReduceSum(test.f(perturbedArgs), Axis::AllStaticAxes());
-                let perturbedResVal = perturbedSumAll.Value();
-                //sumAll->LogToFile(L"sumAll", stderr);
-                //perturbedResVal->LogToFile(L"perturbedResVal", stderr);
-                let perturbedDelta = (perturbedResVal - sumAll)->AsScalar<double>();
+                // in case of batching, compute the sum symbolically so we can test the batched gradient
+                Variable originalBatchSumVar;  // sum over batch over ReduceSum(test.f(args))
+                Variable perturbedBatchSumVar; // same but arg[i] perturbed by epsilon
+                unordered_map<Parameter, NDArrayViewPtr> epsilons;  // [arg] -> epsilon used to perturb arg[i]
+                unordered_map<Parameter, NDArrayViewPtr> gradients; // [arg] -> gradient for arg[i] goes here
+                for (size_t n = 0; n < N; n++)
+                {
+                    let& argValues = allArgValues[n];
+
+                    // original arguments
+                    args.clear();
+                    for (let& argValue : argValues)
+                        args.push_back(Parameter(argValue)); // TODO: does Backward() really need to take Parameters? Why not any Variable? Can Constants take a gradient??
+                    // perturbed arguments
+                    let eps = RandomTestTensor(args[i].Shape(), epsScale, "eps", i, seed, dataType, device);
+                    //eps->LogToFile(L"eps", stderr);
+                    auto perturbedArgs = args;
+                    perturbedArgs[i] = Constant(perturbedArgs[i].Value() + eps);
+
+                    // compute test function, original and perturbed, and ReduceSum
+                    Variable originalBatchSumVar1  = ReduceSum(test.f(args),          Axis::AllStaticAxes());
+                    Variable perturbedBatchSumVar1 = ReduceSum(test.f(perturbedArgs), Axis::AllStaticAxes());
+
+                    // batch sum, original and perturbed
+                    originalBatchSumVar  = n == 0 ? originalBatchSumVar1  : (originalBatchSumVar  + originalBatchSumVar1);
+                    perturbedBatchSumVar = n == 0 ? perturbedBatchSumVar1 : (perturbedBatchSumVar + perturbedBatchSumVar1);
+
+                    // remember the epsilons and the gradients we need to compute
+                    let arg = Parameter(args[i]); // we use this below as a key
+                    epsilons[arg]  = eps;
+                    gradients[arg] = nullptr;
+                }
+
                 // compute gradient of sum over all elements of test.f(args) (=backprop a 1.0 into every element)
-                unordered_map<Parameter, NDArrayViewPtr> gradients{ { arg, nullptr } };
-                sumAllVar.Backward(gradients); // this triggers batched backward computation
-                let gradientWrtInput = gradients[arg]; // get gradient for arg
-                //gradientWrtInput->LogToFile(L"gradientWrtInput", stderr);
-                // compute expected perturbed output based on gradient
-                // gradientWrtInput[j,k] = slope of sum of all outputs w.r.t. changes of arg[j,k]
-                let gradientBasedDelta = SumAll(gradientWrtInput * eps, dataType, device);
+                originalBatchSumVar.Backward(gradients); // this triggers batched backward computation
+
+                // compute output perturbation based on those added epsilons
+                let originalBatchSum  = originalBatchSumVar .Value()->AsScalar<double>();
+                let perturbedBatchSum = perturbedBatchSumVar.Value()->AsScalar<double>();
+                //originalBatchSumVar .Value()->LogToFile(L"originalBatchSum", stderr);
+                //perturbedBatchSumVar.Value()->LogToFile(L"perturbedBatchSum", stderr);
+                let perturbedDelta = perturbedBatchSum - originalBatchSum;
+
+                // compute expected output perturbation based on gradients
+                double gradientBasedDelta = 0;
+                for (let& kv : gradients)
+                {
+                    let& arg = kv.first;
+                    let eps = epsilons[arg];
+                    let gradientWrtInput = gradients[arg]; // get gradient for arg
+                    //gradientWrtInput->LogToFile(L"gradientWrtInput", stderr);
+                    // compute expected perturbed output based on gradient
+                    // gradientWrtInput[j,k] = slope of sum of all outputs w.r.t. changes of arg[j,k]
+                    gradientBasedDelta += SumAll(gradientWrtInput * eps, dataType, device);
+                }
+
+                // check result
                 let relErr = (perturbedDelta == gradientBasedDelta) ? 0 : fabs(((perturbedDelta - gradientBasedDelta) / perturbedDelta));
                 if (relErr > 1e-5)
                     fprintf(stderr, "\t\t\t\tgradient[%d] err=%.10f%% (%.20f, %.20f)\n", (int)i, 100.0 * relErr, perturbedDelta, gradientBasedDelta);
@@ -283,13 +316,13 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 void RunDynamiteTests()
 {
     size_t numFailed = 0;
-    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::CPUDevice());
-    numFailed += DynamiteTest(3, DataType::Float, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(3, DataType::Float,  DeviceDescriptor::GPUDevice(0));
 #if 0 // do this not every time
-    numFailed += DynamiteTest(1, DataType::Float, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(1, DataType::Float,  DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::CPUDevice());
-    numFailed += DynamiteTest(1, DataType::Float, DeviceDescriptor::CPUDevice());
+    numFailed += DynamiteTest(1, DataType::Float,  DeviceDescriptor::CPUDevice());
 #endif
     if (numFailed > 0)
         LogicError("RunDynamiteTests: %d tests failed.", (int)numFailed);
