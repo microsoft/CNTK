@@ -369,47 +369,16 @@ namespace CNTK
             }
             break;
         case PrimitiveOpType::Slice:
-            {
-#if 1
-                // Backprop into the input slice of the input gradient: We can use forward-prop to determine the slice.
-                let gradientSlice = GetSliceView(gradient, attributes, outputValue->Shape(), funcForErrMsg);
-                if (beta == 0) // if beta = 0 then we must explicitly initialize the entire gradient matrix, not just the slice
-                    gradient->SetValue(0.0f);
-                NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
-                                              Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
-                                              gradientSlice,
-                                              /*beta=*/1.0, // 1 since we just cleared the whole tensor
-                                              Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                // This ^^ op is the same as the shared one, except for the output slice.
-#else
-                // TODO: We don't support multi-axis slicing presently. It is just a matter of interpreting the parameters.
-                auto axis       = attributes[L"axis"      /*PrimitiveFunction::AttributeNameAxis*/      ].Value<Axis>();
-                auto beginIndex = attributes[L"beginIndex"/*PrimitiveFunction::AttributeNameBeginIndex*/].Value<int>();
-                auto endIndex   = attributes[L"endIndex"  /*PrimitiveFunction::AttributeNameEndIndex*/  ].Value<int>();
-                auto extent = gradient->Shape().Dimensions();
-                auto startOffset = vector<size_t>(extent.size(), 0);
-                auto axisIndex = axis.StaticAxisIndex();
-                if (startOffset[axisIndex] != beginIndex || extent[axisIndex] != endIndex - beginIndex)
-                {
-                    // backprop into a slice of 'gradient'
-                    if (beta == 0) // if beta = 0 then we must explicitly initialize the entire gradient matrix, not just the slice
-                        gradient->SetValue(0.0f);
-                    // ^^ this is not correct. Can only reset the first.
-                    //if (beta == 0)
-                    //    LogicError("Variable '%S' Value(): Backpropagation for operation %S with beta=0 not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
-                    startOffset[axisIndex] = beginIndex;
-                    extent[axisIndex] = endIndex - beginIndex;
-                    // TODO: can we do this in the shared-code section?
-                    NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
-                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient->SliceView(startOffset, extent), beta,
-                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                }
-                else
-                    op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; // full slice actually: just copy (like a NoOp)
-                // ^^ same except gradient is not a slice
-#endif
-                handled = true;
-            }
+            // Backprop into the input slice of the input gradient: We can use forward-prop to determine the slice.
+            if (beta == 0) // if beta = 0 then we must explicitly initialize the entire gradient matrix, not just the slice
+                gradient->SetValue(0.0f);
+            NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
+                                          Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
+                                          GetSliceView(gradient, attributes, outputValue->Shape(), funcForErrMsg),
+                                          beta, // keep beta; although we just cleared it, beta=0 avoids the memory access
+                                          Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+            // This ^^ op is the same as the shared one, except for the output slice.
+            handled = true;
             break;
         case PrimitiveOpType::Clip:
             if (i == 0)

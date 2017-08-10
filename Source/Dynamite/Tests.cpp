@@ -238,7 +238,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         {
             let n = 0; // TODO: expand this to batching later
             let& argValues = allArgValues[n];
-            let epsScale = 1e-4;
+            let epsScale = 1e-6;
             for (size_t i = 0; i < argValues.size(); i++)
             {
                 // we test SumAll(f(x,y))
