@@ -18,6 +18,38 @@ using namespace std;
 
 namespace CNTK
 {
+    // helper to get a slice view, used for both forward and backward of Slice()
+    static NDArrayViewPtr GetSliceView(const NDArrayViewPtr& out, const Dictionary& attributes, const NDShape& outputShape, const PrimitiveFunction& funcForErrMsg)
+    {
+        if (attributes.Size() > 1)
+        {
+            // TODO: We don't support multi-axis slicing presently. It is just a matter of interpreting the parameters.
+            let axis       = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+            let beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+            let endIndex   = attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
+            auto extent = out->Shape().Dimensions();
+            auto startOffset = vector<size_t>(extent.size(), 0);
+            let axisIndex = axis.StaticAxisIndex();
+            if (startOffset[axisIndex] != beginIndex || extent[axisIndex] != endIndex - beginIndex)
+            {
+                startOffset[axisIndex] = beginIndex;
+                extent[axisIndex] = endIndex - beginIndex;
+                return out->SliceView(startOffset, extent); // slice it
+            }
+        }
+        else // Index() --has no axis or endIndex parameter. and must drop the final axis
+        {
+            let index = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+            let extent = outputShape.Dimensions(); // note: last dimension is missing; this will strip it in the output
+            if (extent.size() + 1 != out->Shape().Rank())
+                LogicError("Variable '%S' Value(): The input and output rank for op Slice when indexing must differ by 1.", funcForErrMsg.AsString().c_str());
+            auto startOffset = vector<size_t>(extent.size() + 1, 0);
+            startOffset.back() = (size_t) index;
+            return out->SliceView(startOffset, extent); // slice it
+        }
+        return out;
+    }
+
     // Note: To support auto-batching, this function must only consider attributes when presence of an additional
     // batch axis makes no difference. That is, for example, not the case for ReduceElements over AllStaticAxes().
     // This is addressed as:
@@ -46,36 +78,11 @@ namespace CNTK
             case PrimitiveOpType::NoOp:
                 break;
             case PrimitiveOpType::Reshape:
-                 if (out->Shape() != outputShape)
+                if (out->Shape() != outputShape)
                      out = out->AsShape(outputShape);
                 break;
             case PrimitiveOpType::Slice:
-                if (attributes.Size() > 1)
-                {
-                    auto axis       = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                    auto beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-                    auto endIndex   = attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
-                    //NormalizeStaticAxis(axis, args[0]->Shape()); // axis must already have been normalized in InferOutputs()
-                    auto extent = out->Shape().Dimensions();
-                    auto startOffset = vector<size_t>(extent.size(), 0);
-                    auto axisIndex = axis.StaticAxisIndex();
-                    if (startOffset[axisIndex] != beginIndex || extent[axisIndex] != endIndex - beginIndex)
-                    {
-                        startOffset[axisIndex] = beginIndex;
-                        extent[axisIndex] = endIndex - beginIndex;
-                        out = out->SliceView(startOffset, extent, true); // slice it
-                    }
-                }
-                else // Index() --has no axis or endIndex parameter. and must drop the final axis
-                {
-                    auto index = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-                    auto extent = outputShape.Dimensions(); // note: last dimension is missing; this will strip it in the output
-                    if (extent.size() + 1 != out->Shape().Rank())
-                        LogicError("Variable '%S' Value(): The input and output rank for op %S (when indexing) must differ by 1.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
-                    auto startOffset = vector<size_t>(extent.size() + 1, 0);
-                    startOffset.back() = (size_t) index;
-                    out = out->SliceView(startOffset, extent, true); // slice it
-                }
+                out = GetSliceView(out, attributes, outputShape, funcForErrMsg);
                 break;
             }
             return out;
@@ -243,9 +250,12 @@ namespace CNTK
     }
 
     // perform back propagation into an input
+    // For now only defined for functions with 1 output.
     // Gradient must have been allocated to the correct shape already.
     // If beta == 0 then gradient can be uninitialized memory.
-    // For now only defined for functions with 1 output.
+    // Important: Beta is meant to apply to the *entire* gradient tensor. Specifically, also for the case of Slice(),
+    // beta == 0 will set the *entire* gradient tensor to 0, not just the slice.
+    // Hence, when back-propagating into multiple slices of the same matrix, only pass beta=0 for the first one.
     // TODO: decide whether we pass raw pointers or shared pointers...
     /*static*/ void PrimitiveFunction::BackpropTo(const NDArrayView* outputGradient,                         // incoming gradient from top...
                               size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes,           // ...goes through this backprop function...
@@ -360,6 +370,19 @@ namespace CNTK
             break;
         case PrimitiveOpType::Slice:
             {
+#if 1
+                // Backprop into the input slice of the input gradient: We can use forward-prop to determine the slice.
+                let gradientSlice = GetSliceView(gradient, attributes, outputValue->Shape(), funcForErrMsg);
+                if (beta == 0) // if beta = 0 then we must explicitly initialize the entire gradient matrix, not just the slice
+                    gradient->SetValue(0.0f);
+                NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
+                                              gradientSlice,
+                                              /*beta=*/1.0, // 1 since we just cleared the whole tensor
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                // This ^^ op is the same as the shared one, except for the output slice.
+#else
+                // TODO: We don't support multi-axis slicing presently. It is just a matter of interpreting the parameters.
                 auto axis       = attributes[L"axis"      /*PrimitiveFunction::AttributeNameAxis*/      ].Value<Axis>();
                 auto beginIndex = attributes[L"beginIndex"/*PrimitiveFunction::AttributeNameBeginIndex*/].Value<int>();
                 auto endIndex   = attributes[L"endIndex"  /*PrimitiveFunction::AttributeNameEndIndex*/  ].Value<int>();
@@ -380,10 +403,12 @@ namespace CNTK
                     NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
                                                   Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient->SliceView(startOffset, extent), beta,
                                                   Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                    handled = true;
                 }
                 else
                     op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; // full slice actually: just copy (like a NoOp)
+                // ^^ same except gradient is not a slice
+#endif
+                handled = true;
             }
             break;
         case PrimitiveOpType::Clip:
