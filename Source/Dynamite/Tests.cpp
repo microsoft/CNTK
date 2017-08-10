@@ -227,14 +227,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                 let perturbedDelta = (perturbedResVal - resVal)->AsScalar<double>();
                 // compute gradient of sum over all elements of test.f(args) (=backprop a 1.0 into every element)
                 unordered_map<Parameter, NDArrayViewPtr> gradients{ { arg, nullptr } };
-                try
-                {
-                    sumAll.Backward(gradients); // this triggers batched backward computation
-                }
-                catch (...)
-                {
-                    continue; // some don't have a gradient implementation yet (don't log anything here; user will crash when trying to use it)
-                }
+                sumAll.Backward(gradients); // this triggers batched backward computation
                 let gradientWrtInput = gradients[arg]; // get gradient for arg
                 //gradientWrtInput->LogToFile(L"gradientWrtInput", stderr);
                 // compute expected perturbed output based on gradient
@@ -262,5 +255,4 @@ void RunDynamiteTests()
 #endif
     if (numFailed > 0)
         LogicError("RunDynamiteTests: %d tests failed.", (int)numFailed);
-    exit(0);
 }

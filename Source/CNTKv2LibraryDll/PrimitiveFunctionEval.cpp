@@ -253,7 +253,11 @@ namespace CNTK
                               const NDArrayViewPtr& gradient, double beta,                                   // ...into here. (Despite 'const', *gradient is the output.)
                               const PrimitiveFunction& funcForErrMsg)
     {
-        auto op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // this gets set for 1-argument TensorView ops for execution after the switch()
+        // The majority of operators are handled by shared code after the switch statement, based on the following op-code variables.
+        // Special cases do operations inside the cases themselves, and leave the opcodes untouched.
+        bool handled = false; // set this for gradients that do not use the shared code at the end
+        bool op0 = false; // opcode to indicate that the gradient is zero
+        auto op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // opcode for single-argument gradients
         auto op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // and this for 2-arg ops
         auto op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // and this for 3-arg ops; all others execute inside the switch()
         const NDArrayView* arg1 = outputGradient;
@@ -267,22 +271,21 @@ namespace CNTK
         case PrimitiveOpType::Plus:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
         case PrimitiveOpType::Minus:          op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; alpha = i == 0 ? 1 : -1; break;
         case PrimitiveOpType::ElementTimes:   op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct; arg2 = inputValues[1 - i]; break;
+        case PrimitiveOpType::LogPlus:        op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLogSumDerivative; arg2 = inputValues[1 - i]; arg3 = inputValues[i]; break;
         case PrimitiveOpType::Pow:
+            if (i == 0)
             {
-                if (i == 0)
-                {
-                    op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithPowBaseDerivative;
-                    arg2 = inputValues[0];
-                    arg3 = inputValues[1];
-                }
-                else
-                {
-                    op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithPowExponentDerivative;
-                    arg2 = outputValue;
-                    arg3 = inputValues[0];
-                }
-                break;
+                op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithPowBaseDerivative;
+                arg2 = inputValues[0];
+                arg3 = inputValues[1];
             }
+            else
+            {
+                op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithPowExponentDerivative;
+                arg2 = outputValue;
+                arg3 = inputValues[0];
+            }
+            break;
             // Times family
         case PrimitiveOpType::Times:
         case PrimitiveOpType::TransposeTimes:
@@ -295,6 +298,8 @@ namespace CNTK
                 NDArrayView::MatrixProduct(/*transC=*/false,
                                           /*A=*/const_cast<NDArrayView*>(arg2)->shared_from_this(), /*transA=*/primitiveOp != PrimitiveOpType::TransposeTimes,
                                           /*B=*/const_cast<NDArrayView*>(arg1)->shared_from_this(), /*transB=*/false, alpha, /*outputRank dummy=*/0, /*C=*/gradient, beta);
+            //gradient->LogToFile(L"times grad", stderr);
+            handled = true;
             break;
             // unary operations with simple TensorView implementation
         case PrimitiveOpType::ReLU:          op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLinearRectifierDerivativeFromOutput;       arg2 = outputValue; break;
@@ -338,6 +343,7 @@ namespace CNTK
                     //  PrimitiveFunction::InternalProdReductionOpName
                     LogicError("Variable '%S' Value(): Gradient of reduction op %S not yet implemented.", funcForErrMsg.AsString().c_str(), reductionOpName.c_str());
             }
+            handled = true;
             break;
             // hard stuff
         case PrimitiveOpType::Splice:
@@ -349,6 +355,7 @@ namespace CNTK
                 NDArrayView::NumericOperation({ arg1->IndexLastAxis(i) }, alpha,
                                               Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta,
                                               Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                handled = true;
             }
             break;
         case PrimitiveOpType::Slice:
@@ -369,41 +376,79 @@ namespace CNTK
                     //    LogicError("Variable '%S' Value(): Backpropagation for operation %S with beta=0 not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
                     startOffset[axisIndex] = beginIndex;
                     extent[axisIndex] = endIndex - beginIndex;
+                    // TODO: can we do this in the shared-code section?
                     NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
                                                   Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient->SliceView(startOffset, extent), beta,
                                                   Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                    handled = true;
                 }
                 else
                     op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; // full slice actually: just copy (like a NoOp)
             }
             break;
+        case PrimitiveOpType::Clip:
+            if (i == 0)
+            {
+                op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opCopyIfEqual;
+                arg1 = inputValues[0];
+                arg2 = outputValue;
+                arg3 = outputGradient;
+            }
+            else // the bounds have no gradient
+                op0 = true;
+            break;
+        case PrimitiveOpType::Select:
+            if (i == 0) // the condition has no gradient
+                op0 = true;
+            else
+            {
+                if (i == 1)
+                    op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opCopyIf;
+                else
+                    op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opCopyIfNot;
+                arg1 = inputValues[0];
+                arg2 = outputGradient;
+            }
+            break;
             // primitives that have zero gradient (piecewise constants)
+        case PrimitiveOpType::Equal:
+        case PrimitiveOpType::NotEqual:
+        case PrimitiveOpType::Less:
+        case PrimitiveOpType::LessEqual:
+        case PrimitiveOpType::Greater:
+        case PrimitiveOpType::GreaterEqual:
         case PrimitiveOpType::Floor:
-            // will be set to zero below
+            op0 = true; // will be set to zero below
             break;
         default:
             //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());
             LogicError("Variable '%S' Value(): Backpropagation for operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             //LogicError("Variable '%S' Value(): Backpropagation for non-existent operation %S?", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
         }
-        // the simple TensorView operations are performed out here
+        // interpret the opcodes
+        // An opcode must be set, or 'handled' must be set when the gradient was already completed in the case above.
         // TODO: we can eliminate the vector<> by passing a std::function, possibly?
-        if (op1Arg != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
+        if (op0) // gradient is zero
+        {
+            if (beta == 0)
+                gradient->SetValue(0.0f);
+            else if (beta != 1) // will this ever be needed?
+                LogicError("Variable '%S' Value(): Backpropagation with beta != 0 or 1 not implemented yet (operation %S).", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+        }
+        else if (op1Arg != Microsoft::MSR::CNTK::ElementWiseOperator::opNone) // gradient is a TensorView op with one operand
             NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
-                                          op1Arg, gradient, beta,
-                                          Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-        else if (op2Args != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
+                op1Arg, gradient, beta,
+                Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+        else if (op2Args != Microsoft::MSR::CNTK::ElementWiseOperator::opNone) // gradient is a TensorView op with two operands
             NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(), const_cast<NDArrayView*>(arg2)->shared_from_this() }, alpha,
-                                          op2Args, gradient, beta,
-                                          Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-        else if (op3Args != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
+                op2Args, gradient, beta,
+                Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+        else if (op3Args != Microsoft::MSR::CNTK::ElementWiseOperator::opNone) // gradient is a TensorView op with three operands
             NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(), const_cast<NDArrayView*>(arg2)->shared_from_this(), const_cast<NDArrayView*>(arg3)->shared_from_this() }, alpha,
-                                          op3Args, gradient, beta,
-                                          Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-        else if (beta == 0)
-            gradient->SetValue(0.0f);
-        else if (beta != 1) // will this ever be needed?
-            LogicError("Variable '%S' Value(): Backpropagation with beta != 0 or 1 not implemented yet (operation %S).", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+                op3Args, gradient, beta,
+                Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+        else if (!handled)
+            LogicError("Variable '%S' Value(): Gradient for operation %S misses a handler.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
     }
 
 }
