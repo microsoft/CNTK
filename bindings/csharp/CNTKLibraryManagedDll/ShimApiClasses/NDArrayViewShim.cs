@@ -8,17 +8,37 @@ namespace CNTK
 {
     public partial class NDArrayView
     {
-        // Constructor using float dense input.
+        /// <summary>
+        /// Constructor using float dense input.
+        /// </summary>
+        /// <param name="viewShape"></param>
+        /// <param name="dataBuffer"></param>
+        /// <param name="device"></param>
+        /// <param name="readOnly"></param>
         public NDArrayView(NDShape viewShape, float[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.Length, device, readOnly)
         {
         }
 
-        // Constructor using double dense input.
+        /// <summary>
+        /// Constructor using double dense input.
+        /// </summary>
+        /// <param name="viewShape"></param>
+        /// <param name="dataBuffer"></param>
+        /// <param name="device"></param>
+        /// <param name="readOnly"></param>
         public NDArrayView(NDShape viewShape, double[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.Length, device, readOnly)
         {
         }
 
-        // Constructor using float sparse input.
+        /// <summary>
+        /// Constructor using float sparse input.
+        /// </summary>
+        /// <param name="viewShape"></param>
+        /// <param name="colStarts"></param>
+        /// <param name="rowIndices"></param>
+        /// <param name="nonZeroValues"></param>
+        /// <param name="device"></param>
+        /// <param name="readOnly"></param>
         public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, float[] nonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)nonZeroValues.Length, device, readOnly)
         {
             if (rowIndices.Length != nonZeroValues.Length)
@@ -31,7 +51,15 @@ namespace CNTK
             }
         }
 
-        // Constructor using double sparse input.
+        /// <summary>
+        /// Constructor using double sparse input.
+        /// </summary>
+        /// <param name="viewShape"></param>
+        /// <param name="colStarts"></param>
+        /// <param name="rowIndices"></param>
+        /// <param name="nonZeroValues"></param>
+        /// <param name="device"></param>
+        /// <param name="readOnly"></param>
         public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, double[] nonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)nonZeroValues.Length, device, readOnly)
         {
             if (rowIndices.Length != nonZeroValues.Length)
@@ -44,43 +72,61 @@ namespace CNTK
             }
         }
 
-        // Property Device.
+        /// <summary>
+        /// Property Device.
+        /// </summary>
         public DeviceDescriptor Device
         {
             get { return _Device(); }
         }
 
-        // Property DataType.
+        /// <summary>
+        /// Property DataType.
+        /// </summary>
         public DataType DataType
         {
             get { return _GetDataType(); }
         }
 
-        // Property Shape.
+        /// <summary>
+        /// Property Shape.
+        /// </summary>
         public NDShape Shape
         {
             get { return _Shape(); }
         }
 
-        // Property StorageFormat.
+        /// <summary>
+        /// Property StorageFormat.
+        /// </summary>
         public StorageFormat StorageFormat
         {
             get { return _GetStorageFormat(); }
         }
 
-        // Property IsSparse.
+        /// <summary>
+        /// Property IsSparse.
+        /// </summary>
         public bool IsSparse
         {
             get { return _IsSparse(); }
         }
 
-        // Property IsReadOnly.
+        /// <summary>
+        /// Property IsReadOnly.
+        /// </summary>
         public bool IsReadOnly
         {
             get { return _IsReadOnly(); }
         }
 
-        // Returns a slice view.
+        /// <summary>
+        /// Returns a slice view.
+        /// </summary>
+        /// <param name="startOffset"></param>
+        /// <param name="extent"></param>
+        /// <param name="readOnly"></param>
+        /// <returns></returns>
         public NDArrayView SliceView(System.Collections.Generic.IEnumerable<int> startOffset, System.Collections.Generic.IEnumerable<int> extent, bool readOnly = false)
         {
             var startOffsetVector = Helper.AsSizeTVector(startOffset);
@@ -90,7 +136,11 @@ namespace CNTK
             return _SliceView(startOffsetVector, extentVector, readOnly);
         }
 
-        // Creates a new NDArrayView which is an alias of this NDArrayView.
+        /// <summary>
+        /// Creates a new NDArrayView which is an alias of this NDArrayView.
+        /// </summary>
+        /// <param name="readOnly"></param>
+        /// <returns></returns>
         public NDArrayView Alias(bool readOnly = false)
         {
             return _Alias(readOnly);

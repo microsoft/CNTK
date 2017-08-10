@@ -160,5 +160,10 @@ namespace CNTK
         {
             return CNTKLib.Times(v1, v2);
         }
+
+        public static Variable InputVariable(NDShape shape, DataType dataType, string name)
+        {
+            return CNTKLib.InputVariable(shape, dataType, name);
+        }
     }
 }

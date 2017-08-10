@@ -4,29 +4,39 @@
 //
 // FunctionShim.cs -- C# Api for CNTK Function class
 //
+using System.Collections.Generic;
+
 namespace CNTK
 {
     public partial class Function
     {
-        // Property Name.
+        /// <summary>
+        /// Property Name.
+        /// </summary>
         public string Name
         {
             get { return _Name(); }
         }
 
-        // Property Uid.
+        /// <summary>
+        /// Property Uid.
+        /// </summary>
         public string Uid
         {
             get { return _Uid(); }
         }
 
-        // Property RootFunction.
+        /// <summary>
+        /// Property RootFunction.
+        /// </summary>
         public Function RootFunction
         {
             get { return _RootFunction(); }
         }
 
-        // Property Outputs
+        /// <summary>
+        /// Property Outputs
+        /// </summary>
         public System.Collections.Generic.IList<Variable> Outputs
         {
             get
@@ -40,43 +50,57 @@ namespace CNTK
             }
         }
 
-        // Property Output.
+        /// <summary>
+        /// Property Output.
+        /// </summary>
         public Variable Output
         {
             get { return _Output(); }
         }
 
-        // Property OpName.
+        /// <summary>
+        /// Property OpName.
+        /// </summary>
         public string OpName
         {
             get { return _OpName(); }
         }
 
-        // Property IsComposite.
+        /// <summary>
+        /// Property IsComposite.
+        /// </summary>
         public bool IsComposite
         {
             get { return _IsComposite(); }
         }
 
-        // Property IsPrimitive.
+        /// <summary>
+        /// Property IsPrimitive.
+        /// </summary>
         public bool IsPrimitive
         {
             get { return _IsPrimitive(); }
         }
 
-        // Property IsBlock.
+        /// <summary>
+        /// Property IsBlock.
+        /// </summary>
         public bool IsBlock
         {
             get { return _IsBlock(); }
         }
 
-        // Property CurrentVersion
+        /// <summary>
+        /// Property CurrentVersion
+        /// </summary>
         public int CurrentVersion
         {
             get { return (int)_CurrentVersion(); }
         }
 
-        // Property Arguments.
+        /// <summary>
+        /// Property Arguments.
+        /// </summary>
         public System.Collections.Generic.IList<Variable> Arguments
         {
             get
@@ -90,7 +114,9 @@ namespace CNTK
             }
         }
 
-        // Property Inputs.
+        /// <summary>
+        /// Property Inputs.
+        /// </summary>
         public System.Collections.Generic.IList<Variable> Inputs
         {
             get
@@ -104,19 +130,34 @@ namespace CNTK
             }
         }
 
-        // Creates a new cloned function instance. For C# Eval, default ParameterCloningMethod is share.
+        /// <summary>
+        /// Creates a new cloned function instance. For C# Eval, default ParameterCloningMethod is share.
+        /// </summary>
+        /// <param name="parameterCloneMethod"></param>
+        /// <returns></returns>
         public Function Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod.Share)
         {
             return _Clone(ParameterCloningMethod.Share);
         }
 
-        // Evaluates the Function using provided inputs.
+        /// <summary>
+        /// Evaluates the Function using provided inputs.
+        /// </summary>
+        /// <param name="inputs"></param>
+        /// <param name="outputs"></param>
+        /// <param name="computeDevice"></param>
         public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
         {
             Evaluate(inputs, outputs, false, computeDevice);
         }
 
-        // Evaluates the Function using provided inputs.
+        /// <summary>
+        /// Evaluates the Function using provided inputs.
+        /// </summary>
+        /// <param name="inputs"></param>
+        /// <param name="outputs"></param>
+        /// <param name="createPersistentOutputValues"></param>
+        /// <param name="computeDevice"></param>
         public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, bool createPersistentOutputValues, DeviceDescriptor computeDevice)
         {
             // Evaluate the rootFunction.
@@ -148,13 +189,23 @@ namespace CNTK
             }
         }
 
-        // Find the function with the specified name.
+        /// <summary>
+        /// Find the function with the specified name.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="nestedSearchInsideBlockFunction"></param>
+        /// <returns></returns>
         public Function FindByName(string name, bool nestedSearchInsideBlockFunction = false)
         {
             return _FindByName(name, nestedSearchInsideBlockFunction);
         }
 
-        // Finds all functions inside this Functions having the specified name.
+        /// <summary>
+        /// Finds all functions inside this Functions having the specified name.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="nestedSearchInsideBlockFunction"></param>
+        /// <returns></returns>
         public System.Collections.Generic.IList<Function> FindAllWithName(string name, bool nestedSearchInsideBlockFunction = false)
         {
             var funcPtrVector = _FindAllWithName(name, nestedSearchInsideBlockFunction);
@@ -167,19 +218,33 @@ namespace CNTK
             return funcPtrList;
         }
 
-        // Loads a model from file.
+        /// <summary>
+        /// Loads a model from file.
+        /// </summary>
+        /// <param name="filepath"></param>
+        /// <param name="computeDevice"></param>
+        /// <returns></returns>
         public static Function Load(string filepath, DeviceDescriptor computeDevice)
         {
             return _Load(filepath, computeDevice);
         }
 
-        // Loads a model from memory buffer.
+        /// <summary>
+        /// Loads a model from memory buffer.
+        /// </summary>
+        /// <param name="modelBuffer"></param>
+        /// <param name="computeDevice"></param>
+        /// <returns></returns>
         public static Function Load(byte[] modelBuffer, DeviceDescriptor computeDevice)
         {
             return _Load(modelBuffer, (uint)modelBuffer.Length, computeDevice);
         }
 
-        // Creates a new Function from specified operands.
+        /// <summary>
+        /// Creates a new Function from specified operands.
+        /// </summary>
+        /// <param name="operands"></param>
+        /// <returns></returns>
         public static Function Combine(System.Collections.Generic.IEnumerable<Variable> operands)
         {
             var varVect = new VariableVector();
@@ -190,21 +255,51 @@ namespace CNTK
             return CNTKLib.Combine(varVect);
         }
 
-        // Creates a composite function from the rootFunction.
+        /// <summary>
+        /// Creates a composite function from the rootFunction.
+        /// </summary>
+        /// <param name="rootFunction"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public static Function AsComposite(Function rootFunction, string name = "")
         {
             return CNTKLib.AsComposite(rootFunction, name);
         }
 
-        // Create a new Function which is the alias of operand.
+        /// <summary>
+        /// Create a new Function which is the alias of operand.
+        /// </summary>
+        /// <param name="operand"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public static Function Alias(Variable operand, string name = "")
         {
             return CNTKLib.Alias(operand, name);
         }
 
+        /// <summary>
+        /// Implicitly convert a function to a Variable.
+        /// </summary>
+        /// <param name="f">The function.</param>
         public static implicit operator Variable(Function f)
         {
             return new Variable(f);
         }
+
+        /// <summary>
+        /// Create a new Function instance which just combines the outputs of the specified list of 'operands' Functions such that the 'Outputs' of the 
+        /// new 'Function' are union of the 'Outputs' of each of the specified 'operands' Functions.
+        /// E.g. When creating a classification model, typically the CrossEntropy loss Function and the ClassificationError Function comprise the two roots
+        /// of the computation graph which can be "Combine"d to create a single Function with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
+        /// </summary>
+        /// <param name="operands"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public static Function Combine(IList<Variable> operands, string name)
+        {
+            VariableVector operandVector = Helper.AsVariableVector(operands);
+            return CNTKLib.Combine(operandVector, name);
+        }
+
     }
 }

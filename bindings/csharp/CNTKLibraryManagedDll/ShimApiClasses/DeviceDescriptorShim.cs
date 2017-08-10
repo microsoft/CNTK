@@ -8,25 +8,35 @@ namespace CNTK
 {
     public partial class DeviceDescriptor
     {
-        // Property Id.
+        /// <summary>
+        /// Property Id.
+        /// </summary>
         public int Id
         {
             get { return (int)_Id(); }
         }
 
-        // Property Type.
+        /// <summary>
+        /// Property Type.
+        /// </summary>
         public DeviceKind Type
         {
             get { return _Type(); }
         }
 
-        // Property CPUDevice.
+        /// <summary>
+        /// Property CPUDevice.
+        /// </summary>
         public static DeviceDescriptor CPUDevice
         {
             get { return _CPUDevice(); }
         }
 
-        // Returns the GPUDevice with the specific deviceId.
+        /// <summary>
+        /// Returns the GPUDevice with the specific deviceId.
+        /// </summary>
+        /// <param name="deviceId"></param>
+        /// <returns></returns>
         public static DeviceDescriptor GPUDevice(int deviceId)
         {
             if (deviceId < 0)
@@ -36,7 +46,10 @@ namespace CNTK
             return _GPUDevice((uint)deviceId);
         }
 
-        // Gets all devices.
+        /// <summary>
+        /// Gets all devices.
+        /// </summary>
+        /// <returns></returns>
         public static System.Collections.Generic.IList<DeviceDescriptor> AllDevices()
         {
             var deviceVector = _AllDevices();
@@ -47,7 +60,11 @@ namespace CNTK
             return deviceList;
         }
 
-        // Value equality.
+        /// <summary>
+        /// Value equality.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
         public override bool Equals(System.Object obj)
         {
             // If parameter is null return false.
@@ -67,7 +84,11 @@ namespace CNTK
             return CNTKLib.AreEqual(this, p);
         }
 
-        // Value equality.
+        /// <summary>
+        /// Value equality.
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
         public bool Equals(DeviceDescriptor p)
         {
             // If parameter is null return false:
@@ -80,13 +101,19 @@ namespace CNTK
             return CNTKLib.AreEqual(this, p);
         }
 
-        // Returns hash code value.
+        /// <summary>
+        /// Returns hash code value.
+        /// </summary>
+        /// <returns></returns>
         public override int GetHashCode()
         {
             return this._Type().GetHashCode();
         }
 
-        // Set devices to be excluded.
+        /// <summary>
+        /// Set devices to be excluded.
+        /// </summary>
+        /// <param name="excluded"></param>
         public static void SetExcludedDevices(System.Collections.Generic.IEnumerable<DeviceDescriptor> excluded)
         {
             var excludeVector = new DeviceDescriptorVector();

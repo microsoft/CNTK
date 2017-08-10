@@ -8,37 +8,53 @@ namespace CNTK
 {
     public partial class Axis
     {
-        // Property Name.
+        /// <summary>
+        /// Property Name.
+        /// </summary>
         public string Name
         {
             get { return _Name(); }
         }
 
-        // Property IsStatic.
+        /// <summary>
+        /// Property IsStatic.
+        /// </summary>
         public bool IsStatic
         {
             get { return _IsStaticAxis(); }
         }
 
-        // Property IsDynamic.
+        /// <summary>
+        /// Property IsDynamic.
+        /// </summary>
         public bool IsDynamic
         {
             get { return _IsDynamicAxis(); }
         }
 
-        // Property IsOrdered.
+        /// <summary>
+        /// Property IsOrdered.
+        /// </summary>
         public bool IsOrdered
         {
             get { return _IsOrdered(); }
         }
 
-        // Returns index of this Axis.
+        /// <summary>
+        /// Returns index of this Axis.
+        /// </summary>
+        /// <param name="checkStaticAxis"></param>
+        /// <returns></returns>
         public int StaticAxisIndex(bool checkStaticAxis = true)
         {
             return _StaticAxisIndex(checkStaticAxis);
         }
 
-        // Value equality.
+        /// <summary>
+        /// Value equality.
+        /// </summary>
+        /// <param name="obj">The object to compare with.</param>
+        /// <returns>Returns true if they are equal.</returns>
         public override bool Equals(System.Object obj)
         {
             // If parameter is null return false.
@@ -58,7 +74,11 @@ namespace CNTK
             return CNTKLib.AreEqual(this, p);
         }
 
-        // Value equality.
+        /// <summary>
+        /// Value equality.
+        /// </summary>
+        /// <param name="p">The Axis to compare with.</param>
+        /// <returns>Returns true if they are equal.</returns>
         public bool Equals(Axis p)
         {
             // If parameter is null return false:
@@ -71,7 +91,10 @@ namespace CNTK
             return CNTKLib.AreEqual(this, p);
         }
 
-        // Returns hash code value.
+        /// <summary>
+        /// Calculates hash code value.
+        /// </summary>
+        /// <returns>The hash code value.</returns>
         public override int GetHashCode()
         {
             if (this._IsDynamicAxis())

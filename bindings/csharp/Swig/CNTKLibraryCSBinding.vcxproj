@@ -73,6 +73,7 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>        
     </ClCompile>
     <Link />
     <ProjectReference>
@@ -87,7 +88,7 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <FloatingPointExceptions>false</FloatingPointExceptions>
-      <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/d2Zi+ %(AdditionalOptions) /bigobj</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -112,11 +113,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cntk_cs_wrap.cxx">
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">/bigobj</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">/bigobj</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/bigobj</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">/bigobj</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">/bigobj</AdditionalOptions>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

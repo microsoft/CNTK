@@ -12,6 +12,18 @@ namespace CNTK
 {
     public partial class MinibatchSource
     {
+        /// <summary>
+        /// Instantiate the CNTK built-in text format minibatch source
+        /// It is better to have default value for optional arguments to avoid method duplication. However, C# requires
+        /// default value being compile time constant which is not the case here.
+        /// </summary>
+        /// <param name="dataFilePath"></param>
+        /// <param name="streamConfigs"></param>
+        /// <param name="epochSize"></param>
+        /// <param name="randomize"></param>
+        /// <param name="randomizationWindow"></param>
+        /// <param name="sampleBasedRandomizationWindow"></param>
+        /// <returns></returns>
         public static MinibatchSource TextFormatMinibatchSource(string dataFilePath, IList<StreamConfiguration> streamConfigs,
             ulong epochSize, bool randomize, ulong randomizationWindow, bool sampleBasedRandomizationWindow = false)
         {
@@ -20,12 +32,25 @@ namespace CNTK
                 epochSize, randomize, randomizationWindow, sampleBasedRandomizationWindow);
         }
 
+        /// <summary>
+        /// Instantiate the CNTK built-in text format minibatch source
+        /// </summary>
+        /// <param name="dataFilePath"></param>
+        /// <param name="streamConfigs"></param>
+        /// <returns></returns>
         static public MinibatchSource TextFormatMinibatchSource(string dataFilePath, IList<StreamConfiguration> streamConfigs)
         {
             StreamConfigurationVector streamConfigurationVector = Helper.AsStreamConfigurationVector(streamConfigs);
             return TextFormatMinibatchSourceInternal(dataFilePath, streamConfigurationVector);
         }
 
+        /// <summary>
+        /// Instantiate the CNTK built-in text format minibatch source
+        /// </summary>
+        /// <param name="dataFilePath"></param>
+        /// <param name="streamConfigs"></param>
+        /// <param name="epochSize"></param>
+        /// <returns></returns>
         static public MinibatchSource TextFormatMinibatchSource(string dataFilePath, IList<StreamConfiguration> streamConfigs,
             ulong epochSize)
         {
@@ -33,6 +58,14 @@ namespace CNTK
             return TextFormatMinibatchSourceInternal(dataFilePath, streamConfigurationVector, epochSize);
         }
 
+        /// <summary>
+        /// Instantiate the CNTK built-in text format minibatch source
+        /// </summary>
+        /// <param name="dataFilePath"></param>
+        /// <param name="streamConfigs"></param>
+        /// <param name="epochSize"></param>
+        /// <param name="randomize"></param>
+        /// <returns></returns>
         static public MinibatchSource TextFormatMinibatchSource(string dataFilePath, IList<StreamConfiguration> streamConfigs,
             ulong epochSize, bool randomize)
         {
@@ -40,21 +73,36 @@ namespace CNTK
             return TextFormatMinibatchSourceInternal(dataFilePath, streamConfigurationVector, epochSize, randomize);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public static ulong FullDataSweep
         {
             get { return GetFullDataSweep(); }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public static ulong InfinitelyRepeat
         {
             get { return GetInfinitelyRepeat(); }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public static ulong DefaultRandomizationWindowInChunks
         {
             get { return GetDefaultRandomizationWindowInChunks(); }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="minibatchSource"></param>
+        /// <param name="computedMeanAndVariances"></param>
+        /// <param name="device"></param>
         public static void ComputeInputPerDimMeansAndInvStdDevs(MinibatchSource minibatchSource,
             IDictionary<StreamInformation, Tuple<NDArrayView, NDArrayView>> computedMeanAndVariances,
             DeviceDescriptor device)

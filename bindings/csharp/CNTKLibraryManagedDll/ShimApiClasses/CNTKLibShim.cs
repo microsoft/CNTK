@@ -10,16 +10,17 @@ namespace CNTK
 {
     public partial class CNTKLib
     {
+        /// <summary>
+        /// Create an instance of the CNTK built-in SGD learner.
+        /// </summary>
+        /// <param name="parameters">Parameters of the learner.</param>
+        /// <param name="learningRateSchedule">Learning rate schedule.</param>
+        /// <param name="additionalOptions">Additional options.</param>
+        /// <returns></returns>
         public static Learner SGDLearner(IList<Parameter> parameters, TrainingParameterScheduleDouble learningRateSchedule, AdditionalLearningOptions additionalOptions)
         {
             ParameterVector parameterVector = Helper.AsParameterVector(parameters);
             return SGDLearner(parameterVector, learningRateSchedule, additionalOptions);
-        }
-
-        public static Function Combine(IList<Variable> operands, string name)
-        {
-            VariableVector operandVector = Helper.AsVariableVector(operands);
-            return Combine(operandVector, name);
         }
     }
 }
