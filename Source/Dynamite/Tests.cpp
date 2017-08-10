@@ -60,8 +60,6 @@ using namespace std;
 
 using namespace Dynamite;
 
-#define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, op##opCode); }, #opCode))
-
 struct TensorViewTest
 {
     pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*> op;
@@ -70,17 +68,43 @@ struct TensorViewTest
 };
 
 // helper to create a random matrix
-static NDArrayViewPtr RandomTensor(const NDShape& shape, double scale, unsigned long& seed, DataType dataType, const DeviceDescriptor& device)
+static NDArrayViewPtr RandomTestTensor(const NDShape& shape, double scale, const char* opName, size_t argIndex, unsigned long& seed, DataType dataType, const DeviceDescriptor& device)
 {
-    if (dataType == DataType::Float)
-        return NDArrayView::RandomNormal<float> (shape, /*mean=*/0., /*stdDev=*/scale, seed++, device);
-    else
-        return NDArrayView::RandomNormal<double>(shape, /*mean=*/0., /*stdDev=*/scale, seed++, device);
+    let randT = [&](double mean, double scale1)
+    {
+        if (dataType == DataType::Float)
+            return NDArrayView::RandomNormal<float>(shape, mean, scale1, seed++, device);
+        else
+            return NDArrayView::RandomNormal<double>(shape, mean, scale1, seed++, device);
+    };
+    let constT = [&](double value)
+    {
+        return make_shared<NDArrayView>(value, dataType, shape, device);
+    };
+    auto res = randT(/*mean=*/0., /*stdDev=*/scale);
+    // some special cases
+    if (strstr(opName, "Log")) // Log requires positive numbers
+    {
+        res = NDArrayView::NumericOperation({ res }, 1.0, ElementWiseOperator::opAbs);
+        res = NDArrayView::NumericOperation({ /*min=*/constT(1e-4), /*max=*/res, res }, 1.0, ElementWiseOperator::opClip);
+    }
+    else if (strcmp(opName, "Pow") == 0 && argIndex == 0) // Pow requires non-negative base
+    {
+        res = NDArrayView::NumericOperation({ res }, 1.0, ElementWiseOperator::opAbs);
+    }
+    else if (strcmp(opName, "Reciprocal") == 0) // Reciprocal should not use too small a number
+    {
+        res = NDArrayView::NumericOperation({ res }, 1.0, ElementWiseOperator::opAbs);
+        res = NDArrayView::NumericOperation({ /*min=*/constT(1e-2), /*max=*/res, res }, 1.0, ElementWiseOperator::opClip);
+    }
+    return res;
 }
 
 // helper to compute average square error between two NDArrayViews
 static double AvSqrErr(const NDArrayViewPtr& resVal, const NDArrayViewPtr& refVal, DataType dataType, const DeviceDescriptor& device)
 {
+    if (resVal->Shape() != refVal->Shape())
+        LogicError("AvSqrErr: Result shape %S is different from expected shape %S", resVal->Shape().AsString().c_str(), refVal->Shape().AsString().c_str());
     let sqrErr = NDArrayView::NumericOperation({ resVal, refVal }, 1.0 / refVal->Shape().TotalSize(), ElementWiseOperator::opSqrOfDifference, make_shared<NDArrayView>(dataType, NDShape{}, device), 0, ElementWiseOperator::opSum);
     return sqrErr->AsScalar<double>();
 }
@@ -96,10 +120,18 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     size_t numFailed = 0;
     unsigned long seed = 1;
     // for testing batching of the matrix product, we need a shared matrix
-    let sharedMatrix = RandomTensor(NDShape{ 13, 42 }, 0.3, seed, dataType, device);
+    let sharedMatrix = RandomTestTensor(NDShape{ 13, 42 }, 0.3, "Times", 0, seed, dataType, device);
     let sharedMatrixVar = Parameter(sharedMatrix);
+#define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, op##opCode); }, #opCode))
+#define RedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0/denom, opCopy, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, op##redOpCode); }, "Reduce" #redOpCode))
     vector<TensorViewTest> tests =
     {
+        // reductions
+        { RedOp(Sum,    NDShape({  1     }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(0)); }, { { 13 } } },
+        { RedOp(Sum,    NDShape({ 13,  1 }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(1)); }, { { 13, 42 } } },
+        { RedOp(Sum,    NDShape({  1, 42 }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(0)); }, { { 13, 42 } } },
+        { RedOp(LogSum, NDShape({  1     }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceLogSum(args[0], Axis(0)); }, { { 13 } } },
+        { RedOp(Sum,    NDShape({  1     }), 13), [](const vector<Variable>& args) { return CNTK::ReduceMean  (args[0], Axis(0)); }, { { 13 } } },
         // matrix product
         { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, sharedMatrix, false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times (sharedMatrixVar, args[1]); },{ { 13, 42 },{ 42, 9 } } },
         { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]); },{ { 13, 42 },{ 42, 9 } } },
@@ -150,7 +182,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         {
             auto& argValues = allArgValues[n];
             for (let& shape : test.shapes)
-                argValues.push_back(RandomTensor(shape, 0.3, seed, dataType, device));
+                argValues.push_back(RandomTestTensor(shape, 0.3, test.op.second, argValues.size(), seed, dataType, device));
         }
         for (size_t n = 0; n < N; n++)
         {
@@ -216,7 +248,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                 Variable sumAllVar = ReduceSum(output, Axis::AllStaticAxes());
                 let sumAll = sumAllVar.Value(); // this triggers batched forward computation
                 // compute perturbed output
-                let eps = RandomTensor(arg.Shape(), epsScale /*/ arg.Shape().TotalSize()*/, seed, dataType, device);
+                let eps = RandomTestTensor(arg.Shape(), epsScale /*/ arg.Shape().TotalSize()*/, "eps", i, seed, dataType, device);
                 //eps->LogToFile(L"eps", stderr);
                 auto perturbedArgs = args;
                 perturbedArgs[i] = Constant(perturbedArgs[i].Value() + eps);

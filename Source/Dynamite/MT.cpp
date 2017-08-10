@@ -36,7 +36,7 @@ const size_t numDecoderLayers = 1;
 const size_t decoderHiddenDim = 512;// 128;
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
-#define DOLOG(var) ((mbCount % 100 == 99) ? LOG(var) : 0)
+#define DOLOG(var) (var)//((mbCount % 100 == 99) ? LOG(var) : 0)
 
 UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
 {
@@ -277,7 +277,7 @@ void Train()
     let parameters = model_fn.Parameters();
     //let epochSize = 100000; // it's a small corpus, ~50k samples
     let epochSize = 10000000; // this is maybe half a true epoch
-    let minibatchSize = 1384;// 50;  // 384 is 32 sequences, assuming av. length ~12
+    let minibatchSize = 1384    /3;// 50;  // 384 is 32 sequences, assuming av. length ~12
     // correction:
     //  - LR is specified for av gradient
     //  - numer should be /32
@@ -287,7 +287,7 @@ void Train()
 #if 0
     auto baseLearner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005), learnerOptions);
 #else
-    let f = 1 / sqrt(32.0)/*AdaGrad correction-correction*/;
+    let f = 1 / sqrt(32.0)/*AdaGrad correction-correction*/   * 4;
     auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*f, 0.00005*f, 0.000025*f, 0.000025*f, 0.000025*f, 0.00001*f }, epochSize),
                                    MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000), /*eps=*/1e-8, /*adamax=*/false,
                                    learnerOptions);
