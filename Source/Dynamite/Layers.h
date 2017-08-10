@@ -261,9 +261,9 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     auto scale = Parameter({ }, DTYPE, 1.0, device, L"scale");
     let eps = Constant::Scalar(DTYPE, 1e-16, device);
     let minusHalf = Constant::Scalar(DTYPE, -0.5, device);
-    return UnaryModel(vector<Parameter>{ /*scale*/ }, [=](const Variable& x)
+    return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x)
     {
-#if 1
+#if 0
         axis;
         return x;// *scale;
 #else
@@ -361,15 +361,15 @@ static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
 static UnaryBroadcastingModel Linear(size_t outputDim, bool bias, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
-    //auto scale = Parameter({ }, DTYPE, 1.0, device, L"Wscale");
+    auto scale = Parameter({ }, DTYPE, 1.0, device, L"Wscale");
     // BUGBUG: ^^ this causes it to no longer converge or budge, it seems
     if (bias)
     {
         auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
-        return UnaryModel({ W/*, scale*/, b }, [=](const Variable& x) { return Times(W, x /* * scale*/) + b; });
+        return UnaryModel({ W, scale, b }, [=](const Variable& x) { return Times(W, x * scale) + b; });
     }
     else
-        return UnaryModel({ W/*, scale*/ }, [=](const Variable& x) { return Times(W, x /* * scale*/); });
+        return UnaryModel({ W, scale    }, [=](const Variable& x) { return Times(W, x * scale); });
 }
 
 // by default we have a bias

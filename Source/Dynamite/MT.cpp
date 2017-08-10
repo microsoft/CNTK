@@ -28,16 +28,15 @@ const DeviceDescriptor device(DeviceDescriptor::UseDefaultDevice());
 //const DeviceDescriptor device(DeviceDescriptor::CPUDevice());
 const size_t srcVocabSize = 27579 + 3; // 2330;
 const size_t tgtVocabSize = 21163 + 3; // 2330;
-const size_t embeddingDim = 300;// 512;// 300;
+const size_t embeddingDim = 512;// 300;
 const size_t attentionDim = 128;
-const size_t numEncoderLayers = 1;// 2;
-const size_t encoderHiddenDim = 128;// 256;// 128;
+const size_t numEncoderLayers = 2;
+const size_t encoderHiddenDim = 256;// 128;
 const size_t numDecoderLayers = 1;
-const size_t decoderHiddenDim = 128;// 512;// 128;
+const size_t decoderHiddenDim = 512;// 128;
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
-#define DOLOG(var) (var)
-                    // ((mbCount % 50 == 49) ? LOG(var) : 0)
+#define DOLOG(var) ((mbCount % 100 == 99) ? LOG(var) : 0)
 
 UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
 {
@@ -136,7 +135,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     {
         { L"normK", normK },
         { L"attentionModel", attentionModel },
-        //{ L"merge", merge },
+        { L"merge", merge },
         { L"dense", dense },
         { L"embed", embed } // note: seems not in the reference model
     });
