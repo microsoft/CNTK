@@ -213,8 +213,8 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                 if (output.Owner()->Inputs()[i] != args[i]) // lambda ignores this input
                     continue;
                 let arg = Parameter(args[i]);
-                Variable sumAll = ReduceSum(output, Axis::AllStaticAxes());
-                let resVal = sumAll.Value(); // this triggers batched forward computation
+                Variable sumAllVar = ReduceSum(output, Axis::AllStaticAxes());
+                let sumAll = sumAllVar.Value(); // this triggers batched forward computation
                 // compute perturbed output
                 let eps = RandomTensor(arg.Shape(), epsScale /*/ arg.Shape().TotalSize()*/, seed, dataType, device);
                 //eps->LogToFile(L"eps", stderr);
@@ -222,12 +222,12 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                 perturbedArgs[i] = Constant(perturbedArgs[i].Value() + eps);
                 Variable perturbedSumAll = ReduceSum(test.f(perturbedArgs), Axis::AllStaticAxes());
                 let perturbedResVal = perturbedSumAll.Value();
-                //resVal->LogToFile(L"resVal", stderr);
+                //sumAll->LogToFile(L"sumAll", stderr);
                 //perturbedResVal->LogToFile(L"perturbedResVal", stderr);
-                let perturbedDelta = (perturbedResVal - resVal)->AsScalar<double>();
+                let perturbedDelta = (perturbedResVal - sumAll)->AsScalar<double>();
                 // compute gradient of sum over all elements of test.f(args) (=backprop a 1.0 into every element)
                 unordered_map<Parameter, NDArrayViewPtr> gradients{ { arg, nullptr } };
-                sumAll.Backward(gradients); // this triggers batched backward computation
+                sumAllVar.Backward(gradients); // this triggers batched backward computation
                 let gradientWrtInput = gradients[arg]; // get gradient for arg
                 //gradientWrtInput->LogToFile(L"gradientWrtInput", stderr);
                 // compute expected perturbed output based on gradient
