@@ -897,7 +897,7 @@ namespace CNTK
                         }
                         case PrimitiveOpType::Splice:
                         {
-                            assert(m_inputs.size() >= 2);
+                            assert(m_inputs.size() >= 2); // BUGBUG: why? Outer layers let a single arg go through.
                             auto maxInputRank = MaxInputRank(m_inputs);
                             auto spliceAxis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), NDShape(maxInputRank));
 

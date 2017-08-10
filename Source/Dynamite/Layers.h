@@ -22,8 +22,8 @@ using namespace CNTK;
 using namespace std;
 
 #define BarrierOp Alias
-//#define DTYPE DataType::Float
-#define DTYPE DataType::Double
+#define DTYPE DataType::Float
+//#define DTYPE DataType::Double
 
 #pragma warning(push)
 #pragma warning(disable: 4505) // unreferenced function was removed --TODO: use push/pop
@@ -518,7 +518,12 @@ static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label
     //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
     // TODO: reduce ops must be able to drop the axis
     // TODO: dynamite should rewrite Times() that is really a dot product
-    let loss = Minus(ReduceLogSum(z, axis, L"ceLogDenom"), ReduceSum(ElementTimes(label, z, L"ceLabel"), axis, L"ceLogNumer"), L"ce");
+    Variable ceLogNumer;
+    if (label.IsSparse() && label.Shape().Rank() == 1)
+        ceLogNumer = Times(label, z, /*outputRank=*/0, L"ceLogNumer");
+    else
+        ceLogNumer = ReduceSum(ElementTimes(label, z, L"ceLabel"), axis, L"ceLogNumer");
+    let loss = Minus(ReduceLogSum(z, axis, L"ceLogDenom"), ceLogNumer, L"ce");
     //return Reshape(loss, NDShape(), L"ce");
     return loss; // Reshape(loss, NDShape());
 }

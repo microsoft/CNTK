@@ -347,6 +347,8 @@ void Train()
         // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
         if (mbCount < 400 || mbCount % 5 == 0)
             fflush(stderr);
+        if (mbCount == 20) // for mem leak check
+            break;
         if (std::isnan(lossPerLabel))
             throw runtime_error("Loss is NaN.");
     }

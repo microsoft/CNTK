@@ -1796,6 +1796,8 @@ namespace CNTK
 
     FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name)
     {
+        if (operands.size() == 1)
+            return operands.front();
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
 

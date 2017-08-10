@@ -293,7 +293,7 @@ public:
                 if (chunkRef.m_size >= roundedChunkSize ||
                     (chunkRef.m_endLineNo + 1 == fileLineRefs.size() && chunkRef.m_endFileIndex + 1 ==  definingTextLineRefs.size()))
                 {
-                    assert(m_chunkRefs.m_id == m_chunkRefs.size());
+                    assert(chunkRef.m_id == m_chunkRefs.size());
                     m_chunkRefs.push_back(chunkRef);
                     // and reset for forming next chunk
                     chunkRef.m_id++;

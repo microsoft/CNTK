@@ -47,7 +47,7 @@ namespace Dynamite {
 
     // helper for converting data to dense
     template<typename ElementType>
-    static NDArrayViewPtr MakeEye(size_t n, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
+    static inline NDArrayViewPtr MakeEye(size_t n, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
     {
         vector<ElementType> buffer(n*n, 0);
         for (size_t i = 0; i < n; i++)
@@ -56,7 +56,7 @@ namespace Dynamite {
         eye = eye->DeepClone(device);
         return eye;
     }
-    static NDArrayViewPtr Eye(size_t n, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
+    static inline NDArrayViewPtr Eye(size_t n, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
     {
         static map<pair<size_t, CNTK::DataType>, NDArrayViewPtr> cached;
         let key = make_pair(n, dataType);
@@ -116,7 +116,7 @@ namespace Dynamite {
                         CNTK::LogicError("FromCNTKMB: Streams declared as !isSequence must have a trailing dimension of 1.");
                     data = Index(data, 0); // slice off sample axis (the last in C++)
                 }
-#if 1 // needed for now since PlainTextDeserializer cannot deliver Linear data, and Dynamite metric blows up on Sparse
+#if 0 // needed for now since PlainTextDeserializer cannot deliver Linear data, and Dynamite metric blows up on Sparse
                 if (data->IsSparse())
                 {
                     // multiply with  an identity matrix
