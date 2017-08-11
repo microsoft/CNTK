@@ -217,6 +217,23 @@ BOOST_AUTO_TEST_CASE(ImageAndImageReaderSimple)
           L"SecondMapFile=\"$RootDir$/ImageReaderSimple_map.txt\"" });
 }
 
+BOOST_AUTO_TEST_CASE(ImageAndTextReaderRegression)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageAndTextReaderRegression_Config.cntk",
+        testDataPath() + "/Control/ImageAndTextReaderRegression_Control.txt",
+        testDataPath() + "/Control/ImageAndTextReaderRegression_Output.txt",
+        "Regression_Test",
+        "reader",
+        4,
+        4,
+        1,
+        1,
+        1,
+        0,
+        1);
+}
+
 BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
 {
     BOOST_REQUIRE_EXCEPTION(

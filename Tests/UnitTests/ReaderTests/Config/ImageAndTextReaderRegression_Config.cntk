@@ -1,0 +1,59 @@
+RootDir = .
+ModelDir = "models"
+command = "Regression_Test"
+
+modelPath = "$ModelDir$/ImageReaderSimple_Model.dnn"
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+outputNodeNames = "Dummy"
+precision = float
+traceLevel = 1
+numCPUThreads = 1
+
+Regression_Test = [
+
+    reader = [
+		verbosity = 0
+		randomize = false
+
+		deserializers = (
+			[
+				type = "CNTKTextFormatDeserializer"
+				module = "CNTKTextFormatReader"
+				file = "$RootDir$/ImageAndTextReaderRegression_labels.txt"
+
+				input = [
+					labels = [
+						dim = 2
+						format = "dense"
+					]
+				]
+			]:[
+				type = "ImageDeserializer"
+				module = "ImageReader"
+				file = "$RootDir$/ImageAndTextReaderRegression_features.txt"
+				grayscale = true
+
+				input = [
+					features = [
+						transforms = (
+							[
+								type = "Scale"
+								width = 4
+								height = 4
+								channels = 1
+								interpolations = "linear"
+							]
+						)
+					]
+
+					ignored = [
+						labelDim = 2
+					]
+				]
+			]
+		)
+	]
+]
