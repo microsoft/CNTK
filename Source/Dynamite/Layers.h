@@ -513,11 +513,8 @@ static Variable Softplus(const Variable& z, const std::wstring& name)
 //static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label, const Axis& axis = Axis::AllStaticAxes())
 static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label, const Axis& axis = Axis(0))
 {
-    // TODO: find a proper way of handling sparse labels
-    //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
-    //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
     // TODO: reduce ops must be able to drop the axis
-    // TODO: dynamite should rewrite Times() that is really a dot product
+    // TODO: Dynamite should rewrite Times() that is really a dot product
     Variable ceLogNumer;
     if (label.IsSparse() && label.Shape().Rank() == 1)
         ceLogNumer = Times(label, z, /*outputRank=*/0, L"ceLogNumer");
@@ -537,7 +534,7 @@ static inline void as_vector(vector<Variable>& res, const Variable& x)
         res[t] = Index(x, (int)t, L"as_vector[" + std::to_wstring(t) + L"]");
 }
 
-// TODO: move this out, and don't use Dynamite Model structure
+// TODO: the following are helpers for Static CNTK from C++. Move them out, and don't use Dynamite data types.
 
 static UnaryModel StaticSequential(const vector<UnaryModel>& fns)
 {

@@ -377,6 +377,7 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
         RuntimeError("AsMatrix: Sparse tensors are not supported unless they are 1D or 2D matrices.");
     else                                                  // dense can slice and reshape neutrally, but will also fail if output matrix needs to move devices
         return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns).Reshaped(m_shape_0, m_shape_1));
+    // TODO: the Reshaped() above does yet another ColumnSlice(), which can be eliminated
 }
 
 template <class ElemType>
@@ -386,6 +387,8 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
     auto shapeA = a.m_shape;
     auto shapeB = b.m_shape;
     auto shapeC =   m_shape;
+    if (shapeA.size() == 1) // if just a vector then make it a row vector; this is like Numpy
+        transA = shapeB.size() > 0; // (original transA value is ignored; it's just a vector)
     if (shapeA.GetRank() + shapeB.GetRank() < shapeC.GetRank())
         InvalidArgument("DoMatrixProductOf: Ranks %s don't match, output must have a non-reduced output dimension.", MatrixProductFormat(shapeA, transA, shapeB, transB, shapeC, transC).c_str());
     let removedDims = shapeA.GetRank() + shapeB.GetRank() - shapeC.GetRank();

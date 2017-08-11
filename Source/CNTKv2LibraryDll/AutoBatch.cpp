@@ -1053,7 +1053,7 @@ class Variable::AutoBatch
 #endif
         auto outValue = isFree
             ? nullptr
-            : m_arena.NewNDArrayView(outputShape, inputValues[0]->GetDataType(), inputValues[0]->GetStorageFormat(), inputValues[0]->Device());
+            : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
         // execute it
         output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
         // stats

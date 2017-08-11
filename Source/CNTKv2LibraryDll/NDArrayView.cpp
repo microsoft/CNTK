@@ -175,8 +175,8 @@ namespace CNTK
             SetValue((double)value);
         else
         {
-            if (IsSparse())
-                LogicError("NDArrayView::SetValue: Setting a NDArrayView contents to a scalar is only allowed for objects with dense storage format.");
+            if (IsSparse() && value != 0)
+                LogicError("NDArrayView::SetValue: Setting a NDArrayView contents to a non-zero scalar is only allowed for objects with dense storage format.");
 
             GetWritableMatrix<float>()->SetValue(value);
         }
@@ -184,8 +184,8 @@ namespace CNTK
 
     void NDArrayView::SetValue(double value)
     {
-        if (IsSparse())
-            LogicError("NDArrayView::SetValue: Setting a NDArrayView contents to a scalar is only allowed for objects with dense storage format.");
+        if (IsSparse() && value != 0)
+            LogicError("NDArrayView::SetValue: Setting a NDArrayView contents to a non-zero scalar is only allowed for objects with dense storage format.");
 
         GetWritableMatrix<double>()->SetValue(value);
     }

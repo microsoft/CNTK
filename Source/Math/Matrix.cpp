@@ -5024,8 +5024,10 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
         }
         else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * DENSE -> DENSE
         {
-            GPUMatrix<ElemType> second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;
-            GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, transposeA, second, false, beta, *c.m_GPUMatrix);
+            if (transposeB) // note: m_GPUMatrix is copied for transposition--BUGBUG: why not just pass it with transposeB true?
+                GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, transposeA, b.m_GPUMatrix->Transpose(), false, beta, *c.m_GPUMatrix);
+            else
+                GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, transposeA, *b.m_GPUMatrix, false, beta, *c.m_GPUMatrix);
             c.SetDataLocation(GPU, DENSE);
         }
         else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * SPARSE -> DENSE
@@ -5051,20 +5053,31 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
         }
         else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * SPARSE -> SPARSE
         {
-            GPUSparseMatrix<ElemType> firstDummy = alpha == 1 ? *a.m_GPUSparseMatrix : (*a.m_GPUSparseMatrix) * alpha;
-            GPUSparseMatrix<ElemType>& first = firstDummy; // By Malcolm.. gcc doesn't support auto
-            if (beta == 0)
+            if (alpha == 1) // the else branch only differs in that first is a copy rather than a reference
             {
-                GPUSparseMatrix<ElemType>::Multiply(first, transposeA, *b.m_GPUSparseMatrix, transposeB, *c.m_GPUSparseMatrix);
-                c.SetDataLocation(GPU, SPARSE);
+                GPUSparseMatrix<ElemType>& first = *a.m_GPUSparseMatrix;
+                if (beta == 0)
+                    GPUSparseMatrix<ElemType>::Multiply(first, transposeA, *b.m_GPUSparseMatrix, transposeB, *c.m_GPUSparseMatrix);
+                else
+                {
+                    GPUSparseMatrix<ElemType> tmp(b.m_GPUSparseMatrix->GetComputeDeviceId());
+                    GPUSparseMatrix<ElemType>::Multiply(first, transposeA, *b.m_GPUSparseMatrix, transposeB, tmp);
+                    *c.m_GPUSparseMatrix = tmp + (*c.m_GPUSparseMatrix) * beta;
+                }
             }
             else
             {
-                GPUSparseMatrix<ElemType> tmp(b.m_GPUSparseMatrix->GetComputeDeviceId());
-                GPUSparseMatrix<ElemType>::Multiply(first, transposeA, *b.m_GPUSparseMatrix, transposeB, tmp);
-                *c.m_GPUSparseMatrix = tmp + (*c.m_GPUSparseMatrix) * beta;
-                c.SetDataLocation(GPU, SPARSE);
+                GPUSparseMatrix<ElemType> first = (*a.m_GPUSparseMatrix) * alpha;
+                if (beta == 0)
+                    GPUSparseMatrix<ElemType>::Multiply(first, transposeA, *b.m_GPUSparseMatrix, transposeB, *c.m_GPUSparseMatrix);
+                else
+                {
+                    GPUSparseMatrix<ElemType> tmp(b.m_GPUSparseMatrix->GetComputeDeviceId());
+                    GPUSparseMatrix<ElemType>::Multiply(first, transposeA, *b.m_GPUSparseMatrix, transposeB, tmp);
+                    *c.m_GPUSparseMatrix = tmp + (*c.m_GPUSparseMatrix) * beta;
+                }
             }
+            c.SetDataLocation(GPU, SPARSE);
         }
         else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, DENSE * DENSE -> SPARSE
         {
