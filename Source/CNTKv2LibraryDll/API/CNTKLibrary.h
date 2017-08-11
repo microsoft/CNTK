@@ -857,30 +857,46 @@ namespace CNTK
         ///
         /// Creates a new NDArrayView which is an alias of a slice of 'this' view; i.e. a new view over the underlying data
         /// corresponding to the specified slice of 'this' view.
-        /// The slice must be dense in memory, cannot incur strides.
+        /// The view is compatible with Matrix operations. Hence, it must be contiguous in memory, it cannot incur strides.
+        /// (If you need strides, use Slice().)
         /// If extent[] has less axes than the object, those axes are dropped from the result, assuming extents of assumed 1.
         /// This expresses the common case of indexing the batch (=trailing) axis.
         /// If the tensor is sparse, the leading axis (which is the sparse one) cannot be slice-viewed.
         ///
-        CNTK_API NDArrayViewPtr SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly = false) const;
+        CNTK_API NDArrayViewPtr SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly = false) const
+        {
+            return Slice(startOffset, extent, std::vector<size_t>(), SliceMode::ContiguousView, readOnly);
+        }
 
         ///
-        /// Same as SliceView(), but allowing non-contiguous slices and strides.
-        /// More efficient than SliceView(), but not all functions can handle such views.
+        /// Creates a new NDArrayView which is an alias of a slice of 'this' view if possible, or else a copy.
+        /// Caller can specify whether slice must be contiguous in memory, and whether a copy may be made to ensure this.
+        /// Only operations backed by TensorView allow non-contiguous slice views.
+        /// (To always make a copy, use SliceCopy().)
+        /// Copying is not supported for sparse storage at present.
+        /// If extent[] has less axes than the object, those axes are dropped from the result, assuming extents of assumed 1.
         ///
-        CNTK_API NDArrayViewPtr SlicedTensorView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides = std::vector<size_t>(), bool readOnly = false) const;
+        enum class SliceMode
+        {
+            View,                 // tensor-level view. Cheapest. TensorView compatible (e.g. NumericOperation). Underlying Matrix object is not changed.
+            ContiguousView,       // tensor and matrix view. Fails if not -contiguous. Matrix compatible (e.g. MatrixProduct).
+            ContiguousViewOrCopy, // like ContiguousView but makes a copy if not memory-contiguous. Matrix compatible, but not always a view.
+        };
+        CNTK_API NDArrayViewPtr Slice(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides = std::vector<size_t>(),
+                                      SliceMode sliceMode = SliceMode::ContiguousView, bool readOnly = false) const;
 
         ///
         /// Tests if the tensor slice is memory-contiguous (no gaps due to strides).
+        /// TODO: Remove again if this is not actually needed.
         ///
         CNTK_API bool IsContiguous() const;
 
         ///
-        /// Same as SliceView(), but makes a copy. Non-contiguous slices and strides are allowed.
+        /// Same as Slice(), but always makes a copy. Non-contiguous slices and strides are allowed (except for sparse input).
         ///
         NDArrayViewPtr SliceCopy(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides = std::vector<size_t>(), bool readOnly = false) const
         {
-            return SlicedTensorView(startOffset, extent, strides, readOnly)->DeepClone();
+            return Slice(startOffset, extent, strides, SliceMode::View, readOnly)->DeepClone();
         }
 
         ///

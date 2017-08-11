@@ -19,7 +19,8 @@ using namespace std;
 namespace CNTK
 {
     // helper to get a slice view, used for both forward and backward of Slice()
-    static NDArrayViewPtr GetSliceView(const NDArrayViewPtr& arg, const Dictionary& attributes, const NDShape& outputShape, bool useTensorView, const PrimitiveFunction& funcForErrMsg)
+    // It returns a TensorView slice (which may have gaps due to strides, e.g. an auto-batched Slice()).
+    static NDArrayViewPtr GetSliceView(const NDArrayViewPtr& arg, const Dictionary& attributes, const NDShape& outputShape, bool readOnly, const PrimitiveFunction& funcForErrMsg)
     {
         if (attributes.Size() == 1) // Index() --has no axis or endIndex parameter. and must drop the final axis
         {
@@ -63,13 +64,7 @@ namespace CNTK
                 extent[axisIndex] = endIndex - beginIndex;
             }
             if (extent != arg->Shape().Dimensions() || any_of(startOffset.begin(), startOffset.end(), [](size_t v) { return v != 0; }))
-            {
-                // slice it
-                if (useTensorView) // when set then use a TensorView into the original storage object, instead of slicing that as well; allows for strides
-                    return arg->SlicedTensorView(startOffset, extent);
-                else
-                    return arg->SliceView(startOffset, extent);
-            }
+                return arg->Slice(startOffset, extent, vector<size_t>(), readOnly ? NDArrayView::SliceMode::ContiguousView : NDArrayView::SliceMode::View, readOnly); // slice it
         }
         return arg;
     }
@@ -106,7 +101,7 @@ namespace CNTK
                      return arg->AsShape(outputShape);
                 break;
             case PrimitiveOpType::Slice:
-                return GetSliceView(arg, attributes, outputShape, false, funcForErrMsg);
+                return GetSliceView(arg, attributes, outputShape, /*readOnly=*/true, funcForErrMsg);
             }
             // operation is a no-op: return original argument as is
             return arg;
@@ -398,7 +393,7 @@ namespace CNTK
                 gradient->SetValue(0.0f);
             NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
                                           Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
-                                          GetSliceView(gradient, attributes, outputValue->Shape(), true, funcForErrMsg),
+                                          GetSliceView(gradient, attributes, outputValue->Shape(), /*readOnly=*/false, funcForErrMsg),
                                           beta, // keep beta; although we just cleared it, beta=0 avoids the memory access
                                           Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
             // This ^^ op is the same as the shared one, except for the output slice.

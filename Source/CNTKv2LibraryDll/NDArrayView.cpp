@@ -634,64 +634,91 @@ namespace CNTK
         }
     }
 
+    // TODO: remove this function if not needed
     bool NDArrayView::IsContiguous() const
     {
         return GetTensorShape().IsDense();
     }
 
-    NDArrayViewPtr NDArrayView::SlicedTensorView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides, bool readOnly) const
-    {
-        // sparse tensors cannot have strides, so we can just use SliceView()
-        if (IsSparse())
-        {
-            if (any_of(strides.begin(), strides.end(), [](size_t v) { return v != 1; }))
-                InvalidArgument("NDArrayView::SlicedTensorView: Strides != 1 are not allowed for sparse data.");
-            return SliceView(startOffset, extent, readOnly);
-        }
-
-        let rank = Shape().Rank();
-        if (startOffset.size() != rank)
-            InvalidArgument("NDArrayView::SlicedTensorView: Rank (%d) of the NDArrayView does not match the dimensionality (%d) of the specified slice offset.", (int)rank, (int)startOffset.size());
-        if (extent.size() > rank)
-            InvalidArgument("NDArrayView::SlicedTensorView: Dimensionality (%d) of the specified slice extent exceeds the rank (%d) of this NDArrayView.", (int)extent.size(), (int)rank);
-
-        // get current actual shape
-        auto tensorShape = GetTensorShape();
-
-        // narrow it down
-        for (size_t i = 0; i < rank; ++i)
-        {
-            let beginIndex = startOffset[i];
-            let endIndex = i >= extent.size()
-                           ? 1 // missing extent at the end means index
-                           : extent[i] == NDShape::InferredDimension
-                             ? tensorShape[i] // InferredDimension means end index = dim
-                             : startOffset[i] + extent[i];
-            let stride = i < strides.size() ? strides[i] : 1;
-            tensorShape.NarrowTo(i, beginIndex, endIndex, (int)stride);
-        }
-
-        // drop trailing singleton dimensions
-        tensorShape.TrimRankInPlace(extent.size());
-
-        // create a NDArrayView with this new tensor shape onto the existing storage object
-        // Note that this version may create an NDArrayView with strides, which is not accepted by some operations.
-        // TODO: Check that at least this will be discovered. AsMatrix() checks it. Does that cover all use cases?
-        return MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
-    }
-
-    NDArrayViewPtr NDArrayView::SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly) const
+    NDArrayViewPtr NDArrayView::Slice(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides, SliceMode sliceMode, bool readOnly) const
     {
         let rank = Shape().Rank();
         if (startOffset.size() != rank)
-            InvalidArgument("NDArrayView::SliceView: Rank (%d) of the NDArrayView does not match the dimensionality (%d) of the specified slice offset.", (int)rank, (int)startOffset.size());
+            InvalidArgument("NDArrayView::Slice: Rank (%d) of the NDArrayView does not match the dimensionality (%d) of the specified slice offset.", (int)rank, (int)startOffset.size());
 
         if (extent.size() > rank)
-            InvalidArgument("NDArrayView::SliceView: Dimensionality (%d) of the specified slice extent exceeds the rank (%d) of this NDArrayView.", (int)extent.size(), (int)rank);
+            InvalidArgument("NDArrayView::Slice: Dimensionality (%d) of the specified slice extent exceeds the rank (%d) of this NDArrayView.", (int)extent.size(), (int)rank);
 
         if (std::find(extent.begin(), extent.end(), 0) != extent.end())
-            InvalidArgument("NDArrayView::SliceView: Specified slice extent is zero along at least one of the axes.");
+            InvalidArgument("NDArrayView::Slice: Specified slice extent is zero along at least one of the axes.");
 
+        // For sparse input, strided views are not supported in any form.
+        // In this case, we just set the sliceMode to ContiguousViews. If we originaly requested a TensorView, this will still
+        // do the right thing in case of SliceMode::View, and also for ContiguousViewOrCopy if no copy is needed.
+        if (IsSparse())
+            sliceMode = SliceMode::ContiguousView;
+
+        if (sliceMode == SliceMode::ContiguousView && any_of(strides.begin(), strides.end(), [](size_t v) { return v != 1; }))
+            InvalidArgument("NDArrayView::Slice: Strides != 1 are not allowed for SliceMode::ContiguousView, and presently not supported fo sparse data.");
+
+        // Modes:
+        //  - ContiguousView --> create both a TensorView and Matrix-level view; fail if not possible
+        //  - View --> create a TensorView view, without updating the underlying matrix
+        //  - ContiguousViewOrCopy --> first try TensorView view. If not contiguous, then copy it. If contiguous then fall through to ContiguousView.
+        //                             This way, we always get an updated Matrix.
+        // If sparse then the slice must always be contiguous presently (due to lack of underlying slicing function for sparse matrices/tensors).
+        if (sliceMode != SliceMode::ContiguousView)
+        {
+            // get current actual shape
+            auto tensorShape = GetTensorShape();
+
+            // narrow it down
+            for (size_t i = 0; i < rank; ++i)
+            {
+                let beginIndex = startOffset[i];
+                let endIndex = i >= extent.size()
+                               ? 1 // missing extent at the end means index
+                               : extent[i] == NDShape::InferredDimension
+                                 ? tensorShape[i] // InferredDimension means end index = dim
+                                 : startOffset[i] + extent[i];
+                let stride = i < strides.size() ? strides[i] : 1;
+                tensorShape.NarrowTo(i, beginIndex, endIndex, (int)stride);
+            }
+
+            // drop trailing singleton dimensions
+            tensorShape.TrimRankInPlace(extent.size());
+
+            // now continue based on sliceMode and whether the resulting tensor is contiguous or not
+            if (sliceMode == SliceMode::View || !tensorShape.IsDense())
+            {
+                // create a NDArrayView with this new tensor shape onto the existing storage object
+                // Note that this version may create an NDArrayView with strides, which is not accepted by some operations.
+                // TODO: Check that at least this will be discovered. AsMatrix() checks it. Does that cover all use cases?
+                let view = MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
+
+                // View: we are done
+                if (sliceMode == SliceMode::View)
+                    return view;
+                // ContiguousViewOrCopy and not contiguous: return a copy of the view
+                else
+                {
+                    assert(sliceMode == SliceMode::ContiguousViewOrCopy && !tensorShape.IsDense());
+                    return view->DeepClone(); // the copy is contiguous
+                }
+            }
+            // we get here for ContiguousViewOrCopy if data is contiguous and does not need to be copied
+            assert(sliceMode == SliceMode::ContiguousViewOrCopy && tensorShape.IsDense());
+            // fall through SliceMode::ContiguousView
+        }
+
+        // create a menmory-contiguous view
+        // We get here under these conditions:
+        //  - caller requested ContiguousView
+        //  - caller requested ContiguousViewOrCopy when no copy is required
+        //  - input is sparse
+        // This also updates the underlying Matrix view, and is thus a little slower.
+        // TODO: This is old code which may be simplified by merging with the TensorShape code above.
+        // TODO: We should change NDArrayView::Slice() to never update the Matrix view, but do that on the fly in GetMatrixImpl() (AsMatrix() probably already does most of the work).
         bool anyPrevAxisSliced = false;
         NDShape sliceViewShape(extent);       // note: has same #dims as extent
         std::vector<size_t> endOffset(rank);  // note: these have same #dims as 'this', not extent
@@ -711,7 +738,7 @@ namespace CNTK
             // Any axes after that must be sliced to a singleton axis.
             // Otherwise, data would be non-contiguous, which the Matrix class does not support.
             if (anyPrevAxisSliced && ((endOffset[i] - startOffset[i]) != 1))
-                InvalidArgument("NDArrayView::SliceView: Cannot create a slice which is not contiguous in memory. "
+                InvalidArgument("NDArrayView::Slice: Cannot create a slice which is not contiguous in memory. "
                     "This NDArrayView shape = %S, slice offset = %S, slice extent = %S.",
                     Shape().AsString().c_str(), NDShape(startOffset).AsString().c_str(), NDShape(extent).AsString().c_str());
 
@@ -723,9 +750,9 @@ namespace CNTK
         if (IsSparse())
         {
             if (rank == 0)
-                LogicError("NDArrayView::SliceView: Scalars cannot be sparse.");
+                LogicError("NDArrayView::Slice: Scalars cannot be sparse.");
             if (startOffset.front() != 0 || endOffset.front() != Shape().Dimensions().front())
-                InvalidArgument("NDArrayView::SliceView: The first axis of a sparse tensor cannot be slice-viewed.");
+                InvalidArgument("NDArrayView::Slice: The first axis of a sparse tensor cannot be slice-viewed.");
         }
         auto tensorShape = AsTensorShape(Shape());
         auto flatBufferOffset = tensorShape.Locate(startOffset);  // offset and length into underlying ElementType array...
@@ -788,7 +815,7 @@ namespace CNTK
             break;
         }
         default:
-            LogicError("NDArrayView::SliceView: Unsupported DataType %s", DataTypeName(m_dataType));
+            LogicError("NDArrayView::Slice: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
         }
 
