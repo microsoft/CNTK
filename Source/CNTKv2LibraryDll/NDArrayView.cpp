@@ -148,6 +148,12 @@ namespace CNTK
         m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
     }
 
+    NDArrayView::NDArrayView(CNTK::DataType dataType, const TensorShape& tensorShape, bool readOnly, const shared_ptr<MatrixBase>& sob)
+        : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())),
+          m_viewShape(move(tensorShape.GetDimsAsVector())), m_isReadOnly(readOnly),
+          m_tensorViewPtr(NewTensorView(dataType, sob, tensorShape))
+    {}
+
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)
         : NDArrayView(dataType, viewShape, false, CreateStorageObject(dataType, storageType, viewShape, device))
     {}
@@ -216,12 +222,14 @@ namespace CNTK
     template <typename ElementType>
     /*static*/ std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(const TensorView<ElementType>& tensorView, size_t rowColSplitPoint)
     {
+        // only contiguous tensors can be processed by the Matrix lib
+        tensorView.GetShape().VerifyIsDense();
+
         // we should always reshape for rank-0, so that batch and sequence axis goes to columns
         if (tensorView.GetShape().GetRank() <= 1 && rowColSplitPoint != 0)
             return tensorView.AsMatrix();
 
         auto tensorShape = tensorView.GetShape();
-
         ToMatrixShape(tensorShape, rowColSplitPoint, AutoSelectRowColSplitPoint);
 
         return tensorView.Reshaped(tensorShape).AsMatrix();
@@ -630,8 +638,6 @@ namespace CNTK
             InvalidArgument("NDArrayView::SlicedTensorView: Rank (%d) of the NDArrayView does not match the dimensionality (%d) of the specified slice offset.", (int)rank, (int)startOffset.size());
         if (extent.size() > rank)
             InvalidArgument("NDArrayView::SlicedTensorView: Dimensionality (%d) of the specified slice extent exceeds the rank (%d) of this NDArrayView.", (int)extent.size(), (int)rank);
-        if (std::find(extent.begin(), extent.end(), 0) != extent.end())
-            InvalidArgument("NDArrayView::SlicedTensorView: Specified slice extent is zero along at least one of the axes.");
 
         // get current actual shape
         TensorShape tensorShape;
@@ -655,7 +661,7 @@ namespace CNTK
             let endIndex = i >= extent.size()
                            ? 1 // missing extent at the end means index
                            : extent[i] == NDShape::InferredDimension
-                             ? tensorShape[i] // InferrefDimension means end index = dim
+                             ? tensorShape[i] // InferredDimension means end index = dim
                              : startOffset[i] + extent[i];
             let stride = i >= strides.size() ? strides[i] : 1;
             tensorShape.NarrowTo(i, beginIndex, endIndex, (int)stride);
@@ -664,14 +670,10 @@ namespace CNTK
         // drop trailing singleton dimensions
         tensorShape.TrimRankInPlace(extent.size());
 
-        // create a TensorView with this new tensor shape onto the existing storage object
-        let tensorView = NewTensorView(m_dataType, GetStorageObjectPtr(), tensorShape);
-
-        // create a new NDArrayView from this
-        // ... need to move the shared_ptr into NewTensorView
-        tensorView;
-
-        NOT_IMPLEMENTED;
+        // create a NDArrayView with this new tensor shape onto the existing storage object
+        // Note that this version may create an NDArrayView with strides, which is not accepted by some operations.
+        // TODO: Check that at least this will be discovered. AsMatrix() checks it. Does that cover all use cases?
+        return MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
     }
 
     NDArrayViewPtr NDArrayView::SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly) const

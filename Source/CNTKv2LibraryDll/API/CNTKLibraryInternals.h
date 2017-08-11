@@ -49,6 +49,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <typename ElemType>
     class TensorView;
 
+    struct TensorShape;
+
     class ComputationNetwork;
     typedef std::shared_ptr<ComputationNetwork> ComputationNetworkPtr;
 

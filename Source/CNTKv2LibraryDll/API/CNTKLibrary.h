@@ -196,6 +196,13 @@ namespace CNTK
         ///
         /// Construct a NDShape instance with specified dimensions.
         ///
+        NDShape(const std::vector<size_t>&& dimensions)
+            : m_shapeDims(std::move(dimensions))
+        {}
+
+        ///
+        /// Construct a NDShape instance with specified dimensions.
+        ///
         NDShape(const std::initializer_list<size_t>& dimensions)
             : m_shapeDims(dimensions)
         {}
@@ -933,6 +940,7 @@ namespace CNTK
 
     private:
         CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
+        CNTK_API NDArrayView(::CNTK::DataType dataType, const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
 
         template <typename ElementType>
         static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>& tensorView, size_t rowColSplitPoint);
