@@ -126,8 +126,10 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 #define RedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0/denom, opCopy, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, op##redOpCode); }, "Reduce" #redOpCode))
     vector<TensorViewTest> tests =
     {
-        // slicing, splicing, reshaping  --Note: multi-axis slicing not implemented presently
-        //{ { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView({ 0, 1 }, { 13, 4 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0), Axis(1) }, { 0, 1 }, { 13, 1+4 }); },{ { 13, 42 } } },
+        // slicing, splicing, reshaping
+        { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView({ 0, 1 }, { 13,  4 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0), Axis(1) }, { 0, 1 }, { 13, 1+4 }); },{ { 13, 42 } } },
+        //{ { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SlicedTensorView({ 2, 0 }, {  3, 42 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0) }, { 2 }, { 2+3 }); },{ { 13, 42 } } },
+        //{ { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SlicedTensorView({ 0, 1 }, { 13,  4 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(1) }, { 1 }, { 1+4 }); },{ { 13, 42 } } },
         { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView({ 0, 1 }, { 13,  4 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(1) }, { 1 }, { 1+4 }); },{ { 13, 42 } } },
         { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView({    1 }, {      3 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0) }, { 1 }, { 1+3 }); },{ { 13 } } },
         { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView({    1 }, {        }); }, "Index" }, [&](const vector<Variable>& args) { return CNTK::Index(args[0], 1); },{ { 13 } } },

@@ -850,11 +850,26 @@ namespace CNTK
         ///
         /// Creates a new NDArrayView which is an alias of a slice of 'this' view; i.e. a new view over the underlying data
         /// corresponding to the specified slice of 'this' view.
+        /// The slice must be dense in memory, cannot incur strides.
         /// If extent[] has less axes than the object, those axes are dropped from the result, assuming extents of assumed 1.
         /// This expresses the common case of indexing the batch (=trailing) axis.
         /// If the tensor is sparse, the leading axis (which is the sparse one) cannot be slice-viewed.
         ///
         CNTK_API NDArrayViewPtr SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly = false) const;
+
+        ///
+        /// Same as SliceView(), but allowing slicing with strides.
+        /// More efficient than SliceView(), but not all functions can handle such views.
+        ///
+        CNTK_API NDArrayViewPtr SlicedTensorView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly = false) const;
+
+        ///
+        /// Same as SliceView(), but makes a copy. Non-contiguous slices are allowed.
+        ///
+        NDArrayViewPtr SliceCopy(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly = false) const
+        {
+            return SlicedTensorView(startOffset, extent, readOnly)->DeepClone();
+        }
 
         ///
         /// Creates a new NDArrayView which is a view that indexes the last axis.

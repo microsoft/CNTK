@@ -339,6 +339,14 @@ void Train()
         learner->Update(gradients, info);
         let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
         totalLabels += info.numberOfSamples;
+        // I once saw a strange (impossible) -1e23 or so CE loss, no idea where that comes from. Skip it in smoothed loss. Does not seem to hurt the convergence.
+        if (lossPerLabel < 0)
+        {
+            fprintf(stderr, "%d STRANGE CrossEntropy loss = %.7f, not counting in accumulative loss, seenLabels=%d, words/sec=%.1f\n",
+                (int)mbCount, lossPerLabel, (int)totalLabels,
+                info.numberOfSamples / timer.ElapsedSeconds());
+            continue;
+        }
         let smoothedLossVal = smoothedLoss.Update(lossPerLabel, info.numberOfSamples);
         fprintf(stderr, "%d: CrossEntropy loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d, words/sec=%.1f\n",
                         (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,

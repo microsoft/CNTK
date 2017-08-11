@@ -19,35 +19,53 @@ using namespace std;
 namespace CNTK
 {
     // helper to get a slice view, used for both forward and backward of Slice()
-    static NDArrayViewPtr GetSliceView(const NDArrayViewPtr& out, const Dictionary& attributes, const NDShape& outputShape, const PrimitiveFunction& funcForErrMsg)
+    static NDArrayViewPtr GetSliceView(const NDArrayViewPtr& arg, const Dictionary& attributes, const NDShape& outputShape, const PrimitiveFunction& funcForErrMsg)
     {
-        if (attributes.Size() > 1)
-        {
-            // TODO: We don't support multi-axis slicing presently. It is just a matter of interpreting the parameters.
-            let axis       = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-            let beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-            let endIndex   = attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
-            auto extent = out->Shape().Dimensions();
-            auto startOffset = vector<size_t>(extent.size(), 0);
-            let axisIndex = axis.StaticAxisIndex();
-            if (startOffset[axisIndex] != beginIndex || extent[axisIndex] != endIndex - beginIndex)
-            {
-                startOffset[axisIndex] = beginIndex;
-                extent[axisIndex] = endIndex - beginIndex;
-                return out->SliceView(startOffset, extent); // slice it
-            }
-        }
-        else // Index() --has no axis or endIndex parameter. and must drop the final axis
+        if (attributes.Size() == 1) // Index() --has no axis or endIndex parameter. and must drop the final axis
         {
             let index = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-            let extent = outputShape.Dimensions(); // note: last dimension is missing; this will strip it in the output
-            if (extent.size() + 1 != out->Shape().Rank())
+            let& extent = outputShape.Dimensions(); // note: last dimension is missing; this will strip it in the output
+            if (extent.size() + 1 != arg->Shape().Rank())
                 LogicError("Variable '%S' Value(): The input and output rank for op Slice when indexing must differ by 1.", funcForErrMsg.AsString().c_str());
             auto startOffset = vector<size_t>(extent.size() + 1, 0);
             startOffset.back() = (size_t) index;
-            return out->SliceView(startOffset, extent); // slice it
+            return arg->SliceView(startOffset, extent); // slice it
         }
-        return out;
+        else
+        {
+            auto extent = arg->Shape().Dimensions();
+            auto startOffset = vector<size_t>(extent.size(), 0);
+            if (attributes.Contains(PrimitiveFunction::AttributeNameAxisVec)) // vector of slices
+            {
+                let& axes         = AsVector<Axis>(attributes[PrimitiveFunction::AttributeNameAxisVec      ].Value<vector<DictionaryValue>>());
+                let& beginIndices = AsVector<int> (attributes[PrimitiveFunction::AttributeNameBeginIndexVec].Value<vector<DictionaryValue>>());
+                let& endIndices   = AsVector<int> (attributes[PrimitiveFunction::AttributeNameEndIndexVec  ].Value<vector<DictionaryValue>>());
+                if (attributes.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
+                    LogicError("Variable '%S' Value(): Strided slicing not yet implemented.", funcForErrMsg.AsString().c_str());
+                for (size_t i = 0; i < axes.size(); i++)
+                {
+                    let axisIndex  = axes[i].StaticAxisIndex();
+                    let beginIndex = beginIndices[i];
+                    let endIndex   = endIndices[i];
+                    startOffset[axisIndex] = beginIndex;
+                    extent[axisIndex] = endIndex - beginIndex;
+                }
+            }
+            else // single slice
+            {
+                let axis       = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                let beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+                let endIndex   = attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
+                if (attributes.Contains(PrimitiveFunction::AttributeNameSliceStrides))
+                    LogicError("Variable '%S' Value(): Strided slicing not yet implemented.", funcForErrMsg.AsString().c_str());
+                let axisIndex = axis.StaticAxisIndex();
+                startOffset[axisIndex] = beginIndex;
+                extent[axisIndex] = endIndex - beginIndex;
+            }
+            if (extent != arg->Shape().Dimensions() || any_of(startOffset.begin(), startOffset.end(), [](size_t v) { return v != 0; }))
+                return arg->SliceView(startOffset, extent); // slice it
+        }
+        return arg;
     }
 
     // Note: To support auto-batching, this function must only consider attributes when presence of an additional
