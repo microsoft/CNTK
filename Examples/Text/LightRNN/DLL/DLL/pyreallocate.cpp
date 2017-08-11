@@ -43,7 +43,7 @@ struct InsertNode {
     /*
     * The Word Node,
     * It include the sorted loss vector of row and col,
-    * and the next great postion row or col for the curr word.
+    * and the next great position row or col for the curr word.
     * */
     DIVector prob_row;
     DIVector prob_col;
