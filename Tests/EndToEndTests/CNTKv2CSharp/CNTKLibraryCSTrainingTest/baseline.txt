@@ -4,22 +4,6 @@ CPU info:
     Total Memory: 33417320 kB
 -------------------------------------------------------------------
 Test CNTKLibraryCSTrainingExamples
-MaxNumCPUThreads: before: 8, after 2
-reset MaxNumCPuThreads to 8
-TraceLevel: before: Warning, after Info
-reset TraceLevel to Warning
-Float
-8
-CPU
-GPU
-False
-True
-True
-Constant
-Placeholder
-Input
-Output
-Parameter
 ======== Train model on CPU using CPUOnly build ========
 Minibatch: 0 CrossEntropy loss = 0.692364807128906, Evaluation criterion = 0.5
 Minibatch: 20 CrossEntropy loss = 0.716969680786133, Evaluation criterion = 0.44
