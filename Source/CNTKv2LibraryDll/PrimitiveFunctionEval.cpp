@@ -19,7 +19,7 @@ using namespace std;
 namespace CNTK
 {
     // helper to get a slice view, used for both forward and backward of Slice()
-    static NDArrayViewPtr GetSliceView(const NDArrayViewPtr& arg, const Dictionary& attributes, const NDShape& outputShape, const PrimitiveFunction& funcForErrMsg)
+    static NDArrayViewPtr GetSliceView(const NDArrayViewPtr& arg, const Dictionary& attributes, const NDShape& outputShape, bool useTensorView, const PrimitiveFunction& funcForErrMsg)
     {
         if (attributes.Size() == 1) // Index() --has no axis or endIndex parameter. and must drop the final axis
         {
@@ -63,7 +63,13 @@ namespace CNTK
                 extent[axisIndex] = endIndex - beginIndex;
             }
             if (extent != arg->Shape().Dimensions() || any_of(startOffset.begin(), startOffset.end(), [](size_t v) { return v != 0; }))
-                return arg->SliceView(startOffset, extent); // slice it
+            {
+                // slice it
+                if (useTensorView) // when set then use a TensorView into the original storage object, instead of slicing that as well; allows for strides
+                    return arg->SlicedTensorView(startOffset, extent);
+                else
+                    return arg->SliceView(startOffset, extent);
+            }
         }
         return arg;
     }
@@ -88,7 +94,7 @@ namespace CNTK
             primitiveOp == PrimitiveOpType::Pass         ||
             primitiveOp == PrimitiveOpType::NoOp         ||
             primitiveOp == PrimitiveOpType::Reshape      ||
-            (primitiveOp == PrimitiveOpType::Slice && args[0]->IsContiguous()))
+            primitiveOp == PrimitiveOpType::Slice)
         {
             if (out)
                 LogicError("Variable '%S' Value(): An output buffer was passed for op %S that does not need one.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
@@ -100,7 +106,7 @@ namespace CNTK
                      return arg->AsShape(outputShape);
                 break;
             case PrimitiveOpType::Slice:
-                return GetSliceView(arg, attributes, outputShape, funcForErrMsg);
+                return GetSliceView(arg, attributes, outputShape, false, funcForErrMsg);
             }
             // operation is a no-op: return original argument as is
             return arg;
@@ -392,7 +398,7 @@ namespace CNTK
                 gradient->SetValue(0.0f);
             NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
                                           Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
-                                          GetSliceView(gradient, attributes, outputValue->Shape(), funcForErrMsg),
+                                          GetSliceView(gradient, attributes, outputValue->Shape(), true, funcForErrMsg),
                                           beta, // keep beta; although we just cleared it, beta=0 avoids the memory access
                                           Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
             // This ^^ op is the same as the shared one, except for the output slice.

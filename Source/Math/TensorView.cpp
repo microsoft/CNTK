@@ -379,12 +379,15 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     if (!needsSlicing && !needsReshaping)     // no need to mess with the storage object: pass it on as it is. Full support for moving devices.
         return m_sob;
     else if (needsSlicing && !needsReshaping) // slicing is supported for sparse as well
-        return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns));
+        return make_shared<Matrix<ElemType>>(move(m_sob->ColumnSlice(firstColumn, numColumns)));
     else if (m_sob->GetMatrixType() != MatrixType::DENSE) // needsReshaping: not allowed for sparse matrices
         RuntimeError("AsMatrix: Sparse tensors are not supported unless they are 1D or 2D matrices.");
     else                                                  // dense can slice and reshape neutrally, but will also fail if output matrix needs to move devices
-        return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns).Reshaped(m_shape_0, m_shape_1));
-    // TODO: the Reshaped() above does yet another ColumnSlice(), which can be eliminated
+    {
+        auto slice = m_sob->ColumnSlice(firstColumn, numColumns);
+        slice.Reshape(m_shape_0, m_shape_1);
+        return make_shared<Matrix<ElemType>>(move(slice));
+    }
 }
 
 template <class ElemType>
