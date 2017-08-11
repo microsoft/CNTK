@@ -111,8 +111,7 @@ namespace CNTK
     }
 
     // ElementType-erasing version of new TensorView(sob, shape), based on dataType.
-    // This returns a naked pointer.
-    static void* NewTensorView(CNTK::DataType dataType, const shared_ptr<MatrixBase>& sob, const TensorShape& shape)
+    static shared_ptr<void> NewTensorView(CNTK::DataType dataType, const shared_ptr<MatrixBase>& sob, const TensorShape& shape)
     {
         switch (dataType)
         {
@@ -120,14 +119,14 @@ namespace CNTK
             {
                 auto matrix = dynamic_pointer_cast<Matrix<float>>(sob);
                 if (matrix)
-                    return new TensorView<float>(matrix, shape);
+                    return shared_ptr<void>(new TensorView<float>(matrix, shape), [](void* p) { delete (const TensorView<float>*)(p); });
             }
             break;
         case DataType::Double:
             {
                 auto matrix = dynamic_pointer_cast<Matrix<double>>(sob);
                 if (matrix)
-                    return new TensorView<double>(matrix, shape);
+                    return shared_ptr<void>(new TensorView<double>(matrix, shape), [](void* p) { delete (const TensorView<double>*)(p); });
             }
             break;
         default:
@@ -146,21 +145,7 @@ namespace CNTK
 #else
         const auto tensorShape = AsTensorShapeMin2D(viewShape); // not lazy (old version): sdo it here and bake it into teh object
 #endif
-        void* tensorView = NewTensorView(dataType, sob, tensorShape);
-        m_tensorViewPtr = std::shared_ptr<void>(tensorView, [this](void*) {
-            switch (m_dataType)
-            {
-            case DataType::Float:
-                delete GetTensorViewPtr<float>();
-                break;
-            case DataType::Double:
-                delete GetTensorViewPtr<double>();
-                break;
-            default:
-                LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
-                break;
-            }
-        });
+        m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
     }
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)

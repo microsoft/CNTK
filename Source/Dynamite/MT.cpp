@@ -277,7 +277,7 @@ void Train()
     let parameters = model_fn.Parameters();
     //let epochSize = 100000; // it's a small corpus, ~50k samples
     let epochSize = 10000000; // this is maybe half a true epoch
-    let minibatchSize = 4*1384;// 50;  // 384 is 32 sequences, assuming av. length ~12
+    let minibatchSize = 4*1384/100;// 50;  // 384 is 32 sequences, assuming av. length ~12
     // correction:
     //  - LR is specified for av gradient
     //  - numer should be /32
