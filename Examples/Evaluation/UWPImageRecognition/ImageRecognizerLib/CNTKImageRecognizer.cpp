@@ -6,7 +6,7 @@
 #include "pch.h"
 #include "CNTKImageRecognizer.h"
 
-using namespace ImageRecognitionLib;
+using namespace ImageRecognizerLib;
 using namespace Platform;
 using namespace Microsoft::MSR::CNTK;
 
@@ -94,11 +94,9 @@ CNTKImageRecognizer::CNTKImageRecognizer(String^ modelFile, Platform::String^ cl
     classNames = read_class_names(w_str);
 }
 
-Windows::Foundation::IAsyncOperation<CNTKImageRecognizer^>^ CNTKImageRecognizer::Create(Platform::String^ modelFile, Platform::String^ classesFile)
+CNTKImageRecognizer^ CNTKImageRecognizer::Create(Platform::String^ modelFile, Platform::String^ classesFile)
 {
-    return concurrency::create_async([=] {
-        return ref new CNTKImageRecognizer(modelFile, classesFile);
-    });
+    return ref new CNTKImageRecognizer(modelFile, classesFile);
 }
 
 Windows::Foundation::IAsyncOperation<Platform::String^>^ CNTKImageRecognizer::RecognizeObjectAsync(const Platform::Array<byte>^ bytes)

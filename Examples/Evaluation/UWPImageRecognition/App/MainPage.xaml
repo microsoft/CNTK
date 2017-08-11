@@ -13,12 +13,16 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row ="0" x:Name="text" Margin="10" TextWrapping="Wrap" Text="" HorizontalAlignment="Left" FontSize="20" />
-            <Button Grid.Row ="1" x:Name="cntkPickButton" Height="40" Content="Pick Image" HorizontalAlignment="Left" VerticalAlignment="Top" Click="CNTKButton_Click"/>
-            <ProgressRing Grid.Row ="1" x:Name="progress" Height="40" Width="40" HorizontalAlignment="Left" Margin="100,00,0,0" VerticalAlignment="Top"/>
-            <TextBlock Grid.Row ="2" Margin="10" TextWrapping="Wrap" Text="(Hint: some sample images are located in the Assets folder)" HorizontalAlignment="Left" FontSize="14" />
+            <Button Grid.Row ="0" x:Name="cntkPickModel" Height="40" Content="Pick Model" HorizontalAlignment="Left" VerticalAlignment="Top" Click="cntkPickModel_Click"/>
+            <TextBlock Grid.Row ="1" Margin="10" TextWrapping="Wrap" Text="(Hint: some pretrained models can be downloaded from https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/ResNet/Readme.md)" HorizontalAlignment="Left" FontSize="14" />
+            <Button Grid.Row ="2" x:Name="cntkPickImage" Height="40" Content="Pick Image" HorizontalAlignment="Left" VerticalAlignment="Top" Click="cntkPickImage_Click"/>
+            <ProgressRing Grid.Row ="2" x:Name="progress" Height="40" Width="40" HorizontalAlignment="Left" Margin="100,00,0,0" VerticalAlignment="Top"/>
+            <TextBlock Grid.Row ="3" Margin="10" TextWrapping="Wrap" Text="(Hint: some sample images are located in the Assets folder)" HorizontalAlignment="Left" FontSize="14" />
+            <TextBlock Grid.Row ="4" x:Name="text" Margin="10" TextWrapping="Wrap" Text="" HorizontalAlignment="Left" FontSize="20" />
         </Grid>
     </Grid>
 </Page>
