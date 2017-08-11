@@ -310,3 +310,6 @@ Examples/Text/LightRNN/LightRNN/*.so
 /CNTK.VC.db
 /CNTK.VC.VC.opendb
 /Local
+.Rproj.user
+.Rhistory
+.ipynb_checkpoints/
