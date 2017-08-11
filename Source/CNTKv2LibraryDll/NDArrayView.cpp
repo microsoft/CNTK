@@ -623,6 +623,22 @@ namespace CNTK
         }
     }
 
+    // helper to get the underlying TensorView's TensorShape
+    const TensorShape& NDArrayView::GetTensorShape() const
+    {
+        switch (m_dataType)
+        {
+        case DataType::Float:  return NativeTensorView<float> ()->GetShape();
+        case DataType::Double: return NativeTensorView<double>()->GetShape();
+        default: LogicError("NDArrayView::SlicedTensorView: Unsupported DataType %s", DataTypeName(m_dataType));
+        }
+    }
+
+    bool NDArrayView::IsContiguous() const
+    {
+        return GetTensorShape().IsDense();
+    }
+
     NDArrayViewPtr NDArrayView::SlicedTensorView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides, bool readOnly) const
     {
         // sparse tensors cannot have strides, so we can just use SliceView()
@@ -640,19 +656,7 @@ namespace CNTK
             InvalidArgument("NDArrayView::SlicedTensorView: Dimensionality (%d) of the specified slice extent exceeds the rank (%d) of this NDArrayView.", (int)extent.size(), (int)rank);
 
         // get current actual shape
-        TensorShape tensorShape;
-        switch (m_dataType)
-        {
-        case DataType::Float:
-            tensorShape = NativeTensorView<float>()->GetShape();
-            break;
-        case DataType::Double:
-            tensorShape = NativeTensorView<double>()->GetShape();
-            break;
-        default:
-            LogicError("NDArrayView::SlicedTensorView: Unsupported DataType %s", DataTypeName(m_dataType));
-            break;
-        }
+        auto tensorShape = GetTensorShape();
 
         // narrow it down
         for (size_t i = 0; i < rank; ++i)

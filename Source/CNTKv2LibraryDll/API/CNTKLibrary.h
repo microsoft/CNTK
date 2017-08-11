@@ -871,6 +871,11 @@ namespace CNTK
         CNTK_API NDArrayViewPtr SlicedTensorView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides = std::vector<size_t>(), bool readOnly = false) const;
 
         ///
+        /// Tests if the tensor slice is memory-contiguous (no gaps due to strides).
+        ///
+        CNTK_API bool IsContiguous() const;
+
+        ///
         /// Same as SliceView(), but makes a copy. Non-contiguous slices and strides are allowed.
         ///
         NDArrayViewPtr SliceCopy(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides = std::vector<size_t>(), bool readOnly = false) const
@@ -968,6 +973,8 @@ namespace CNTK
 
         template <typename ElementType>
         std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> WritableNativeTensorView();
+
+        const Microsoft::MSR::CNTK::TensorShape& GetTensorShape() const;
 
         std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase> GetStorageObjectPtr() const;
 

@@ -68,6 +68,11 @@ namespace CNTK
         return arg;
     }
 
+    // Performs a forward operation.
+    // It is assumed that the inputs are immutable, and hence if the result is merely a view (e.g. Reshape()),
+    // a view into the an input is returned instead of a newly allocated buffer.
+    // For Slice(), a view is returned if the slice is memory-contiguous. Otherwise, a copy is made, so that the
+    // result remains compatible with potential subsequent Matrix-library operations.
     // Note: To support auto-batching, this function must only consider attributes when presence of an additional
     // batch axis makes no difference. That is, for example, not the case for ReduceElements over AllStaticAxes().
     // This is addressed as:
@@ -83,27 +88,22 @@ namespace CNTK
             primitiveOp == PrimitiveOpType::Pass         ||
             primitiveOp == PrimitiveOpType::NoOp         ||
             primitiveOp == PrimitiveOpType::Reshape      ||
-            primitiveOp == PrimitiveOpType::Slice)
+            (primitiveOp == PrimitiveOpType::Slice && args[0]->IsContiguous()))
         {
             if (out)
                 LogicError("Variable '%S' Value(): An output buffer was passed for op %S that does not need one.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
-            out = args[0];
+            let arg = args[0];
             switch (primitiveOp)
             {
-            // ops that do not copy data
-            case PrimitiveOpType::StopGradient:
-            case PrimitiveOpType::Pass:
-            case PrimitiveOpType::NoOp:
-                break;
             case PrimitiveOpType::Reshape:
-                if (out->Shape() != outputShape)
-                     out = out->AsShape(outputShape);
+                if (arg->Shape() != outputShape)
+                     return arg->AsShape(outputShape);
                 break;
             case PrimitiveOpType::Slice:
-                out = GetSliceView(out, attributes, outputShape, funcForErrMsg);
-                break;
+                return GetSliceView(arg, attributes, outputShape, funcForErrMsg);
             }
-            return out;
+            // operation is a no-op: return original argument as is
+            return arg;
         }
 
         // ops that generate output: allocate memory for the result unless memory was passed in
@@ -112,9 +112,9 @@ namespace CNTK
         else if (out->Shape() != outputShape)
             LogicError("Variable '%S' Value(): The out buffer passed to op %S does not match outputShape.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
         // perform the operation
-        auto op = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
+        auto op          = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
         auto reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
-        double alpha = 1; // changed in ReduceMean()
+        double alpha = 1; // changed in ReduceMean() to 1/#elements averaged over
         switch (primitiveOp)
         {
             // binary elementwise ops are done outside, we just set the opcode
