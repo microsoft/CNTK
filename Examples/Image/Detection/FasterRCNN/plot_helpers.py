@@ -30,26 +30,38 @@ except:
 ####################################
 # Visualize results
 ####################################
-def visualizeResultsFaster(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padHeight, classes,
+def visualizeResultsFaster(imgPath, roiLabels, roiScores, roiRelCoords, targetWidht, targetHeight, classes,
                      nmsKeepIndices = None, boDrawNegativeRois = True, decisionThreshold = 0.0):
     # read and resize image
     imgWidth, imgHeight = imWidthHeight(imgPath)
-    scale = 800.0 / max(imgWidth, imgHeight)
-    imgHeight = int(imgHeight * scale)
-    imgWidth = int(imgWidth * scale)
-    if imgWidth > imgHeight:
-        h_border = 0
-        v_border = int((imgWidth - imgHeight)/2)
+    imgRatio = imgWidth / imgHeight
+    targetRatio = targetWidht / targetHeight
+    v_border = 0
+    h_border = 0
+    if np.abs(imgRatio - targetRatio) < 0.01:
+        imgWidth = targetWidht
+        imgHeight = targetHeight
     else:
-        h_border = int((imgHeight - imgWidth)/2)
-        v_border = 0
+        if imgRatio > targetRatio:
+            # fit the width, pad in height
+            scale = targetWidht / (1.0 * imgWidth)
+            imgWidth = targetWidht
+            imgHeight = int(imgHeight * scale)
+            v_border = int((targetHeight - imgHeight)/2)
+        else:
+            # fit the height, pad in width
+            scale = targetHeight / (1.0 * imgHeight)
+            imgHeight = targetHeight
+            imgWidth = int(imgWidth * scale)
+            h_border = int((targetWidht - imgWidth)/2)
+
+    assert h_border >= 0 and v_border >= 0
 
     PAD_COLOR = [103, 116, 123] # [114, 114, 114]
     cv_img = cv2.imread(imgPath)
     rgb_img = cv2.cvtColor(cv_img,cv2.COLOR_BGR2RGB)
     resized = cv2.resize(rgb_img, (imgWidth, imgHeight), interpolation=cv2.INTER_NEAREST)
     imgDebug = cv2.copyMakeBorder(resized,v_border,v_border,h_border,h_border,cv2.BORDER_CONSTANT,value=PAD_COLOR)
-    rect_scale = 800 / padWidth
 
     assert(len(roiLabels) == len(roiRelCoords))
     if roiScores:
@@ -76,11 +88,11 @@ def visualizeResultsFaster(imgPath, roiLabels, roiScores, roiRelCoords, padWidth
             else:
                 color = getColorsPalette()[label]
 
-            rect = [(rect_scale * i) for i in roiRelCoords[roiIndex]]
-            rect[0] = int(max(0, min(padWidth, rect[0])))
-            rect[1] = int(max(0, min(padHeight, rect[1])))
-            rect[2] = int(max(0, min(padWidth, rect[2])))
-            rect[3] = int(max(0, min(padHeight, rect[3])))
+            rect = roiRelCoords[roiIndex]
+            rect[0] = int(max(0, min(targetWidht, rect[0])))
+            rect[1] = int(max(0, min(targetHeight, rect[1])))
+            rect[2] = int(max(0, min(targetWidht, rect[2])))
+            rect[3] = int(max(0, min(targetHeight, rect[3])))
 
             # draw in higher iterations only the detections
             if iter == 0 and boDrawNegativeRois:
