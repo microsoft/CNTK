@@ -209,6 +209,7 @@ public:
                                                                    (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
                                                                    (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbuffer /*empty, not used*/,
                                                                    lmf, wp, amf, boostmmifactor, seqsMBRmode, uidsstripe, boundariesstripe);
+
             objectValue += (ElemType)((numavlogp - denavlogp) * numframes);
 
             if (samplesInRecurrentStep == 1)
@@ -223,6 +224,13 @@ public:
             }
             else
                 parallellattice.getgamma(tempmatrix);
+
+            if (denavlogp < LOGZERO / 2)
+            {
+                std::wstring key = lattices[i]->second.getkey();
+                fprintf(stderr, "bad utt: %ls\n", key.c_str());
+                tempmatrix.SetValue(0.0f);
+            }
 
             // set gamma for multi channel
             if (samplesInRecurrentStep > 1)
