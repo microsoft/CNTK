@@ -110,7 +110,8 @@ namespace CNTK
         m_isReadOnly = readOnly;
     }
 
-    // ElementType-erasing version of TensorView(sob, shape), based on dataType
+    // ElementType-erasing version of new TensorView(sob, shape), based on dataType.
+    // This returns a naked pointer.
     static void* NewTensorView(CNTK::DataType dataType, const shared_ptr<MatrixBase>& sob, const TensorShape& shape)
     {
         switch (dataType)
@@ -629,9 +630,68 @@ namespace CNTK
         }
     }
 
+    NDArrayViewPtr NDArrayView::SlicedTensorView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides, bool readOnly) const
+    {
+        // sparse tensors cannot have strides, so we can just use SliceView()
+        if (IsSparse())
+        {
+            if (any_of(strides.begin(), strides.end(), [](size_t v) { return v != 1; }))
+                InvalidArgument("NDArrayView::SlicedTensorView: Strides != 1 are not allowed for sparse data.");
+            return SliceView(startOffset, extent, readOnly);
+        }
+
+        let rank = Shape().Rank();
+        if (startOffset.size() != rank)
+            InvalidArgument("NDArrayView::SlicedTensorView: Rank (%d) of the NDArrayView does not match the dimensionality (%d) of the specified slice offset.", (int)rank, (int)startOffset.size());
+        if (extent.size() > rank)
+            InvalidArgument("NDArrayView::SlicedTensorView: Dimensionality (%d) of the specified slice extent exceeds the rank (%d) of this NDArrayView.", (int)extent.size(), (int)rank);
+        if (std::find(extent.begin(), extent.end(), 0) != extent.end())
+            InvalidArgument("NDArrayView::SlicedTensorView: Specified slice extent is zero along at least one of the axes.");
+
+        // get current actual shape
+        TensorShape tensorShape;
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            tensorShape = NativeTensorView<float>()->GetShape();
+            break;
+        case DataType::Double:
+            tensorShape = NativeTensorView<double>()->GetShape();
+            break;
+        default:
+            LogicError("NDArrayView::SlicedTensorView: Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+
+        // narrow it down
+        for (size_t i = 0; i < rank; ++i)
+        {
+            let beginIndex = startOffset[i];
+            let endIndex = i >= extent.size()
+                           ? 1 // missing extent at the end means index
+                           : extent[i] == NDShape::InferredDimension
+                             ? tensorShape[i] // InferrefDimension means end index = dim
+                             : startOffset[i] + extent[i];
+            let stride = i >= strides.size() ? strides[i] : 1;
+            tensorShape.NarrowTo(i, beginIndex, endIndex, (int)stride);
+        }
+
+        // drop trailing singleton dimensions
+        tensorShape.TrimRankInPlace(extent.size());
+
+        // create a TensorView with this new tensor shape onto the existing storage object
+        let tensorView = NewTensorView(m_dataType, GetStorageObjectPtr(), tensorShape);
+
+        // create a new NDArrayView from this
+        // ... need to move the shared_ptr into NewTensorView
+        tensorView;
+
+        NOT_IMPLEMENTED;
+    }
+
     NDArrayViewPtr NDArrayView::SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly) const
     {
-        auto rank = Shape().Rank();
+        let rank = Shape().Rank();
         if (startOffset.size() != rank)
             InvalidArgument("NDArrayView::SliceView: Rank (%d) of the NDArrayView does not match the dimensionality (%d) of the specified slice offset.", (int)rank, (int)startOffset.size());
 

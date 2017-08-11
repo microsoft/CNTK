@@ -858,17 +858,17 @@ namespace CNTK
         CNTK_API NDArrayViewPtr SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly = false) const;
 
         ///
-        /// Same as SliceView(), but allowing slicing with strides.
+        /// Same as SliceView(), but allowing non-contiguous slices and strides.
         /// More efficient than SliceView(), but not all functions can handle such views.
         ///
-        CNTK_API NDArrayViewPtr SlicedTensorView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly = false) const;
+        CNTK_API NDArrayViewPtr SlicedTensorView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides = std::vector<size_t>(), bool readOnly = false) const;
 
         ///
-        /// Same as SliceView(), but makes a copy. Non-contiguous slices are allowed.
+        /// Same as SliceView(), but makes a copy. Non-contiguous slices and strides are allowed.
         ///
-        NDArrayViewPtr SliceCopy(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly = false) const
+        NDArrayViewPtr SliceCopy(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides = std::vector<size_t>(), bool readOnly = false) const
         {
-            return SlicedTensorView(startOffset, extent, readOnly)->DeepClone();
+            return SlicedTensorView(startOffset, extent, strides, readOnly)->DeepClone();
         }
 
         ///

@@ -390,7 +390,7 @@ public:
         {
             ptrdiff_t stride = k > 0 ? m_strides[k - 1] * (ptrdiff_t) m_dims[k - 1] : 1;
             if (m_strides[k] != stride)
-                LogicError("TensorShape: A dense TensorShape expected. Dimension %d is not.", (int) k);
+                LogicError("TensorShape: A dense TensorShape expected. Axis %d is not.", (int) k);
         }
     }
 
@@ -630,7 +630,7 @@ public:
             m_strides.pop_back();
             m_dims.pop_back();
         }
-        VerifyIsDense(); // (should be OK to drop non-dense singleton dimensions, so check after dropping them)
+        //VerifyIsDense(); // (should be OK to drop non-dense singleton dimensions, so check after dropping them)
         return *this;
     }
     TensorShape PadRank(size_t desiredRank) const // append singleton dimensions
@@ -651,25 +651,25 @@ public:
         return TensorShape(*this).AppendInPlace(rank, newDim);
     }
     // narrow a dimension k to given bounds [begin, end), done in-place
-    TensorShape& NarrowTo(size_t k, size_t begin, size_t end, int strides = 1)
+    TensorShape& NarrowTo(size_t k, size_t begin, size_t end, int stride = 1)
     {
         if (k >= size())
             LogicError("NarrowTo: Index out of bounds.");
         if (end <= begin || end > m_dims[k])
             LogicError("NarrowTo: Invalid bounds parameter, dimensions must be at least one.");
-        bool reverse = strides < 0;
-        size_t realStrides = std::abs(strides);
-        if (realStrides == 0)
+        bool reverse = stride < 0;
+        size_t realStride = std::abs(stride);
+        if (realStride == 0)
             LogicError("NarrowTo: Narrow with stride 0 is not supported.");
-        if (realStrides == 0 || realStrides > (end - begin))
-            LogicError("NarrowTo: stride %zd is invalid for interval [%zd, %zd).", realStrides, begin, end);
+        if (realStride == 0 || realStride > (end - begin))
+            LogicError("NarrowTo: stride %zd is invalid for interval [%zd, %zd).", realStride, begin, end);
         size_t start = reverse ? (end - 1) : begin;
-        auto dims = (end - begin) / realStrides;
-        if ((end - begin) % realStrides > 0)
+        auto dims = (end - begin) / realStride;
+        if ((end - begin) % realStride > 0)
             dims++;
         m_offset += m_strides[k] * start;
         m_dims[k] = dims;
-        m_strides[k] *= realStrides;
+        m_strides[k] *= realStride;
         if (reverse)
             m_strides[k] *= -1;
         return *this;
