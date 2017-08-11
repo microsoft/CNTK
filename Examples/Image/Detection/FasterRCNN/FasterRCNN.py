@@ -27,7 +27,7 @@ from _cntk_py import force_deterministic_algorithms
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, ".."))
-from utils.rpn.rpn_helpers import create_rpn, create_proposal_target_layer
+from utils.rpn.rpn_helpers import create_rpn, create_rpn_bottom, create_proposal_target_layer
 from utils.rpn.cntk_smoothL1_loss import SmoothL1Loss
 from utils.map.map_helpers import evaluate_detections
 from utils.annotations.annotations_helper import parse_class_map_file
@@ -324,6 +324,7 @@ def create_eval_model(model, image_input, dims_input, rpn_model=None):
 def train_model(image_input, roi_input, dims_input, loss, pred_error,
                 lr_per_sample, mm_schedule, l2_reg_weight, epochs_to_train,
                 rpn_rois_input=None, buffered_rpn_proposals=None):
+    loss = alias(loss, 'final_net_loss')
     if isinstance(loss, cntk.Variable):
         loss = combine([loss])
 
@@ -348,7 +349,7 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
     bias_lr_schedule = learning_rate_schedule(bias_lr_per_sample, unit=UnitType.sample)
     bias_learner = momentum_sgd(biases, bias_lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
                            unit_gain=False, use_mean_gradient=cfg["CNTK"].USE_MEAN_GRADIENT)
-    trainer = Trainer(None, (loss, pred_error), [learner, bias_learner])
+    #trainer = Trainer(None, (loss, pred_error), [learner, bias_learner])
 
     # Get minibatches of images and perform model training
     print("Training model for %s epochs." % epochs_to_train)
@@ -379,15 +380,54 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
             if use_buffered_proposals:
                 data[rpn_rois_input] = MinibatchData(Value(batch=np.asarray(proposals, dtype=np.float32)), 1, 1, False)
                 # remove dims input if no rpn is required to avoid warnings
-                del data[[k for k in data if '[6]' in str(k)][0]]
+                del data[dims_input]
+
+            # create custom input variable for current image shape
+            image_data = data[image_input]
+            del data[image_input]
+            img_shape = image_data.shape
+            current_w = img_shape[2]
+            current_h = img_shape[1]
+            current_input_var = input_variable((num_channels, current_h, current_w), dynamic_axes=[Axis.default_batch_axis()], name='current_input')
+            data[current_input_var] = image_data
+
+            # clone network (and replace the reshape ops...)
+            #cloned_net = clone_model(loss, [feature_node_name], [loss.outputs[0].name], CloneMethod.share)
+            #cloned_loss = cloned_net(current_input_var, roi_input, dims_input)
+            cloned_net_top = clone_model(loss, [feature_node_name],
+                                     ['rpn_cls_score', 'rpn_bbox_pred', last_conv_node_name],
+                                     CloneMethod.share)
+            cloned_net_bottom = clone_model(loss, ['rpn_rois', 'rpn_losses', last_conv_node_name],
+                                     [loss.outputs[0].name],
+                                     CloneMethod.share)
+
+            top_out = cloned_net_top(current_input_var)
+            rpn_cls_score = top_out.outputs[0]
+            rpn_bbox_pred = top_out.outputs[1]
+            last_conv_out = top_out.outputs[2]
+
+            import pdb; pdb.set_trace()
+            # from rpn helpers:
+            rpn_rois, rpn_losses = create_rpn_bottom(rpn_cls_score, rpn_bbox_pred, roi_input, dims_input,
+                                                     proposal_layer_param_string=cfg["CNTK"].PROPOSAL_LAYER_PARAMS)
+
+            # Composite(Combine):
+            # Placeholder('Placeholder1364', [???], [???]),
+            # Placeholder('Placeholder1365', [???], [???]),
+            # Placeholder('Placeholder1363', [???], [???]),
+            # Input('Input1377', [#], [50 x 5])
+            # -> Output('final_net_loss', [???], [???])
+            cloned_loss = cloned_net_bottom(rpn_rois, rpn_losses, last_conv_out, roi_input)
+
+            trainer = Trainer(None, (cloned_loss, None), [learner, bias_learner])
 
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
+            progress_printer.update_with_trainer(trainer, with_metric=False)  # log progress
             if sample_count % 100 == 0:
                 print("Processed {} samples".format(sample_count))
 
-        progress_printer.epoch_summary(with_metric=True)
+        progress_printer.epoch_summary(with_metric=False)
 
 def compute_rpn_proposals(rpn_model, image_input, roi_input, dims_input):
     num_images = cfg["CNTK"].NUM_TRAIN_IMAGES

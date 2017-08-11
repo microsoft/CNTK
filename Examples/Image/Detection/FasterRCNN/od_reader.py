@@ -192,9 +192,11 @@ class ObjectDetectionReader:
 
         target_w, target_h, img_width, img_height, top, bottom, left, right = self._img_stats[index]
 
-        resized = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_NEAREST)
-        resized_with_pad = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT,
-                                              value=self._pad_value)
+        #resized = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_NEAREST)
+        #resized_with_pad = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=self._pad_value)
+        resized = cv2.resize(img, (target_w + index * 10, target_h + index * 10), 0, 0, interpolation=cv2.INTER_NEAREST)
+        resized_with_pad = resized
+
         if self._flip_image:
             resized_with_pad = cv2.flip(resized_with_pad, 1)
 

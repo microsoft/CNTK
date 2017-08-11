@@ -55,6 +55,10 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, add_loss_functions=True,
     rpn_bbox_pred = Convolution((1, 1), 36, activation=None, name="rpn_bbox_pred",
                                 init = normal(scale=0.01), init_bias=conv_bias_init)(rpn_conv_3x3)  # 4(coords) * 9(anchors)
 
+    return create_rpn_bottom(rpn_cls_score, rpn_bbox_pred, scaled_gt_boxes, im_info, add_loss_functions, proposal_layer_param_string)
+
+def create_rpn_bottom(rpn_cls_score, rpn_bbox_pred, scaled_gt_boxes, im_info, add_loss_functions=True,
+               proposal_layer_param_string=None):
     # apply softmax to get (bg, fg) probabilities and reshape predictions back to grid of (18, H, W)
     num_predictions = int(rpn_cls_score.shape[0] / 2)
     rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions, rpn_cls_score.shape[1], rpn_cls_score.shape[2]), name="rpn_cls_score_rshp")
