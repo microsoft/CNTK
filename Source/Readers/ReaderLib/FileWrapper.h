@@ -185,6 +185,16 @@ public:
             RuntimeError("Input file '%ls' is not open.", Filename().c_str());
     }
 
+    inline bool CheckUnicode() const
+    {
+        return funicode(File());
+    }
+
+    inline bool CheckError() const
+    {
+        return (ferror(File()) != 0);
+    }
+
     inline FILE* File() const
     {
         return m_file.get();
