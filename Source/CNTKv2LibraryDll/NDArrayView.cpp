@@ -663,7 +663,7 @@ namespace CNTK
                            : extent[i] == NDShape::InferredDimension
                              ? tensorShape[i] // InferredDimension means end index = dim
                              : startOffset[i] + extent[i];
-            let stride = i >= strides.size() ? strides[i] : 1;
+            let stride = i < strides.size() ? strides[i] : 1;
             tensorShape.NarrowTo(i, beginIndex, endIndex, (int)stride);
         }
 

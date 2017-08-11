@@ -383,15 +383,33 @@ public:
     bool operator==(const TensorShape& other) const { return m_dims == other.m_dims; }
     bool operator!=(const TensorShape& other) const { return !operator==(other); } // duh!
 
-    // verify that this refers to a dense matrix (no strides)
+    // check whether this refers to a dense matrix (contiguous in memory, no strides)
+    bool IsDense() const
+    {
+        let rank = m_dims.size();
+        if (rank > 0)
+        {
+            if (m_strides[0] != 1)
+                return false;
+            if (rank > 1)
+            {
+                if (m_strides[1] != (ptrdiff_t)m_dims[0])
+                    return false;
+                for (size_t k = 2; k < rank; k++)
+                {
+                    if (m_strides[k] != m_strides[k - 1] * (ptrdiff_t)m_dims[k - 1])
+                        return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    // verify that this refers to a dense matrix (contiguous in memory, no strides)
     void VerifyIsDense() const
     {
-        for (size_t k = 0; k < m_dims.size(); k++) // (TODO: we can save one multiplication here)
-        {
-            ptrdiff_t stride = k > 0 ? m_strides[k - 1] * (ptrdiff_t) m_dims[k - 1] : 1;
-            if (m_strides[k] != stride)
-                LogicError("TensorShape: A dense TensorShape expected. Axis %d is not.", (int) k);
-        }
+        if (!IsDense())
+            LogicError("TensorShape: A dense (memory-contiguous) TensorShape was expected.");
     }
 
     // TODO: move the methods in this region under their respective headline
