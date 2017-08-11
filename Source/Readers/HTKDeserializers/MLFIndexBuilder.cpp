@@ -82,6 +82,9 @@ namespace CNTK {
             if (!line.empty() && line.back() == '\r')
                 line.pop_back();
 
+            if (line.empty())
+                continue;
+
             switch (currentState)
             {
             case State::Header:
