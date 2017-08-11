@@ -265,6 +265,13 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
     if (reducingOpDims.size() > 0)
         CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this);
 
+    // special support for sparse data: ReduceSum(ElementWiseProduct(x,y)) (same as batched Times(x,y))
+    // Note: User writes Times(), and Dynamite will map it to this instead.
+    if (op == ElementWiseOperator::opElementwiseProduct && reductionOp == ElementWiseOperator::opSum)
+    {
+        // TODO: ...
+    }
+
     GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 

@@ -277,7 +277,7 @@ void Train()
     let parameters = model_fn.Parameters();
     //let epochSize = 100000; // it's a small corpus, ~50k samples
     let epochSize = 10000000; // this is maybe half a true epoch
-    let minibatchSize = 1384    /3;// 50;  // 384 is 32 sequences, assuming av. length ~12
+    let minibatchSize = 4*1384;// 50;  // 384 is 32 sequences, assuming av. length ~12
     // correction:
     //  - LR is specified for av gradient
     //  - numer should be /32
@@ -287,7 +287,7 @@ void Train()
 #if 0
     auto baseLearner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005), learnerOptions);
 #else
-    let f = 1 / sqrt(32.0)/*AdaGrad correction-correction*/   * 4;
+    let f = 1 / sqrt(32.0)/*AdaGrad correction-correction*/;
     auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*f, 0.00005*f, 0.000025*f, 0.000025*f, 0.000025*f, 0.00001*f }, epochSize),
                                    MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000), /*eps=*/1e-8, /*adamax=*/false,
                                    learnerOptions);
@@ -340,15 +340,15 @@ void Train()
         let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
         totalLabels += info.numberOfSamples;
         let smoothedLossVal = smoothedLoss.Update(lossPerLabel, info.numberOfSamples);
-        fprintf(stderr, "%d: CrossEntropy loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d, word/sec=%.1f\n",
+        fprintf(stderr, "%d: CrossEntropy loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d, words/sec=%.1f\n",
                         (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
                         info.numberOfSamples / timer.ElapsedSeconds());
         // log
         // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
         if (mbCount < 400 || mbCount % 5 == 0)
             fflush(stderr);
-        if (mbCount == 20) // for mem leak check
-            break;
+        //if (mbCount == 20) // for mem leak check
+        //    break;
         if (std::isnan(lossPerLabel))
             throw runtime_error("Loss is NaN.");
     }

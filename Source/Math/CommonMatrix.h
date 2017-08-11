@@ -518,7 +518,6 @@ protected:
     ElemType* Buffer() const { return m_sob->Buffer(); }
     void SetBuffer(ElemType* parray, size_t alloc, bool external = false) { m_sob->SetBuffer(parray, alloc, external); }
 
-    
     size_t GetBlockSize() const { return m_sob->GetBlockSize(); }
     void SetBlockSize(size_t blockSize) { m_sob->SetBlockSize(blockSize); }
 

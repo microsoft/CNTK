@@ -236,6 +236,7 @@ namespace CNTK
         // Conditions (batching):
         //   The first input (the matrix) must be the same for all items.
         //   The second one has the same conditions as for unary element-wise ops.
+        //   If expressable as ReduceSum(ElementTimes(x,y)) then matrix does not need to be the same.
         // 
         // Conditions (stacking):
         //   First input (matrix) like batching.
@@ -243,8 +244,11 @@ namespace CNTK
         // 
         // When batching, rank parameters that count from the right (mapRank?--TODO: track it down) must be
         // adjusted or resolved into absolute ones (that counts from the left).
+        //
+        // If expressable as ReduceSum(ElementTimes(x,y)) then the batched version will use a special Matrix operation.
+        // ... TODO: Get the corresponding condition for the backprop path.
         // 
-        // TODO: We should investigate strided SGEMM. Then we can batch everything.
+        // TODO: We should investigate stride-batched SGEMM. Then we can batch everything.
 
         // Convolution/pooling
         // -------------------
@@ -1138,9 +1142,9 @@ class Variable::AutoBatch
         auto doNaively = true;
 #else
         let doNaively =
-            isFree ||
+            (isFree && opClass != OpSpecificConditionKind::Slice) ||
             op == PrimitiveOpType::Splice ||
-            op == PrimitiveOpType::Slice || // TODO: broken for Index()
+            op == PrimitiveOpType::Slice || // TODO: for now, snce we don't support SliceView with strides
             batchSize == 1;
 #endif
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",

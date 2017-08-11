@@ -44,7 +44,7 @@ enum ElementWiseOperator
     opElementwiseProductWithQuotient, /* a * (b / c) */
     opElementwiseProductWithPowExponentDerivative, /* a * b * log(c) */
     opElementwiseProductWithPowBaseDerivative,  /* a * c * pow(b, c-1) */
-                                                // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
+    // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
 

@@ -3118,6 +3118,8 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
     int start = colCSCIndex[colInC];
     int end = colCSCIndex[colInC + 1];
 
+    // loop over all non-zero elements in a single column
+    // In the case of one-hot, that's one loop iteration.
     ElemType s = 0;
     for (int j = start; j < end; j++) // j points to the value
     {

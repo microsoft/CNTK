@@ -463,6 +463,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
     SetValue(denseMatrix, GetFormat());
 }
 
+// set value from a dense matrix
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat)
 {
@@ -534,6 +535,8 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
     UpdateCachedNzCount(nnzTotalDevHostPtr);
 }
 
+// fetch the CSC-column/CSR-row offset array from the GPU to the CPU
+// Returns a pointer that the caller must delete[].
 template <class ElemType>
 GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
 {
@@ -587,7 +590,7 @@ void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsM
 #endif
 }
 
-
+// assignment is deep
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(const GPUSparseMatrix<ElemType>& deepCopy)
 {
@@ -619,7 +622,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(GPUSparseMatrix<
 template <class ElemType>
 GPUSparseMatrix<ElemType>::~GPUSparseMatrix()
 {
-    ZeroValues();
+    ZeroValues(); // TODO: why is this necessary?
 }
 
 //ResizeAsAndCopyIndexFrom - Resize this sparse matrix to have the same element structure as the passed matrix
@@ -686,6 +689,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
     SetNumCols(numCols);
 }
 
+// Reserves space for numNZElemToReserve non-zero elements. Also verifies that the matrix is indeed [numRows x numCols].
 // WARNING: When memory is reallocated, existing information will be lost.
 // TODO: add keepExistingValues (default to true) argument so that the existing values are kept even after reallocation
 template <class ElemType>
@@ -828,6 +832,7 @@ void GPUSparseMatrix<ElemType>::ClearNzCount()
 }
 
 // copy features to GPU
+// TODO: This function should be near-identical to SetMatrixFromCSCFormat(), but SetMatrixFromCSCFormat() has been updated. Merge these.
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE* h_CSRRow, const GPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
                                                        const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
@@ -913,6 +918,7 @@ void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_
     }
 }
 
+// Set the matrix to the data given by the three arrays, copying the data to the GPU.
 // this version is used from the reader
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
@@ -934,6 +940,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 
     // m_nz doesn't exist anymore. How are we going to deal with the NzSize, RowSize, and ColSize? Do it ourselves of course.
 
+    // copy the non-zero elements
     cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
     if (transferer)
     {
@@ -947,7 +954,8 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     else
         CUDA_CALL(cudaMemcpy(Data(), h_Val, nz * sizeof(ElemType), kind));
 
-    if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
+    // copy the index arrays
+    if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE)) // note: this is true
     {
         if (transferer)
         {
@@ -960,7 +968,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
             CUDA_CALL(cudaMemcpy(ColLocation(), h_CSCCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1), kind));
         }
     }
-    else
+    else // TODO: is this branch needed, or can it just throw a logic_error?
     {
         size_t allocSize = sizeof(GPUSPARSE_INDEX_TYPE) * nz + sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1);
         GPUSPARSE_INDEX_TYPE* pCol = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(allocSize);
@@ -980,6 +988,9 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
             CUDA_CALL(cudaMemcpy(ColLocation(), pCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1), kind));
         }
     }
+
+    // TODO: When coming from the CPU, we can check whether the data is one-hot; and pass that to UpdateCachedNZCount() as well.
+
     UpdateCachedNzCount(nz, IsOnDevice && !transferer); // (when coming from CPU, nz was already validated)
 }
 
@@ -1065,6 +1076,7 @@ void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(GPUSPARSE_INDEX_TYPE*& h_
 #pragma region Static BLAS Functions
 
 // dense X sparse = dense
+// This is e.g. used for the forward pass of an embedding (e = E w where w is one-hot).
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
                                                        const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c)
@@ -1097,6 +1109,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     c.PrepareDevice();
     if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC)
     {
+        // this is the code branch for embedding from sparse input
         ConvolveAndWeightedAdd(alpha, lhs, transposeA, rhs, transposeB, beta, c, 1, 1, false, false);
     }
     else if (rhs.GetFormat() == matrixFormatSparseCSR)
@@ -1112,6 +1125,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
 }
 
 // dense X sparse = dense
+// This is called from MultiplyAndWeightedAdd() for the forward pass of an embedding (e = E w where w is one-hot), with numChannels=1, no subsampling, no padding, not channelwise.
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
                                                        const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta,
@@ -1238,6 +1252,7 @@ void GPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, co
         c.Data(),
         a.GetNumRows(), a.GetNumCols());
 }
+
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, 
     ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
@@ -1283,8 +1298,10 @@ void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, co
     }
 }
 
-// backward pass from hidden layer to feature weight
 // dense X sparse = sparse
+// This is the backward pass from hidden layer to feature weight.
+// E.g. e = E * w -> grad_E = grad_e * w'   (where w = CSC one-hot).
+// In the one-hot case, this adds grad_e(t) to column w_index(t) of E.
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
                                                const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, GPUSparseMatrix<ElemType>& c)
@@ -1314,6 +1331,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
     }
     else if (!transposeA && transposeB)
     {
+        // This is the backward pass from hidden layer to feature weight.
         if (rhs.GetFormat() != matrixFormatSparseCSC)
             NOT_IMPLEMENTED;
 
@@ -1347,6 +1365,11 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         _determineBlockIds<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
             c.BlockId2ColOrRow(), c.ColOrRow2BlockId(), n, blockSize);
 
+        // setting the block size incurs a GPU sync
+        // In the case of one-hot, we know an upper bound.
+        // TODO: We could count the number of non-zero rows when transferring from the CPU.
+        //       Should we just keep the CPU-side data around? In the one-hot case? Then we can do the mapping CPU-side.
+        //       We can then even keep a CPU-side buffer in the weight matrix, for this purpose.
         size_t blockSizeCurr;
         CUDA_CALL(cudaMemcpy(&blockSizeCurr, blockSize, sizeof(size_t), cudaMemcpyDeviceToHost));
         TracingGPUMemoryAllocator::Free<size_t>(lhs.GetComputeDeviceId(), blockSize);
