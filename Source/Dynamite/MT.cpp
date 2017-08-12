@@ -147,6 +147,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
         // convert encoder sequence into a dense tensor, so that we can do matrix products along the sequence axis - 1
         Variable hEncsTensor = Splice(hEncs, Axis(1)); // [2*hiddenDim, inputLen]
         //hEncsTensor = barrier(hEncsTensor);
+        // ...this makes it worse... why?
         // decoding loop
         Variable state = initialState;
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
@@ -275,18 +276,17 @@ void Train()
     model_fn.LogParameters();
 
     let parameters = model_fn.Parameters();
-    //let epochSize = 100000; // it's a small corpus, ~50k samples
-    let epochSize = 10000000; // this is maybe half a true epoch
-    let minibatchSize = 4*1384/100;// 50;  // 384 is 32 sequences, assuming av. length ~12
-    // correction:
-    //  - LR is specified for av gradient
-    //  - numer should be /32
-    //  - denom should be /sqrt(32)
+    let epochSize = 10000000; // 10M is a bit more than half an epoch of ROM-ENG (~16M words)
+    let minibatchSize = 4*1384; // TODO: change to 4k or 8k
     AdditionalLearningOptions learnerOptions;
     learnerOptions.gradientClippingThresholdPerSample = 2;
 #if 0
     auto baseLearner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005), learnerOptions);
 #else
+    // AdaGrad correction-correction:
+    //  - LR is specified for av gradient
+    //  - numer should be /32
+    //  - denom should be /sqrt(32)
     let f = 1 / sqrt(32.0)/*AdaGrad correction-correction*/;
     auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*f, 0.00005*f, 0.000025*f, 0.000025*f, 0.000025*f, 0.00001*f }, epochSize),
                                    MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000), /*eps=*/1e-8, /*adamax=*/false,

@@ -1144,7 +1144,7 @@ class Variable::AutoBatch
         let doNaively =
             (isFree && opClass != OpSpecificConditionKind::Slice) ||
             op == PrimitiveOpType::Splice ||
-            op == PrimitiveOpType::Slice || // TODO: for now, snce we don't support SliceView with strides
+            (op == PrimitiveOpType::Slice && f0.m_attributes.Size() == 1) || // TODO: for now, since Indexing with dropping axes fails batching
             batchSize == 1;
 #endif
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
@@ -1354,7 +1354,7 @@ class Variable::AutoBatch
                 // TODO: the following is a little more efficient, but creates a cycle, so we should exclude the lazy index for the first op
                 //batchedOp = f0.shared_from_this();
             }
-            // execute it
+            // execute it   --this is the actual batched execution of the op
             MemoizeKnowableValueInArena(*batchedOp);
             // implant all results (all as lazy/virtual references through m_lazyIndex)
             size_t j = anyBatchedInputs ? 0 : SIZE_MAX;

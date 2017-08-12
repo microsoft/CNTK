@@ -70,7 +70,7 @@ namespace CNTK
     }
 
     // Performs a forward operation.
-    // It is assumed that the inputs are immutable, and hence if the result is merely a view (e.g. Reshape()),
+    // It is assumed that the inputs are immutable, and hence if the result can be expressed as a view (e.g. Reshape()),
     // a view into the an input is returned instead of a newly allocated buffer.
     // For Slice(), a view is returned if the slice is memory-contiguous. Otherwise, a copy is made, so that the
     // result remains compatible with potential subsequent Matrix-library operations.
@@ -153,6 +153,7 @@ namespace CNTK
         case PrimitiveOpType::Select:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opCond;                  break;
             // Slice if copy requested or needed
         case PrimitiveOpType::Slice:
+            // The slice view has already completed, but we must copy the result over. The following op is the same as the shared one except for taking the slice view as its input.
             NDArrayView::NumericOperation({ sliceView }, alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, out, 0.0, reductionOp);
             break;
             // reduction ops are also done outside, but set the reductionOp

@@ -470,7 +470,8 @@ struct Sequence
             Variable state = initialState;
             for (let& xt : x)
                 state = step(state, xt);
-            return barrier(state);
+            state = barrier(state);
+            return state;
         });
     }
 
