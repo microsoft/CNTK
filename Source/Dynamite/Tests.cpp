@@ -135,7 +135,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->Slice           ({ 0, 1 }, { 13,  4 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(1) }, { 1 }, { 1+4 }); },{ { 13, 42 } } }, // same but testing SlicedTensorView() on the reference path
         { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView       ({    1 }, {      3 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0) }, { 1 }, { 1+3 }); },{ { 13 } } }, // slice of rank 1
         // matrix product
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, sharedMatrix, false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times (sharedMatrixVar, args[1]   ); },{ { 13, 42 },{ 42, 9 } } },
+        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, sharedMatrix, false, argValues[1], false, 1.0, 1); }, "Times_shared"   }, [&](const vector<Variable>& args) { return CNTK::Times (sharedMatrixVar, args[1]   ); },{ { 13, 42 },{ 42, 9 } } },
         { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42, 9 } } },
         { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42 } } },
         { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1], 0); },{ { 42 },{ 42 } } },
@@ -180,7 +180,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         { RedOp(Sum,    NDShape({  1     }), 13), [](const vector<Variable>& args) { return CNTK::ReduceMean  (args[0], Axis(0)); }, { { 13 } } }
     };
 
-    fprintf(stderr, "\n--- batch of %d. %s on %S\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str());
+    fprintf(stderr, "\n--- Running tests for batch of %d. %s on %S\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str());
     for (let& test : tests)
     {
         NDArrayViewPtr refVal;

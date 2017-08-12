@@ -1062,11 +1062,7 @@ class Variable::AutoBatch
         output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
         // stats
         let primitiveOp = f.m_op;
-        if (primitiveOp == PrimitiveOpType::StopGradient ||
-            primitiveOp == PrimitiveOpType::Pass ||
-            primitiveOp == PrimitiveOpType::NoOp ||
-            primitiveOp == PrimitiveOpType::Reshape ||
-            primitiveOp == PrimitiveOpType::Slice)
+        if (isFree) // means we did not pass a data buffer for the result; any one we pass a buffer does actual work
             m_stats.numDoneFreeOps++;
         else if (primitiveOp == PrimitiveOpType::Splice)
             m_stats.numDoneSpliceOps++;
@@ -1863,7 +1859,7 @@ public:
             return true;
 #endif
         };
-#ifndef NO_BATCHED_FORWARDxxxx  // TODO: should this be backward?
+#ifndef NO_BATCHED_FORWARD  // TODO: should this be backward?
         let opClass = g_oscTable[f->m_op]; // operation-specific auto-batching class
         // splice operation must use scatter
         if (opClass == OpSpecificConditionKind::Splice)
