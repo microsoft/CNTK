@@ -23,6 +23,10 @@ from ..default_options import get_default_override, default_override_or
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
 
+CONSTANT_PAD = cntk_py.PaddingMode_CONSTANTPAD
+REFLECT_PAD = cntk_py.PaddingMode_REFLECTPAD
+SYMMETRIC_PAD = cntk_py.PaddingMode_SYMMETRICPAD
+
 @typemap
 def combine(*operands, **kw_name):
     '''
@@ -1993,6 +1997,50 @@ def swapaxes(x, axis1=0, axis2=1, name=''):
     axis1 = sanitize_axis(axis1)
     axis2 = sanitize_axis(axis2)
     return transpose_axes(x, axis1, axis2, name)
+
+
+@typemap
+def pad(x, pattern, mode=CONSTANT_PAD, constant_value = 0, name=''):
+    '''
+    Pads a tensor according to the specified patterns.
+    Three padding modes are supported: CONSTANT / REFLECT / SYMMETRIC.
+
+    Example:
+        >>> data = np.arange(6, dtype=np.float32).reshape((2,3))
+        >>> x = C.constant(value=data)
+        >>> C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.CONSTANT_PAD, constant_value=1).eval()
+        array([[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
+               [ 1.,  1.,  0.,  1.,  2.,  1.,  1.],
+               [ 1.,  1.,  3.,  4.,  5.,  1.,  1.],
+               [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]], dtype=float32)
+        >>> C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.REFLECT_PAD).eval()
+        array([[ 5.,  4.,  3.,  4.,  5.,  4.,  3.],
+               [ 2.,  1.,  0.,  1.,  2.,  1.,  0.],
+               [ 5.,  4.,  3.,  4.,  5.,  4.,  3.],
+               [ 2.,  1.,  0.,  1.,  2.,  1.,  0.]], dtype=float32)
+        >>> C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.SYMMETRIC_PAD).eval()
+        array([[ 1.,  0.,  0.,  1.,  2.,  2.,  1.],
+               [ 1.,  0.,  0.,  1.,  2.,  2.,  1.],
+               [ 4.,  3.,  3.,  4.,  5.,  5.,  4.],
+               [ 4.,  3.,  3.,  4.,  5.,  5.,  4.]], dtype=float32)
+
+    Args:
+        x: tensor to be padded.
+        pattern (list of tuple with 2 integers): how many values to add before and after the contents of the tensor in each dimension.
+        mode (int): padding mode: C.ops.CONSTANT_PAD, C.ops.REFLECT_PAD and C.ops.SYMMETRIC_PAD
+        constant_value: the value used to fill the padding cells, only meaningful under CONSTANT mode.
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import pad
+    if (any([len(_) != 2 for _  in pattern])):
+        raise ValueError("padding pattern should be a integer list with shape [n, 2]")
+    x = sanitize_input(x)
+    head = [p[0] for p in reversed(pattern)]
+    foot = [p[1] for p in reversed(pattern)]
+    return pad(x, mode, head, foot, constant_value, name)
+
 
 @typemap
 def slice(x, axis, begin_index, end_index, strides=None, name=''):

@@ -1312,6 +1312,16 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::UnpackBatch, operand, Dictionary(), name);
     }
 
+    FunctionPtr Pad(const Variable& operand, PaddingMode mode, const std::vector<size_t>& head, const std::vector<size_t>& foot, double constantValue, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePaddingHead] = AsDictionaryValueVector(head);
+        additionalProperties[PrimitiveFunction::AttributeNamePaddingFoot] = AsDictionaryValueVector(foot);
+        additionalProperties[PrimitiveFunction::AttributeNamePaddingMode] = (size_t)mode;
+        additionalProperties[PrimitiveFunction::AttributeNamePaddingConstantValue] = constantValue;
+        return UnaryOp(PrimitiveOpType::Pad, operand, std::move(additionalProperties), name);
+    }
+
     FunctionPtr GumbelRandom(const NDShape& shape, DataType dataType, double loc, double scale, unsigned long seed, const std::wstring& name)
     {
         if (scale < 0)
