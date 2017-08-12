@@ -664,8 +664,7 @@ namespace CNTK
         // Modes:
         //  - ContiguousView --> create both a TensorView and Matrix-level view; fail if not possible
         //  - View --> create a TensorView view, without updating the underlying matrix
-        //  - ContiguousViewOrCopy --> first try TensorView view. If not contiguous, then copy it. If contiguous then fall through to ContiguousView.
-        //                             This way, we always get an updated Matrix.
+        //  - ContiguousViewOrCopy --> first try TensorView view. If not contiguous, then copy it. If contiguous then fall through to ContiguousView. This way, we always get an updated Matrix view.
         // If sparse then the slice must always be contiguous presently (due to lack of underlying slicing function for sparse matrices/tensors).
         if (sliceMode != SliceMode::ContiguousView)
         {
@@ -677,10 +676,10 @@ namespace CNTK
             {
                 let beginIndex = startOffset[i];
                 let endIndex = i >= extent.size()
-                               ? 1 // missing extent at the end means index
+                               ? beginIndex + 1 // missing extent at the end means index
                                : extent[i] == NDShape::InferredDimension
                                  ? tensorShape[i] // InferredDimension means end index = dim
-                                 : startOffset[i] + extent[i];
+                                 : beginIndex + extent[i];
                 let stride = i < strides.size() ? strides[i] : 1;
                 tensorShape.NarrowTo(i, beginIndex, endIndex, (int)stride);
             }
