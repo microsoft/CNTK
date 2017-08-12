@@ -64,7 +64,7 @@ namespace CNTK
                 extent[axisIndex] = endIndex - beginIndex;
             }
             if (extent != arg->Shape().Dimensions() || any_of(startOffset.begin(), startOffset.end(), [](size_t v) { return v != 0; }))
-                return arg->Slice(startOffset, extent, vector<size_t>(), readOnly ? NDArrayView::SliceMode::ContiguousView : NDArrayView::SliceMode::View, readOnly); // slice it
+                return arg->Slice(startOffset, extent, vector<size_t>(), NDArrayView::SliceMode::View, readOnly); // slice it
         }
         return arg;
     }
@@ -84,12 +84,15 @@ namespace CNTK
                      const NDShape& outputShape, NDArrayViewPtr&& out, // into this output (if null then create a new one)
                      const PrimitiveFunction& funcForErrMsg)
     {
+        // Slice() can either create new data or not, so do it first
+        let sliceView = primitiveOp == PrimitiveOpType::Slice ? GetSliceView(args[0], attributes, outputShape, /*readOnly=*/true, funcForErrMsg) : nullptr;
+
         // first handle ops that do not create new data
         if (primitiveOp == PrimitiveOpType::StopGradient ||
             primitiveOp == PrimitiveOpType::Pass         ||
             primitiveOp == PrimitiveOpType::NoOp         ||
             primitiveOp == PrimitiveOpType::Reshape      ||
-            primitiveOp == PrimitiveOpType::Slice)
+            (primitiveOp == PrimitiveOpType::Slice && !out && sliceView->IsContiguous())) // must copy if output buffer provided or data not contiguous
         {
             if (out)
                 LogicError("Variable '%S' Value(): An output buffer was passed for op %S that does not need one.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
@@ -101,7 +104,7 @@ namespace CNTK
                      return arg->AsShape(outputShape);
                 break;
             case PrimitiveOpType::Slice:
-                return GetSliceView(arg, attributes, outputShape, /*readOnly=*/true, funcForErrMsg);
+                return sliceView;
             }
             // operation is a no-op: return original argument as is
             return arg;
@@ -148,6 +151,10 @@ namespace CNTK
             // ternary operations to be completed
         case PrimitiveOpType::Clip:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opClip;                  break;
         case PrimitiveOpType::Select:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opCond;                  break;
+            // Slice if copy requested or needed
+        case PrimitiveOpType::Slice:
+            NDArrayView::NumericOperation({ sliceView }, alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, out, 0.0, reductionOp);
+            break;
             // reduction ops are also done outside, but set the reductionOp
         case PrimitiveOpType::ReduceElements:
             {
@@ -346,8 +353,8 @@ namespace CNTK
         case PrimitiveOpType::StableSigmoid: op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithSigmoidDerivativeFromOutput;               arg2 = outputValue; break;
             // no-op operations with simple TensorView implementation
             // NOTE: These do not need any data copy if there is only one consumer, which we won't know here. That case will be caught in the batched version.
-        case PrimitiveOpType::NoOp:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
-        case PrimitiveOpType::Reshape:        op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
+        case PrimitiveOpType::NoOp:          op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
+        case PrimitiveOpType::Reshape:       op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
             // gradients that are copies with broadcasting
         case PrimitiveOpType::ReduceElements:
             {

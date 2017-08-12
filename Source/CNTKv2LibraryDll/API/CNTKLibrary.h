@@ -871,6 +871,7 @@ namespace CNTK
         ///
         /// Creates a new NDArrayView which is an alias of a slice of 'this' view if possible, or else a copy.
         /// Caller can specify whether slice must be contiguous in memory, and whether a copy may be made to ensure this.
+        /// The default is View; use SliceView() if you require Matrix-compatible a contiguous view.
         /// Only operations backed by TensorView allow non-contiguous slice views.
         /// (To always make a copy, use SliceCopy().)
         /// Copying is not supported for sparse storage at present.
@@ -883,7 +884,7 @@ namespace CNTK
             ContiguousViewOrCopy, // like ContiguousView but makes a copy if not memory-contiguous. Matrix compatible, but not always a view.
         };
         CNTK_API NDArrayViewPtr Slice(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides = std::vector<size_t>(),
-                                      SliceMode sliceMode = SliceMode::ContiguousView, bool readOnly = false) const;
+                                      SliceMode sliceMode = SliceMode::View, bool readOnly = false) const;
 
         ///
         /// Tests if the tensor slice is memory-contiguous (no gaps due to strides).

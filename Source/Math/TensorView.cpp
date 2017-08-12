@@ -438,8 +438,8 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
 // helper to report mismatching dimensions for DoGather/ScatterBatchOf()
 // Item = the individual item (Gather: input; Scatter: output)
 // Batch = the batched item (Gather: this (=output); Scatter: this (=input))
-static void GatherScatterCheckDimensions(const TensorShape& itemShape, const TensorShape& batchedShape,
-                                         const char* funcName, size_t i) // <- for error messages
+static void GatherScatterVerifyDimensions(const TensorShape& itemShape, const TensorShape& batchedShape,
+                                          const char* funcName, size_t i) // <- for error messages
 {
     // item must not have more axes than batch
     if (itemShape.GetRank() > batchedShape.GetRank())
@@ -455,6 +455,29 @@ static void GatherScatterCheckDimensions(const TensorShape& itemShape, const Ten
             InvalidArgument("%s: Item %d's shape %s missing non-1 dimensions of batched shape %s.",
                             funcName, (int)i, string(itemShape).c_str(), string(batchedShape).c_str());
 }
+
+// helper to determine whether the SOB can be passed as is (-> true), or needs to be converted into a view (-> false)
+template <class ElemType>
+static bool GatherScatterCanPassSOB(const TensorView<ElemType>& itemView)
+{
+    let& shape = itemView.GetShape();
+    shape.VerifyIsDense(); // we don't support non-dense tensors here
+    return shape.GetNumElements() == itemView.GetSOB().GetNumElements();
+    // Note: Comparing the number of elements is sufficient to know whether there are gaps,
+    // but it is not sufficient to know whether axes have been transposed.
+}
+
+template <class ElemType>
+static Matrix<ElemType>& GatherScatterGetSOBView(const TensorView<ElemType>& itemView, Matrix<ElemType>& sliceBuf)
+{
+    // (it has already been verified in GatherScatterCanPassSOB() that the matrix is contiguous in memory)
+    let& shape = itemView.GetShape();
+    let& sob = itemView.GetSOB();
+    // create a single-row view into the buffer
+    sliceBuf = move(sob.ColumnSlice(shape.GetOffset(), shape.GetNumElements(), /*pretendSourceHasNumCols=*/sob.GetNumElements()));
+    return sliceBuf;
+}
+
 template <class ElemType>
 void TensorView<ElemType>::DoGatherBatchOf(size_t numInputs, const std::function<const TensorView&(size_t)>& inputs)
 {
@@ -465,11 +488,15 @@ void TensorView<ElemType>::DoGatherBatchOf(size_t numInputs, const std::function
     if (m_shape.GetRank() == 0)
         InvalidArgument("DoGatherBatchOf: Output cannot be a scalar.");
     let numRows = m_shape.GetNumElements() / m_shape.GetDims().back();
+    Matrix<ElemType> sliceBuf(CPUDEVICE/*dummy*/); // buffer to hold the slice so that we can return it by reference
     GetSOB().GatherBatch(numRows, numInputs, [&](size_t i) -> const Matrix<ElemType>&
     {
         let& input = inputs(i);
-        GatherScatterCheckDimensions(input.m_shape, m_shape, "DoGatherBatchOf", i);
-        return input.GetSOB();
+        GatherScatterVerifyDimensions(input.m_shape, m_shape, "DoGatherBatchOf", i);
+        if (GatherScatterCanPassSOB(input))
+            return input.GetSOB();
+        else
+            return GatherScatterGetSOBView(input, sliceBuf);
     });
 }
 
@@ -483,11 +510,15 @@ void TensorView<ElemType>::DoScatterBatchOf(ElemType beta, size_t numOutputs, co
     if (m_shape.GetRank() == 0)
         InvalidArgument("DoScatterBatchOf: Input cannot be a scalar.");
     let numRows = m_shape.GetNumElements() / m_shape.GetDims().back();
+    Matrix<ElemType> sliceBuf(CPUDEVICE/*dummy*/);
     GetSOB().ScatterBatch(beta, numRows, numOutputs, [&](size_t i) -> Matrix<ElemType>&
     {
         auto& output = outputs(i);
-        GatherScatterCheckDimensions(output.m_shape, m_shape, "DoScatterBatchOf", i);
-        return output.GetSOB();
+        GatherScatterVerifyDimensions(output.m_shape, m_shape, "DoScatterBatchOf", i);
+        if (GatherScatterCanPassSOB(output))
+            return output.GetSOB();
+        else
+            return GatherScatterGetSOBView(output, sliceBuf);
     });
 }
 
