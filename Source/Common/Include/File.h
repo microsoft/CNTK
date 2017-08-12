@@ -18,7 +18,6 @@
 #ifdef __unix__
 #include <unistd.h>
 #endif
-#include "HadoopFileSystem.h"
 #include "fileutil.h" // for f{ge,pu}t{,Text}()
 #include <fstream>    // for LoadMatrixFromTextFile() --TODO: change to using this File class
 #include <sstream>
@@ -26,6 +25,8 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
+
+class hdfs_File;
 
 // file options, Type of textfile to use
 enum FileOptions
@@ -104,7 +105,7 @@ private:
     bool m_seekable;     // this stream is seekable
     int m_options;       // FileOptions ored togther
     void Init(const wchar_t* filename, int fileOptions);
-    hdfsFile* m_hdfsFile; // handle for hdfs file
+    hdfs_File* m_hdfsFile; // handle for hdfs file
 
 public:
     File(const std::wstring& filename, int fileOptions);

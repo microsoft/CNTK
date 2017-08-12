@@ -32,7 +32,7 @@
 
 #define PCLOSE_ERROR -1
 #define WRITE_BUFFER_SIZE (1024 * 1024)
-#define HDFS_PREFIX "hdfs://"
+const std::wstring HDFS_PREFIX = L"hdfs://";
 
 #include <boost/algorithm/string.hpp>
 
@@ -91,11 +91,7 @@ template<class String>
         if (m_hdfsFile != nullptr &&
         filename.compare(0, HDFS_PREFIX.size(), HDFS_PREFIX))
         {
-            m_hdfsFile->make_intermediate_dirs(filename.substr(HDFS_PREFIX.size()));
-        }
-        else
-        {
-            msra::files::make_intermediate_dirs(filename);
+            filename = filename.substr(HDFS_PREFIX.size()));
         }
     }
 }
@@ -106,16 +102,17 @@ template /*static*/ void File::MakeIntermediateDirs<wstring>(const wstring& file
 // all constructors call this
 void File::Init(const wchar_t* filename, int fileOptions)
 {
+    m_filename = filename;
+    m_options = fileOptions;
+
     // Init as Hadoop_file_system if filename starts with "hdfs://"
     m_hdfsFile = nullptr;
-    if (filename.compare(0, HDFS_PREFIX.size(), HDFS_PREFIX))
+    if (m_filename.substr(0, HDFS_PREFIX.size()) == HDFS_PREFIX)
     {
-        m_hdfsFile = new hdfsFile(filename.substr(HDFS_PREFIX.size()), fileOptions);
+        m_hdfsFile = new hdfs_File(m_filename.substr(HDFS_PREFIX.size()), fileOptions);
         return;
     }
 
-    m_filename = filename;
-    m_options = fileOptions;
     if (m_filename.empty())
         RuntimeError("File: filename is empty");
     const auto outputPipe = (m_filename.front() == '|');
@@ -187,12 +184,6 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // (wstring only for now; feel free to make this a template if needed)
 /*static*/ wstring File::DirectoryPathOf(wstring path)
 {
-    if (m_hdfsFile != nullptr &&
-        filename.compare(0, HDFS_PREFIX.size(), HDFS_PREFIX))
-    {
-        return m_hdfsFile->DirectoryPathOf(path);
-    }
-
 #ifdef _WIN32
     // Win32 accepts forward slashes, but it seems that PathRemoveFileSpec() does not
     // TODO:
@@ -245,12 +236,6 @@ void File::Init(const wchar_t* filename, int fileOptions)
 // (wstring only for now; feel free to make this a template if needed)
 /*static*/ wstring File::FileNameOf(wstring path)
 {
-    if (m_hdfsFile != nullptr &&
-        filename.compare(0, HDFS_PREFIX.size(), HDFS_PREFIX))
-    {
-        return m_hdfsFile->FileNameOf(path);
-    }
-
 #ifdef WIN32
     static const wstring delim = L"\\:/";
 #else
@@ -320,7 +305,7 @@ bool File::IsTextBased()
 File::~File(void)
 {
     if (m_hdfsFile != nullptr) {
-        delete m_hdfsfile;
+        delete m_hdfsFile;
         return;
     }
 
@@ -744,7 +729,7 @@ int File::EndOfLineOrEOF(bool skip)
 // Buffer write stream
 int File::Setvbuf()
 {
-    if (m_hdfsFile != null)
+    if (m_hdfsFile != nullptr)
         return -1;
     return setvbuf(this->m_file, NULL, _IOFBF, WRITE_BUFFER_SIZE);
 }

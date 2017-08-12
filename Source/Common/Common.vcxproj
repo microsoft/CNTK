@@ -102,6 +102,7 @@
     <ClCompile Include="File.cpp" />
     <ClCompile Include="fileutil.cpp" />
     <ClCompile Include="Globals.cpp" />
+    <ClCompile Include="HadoopFileSystem.cpp" />
     <ClCompile Include="MPIWrapper.cpp" />
     <ClCompile Include="Sequences.cpp" />
     <ClCompile Include="TimerUtility.cpp" />
