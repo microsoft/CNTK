@@ -114,7 +114,9 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     for (size_t i = 0; i < numLayers; i++)
         lstms.push_back(GRU(hiddenDim, device));
     let attentionModel = AttentionModel(attentionDim); // (state, encoding) -> interpolated encoding
-    let barrier = Barrier();
+    let encBarrier = Barrier();
+    let outBarrier = Barrier();
+    let embedBarrier = Barrier();
     auto merge = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
     auto linear1 = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
     auto linear2 = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
@@ -146,7 +148,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
         // TODO: this is one layer only for now
         // convert encoder sequence into a dense tensor, so that we can do matrix products along the sequence axis - 1
         Variable hEncsTensor = Splice(hEncs, Axis(1)); // [2*hiddenDim, inputLen]
-        //hEncsTensor = barrier(hEncsTensor);
+        //hEncsTensor = encBarrier(hEncsTensor);
         // ...this makes it worse... why?
         // decoding loop
         Variable state = initialState;
@@ -161,14 +163,15 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
             // In inference, history[t] would become res[t-1].
             // TODO: Why not learn the output of the first step, and skip the <s> and funky initial attention context?
             //let pred = history[t];
-            let pred = embed(history[t]);
+            let pred = embedBarrier(embed(history[t]));
             let input = Splice({ pred, attentionContext }, Axis(0), L"augInput");
             state = lstms[0](state, input);
             DOLOG(state);
             // compute attention vector
             attentionContext = attentionModel(state, projectedKeys/*keys*/, /*data=*/hEncsTensor);
             // compute an enhanced hidden state with attention value merged in
-            let m = Tanh(merge(Splice({ state, attentionContext }, Axis(0)))) + state;
+            let state1 = outBarrier(state);
+            let m = Tanh(merge(Splice({ state1, attentionContext }, Axis(0)))) + state1;
             //let m = state; // normal s2s: predict from hidden state
             DOLOG(m);
             // compute output
@@ -331,6 +334,10 @@ void Train()
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples,
                 learner->LearningRate());
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
+#if 0   // for debugging: reduce #sequences to 2
+        args[0].resize(2);
+        args[1].resize(2);
+#endif
         // train minibatch
         let mbLoss = criterion_fn(args[0], args[1]);
         // backprop and model update
