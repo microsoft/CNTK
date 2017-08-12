@@ -297,7 +297,7 @@ namespace CNTK
         auto op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // opcode for single-argument gradients
         auto op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // and this for 2-arg ops
         auto op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // and this for 3-arg ops; all others execute inside the switch()
-        const NDArrayView* arg1 = outputGradient;
+        const NDArrayView* arg1 = outputGradient; // incoming gradient from top is the first arg of most gradient ops, so set it by default (some ops will change it)
         const NDArrayView* arg2 = nullptr;
         const NDArrayView* arg3 = nullptr;
         double alpha = 1;
@@ -355,7 +355,18 @@ namespace CNTK
             // no-op operations with simple TensorView implementation
             // NOTE: These do not need any data copy if there is only one consumer, which we won't know here. That case will be caught in the batched version.
         case PrimitiveOpType::NoOp:          op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
-        case PrimitiveOpType::Reshape:       op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
+        case PrimitiveOpType::Reshape:
+            // shapes won't match, so reshape one to match the other (we can't just opCopy with mismatching shapes, which may cause weird broadcasting weirdness that won't crash but produce garbage values)
+            if (arg1->Shape() != gradient->Shape())
+            {
+                NDArrayView::NumericOperation({ arg1->AsShape(gradient->Shape()) }, alpha, // differs from shared code below in passing the reshaped arg1
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta,
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                handled = true;
+            }
+            else
+                op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; // (no shape change: they match already, use the the shared code below)
+            break;
             // gradients that are copies with broadcasting
         case PrimitiveOpType::ReduceElements:
             {

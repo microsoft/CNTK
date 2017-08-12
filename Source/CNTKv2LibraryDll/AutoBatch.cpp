@@ -993,6 +993,7 @@ class Variable::AutoBatch
             fields.m_value = from;
         else
             fields.m_value = from->IndexLastAxis(index);
+        fail_if(fields.m_shape != fields.m_value->Shape(), "variable shape different from its value??");
         return fields.m_value;
     }
 
@@ -1357,6 +1358,17 @@ class Variable::AutoBatch
                 // create a new PrimitiveFunction for the batched op
                 // This is the actual batched op that we create here.
                 // Batched inputs have been prepared in m_batchedInputs[].
+
+                // handle the special case of Index()
+                // It operates on the trailing dimension. We convert it to a Slice() op instead.
+                if (op == PrimitiveOpType::Slice && attributes.Size() == 1)
+                {
+                    // ... CONTINUE THIS
+                    //let axis = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                    //let beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+                    //let endIndex = attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
+                }
+
                 let expectedOutputShape = unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize);
                 batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(m_batchedInputs), expectedOutputShape, move(attributes));
                 // Note: We could move(m_batchedInputs), but don't, since then we would have to reallocate m_batchedInputs for the next operation, so makes no difference.
@@ -1386,7 +1398,7 @@ class Variable::AutoBatch
             {
                 if (outputBatchAxis != unbatchedOutputShape.Rank())
                 {
-                     fail_if(!isElementWise, "output shape should only additional singleton axes for elementwise operations");
+                    fail_if(!isElementWise, "output shape should only have additional singleton axes for elementwise operations");
                     // insert a Reshape() op to remove the axes
                     let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
                     fail_if(batchedOutputShape.TotalSize() != batchedOp->m_outputs[0].Shape().TotalSize(), "output shape has unexpected axes that should be singletons but aren't");
@@ -1401,7 +1413,7 @@ class Variable::AutoBatch
                     //additionalProperties[PrimitiveFunction::AttributeNameEndAxis]   = Axis((int)axis);
                     let reshapeOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, move(additionalProperties));
 #ifdef LOG_DETAILS
-                    reshapeOp->m_uid = L"*," + spliceInputs[0].Uid();
+                    reshapeOp->m_uid = L"*," + arg.Uid();
 #endif
                     // and execute it
                     MemoizeKnowableValueInArena(*reshapeOp, /*isFree=*/true);
@@ -1729,8 +1741,12 @@ public:
         // If the input is a lazyIndex, then the gradient is a view into the lazy source.
         let beta = LazilyCreateLazilyIndexedGradient(input, DetermineGradientStorageType(*f, 0));
         // backprop into the input
+        // BUGBUG: (perf) In case of Reshape we currently make a copy, which is not needed --> see-through the op, and backprop through a reshaped view into Reshape's argument gradient?
         PrimitiveFunction::BackpropTo(outputGradient/*incoming*/, index, f->m_op, f->m_attributes, outputValue, inputValues, fields.m_gradient/*target*/, beta, *f);
         m_stats.numBatchedBackpropToCalls++;
+#if 0   // debug the actual values
+        fields.m_gradient->LogToFile(L"gradient", stderr);
+#endif
     }
 
     // backprop into an input of a splice operation
