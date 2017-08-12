@@ -117,14 +117,15 @@ template <class ElemType>
     ChangeDeviceTo(deepCopy.GetComputeDeviceId());
     deepCopy.PrepareDevice();
 
+    // If the source is a slice, then this copy is only the content of the slice.
     RequireSizeAndAllocate(deepCopy.GetNumRows(), deepCopy.GetNumCols(), deepCopy.GetNumNZElements(), deepCopy.GetFormat(), true, false);
     m_sliceViewOffset = 0; // reset to zero as we only start copying the indices starting from the offset in the source matrix
 
     CUDA_CALL(cudaMemcpy(Data(), deepCopy.NzValues(), deepCopy.NzSize(), cudaMemcpyDeviceToDevice));
     CUDA_CALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocationWithSliceViewOffset(), deepCopy.MajorIndexSize(), cudaMemcpyDeviceToDevice));
     CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), deepCopy.SecondaryIndexLocation(), deepCopy.SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
-    UpdateCachedNzCount(deepCopy.NzCount());
 
+    // When slicing not from the start, the offset array must be updated.
     if (deepCopy.m_sliceViewOffset > 0)
     {
         int blocksPerGrid = (int) ceil(1.0 * SecondaryIndexCount() / GridDim::maxThreadsPerBlock);
@@ -133,8 +134,9 @@ template <class ElemType>
             SecondaryIndexLocation(),
             SecondaryIndexCount(),
             GetNumNZElements());
-        // note: NzCount() remains unchanged by this
     }
+
+    UpdateCachedNzCount(deepCopy.NzCount()); // in case of a slice, the sources NZCount already reflects the count of the slice
 }
 
 template <class ElemType>

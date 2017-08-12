@@ -107,8 +107,11 @@ namespace Dynamite {
             for (size_t s = 0; s < numSeq; s++)
             {
                 auto data = sequences[s];      // NDArrayView
+#if 1
+                data = data->DeepClone(); // sometimes we get strange objective values; see if this is the cause. This will release the original matrix.
+#endif
                 //if (!data->IsSparse())
-                //    data = data->DeepClone(); // sometimes we get "cannot resize"--just fishing here
+                //    data = data->DeepClone(); // sometimes we get "cannot resize"--just fishing here   --still happens occasionally
                 // return in correct shape
                 if (!hasAxis)
                 {

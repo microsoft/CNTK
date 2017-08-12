@@ -155,7 +155,7 @@ public:
 
     inline size_t NzSize() const { return sizeof(ElemType) * NzCount(); } // actual number of element bytes in use
 
-    inline size_t GetNumNZElements() const { return NzCount(); }
+    inline size_t GetNumNZElements() const { return NzCount(); } // TODO: GetNumNZElements() and NzCount() are redundant. Remove one of the two.
 
     void ClearNzCount();
     // The sparse matrix representation of CSC/CSR uses one large matrix (m_pArray) with offsets to the Major/Secondary index location.

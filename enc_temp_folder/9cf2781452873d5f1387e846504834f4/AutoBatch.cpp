@@ -1386,7 +1386,7 @@ class Variable::AutoBatch
             {
                 if (outputBatchAxis != unbatchedOutputShape.Rank())
                 {
-                     fail_if(!isElementWise, "output shape should only additional singleton axes for elementwise operations");
+                    fail_if(!isElementWise, "output shape should only additional singleton axes for elementwise operations");
                     // insert a Reshape() op to remove the axes
                     let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
                     fail_if(batchedOutputShape.TotalSize() != batchedOp->m_outputs[0].Shape().TotalSize(), "output shape has unexpected axes that should be singletons but aren't");
