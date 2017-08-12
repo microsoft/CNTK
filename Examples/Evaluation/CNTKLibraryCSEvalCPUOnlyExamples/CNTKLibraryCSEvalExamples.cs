@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CNTK;
+using CNTKExtension;
 using CNTKImageProcessing;
 
 namespace CNTKLibraryCSEvalExamples
@@ -49,16 +50,6 @@ namespace CNTKLibraryCSEvalExamples
                 NDShape inputShape = inputVar.Shape;
                 int imageWidth = inputShape[0];
                 int imageHeight = inputShape[1];
-                int imageChannels = inputShape[2];
-                int imageSize = inputShape.TotalSize;
-
-                // The model has only one output.
-                // If the model have more than one output, use the following way to get output variable by name.
-                // Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
-                Variable outputVar = modelFunc.Output;
-
-                var inputDataMap = new Dictionary<Variable, Value>();
-                var outputDataMap = new Dictionary<Variable, Value>();
 
                 // Image preprocessing to match input requirements of the model.
                 // This program uses images from the CIFAR-10 dataset for evaluation.
@@ -66,15 +57,22 @@ namespace CNTKLibraryCSEvalExamples
                 string sampleImage = "00000.png";
                 ThrowIfFileNotExist(sampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", sampleImage));
                 Bitmap bmp = new Bitmap(Bitmap.FromFile(sampleImage));
-                var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                var resized = bmp.Resize(imageWidth, imageHeight, true);
                 List<float> resizedCHW = resized.ParallelExtractCHW();
 
                 // Create input data map
-                var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
+                var inputDataMap = new Dictionary<Variable, Value>();
+                var inputVal = Value.CreateBatch(inputShape, resizedCHW, device);
                 inputDataMap.Add(inputVar, inputVal);
+
+                // The model has only one output.
+                // You can also use the following way to get output variable by name:
+                // Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
+                Variable outputVar = modelFunc.Output;
 
                 // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
+                var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
                 // Start evaluation on the device
@@ -131,16 +129,6 @@ namespace CNTKLibraryCSEvalExamples
                 NDShape inputShape = inputVar.Shape;
                 int imageWidth = inputShape[0];
                 int imageHeight = inputShape[1];
-                int imageChannels = inputShape[2];
-                int imageSize = inputShape.TotalSize;
-
-                // The model has only one output.
-                // If the model have more than one output, use the following way to get output variable by name.
-                // Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
-                Variable outputVar = modelFunc.Output;
-
-                var inputDataMap = new Dictionary<Variable, Value>();
-                var outputDataMap = new Dictionary<Variable, Value>();
 
                 Bitmap bmp, resized;
                 List<float> resizedCHW;
@@ -148,7 +136,7 @@ namespace CNTKLibraryCSEvalExamples
                 for (int sampleIndex = 0; sampleIndex < imageList.Count; sampleIndex++)
                 {
                     bmp = new Bitmap(Bitmap.FromFile(imageList[sampleIndex]));
-                    resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                    resized = bmp.Resize(imageWidth, imageHeight, true);
                     resizedCHW = resized.ParallelExtractCHW();
                     // Aadd this sample to the data buffer.
                     seqData.AddRange(resizedCHW);
@@ -157,10 +145,17 @@ namespace CNTKLibraryCSEvalExamples
                 // Create Value for the batch data.
                 var inputVal = Value.CreateBatch(inputVar.Shape, seqData, device);
                 // Create input data map.
+                var inputDataMap = new Dictionary<Variable, Value>();
                 inputDataMap.Add(inputVar, inputVal);
+
+                // The model has only one output.
+                // You can also use the following way to get output variable by name:
+                // Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
+                Variable outputVar = modelFunc.Output;
 
                 // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
+                var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
                 // Evaluate the model against the batch input
@@ -223,8 +218,6 @@ namespace CNTKLibraryCSEvalExamples
             NDShape inputShape = input.Shape;
             int imageWidth = inputShape[0];
             int imageHeight = inputShape[1];
-            int imageChannels = inputShape[2];
-            int imageSize = inputShape.TotalSize;
             Object lockObj = new object();
 
             // Start to evaluate samples in parallel.
@@ -236,21 +229,22 @@ namespace CNTKLibraryCSEvalExamples
                 var evaluatorFunc = Models.Take();
                 try
                 {
-                    Variable outputVar = evaluatorFunc.Output;
+
                     Variable inputVar = evaluatorFunc.Arguments.Single();
-                    var inputDataMap = new Dictionary<Variable, Value>();
-                    var outputDataMap = new Dictionary<Variable, Value>();
 
                     Bitmap bmp = new Bitmap(Bitmap.FromFile(image));
-                    var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                    var resized = bmp.Resize(imageWidth, imageHeight, true);
                     List<float> resizedCHW = resized.ParallelExtractCHW();
 
                     // Create input data map
+                    var inputDataMap = new Dictionary<Variable, Value>();
                     var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
                     inputDataMap.Add(inputVar, inputVal);
 
                     // Create output data map. Using null as Value to indicate using system allocated memory.
                     // Alternatively, create a Value object and add it to the data map.
+                    Variable outputVar = evaluatorFunc.Output;
+                    var outputDataMap = new Dictionary<Variable, Value>();
                     outputDataMap.Add(outputVar, null);
 
                     // Start evaluation on the device
@@ -294,26 +288,12 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Load model from memroy buffer
                 Function modelFunc = Function.Load(modelBuffer, device);
-
-                // Get input variable. The model has only one single input.
-                // If the model have more than one input, use the following way to get input variable by name.
-                // Variable inputVar = modelFunc.Arguments.Where(variable => string.Equals(variable.Name, inputName)).Single();
-                Variable inputVar = modelFunc.Arguments.Single();
-
+                
                 // Get shape data for the input variable
+                Variable inputVar = modelFunc.Arguments.Single();
                 NDShape inputShape = inputVar.Shape;
                 int imageWidth = inputShape[0];
                 int imageHeight = inputShape[1];
-                int imageChannels = inputShape[2];
-                int imageSize = inputShape.TotalSize;
-
-                // The model has only one output.
-                // If the model have more than one output, use the following way to get output variable by name.
-                // Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
-                Variable outputVar = modelFunc.Output;
-
-                var inputDataMap = new Dictionary<Variable, Value>();
-                var outputDataMap = new Dictionary<Variable, Value>();
 
                 // Image preprocessing to match input requirements of the model.
                 // This program uses images from the CIFAR-10 dataset for evaluation.
@@ -321,21 +301,91 @@ namespace CNTKLibraryCSEvalExamples
                 string sampleImage = "00000.png";
                 ThrowIfFileNotExist(sampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", sampleImage));
                 Bitmap bmp = new Bitmap(Bitmap.FromFile(sampleImage));
-                var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                var resized = bmp.Resize(imageWidth, imageHeight, true);
                 List<float> resizedCHW = resized.ParallelExtractCHW();
 
-                // Create input data map
+                // Create input data map.
+                var inputDataMap = new Dictionary<Variable, Value>();
                 var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
                 inputDataMap.Add(inputVar, inputVal);
 
+                // Get output variable.
+                Variable outputVar = modelFunc.Output;
+
                 // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
+                var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
-                // Start evaluation on the device
+                // Start evaluation on the device.
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
-                // Get evaluate result as dense output
+                // Get evaluate result as dense output.
+                var outputVal = outputDataMap[outputVar];
+                var outputData = outputVal.GetDenseData<float>(outputVar);
+
+                PrintOutput(outputVar.Shape.TotalSize, outputData);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// The example shows
+        /// - how to evaluate model using asynchronous task. This is useful when offloading is needed to achieve better responsiveness.
+        /// The asynchronous evaluation is implemented as an extension method in CNTKExtensions.cs, which provides an asynchrounous facade for the synchronous Evaluation().
+        /// </summary>
+        /// <param name="device">Specify on which device to run the evaluation.</param>
+        public static async Task EvaluationSingleImageAsync(DeviceDescriptor device)
+        {
+            try
+            {
+                Console.WriteLine("\n===== Evaluate image asynchronously =====");
+
+                // Load the model.
+                // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
+                // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
+                string modelFilePath = "resnet20.dnn";
+                ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
+                Function modelFunc = Function.Load(modelFilePath, device);
+
+                // Get input variable.
+                Variable inputVar = modelFunc.Arguments.Single();
+
+                // Get shape data for the input variable.
+                NDShape inputShape = inputVar.Shape;
+                int imageWidth = inputShape[0];
+                int imageHeight = inputShape[1];
+
+                // Image preprocessing to match input requirements of the model.
+                // This program uses images from the CIFAR-10 dataset for evaluation.
+                // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
+                string sampleImage = "00000.png";
+                ThrowIfFileNotExist(sampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", sampleImage));
+                Bitmap bmp = new Bitmap(Bitmap.FromFile(sampleImage));
+                var resized = bmp.Resize(imageWidth, imageHeight, true);
+                List<float> resizedCHW = resized.ParallelExtractCHW();
+
+                // Create input data map.
+                var inputDataMap = new Dictionary<Variable, Value>();
+                var inputVal = Value.CreateBatch(inputShape, resizedCHW, device);
+                inputDataMap.Add(inputVar, inputVal);
+
+                // Get output variable.
+                Variable outputVar = modelFunc.Output;
+
+                // Create output data map. Using null as Value to indicate using system allocated memory.
+                // Alternatively, create a Value object and add it to the data map.
+                var outputDataMap = new Dictionary<Variable, Value>();
+                outputDataMap.Add(outputVar, null);
+
+                // Start evaluation, await on the result.
+                await modelFunc.EvaluateAsync(inputDataMap, outputDataMap, device);
+
+                // Get evaluate result as dense output.
                 var outputVal = outputDataMap[outputVar];
                 var outputData = outputVal.GetDenseData<float>(outputVar);
 
@@ -443,7 +493,7 @@ namespace CNTKLibraryCSEvalExamples
                 var inputDataMap = new Dictionary<Variable, Value>();
                 inputDataMap.Add(inputVar, inputValue);
 
-                // Prepare output
+                // Prepare output.
                 Variable outputVar = modelFunc.Output;
 
                 // Create output data map. Using null as Value to indicate using system allocated memory.
@@ -453,12 +503,12 @@ namespace CNTKLibraryCSEvalExamples
                 // Evalaute the model.
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
-                // Get output result
+                // Get output result.
                 var outputVal = outputDataMap[outputVar];
                 var outputData = outputVal.GetDenseData<float>(outputVar);
 
-                // output the result
-                var outputSampleSize = (int)outputVar.Shape.TotalSize;
+                // output the result.
+                var outputSampleSize = outputVar.Shape.TotalSize;
                 if (outputData.Count != 1)
                 {
                     throw new ApplicationException("Only one sequence of slots is expected as output.");
@@ -567,8 +617,9 @@ namespace CNTKLibraryCSEvalExamples
                 var inputDataMap = new Dictionary<Variable, Value>();
                 inputDataMap.Add(inputVar, inputValue);
 
-                // Prepare output
+                // Prepare output.
                 Variable outputVar = modelFunc.Output;
+
                 // Create output data map. Using null as Value to indicate using system allocated memory.
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
@@ -581,7 +632,7 @@ namespace CNTKLibraryCSEvalExamples
                 var outputData = outputVal.GetDenseData<float>(outputVar);
 
                 // output the result
-                var outputSampleSize = (int)outputVar.Shape.TotalSize;
+                var outputSampleSize = outputVar.Shape.TotalSize;
                 if (outputData.Count != inputBatch.Count)
                 {
                     throw new ApplicationException("The number of sequence in output does not match that in input.");
@@ -671,7 +722,7 @@ namespace CNTKLibraryCSEvalExamples
                 for (; count < seqLen; count++)
                 {
                     // Get the index of the word
-                    var nonZeroValueIndex = (int)vocabToIndex[inputWords[count]];
+                    var nonZeroValueIndex = vocabToIndex[inputWords[count]];
                     // Add the sample to the sequence
                     nonZeroValues[count] = (float)1.0;
                     rowIndices[count] = nonZeroValueIndex;
@@ -701,7 +752,7 @@ namespace CNTKLibraryCSEvalExamples
                 var outputData = outputVal.GetDenseData<float>(outputVar);
 
                 // Output the result
-                var outputSampleSize = (int)outputVar.Shape.TotalSize;
+                var outputSampleSize = outputVar.Shape.TotalSize;
                 if (outputData.Count != 1)
                 {
                     throw new ApplicationException("Only one sequence of slots is expected as output.");
