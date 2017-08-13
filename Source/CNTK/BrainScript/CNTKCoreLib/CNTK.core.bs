@@ -471,7 +471,31 @@ CNTK2 = [
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     StraightThrough(_, tag='') = new ComputationNode [ operation = 'StraightThrough' ; inputs = _AsNodes (_) /*plus the function args*/ ]
 
-    // 6. Reductions
+    # Log Gamma, approximated through continued fractions
+    # NIST Handbook of Mathematical Functions (2010)
+    LogGamma(_, tag='') = {
+        # Page 140, Equ. 5.10.1 (continued fractions)
+        a0 = Constant { 0.08333333333 } # 1.0 / 12
+        a1 = Constant { 0.03333333333 } # 1.0 / 30
+        a2 = Constant { 0.25238095238 } # 53.0 / 210
+        a3 = Constant { 0.525606469   } # 195.0 / 371;
+        a4 = Constant { 1.01152306813 } # 22999.0 / 22737
+        a5 = Constant { 1.51747364915 } # 29944523.0 / 19733142
+        a6 = Constant { 2.2694889742  } # 109535241009.0 / 48264275462
+        l2p = Constant { 0.9189385332 } # 0.5 * log(2 * pi)
+
+        t6 = a6 .* Reciprocal(_)
+        t5 = a5 .* Reciprocal(_ + t6)
+        t4 = a4 .* Reciprocal(_ + t5)
+        t3 = a3 .* Reciprocal(_ + t4)
+        t2 = a2 .* Reciprocal(_ + t3)
+        t1 = a1 .* Reciprocal(_ + t2)
+        t0 = a0 .* Reciprocal(_ + t1)
+
+        Res = t0 - _ + (_ - 0.5) .* Log(_) + l2p
+    }.Res
+
+    // 6. Reductions    
     ReduceSum   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "Sum"    /*plus the function args*/ ]}.r
     ReduceLogSum(_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "LogSum" /*plus the function args*/ ]}.r
     ReduceMean  (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "Mean"   /*plus the function args*/ ]}.r
