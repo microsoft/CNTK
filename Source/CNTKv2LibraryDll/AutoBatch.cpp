@@ -282,18 +282,22 @@ namespace CNTK
             PrimitiveOpType::Slice
         }},
         // 
-        // Conditions (batching):
-        //   All dimensions must match.
-        // 
-        // Conditions (stacking):
-        //   All except the last dimensions must match.
-        //   Must not slice along the last dimension.
-        //   Must actually slice (and not be a no-op). TODO: Should we see-through no-op slice ops?
-        // 
-        // Unlike Reshape(), Slice() currently always involves a copy (since CNTK does not generally support
-        // strided views at present). Hence, an optimization like for Reshape() does not apply.
-        // This makes Slice() similar to a unary op, with the exception that Slice() still uses
-        // additional arguments from the dictionary. These remain valid also for the batched/stacked op.
+        // Conditions:
+        //   false
+        //
+        // Slice() is an actual view, not a copy. Hence, we do not batch it.
+        // The result of Slice() is smaller than its input, so there is no point in gathering
+        // the unsliced inputs, only to put a view on it.
+        //
+        // If we batch-Slice() an already batched input, this is only slightly suboptimal. Because slicing a batched
+        // input always makes the result non-contiguous, it would have to be followed by a copy operation.
+        // By not slicing batched inputs, instead we'd slice each item separately (which is merely a view)
+        // and then gather them together. In both cases, the same number of bytes are copied.
+        // However, in the former case, the copy is a rectangle, and it involves less overhead.
+        //
+        // Note: It is currently required that user-specified slices must always be memory-contiguous.
+        // If not, then we may allocate temp memory in Memoize() in an unoptimized fashion, and
+        // GatherBatch() will fail.
 
         // Splice()
         // --------
@@ -1142,9 +1146,8 @@ class Variable::AutoBatch
         auto doNaively = true;
 #else
         let doNaively =
-            (isFree && opClass != OpSpecificConditionKind::Slice) ||
+            isFree ||
             op == PrimitiveOpType::Splice ||
-            (op == PrimitiveOpType::Slice && f0.m_attributes.Size() == 1) || // TODO: for now, since Indexing with dropping axes fails batching
             batchSize == 1;
 #endif
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
@@ -1189,7 +1192,7 @@ class Variable::AutoBatch
             //  - For elementwise operations, its position must be the same for all inputs.
             //    The result's batch axis will also be in the same position.
             //    Thus, it may have padded singleton dims, e.g. for reductions or Index(), which may need to be removed.
-            //    This also holds for Slice().
+            //    (This also holds for Slice(), if we one day decide to batch it.)
             //  - Splice() is like an elementwise op, but it may splice into a new axis.
             //    Hence, we preemptively insert one extra singleton axis into the inputs, and then append the batch axis.
             //  - For matrix products and convolution, the column axes is already sort of a batch axis. We append the batch axis to them.
@@ -1282,9 +1285,9 @@ class Variable::AutoBatch
                         vector<size_t> outputShape = fromDims; // determine output shape
                         outputShape[axis] = j;
                         auto additionalProperties = Dictionary(); // create additional arguments
-                        additionalProperties[L"axis"      /*PrimitiveFunction::AttributeNameAxis*/      ] = Axis((int)axis);
-                        additionalProperties[L"beginIndex"/*PrimitiveFunction::AttributeNameBeginIndex*/] = (int)begin;
-                        additionalProperties[L"endIndex"  /*PrimitiveFunction::AttributeNameEndIndex*/  ] = (int)(begin + j);
+                        additionalProperties[PrimitiveFunction::AttributeNameAxis      ] = Axis((int)axis);
+                        additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = (int)begin;
+                        additionalProperties[PrimitiveFunction::AttributeNameEndIndex  ] = (int)(begin + j);
                         // TODO: ^^ reinsert all those PrimitiveFunction:: symbols, since we have access to those now
                         let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties));
 #ifdef LOG_DETAILS
@@ -1298,6 +1301,7 @@ class Variable::AutoBatch
                         m_batchedInputs[i].m_outputComposite = spliceOp;
                     }
                     // if this op has a higher batchAxis than the re-batched view, we must move the axis
+                    // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
                     if (axis != batchAxis)
                     {
                         let batchedInput = m_batchedInputs[i];
@@ -1328,10 +1332,10 @@ class Variable::AutoBatch
                     vector<size_t> outputShape; // determine output shape
                     outputShape.reserve(batchAxis + 1);
                     outputShape = LazilyIndexedValue(spliceInputs[0])->Shape().Dimensions();
-                    outputShape.resize(batchAxis, 1);             // pad to batchAxis
+                    outputShape.resize(batchAxis, 1);           // pad to batchAxis
                     outputShape.push_back(spliceInputs.size()); // and add the batch axis
-                    auto additionalProperties = Dictionary(); // create additional arguments
-                    additionalProperties[L"axis"/*PrimitiveFunction::AttributeNameAxis*/] = Axis((int)batchAxis);
+                    auto additionalProperties = Dictionary();   // create additional arguments
+                    additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis((int)batchAxis);
                     let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties));
 #ifdef LOG_DETAILS
                     spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
@@ -1359,15 +1363,21 @@ class Variable::AutoBatch
                 // This is the actual batched op that we create here.
                 // Batched inputs have been prepared in m_batchedInputs[].
 
+#if 0
                 // handle the special case of Index()
-                // It operates on the trailing dimension. We convert it to a Slice() op instead.
+                // This is presently dead code since we don't batch Slice().
+                // It operates on the trailing dimension. We convert it to a Slice() op instead that does not drop the dimension.
+                // The additional axis is reshaped away further below.
                 if (op == PrimitiveOpType::Slice && attributes.Size() == 1)
                 {
-                    // ... CONTINUE THIS
-                    //let axis = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                    //let beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-                    //let endIndex = attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
+                    let axis = unbatchedOutputShape.Rank(); // (this axis is disappeared by the Index() operation)
+                    let beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+                    let endIndex = beginIndex + 1;
+                    // inject the two additional parameters. With this parameter set it's a Splice().
+                    attributes[PrimitiveFunction::AttributeNameAxis] = Axis((int)axis);
+                    attributes[PrimitiveFunction::AttributeNameEndIndex] = (int)(endIndex);
                 }
+#endif
 
                 let expectedOutputShape = unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize);
                 batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(m_batchedInputs), expectedOutputShape, move(attributes));
@@ -1394,6 +1404,7 @@ class Variable::AutoBatch
 
             // in case of reducing operations (e.g. ReduceSum() and also Index()), additional singleton axes
             // may have been inserted to align the batch axes. Remove these if present.
+            // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
             if (anyBatchedInputs)
             {
                 if (outputBatchAxis != unbatchedOutputShape.Rank())
@@ -1935,6 +1946,7 @@ public:
 #endif
         };
 #ifndef NO_BATCHED_FORWARD  // TODO: should this be backward?
+        // BUGBUG: (perf) We should also have a special path for Reshape(), as to avoid the memory copy.
         let opClass = g_oscTable[f->m_op]; // operation-specific auto-batching class
         // splice operation must use scatter
         if (opClass == OpSpecificConditionKind::Splice)
