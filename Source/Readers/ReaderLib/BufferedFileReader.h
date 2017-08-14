@@ -77,9 +77,17 @@ public:
     // File offset that correspond to the current position to read from.
     void SetFileOffset(const size_t& fileOffset)
     {
-        m_file.SeekOrDie(fileOffset, SEEK_SET);
-        m_fileOffset = fileOffset;
-        Reset();
+        // We reset the current buffer only if the new fileOffset is out of the buffer limits.
+        // If not, we just go to the index corresponding to the offset.
+        if (fileOffset >= (m_buffer.size() + m_fileOffset) || fileOffset < m_fileOffset) {
+            m_file.SeekOrDie(fileOffset, SEEK_SET);
+            Reset();
+        }
+        else
+        {
+            m_index = fileOffset - m_fileOffset;
+            m_done = false;
+        }
     }
 
 private:
