@@ -19,6 +19,7 @@ cfg = __C
 
 __C.CNTK = edict()
 
+__C.CNTK.FIXED_SIZE = True
 __C.CNTK.MAKE_MODE = False
 __C.CNTK.TRAIN_E2E = True # E2E or 4-stage training
 __C.CNTK.TRAIN_CONV_LAYERS = True
@@ -38,7 +39,8 @@ __C.CNTK.L2_REG_WEIGHT = 0.0005
 __C.CNTK.MOMENTUM_PER_MB = 0.9
 
 # E2E config
-__C.CNTK.E2E_MAX_EPOCHS = 20
+__C.CNTK.E2E_MAX_EPOCHS = 3 # 20
+#__C.CNTK.E2E_LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 10 + [0.00001]
 __C.CNTK.E2E_LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 10 + [0.00001]
 
 # 4-stage config (alternating training scheme)
@@ -242,7 +244,7 @@ __C.RNG_SEED = 3
 __C.EPS = 1e-14
 
 # Use GPU implementation of non-maximum suppression
-__C.USE_GPU_NMS = True
+__C.USE_GPU_NMS = False
 
 # Default GPU device id
 __C.GPU_ID = 0

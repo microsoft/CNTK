@@ -27,7 +27,7 @@ from _cntk_py import force_deterministic_algorithms
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, ".."))
-from utils.rpn.rpn_helpers import create_rpn, create_rpn_bottom, create_proposal_target_layer
+from utils.rpn.rpn_helpers import create_rpn, create_rpn_bottom, create_proposal_target_layer, create_proposal_incl_reshape
 from utils.rpn.cntk_smoothL1_loss import SmoothL1Loss
 from utils.map.map_helpers import evaluate_detections
 from utils.annotations.annotations_helper import parse_class_map_file
@@ -223,6 +223,7 @@ def clone_conv_layers(base_model):
 def create_fast_rcnn_predictor(conv_out, rois, fc_layers):
     # RCNN
     roi_out = roipooling(conv_out, rois, cntk.MAX_POOLING, (roi_dim, roi_dim), spatial_scale=1/16.0)
+    roi_out = alias(roi_out, 'roipooling_out')
     fc_out = fc_layers(roi_out)
 
     # prediction head
@@ -314,17 +315,51 @@ def create_eval_model(model, image_input, dims_input, rpn_model=None):
         num_boxes = int(bbox_regr.shape[1] / 4)
         bbox_normalize_means = np.array(cfg["TRAIN"].BBOX_NORMALIZE_MEANS * num_boxes)
         bbox_normalize_stds = np.array(cfg["TRAIN"].BBOX_NORMALIZE_STDS * num_boxes)
-        bbox_regr = plus(element_times(bbox_regr, bbox_normalize_stds), bbox_normalize_means, name='bbox_regr')
+        bbox_regr = plus(element_times(bbox_regr, bbox_normalize_stds), bbox_normalize_means, name='bbox_deltas')
+    else:
+        bbox_regr = alias(bbox_regr, name='bbox_deltas')
 
     cls_pred = softmax(cls_score, axis=1, name='cls_pred')
     eval_model = combine([cls_pred, rpn_rois, bbox_regr])
 
     return eval_model
 
+def adapt_input_size_eval_model(model, data, image_input, dims_input):
+    # create custom input variable for current image shape
+    image_data = data[image_input]
+    del data[image_input]
+    img_shape = image_data.shape
+    current_w = img_shape[2]
+    current_h = img_shape[1]
+    current_input_shape = (num_channels, current_h, current_w)
+    print("Current input shape: {}".format(current_input_shape))
+    current_input_var = input_variable(current_input_shape, dynamic_axes=[Axis.default_batch_axis()], name=feature_node_name)
+    data[current_input_var] = image_data
+
+    cloned_net_top = clone_model(model, [feature_node_name], ['rpn_cls_score', 'rpn_bbox_pred', last_conv_node_name], CloneMethod.share)
+    cloned_net_bottom_fc = clone_model(model, ['roipooling_out'], ['cls_pred', 'bbox_deltas'], CloneMethod.share)
+
+    # conv layers and rpn con layers
+    top_out = cloned_net_top(current_input_var)
+    rpn_cls_score = top_out.outputs[0]
+    rpn_bbox_pred = top_out.outputs[1]
+    last_conv_out = top_out.outputs[2]
+
+    rpn_rois, _ = create_proposal_incl_reshape(rpn_cls_score, rpn_bbox_pred, dims_input, proposal_layer_param_string=cfg["CNTK"].PROPOSAL_LAYER_PARAMS)
+    roi_out = roipooling(last_conv_out, rpn_rois, cntk.MAX_POOLING, (cfg["CNTK"].ROI_DIM, cfg["CNTK"].ROI_DIM), spatial_scale=1 / 16.0)
+    roi_out = alias(roi_out, 'roipooling_out')
+
+    # fc layers and prediction heads
+    net_out = cloned_net_bottom_fc(roi_out)
+    cls_pred = net_out.outputs[0]
+    bbox_regr = net_out.outputs[1]
+    cloned_model = combine([cls_pred, rpn_rois, bbox_regr])
+
+    return cloned_model, data, current_input_var
+
 def train_model(image_input, roi_input, dims_input, loss, pred_error,
                 lr_per_sample, mm_schedule, l2_reg_weight, epochs_to_train,
                 rpn_rois_input=None, buffered_rpn_proposals=None):
-    loss = alias(loss, 'final_net_loss')
     if isinstance(loss, cntk.Variable):
         loss = combine([loss])
 
@@ -349,7 +384,7 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
     bias_lr_schedule = learning_rate_schedule(bias_lr_per_sample, unit=UnitType.sample)
     bias_learner = momentum_sgd(biases, bias_lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
                            unit_gain=False, use_mean_gradient=cfg["CNTK"].USE_MEAN_GRADIENT)
-    #trainer = Trainer(None, (loss, pred_error), [learner, bias_learner])
+    trainer = Trainer(None, (loss, pred_error), [learner, bias_learner])
 
     # Get minibatches of images and perform model training
     print("Training model for %s epochs." % epochs_to_train)
@@ -380,6 +415,78 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
             if use_buffered_proposals:
                 data[rpn_rois_input] = MinibatchData(Value(batch=np.asarray(proposals, dtype=np.float32)), 1, 1, False)
                 # remove dims input if no rpn is required to avoid warnings
+                del data[[k for k in data if '[6]' in str(k)][0]]
+
+            trainer.train_minibatch(data)                                    # update model with it
+            sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
+            progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
+            if sample_count % 100 == 0:
+                print("Processed {} samples".format(sample_count))
+
+        progress_printer.epoch_summary(with_metric=True)
+
+def train_model2(image_input, roi_input, dims_input, loss, pred_error,
+                lr_per_sample, mm_schedule, l2_reg_weight, epochs_to_train,
+                rpn_rois_input=None, buffered_rpn_proposals=None):
+    loss = alias(loss, 'final_net_loss')
+    if isinstance(loss, cntk.Variable):
+        loss = combine([loss])
+
+    params = loss.parameters
+    biases = [p for p in params if '.b' in p.name or 'b' == p.name]
+    others = [p for p in params if not p in biases]
+    bias_lr_mult = cfg["CNTK"].BIAS_LR_MULT
+
+    if cfg["CNTK"].DEBUG_OUTPUT:
+        print("biases")
+        for p in biases: print(p)
+        print("others")
+        for p in others: print(p)
+        print("bias_lr_mult: {}".format(bias_lr_mult))
+
+    # Instantiate the learners and the trainer object
+    lr_schedule = learning_rate_schedule(lr_per_sample, unit=UnitType.sample)
+    learner = momentum_sgd(others, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
+                           unit_gain=False, use_mean_gradient=cfg["CNTK"].USE_MEAN_GRADIENT)
+
+    bias_lr_per_sample = [v * bias_lr_mult for v in lr_per_sample]
+    bias_lr_schedule = learning_rate_schedule(bias_lr_per_sample, unit=UnitType.sample)
+    bias_learner = momentum_sgd(biases, bias_lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
+                           unit_gain=False, use_mean_gradient=cfg["CNTK"].USE_MEAN_GRADIENT)
+
+    # Get minibatches of images and perform model training
+    print("Training model for %s epochs." % epochs_to_train)
+    log_number_of_parameters(loss)
+
+    # Create the minibatch source
+    od_minibatch_source = ObjectDetectionMinibatchSource(
+        globalvars['train_map_file'], globalvars['train_roi_file'],
+        max_annotations_per_image=cfg["CNTK"].INPUT_ROIS_PER_IMAGE,
+        pad_width=image_width, pad_height=image_height, pad_value=img_pad_value,
+        randomize=True, use_flipping=cfg["TRAIN"].USE_FLIPPED,
+        max_images=cfg["CNTK"].NUM_TRAIN_IMAGES,
+        buffered_rpn_proposals=buffered_rpn_proposals,
+        fixed_size=cfg["CNTK"].FIXED_SIZE)
+
+    # define mapping from reader streams to network inputs
+    input_map = {
+        od_minibatch_source.image_si: image_input,
+        od_minibatch_source.roi_si: roi_input,
+        od_minibatch_source.dims_si: dims_input
+    }
+
+    cloned_net_top = clone_model(loss, [feature_node_name], ['rpn_cls_score', 'rpn_bbox_pred', last_conv_node_name], CloneMethod.share)
+    cloned_net_bottom_fc = clone_model(loss, ['roipooling_out'], ['cls_score', 'bbox_regr'], CloneMethod.share)
+
+    use_buffered_proposals = buffered_rpn_proposals is not None
+    progress_printer = ProgressPrinter(tag='Training', num_epochs=epochs_to_train, gen_heartbeat=True)
+    for epoch in range(epochs_to_train):       # loop over epochs
+        sample_count = 0
+        while sample_count < epoch_size:  # loop over minibatches in the epoch
+            data, proposals = od_minibatch_source.next_minibatch_with_proposals(min(mb_size, epoch_size-sample_count), input_map=input_map)
+            if use_buffered_proposals:
+                data[rpn_rois_input] = MinibatchData(Value(batch=np.asarray(proposals, dtype=np.float32)), 1, 1, False)
+                # remove dims input if no rpn is required to avoid warnings
                 del data[dims_input]
 
             # create custom input variable for current image shape
@@ -388,38 +495,38 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
             img_shape = image_data.shape
             current_w = img_shape[2]
             current_h = img_shape[1]
-            current_input_var = input_variable((num_channels, current_h, current_w), dynamic_axes=[Axis.default_batch_axis()], name='current_input')
+            current_input_shape = (num_channels, current_h, current_w)
+            print("Current input shape: {}".format(current_input_shape))
+            current_input_var = input_variable(current_input_shape, dynamic_axes=[Axis.default_batch_axis()], name=feature_node_name)
             data[current_input_var] = image_data
 
-            # clone network (and replace the reshape ops...)
-            #cloned_net = clone_model(loss, [feature_node_name], [loss.outputs[0].name], CloneMethod.share)
-            #cloned_loss = cloned_net(current_input_var, roi_input, dims_input)
-            cloned_net_top = clone_model(loss, [feature_node_name],
-                                     ['rpn_cls_score', 'rpn_bbox_pred', last_conv_node_name],
-                                     CloneMethod.share)
-            cloned_net_bottom = clone_model(loss, ['rpn_rois', 'rpn_losses', last_conv_node_name],
-                                     [loss.outputs[0].name],
-                                     CloneMethod.share)
+            if False:
+                # this works for arbitrary but fixed input sizes
+                cloned_net = clone_model(loss, [feature_node_name], [loss.outputs[0].name], CloneMethod.share)
+                loss = cloned_net(current_input_var, roi_input, dims_input)
+                trainer = Trainer(None, (loss, None), [learner, bias_learner])
+            else:
+                # conv layers and rpn con layers
+                top_out = cloned_net_top(current_input_var)
+                rpn_cls_score = top_out.outputs[0]
+                rpn_bbox_pred = top_out.outputs[1]
+                last_conv_out = top_out.outputs[2]
 
-            top_out = cloned_net_top(current_input_var)
-            rpn_cls_score = top_out.outputs[0]
-            rpn_bbox_pred = top_out.outputs[1]
-            last_conv_out = top_out.outputs[2]
+                # rpn losses, rpn targets and roi pooling
+                rpn_rois, rpn_losses = create_rpn_bottom(rpn_cls_score, rpn_bbox_pred, roi_input, dims_input, proposal_layer_param_string=cfg["CNTK"].PROPOSAL_LAYER_PARAMS)
+                rois, label_targets, bbox_targets, bbox_inside_weights = create_proposal_target_layer(rpn_rois, roi_input, num_classes=globalvars['num_classes'])
+                roi_out = roipooling(last_conv_out, rois, cntk.MAX_POOLING, (cfg["CNTK"].ROI_DIM, cfg["CNTK"].ROI_DIM), spatial_scale=1 / 16.0)
+                roi_out = alias(roi_out, 'roipooling_out')
 
-            import pdb; pdb.set_trace()
-            # from rpn helpers:
-            rpn_rois, rpn_losses = create_rpn_bottom(rpn_cls_score, rpn_bbox_pred, roi_input, dims_input,
-                                                     proposal_layer_param_string=cfg["CNTK"].PROPOSAL_LAYER_PARAMS)
+                # fc layers and prediction heads
+                net_out = cloned_net_bottom_fc(roi_out)
+                cls_score = net_out.outputs[0]
+                bbox_regr = net_out.outputs[1]
+                det_loss = create_detection_losses(cls_score, label_targets, rois, bbox_regr, bbox_targets, bbox_inside_weights)
+                cloned_loss = det_loss + rpn_losses
 
-            # Composite(Combine):
-            # Placeholder('Placeholder1364', [???], [???]),
-            # Placeholder('Placeholder1365', [???], [???]),
-            # Placeholder('Placeholder1363', [???], [???]),
-            # Input('Input1377', [#], [50 x 5])
-            # -> Output('final_net_loss', [???], [???])
-            cloned_loss = cloned_net_bottom(rpn_rois, rpn_losses, last_conv_out, roi_input)
-
-            trainer = Trainer(None, (cloned_loss, None), [learner, bias_learner])
+                # new trainer with existing learners
+                trainer = Trainer(None, (cloned_loss, None), [learner, bias_learner])
 
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
@@ -493,8 +600,12 @@ def train_faster_rcnn_e2e(base_model_file_name, debug_output=False):
     print("Using base model:   {}".format(cfg["CNTK"].BASE_MODEL))
     print("lr_per_sample:      {}".format(e2e_lr_per_sample_scaled))
 
-    train_model(image_input, roi_input, dims_input, loss, pred_error,
-                e2e_lr_per_sample_scaled, mm_schedule, cfg["CNTK"].L2_REG_WEIGHT, globalvars['e2e_epochs'])
+    if cfg["CNTK"].FIXED_SIZE:
+        train_model(image_input, roi_input, dims_input, loss, pred_error,
+                    e2e_lr_per_sample_scaled, mm_schedule, cfg["CNTK"].L2_REG_WEIGHT, globalvars['e2e_epochs'])
+    else:
+        train_model2(image_input, roi_input, dims_input, loss, pred_error,
+                    e2e_lr_per_sample_scaled, mm_schedule, cfg["CNTK"].L2_REG_WEIGHT, globalvars['e2e_epochs'])
 
     return create_eval_model(loss, image_input, dims_input)
 
@@ -662,7 +773,8 @@ def eval_faster_rcnn_mAP(eval_model):
     image_input = input_variable((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis()], name=feature_node_name)
     roi_input = input_variable((cfg["CNTK"].INPUT_ROIS_PER_IMAGE, 5), dynamic_axes=[Axis.default_batch_axis()])
     dims_input = input_variable((6), dynamic_axes=[Axis.default_batch_axis()])
-    frcn_eval = eval_model(image_input, dims_input)
+    if cfg["CNTK"].FIXED_SIZE:
+        frcn_eval = eval_model(image_input, dims_input)
 
     # Create the minibatch source
     minibatch_source = ObjectDetectionMinibatchSource(
@@ -670,7 +782,8 @@ def eval_faster_rcnn_mAP(eval_model):
         max_annotations_per_image=cfg["CNTK"].INPUT_ROIS_PER_IMAGE,
         pad_width=image_width, pad_height=image_height, pad_value=img_pad_value,
         randomize=False, use_flipping=False,
-        max_images=cfg["CNTK"].NUM_TEST_IMAGES)
+        max_images=cfg["CNTK"].NUM_TEST_IMAGES,
+        fixed_size=cfg["CNTK"].FIXED_SIZE)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -701,11 +814,16 @@ def eval_faster_rcnn_mAP(eval_model):
                                            'difficult': [False] * len(cls_gt_boxes),
                                            'det': [False] * len(cls_gt_boxes)})
 
-        output = frcn_eval.eval({image_input: mb_data[image_input], dims_input: mb_data[dims_input]})
+        if cfg["CNTK"].FIXED_SIZE:
+            output = frcn_eval.eval({image_input: mb_data[image_input], dims_input: mb_data[dims_input]})
+        else:
+            frcn_eval, mb_data, new_image_input = adapt_input_size_eval_model(eval_model, mb_data, image_input, dims_input)
+            output = frcn_eval.eval({new_image_input: mb_data[new_image_input], dims_input: mb_data[dims_input]})
+
         out_dict = dict([(k.name, k) for k in output])
         out_cls_pred = output[out_dict['cls_pred']][0]
         out_rpn_rois = output[out_dict['rpn_rois']][0]
-        out_bbox_regr = output[out_dict['bbox_regr']][0]
+        out_bbox_regr = output[out_dict['bbox_deltas']][0]
 
         labels = out_cls_pred.argmax(axis=1)
         scores = out_cls_pred.max(axis=1)

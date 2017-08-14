@@ -14,11 +14,13 @@ DEBUG = False
 if DEBUG:
     import matplotlib.pyplot as mp
 
+# side length used for non-fixed image size
+shorter_size_px = 600
 
 class ObjectDetectionReader:
     def __init__(self, img_map_file, roi_map_file, max_annotations_per_image,
                  pad_width, pad_height, pad_value, randomize, use_flipping,
-                 max_images=None, buffered_rpn_proposals=None):
+                 max_images=None, buffered_rpn_proposals=None, fixed_size = True):
         self._pad_width = pad_width
         self._pad_height = pad_height
         self._pad_value = pad_value
@@ -28,6 +30,7 @@ class ObjectDetectionReader:
         self._buffered_rpn_proposals = buffered_rpn_proposals
         self._img_file_paths = []
         self._gt_annotations = []
+        self._fixed_size = fixed_size
 
         self._num_images = self._parse_map_files(img_map_file, roi_map_file, max_annotations_per_image, max_images)
         self._img_stats = [None for _ in range(self._num_images)]
@@ -143,21 +146,35 @@ class ObjectDetectionReader:
 
     def _prepare_annotations_and_image_stats(self, index, img_width, img_height):
         annotations = self._gt_annotations[index]
-        do_scale_w = img_width > img_height
-        target_w = self._pad_width
-        target_h = self._pad_height
+        if self._fixed_size:
+            do_scale_w = img_width > img_height
+            target_w = self._pad_width
+            target_h = self._pad_height
 
-        if do_scale_w:
-            scale_factor = float(self._pad_width) / float(img_width)
-            target_h = int(np.round(img_height * scale_factor))
+            if do_scale_w:
+                scale_factor = float(self._pad_width) / float(img_width)
+                target_h = int(np.round(img_height * scale_factor))
+            else:
+                scale_factor = float(self._pad_height) / float(img_height)
+                target_w = int(np.round(img_width * scale_factor))
+
+            top = int(max(0, np.round((self._pad_height - target_h) / 2)))
+            left = int(max(0, np.round((self._pad_width - target_w) / 2)))
+            bottom = self._pad_height - top - target_h
+            right = self._pad_width - left - target_w
         else:
-            scale_factor = float(self._pad_height) / float(img_height)
-            target_w = int(np.round(img_width * scale_factor))
-
-        top = int(max(0, np.round((self._pad_height - target_h) / 2)))
-        left = int(max(0, np.round((self._pad_width - target_w) / 2)))
-        bottom = self._pad_height - top - target_h
-        right = self._pad_width - left - target_w
+            top = 0
+            bottom = 0
+            left = 0
+            right = 0
+            if img_width < img_height:
+                target_w = shorter_size_px
+                scale_factor = float(target_w) / float(img_width)
+                target_h = int(np.round(img_height * scale_factor))
+            else:
+                target_h = shorter_size_px
+                scale_factor = float(target_h) / float(img_height)
+                target_w = int(np.round(img_width * scale_factor))
 
         xyxy = annotations[:, :4]
         xyxy *= scale_factor
@@ -192,10 +209,12 @@ class ObjectDetectionReader:
 
         target_w, target_h, img_width, img_height, top, bottom, left, right = self._img_stats[index]
 
-        #resized = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_NEAREST)
-        #resized_with_pad = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=self._pad_value)
-        resized = cv2.resize(img, (target_w + index * 10, target_h + index * 10), 0, 0, interpolation=cv2.INTER_NEAREST)
-        resized_with_pad = resized
+        if self._fixed_size:
+            resized = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_NEAREST)
+            resized_with_pad = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=self._pad_value)
+        else:
+            resized = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_NEAREST)
+            resized_with_pad = resized
 
         if self._flip_image:
             resized_with_pad = cv2.flip(resized_with_pad, 1)

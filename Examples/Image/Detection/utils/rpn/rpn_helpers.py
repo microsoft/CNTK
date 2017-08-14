@@ -57,8 +57,7 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, add_loss_functions=True,
 
     return create_rpn_bottom(rpn_cls_score, rpn_bbox_pred, scaled_gt_boxes, im_info, add_loss_functions, proposal_layer_param_string)
 
-def create_rpn_bottom(rpn_cls_score, rpn_bbox_pred, scaled_gt_boxes, im_info, add_loss_functions=True,
-               proposal_layer_param_string=None):
+def create_proposal_incl_reshape(rpn_cls_score, rpn_bbox_pred, im_info, proposal_layer_param_string):
     # apply softmax to get (bg, fg) probabilities and reshape predictions back to grid of (18, H, W)
     num_predictions = int(rpn_cls_score.shape[0] / 2)
     rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions, rpn_cls_score.shape[1], rpn_cls_score.shape[2]), name="rpn_cls_score_rshp")
@@ -70,6 +69,10 @@ def create_rpn_bottom(rpn_cls_score, rpn_bbox_pred, scaled_gt_boxes, im_info, ad
     # proposal layer
     rpn_rois_raw = user_function(ProposalLayer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, param_str=proposal_layer_param_string))
     rpn_rois = alias(rpn_rois_raw, name='rpn_rois')
+    return rpn_rois, rpn_cls_score_rshp
+
+def create_rpn_bottom(rpn_cls_score, rpn_bbox_pred, scaled_gt_boxes, im_info, add_loss_functions=True, proposal_layer_param_string=None):
+    rpn_rois, rpn_cls_score_rshp = create_proposal_incl_reshape(rpn_cls_score, rpn_bbox_pred, im_info, proposal_layer_param_string)
 
     rpn_losses = None
     if(add_loss_functions):
@@ -145,9 +148,12 @@ def create_proposal_target_layer(rpn_rois, scaled_gt_boxes, num_classes):
 
     # use an alias if you need to access the outputs, e.g., when cloning a trained network
     rois = alias(ptl.outputs[0], name='rpn_target_rois')
-    label_targets = ptl.outputs[1]
-    bbox_targets = ptl.outputs[2]
-    bbox_inside_weights = ptl.outputs[3]
+    #label_targets = ptl.outputs[1]
+    #bbox_targets = ptl.outputs[2]
+    #bbox_inside_weights = ptl.outputs[3]
+    label_targets = alias(ptl.outputs[1], name='rpn_label_targets')
+    bbox_targets = alias(ptl.outputs[2], name='rpn_bbox_targets')
+    bbox_inside_weights = alias(ptl.outputs[3], name='rpn_bbox_inside_weights')
 
     return rois, label_targets, bbox_targets, bbox_inside_weights
 

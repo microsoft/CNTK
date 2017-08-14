@@ -81,6 +81,9 @@ def clip_boxes(boxes, im_info):
                     e.g.(1000, 1000, 1000, 600, 500, 300) for an original image of 600x300 that is scaled and padded to 1000x1000
     '''
 
+    if (np.isnan(boxes).any()):
+        import pdb; pdb.set_trace()
+
     im_info.shape = (6)
     padded_wh = im_info[0:2]
     scaled_wh = im_info[2:4]

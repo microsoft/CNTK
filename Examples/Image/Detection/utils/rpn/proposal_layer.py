@@ -136,6 +136,8 @@ class ProposalLayer(UserFunction):
         # reshape to (1 * H * W * A, 1) where rows are ordered by (h, w, a)
         scores = scores.transpose((0, 2, 3, 1)).reshape((-1, 1))
 
+        #import pdb; pdb.set_trace()
+
         # Convert anchors into proposals via bbox transformations
         proposals = bbox_transform_inv(anchors, bbox_deltas)
 

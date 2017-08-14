@@ -173,7 +173,7 @@ def eval_and_plot_faster_rcnn(eval_model, num_images_to_plot, test_map_file, img
         out_dict = dict([(k.name, k) for k in output])
         out_cls_pred = output[out_dict['cls_pred']][0]
         out_rpn_rois = output[out_dict['rpn_rois']][0]
-        out_bbox_regr = output[out_dict['bbox_regr']][0]
+        out_bbox_regr = output[out_dict['bbox_deltas']][0]
 
         labels = out_cls_pred.argmax(axis=1)
         scores = out_cls_pred.max(axis=1).tolist()

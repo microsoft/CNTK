@@ -12,14 +12,14 @@ import numpy as np
 class ObjectDetectionMinibatchSource(UserMinibatchSource):
     def __init__(self, img_map_file, roi_map_file, max_annotations_per_image,
                  pad_width, pad_height, pad_value, randomize, use_flipping,
-                 max_images=None, buffered_rpn_proposals=None):
+                 max_images=None, buffered_rpn_proposals=None, fixed_size=True):
 
         self.image_si = StreamInformation("image", 0, 'dense', np.float32, (3, pad_height, pad_width,))
         self.roi_si = StreamInformation("annotation", 1, 'dense', np.float32, (max_annotations_per_image, 5,))
         self.dims_si = StreamInformation("dims", 1, 'dense', np.float32, (4,))
 
         self.od_reader = ObjectDetectionReader(img_map_file, roi_map_file, max_annotations_per_image,
-                 pad_width, pad_height, pad_value, randomize, use_flipping, max_images, buffered_rpn_proposals)
+                 pad_width, pad_height, pad_value, randomize, use_flipping, max_images, buffered_rpn_proposals, fixed_size)
 
         super(ObjectDetectionMinibatchSource, self).__init__()
 
