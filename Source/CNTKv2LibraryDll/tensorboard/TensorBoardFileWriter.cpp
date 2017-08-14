@@ -239,6 +239,70 @@ namespace CNTK
             WriteRecord(Serialize(event));
         }
 
+        void TensorBoardFileWriter::WriteImage(const std::wstring& name, Value& value, uint64_t step) {
+            WriteImage(name, value.Data(), step);
+        }
+
+        void TensorBoardFileWriter::WriteImage(const std::wstring& name, NDArrayViewPtr NDPtr, uint64_t step)
+        {
+            assert(value != nullptr);
+            tensorflow::Event event;
+            event.set_wall_time(static_cast<double>(std::time(0)));
+            tensorflow::Summary* summary = event.mutable_summary();
+
+            std::vector<size_t> dimensions = NDPtr->Shape().Dimensions();
+            const size_t batch_size = dimensions.at(3);
+            const size_t depth = dimensions.at(2);
+            const size_t width = dimensions.at(1);
+            const size_t height = dimensions.at(0);
+            const DataType dtype = NDPtr->GetDataType();
+
+            std::vector<size_t> start(4, 0);
+            std::vector<size_t> extent;
+            extent.push_back(height);
+            extent.push_back(width);
+            extent.push_back(depth);
+            extent.push_back(1);
+            const int compression = -1;
+            
+            const std::vector<size_t> imageDim({height, width, depth});
+            NDShape imageShape(imageDim);
+
+            for (size_t i = 0; i < batch_size; i++) {
+                tensorflow::Summary::Value* summaryValue = summary->add_value();
+                summaryValue->set_tag(ToString(name) + "/image/" + std::to_string(i));
+
+                tensorflow::Summary::Image* summaryImage = summaryValue->mutable_image();
+                summaryImage->set_height(height);
+                summaryImage->set_width(width);
+                summaryImage->set_colorspace(depth);
+                start.back() = static_cast<size_t>(i);
+                auto image = NDPtr->SliceView(start, extent)->AsShape(imageDim);
+                vector<uchar> buffer;
+
+                switch (dtype)
+                {
+                case DataType::Float:
+                    writeImageToBuffer(image->WritableDataBuffer<float>(), height, width, CV_32FC(depth), buffer);
+                    break;
+                
+                case DataType::Double:
+                    writeImageToBuffer(image->WritableDataBuffer<double>(), height, width, CV_64FC(depth), buffer);
+                    break;
+
+                default:
+                    fprintf(stderr, "TensorBoardFileWriter: Unsupported data type: %d ", dtype);
+                    break;
+                }
+
+                string str(buffer.begin(), buffer.end());
+                summaryImage->set_encoded_image_string(str);
+            }
+            
+            WriteRecord(Serialize(event));
+        }
+        
+
         void TensorBoardFileWriter::WriteVersion(time_t time)
         {
             // Version string present in the first entry of every event file.
