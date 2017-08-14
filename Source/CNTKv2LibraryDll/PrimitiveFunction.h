@@ -447,7 +447,8 @@ namespace CNTK
                         if ((dim == NDShape::InferredDimension) || (outputDims[index] == NDShape::InferredDimension))
                             outputDims[index] = NDShape::InferredDimension;
                         else if (dim == NDShape::FreeDimension)
-                            InvalidArgument("Splice: Illegal to splice along an axis (%d) for which any of the inputs has a free dimension.", (int)index);
+                            //InvalidArgument("Splice: Illegal to splice along an axis (%d) for which any of the inputs has a free dimension.", (int)index);
+                            outputDims[index] = NDShape::FreeDimension;
                         else
                             outputDims[index] += dim;
                     }
