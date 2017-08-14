@@ -803,7 +803,7 @@ def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
     Label File)
 
     Args:
-        label_mapping_file (`str`): path to the label mapping file
+        label_mapping_file (str): path to the label mapping file
         streams: any dictionary-like object that contains a mapping from stream
           names to :class:`StreamDef` objects. Each StreamDef object configures
           a label stream.
