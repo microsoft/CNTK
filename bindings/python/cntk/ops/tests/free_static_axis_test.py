@@ -139,6 +139,26 @@ def test_free_dimension_broadcast():
     assert m.shape == (-3, 5)
 
 
+def test_free_static_times():
+    x = C.input_variable((C.FreeDimension, C.FreeDimension))
+    w = C.parameter(init=np.asarray([[2, 5], [1, 3]], dtype=np.float32))
+    t = C.times(x, w)
+
+    x_data = np.asarray([[0.5, 0.2]], np.float32)
+    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])
+    assert np.array_equal(t_val, np.asarray([[[1.2, 3.1]]], dtype=np.float32))
+    assert np.array_equal(w_grad, np.asarray([[0.5, .5], [.2, .2]], dtype=np.float32))
+
+    x_data = np.asarray([[0.5, 0.2], [0.1, .6]], np.float32)
+    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])
+    assert np.allclose(t_val, np.asarray([[[1.2, 3.1], [0.8, 2.3]]], dtype=np.float32))
+    assert np.array_equal(w_grad, np.asarray([[0.6, .6], [.8, .8]], dtype=np.float32))
+
+    x_data = np.asarray([[0.5, 0.2]], np.float32)
+    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])    assert np.array_equal(t_val, np.asarray([[[1.2, 3.1]]], dtype=np.float32))
+    assert np.array_equal(w_grad, np.asarray([[0.5, .5], [.2, .2]], dtype=np.float32))
+
+
 from cntk.ops.functions import Function, UserFunction
 from .ops_test_utils import AA
 
