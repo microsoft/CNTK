@@ -27,7 +27,7 @@ __C.CNTK.USE_MEAN_GRADIENT = True
 __C.CNTK.FORCE_DETERMINISTIC = True
 __C.CNTK.FAST_MODE = True
 
-__C.CNTK.DATASET = "Grocery" # "Grocery" or "Pascal"
+__C.CNTK.DATASET = "Pascal" # "Grocery" or "Pascal"
 __C.CNTK.BASE_MODEL = "AlexNet" # "VGG16" or "AlexNet"
 __C.CNTK.CONV_BIAS_INIT = 0.0
 __C.CNTK.SIGMA_RPN_L1 = 3.0
@@ -50,7 +50,7 @@ __C.CNTK.FRCN_EPOCHS = 8
 __C.CNTK.FRCN_LR_PER_SAMPLE = [0.001] * 6 + [0.0001] * 2
 
 __C.CNTK.INPUT_ROIS_PER_IMAGE = 50
-__C.CNTK.IMAGE_WIDTH = 478 # 850
+__C.CNTK.IMAGE_WIDTH = 850
 __C.CNTK.IMAGE_HEIGHT = 850
 
 __C.CNTK.RESULTS_NMS_THRESHOLD = 0.3 # see also: __C.TEST.NMS = 0.3
@@ -89,8 +89,8 @@ if __C.CNTK.DATASET == "Pascal":
     __C.CNTK.TRAIN_ROI_FILE = "trainval2007_rois_abs-xyxy_noPad_skipDif.txt"
     __C.CNTK.TEST_MAP_FILE = "test2007.txt"
     __C.CNTK.TEST_ROI_FILE = "test2007_rois_abs-xyxy_noPad_skipDif.txt"
-    __C.CNTK.NUM_TRAIN_IMAGES = 5010
-    __C.CNTK.NUM_TEST_IMAGES = 4952
+    __C.CNTK.NUM_TRAIN_IMAGES = 20 #5010
+    __C.CNTK.NUM_TEST_IMAGES = 10# 4952
     __C.CNTK.PROPOSAL_LAYER_PARAMS = "'feat_stride': 16\n'scales':\n - 8 \n - 16 \n - 32"
 
 #
