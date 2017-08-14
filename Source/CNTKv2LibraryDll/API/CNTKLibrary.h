@@ -594,6 +594,7 @@ namespace CNTK
         friend class BlockMomentumDistributedLearner;
         friend class Internal::VariableResolver;
         friend class Trainer;
+        friend class Internal::TensorBoardFileWriter;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);

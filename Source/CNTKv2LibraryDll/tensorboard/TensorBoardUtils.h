@@ -7,6 +7,9 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
+#include <opencv2/core/mat.hpp>
+#include <opencv2/opencv.hpp>
+#include "opencv2/core/types.hpp"
 
 namespace tensorflow
 {
@@ -15,11 +18,14 @@ namespace tensorflow
 
 namespace CNTK
 {
-    namespace Internal
-    {
-        ///
-        /// Populates the given TensorBoard GraphDef with the graph of the given CNTK function.
-        ///
-        void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst);
-    }
+namespace Internal {
+///
+/// Populates the given TensorBoard GraphDef with the graph of the given CNTK function.
+///
+void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst);
+
+void writeImageToBuffer(void* matrix, int h, int w, int type, std::vector<uchar>& buf);
+
+}
+ 
 }

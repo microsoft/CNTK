@@ -12,6 +12,8 @@
 
 #include "Utils.h"
 
+using namespace cv;
+
 namespace CNTK
 {
     namespace Internal
@@ -261,5 +263,20 @@ namespace CNTK
                 placeholder.first->add_input(inputNode->name());
             }
         }
+
+        void writeImageToBuffer(void* matrix, int h, int w, int type, std::vector<uchar>& buf) {
+            assert(matrix != nullptr);
+            assert(buf != nullptr);
+            vector<int> param = vector<int>(2);
+            param[0] = CV_IMWRITE_PNG_COMPRESSION;
+            param[1] = 3;//default(3)  0-9
+            cv::Mat src = cv::Mat(h, w, type, matrix);
+
+            if (!imencode(".png", src, buf, param)) {
+                fprintf(stderr, "TensorBoardFileWriter: PNG encoding failed. ");
+                return;
+            }
+        }
+
     }
 }

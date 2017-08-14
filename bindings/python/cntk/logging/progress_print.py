@@ -470,6 +470,14 @@ class TensorBoardProgressWriter(cntk_py.ProgressWriter):
         if self.writer:
             self.writer.write_value(str(name), float(value), int(step))
 
+    def write_image(self, name, value, step):
+        if self.closed:
+            raise RuntimeError('Attempting to use a closed TensorBoardProgressWriter')
+
+        if self.writer:
+            self.writer.write_image(str(name), value, int(step))
+
+
     def flush(self):
         '''Make sure that any outstanding records are immediately persisted.'''
         if self.closed:
