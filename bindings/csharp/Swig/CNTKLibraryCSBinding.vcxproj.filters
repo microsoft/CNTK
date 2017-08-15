@@ -32,6 +32,9 @@
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\MomentumAsTimeConstantScheduleCS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\common\CNTKExceptionHandling.i">

@@ -98,7 +98,7 @@ namespace CNTK
         }
 
         /// <summary>
-        /// 
+        /// Compute the per dimension means and variances for each of the specified streams using data from the specified minibatchSource.
         /// </summary>
         /// <param name="minibatchSource"></param>
         /// <param name="computedMeanAndVariances"></param>

@@ -14,6 +14,38 @@ namespace CNTK.CNTKLibraryCSTrainingTest
 {
     public class TestHelper
     {
+        public enum Activation
+        {
+            None,
+            ReLU,
+            Sigmoid,
+            Tanh
+        }
+        public static Function Dense(Variable input, int outputDim, DeviceDescriptor device, 
+            Activation activation = Activation.None, string outputName = "")
+        {
+            if (input.Shape.Rank != 1)
+            {
+                // 
+                int newDim = input.Shape.Dimensions.Aggregate((d1, d2) => d1 * d2);
+                input = CNTKLib.Reshape(input, new int[] { newDim });
+            }
+
+            Function fullyConnected = FullyConnectedLinearLayer(input, outputDim, device, outputName);
+            switch (activation)
+            {
+                default:
+                case Activation.None:
+                    return fullyConnected;
+                case Activation.ReLU:
+                    return CNTKLib.ReLU(fullyConnected);
+                case Activation.Sigmoid:
+                    return CNTKLib.Sigmoid(fullyConnected);
+                case Activation.Tanh:
+                    return CNTKLib.Tanh(fullyConnected);
+            }
+        }
+
         public static Function FullyConnectedLinearLayer(Variable input, int outputDim, DeviceDescriptor device,
             string outputName = "")
         {

@@ -161,5 +161,46 @@ namespace CNTK
             return inputVector;
         }
 
+        internal static IDictionary<Variable, MinibatchData> FromUnorderedMapStreamInformationMinibatchData(
+            UnorderedMapVariableMinibatchData unorderedMapVariableMinibatchData)
+        {
+            IDictionary<Variable, MinibatchData> dict = new Dictionary<Variable, MinibatchData>();
+            foreach (var pair in unorderedMapVariableMinibatchData)
+            {
+                dict.Add(pair.Key, pair.Value);
+            }
+            return dict;
+        }
+
+        internal static AxisVector AsAxisVector(IList<Axis> input)
+        {
+            AxisVector inputVector = new AxisVector();
+            foreach (var element in input)
+            {
+                inputVector.Add(element);
+            }
+            return inputVector;
+        }
+
+        internal static UnorderedMapVariableVariable AsUnorderedMapVariableVariable(IDictionary<Variable, Variable> input)
+        {
+            UnorderedMapVariableVariable inputMap = new UnorderedMapVariableVariable();
+            foreach (var element in input)
+            {
+                inputMap.Add(element.Key, element.Value);
+            }
+            return inputMap;
+        }
+
+        internal static IList<Parameter> FromParameterVector(ParameterVector parameterVector)
+        {
+            IList<Parameter> parameterList = new List<Parameter>();
+            foreach (var parameter in parameterVector)
+            {
+                parameterList.Add(parameter);
+            }
+
+            return parameterList;
+        }
     }
 }

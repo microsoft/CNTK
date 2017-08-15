@@ -4,6 +4,8 @@
 //
 // VariableShim.cs -- C# Api for CNTK Variable class
 //
+using System.Collections.Generic;
+
 namespace CNTK
 {
     public partial class Variable
@@ -164,6 +166,24 @@ namespace CNTK
         public static Variable InputVariable(NDShape shape, DataType dataType, string name)
         {
             return CNTKLib.InputVariable(shape, dataType, name);
+        }
+
+        public static Variable InputVariable(NDShape shape, bool isSparse, DataType dataType, bool needsGradient, string name, IList<Axis> dynamicAxes)
+        {
+            AxisVector dynamicAxesVector = Helper.AsAxisVector(dynamicAxes);
+            return CNTKLib.InputVariable(shape, isSparse, dataType, needsGradient, name, dynamicAxesVector);
+        }
+
+        public static Variable InputVariable(NDShape shape, bool isSparse, DataType dataType, string name, IList<Axis> dynamicAxes)
+        {
+            AxisVector dynamicAxesVector = Helper.AsAxisVector(dynamicAxes);
+            return CNTKLib.InputVariable(shape, isSparse, dataType, name, dynamicAxesVector);
+        }
+
+        public static Variable PlaceholderVariable(NDShape shape, IList<Axis> dynamicAxes)
+        {
+            AxisVector dynamicAxesVector = Helper.AsAxisVector(dynamicAxes);
+            return CNTKLib.PlaceholderVariable(shape, dynamicAxesVector);
         }
     }
 }

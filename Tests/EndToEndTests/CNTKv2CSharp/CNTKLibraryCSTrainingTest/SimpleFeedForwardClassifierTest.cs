@@ -104,7 +104,7 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                     { new StreamConfiguration("features", inputDim), new StreamConfiguration("labels", numOutputClasses) };
 
                 IList<Learner> parameterLearners =
-                    new List<Learner>() { CNTKLib.SGDLearner(classifierOutput.Parameters(), learningRatePerSample) };
+                    new List<Learner>() { Learner.SGDLearner(classifierOutput.Parameters(), learningRatePerSample) };
                 var trainer = Trainer.CreateTrainer(classifierOutput, trainingLoss, prediction, parameterLearners);
 
                 int outputFrequencyInMinibatches = 20;

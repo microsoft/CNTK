@@ -25,6 +25,9 @@
 
 %{
     #include "CNTKLibrary.h"
+#ifdef SWIGCSHARP
+    #include "MomentumAsTimeConstantScheduleCS.h"
+#endif
     #pragma warning(disable : 4100) //unreferenced formal parameter
 %}
 
@@ -39,10 +42,12 @@
 %typemap(csclassmodifiers) CNTK::NDMask "public partial class"
 %typemap(csclassmodifiers) CNTK::Variable "public partial class"
 %typemap(csclassmodifiers) CNTK::Parameter "public partial class"
+%typemap(csclassmodifiers) CNTK::Constant "public partial class"
 %typemap(csclassmodifiers) CNTK::Value "public partial class"
 %typemap(csclassmodifiers) CNTK::NDArrayView "public partial class"
 %typemap(csclassmodifiers) CNTK::StreamConfiguration "public partial class"
 %typemap(csclassmodifiers) CNTK::Trainer "public partial class"
+%typemap(csclassmodifiers) CNTK::Learner "public partial class"
 %typemap(csclassmodifiers) CNTK::MinibatchSource "public partial class"
 #endif
 
@@ -107,6 +112,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::Learner)
 %template(UnorderedMapVariableMinibatchData) std::unordered_map<CNTK::Variable, CNTK::MinibatchData>;
 %template(StreamConfigurationVector) std::vector<CNTK::StreamConfiguration>;
 %template(ParameterVector) std::vector<CNTK::Parameter>;
+%template(ConstantVector) std::vector<CNTK::Constant>;
+%template(StringVector) std::vector<std::wstring>;
+%template(HTKFeatureConfigurationVector) std::vector<CNTK::HTKFeatureConfiguration>;
 %template(UnorderedMapParameterNDArrayViewPtr) std::unordered_map<CNTK::Parameter, std::shared_ptr<CNTK::NDArrayView>>;
 %template(PairNDArrayViewPtrNDArrayViewPtr) std::pair<std::shared_ptr<CNTK::NDArrayView>, std::shared_ptr<CNTK::NDArrayView>>;
 %template(UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr) std::unordered_map<CNTK::StreamInformation, std::pair<std::shared_ptr<CNTK::NDArrayView>, std::shared_ptr<CNTK::NDArrayView>>>;
@@ -114,9 +122,13 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::Learner)
 %template(LearnerVector) std::vector<std::shared_ptr<CNTK::Learner>>;
 %template(UnorderedMapStringDictionaryValue) std::unordered_map<std::wstring, CNTK::DictionaryValue>;
 
+
 %template(PairSizeTDouble) std::pair<size_t, double>;
 %template(VectorPairSizeTDouble) std::vector<std::pair<size_t, double>>;
 %template(PairSizeTSizeT) std::pair<size_t, size_t>;
+%template(PairSizeTInt) std::pair<size_t, int>;
+%template(PairIntInt) std::pair<int, int>;
+%template(PairFloatFloat) std::pair<float, float>;
 %template(PairDoubleDouble) std::pair<double, double>;
 #endif
 
@@ -128,6 +140,34 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::Learner)
 // It seems that SWIG does not understand %$isstruct.
 #define IGNORE_STRUCT %rename("$ignore", fullname=1)
 #define IGNORE_ENUM_CLASS %rename("$ignore", fullname=1)
+
+//use when the wrapped method returns an idiomatic type
+//for non-idiomatic types, such as the default collection wrappers use RENAME_AND_MAKE_PRIVATE below
+//and then write custom method in the language specific file
+#if defined(SWIGCSHARP)
+#define MAKE_PRIVATE(x) %csmethodmodifiers x "private"
+#elif defined(SWIGJAVA)
+#define MAKE_PRIVATE(x) %javamethodmodifiers x "private"
+#else
+#error "MAKE_PRIVATE is not defined."
+#endif
+
+%define RENAME_AND_MAKE_PRIVATE(namespace, method)
+  MAKE_PRIVATE(namespace##::##method);
+  %rename (_##method) namespace##::##method
+%enddef
+
+#if defined(SWIGCSHARP)
+// For C#, property needs to be added as C# code. Here we just rename the corresponding C++ method and make it as private.
+#define MAKE_GETTER(namespace, method) RENAME_AND_MAKE_PRIVATE(namespace, method)
+#elif defined(SWIGJAVA)
+// For Java, we add "get" prefix to the method name.
+%define MAKE_GETTER(namespace, method)
+    %rename (get ## method) namespace##::##method
+%enddef
+#else
+#error "MAKE_GETTER is not defined."
+#endif
 
 #ifndef SWIGCSHARP
 IGNORE_FUNCTION CNTK::PlaceholderVariable;
@@ -222,15 +262,15 @@ IGNORE_FUNCTION CNTK::Function::Deserialize;
 
 #ifndef SWIGCSHARP
 IGNORE_FUNCTION CNTK::Function::Parameters;
-#endif
-
-IGNORE_FUNCTION CNTK::Function::Constants;
-IGNORE_FUNCTION CNTK::Function::Placeholders;
-IGNORE_FUNCTION CNTK::Function::Attributes;
-IGNORE_FUNCTION CNTK::Function::PrintGraph;
-IGNORE_FUNCTION CNTK::Function::BlockArgumentsMapping;
 IGNORE_FUNCTION CNTK::Function::ReplacePlaceholders;
 IGNORE_FUNCTION CNTK::Function::ReplacePlaceholder;
+IGNORE_FUNCTION CNTK::Function::Placeholders;
+IGNORE_FUNCTION CNTK::Function::PrintGraph;
+IGNORE_FUNCTION CNTK::Function::Constants;
+IGNORE_FUNCTION CNTK::Function::Attributes;
+#endif
+
+IGNORE_FUNCTION CNTK::Function::BlockArgumentsMapping;
 IGNORE_FUNCTION CNTK::Function::Function;
 IGNORE_FUNCTION CNTK::Function::RestoreFromCheckpoint;
 IGNORE_FUNCTION CNTK::Function::Gradients;
@@ -240,19 +280,20 @@ IGNORE_FUNCTION CNTK::Function::SetAttribute;
 
 #ifndef SWIGCSHARP
 IGNORE_CLASS CNTK::Parameter;
+IGNORE_CLASS CNTK::Constant;
 #endif
 
-IGNORE_CLASS CNTK::Constant;
 IGNORE_CLASS CNTK::BackPropState;
-IGNORE_ENUM_CLASS CNTK::PoolingType;
 
-IGNORE_FUNCTION CNTK::Negate;
+IGNORE_FUNCTION CNTK::operator+;
 IGNORE_FUNCTION CNTK::operator-;
 
-#ifndef SWIGCSHARP
-IGNORE_FUNCTION CNTK::Sigmoid;
-#endif
+IGNORE_FUNCTION CNTK::Slice;
 
+#ifndef SWIGCSHARP
+IGNORE_ENUM_CLASS CNTK::PoolingType;
+IGNORE_FUNCTION CNTK::Negate;
+IGNORE_FUNCTION CNTK::Sigmoid;
 IGNORE_FUNCTION CNTK::Tanh;
 IGNORE_FUNCTION CNTK::Sin;
 IGNORE_FUNCTION CNTK::Cos;
@@ -270,23 +311,14 @@ IGNORE_FUNCTION CNTK::Floor;
 IGNORE_FUNCTION CNTK::Ceil;
 IGNORE_FUNCTION CNTK::Abs;
 IGNORE_FUNCTION CNTK::Reciprocal;
-IGNORE_FUNCTION CNTK::Softmax;
-IGNORE_FUNCTION CNTK::Hardmax;
 IGNORE_FUNCTION CNTK::TransposeAxes;
 IGNORE_FUNCTION CNTK::Transpose;
-IGNORE_FUNCTION CNTK::Slice;
 IGNORE_FUNCTION CNTK::RandomSample;
 IGNORE_FUNCTION CNTK::RandomSampleInclusionFrequency;
 IGNORE_FUNCTION CNTK::Dropout;
 IGNORE_FUNCTION CNTK::Reshape;
-
-#ifndef SWIGCSHARP
 IGNORE_FUNCTION CNTK::Plus;
-#endif
-
-IGNORE_FUNCTION CNTK::operator+;
 IGNORE_FUNCTION CNTK::Minus;
-IGNORE_FUNCTION CNTK::operator-;
 IGNORE_FUNCTION CNTK::LogAddExp;
 IGNORE_FUNCTION CNTK::Pow;
 IGNORE_FUNCTION CNTK::ElementTimes;
@@ -297,45 +329,26 @@ IGNORE_FUNCTION CNTK::Less;
 IGNORE_FUNCTION CNTK::LessEqual;
 IGNORE_FUNCTION CNTK::Greater;
 IGNORE_FUNCTION CNTK::GreaterEqual;
-
-#ifndef SWIGCSHARP
 IGNORE_FUNCTION CNTK::Times;
-#endif
-
 IGNORE_FUNCTION CNTK::TransposeTimes;
 IGNORE_FUNCTION CNTK::CosineDistance;
 IGNORE_FUNCTION CNTK::CosineDistanceWithNegativeSamples;
 IGNORE_FUNCTION CNTK::BinaryCrossEntropy;
 IGNORE_FUNCTION CNTK::WeightedBinaryCrossEntropy;
 IGNORE_FUNCTION CNTK::SquaredError;
-
-#ifndef SWIGCSHARP
 IGNORE_FUNCTION CNTK::CrossEntropyWithSoftmax;
-#endif
-
 IGNORE_FUNCTION CNTK::EditDistanceError;
 IGNORE_FUNCTION CNTK::ForwardBackward;
 IGNORE_FUNCTION CNTK::LabelsToGraph;
-
-#ifndef SWIGCSHARP
 IGNORE_FUNCTION CNTK::ClassificationError;
-#endif
-
 IGNORE_FUNCTION CNTK::PastValue;
 IGNORE_FUNCTION CNTK::FutureValue;
 IGNORE_FUNCTION CNTK::ReduceSum;
 IGNORE_FUNCTION CNTK::ReduceLogSum;
 IGNORE_FUNCTION CNTK::ReduceMean;
-IGNORE_FUNCTION CNTK::ReduceMax;
-IGNORE_FUNCTION CNTK::ReduceMin;
 IGNORE_FUNCTION CNTK::ReduceProd;
-
-#ifndef SWIGCSHARP
 IGNORE_FUNCTION CNTK::PerDimMeanVarianceNormalize;
-#endif
-
 IGNORE_FUNCTION CNTK::Convolution;
-IGNORE_FUNCTION CNTK::ROIPooling;
 IGNORE_FUNCTION CNTK::ConvolutionTranspose;
 IGNORE_FUNCTION CNTK::Pooling;
 IGNORE_FUNCTION CNTK::Unpooling;
@@ -357,11 +370,24 @@ IGNORE_FUNCTION CNTK::Argmax;
 IGNORE_FUNCTION CNTK::Argmin;
 IGNORE_FUNCTION CNTK::ToSequence;
 IGNORE_FUNCTION CNTK::ToSequenceLike;
-IGNORE_FUNCTION CNTK::AsBlock;
-IGNORE_FUNCTION CNTK::ReaderCrop;
 IGNORE_FUNCTION CNTK::ReaderMean;
 IGNORE_FUNCTION CNTK::ReaderScale;
 IGNORE_FUNCTION CNTK::ReaderColor;
+IGNORE_NAMESPACE CNTK::Sequence;
+#else
+%rename(SequenceReduceSum) CNTK::Sequence::ReduceSum;
+#endif
+
+IGNORE_FUNCTION CNTK::ReduceMax;
+IGNORE_FUNCTION CNTK::ReduceMin;
+IGNORE_FUNCTION CNTK::Softmax;
+IGNORE_FUNCTION CNTK::Hardmax;
+
+IGNORE_FUNCTION CNTK::AsBlock;
+
+#ifndef SWIGCSHARP
+IGNORE_FUNCTION CNTK::ROIPooling;
+IGNORE_FUNCTION CNTK::ReaderCrop;
 IGNORE_FUNCTION CNTK::ImageDeserializer;
 IGNORE_FUNCTION CNTK::Base64ImageDeserializer;
 IGNORE_FUNCTION CNTK::CTFDeserializer;
@@ -369,9 +395,6 @@ IGNORE_FUNCTION CNTK::CBFDeserializer;
 IGNORE_FUNCTION CNTK::HTKFeatureDeserializer;
 IGNORE_FUNCTION CNTK::HTKMLFDeserializer;
 
-IGNORE_NAMESPACE CNTK::Sequence;
-
-#ifndef SWIGCSHARP
 IGNORE_CLASS CNTK::TrainingParameterSchedule;
 IGNORE_CLASS CNTK::TrainingParameterPerUnitSchedule;
 IGNORE_CLASS CNTK::TrainingParameterPerSampleSchedule;
@@ -402,9 +425,9 @@ IGNORE_FUNCTION CNTK::SetDefaultUnitGainValue;
 
 #ifndef SWIGCSHARP
 IGNORE_FUNCTION CNTK::SGDLearner;
+IGNORE_FUNCTION CNTK::MomentumSGDLearner;
 #endif
 
-IGNORE_FUNCTION CNTK::MomentumSGDLearner;
 IGNORE_FUNCTION CNTK::NesterovLearner;
 
 IGNORE_VARIABLE CNTK::DefaultVarianceMomentum;
@@ -448,13 +471,13 @@ IGNORE_STRUCT CNTK::StreamConfiguration;
 %ignore CNTK::MinibatchSource::FullDataSweep;
 %ignore CNTK::MinibatchSource::DefaultRandomizationWindowInChunks;
 %ignore CNTK::MinibatchSourceConfig::isMultithreaded;
+// RENAME_AND_MAKE_PRIVATE(CNTK::MinibatchSource, GetNextMinibatch);
 #endif
 
-IGNORE_FUNCTION CNTK::CreateCompositeMinibatchSource;
-IGNORE_STRUCT CNTK::HTKFeatureConfiguration;
-IGNORE_FUNCTION CNTK::TextFormatMinibatchSource;
-
 #ifndef SWIGCSHARP
+IGNORE_FUNCTION CNTK::CreateCompositeMinibatchSource;
+IGNORE_FUNCTION CNTK::TextFormatMinibatchSource;
+IGNORE_STRUCT CNTK::HTKFeatureConfiguration;
 IGNORE_FUNCTION CNTK::ComputeInputPerDimMeansAndInvStdDevs;
 #endif
 
@@ -562,34 +585,6 @@ IGNORE_FUNCTION CNTK::DeviceKindName;
 IGNORE_FUNCTION CNTK::VariableKindName;
 #endif
 
-//use when the wrapped method returns an idiomatic type
-//for non-idiomatic types, such as the default collection wrappers use RENAME_AND_MAKE_PRIVATE below
-//and then write custom method in the language specific file
-#if defined(SWIGCSHARP)
-#define MAKE_PRIVATE(x) %csmethodmodifiers x "private"
-#elif defined(SWIGJAVA)
-#define MAKE_PRIVATE(x) %javamethodmodifiers x "private"
-#else
-#error "MAKE_PRIVATE is not defined."
-#endif
-
-%define RENAME_AND_MAKE_PRIVATE(namespace, method)
-  MAKE_PRIVATE(namespace##::##method);
-  %rename (_##method) namespace##::##method
-%enddef
-
-#if defined(SWIGCSHARP)
-// For C#, property needs to be added as C# code. Here we just rename the corresponding C++ method and make it as private.
-#define MAKE_GETTER(namespace, method) RENAME_AND_MAKE_PRIVATE(namespace, method)
-#elif defined(SWIGJAVA)
-// For Java, we add "get" prefix to the method name.
-%define MAKE_GETTER(namespace, method)
-    %rename (get ## method) namespace##::##method
-%enddef
-#else
-#error "MAKE_GETTER is not defined."
-#endif
-
 // include common warning filters
 %include "CNTKWarnFilters.i"
 
@@ -618,7 +613,6 @@ RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, GPUDevice);
 %rename (useDefaultDevice) CNTK::DeviceDescriptor::UseDefaultDevice;
 %rename (trySetDefaultDevice) CNTK::DeviceDescriptor::TrySetDefaultDevice;
 %rename (toString) CNTK::DeviceDescriptor::AsString;
-#endif
 
 // class Axis
 IGNORE_FUNCTION CNTK::Axis::DefaultDynamicAxis();
@@ -628,6 +622,7 @@ IGNORE_FUNCTION CNTK::Axis::AllStaticAxes();
 IGNORE_FUNCTION CNTK::Axis::AllAxes();
 IGNORE_FUNCTION CNTK::Axis::DefaultInputVariableDynamicAxes();
 IGNORE_FUNCTION CNTK::Axis::UnknownDynamicAxes();
+#endif
 
 MAKE_GETTER(CNTK::Axis, Name);
 
@@ -669,6 +664,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, Inputs);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Outputs);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Arguments);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindAllWithName);
+RENAME_AND_MAKE_PRIVATE(CNTK::Function, Parameters);
 
 #ifdef SWIGCSHARP
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, IsComposite);
@@ -862,6 +858,9 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateOneHotDouble);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueTo);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToFloat);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
+
+RENAME_AND_MAKE_PRIVATE(CNTK::Constant, ScalarFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Constant, ScalarDouble);
 #endif // SWIGCSHARP
 
 #ifdef SWIGCSHARP

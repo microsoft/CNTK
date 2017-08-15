@@ -73,3 +73,7 @@
 %include "CNTKLibrary.h"
 
 %template(TrainingParameterScheduleDouble) CNTK::TrainingParameterSchedule<double>;
+
+// %warnfilter(401, 509) CNTK::MomentumAsTimeConstantSchedule;
+
+%include "MomentumAsTimeConstantScheduleCS.h"

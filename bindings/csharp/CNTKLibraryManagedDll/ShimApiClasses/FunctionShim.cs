@@ -130,6 +130,12 @@ namespace CNTK
             }
         }
 
+        public IList<Parameter> Parameters()
+        {
+            ParameterVector parameterVector = _Parameters();
+            return Helper.FromParameterVector(parameterVector);
+        }
+
         /// <summary>
         /// Creates a new cloned function instance. For C# Eval, default ParameterCloningMethod is share.
         /// </summary>
@@ -138,6 +144,12 @@ namespace CNTK
         public Function Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod.Share)
         {
             return _Clone(ParameterCloningMethod.Share);
+        }
+
+        public Function Clone(ParameterCloningMethod parameterCloneMethod, IDictionary<Variable, Variable> replacements)
+        {
+            UnorderedMapVariableVariable replacementVector = Helper.AsUnorderedMapVariableVariable(replacements);
+            return _Clone(parameterCloneMethod, replacementVector);
         }
 
         /// <summary>
@@ -275,6 +287,12 @@ namespace CNTK
         public static Function Alias(Variable operand, string name = "")
         {
             return CNTKLib.Alias(operand, name);
+        }
+
+        public Function ReplacePlaceholders(IDictionary<Variable, Variable> placeholderReplacements)
+        {
+            UnorderedMapVariableVariable unorderedMapVariableVariable = Helper.AsUnorderedMapVariableVariable(placeholderReplacements);
+            return ReplacePlaceholders(unorderedMapVariableVariable);
         }
 
         /// <summary>

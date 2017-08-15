@@ -73,7 +73,7 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
-      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>        
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
     </ClCompile>
     <Link />
     <ProjectReference>
@@ -118,6 +118,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibrary.h" />
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h" />
+    <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\MomentumAsTimeConstantScheduleCS.h" />
     <ClInclude Include="cntk_cs_wrap.h" />
   </ItemGroup>
   <ItemGroup>
