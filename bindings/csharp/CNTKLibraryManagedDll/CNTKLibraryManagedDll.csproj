@@ -56,10 +56,49 @@
   <ItemGroup>
     <Compile Include="Helper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ShimApiClasses\AxisShim.cs" />
+    <Compile Include="ShimApiClasses\CNTKLibShim.cs" />
+    <Compile Include="ShimApiClasses\DeviceDescriptorShim.cs" />
+    <Compile Include="ShimApiClasses\FunctionShim.cs" />
+    <Compile Include="ShimApiClasses\MinibatchSourceShim.cs" />
+    <Compile Include="ShimApiClasses\NDArrayViewShim.cs" />
+    <Compile Include="ShimApiClasses\NDMaskShim.cs" />
+    <Compile Include="ShimApiClasses\NDShapeShim.cs" />
+    <Compile Include="ShimApiClasses\ParameterShim.cs" />
+    <Compile Include="ShimApiClasses\StreamConfigurationShim.cs" />
+    <Compile Include="ShimApiClasses\TrainerShim.cs" />
+    <Compile Include="ShimApiClasses\ValueShim.cs" />
+    <Compile Include="ShimApiClasses\VariableShim.cs" />
+    <Compile Include="SwigProxyClasses\AdditionalLearningOptions.cs" />
+    <Compile Include="SwigProxyClasses\CNTKDictionary.cs" />
+    <Compile Include="SwigProxyClasses\DictionaryValue.cs" />
+    <Compile Include="SwigProxyClasses\DictionaryVector.cs" />
     <Compile Include="SwigProxyClasses\IntVector.cs" />
-    <Compile Include="Utils.cs" />
-  </ItemGroup>
-  <ItemGroup>
+    <Compile Include="SwigProxyClasses\Learner.cs" />
+    <Compile Include="SwigProxyClasses\LearnerVector.cs" />
+    <Compile Include="SwigProxyClasses\MinibatchData.cs" />
+    <Compile Include="SwigProxyClasses\MinibatchInfo.cs" />
+    <Compile Include="SwigProxyClasses\MinibatchSource.cs" />
+    <Compile Include="SwigProxyClasses\MinibatchSourceConfig.cs" />
+    <Compile Include="SwigProxyClasses\PairDoubleDouble.cs" />
+    <Compile Include="SwigProxyClasses\PairNDArrayViewPtrNDArrayViewPtr.cs" />
+    <Compile Include="SwigProxyClasses\PairSizeTDouble.cs" />
+    <Compile Include="SwigProxyClasses\PairSizeTSizeT.cs" />
+    <Compile Include="SwigProxyClasses\Parameter.cs" />
+    <Compile Include="SwigProxyClasses\ParameterVector.cs" />
+    <Compile Include="SwigProxyClasses\ProgressWriter.cs" />
+    <Compile Include="SwigProxyClasses\ProgressWriterVector.cs" />
+    <Compile Include="SwigProxyClasses\StreamConfiguration.cs" />
+    <Compile Include="SwigProxyClasses\StreamConfigurationVector.cs" />
+    <Compile Include="SwigProxyClasses\StreamInformation.cs" />
+    <Compile Include="SwigProxyClasses\Trainer.cs" />
+    <Compile Include="SwigProxyClasses\TrainingParameterScheduleDouble.cs" />
+    <Compile Include="SwigProxyClasses\UnorderedMapParameterNDArrayViewPtr.cs" />
+    <Compile Include="SwigProxyClasses\UnorderedMapStreamInformationMinibatchData.cs" />
+    <Compile Include="SwigProxyClasses\UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr.cs" />
+    <Compile Include="SwigProxyClasses\UnorderedMapStringDictionaryValue.cs" />
+    <Compile Include="SwigProxyClasses\UnorderedMapVariableMinibatchData.cs" />
+    <Compile Include="SwigProxyClasses\VectorPairSizeTDouble.cs" />
     <Compile Include="SwigProxyClasses\Axis.cs" />
     <Compile Include="SwigProxyClasses\AxisVector.cs" />
     <Compile Include="SwigProxyClasses\BoolVector.cs" />
@@ -91,6 +130,7 @@
     <Compile Include="SwigProxyClasses\VariableKind.cs" />
     <Compile Include="SwigProxyClasses\VariableVector.cs" />
     <Compile Include="SwigProxyClasses\FunctionPtrVector.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup Condition="$(CpuOnlyBuild)">
     <Compile Include="CNTKLibraryManagedDll-CPUOnly-AssemblyInfo.cs" />
