@@ -175,3 +175,47 @@ def test_large_model_serialization_double(tmpdir):
     for param_pair in zip(z.parameters, y.parameters):
         assert param_pair[0].shape == param_pair[1].shape
         assert np.allclose(param_pair[0].value, param_pair[1].value)
+
+
+def test_restore_constants(tmpdir):
+    C.device.try_set_default_device(C.device.cpu())
+    def _setvalue(x, v):
+        x.value = 0 * x.value + v if len(x.shape)> 0 else np.array(v, dtype=np.float32)
+
+    def _setall(f, v):
+        for x in f.constants + f.parameters:
+            _setvalue(x, v)
+
+    def _checkall(f, v):
+        for x in f.constants + f.parameters:
+            assert (x.value == v).all()
+
+    x = C.input_variable(10)
+    f = C.layers.BatchNormalization()(x)
+    trainer = C.Trainer(f, C.reduce_sum(f), C.sgd(f.parameters, C.learning_rate_schedule(0.1, 'sample')))
+
+    model_filename = str(tmpdir / 'function.out')
+    checkpoint_filename = str(tmpdir / 'checkpoint.out')
+    _setall(f, 1)
+    f.save(model_filename)
+    _checkall(f, 1)
+
+    _setall(f, 2)
+    trainer.save_checkpoint(checkpoint_filename)
+    _checkall(f, 2)
+
+    _setall(f, 3)
+    _checkall(f, 3)
+    trainer.restore_from_checkpoint(checkpoint_filename)
+    _checkall(f, 2)
+
+    f2 = C.Function.load(model_filename)
+    _checkall(f2, 1)
+
+    _setall(f, 4)
+    _checkall(f, 4)
+    f.restore(model_filename)
+    _checkall(f, 1)
+
+    _setall(f2, 5)
+    _checkall(f2, 5)

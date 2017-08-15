@@ -22,6 +22,9 @@
 #include <assert.h>
 #include <stack>
 #include <unordered_map>
+#include <numeric>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -36,7 +39,7 @@ template <class ElemType>
     if (flags & CopyNodeFlags::copyNodeValue)
     {
         auto node = dynamic_pointer_cast<ReduceElementsNode<ElemType>>(nodeP);
-        node->m_axis        = m_axis;
+        node->m_axes        = m_axes;
         node->m_operation   = m_operation;
         node->m_reductionOp = m_reductionOp;
         node->m_scale       = m_scale;
@@ -48,11 +51,21 @@ template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::Load(File& fstream, size_t modelVersion) /*override*/
 {
     Base::Load(fstream, modelVersion);
-    fstream >> m_axis >> m_operation;
+    m_axes.clear();
+    int num_axes = 1; //emulate old version in which only 1 axis is supported
+    if (modelVersion >= CNTK_MODEL_VERSION_27)
+        fstream >> num_axes;
+    for (int i = 0; i < num_axes; ++i)
+    {
+        int axis; 
+        fstream >> axis;
+        m_axes.push_back(axis);
+    }
+    fstream >> m_operation;
     if (modelVersion >= CNTK_MODEL_VERSION_24)
         fstream >> m_keepDimensions;
     else
-        m_keepDimensions = DefaultKeepDimensionsSetting(m_axis);
+        m_keepDimensions = DefaultKeepDimensionsSetting(m_axes);
 
     ValidateOp();
 }
@@ -61,7 +74,12 @@ template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::Save(File& fstream) const /*override*/
 {
     Base::Save(fstream);
-    fstream << m_axis << m_operation; // note: we serialize the string and not the opcode, since opcodes may change
+    fstream << ((int) m_axes.size());
+    for (int i = 0; i < m_axes.size(); ++i)
+    {
+        fstream << m_axes[i];
+    }
+    fstream << m_operation; // note: we serialize the string and not the opcode, since opcodes may change
     fstream << m_keepDimensions;
 }
 
@@ -69,7 +87,7 @@ template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
 {
     // We are mixing two kinds of operations here; elementwise and whole-batch or sequence reduction (ReduceAllAxes()).
-    // In the latter case, we must mimic the behaviour of ComputationNodeNonLooping.
+    // In the latter case, we must mimic the behavior of ComputationNodeNonLooping.
     if ((ReduceAllAxes() || ReduceSequenceAxis() || ReduceBatchAxis()) && !fr.IsAllFrames())
         LogicError("%ls: %s node should never be in a loop when reducing over all static and dynamic axes or just the sequence axis.", Base::NodeDescription().c_str(), typeid(*this).name());
 
@@ -116,6 +134,9 @@ template <class ElemType>
     {
     case ElementWiseOperator::opArgmin:
     case ElementWiseOperator::opArgmax:
+        if (m_axes.size() > 1)
+            LogicError("%ls: %s node cannot perform argmin or argmax operator over multiple axes.", Base::NodeDescription().c_str(), typeid(*this).name());
+
         result.DoArgReductionOpOf(input, m_reductionOp);
         break;
     default:
@@ -260,6 +281,7 @@ template <class ElemType>
 {
     // validate the opcode (in case we got instantiated empty and never updated)
     ValidateOp();
+
     m_scale = (ElemType)1;
     if (ReduceAllAxes())
         Base::ValidateUnaryReduce(isFinalValidationPass, m_keepDimensions);
@@ -297,38 +319,53 @@ template <class ElemType>
 
         let shape = Input(0)->GetSampleLayout();
         auto dims = shape.GetDims();
-        size_t reducedDim = 0; // (init to keep compiler happy)
+        size_t reducedDimProd = 1; 
         if (ReduceAllStaticAxes())
         {
-            reducedDim = shape.GetNumElements();
+            reducedDimProd = shape.GetNumElements();
             dims = m_keepDimensions ? SmallVector<size_t>(shape.GetRank(), 1) : (Environment().IsV2Library() ? SmallVector<size_t>({}) : SmallVector<size_t>({ 1 })); // entire sample is reduced to a scalar
         }
-        else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
+        else if (!m_axes.empty() 
+                && std::all_of(m_axes.begin(), 
+                                m_axes.end(), 
+                                [&dims](int axis) { return axis - 1 >= 0 && axis - 1 < dims.size(); }))
         {
-            reducedDim = dims[m_axis - 1];
-            // one axis is reduced to a scalar
+            //Accumulate the number of elements for reduce_mean
+            reducedDimProd = std::accumulate(m_axes.begin(),
+                                                m_axes.end(), 
+                                                1, 
+                                                [&dims](size_t acc, int& axis) { return acc * dims[axis - 1]; });
+
+            // axes reduced to a scalar
             if (m_keepDimensions)
-                dims[m_axis - 1] = 1;
+                std::for_each(m_axes.begin(),
+                    m_axes.end(),
+                    [&dims](int axis) {dims[axis - 1] = 1; }
+                 );
             else
             {
-                SmallVector<size_t> reducedDims(dims.size() - 1);
+                SmallVector<size_t> reducedDims(dims.size() - m_axes.size());
                 for (size_t i = 0, j = 0; i < dims.size(); ++i)
                 {
-                    if (i == (m_axis - 1))
+                    if (Contains(m_axes, i + 1)) //note that axis = (i + 1) --- starting from 1 instead of 0
                         continue;
-
                     reducedDims[j] = dims[i];
                     j++;
                 }
                 dims = reducedDims;
             }
         }
-        else if (isFinalValidationPass)
-            InvalidArgument("The shape of %ls [%s] has no axis %d", NodeDescription().c_str(), string(shape).c_str(), m_axis);
-
+        else if (isFinalValidationPass) 
+        {
+            InvalidArgument("The shape of %ls [%ls] can not be reduced along axes [%ls]",
+                NodeDescription().c_str(),
+                wstring(shape).c_str(),
+                boost::algorithm::join(m_axes | boost::adaptors::transformed([](int axis) { return std::to_wstring(axis); }), ", ").c_str()
+            );
+        }
         // for "Mean", we must divide by #elements
         if (isFinalValidationPass && IsMean())
-            m_scale = (ElemType)(1.0 / reducedDim);
+            m_scale = (ElemType)(1.0 / reducedDimProd);
 
         SetDims(TensorShape(dims), Input(0)->HasMBLayout());
     }

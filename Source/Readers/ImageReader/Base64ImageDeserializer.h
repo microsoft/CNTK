@@ -8,7 +8,6 @@
 #include "ImageDeserializerBase.h"
 #include "Config.h"
 #include "CorpusDescriptor.h"
-#include "Indexer.h"
 
 namespace CNTK {
 
@@ -33,9 +32,10 @@ namespace CNTK {
     private:
         class ImageChunk;
 
-        std::unique_ptr<Indexer> m_indexer;
+        std::shared_ptr<Index> m_index;
         std::shared_ptr<FILE> m_dataFile;
         std::wstring m_fileName;
+        bool m_hasSequenceIds;
     };
 
 }

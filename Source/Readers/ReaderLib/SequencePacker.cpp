@@ -56,7 +56,7 @@ Minibatch SequencePacker::ReadMinibatch()
 
         if (m_checkSampleShape[streamIndex])
         {
-            CheckSampleShape(streamBatch, m_outputStreamDescriptions[streamIndex]);
+            RefreshSampleShape(streamBatch, m_outputStreamDescriptions[streamIndex]);
         }
 
         const auto& type = m_outputStreamDescriptions[streamIndex].m_storageFormat;
@@ -68,6 +68,8 @@ Minibatch SequencePacker::ReadMinibatch()
         auto streamMinibatch = std::make_shared<StreamMinibatch>();
         streamMinibatch->m_data = buffer.m_data.get();
         streamMinibatch->m_layout = pMBLayout;
+        streamMinibatch->m_sampleShape = m_outputStreamDescriptions[streamIndex].m_sampleLayout;
+
         minibatch.m_data.push_back(streamMinibatch);
     }
 
@@ -104,13 +106,10 @@ void SequencePacker::SetConfiguration(const ReaderConfiguration& config, const s
     }
 }
 
-void SequencePacker::CheckSampleShape(const std::vector<SequenceDataPtr>& minibatch, StreamInformation& outputStream)
+void SequencePacker::RefreshSampleShape(const std::vector<SequenceDataPtr>& minibatch, StreamInformation& outputStream)
 {
     assert(!minibatch.empty());
 
-    // TODO: This should come from the network - layout that network expects.
-    // TODO: In this case we can make outputStream const.
-    // Currently it is not coming from SGD/Network, so we assume the first one is correct.
     if (outputStream.m_sampleLayout.IsUnknown() && !minibatch.front()->GetSampleShape().IsUnknown())
         outputStream.m_sampleLayout = minibatch.front()->GetSampleShape();
 

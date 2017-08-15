@@ -484,3 +484,120 @@ def test_gather_op(device_id, precision):
     expectd2 = np.asarray([[[[0., 1.],[4.,5.]],[[2., 3.],[6., 7.]]],[[[4., 5.],[8.,9.]],[[6., 7.], [10., 11.]]]])
     assert np.array_equal(res2, expectd2)
 
+    #the following small model is to test the memory reuse issue of gather node.
+    x = C.input((3, 4))
+    x1 = C.to_sequence(x)
+    w = C.parameter((5, 6), init=1)
+    z = C.gather(w, x1)
+    assert z.shape == (4, 6)
+    #need the unpack node to trigger memory reuse.
+    f = C.sequence.unpack(z, 0, no_mask_output=True)
+    y = C.input((3, 4, 6))
+    loss = C.reduce_mean(C.square(f - y), axis=-1)
+    loss = C.reduce_mean(loss, axis=C.Axis.all_axes())
+
+    g = C.constant(0, shape=w.shape)
+    u = C.assign(w, g + 1)
+    learner = C.cntk_py.universal_learner([w], [g], u)
+    trainer = C.trainer.Trainer(loss, [loss], [learner])
+    indices = np.asarray([[[1, 2, 1, 2]]])
+    input = np.repeat(np.repeat(indices, 3, axis=1), 10, axis=0)
+    lable = np.full((10, 3, 4, 6), 2)
+    trainer.train_minibatch({x: input, y: lable})
+    # the 2nd and 3rd rows should be udpated by gradients.
+    assert np.mean(w.value[1, :]) < 1
+    assert np.mean(w.value[2, :]) < 1
+    # the other three rows should keep as 1
+    assert np.isclose(np.mean(w.value[0, :]), 1)
+    assert np.isclose(np.mean(w.value[3, :]), 1)
+    assert np.isclose(np.mean(w.value[4, :]), 1)
+
+def test_convert_dynamic_axis():
+    #test fix batch size
+    batch_size = 4
+    a = C.constant(shape=(batch_size, 2, 3), value=1)
+    dynamic_a = C.to_batch(a)
+    assert len(dynamic_a.dynamic_axes) == 1
+    assert dynamic_a.shape == (2, 3)
+
+    x = C.input_variable((2, 3))
+    y = x + dynamic_a
+
+    const_a = C.unpack_batch(y)
+    assert len(const_a.dynamic_axes) == 0
+    assert const_a.shape == (C.FreeDimension, 2, 3)
+
+    f = C.assign(a, const_a)
+    z = x + 1
+    data = np.arange(24).reshape(4, 2, 3).astype('f')
+    f.eval({x:data})
+    expected = z.eval({x:data})
+    assert np.array_equal(a.value, expected)
+
+    #test reshape with batch axis
+    x = C.input_variable((2,3))
+    const_x = C.unpack_batch(x)
+    assert len(const_x.dynamic_axes) == 0
+    assert const_x.shape == (C.FreeDimension, 2, 3)
+
+    const_y = C.reshape(const_x, (-1, 3))
+    assert const_y.shape == (C.FreeDimension, 3)
+    y = C.to_batch(const_y)
+    assert len(y.dynamic_axes) == 1
+    assert y.shape == (3,)
+
+    z = y * 2
+    expected = data.reshape((8, 3)) * 2
+    assert np.array_equal(z.eval({x:data}), expected)
+
+    #test inferred dimension
+    x = C.input_variable((C.InferredDimension, 3))
+    const_x = C.unpack_batch(x)
+    assert len(const_x.dynamic_axes) == 0
+    assert const_x.shape == (C.FreeDimension, C.InferredDimension, 3)
+
+    const_y = const_x * 2
+    y = C.to_batch(const_y)
+    assert len(y.dynamic_axes) == 1
+    assert y.shape == (C.InferredDimension, 3)
+
+def test_pad():
+    x = C.constant(value=np.arange(6).reshape((2,3)))
+    pad1 = C.pad(x, [(1, 1), (2, 2)]).eval()
+    expect1 = np.lib.pad([[0, 1, 2], [3, 4, 5]], ((1, 1), (2, 2)), 'constant')
+    assert np.array_equal(pad1, expect1)
+
+    pad2 = C.pad(x, [(1, 1), (2, 2)], mode=1).eval()
+    expect2 = np.lib.pad([[0, 1, 2], [3, 4, 5]], ((1, 1), (2, 2)), 'reflect')
+    assert np.array_equal(pad2, expect2)
+
+    pad3 = C.pad(x, [(1, 1), (2, 2)], mode=2).eval()
+    expect3 = np.lib.pad([[0, 1, 2], [3, 4, 5]], ((1, 1), (2, 2)), 'symmetric')
+    assert np.array_equal(pad3, expect3)
+
+    #test inferred dimension and free dimension
+    x = C.input((C.InferredDimension, 3))
+    data = np.arange(12).reshape((2, 2, 3))
+    pad4 = C.pad(x, [(1, 1), (2, 2)], mode=1).eval({x:data})
+    expect4 = np.lib.pad([[[0, 1, 2], [3, 4, 5]], [[6, 7, 8], [9, 10, 11]]],
+                         ((0,0),(1,1),(2,2)), 'reflect')
+    assert np.array_equal(pad4, expect4)
+
+    x = C.input((C.FreeDimension, 3))
+    pad5 = C.pad(x, [(1, 1), (2, 2)], mode=2).eval({x: data})
+    expect5 = np.lib.pad([[[0, 1, 2], [3, 4, 5]], [[6, 7, 8], [9, 10, 11]]],
+                         ((0, 0), (1, 1), (2, 2)), 'symmetric')
+    assert np.array_equal(pad5, expect5)
+
+    #test grad
+    x = C.parameter(init=np.arange(6).reshape((2,3)))
+    p = C.pad(x, mode=C.ops.SYMMETRIC_PAD, pattern=[(1, 0), (2, 1)])
+    grad = p.grad({}, [x])
+    expect_grad = np.asarray([[4., 4., 4.],[2., 2., 2.]])
+    assert np.array_equal(grad, expect_grad)
+
+    p2 = C.pad(x, mode=C.ops.REFLECT_PAD, pattern=[(1, 1), (2, 2)])
+    grad2 = p2.grad({}, [x])
+    expect_grad2 = np.asarray([[4., 6., 4.], [4., 6., 4.]])
+    assert np.array_equal(grad2, expect_grad2)
+

@@ -16,6 +16,7 @@
 
     <GpuBuild>true</GpuBuild>
     <GpuBuild Condition="$(Configuration.EndsWith('_CpuOnly'))">false</GpuBuild>
+    <GpuBuild Condition="$(Configuration.EndsWith('_UWP'))">false</GpuBuild>
 
     <CpuOnlyBuild>true</CpuOnlyBuild>
     <CpuOnlyBuild Condition="$(GpuBuild)">false</CpuOnlyBuild>
@@ -29,7 +30,7 @@
     <HasJava>false</HasJava>
     <HasJava Condition="Exists('$(JAVA_HOME)\bin\javac.exe')">true</HasJava>
 
-    <CntkComponentVersion>2.0</CntkComponentVersion>
+    <CntkComponentVersion>2.1</CntkComponentVersion>
     <CntkComponentVersion Condition="$(DebugBuild)">$(CntkComponentVersion)d</CntkComponentVersion>
   </PropertyGroup>
   

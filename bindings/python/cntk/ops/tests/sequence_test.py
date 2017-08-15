@@ -338,8 +338,8 @@ def test_sequence_reduce_over_reduced_scalar():
     op = C.sequence.reduce_sum(C.reduce_sum(x))
 
     grad, result = op.grad({x : np.asarray([[-1], [3], [5]], dtype=np.float32)}, outputs=[op])
-    assert np.array_equal(result, [7])
-    assert np.array_equal(grad[0], [[1], [1], [1]])
+    assert np.array_equal(result, [7.0])
+    assert np.array_equal(grad[0], [[1.0], [1.0], [1.0]])
 
 def test_op_broadcast_as(device_id, precision):
 

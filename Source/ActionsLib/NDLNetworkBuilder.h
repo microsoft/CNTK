@@ -220,7 +220,7 @@ public:
     }
 
     // EvaluateParameters - Evaluate the parameters of a call
-    // node - NDLNode we are evaluating paramters for
+    // node - NDLNode we are evaluating parameters for
     // baseName - baseName for the current node
     // nodeParamStart - starting parameter that contains a node
     // nodeParamCount - ending parameter that contains a node
@@ -237,7 +237,7 @@ public:
             return inputs;
         }
         if (nodeParamStart + nodeParamCount > parameter.size())
-            LogicError("EvaluateParmeters: nodeParamters specified that do not exist");
+            LogicError("EvaluateParmeters: nodeParameters specified that do not exist");
         size_t numChildren = nodeParamCount;
         for (size_t i = 0; i < numChildren; ++i)
         {

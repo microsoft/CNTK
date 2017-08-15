@@ -705,7 +705,7 @@ void ComputationNetwork::ValidateNetwork()
     for (auto& node : nodes)
     {
         // nodes must output non-zero dimensional data, otherwise assume user error
-        if (node->GetSampleLayout().GetNumElements() == 0)
+        if (!node->m_needsDynamicValidation && node->GetSampleLayout().GetNumElements() == 0)
             RuntimeError("%ls operation has 0 elements", node->NodeName().c_str());
     }
     if (TraceLevel() > 0)

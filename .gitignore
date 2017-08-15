@@ -24,6 +24,8 @@ build/
 .run-*
 lib/
 bin/
+Generated Files/
+buildinfo.h$$
 
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
@@ -40,6 +42,7 @@ bin/
 *.obj
 *.pch
 *.pdb
+*.idb
 *.pgc
 *.pgd
 *.rsp
@@ -50,6 +53,7 @@ bin/
 *.tmp
 *.tmp_proj
 *.log
+*.tlog
 *.vspscc
 *.vssscc
 .builds
@@ -59,6 +63,8 @@ bin/
 *.dep
 *.o
 *.d
+*.intermediate
+*.resfiles
 
 # Visual C++ cache files
 ipch/
@@ -275,6 +281,7 @@ Examples/Image/PretrainedModels/*.model
 Examples/Image/FeatureExtraction/*.txt
 Examples/Image/GettingStarted/Output/
 Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
+Tests/EndToEndTests/CNTKv2Python/Keras/keras-*
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/
 Tutorials/.ipynb_checkpoints/
@@ -296,6 +303,7 @@ Tutorials/zip
 Manual/*.tmp
 Manual/*.ckp
 Manual/.ipynb_checkpoints
+Examples/Text/LightRNN/LightRNN/*.so
 
 # other
 /packages

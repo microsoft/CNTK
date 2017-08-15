@@ -90,6 +90,8 @@ class CropTransformer : public ImageTransformerBase
 public:
     explicit CropTransformer(const Microsoft::MSR::CNTK::ConfigParameters& config);
 
+    StreamInformation Transform(const StreamInformation& inputStream);
+
 private:
     void Apply(uint8_t copyId, cv::Mat &mat) override;
 

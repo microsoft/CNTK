@@ -10,7 +10,6 @@
 #include "DataReader.h"
 #include "ReaderShim.h"
 #include "CNTKTextFormatReader.h"
-#include "HeapMemoryProvider.h"
 #include "StringUtil.h"
 #include "V2Dependencies.h"
 

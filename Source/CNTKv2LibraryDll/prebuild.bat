@@ -65,8 +65,11 @@ set l_build_target=Unknown
 :: Configuration property provided by CNTK.vcxproj
 if /i "%p_Configuration%" == "Debug" set l_build_type=Debug&set l_build_target=GPU
 if /i "%p_Configuration%" == "Debug_CpuOnly" set l_build_type=Debug&set l_build_target=CPU-only
+if /i "%p_Configuration%" == "Debug_UWP" set l_build_type=Debug&set l_build_target=UWP
 if /i "%p_Configuration%" == "Release" set l_build_type=Release&set l_build_target=GPU
 if /i "%p_Configuration%" == "Release_CpuOnly" set l_build_type=Release&set l_build_target=CPU-only
+if /i "%p_Configuration%" == "Release_UWP" set l_build_type=Release&set l_build_target=UWP
+if /i "%p_Configuration%" == "Release_NoOpt" set l_build_type=Release_NoOpt&set l_build_target=GPU
 
 echo #define _BUILDTYPE_ "%l_build_type%">> buildinfo.h$$
 echo #define _BUILDTARGET_ "%l_build_target%">> buildinfo.h$$
@@ -82,7 +85,7 @@ if "%p_CNTK_ENABLE_ASGD%" == "false" (
 ) else (
     echo #define _WITH_ASGD_ "yes">>buildinfo.h$$
 )
-if not %l_build_target% == CPU-only (
+if not %l_build_target% == CPU-only if not %l_build_target% == UWP (
     if "%p_CudaPath%" == "" (
         echo #define _CUDA_PATH_    "NOT_DEFINED"     >> buildinfo.h$$
     ) else (

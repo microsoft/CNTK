@@ -311,7 +311,7 @@ public:
 
     // Returns the start of the secondary index valid for the slice-view.
     // Secondary index provides the offset to the data buffer for the values.
-    // E.g. for CSC the the first nonzero value of column k is Buffer(SecondaryIndexLocation[k])
+    // E.g. for CSC the first nonzero value of column k is Buffer(SecondaryIndexLocation[k])
     CPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const
     {
         return GetCompIndex() + m_sliceViewOffset;

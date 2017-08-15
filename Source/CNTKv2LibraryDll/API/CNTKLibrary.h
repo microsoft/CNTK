@@ -31,6 +31,10 @@
 
 #include "CNTKLibraryInternals.h"
 
+// undef max in the rest of the file to avoid conflicts with the max macro defined in windows.h.
+#pragma push_macro("max")
+#undef max
+
 namespace CNTK
 {
     ///
@@ -1090,6 +1094,23 @@ namespace CNTK
         bool IsDynamicAxis() const
         {
             return (m_staticAxisIdx == SentinelStaticAxisIndexValueForDynamicAxes);
+        }
+
+        ///
+        /// Indicate whether 'this' Axis is a batch axis.
+        ///
+        bool IsBatchAxis() const
+        {
+            //TODO: Do we assume there is only one batch axis in the whole system?
+            return (this->IsDynamicAxis() && !this->IsSequenceAxis());
+        }
+
+        ///
+        /// Indicate whether 'this' Axis is a sequence axis.
+        ///
+        bool IsSequenceAxis() const
+        {
+            return (this->IsDynamicAxis() && this->m_isOrderedDynamicAxis);
         }
 
         ///
@@ -3573,9 +3594,19 @@ namespace CNTK
     CNTK_API FunctionPtr Tanh(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise asin operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Asin(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise sine operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Sin(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise acos operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Acos(const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise cosine operation with the specified input operand.
@@ -3682,6 +3713,26 @@ namespace CNTK
     /// Create an instance of the slice operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name = L"");
+\
+    /// Create an instance of attach dynamic axis operation that convert the input's first static axis to dynamic axis.
+    /// Only batch axis is supported now.
+    ///
+    CNTK_API FunctionPtr ToBatch(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of detach dynamic axis operation that convert the input's last dynamic axis to static axis.
+    /// Only batch axis is supported now.
+    ///
+    CNTK_API FunctionPtr UnpackBatch(const Variable& operand, const std::wstring& name);
+
+    enum class PaddingMode
+    {
+        CONSTANTPAD = 0, // the default, fill the padding cells with 0
+        REFLECTPAD = 1, // Padding with reflect mode
+        SYMMETRICPAD = 2, // Padding with symmetric mode
+    };
+
+    CNTK_API FunctionPtr Pad(const Variable& operand, PaddingMode mode, const std::vector<size_t>& head, const std::vector<size_t>& foot, double constantValue = 0, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the random_sample operation on specified sampling weights input vector
@@ -4043,7 +4094,37 @@ namespace CNTK
     /// Create an instance of the CNTK built-in Prod reduction operation on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr ReduceProd(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    //multiple axes reduction below:
 
+    ///
+    /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in LogSum reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceLogSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Mean reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceMean(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Max reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceMax(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Min reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceMin(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Prod reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
     ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
@@ -4237,7 +4318,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-
+ 
     ///
     /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
     ///
@@ -5179,6 +5260,11 @@ namespace CNTK
         ///
         virtual void RestoreFromCheckpoint(const Dictionary& /*checkpoint*/) {}
 
+        virtual bool IsInfinite()
+        {
+            return false;
+        }
+
     public:
         ///
         /// Gets the description of the stream with given name. 
@@ -5891,3 +5977,6 @@ namespace CNTK
 
 #endif // !CNTK_HEADERONLY_DEFINITIONS
 }
+
+// restore saved macro definition
+#pragma pop_macro("max")

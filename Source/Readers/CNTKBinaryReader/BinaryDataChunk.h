@@ -7,7 +7,6 @@
 
 #include "DataDeserializerBase.h"
 #include "BinaryConfigHelper.h"
-#include "CorpusDescriptor.h"
 #include "BinaryChunkDeserializer.h"
 #include "BinaryDataDeserializer.h"
 

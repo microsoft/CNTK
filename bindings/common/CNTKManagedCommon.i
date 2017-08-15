@@ -40,7 +40,7 @@
 
 // temaplate definitions
 #ifdef SWIGCSHARP
-// bool/double/float are already enabled with SWIG_STD_VECTOR_ENHANCED in std_vector.i
+// int/bool/double/float are already enabled with SWIG_STD_VECTOR_ENHANCED in std_vector.i
 SWIG_STD_VECTOR_ENHANCED(size_t)
 SWIG_STD_VECTOR_ENHANCED(std::shared_ptr<CNTK::NDArrayView>)
 SWIG_STD_VECTOR_ENHANCED(CNTK::Variable)
@@ -48,6 +48,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::Axis)
 SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 #endif //SWIGCSHARP
 
+%template(IntVector) std::vector<int>;
 %template(SizeTVector) std::vector<size_t>;
 %template(DoubleVector) std::vector<double>;
 %template(FloatVector) std::vector<float>;
@@ -145,6 +146,7 @@ IGNORE_CLASS CNTK::Parameter;
 IGNORE_CLASS CNTK::Constant;
 IGNORE_CLASS CNTK::BackPropState;
 IGNORE_ENUM_CLASS CNTK::PoolingType;
+IGNORE_ENUM_CLASS CNTK::PaddingMode;
 
 IGNORE_FUNCTION CNTK::Negate;
 IGNORE_FUNCTION CNTK::operator-;
@@ -152,6 +154,8 @@ IGNORE_FUNCTION CNTK::Sigmoid;
 IGNORE_FUNCTION CNTK::Tanh;
 IGNORE_FUNCTION CNTK::Sin;
 IGNORE_FUNCTION CNTK::Cos;
+IGNORE_FUNCTION CNTK::Acos;
+IGNORE_FUNCTION CNTK::Asin;
 IGNORE_FUNCTION CNTK::Cosh;
 IGNORE_FUNCTION CNTK::Sinh;
 IGNORE_FUNCTION CNTK::ReLU;
@@ -212,6 +216,7 @@ IGNORE_FUNCTION CNTK::Convolution;
 IGNORE_FUNCTION CNTK::ROIPooling;
 IGNORE_FUNCTION CNTK::ConvolutionTranspose;
 IGNORE_FUNCTION CNTK::Pooling;
+IGNORE_FUNCTION CNTK::Pad;
 IGNORE_FUNCTION CNTK::Unpooling;
 IGNORE_FUNCTION CNTK::LambdaRank;
 IGNORE_FUNCTION CNTK::NDCGAt1;
@@ -556,7 +561,9 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindByName);
 #endif  // SWIGJAVA
 
 // class Varaiable
+#ifndef SWIGCSHARP
 %ignore CNTK::Variable::Variable;
+#endif
 %ignore CNTK::Variable::operator FunctionPtr;
 %rename ("%s") CNTK::Variable::Variable(const FunctionPtr& function);
 
@@ -687,6 +694,8 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 %apply int INPUT[]  { int *rowIndices }
 %apply float INPUT[]  { float *nonZeroValues }
 %apply double INPUT[]  { double *nonZeroValues }
+%apply int OUTPUT[]  { int *sequenceLength }
+%apply int OUTPUT[]  { int *numNonZeroValues }
 #endif
 
 #ifdef SWIGJAVA
