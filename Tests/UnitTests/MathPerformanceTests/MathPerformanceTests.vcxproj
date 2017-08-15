@@ -112,10 +112,10 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ImportGroup Condition="$(GpuBuild)" Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).props" />
+    <Import Project="$(CudaMsbuildPath)\CUDA $(CudaVersion).props" />
   </ImportGroup>
   <ImportGroup Condition="$(GpuBuild)" Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).targets" />
+    <Import Project="$(CudaMsbuildPath)\CUDA $(CudaVersion).targets" />
   </ImportGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

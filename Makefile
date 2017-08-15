@@ -279,7 +279,7 @@ ORIGINDIR:='$$ORIGIN'
 # Components VERSION info
 ########################################
 
-CNTK_COMPONENT_VERSION := 2.0
+CNTK_COMPONENT_VERSION := 2.1
 ifeq ("$(BUILDTYPE)","debug")
 CNTK_COMPONENT_VERSION := $(CNTK_COMPONENT_VERSION)d
 endif
@@ -337,6 +337,9 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/BlockRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/Bundler.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/NoRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/LTNoRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/LTTumblingWindowRandomizer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/LocalTimelineRandomizerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ReaderShim.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ChunkRandomizer.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/SequenceRandomizer.cpp \
@@ -345,8 +348,9 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ReaderBase.cpp \
-	$(SOURCEDIR)/Readers/ReaderLib/Indexer.cpp \
-	$(SOURCEDIR)/Readers/ReaderLib/MemoryBuffer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/Index.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/IndexBuilder.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/BufferedFileReader.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/DataDeserializerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ReaderUtil.cpp \
@@ -362,10 +366,10 @@ COMMON_SRC =\
 	$(SOURCEDIR)/Common/TimerUtility.cpp \
 	$(SOURCEDIR)/Common/fileutil.cpp \
 	$(SOURCEDIR)/Common/Sequences.cpp \
+	$(SOURCEDIR)/Common/EnvironmentUtil.cpp \
 
 MATH_SRC =\
 	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
-	$(SOURCEDIR)/Math/BlockHandlerSSE.cpp \
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/CPUMatrixFloat.cpp \
 	$(SOURCEDIR)/Math/CPUMatrixDouble.cpp \
@@ -380,12 +384,6 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/RNGHandle.cpp \
 	$(SOURCEDIR)/Math/TensorView.cpp \
 	$(SOURCEDIR)/Math/NcclComm.cpp \
-
-ifdef SUPPORT_AVX2
-MATH_SRC +=\
-	$(SOURCEDIR)/Math/BlockHandlerAVX.cpp \
-
-endif
 
 ifdef CUDA_PATH
 MATH_SRC +=\
@@ -489,7 +487,6 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/Serialization.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/DistributedCommunicator.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/DistributedLearnerBase.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/TrainingSession.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/DataParallelDistributedLearner.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/ProgressWriter.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/CNTK.pb.cc \
@@ -500,6 +497,7 @@ CNTKLIBRARY_COMMON_SRC =\
 CNTKLIBRARY_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/ComputeInputStatistics.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/MinibatchSource.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/TrainingSession.cpp \
 
 CNTKLIBRARY_SRC+=$(CNTKLIBRARY_COMMON_SRC)
 CNTKLIBRARY_SRC+=$(CNTK_COMMON_SRC)
@@ -745,7 +743,7 @@ HTKDESERIALIZERS_SRC =\
 	$(SOURCEDIR)/Readers/HTKDeserializers/HTKDeserializer.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/HTKMLFReader.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDeserializer.cpp \
-	$(SOURCEDIR)/Readers/HTKDeserializers/MLFIndexer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFIndexBuilder.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFUtils.cpp \
 
 HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC))
@@ -1178,6 +1176,7 @@ UNITTEST_READER_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/HTKLMFReaderTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/ImageReaderTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/ReaderLibTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/ReaderUtilTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/stdafx.cpp \
 	$(SOURCEDIR)/Readers/CNTKTextFormatReader/TextParser.cpp \
 
@@ -1237,7 +1236,6 @@ $(UNITTEST_NETWORK): $(UNITTEST_NETWORK_OBJ) | $(READER_LIBS) $(CNTKTEXTFORMATRE
 
 UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/BatchNormalizationEngineTests.cpp \
-	$(SOURCEDIR)/../Tests/UnitTests/MathTests/BlockMultiplierTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/constants.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/ConvolutionEngineTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/CPUMatrixTests.cpp \

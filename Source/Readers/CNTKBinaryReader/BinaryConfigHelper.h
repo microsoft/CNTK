@@ -5,11 +5,12 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
 #include <map>
-#include "Config.h"
 #include "Reader.h"
+
+namespace Microsoft { namespace MSR { namespace CNTK {
+    class ConfigParameters;
+}}}
 
 namespace CNTK {
 

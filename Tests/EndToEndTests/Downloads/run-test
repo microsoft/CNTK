@@ -15,6 +15,7 @@ downloaders=(
   Examples/Image/DataSets/Grocery/install_grocery.py
   Examples/Image/DataSets/MNIST/install_mnist.py
   Examples/Image/DataSets/Pascal/install_pascalvoc.py
+  Examples/Text/LightRNN/PTB/Data/download_data.py
   Examples/Text/WordLMWithSampledSoftmax/download_data.py
   Examples/Video/DataSets/UCF11/ucf11_utils.py
 )

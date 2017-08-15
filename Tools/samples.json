@@ -28,12 +28,21 @@
     },
     {
         "category": [""],
-        "name":  "Model Evaluation in C++/C#",
+        "name":  "Model Evaluation in C++/C#/.NET",
         "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Eval-Examples",
         "description":  "Evaluation or inference of an already trained CNTK model in C++/C#.",
-        "language":  ["C#"],
+        "language":  ["C++", "C#", ".NET"],
         "type":  ["Example"],
 	"dateadded": "4/14/2017"
+    },
+    {
+        "category": [""],
+        "name":  "Model Evaluation on Universal Windows Platform (UWP)",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Library-Evaluation-on-UWP",
+        "description":  "Evaluation or inference of an already trained CNTK model on UWP.",
+        "language":  ["C++", "C#"],
+        "type":  ["Example"],
+	"dateadded": "7/31/2017"
     },
     {
         "category": ["Image"],
@@ -109,6 +118,15 @@
     },
     {
         "category": ["Image"],
+        "name":  "Faster R-CNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Detection/FasterRCNN",
+        "description":  "Train object detection from images by adapting pre-trained classification models on arbitrarily sized regions of interest using ROI pooling and region proposal networks.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "7/25/2017"
+    },
+    {
+        "category": ["Image"],
         "name":  "GoogLeNet (BN-Inception)",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/BN-Inception#cntk-examples-imageclassificationgooglenetbn-inception",
         "description":  "GoogLeNet (BN-Inception) network for image classification.",
@@ -121,7 +139,7 @@
         "name":  "GoogLeNet (Inception V3)",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/InceptionV3#cntk-examples-imageclassificationgooglenetinceptionv3",
         "description":  "GoogLeNet (Inception V3) network for image classification.",
-        "language":  ["BrainScript"],
+        "language":  ["Python", "BrainScript"],
         "type":  ["Recipe"],
 	"dateadded": "4/14/2017"
     },
@@ -522,6 +540,15 @@
 	"dateadded": "4/14/2017"
     },
     {
+        "category": ["Text"],
+        "name": "LightRNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/LightRNN",
+        "description": "LightRNN: Memory and Computation-Efficient Recurrent Neural Networks",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dateadded": "07/14/2017"
+    },
+    {
         "category": ["Reinforcement Learning"],
         "name": "Deep Q Neural Network",
         "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning",
@@ -529,5 +556,14 @@
         "language": ["Python"],
         "type": ["Recipe"],
         "dataadded": "05/05/2017"
+    },
+    {
+        "category": ["Reinforcement Learning"],
+        "name": "Flapping Bird with Keras",
+        "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning/FlappingBirdWithKeras",
+        "description": "Using CNTK Keras backend to train an agent to navigate a bird through a cactus maze",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dataadded": "07/21/2017"
     }
 ]

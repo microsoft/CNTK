@@ -847,7 +847,7 @@ static shared_ptr<ElemType> GetReductionBuffer(size_t N)
     if (t_stream != 0 || dontCache) // we cache for the NULL stream but don't bother for others, since we only ever use the NULL stream currently
         return AllocateReductionBuffer<ElemType>(N);
 
-    static shared_ptr<ElemType> reductionBuffersCache[32]; // cache of objects    --TODO: Do we have a #define the the max somewhere? Then also use it in CPUMatrix.cu GetOnesTensor()
+    static shared_ptr<ElemType> reductionBuffersCache[32]; // cache of objects    --TODO: Do we have a #define the max somewhere? Then also use it in CPUMatrix.cu GetOnesTensor()
     static size_t reductionBuffersCacheSize[_countof(reductionBuffersCache)] = { 0 };
     let deviceId = GridDim::GetCurrentDeviceId();
     if (deviceId >= _countof(reductionBuffersCache)) // index check w.r.t. our hard-coded dimensions
@@ -1205,6 +1205,9 @@ void TensorOpN(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, Elem
     size_t dims = regularOpDims.size();
     switch (dims)
     {
+    // N.B. consider code size impact when adding more cases.
+    case 5:
+        return TensorOpWithRegularLoop<ElemType, N, 5>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 4:
         return TensorOpWithRegularLoop<ElemType, N, 4>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 3:

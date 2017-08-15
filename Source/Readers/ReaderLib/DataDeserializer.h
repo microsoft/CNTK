@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include <vector>
-
 // Currently it is a workaround to make CNTKLibrary.h header only
 // So that interfaces can be implemented by different libraries without
 // binary dependency on CNTKLibrary.so/dll.

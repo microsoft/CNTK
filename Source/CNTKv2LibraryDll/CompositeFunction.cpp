@@ -622,11 +622,23 @@ namespace CNTK
                 case PrimitiveOpType::Tanh:
                     computationNodePtr = New<TanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::Acos:
+                    computationNodePtr = New<AcosNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::Cos:
                     computationNodePtr = New<CosineNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::Asin:
+                    computationNodePtr = New<AsinNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::Sin:
                     computationNodePtr = New<SinNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Cosh:
+                    computationNodePtr = New<CoshNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Sinh:
+                    computationNodePtr = New<SinhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
                 case PrimitiveOpType::ReLU:
                     computationNodePtr = New<RectifiedLinearNode<ElementType>>(network->GetDeviceId(), internalNodeName);
@@ -707,7 +719,7 @@ namespace CNTK
                 case PrimitiveOpType::Slice:
                 {
                     std::vector<Axis> axis;
-                    std::vector<int> beginIndex, endIndex;
+                    std::vector<int> beginIndex, endIndex, strides;
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
                         functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
                         functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
@@ -715,6 +727,10 @@ namespace CNTK
                         axis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
                         beginIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
                         endIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
+                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
+                            strides = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
+                        else
+                            strides.resize(axis.size(), 1);
                     }
                     else if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis) &&
                         functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
@@ -723,13 +739,17 @@ namespace CNTK
                         axis.push_back(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
                         beginIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
                         endIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
+                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStrides))
+                            strides.push_back(functionConfig[PrimitiveFunction::AttributeNameSliceStrides].Value<int>());
+                        else
+                            strides.push_back(1);
                     }
                     else
                     {
                         RuntimeError("Failed to create computation node: Slice operation with inconsistent attributes");
                     }
                     // Internal CNTK SliceNode takes 1 based axis indices instead of 0 based
-                    computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis));
+                    computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis), strides);
                     break;
                 }
                 case PrimitiveOpType::RandomSample:
@@ -847,6 +867,16 @@ namespace CNTK
                 case PrimitiveOpType::Gather:
                     computationNodePtr = New<GatherNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::ToBatch:
+                {
+                    computationNodePtr = New<ToBatchAxisNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                }
+                case PrimitiveOpType::UnpackBatch:
+                {
+                    computationNodePtr = New<UnpackBatchAixsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                }
                 case PrimitiveOpType::Plus:
                     computationNodePtr = New<PlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
@@ -974,9 +1004,25 @@ namespace CNTK
                     bool keepDimensions = true;
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameReductionKeepDimensions))
                         keepDimensions = functionConfig[PrimitiveFunction::AttributeNameReductionKeepDimensions].Value<bool>();
-
-                    auto reductionAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
                     auto reductionOpName = functionConfig[PrimitiveFunction::AttributeNameReductionOpName].Value<std::wstring>();
+                    std::vector<Axis> reductionAxis;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+                    {
+                        reductionAxis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                     }
+                    else if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis))
+                    {
+                        reductionAxis.push_back(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
+                    }
+                    else
+                    {
+                        RuntimeError("Failed to create computation node': Reduce operation %ls with no '%ls' or  '%ls' attributes",
+                            PrimitiveOpTypeName(op).c_str(),
+                            PrimitiveFunction::AttributeNameAxis.c_str(),
+                            PrimitiveFunction::AttributeNameAxisVec.c_str()
+                        );
+
+                    } 
                     computationNodePtr = New<ReduceElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName, reductionOpName, AsCNTKInternalAxisIdx(reductionAxis), keepDimensions);
                     break;
                 }
@@ -1015,6 +1061,15 @@ namespace CNTK
                 {
                     Axis spliceAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
                     computationNodePtr = New<RowStackNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(spliceAxis));
+                    break;
+                }
+                case PrimitiveOpType::Pad:
+                {
+                    auto head = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNamePaddingHead].Value<std::vector<DictionaryValue>>());
+                    auto foot = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNamePaddingFoot].Value<std::vector<DictionaryValue>>());
+                    auto mode = functionConfig[PrimitiveFunction::AttributeNamePaddingMode].Value<size_t>();
+                    auto constantValue = functionConfig[PrimitiveFunction::AttributeNamePaddingConstantValue].Value<double>();
+                    computationNodePtr = New<PaddingNode<ElementType>>(network->GetDeviceId(), internalNodeName, head, foot, (PaddingType)mode, (ElementType)constantValue);
                     break;
                 }
                 case PrimitiveOpType::OptimizedRNNStack:

@@ -39,8 +39,8 @@ protected:
     // the actual packing.
     virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch);
 
-    // Helper function to check the sample shape of input samples.
-    void CheckSampleShape(const std::vector<SequenceDataPtr>& minibatch, StreamInformation& outputStream);
+    // Helper function to check and refresh the sample shape of input samples.
+    void RefreshSampleShape(const std::vector<SequenceDataPtr>& minibatch, StreamInformation& outputStream);
 
     // A flag indicating whether to use local timeline for data.
     bool m_useLocalTimeline;

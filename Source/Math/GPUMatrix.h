@@ -260,7 +260,7 @@ public:
     ElemType Get00Element() const;
 
     void SetValue(const ElemType v);
-    void SetValue(const ElemType* d_v); // d_v is pointer to the the value in GPU memory
+    void SetValue(const ElemType* d_v); // d_v is pointer to the value in GPU memory
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd);
 
@@ -379,6 +379,18 @@ public:
 
     GPUMatrix<ElemType>& InplaceNegativeSine();
     GPUMatrix<ElemType>& AssignNegativeSineOf(const GPUMatrix<ElemType>& a);
+
+    GPUMatrix<ElemType>& InplaceAcos();
+    GPUMatrix<ElemType>& AssignAcosOf(const GPUMatrix<ElemType>& a);
+
+    GPUMatrix<ElemType>& InplaceAsin();
+    GPUMatrix<ElemType>& AssignAsinOf(const GPUMatrix<ElemType>& a);
+
+    GPUMatrix<ElemType>& InplaceCosh();
+    GPUMatrix<ElemType>& AssignCoshOf(const GPUMatrix<ElemType>& a);
+
+    GPUMatrix<ElemType>& InplaceSinh();
+    GPUMatrix<ElemType>& AssignSinhOf(const GPUMatrix<ElemType>& a);
 
     GPUMatrix<ElemType>& InplaceAbs();
     GPUMatrix<ElemType>& AssignAbsOf(const GPUMatrix<ElemType>& a);

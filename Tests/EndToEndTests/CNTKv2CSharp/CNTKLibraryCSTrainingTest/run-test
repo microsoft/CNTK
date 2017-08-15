@@ -1,0 +1,15 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+if [ "$OS" == "Windows_NT" ]; then
+  cp $TEST_DIR/../../../../Tests/EndToEndTests/Simple2d/Data/SimpleDataTrain_cntk_text.txt $TEST_DIR || exit $?
+  $TEST_BIN_DIR/CNTKLibraryCSTrainingTest.exe
+else
+  echo Cannot run CNTKLibraryCSTrainingTest on Linux.
+  exit 1
+fi
+
+ExitCode=$?
+
+exit $ExitCode

@@ -6,7 +6,7 @@
 #pragma once
 
 #pragma warning( push )
-#pragma warning ( disable : 4100 ) // Disable warning 4100 (unrefrenced paramter)
+#pragma warning ( disable : 4100 ) // Disable warning 4100 (unrefrenced parameter)
 
 #include "Matrix.h"
 #include "MPIWrapper.h"

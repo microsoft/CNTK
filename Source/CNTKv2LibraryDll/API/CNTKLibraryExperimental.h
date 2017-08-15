@@ -144,6 +144,14 @@ namespace CNTK {
         ///
         virtual void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) = 0;
 
+        ///
+        /// Returns meta information about sequences that this chunk has.
+        /// This allows deserialization of sequences on several threads afterwords.
+        /// TODO: Currently chunk->SequenceInfos() == deserializer->SequenceInfo(chunk),
+        /// this should be unified.
+        ///
+        virtual void SequenceInfos(std::vector<SequenceInfo>& /*result*/) { NOT_IMPLEMENTED; }
+
         virtual ~Chunk() = default;
 
     protected:

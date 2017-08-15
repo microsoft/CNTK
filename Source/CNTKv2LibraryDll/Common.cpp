@@ -16,6 +16,7 @@
 #include "Globals.h"
 #include "PerformanceProfiler.h"
 #include "MPIWrapper.h"
+#include "EnvironmentUtil.h"
 #include "Basics.h"
 #include "ProgressTracing.h"
 #include "buildinfo.h"
@@ -94,7 +95,7 @@ namespace CNTK
 
             static size_t numWorkers = 1, rank = 0;
             static bool initialized = false;
-            if (MPIWrapper::GetTotalNumberOfMPINodes() > 1 && !initialized) 
+            if (EnvironmentUtil::GetTotalNumberOfMPINodes() > 1 && !initialized)
             {
                 DistributedCommunicatorPtr communicator = MPICommunicator();
                 numWorkers = communicator->Workers().size();
@@ -172,6 +173,7 @@ namespace CNTK
 
         void StartProfiler(const wstring& profilerDir, bool profilerSyncGpu, size_t profilerBufferSize)
         {
+#ifndef CNTK_UWP
             std::wstring logSuffix = L"";
             auto mpi = Microsoft::MSR::CNTK::MPIWrapper::GetInstance();
             if (mpi)
@@ -184,21 +186,28 @@ namespace CNTK
                 profilerBufferSize,
                 logSuffix,
                 profilerSyncGpu);
+#endif
         }
 
         void EnableProfiler()
         {
+#ifndef CNTK_UWP
             Microsoft::MSR::CNTK::ProfilerEnable(true);
+#endif
         }
 
         void DisableProfiler()
         {
+#ifndef CNTK_UWP
             Microsoft::MSR::CNTK::ProfilerEnable(false);
+#endif
         }
 
         void StopProfiler()
         {
+#ifndef CNTK_UWP
             Microsoft::MSR::CNTK::ProfilerClose();
+#endif
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
@@ -632,7 +641,7 @@ namespace CNTK
                 fprintf(stderr, "Auto-selecting process wide default device.\n");
             }
 
-            // This will both initialize the list of available devices and log the the device stats
+            // This will both initialize the list of available devices and log the device stats
             // (including the info on which devices are compatible and eligible for selection).
             const auto& allDevices = AllDevices();
             UNUSED(allDevices);

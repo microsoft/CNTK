@@ -70,6 +70,9 @@ public:
     // Gets randomizer type - "auto" or "block"
     std::wstring GetRandomizer();
 
+    // Gets "cacheIndex" config flag.
+    bool GetCacheIndex() const;
+
     // Gets number of utterances per minibatch for epochs as an array.
     Microsoft::MSR::CNTK::intargvector GetNumberOfUtterancesPerMinibatchForAllEppochs();
 

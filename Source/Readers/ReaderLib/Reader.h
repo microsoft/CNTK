@@ -9,7 +9,6 @@
 #include <memory>
 #include <functional>
 #include "Sequences.h"
-#include "TensorShape.h"
 #include "ReaderConstants.h"
 #include "DataDeserializer.h"
 
@@ -22,7 +21,6 @@ typedef GPUSPARSE_INDEX_TYPE IndexType;
 using MSR_CNTK::MBLayout;
 using MSR_CNTK::MBLayoutPtr;
 
-typedef std::shared_ptr<MSR_CNTK::TensorShape> TensorShapePtr;
 
 // Configuration for the current epoch.
 // Each time the epoch is started CNTK should provide the configuration to the reader using StartEpoch method
@@ -62,6 +60,7 @@ struct StreamMinibatch
     void* m_data;         // Contiguous array of data. Can be encoded in dense or sparse formats depending on the stream description.
                           // The size is (the number of rows * number of columns in the layout) * by the element size of the stream (float/double/etc.).
     MBLayoutPtr m_layout; // Layout of the data
+    NDShape m_sampleShape;
 };
 typedef std::shared_ptr<StreamMinibatch> StreamMinibatchPtr;
 

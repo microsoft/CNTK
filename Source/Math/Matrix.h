@@ -407,6 +407,18 @@ public:
     Matrix<ElemType>& InplaceNegativeSine();
     Matrix<ElemType>& AssignNegativeSineOf(const Matrix<ElemType>& a);
 
+    Matrix<ElemType>& InplaceAcos();
+    Matrix<ElemType>& AssignAcosOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceAsin();
+    Matrix<ElemType>& AssignAsinOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceCosh();
+    Matrix<ElemType>& AssignCoshOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceSinh();
+    Matrix<ElemType>& AssignSinhOf(const Matrix<ElemType>& a);
+
     Matrix<ElemType>& InplaceLog10();
     Matrix<ElemType>& AssignLog10Of(const Matrix<ElemType>& a);
 

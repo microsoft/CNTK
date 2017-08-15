@@ -7,6 +7,7 @@
 #include "ConfigHelper.h"
 #include "DataReader.h"
 #include "StringUtil.h"
+#include <boost/algorithm/string.hpp>
 
 namespace CNTK {
 
@@ -164,9 +165,16 @@ vector<wstring> ConfigHelper::GetMlfPaths() const
         }
 
         wstring list = m_config(L"mlfFileList");
-        for (msra::files::textreader r(list); r;)
+        if (list.find(':') == string::npos)
         {
-            result.push_back(r.wgetline());
+            for (msra::files::textreader r(list); r;)
+            {
+                result.push_back(r.wgetline());
+            }
+        }
+        else
+        {
+            result = m_config(L"mlfFileList", ConfigParameters::Array(stringargvector(vector<wstring>{})));
         }
     }
 
@@ -421,6 +429,11 @@ void ConfigHelper::ExpandDotDotDot(string& featPath, const string& scpPath, stri
     size_t pos = featPath.find("...");
     if (pos != featPath.npos)
         featPath = featPath.substr(0, pos) + scpDirCached + featPath.substr(pos + 3);
+}
+
+bool ConfigHelper::GetCacheIndex() const
+{
+    return m_config(L"cacheIndex", false);
 }
 
 }

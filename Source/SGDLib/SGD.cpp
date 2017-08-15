@@ -1067,7 +1067,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         smbDispatcher.Init(net, learnableNodes, criterionNodes, evaluationNodes);
 
     // The following is a special feature only supported by the Kaldi2Reader for more efficient sequence training.
-    // This attemps to compute the error signal for the whole utterance, which will
+    // This attempts to compute the error signal for the whole utterance, which will
     // be fed to the neural network as features. Currently it is a workaround
     // for the two-forward-pass sequence and ctc training, which allows
     // processing more utterances at the same time.

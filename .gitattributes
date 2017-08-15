@@ -88,6 +88,7 @@ Makefile text
 *.list text
 
 *.log text
+*.prototxt text
 
 Dockerfile* text
 .dockerignore text
@@ -123,10 +124,14 @@ TIMIT*.statelist text
 TIMIT*.tfsa text
 TIMIT*.transitions text
 
+Examples/Evaluation/UWPImageRecognition/ImageRecognizerLib/utils.inl text
 Examples/LanguageUnderstanding/ATIS/Data/ATIS.* text
 Examples/LanguageUnderstanding/ATIS/BrainScript/*.wl text
-
 Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
+Examples/Text/LightRNN/test/word-0.location text
+
+*.xaml text
+*.appxmanifest text
 
 # Binary extensions:
 *.ark binary
@@ -152,3 +157,5 @@ Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_conv
 Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve.lib binary
 Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.a binary
 Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.lib binary
+#certificates
+*.pfx binary

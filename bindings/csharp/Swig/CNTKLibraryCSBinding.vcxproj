@@ -73,6 +73,7 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>        
     </ClCompile>
     <Link />
     <ProjectReference>
@@ -87,7 +88,7 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <FloatingPointExceptions>false</FloatingPointExceptions>
-      <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/d2Zi+ %(AdditionalOptions) /bigobj</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -111,7 +112,8 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cntk_cs_wrap.cxx" />
+    <ClCompile Include="cntk_cs_wrap.cxx">
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibrary.h" />
