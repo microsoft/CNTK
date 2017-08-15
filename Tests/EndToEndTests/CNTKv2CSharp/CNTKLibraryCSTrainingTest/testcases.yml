@@ -1,4 +1,4 @@
-isPythonTest: True
+isPythonTest: No
 
 dataDir: .
 
@@ -11,4 +11,4 @@ tags:
 testCases:
   Test run must be completed:
     patterns:
-      - Training completes
+      - Train completes.
