@@ -64,7 +64,7 @@ epoch_size = cfg["CNTK"].NUM_TRAIN_IMAGES
 num_test_images = cfg["CNTK"].NUM_TEST_IMAGES
 
 # model specific parameters
-model_folder = os.path.join(abs_path, "..", "..", "PretrainedModels")
+model_folder = os.path.join(abs_path, "..", "..", "..", "..", "PretrainedModels")
 base_model_file = os.path.join(model_folder, cfg["CNTK"].BASE_MODEL_FILE)
 feature_node_name = cfg["CNTK"].FEATURE_NODE_NAME
 last_conv_node_name = cfg["CNTK"].LAST_CONV_NODE_NAME

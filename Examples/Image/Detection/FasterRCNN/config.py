@@ -96,7 +96,7 @@ if __C.CNTK.DATASET == "Pascal":
 #
 
 if __C.CNTK.BASE_MODEL == "AlexNet":
-    __C.CNTK.BASE_MODEL_FILE = "AlexNet.model"
+    __C.CNTK.BASE_MODEL_FILE = "AlexNet_ImageNet_CNTK.model"
     __C.CNTK.FEATURE_NODE_NAME = "features"
     __C.CNTK.LAST_CONV_NODE_NAME = "conv5.y"
     __C.CNTK.START_TRAIN_CONV_NODE_NAME = __C.CNTK.FEATURE_NODE_NAME

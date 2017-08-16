@@ -48,7 +48,7 @@ momentum_time_constant = p.cntk_momentum_time_constant
 # model specific variables (only AlexNet for now)
 base_model = "AlexNet"
 if base_model == "AlexNet":
-    model_file = "../../../../../PretrainedModels/AlexNet.model"
+    model_file = "../../../../../../../PretrainedModels/AlexNet_ImageNet_CNTK.model"
     feature_node_name = "features"
     last_conv_node_name = "conv5.y"
     pool_node_name = "pool3"
