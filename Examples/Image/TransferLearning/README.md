@@ -12,7 +12,7 @@
 
 ### Getting the data
 
-We use the `Flowers` data set ([Examples/Image/DataSets/Flowers](../DataSets/Flowers)) and a pre-trained ResNet_18 model [Examples/Image/PretrainedModels/ResNet_18.model](../PretrainedModels). To download both run 
+We use the `Flowers` data set ([Examples/Image/DataSets/Flowers](../DataSets/Flowers)) and a pre-trained ResNet_18 model [PretrainedModels/ResNet18_ImageNet_CNTK.model](../../../PretrainedModels). To download both run 
 
 `python install_data_and_model.py`
 

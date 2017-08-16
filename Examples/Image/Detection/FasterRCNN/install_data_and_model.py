@@ -24,9 +24,9 @@ if __name__ == '__main__':
     from install_grocery import download_grocery_data
     download_grocery_data()
 
-    sys.path.append(os.path.join(base_folder, "..", "..", "PretrainedModels"))
-    from models_util import download_model_by_name
-    download_model_by_name("AlexNet")
+    sys.path.append(os.path.join(base_folder, "..", "..", "..", "..", "PretrainedModels"))
+    from download_model import download_model_by_name
+    download_model_by_name("AlexNet_ImageNet_CNTK")
 
     print("Creating mapping files for Grocery data set..")
     create_grocery_mappings(base_folder)
