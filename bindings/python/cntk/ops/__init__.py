@@ -2109,9 +2109,9 @@ def slice(x, axis, begin_index, end_index, strides=None, name=''):
         axis (int or :class:`~cntk.axis.Axis`): axis along which ``begin_index`` and ``end_index``
          will be used. If it is of type int it will be used as a static axis.
         begin_index (int): the index along axis where the slicing starts
-        end_index (int): the index along axis where the slicing ends
-        name (str, optional): the name of the Function instance in the network
+        end_index (int): the index along axis where the slicing ends (exclusive)
         strides(int): step sizes when applying slice, negative value means in reverse order
+        name (str, optional): the name of the Function instance in the network
 
     See also:
         Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
