@@ -34,7 +34,7 @@ class PolyMath:
         self.highway_layers = model_config['highway_layers']
         self.two_step = model_config['two_step']
         self.use_cudnn = model_config['use_cudnn']
-        self.use_sparse = C.Communicator.num_workers() == 1 # always use sparse when running single GPU, dense for data_parallel_distributed_learner
+        self.use_sparse = True
 
         print('dropout', self.dropout)
         print('use_cudnn', self.use_cudnn)
@@ -70,7 +70,7 @@ class PolyMath:
         qgw_ph = C.placeholder()
         qnw_ph = C.placeholder()
         qc_ph  = C.placeholder()
-    
+
         input_chars = C.placeholder(shape=(1,self.word_size,self.c_dim))
         input_glove_words = C.placeholder(shape=(self.wg_dim,))
         input_nonglove_words = C.placeholder(shape=(self.wn_dim,))

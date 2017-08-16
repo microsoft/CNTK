@@ -47,10 +47,12 @@ def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
     }
     return mb_source, input_map
 
-def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, misc={}):
+def create_tsv_reader(func, tsv_file, polymath, seqs, num_workers, is_test=False, misc=None):
     with open(tsv_file, 'r', encoding='utf-8') as f:
         eof = False
-        while not eof:
+        batch_count = 0
+        while not(eof and (batch_count % num_workers) == 0):
+            batch_count += 1
             batch={'cwids':[], 'qwids':[], 'baidx':[], 'eaidx':[], 'ccids':[], 'qcids':[]}
 
             while not eof and len(batch['cwids']) < seqs:
@@ -90,7 +92,8 @@ def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, misc={}):
                         argument_by_name(func, 'qc' ): query_chars,
                         argument_by_name(func, 'ab' ): answer_begin,
                         argument_by_name(func, 'ae' ): answer_end }
-
+            else:
+                yield {} # need to generate empty batch for distributed training
 
 def train(data_path, model_path, log_file, config_file, restore=False, profiling=False, gen_heartbeat=False):
     polymath = PolyMath(config_file)
@@ -200,11 +203,12 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
         minibatch_seqs = training_config['minibatch_seqs'] # number of sequences
 
         for epoch in range(max_epochs):       # loop over epochs
-            tsv_reader = create_tsv_reader(loss, train_data_file, polymath, minibatch_seqs)
+            tsv_reader = create_tsv_reader(loss, train_data_file, polymath, minibatch_seqs, C.Communicator.num_workers())
             minibatch_count = 0
             for data in tsv_reader:
                 if (minibatch_count % C.Communicator.num_workers()) == C.Communicator.rank():
                     trainer.train_minibatch(data) # update model with it
+                    dummy.eval()
                 minibatch_count += 1
             if not post_epoch_work(epoch_stat):
                 break
@@ -253,9 +257,6 @@ def validate_model(test_data, model, polymath):
     stat_sum = 0
     loss_sum = 0
 
-    C.debugging.start_profiler()
-    C.debugging.enable_profiler()
-
     while True:
         data = mb_source.next_minibatch(minibatch_size, input_map=input_map)
         if not data or not (begin_label in data) or data[begin_label].num_sequences == 0:
@@ -267,8 +268,6 @@ def validate_model(test_data, model, polymath):
         stat_sum += stats.eval((other_input_map))
         loss_sum += np.sum(testloss.asarray())
         num_sequences += data[begin_label].num_sequences
-
-    C.debugging.stop_profiler()
 
     stat_avg = stat_sum / num_sequences
     loss_avg = loss_sum / num_sequences
