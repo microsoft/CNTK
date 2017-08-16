@@ -1568,6 +1568,27 @@ def cosh(x, name=''):
     x = sanitize_input(x)
     return cosh(x, name)
 
+@typemap
+def acosh(x, name=''):
+    '''
+    Computes the element-wise acosh of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.acosh([[1,2],[3,4]]).eval(),5)
+        array([[ 0.00000,  1.31696],
+               [ 1.76275,  2.06344]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import acosh
+    x = sanitize_input(x)
+    return acosh(x, name)
 
 @typemap
 def softmax(x, axis=None, name=''):

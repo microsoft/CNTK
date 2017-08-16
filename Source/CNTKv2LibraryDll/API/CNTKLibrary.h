@@ -3614,6 +3614,11 @@ namespace CNTK
     CNTK_API FunctionPtr Cos(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise acosh operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Acosh(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise cosh operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Cosh(const Variable& operand, const std::wstring& name = L"");

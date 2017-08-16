@@ -150,6 +150,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Cos;
                 else if (node->OperationName() == OperationNameOf(SinNode))
                     opType = PrimitiveOpType::Sin;
+                else if (node->OperationName() == OperationNameOf(AcoshNode))
+                    opType = PrimitiveOpType::Acosh;
                 else if (node->OperationName() == OperationNameOf(CoshNode))
                     opType = PrimitiveOpType::Cosh;
                 else if (node->OperationName() == OperationNameOf(SinhNode))

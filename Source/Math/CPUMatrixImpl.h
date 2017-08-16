@@ -2834,6 +2834,33 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSinhOf(const CPUMatrix<ElemType>
     return *this;
 }
 
+//[this]=acosh([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceAcosh()
+{
+    return AssignAcoshOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAcoshOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAcoshOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord (i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = acosh(v);
+    }
+
+    return *this;
+}
+
 //Threshold truncating: this[i] = max( this[i], threshold )
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)

@@ -265,6 +265,9 @@ public:
     CPUMatrix<ElemType>& InplaceCosh();
     CPUMatrix<ElemType>& AssignCoshOf(const CPUMatrix<ElemType>& a);
 
+    CPUMatrix<ElemType>& InplaceAcosh();
+    CPUMatrix<ElemType>& AssignAcoshOf(const CPUMatrix<ElemType>& a);
+
     CPUMatrix<ElemType>& InplaceSinh();
     CPUMatrix<ElemType>& AssignSinhOf(const CPUMatrix<ElemType>& a);
 

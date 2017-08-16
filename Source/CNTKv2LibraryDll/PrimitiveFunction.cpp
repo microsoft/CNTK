@@ -406,6 +406,7 @@ namespace CNTK
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
                         case PrimitiveOpType::Cosh:
+                        case PrimitiveOpType::Acosh:
                         case PrimitiveOpType::Sinh:
                         case PrimitiveOpType::Pass:
                         case PrimitiveOpType::LabelsToGraph:

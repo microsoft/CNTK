@@ -419,6 +419,16 @@ __global__ void _elementWiseSinhOnCuda(
 };
 
 template <class ElemType>
+__global__ void _elementWiseAcoshOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = acosh_(a[id]);
+};
+
+template <class ElemType>
 __global__ void _setValue(
     ElemType* a,
     const ElemType v,
