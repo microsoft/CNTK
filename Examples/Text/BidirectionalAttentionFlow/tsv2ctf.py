@@ -11,7 +11,7 @@ word_size = data_config['word_size']
 sanitize = str.maketrans({"|": None, "\n": None})
 tsvs = 'train', 'dev', 'val'
 unk = '<UNK>'
-pad = '<PAD>'
+pad = ''
 EMPTY_TOKEN = '<NULL>'
 # pad (or trim) to word_size characters
 pad_spec = '{0:<%d.%d}' % (word_size, word_size)
