@@ -106,6 +106,10 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSpatialScale = L"spatialScale";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStrides = L"sliceStrides";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStridesVec = L"sliceStridesVec";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNamePaddingHead = L"paddingHead";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNamePaddingFoot = L"paddingFoot";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNamePaddingMode = L"paddingMode";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNamePaddingConstantValue = L"paddingConstantValue";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -479,6 +483,39 @@ namespace CNTK
                                 
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
                             break;
+                        case PrimitiveOpType::Pad:
+                        {
+                            assert(m_inputs.size() == 1);
+                            auto head = AsVector<size_t>(m_attributes[PrimitiveFunction::AttributeNamePaddingHead].Value<std::vector<DictionaryValue>>());
+                            auto foot = AsVector<size_t>(m_attributes[PrimitiveFunction::AttributeNamePaddingFoot].Value<std::vector<DictionaryValue>>());
+                            PaddingMode mode = (PaddingMode)m_attributes[PrimitiveFunction::AttributeNamePaddingMode].Value<size_t>();
+                            auto inputDims = m_inputs[0].Shape().Dimensions();
+                            if (head.size() != inputDims.size() || head.size() != foot.size())
+                                LogicError("Pad: the length of head and foot does not match input operand's dimension.");
+
+                            if (!m_inputs[0].Shape().HasUnboundDimension())
+                            {
+                                if (mode == PaddingMode::REFLECTPAD)
+                                {
+                                    for (int i = 0; i < inputDims.size(); i++)
+                                        if (head[i] > inputDims[i] - 1 || foot[i] > inputDims[i] - 1)
+                                            LogicError("Pad: with REFLECTPAD mode, the head and foot length must be no greater than input dimension - 1.");
+                                }
+                                else if (mode == PaddingMode::SYMMETRICPAD)
+                                {
+                                    for (int i = 0; i < inputDims.size(); i++)
+                                        if (head[i] > inputDims[i] || foot[i] > inputDims[i])
+                                            LogicError("Pad: with SYMMETRICPAD mode, the head and foot length must be no greater than input dimension.");
+                                }
+                            }
+
+                            for (int i = 0; i < inputDims.size(); i++)
+                                if (inputDims[i] != NDShape::FreeDimension && inputDims[i] != NDShape::InferredDimension)
+                                    inputDims[i] += head[i] + foot[i];
+                            outputShape = NDShape(inputDims);
+                            break;
+                        }
+                            
                         case PrimitiveOpType::ScatterPacked:
                         {
                             assert(m_inputs.size() == 3);

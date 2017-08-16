@@ -108,6 +108,7 @@ namespace CNTK
         {PrimitiveOpType::RandomDistribution, L"RandomDistribution"},
         {PrimitiveOpType::UnpackBatch, L"UnpackBatchAxis"},
         {PrimitiveOpType::ToBatch, L"ToBatchAxis"},
+        {PrimitiveOpType::Pad, L"Pad"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -274,6 +275,10 @@ namespace CNTK
         static const std::wstring AttributeNameSpatialScale;
         static const std::wstring AttributeNameSliceStrides;
         static const std::wstring AttributeNameSliceStridesVec;
+        static const std::wstring AttributeNamePaddingHead;
+        static const std::wstring AttributeNamePaddingFoot;
+        static const std::wstring AttributeNamePaddingMode;
+        static const std::wstring AttributeNamePaddingConstantValue;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -784,7 +789,8 @@ namespace CNTK
         // Version 14: Add StableSigmoid
         // Version 15: Add RandomDistribution
         // Version 16: Add to_batch/unpack_batch.
-        static const size_t s_serializationVersion = 16;
+        // Version 16: Add Pad.
+        static const size_t s_serializationVersion = 17;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

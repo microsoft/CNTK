@@ -16,6 +16,9 @@ namespace CNTK {
 template <class ElemType>
 class CNTKTextFormatReaderTestRunner;
 
+class FileWrapper;
+class BufferedFileReader;
+
 // TODO: more details when tracing warnings
 // (e.g., buffer content around the char that triggered the warning)
 template <class ElemType>
@@ -104,7 +107,8 @@ private:
     };
 
     const std::wstring m_filename;
-    FILE* m_file;
+    std::shared_ptr<FileWrapper> m_file;
+    std::shared_ptr<BufferedFileReader> m_fileReader;
 
     // An internal structure to assist with copying from input stream buffers into
     // into sequence data in a proper format.
@@ -116,15 +120,6 @@ private:
     std::map<std::string, size_t> m_aliasToIdMap;
 
     std::shared_ptr<Index> m_index;
-
-    size_t m_fileOffsetStart;
-    size_t m_fileOffsetEnd;
-
-    // TODO: not DRY (same in the Indexer), needs refactoring
-    unique_ptr<char[]> m_buffer;
-    const char* m_bufferStart;
-    const char* m_bufferEnd;
-    const char* m_pos; // buffer index
 
     unique_ptr<char[]> m_scratch; // local buffer for string parsing
 
@@ -152,14 +147,9 @@ private:
     // have been swallowed.
     void PrintWarningNotification();
 
-    void SetFileOffset(int64_t position);
+    int64_t GetFileOffset() const;
 
-    void SkipToNextValue(size_t& bytesToRead);
     void SkipToNextInput(size_t& bytesToRead);
-
-    bool TryRefillBuffer();
-
-    int64_t GetFileOffset() const { return m_fileOffsetStart + (m_pos - m_bufferStart); }
 
     // Returns a string containing input file information (current offset, file name, etc.),
     // which can be included as a part of the trace/log message.
@@ -186,7 +176,7 @@ private:
     bool TryReadRow(SequenceBuffer& sequence, size_t& bytesToRead);
 
     // Returns true if there's still data available.
-    bool inline CanRead() { return m_pos != m_bufferEnd || TryRefillBuffer(); }
+    bool inline CanRead();
 
     // Returns true if the trace level is greater or equal to 'Warning'
     bool inline ShouldWarn() { m_hadWarnings = true; return m_traceLevel >= Warning; }

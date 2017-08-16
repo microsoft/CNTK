@@ -92,6 +92,7 @@ namespace CNTK
         ToBatch = 80,
         Asin = 81,
         Acos = 82,
+        Pad = 83,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

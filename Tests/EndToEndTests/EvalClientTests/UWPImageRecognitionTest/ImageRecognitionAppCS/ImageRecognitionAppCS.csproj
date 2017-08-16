@@ -1,25 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <UsingTask TaskName="DownloadFile" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v12.0.dll">
-    <ParameterGroup>
-      <Url ParameterType="System.String" Required="true" />
-      <File ParameterType="System.String" Required="false" />
-      <OutputFolder ParameterType="System.String" Required="false" />
-    </ParameterGroup>
-    <Task>
-      <Using Namespace="System.Web" />
-      <Code Type="Fragment" Language="cs"><![CDATA[
-        var localPath = (OutputFolder != null ? OutputFolder + "/" : "") + (File ?? System.IO.Path.GetFileName(new Uri(Url).LocalPath));
-        if(!System.IO.File.Exists(localPath)) {
-            using (var client = new System.Net.WebClient())
-            {
-                client.DownloadFile(Url, localPath);
-            }
-        }
-        ]]></Code>
-    </Task>
-  </UsingTask>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug_UWP</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
@@ -65,9 +46,6 @@
   <ItemGroup>
     <!-- A reference to the entire .Net Framework and Windows SDK are automatically included -->
     <Content Include="Assets\imagenet1000_clsid.txt" />
-    <Content Include="Assets\ResNet18_ImageNet_CNTK.model">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <None Include="project.json" />
   </ItemGroup>
   <ItemGroup>
@@ -84,7 +62,7 @@
     <AppxManifest Include="Package.appxmanifest">
       <SubType>Designer</SubType>
     </AppxManifest>
-    <None Include="ImageRecognitionAppCS_TemporaryKey.pfx" />
+    <Content Include="ImageRecognitionAppCS_TemporaryKey.pfx" />
   </ItemGroup>
   <PropertyGroup>
     <CNTKBinSuffix />
@@ -120,17 +98,13 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="ImageRecognitionLib, Version=255.255.255.255, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ImageRecognizerLib, Version=255.255.255.255, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(CNTKRoot)$(Platform)\$(Configuration)\ImageRecognitionLib.winmd</HintPath>
+      <HintPath>$(CNTKRoot)$(Platform)\$(Configuration)\ImageRecognizerLib.winmd</HintPath>
     </Reference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
-  <Target Name="BeforeBuild">
-    <!-- Model file is downloaded from a public location before build -->
-    <DownloadFile Url="https://www.cntk.ai/Models/CNTK_Pretrained/ResNet18_ImageNet_CNTK.model" OutputFolder="Assets" />
-  </Target>
 </Project>

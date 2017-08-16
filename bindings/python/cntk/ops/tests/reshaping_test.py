@@ -560,3 +560,44 @@ def test_convert_dynamic_axis():
     y = C.to_batch(const_y)
     assert len(y.dynamic_axes) == 1
     assert y.shape == (C.InferredDimension, 3)
+
+def test_pad():
+    x = C.constant(value=np.arange(6).reshape((2,3)))
+    pad1 = C.pad(x, [(1, 1), (2, 2)]).eval()
+    expect1 = np.lib.pad([[0, 1, 2], [3, 4, 5]], ((1, 1), (2, 2)), 'constant')
+    assert np.array_equal(pad1, expect1)
+
+    pad2 = C.pad(x, [(1, 1), (2, 2)], mode=1).eval()
+    expect2 = np.lib.pad([[0, 1, 2], [3, 4, 5]], ((1, 1), (2, 2)), 'reflect')
+    assert np.array_equal(pad2, expect2)
+
+    pad3 = C.pad(x, [(1, 1), (2, 2)], mode=2).eval()
+    expect3 = np.lib.pad([[0, 1, 2], [3, 4, 5]], ((1, 1), (2, 2)), 'symmetric')
+    assert np.array_equal(pad3, expect3)
+
+    #test inferred dimension and free dimension
+    x = C.input((C.InferredDimension, 3))
+    data = np.arange(12).reshape((2, 2, 3))
+    pad4 = C.pad(x, [(1, 1), (2, 2)], mode=1).eval({x:data})
+    expect4 = np.lib.pad([[[0, 1, 2], [3, 4, 5]], [[6, 7, 8], [9, 10, 11]]],
+                         ((0,0),(1,1),(2,2)), 'reflect')
+    assert np.array_equal(pad4, expect4)
+
+    x = C.input((C.FreeDimension, 3))
+    pad5 = C.pad(x, [(1, 1), (2, 2)], mode=2).eval({x: data})
+    expect5 = np.lib.pad([[[0, 1, 2], [3, 4, 5]], [[6, 7, 8], [9, 10, 11]]],
+                         ((0, 0), (1, 1), (2, 2)), 'symmetric')
+    assert np.array_equal(pad5, expect5)
+
+    #test grad
+    x = C.parameter(init=np.arange(6).reshape((2,3)))
+    p = C.pad(x, mode=C.ops.SYMMETRIC_PAD, pattern=[(1, 0), (2, 1)])
+    grad = p.grad({}, [x])
+    expect_grad = np.asarray([[4., 4., 4.],[2., 2., 2.]])
+    assert np.array_equal(grad, expect_grad)
+
+    p2 = C.pad(x, mode=C.ops.REFLECT_PAD, pattern=[(1, 1), (2, 2)])
+    grad2 = p2.grad({}, [x])
+    expect_grad2 = np.asarray([[4., 6., 4.], [4., 6., 4.]])
+    assert np.array_equal(grad2, expect_grad2)
+

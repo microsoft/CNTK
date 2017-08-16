@@ -24,19 +24,29 @@ namespace ImageRecognitionCS
         void IImageRecognizerConsole.ShowProgress(bool progress)
         {
             this.progress.IsActive = progress;
-            this.cntkPickButton.IsEnabled = !progress;
+            this.cntkPickModel.IsEnabled = !progress;
+            this.cntkPickImage.IsEnabled = !progress;
         }
 
         public MainPage()
         {
             this.InitializeComponent();
             this.driver = new ImageRecognizerDriver(this);
-            var t = this.driver.Start();
+            this.cntkPickModel.IsEnabled = true;
+            this.cntkPickImage.IsEnabled = false;
         }
 
-        private async void CNTKButton_Click(object sender, RoutedEventArgs e)
+        private async void cntkPickImage_Click(object sender, RoutedEventArgs e)
         {
-            await driver.PickAndRecognizeImage();
+            await driver.PickAndRecognizeImageAsync();
         }
+
+        private async void cntkPickModel_Click(object sender, RoutedEventArgs e)
+        {
+            await driver.LoadModelAsync();
+            this.cntkPickModel.IsEnabled = false;
+            this.cntkPickImage.IsEnabled = true;
+        }
+
     }
 }
