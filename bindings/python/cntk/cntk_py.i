@@ -250,24 +250,21 @@ def dynamic_axes(self):
         PyObject* ndarray = PyArray_SimpleNew(static_cast<int>(dimensions.size()), shape, numpy_type);
         void *arr_data = PyArray_DATA((PyArrayObject*)ndarray);
 
-        NDArrayView* cpuView;
         if ((*self).Device() != DeviceDescriptor::CPUDevice())
         {
-            cpuView = new NDArrayView(cntk_type, (*self).Shape(), arr_data, PyArray_ITEMSIZE((PyArrayObject*) ndarray) * num_elements, DeviceDescriptor::CPUDevice());
-            cpuView->CopyFrom((*self));
+            NDArrayView cpuView(cntk_type, (*self).Shape(), arr_data, PyArray_ITEMSIZE((PyArrayObject*) ndarray) * num_elements, DeviceDescriptor::CPUDevice());
+            cpuView.CopyFrom((*self));
         }
         else
         {
-            cpuView = const_cast<NDArrayView*>(&(*self));
-
             void* buffer;
             if (cntk_type == CNTK::DataType::Float)
             {
-                buffer = (void*)cpuView->DataBuffer<float>();
+                buffer = (void*)self->DataBuffer<float>();
             }
             else if (cntk_type == CNTK::DataType::Double)
             {
-                buffer = (void*)cpuView->DataBuffer<double>();
+                buffer = (void*)self->DataBuffer<double>();
             }
             else
             {
