@@ -29,8 +29,8 @@ namespace CNTK {
             return;
 
         m_index = 0;
-        m_fileOffset += m_buffer.size();
-        
+        m_fileOffset = m_file.TellOrDie();
+
         m_buffer.resize(m_maxSize);
         size_t bytesRead = m_file.Read(m_buffer.data(), 1, m_maxSize);
 

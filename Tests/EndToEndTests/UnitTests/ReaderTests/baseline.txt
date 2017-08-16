@@ -1,358 +1,386 @@
 CPU info:
-    CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz
-    Hardware threads: 24
-    Total Memory: 33476764 kB
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 12
+    Total Memory: 264106564 kB
 -------------------------------------------------------------------
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 30 in the input file (missing_trailing_newline.txt). Possibly, a trailing newline is missing.
-WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 30 in the input file (missing_trailing_newline.txt).
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 30 in the input file (missing_trailing_newline.txt). Possibly, a trailing newline is missing.
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 30 in the input file (missing_trailing_newline.txt). Possibly, a trailing newline is missing.
-WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 30 in the input file (missing_trailing_newline.txt).
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 30 in the input file (missing_trailing_newline.txt). Possibly, a trailing newline is missing.
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 29 in the input file (missing_trailing_newline.txt). Possibly, a trailing newline is missing.
+WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 29 in the input file (missing_trailing_newline.txt).
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 29 in the input file (missing_trailing_newline.txt). Possibly, a trailing newline is missing.
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 29 in the input file (missing_trailing_newline.txt). Possibly, a trailing newline is missing.
+WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 29 in the input file (missing_trailing_newline.txt).
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 29 in the input file (missing_trailing_newline.txt). Possibly, a trailing newline is missing.
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 17 in the input file (contains_blank_lines.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt).'
 attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 2-th time out of 5...
-WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 17 in the input file (contains_blank_lines.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt).'
 attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 3-th time out of 5...
-WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 17 in the input file (contains_blank_lines.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt).'
 attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 4-th time out of 5...
-WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 17 in the input file (contains_blank_lines.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt).'
 attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 5-th time out of 5...
-WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
-attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 2-th time out of 5...
-WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
-attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 3-th time out of 5...
-WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
-attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 4-th time out of 5...
-WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
-attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 5-th time out of 5...
-WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Could not read a row (# 2) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
-WARNING: Exhausted all input expected for the current sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt), but only read 1 out of 2 expected rows.
-WARNING: Maximum per-input number of samples for sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt) is less than expected (1 vs. 2).
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-WARNING: Input row at offset 27 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
-WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 27 in the input file (duplicate_inputs.txt).
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+WARNING: Could not read a row (# 1) while loading sequence (id = 1) at offset 17 in the input file (contains_blank_lines.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt).'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+WARNING: Could not read a row (# 2) while loading sequence (id = 1) at offset 17 in the input file (contains_blank_lines.txt).
+WARNING: Exhausted all input expected for the current sequence (id = 1) at offset 17 in the input file (contains_blank_lines.txt), but only read 1 out of 2 expected rows.
+WARNING: Number of samples for sequence (id = 1) at offset 17 in the input file (contains_blank_lines.txt) is less than expected (1 vs. 2).
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: Input row at offset 26 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
+WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 26 in the input file (duplicate_inputs.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt).'
 attempt: Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt)., retrying 2-th time out of 5...
-WARNING: Input row at offset 27 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
-WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 27 in the input file (duplicate_inputs.txt).
+WARNING: Input row at offset 26 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
+WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 26 in the input file (duplicate_inputs.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt).'
 attempt: Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt)., retrying 3-th time out of 5...
-WARNING: Input row at offset 27 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
-WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 27 in the input file (duplicate_inputs.txt).
+WARNING: Input row at offset 26 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
+WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 26 in the input file (duplicate_inputs.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt).'
 attempt: Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt)., retrying 4-th time out of 5...
-WARNING: Input row at offset 27 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
-WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 27 in the input file (duplicate_inputs.txt).
+WARNING: Input row at offset 26 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
+WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 26 in the input file (duplicate_inputs.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt).'
 attempt: Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt)., retrying 5-th time out of 5...
-WARNING: Input row at offset 27 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
-WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 27 in the input file (duplicate_inputs.txt).
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: Input row at offset 26 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
+WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 26 in the input file (duplicate_inputs.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt).'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
 WARNING: A dense sample at offset 6 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 0).
-WARNING: A dense sample at offset 62 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 5).
-WARNING: A dense sample at offset 478 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 1).
+WARNING: A dense sample at offset 61 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 5).
+WARNING: A dense sample at offset 473 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 1).
 WARNING: A dense sample at offset 6 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 0).
-WARNING: A dense sample at offset 62 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 5).
-WARNING: A dense sample at offset 478 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 1).
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 7 in the input file (no_trailing_newline.txt). Possibly, a trailing newline is missing.
-WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 7 in the input file (no_trailing_newline.txt).
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 7 in the input file (no_trailing_newline.txt). Possibly, a trailing newline is missing.
-INFO: Finished loading sequence (id = 4213508252181361269) at offset 7 in the input file (no_trailing_newline.txt), successfully read 1 out of expected 1 rows.
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 6 in the input file (no_trailing_newline.txt). Possibly, a trailing newline is missing.
-WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 6 in the input file (no_trailing_newline.txt).
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 6 in the input file (no_trailing_newline.txt). Possibly, a trailing newline is missing.
-INFO: Finished loading sequence (id = 4213508252181361269) at offset 6 in the input file (no_trailing_newline.txt), successfully read 1 out of expected 1 rows.
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 7 in the input file (no_trailing_newline.txt). Possibly, a trailing newline is missing.
-WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 7 in the input file (no_trailing_newline.txt).
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 7 in the input file (no_trailing_newline.txt). Possibly, a trailing newline is missing.
-INFO: Finished loading sequence (id = 1) at offset 7 in the input file (no_trailing_newline.txt), successfully read 1 out of expected 1 rows.
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 11 in the input file (no_trailing_newline.txt). Possibly, a trailing newline is missing.
-WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 11 in the input file (no_trailing_newline.txt).
-WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 11 in the input file (no_trailing_newline.txt). Possibly, a trailing newline is missing.
-INFO: Finished loading sequence (id = 1) at offset 11 in the input file (no_trailing_newline.txt), successfully read 1 out of expected 1 rows.
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: A dense sample at offset 61 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 5).
+WARNING: A dense sample at offset 473 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 1).
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 4 in the input file (0.no_trailing_newline.txt). Possibly, a trailing newline is missing.
+WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 4 in the input file (0.no_trailing_newline.txt).
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 4 in the input file (0.no_trailing_newline.txt). Possibly, a trailing newline is missing.
+INFO: Finished loading sequence (id = 0) at offset 4 in the input file (0.no_trailing_newline.txt), successfully read 1 out of expected 1 rows.
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 7 in the input file (1.no_trailing_newline.txt). Possibly, a trailing newline is missing.
+WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 7 in the input file (1.no_trailing_newline.txt).
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 7 in the input file (1.no_trailing_newline.txt). Possibly, a trailing newline is missing.
+INFO: Finished loading sequence (id = 0) at offset 7 in the input file (1.no_trailing_newline.txt), successfully read 1 out of expected 1 rows.
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 6 in the input file (2.no_trailing_newline.txt). Possibly, a trailing newline is missing.
+WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 6 in the input file (2.no_trailing_newline.txt).
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 6 in the input file (2.no_trailing_newline.txt). Possibly, a trailing newline is missing.
+INFO: Finished loading sequence (id = 0) at offset 6 in the input file (2.no_trailing_newline.txt), successfully read 1 out of expected 1 rows.
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 7 in the input file (3.no_trailing_newline.txt). Possibly, a trailing newline is missing.
+WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 7 in the input file (3.no_trailing_newline.txt).
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 7 in the input file (3.no_trailing_newline.txt). Possibly, a trailing newline is missing.
+INFO: Finished loading sequence (id = 0) at offset 7 in the input file (3.no_trailing_newline.txt), successfully read 1 out of expected 1 rows.
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 11 in the input file (4.no_trailing_newline.txt). Possibly, a trailing newline is missing.
+WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 11 in the input file (4.no_trailing_newline.txt).
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 11 in the input file (4.no_trailing_newline.txt). Possibly, a trailing newline is missing.
+INFO: Finished loading sequence (id = 0) at offset 11 in the input file (4.no_trailing_newline.txt), successfully read 1 out of expected 1 rows.
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
 WARNING: Exhausted all input expected for the current sequence while reading an input name at offset 2 in the input file (no_trailing_newline.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (no_trailing_newline.txt).'
 WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 3 in the input file (no_trailing_newline.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (no_trailing_newline.txt).'
 WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 3 in the input file (no_trailing_newline.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (no_trailing_newline.txt).'
 WARNING: Exhausted all input expected for the current sequence while reading a dense sample at offset 7 in the input file (no_trailing_newline.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (no_trailing_newline.txt).'
 WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 4 in the input file (no_trailing_newline.txt). Possibly, a trailing newline is missing.
 WARNING: Reached an invalid state while reading a floating point value at offset 4 in the input file (no_trailing_newline.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (no_trailing_newline.txt).'
 WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 4 in the input file (no_trailing_newline.txt). Possibly, a trailing newline is missing.
 WARNING: Reached an invalid state while reading a floating point value at offset 4 in the input file (no_trailing_newline.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (no_trailing_newline.txt).'
 WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 7 in the input file (no_trailing_newline.txt). Possibly, a trailing newline is missing.
 WARNING: Reached an invalid state while reading a floating point value at offset 7 in the input file (no_trailing_newline.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (no_trailing_newline.txt).'
 WARNING: A sign symbol is followed by an invalid character('e') in a floating point value at offset 7 in the input file (no_trailing_newline.txt).
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (no_trailing_newline.txt).'
 WARNING: Unexpected character (':') in a floating point value at offset 4 in the input file (no_trailing_newline.txt).
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+
+About to throw exception 'Reached the maximum number of allowed errors while reading the input file (no_trailing_newline.txt).'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
 INFO: Skipping unknown input ('B') at offset 7 in the input file (extra_input.txt). Input name 'B' was not specified in the reader config section.
 WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 13 in the input file (extra_input.txt). Possibly, a trailing newline is missing.
-INFO: Finished loading sequence (id = 1688849860264203) at offset 13 in the input file (extra_input.txt), successfully read 1 out of expected 1 rows.
+INFO: Finished loading sequence (id = 0) at offset 13 in the input file (extra_input.txt), successfully read 1 out of expected 1 rows.
 INFO: Skipping unknown input at offset 7 in the input file (extra_input.txt). Input name (with the 1-character prefix 't') exceeds the maximum expected length (1).
 WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 53 in the input file (extra_input.txt). Possibly, a trailing newline is missing.
-INFO: Finished loading sequence (id = 3702261810013) at offset 53 in the input file (extra_input.txt), successfully read 1 out of expected 1 rows.
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+INFO: Finished loading sequence (id = 0) at offset 53 in the input file (extra_input.txt), successfully read 1 out of expected 1 rows.
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
@@ -362,17 +390,17 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT79E5.tmp'
+biggrowablevectorarray: creating disk backup store at '/tmp/temp.CNTK.qoaBb1'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -381,14 +409,14 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT79E5.tmp'
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+biggrowablevectorarray: deleted disk backup store at '/tmp/temp.CNTK.qoaBb1'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 evaluate: reading 368 frames of An4/71/71/cen5-fjam-b.mfc
 evaluate: reading 438 frames of An4/213/213/cen4-fsaf2-b.mfc
@@ -412,13 +440,13 @@ evaluate: reading 608 frames of An4/477/477/an257-mewl-b.mfc
 evaluate: reading 78 frames of An4/454/454/an70-meht-b.mfc
 evaluate: reading 228 frames of An4/254/254/cen6-ftmj-b.mfc
 evaluate: reading 218 frames of An4/946/946/cen6-mwhw-b.mfc
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
@@ -428,13 +456,13 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 886), data subset 0 of 1, with 1 datapasses
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
@@ -444,20 +472,22 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+
+About to throw exception ''Truncated' cannot be 'true' in frameMode (i.e. when 'frameMode' is 'true')'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
@@ -467,13 +497,13 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 886), data subset 0 of 1, with 1 datapasses
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
@@ -504,13 +534,13 @@ getbatch: getting randomized frames [250..500] (250 frames out of 250 requested)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
 getbatch: getting randomized frames [500..750] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
 getbatch: getting randomized frames [750..1000] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
@@ -520,17 +550,17 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNTC5C4.tmp'
+biggrowablevectorarray: creating disk backup store at '/tmp/temp.CNTK.XKrjWP'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -539,14 +569,14 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNTC5C4.tmp'
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+biggrowablevectorarray: deleted disk backup store at '/tmp/temp.CNTK.XKrjWP'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 evaluate: reading 368 frames of An4/71/71/cen5-fjam-b.mfc
 evaluate: reading 438 frames of An4/213/213/cen4-fsaf2-b.mfc
@@ -570,13 +600,13 @@ evaluate: reading 608 frames of An4/477/477/an257-mewl-b.mfc
 evaluate: reading 78 frames of An4/454/454/an70-meht-b.mfc
 evaluate: reading 228 frames of An4/254/254/cen6-ftmj-b.mfc
 evaluate: reading 218 frames of An4/946/946/cen6-mwhw-b.mfc
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
@@ -586,13 +616,13 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 886), data subset 0 of 1, with 1 datapasses
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
@@ -602,13 +632,13 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
@@ -617,13 +647,13 @@ label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
 minibatchiterator: epoch 0: frames [0..2000] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
@@ -654,13 +684,13 @@ getbatch: getting randomized frames [250..500] (250 frames out of 250 requested)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
 getbatch: getting randomized frames [500..750] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
 getbatch: getting randomized frames [750..1000] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
@@ -670,13 +700,13 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 2, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 2, with 1 datapasses
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
@@ -686,20 +716,20 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 1 of 2, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 1 of 2, with 1 datapasses
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 simplesenonehmm: reading './model.overalltying', './state.list', './model.transprob'
 simplesenonehmm: 83253 units with 45 unique HMMs, 132 tied states, and 45 trans matrices read
 reading script file ./glob_0000.scp ... 948 entries
 trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-archive: opening 80 lattice-archive TOC files ('.\CY2SCH010061231_1369712653.numden.lats.toc' etc.).................................................................................. 923 total lattices referenced in 80 archive files
+archive: opening 80 lattice-archive TOC files ('./CY2SCH010061231_1369712653.numden.lats.toc' etc.).................................................................................. 923 total lattices referenced in 80 archive files
 . [no lattice for An4/454/454/an70-meht-b]....... [no lattice for An4/89/89/an6-fjmd-b].. [no lattice for An4/683/683/an364-mmkw-b].. [no lattice for An4/476/476/an256-mewl-b].... [no lattice for An4/2/2/an253-fash-b]...............................................................................feature set 0: 250814 frames in 923 out of 948 utterances
 minibatchutterancesource: out of 948 files, 0 files not found in label set and 25 have no lattice
 label set 0: 129 classes
@@ -830,121 +860,123 @@ getbatch: getting utterances 32..32 (268 subset of 268 frames out of 250 request
 getbatch: getting utterances 33..33 (348 subset of 348 frames out of 250 requested) in sweep 0
 getbatch: getting utterances 34..34 (258 subset of 258 frames out of 250 requested) in sweep 0
 getbatch: getting utterances 35..35 (598 subset of 598 frames out of 220 requested) in sweep 0
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
 Total (133) state names in state list './state.list'
 MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+OMP: Warning #96: Cannot form a team with 12 threads, using 10 instead.
+OMP: Hint: Consider unsetting KMP_ALL_THREADS and OMP_THREAD_LIMIT (if either is set).
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
 Total (133) state names in state list './state.list'
 MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
 Total (133) state names in state list './state.list'
 MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
 Total (133) state names in state list './state.list'
 MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
 Total (133) state names in state list './state.list'
 MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
 Total (133) state names in state list './state.list'
 MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
 Total (133) state names in state list './state.list'
 MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
 Total (133) state names in state list './state.list'
 MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
 Total (133) state names in state list './state.list'
 MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
@@ -953,25 +985,25 @@ label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
 minibatchiterator: epoch 0: frames [0..2000] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
 Total (133) state names in state list './state.list'
 MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
@@ -990,31 +1022,31 @@ SequenceRandomizer::Seek(): seeking offset 0 in sweep 0
 SequenceRandomizer::Seek(): offset is within randomized window
 SequenceRandomizer::Seek(): advancing cursor from 0 to 0
 BlockRandomizer::StartEpoch: epoch 1: samples [0..500] (first sequence at sample 0), worker rank 0, total workers 1
-HTKChunkDescription::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
-HTKChunkDescription::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
-HTKChunkDescription::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
-HTKChunkDescription::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
-HTKChunkDescription::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
-HTKChunkDescription::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkInfo::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+HTKChunkInfo::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+HTKChunkInfo::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkInfo::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkInfo::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkInfo::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
 BlockRandomizer::RetrieveDataChunks: 3 chunks paged-in from chunk window [0..2]
 SequenceRandomizer::Seek(): seeking offset 500 in sweep 0
 SequenceRandomizer::Seek(): offset is within randomized window
 SequenceRandomizer::Seek(): advancing cursor from 0 to 500
 BlockRandomizer::StartEpoch: epoch 2: samples [500..1000] (first sequence at sample 500), worker rank 0, total workers 1
 BlockRandomizer::RetrieveDataChunks: 3 chunks paged-in from chunk window [0..2]
-HTKChunkDescription::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
-HTKChunkDescription::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
-HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
-HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
-HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
-HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+HTKChunkInfo::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkInfo::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkInfo::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkInfo::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkInfo::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+HTKChunkInfo::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
@@ -1033,14 +1065,14 @@ SequenceRandomizer::Seek(): seeking offset 0 in sweep 0
 SequenceRandomizer::Seek(): offset is within randomized window
 SequenceRandomizer::Seek(): advancing cursor from 0 to 0
 BlockRandomizer::StartEpoch: epoch 1: samples [0..500] (first sequence at sample 0), worker rank 0, total workers 1
-HTKChunkDescription::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
-HTKChunkDescription::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+HTKChunkInfo::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+HTKChunkInfo::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
 BlockRandomizer::RetrieveDataChunks: paged in randomized chunk 0 (original chunk: 0), now 1 chunks in memory
-HTKChunkDescription::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
-HTKChunkDescription::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkInfo::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkInfo::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
 BlockRandomizer::RetrieveDataChunks: paged in randomized chunk 1 (original chunk: 1), now 2 chunks in memory
-HTKChunkDescription::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
-HTKChunkDescription::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkInfo::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkInfo::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
 BlockRandomizer::RetrieveDataChunks: paged in randomized chunk 2 (original chunk: 2), now 3 chunks in memory
 BlockRandomizer::RetrieveDataChunks: 3 chunks paged-in from chunk window [0..2]
 SequenceRandomizer::Seek(): seeking offset 500 in sweep 0
@@ -1048,201 +1080,221 @@ SequenceRandomizer::Seek(): offset is within randomized window
 SequenceRandomizer::Seek(): advancing cursor from 0 to 500
 BlockRandomizer::StartEpoch: epoch 2: samples [500..1000] (first sequence at sample 500), worker rank 0, total workers 1
 BlockRandomizer::RetrieveDataChunks: 3 chunks paged-in from chunk window [0..2]
-HTKChunkDescription::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
-HTKChunkDescription::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
-HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
-HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
-HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
-HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+HTKChunkInfo::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkInfo::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkInfo::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkInfo::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkInfo::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+HTKChunkInfo::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
-Reading script file NonExistingScpFile ...Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file NonExistingScpFile ...
+About to throw exception 'Failed to open input file: NonExistingScpFile'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
-Reading script file ./glob_0000.scp ... 948 entries
-HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
-HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
-Total (133) state names in state list './state.list'
-MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
 Total (133) state names in state list './state.list'
 MLFDeserializer: '948' utterances with '252734' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
+Total (133) state names in state list './state.list'
+MLFDeserializer: '948' utterances with '252734' frames
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
 WARNING: Could not decompress sequence with id '0'
 WARNING: Could not decompress sequence with id '0'
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+
+About to throw exception 'Invalid map file format, must contain 2 or 3 tab-delimited columns, line 2 in file ./ImageReaderBadMap_map.txt.'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+
+About to throw exception 'Two streams with the same name 'feature' have been found. Please rename the duplicate.'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+
+About to throw exception 'Cannot parse label value on line 1, second column, in file ./ImageReaderBadLabel_map.txt.'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+
+About to throw exception 'Image 'images/red.jpg' has invalid class id '10'. It is exceeding the label dimension of '4'. Line 3 in file ./ImageReaderLabelOutOfRange_map.txt.'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
 Sequence missing.jpg is not found in container images/simple.zip.
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests/.
-Current working directory is now: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+
+About to throw exception 'Cannot retrieve image data for some sequences. For more detail, please see the log file.'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+
+About to throw exception 'Cannot open file 'imageDoesNotExists/black.jpg''
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+
+About to throw exception 'Packer currently does not support samples with varying shapes.Please make sure there is a transform that unifies the shape of samples for input stream 'features' or the deserializer provides samples with the same shape.'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+
+About to throw exception 'Packer currently does not support samples with varying shapes.Please make sure there is a transform that unifies the shape of samples for input stream 'features' or the deserializer provides samples with the same shape.'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/Data
+
+About to throw exception 'Could not reconcile data between different deserializers. Keys of logical sequences do not match.'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests/.
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/iVector
-Current working directory is now: d:/TestPreparation/iVector
+Set current path to: /home/philly/data/CNTKTestData/iVector
+Current working directory is now: /home/philly/data/CNTKTestData/iVector
 reading script file ./features.rscp ... 4963 entries
 total 9000 state names in state list ./labels.statelist
 htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
@@ -1256,13 +1308,13 @@ HTKDeserializer: selected '4963' utterances grouped into '19' chunks, average ch
 HTKDeserializer: determined feature kind as '40'-dimensional 'FBANK_Z' with frame shift 10.0 ms
 Total (9001) state names in state list './labels.statelist'
 MLFDeserializer: '4974' utterances with '1671772' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/iVector
-Current working directory is now: d:/TestPreparation/iVector
+Set current path to: /home/philly/data/CNTKTestData/iVector
+Current working directory is now: /home/philly/data/CNTKTestData/iVector
 reading script file ./features.rscp ... 4963 entries
 reading script file ./ivector.rscp ... 4963 entries
 total 9000 state names in state list ./labels.statelist
@@ -1283,13 +1335,13 @@ HTKDeserializer: selected '4963' utterances grouped into '1' chunks, average chu
 HTKDeserializer: determined feature kind as '100'-dimensional 'USER' with frame shift 10.0 ms
 Total (9001) state names in state list './labels.statelist'
 MLFDeserializer: '4974' utterances with '1671772' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/iVector
-Current working directory is now: d:/TestPreparation/iVector
+Set current path to: /home/philly/data/CNTKTestData/iVector
+Current working directory is now: /home/philly/data/CNTKTestData/iVector
 Reading script file ./features.rscp ... 4963 entries
 HTKDeserializer: selected '4963' utterances grouped into '19' chunks, average chunk size: 261.2 utterances, 87863.9 frames (for I/O: 261.2 utterances, 87863.9 frames)
 HTKDeserializer: determined feature kind as '40'-dimensional 'FBANK_Z' with frame shift 10.0 ms
@@ -1298,13 +1350,15 @@ HTKDeserializer: selected '4963' utterances grouped into '1' chunks, average chu
 HTKDeserializer: determined feature kind as '100'-dimensional 'USER' with frame shift 10.0 ms
 Total (9001) state names in state list './labels.statelist'
 MLFDeserializer: '4974' utterances with '1671772' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+
+About to throw exception 'Sequence with key 'fsh060057A-0002' has '1' frame(s), whereas the primary sequence expects at least '2' frames'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/iVector
-Current working directory is now: d:/TestPreparation/iVector
+Set current path to: /home/philly/data/CNTKTestData/iVector
+Current working directory is now: /home/philly/data/CNTKTestData/iVector
 reading script file ./features.rscp ... 4963 entries
 reading script file ./ivector.rscp ... 4963 entries
 total 9000 state names in state list ./labels.statelist
@@ -1325,13 +1379,13 @@ HTKDeserializer: selected '4963' utterances grouped into '1' chunks, average chu
 HTKDeserializer: determined feature kind as '100'-dimensional 'USER' with frame shift 10.0 ms
 Total (9001) state names in state list './labels.statelist'
 MLFDeserializer: '4974' utterances with '1671772' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github5/CNTK/x64/release
-Test path: C:/repo/cntk_github5/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/debug/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/iVector
-Current working directory is now: d:/TestPreparation/iVector
+Set current path to: /home/philly/data/CNTKTestData/iVector
+Current working directory is now: /home/philly/data/CNTKTestData/iVector
 reading script file ./features.rscp ... 4963 entries
 reading script file ./ivector.rscp ... 4963 entries
 total 9000 state names in state list ./labels.statelist
@@ -1339,8 +1393,7 @@ htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
 ....................................................................................................feature set 0: 1669414 frames in 4963 out of 4963 utterances
 label set 0: 9000 classes
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
-....................................................................................................Running 145 test cases...
-feature set 1: 1669414 frames in 4963 out of 4963 utterances
+....................................................................................................feature set 1: 1669414 frames in 4963 out of 4963 utterances
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
 minibatchiterator: epoch 0: frames [0..400] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 40-dimensional 'FBANK_Z' with frame shift 10.0 ms
@@ -1353,15 +1406,28 @@ HTKDeserializer: selected '4963' utterances grouped into '1' chunks, average chu
 HTKDeserializer: determined feature kind as '100'-dimensional 'USER' with frame shift 10.0 ms
 Total (9001) state names in state list './labels.statelist'
 MLFDeserializer: '4974' utterances with '1671772' frames
-Set current path to: C:/repo/cntk_github5/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/UnitTests/ReaderTests
+
+About to throw exception 'Invalid numeric sequence id 'not a number''
+
+About to throw exception 'Hashing should not be used with numeric sequence keys.'
+
+About to throw exception 'Input file is empty'
+
+About to throw exception 'Expected a sequence id at the offset 0, none was found.'
+
+About to throw exception 'Expected a sequence id at the offset 0, none was found.'
+
+About to throw exception 'Overflow while reading a numeric sequence id (8-bit value).'
+Running 159 test cases...
 
 Test module "ReaderTests" has passed with:
-  145 test cases out of 145 passed
-  22632380 assertions out of 22632380 passed
+  159 test cases out of 159 passed
+  35261320 assertions out of 35261320 passed
 
   Test suite "ReaderTestSuite" has passed with:
     100 test cases out of 100 passed
-    16971380 assertions out of 16971380 passed
+    16971381 assertions out of 16971381 passed
 
     Test case "ReaderTestSuite/CNTKBinaryReader_Simple_dense" has passed with:
       1 assertion out of 1 passed
@@ -1466,7 +1532,7 @@ Test module "ReaderTests" has passed with:
       1 assertion out of 1 passed
 
     Test case "ReaderTestSuite/CNTKTextFormatReader_no_trailing_newline_valid_input" has passed with:
-      4 assertions out of 4 passed
+      5 assertions out of 5 passed
 
     Test case "ReaderTestSuite/CNTKTextFormatReader_no_trailing_newline_invalid_input" has passed with:
       9 assertions out of 9 passed
@@ -1682,8 +1748,8 @@ Test module "ReaderTests" has passed with:
       2 assertions out of 2 passed
 
   Test suite "ReaderLibTests" has passed with:
-    32 test cases out of 32 passed
-    399020 assertions out of 399020 passed
+    28 test cases out of 28 passed
+    398896 assertions out of 398896 passed
 
     Test case "ReaderLibTests/CheckSetCurrentCursorForRandomizers" has passed with:
       12 assertions out of 12 passed
@@ -1769,8 +1835,8 @@ Test module "ReaderTests" has passed with:
       592 assertions out of 592 passed
 
   Test suite "PackerTests" has passed with:
-    8 test cases out of 8 passed
-    5261971 assertions out of 5261971 passed
+    9 test cases out of 9 passed
+    5261972 assertions out of 5261972 passed
 
     Test case "PackerTests/SequencePackerBigChunksWithFrames1Sweep" has passed with:
       1637325 assertions out of 1637325 passed
@@ -1800,8 +1866,8 @@ Test module "ReaderTests" has passed with:
       1 assertion out of 1 passed
 
   Test suite "BufferedFileReaderTests" has passed with:
-    4 test cases out of 4 passed
-    37207 assertions out of 37207 passed
+    5 test cases out of 5 passed
+    43403 assertions out of 43403 passed
 
     Test case "BufferedFileReaderTests/Test_peek_and_pop" has passed with:
       16480 assertions out of 16480 passed
@@ -1815,9 +1881,12 @@ Test module "ReaderTests" has passed with:
     Test case "BufferedFileReaderTests/Test_line_reading" has passed with:
       1299 assertions out of 1299 passed
 
+    Test case "BufferedFileReaderTests/Test_set_offset_after_reading_all" has passed with:
+      6196 assertions out of 6196 passed
+
   Test suite "TextInputIndexBuilderTests" has passed with:
     12 test cases out of 12 passed
-    4196443 assertions out of 4196443 passed
+    12585659 assertions out of 12585659 passed
 
     Test case "TextInputIndexBuilderTests/Index_exceptions" has passed with:
       8 assertions out of 8 passed
@@ -1850,6 +1919,6 @@ Test module "ReaderTests" has passed with:
       20 assertions out of 20 passed
 
     Test case "TextInputIndexBuilderTests/Index_64MB_with_caching_check_perf" has passed with:
-      4194609 assertions out of 4194609 passed
+      12583825 assertions out of 12583825 passed
 
     Test case "TextInputIndexBuilderTests/Index_1GB_with_caching_check_perf" has passed

@@ -144,8 +144,6 @@ void ReadLines(const std::string& content, const std::vector<size_t>& bufferSize
     CreateTestFile(content);
     auto testFileSize = content.size();
 
-    DelimiterHash({ '\n' });
-
     const static std::vector<bool> delim = DelimiterHash({ '\n' });
     vector<boost::iterator_range<char*>> lines;
     Split(const_cast<char*>(content.data()), const_cast<char*>(content.data()+content.size()), delim, lines);
@@ -228,6 +226,48 @@ BOOST_AUTO_TEST_CASE(Test_line_reading)
         ReadLines(str, { 1, 2, 3, 10, 20 });
 
     ReadLines(s_textData, { 1, 2, 3, 7, 19, 33, 71, 139, 144, 145, 146, 147, 150, 300, 1024, g_1MB, g_32MB });
+}
+
+BOOST_AUTO_TEST_CASE(Test_set_offset_after_reading_all)
+{
+    Sleep(5000);
+    CreateTestFile(s_textData);
+
+    for (size_t i : {1, 2, 3, 7, 19, 33, 71, 139, 144, 145, 146, 147, 150, 300})
+    {
+        auto f = FileWrapper::OpenOrDie(L"test.tmp", L"rb");
+
+        BufferedFileReader reader(i, f);
+        for (auto ch : s_textData)
+        {
+            BOOST_REQUIRE(!reader.Empty());
+            char c;
+            BOOST_REQUIRE(reader.TryGetNext(c));
+            BOOST_REQUIRE_EQUAL(c, ch);
+        }
+        BOOST_REQUIRE(reader.Empty());
+
+
+        // Reading again from the beginning
+        reader.SetFileOffset(0);
+        char c;
+        BOOST_REQUIRE(reader.TryGetNext(c));
+        BOOST_REQUIRE(!reader.Empty());
+
+        // Reading again the last character in the buffer
+        if (i < s_textData.size()) {
+            reader.SetFileOffset(i - 1);
+            BOOST_REQUIRE(reader.TryGetNext(c));
+            BOOST_REQUIRE(!reader.Empty());
+        }
+
+        // Reading the last character in file and buffer
+        if (i == s_textData.size()) {
+            reader.SetFileOffset(i - 1);
+            BOOST_REQUIRE(reader.TryGetNext(c));
+            BOOST_REQUIRE(reader.Empty());
+        }
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
