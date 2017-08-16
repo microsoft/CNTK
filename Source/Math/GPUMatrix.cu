@@ -245,7 +245,7 @@ std::pair<size_t, size_t> TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(
     return {free / numBytesPerMB, total / numBytesPerMB};
 }
 
-// PrepareDevice - Setup the correct cuda context for an operation
+// PrepareDevice - Set up the correct cuda context for an operation
 // deviceId - the device on which the operation will take place
 void PrepareDevice(DEVICEID_TYPE deviceId)
 {
@@ -315,7 +315,7 @@ void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId)
     CUDA_CALL(cudaSetDevice(deviceId));
 }
 
-// PrepareDevice - Setup the correct cuda context for an operation
+// PrepareDevice - Set up the correct cuda context for an operation
 // deviceId - the device on which the operation will take place
 //            defaults to -1, which means use matrices current device
 template <class ElemType>
@@ -368,11 +368,16 @@ size_t GPUMatrix<ElemType>::CopyToArray(ElemType*& arrayCopyTo, size_t& currentA
     return numElements;
 }
 
+// copy GPU matrix data from this matrix to a CPU-side rectangular buffer
 template <class ElemType>
 void GPUMatrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const
 {
-    CUBLAS_CALL(cublasGetMatrix((int) numRows, (int) numCols, sizeof(ElemType),
-                                Data(), (int) GetNumRows(), dst, (int) colStride));
+    PrepareDevice();
+    if (numRows == GetNumRows() && colStride == numRows) // if contiguous in memory then use cudaMemcpy()
+        CUDA_CALL(cudaMemcpy(dst, Data(), sizeof(ElemType) * numRows * numCols, cudaMemcpyDeviceToHost));
+    else
+        CUBLAS_CALL(cublasGetMatrix((int) numRows, (int) numCols, sizeof(ElemType),
+                                    Data(), (int) GetNumRows(), dst, (int) colStride));
 }
 template <class ElemType>
 void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
@@ -1025,6 +1030,9 @@ GPUMatrix<ElemType> GPUMatrix<ElemType>::Diagonal() const
 }
 
 // c = c - 1.0 for a specific position
+// BUGBUG (perf): This launches a kernel for every single element, only to update only one.
+//                We should just launch a single thread for that element!
+//                Won't fix because this is only used by the now defunct ClassBasedCrossEntropyNode.
 template <class ElemType>
 void GPUMatrix<ElemType>::MinusOneAt(GPUMatrix<ElemType>& c, const size_t position)
 {
@@ -1034,7 +1042,7 @@ void GPUMatrix<ElemType>::MinusOneAt(GPUMatrix<ElemType>& c, const size_t positi
     CUDA_LONG p = (CUDA_LONG) position;
 
     int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-    // BUGBUG: PrepareDevice() missing?
+    //c.PrepareDevice(); // Note: This should be enabled, but we have no test for this, and this function is only used by a defunct V1 node.
     SyncGuard syncGuard;
     _minusOneAt<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.Data(), p, n);
 }

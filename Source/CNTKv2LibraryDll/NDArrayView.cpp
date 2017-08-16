@@ -235,9 +235,9 @@ namespace CNTK
         return tensorView.Reshaped(tensorShape).AsMatrix();
     }
 
+#if 1
     // -ViewMin2D: use if you interop with V1 code that needs shapes of rank 2 or higher
-    // These versions are only ever called by GetMatrix() and, from outside, in Accumulator::Update(), which probably could do without.
-    // If we get them out from Update(), then we can just inline them here.
+    // These versions are only ever called by GetMatrix(). We could just inline them here.
     template <typename ElementType>
     std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> NDArrayView::GetTensorViewMin2D() const
     {
@@ -264,6 +264,7 @@ namespace CNTK
 
         return const_pointer_cast<TensorView<ElementType>>(GetTensorViewMin2D<ElementType>());
     }
+#endif
 
     template <typename ElementType>
     std::shared_ptr<const Matrix<ElementType>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const
@@ -296,6 +297,9 @@ namespace CNTK
         return const_cast<TensorView<ElementType>*>(GetTensorViewPtr<ElementType>());
     }
 
+    // WARNING! The SOBPtr does not necessarily represent the offset field of the TensorShape.
+    // So one should never use the SOB for Matrix operations directly. Use AsMatrix() or TensorView operations instead.
+    // TODO: Remove this function altogether; and replace with creating an NDArrayView from a TensorShape and an old NDArrayView.
     shared_ptr<MatrixBase> NDArrayView::GetStorageObjectPtr() const
     {
         switch (m_dataType)
@@ -305,7 +309,7 @@ namespace CNTK
         case DataType::Double:
             return GetTensorViewPtr<double>()->GetSOBPtr();
         default:
-            LogicError("NDArrayView::Alias: Unsupported DataType %s", DataTypeName(m_dataType));
+            LogicError("NDArrayView::GetStorageObjectPtr: Unsupported DataType %s", DataTypeName(m_dataType));
         }
     }
 
@@ -373,13 +377,16 @@ namespace CNTK
 
     NDArrayViewPtr NDArrayView::Alias(bool readOnly/* = false*/) const
     {
-        return MakeSharedObject<NDArrayView>(GetDataType(), Shape(), IsReadOnly() || readOnly, GetStorageObjectPtr());
+        // BUGBUG: We cannot just use the SOBPtr because with Slice(::View), we may have an offset.
+        //         Instead, we should just do this the TensorView way.
+        //return MakeSharedObject<NDArrayView>(GetDataType(), Shape(), IsReadOnly() || readOnly, GetStorageObjectPtr());
+        return MakeSharedObject<NDArrayView>(GetDataType(), GetTensorShape(), IsReadOnly() || readOnly, GetStorageObjectPtr());
     }
 
     static DataType GetType(float)  { return DataType::Float; }
     static DataType GetType(double) { return DataType::Double; }
 
-    // TODO: one day, this just becomes GetTensorViewPtr
+    // TODO: merge with GetTensorViewPtr() as GetTensorView() which returns a reference while GetTensorViewPtr returns a shared_ptr. If needed at all.
     template <typename ElementType>
     std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> NDArrayView::NativeTensorView() const
     {
@@ -771,7 +778,7 @@ namespace CNTK
         {
         case DataType::Float:
         {
-            const auto& sob = GetTensorViewPtr<float>()->GetSOBPtr();
+            const auto& sob = GetTensorViewPtr<float>()->GetSOBViewPtr();
             if (!anyPrevAxisSliced)
                 // Nothing was sliced: current SOB is just fine.
                 matrix = sob;
@@ -793,7 +800,7 @@ namespace CNTK
         }
         case DataType::Double:
         {
-            const auto& sob = GetTensorViewPtr<double>()->GetSOBPtr();
+            const auto& sob = GetTensorViewPtr<double>()->GetSOBViewPtr();
             if (!anyPrevAxisSliced)
                 // Nothing was sliced: current SOB is just fine.
                 matrix = sob;
@@ -837,11 +844,12 @@ namespace CNTK
         std::vector<size_t> startOffset(rank, 0);
         startOffset[rank - 1] = index;
 #if 1
-        // SliceView() keeps as many axes as extent[] has.
+        // Slice() keeps as many axes as extent[] has.
         // Any additional axes are sliced to 1 element. So by passing sliceViewShape,
         // which has been striped of the last axis, as extent[], the last axis will be
         // sliced to 1 element and removed.
-        return SliceView(startOffset, /*extent=*/ sliceViewShape.Dimensions(), readOnly);
+        //return SliceView(startOffset, /*extent=*/ sliceViewShape.Dimensions(), readOnly);
+        return Slice(startOffset, /*extent=*/ sliceViewShape.Dimensions(), vector<size_t>(), SliceMode::View, readOnly);
 #else
         endOffset[rank - 1] = index + 1;
         std::vector<size_t> lastOffset(rank);
@@ -922,7 +930,12 @@ namespace CNTK
                             (int)newShape.TotalSize(), newShape.AsString().c_str());
         }
 
-        return MakeSharedObject<NDArrayView>(GetDataType(), newShape, IsReadOnly(), GetStorageObjectPtr());
+        // BUGBUG: We cannot just use the SOBPtr because with Slice(::View), we may have an offset.
+        //         Instead, we should just do this the TensorView way. Reshape requires contiguous data.
+        //return MakeSharedObject<NDArrayView>(GetDataType(), newShape, IsReadOnly(), GetStorageObjectPtr());
+        auto tensorShape = GetTensorShape();
+        tensorShape.ReshapeInPlace(newShape.Dimensions());
+        return MakeSharedObject<NDArrayView>(GetDataType(), tensorShape, IsReadOnly(), GetStorageObjectPtr());
     }
 
     // TODO: This could actually be strided?
@@ -946,10 +959,14 @@ namespace CNTK
             InvalidArgument("The stroage format of 'this' NDArrayView is sparse. Please use SparseDataBuffers().");
 
         // First make sure that the underlying matrix is on the right device
-        // TODO: Don't we just need the storage object?
-        auto matrix = GetMatrix<ElementType>();
-        matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
-        return matrix->Data();
+        //auto matrix = GetMatrix<ElementType>();
+        //matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
+        // We transfer the underlying object before taking a view, since objects with views on them cannot be transferred.
+        // Note: In Dynamite, most NDArrayViews share one underlying big matrix. Those can never be transferred.
+        // TODO: Double-check that. Maybe multiple TensorViews pointing to a single SOB can transfer.
+        //       That would be a huge perf hit if the entire arena gets transferred.
+        GetTensorViewPtr<ElementType>()->GetSOBPtr()->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
+        return GetTensorViewPtr<ElementType>()->GetSOBViewPtr()->Data();
     }
 
     template <typename ElementType>
@@ -1059,6 +1076,17 @@ namespace CNTK
     template <typename ElementType>
     ElementType NDArrayView::AsScalar() const
     {
+#if 1
+        if (Shape().TotalSize() != 1)
+            LogicError("NDArrayView::AsScalar: The NDArrayView shaped '%S' is not a scalar.", Shape().AsString().c_str());
+
+        if (GetDataType() == DataType::Float)
+            return (ElementType)GetTensorViewPtr<float>()->GetSOBViewPtr()->Get00Element();
+        else if (GetDataType() == DataType::Double)
+            return (ElementType)GetTensorViewPtr<double>()->GetSOBViewPtr()->Get00Element();
+        else
+            LogicError("NDArrayView::AsScalar: Unsupported DataType");
+#else
         auto scalarData = this->shared_from_this();
         if (scalarData->Shape().TotalSize() != 1)
             LogicError("NDArrayView::AsScalar: The NDArrayView shaped '%S' is not a scalar.", scalarData->Shape().AsString().c_str());
@@ -1082,6 +1110,7 @@ namespace CNTK
             LogicError("NDArrayView::AsScalar: Unsupported DataType");
 
         return scalar;
+#endif
     }
 
     std::wstring NDArrayView::AsString() const

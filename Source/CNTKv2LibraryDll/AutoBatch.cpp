@@ -539,7 +539,8 @@ public:
     // allocate an NDArrayView of a given shape, data type, and device
     // The returned memory region is a slice into a much larger NDArrayView; therefore,
     // this operation short-circuits CUDA and is very fast.
-    // Sparse objects cannot be arena-allocated.
+    // Sparse objects cannot be arena-allocated. Which is fine, since they are inputs or
+    // gradients (of embeddings) that can be kept around across minibatches, and thus not part of batched computation.
     NDArrayViewPtr NewNDArrayView(const NDShape& shape, const DataType& dataType, StorageFormat format, const DeviceDescriptor& device)
     {
         let numElements = shape.TotalSize();
@@ -559,9 +560,13 @@ public:
         }
         vector<size_t> startOffset{ s_currentArenaUsed };
         vector<size_t> extent{ numElements };
-        NDArrayViewPtr region = s_currentArena->SliceView(startOffset, extent);
+        //NDArrayViewPtr region = s_currentArena->SliceView(startOffset, extent); // SliceView() adjusts the MatrixView
+        NDArrayViewPtr region = s_currentArena->Slice(startOffset, extent);  // BUGBUG: fails in DistributedLearner
         s_currentArenaUsed += numElements;
-        return region->AsShape(shape);
+        if (region->Shape() == shape)
+            return region;
+        else
+            return region->AsShape(shape);
     }
 };
 

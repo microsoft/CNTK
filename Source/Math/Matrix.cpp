@@ -711,11 +711,11 @@ size_t Matrix<ElemType>::CopyToArray(ElemType*& arrayCopyTo, size_t& currentArra
                             NOT_IMPLEMENTED);
 }
 
+// copy data from this matrix to a CPU-side rectangular buffer
 template <class ElemType>
 void Matrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const
 {
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            nullptr,
+    DISPATCH_MATRIX_ON_FLAG(this, nullptr,
                             m_CPUMatrix->CopySection(numRows, numCols, dst, colStride),
                             m_GPUMatrix->CopySection(numRows, numCols, dst, colStride),
                             NOT_IMPLEMENTED,

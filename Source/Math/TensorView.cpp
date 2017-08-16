@@ -465,21 +465,37 @@ template <class ElemType>
 static bool GatherScatterCanPassSOB(const TensorView<ElemType>& itemView)
 {
     let& shape = itemView.GetShape();
+    let& sob = itemView.GetSOB();
     shape.VerifyIsDense(); // we don't support non-dense tensors here
-    return shape.GetNumElements() == itemView.GetSOB().GetNumElements();
-    // Note: Comparing the number of elements is sufficient to know whether there are gaps,
-    // but it is not sufficient to know whether axes have been transposed.
+    return shape.GetNumElements() == sob.GetNumElements() && shape.GetOffset() == 0;
+    // Note: Comparing the number of elements is sufficient to know whether there are gaps.
+    // It is not sufficient to know whether axes have been transposed, but we also verified it is dense.
+    // We do not test for sparse in this condition because sparse views are always created with correct
+    // matrix dimensions. Any mismatch will be caught elsewhere.
 }
 
 template <class ElemType>
-static Matrix<ElemType>& GatherScatterGetSOBView(const TensorView<ElemType>& itemView, Matrix<ElemType>& sliceBuf)
+static Matrix<ElemType>& GatherScatterGetSOBView(const TensorView<ElemType>& itemView, Matrix<ElemType>& out)
 {
     // (it has already been verified in GatherScatterCanPassSOB() that the matrix is contiguous in memory)
     let& shape = itemView.GetShape();
     let& sob = itemView.GetSOB();
     // create a single-row view into the buffer
-    sliceBuf = move(sob.ColumnSlice(shape.GetOffset(), shape.GetNumElements(), /*pretendSourceHasNumCols=*/sob.GetNumElements()));
-    return sliceBuf;
+    if (sob.GetMatrixType() != MatrixType::DENSE) // sparse
+    {
+        let sobRows = sob.GetNumRows();
+        let viewElements = shape.GetNumElements();
+        let firstColumn = shape.GetOffset() / sobRows;
+        let numColumns  = viewElements      / sobRows;
+        if (firstColumn * sobRows != shape.GetOffset() || numColumns * sobRows != viewElements)
+            InvalidArgument("GatherScatterGetSOBView: Sparse [%s] tensor has an offset or width that is not a multiple of the storage object's row dimension.", string(shape).c_str());
+        out = move(sob.ColumnSlice(firstColumn, numColumns));
+    }
+    else // dense
+    {
+        out = move(sob.ColumnSlice(shape.GetOffset(), shape.GetNumElements(), /*pretendSourceHasNumCols=*/sob.GetNumElements()));
+    }
+    return out;
 }
 
 template <class ElemType>
@@ -493,7 +509,7 @@ void TensorView<ElemType>::DoGatherBatchOf(size_t numInputs, const std::function
         InvalidArgument("DoGatherBatchOf: Output cannot be a scalar.");
     let numRows = m_shape.GetNumElements() / m_shape.GetDims().back();
     Matrix<ElemType> sliceBuf(CPUDEVICE/*dummy*/); // buffer to hold the slice so that we can return it by reference
-    GetSOB().GatherBatch(numRows, numInputs, [&](size_t i) -> const Matrix<ElemType>&
+    GetSOBViewPtr()->GatherBatch(numRows, numInputs, [&](size_t i) -> const Matrix<ElemType>&
     {
         let& input = inputs(i);
         GatherScatterVerifyDimensions(input.m_shape, m_shape, "DoGatherBatchOf", i);
@@ -515,7 +531,7 @@ void TensorView<ElemType>::DoScatterBatchOf(ElemType beta, size_t numOutputs, co
         InvalidArgument("DoScatterBatchOf: Input cannot be a scalar.");
     let numRows = m_shape.GetNumElements() / m_shape.GetDims().back();
     Matrix<ElemType> sliceBuf(CPUDEVICE/*dummy*/);
-    GetSOB().ScatterBatch(beta, numRows, numOutputs, [&](size_t i) -> Matrix<ElemType>&
+    GetSOBViewPtr()->ScatterBatch(beta, numRows, numOutputs, [&](size_t i) -> Matrix<ElemType>&
     {
         auto& output = outputs(i);
         GatherScatterVerifyDimensions(output.m_shape, m_shape, "DoScatterBatchOf", i);
@@ -524,6 +540,25 @@ void TensorView<ElemType>::DoScatterBatchOf(ElemType beta, size_t numOutputs, co
         else
             return GatherScatterGetSOBView(output, sliceBuf);
     });
+}
+
+// -------------------------------------------------------------------
+// GetSOBViewPtr() -- get a view on the SOB if possible (will fail if TensorView is not contiguous in memory)
+// -------------------------------------------------------------------
+
+template <class ElemType>
+shared_ptr<Matrix<ElemType>> TensorView<ElemType>::GetSOBViewPtr() const
+{
+    // return the original if no need for slicing and dicing
+    if (GatherScatterCanPassSOB(*this))
+        return m_sob;
+    else
+    {
+        m_shape.VerifyIsDense();
+        Matrix<ElemType> sliceBuf(CPUDEVICE/*dummy*/);
+        GatherScatterGetSOBView(*this, sliceBuf); 
+        return make_shared<Matrix<ElemType>>(move(sliceBuf));
+    }
 }
 
 // -------------------------------------------------------------------

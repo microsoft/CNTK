@@ -2907,7 +2907,8 @@ namespace CNTK
                 std::vector<size_t> extent(valueShapeWithSequenceAndBatchAxes.Rank() - 1, NDShape::InferredDimension);
                 extent.back() = sequenceLengths[i];
 
-                sequences[i] = valueData->SliceView(offset, extent, valueData->IsReadOnly());
+                //sequences[i] = valueData->SliceView(offset, extent, valueData->IsReadOnly());
+                sequences[i] = valueData->Slice(offset, extent, std::vector<size_t>(), NDArrayView::SliceMode::View, valueData->IsReadOnly());
                 sequenceStartFlags[i] = (sequenceBeginIndices[i] == 0);
             }
 

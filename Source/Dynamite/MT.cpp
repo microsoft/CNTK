@@ -341,8 +341,11 @@ void Train()
         // train minibatch
         let mbLoss = criterion_fn(args[0], args[1]);
         // backprop and model update
+        mbLoss.Value()->AsScalar<float>();
         mbLoss.Backward(gradients);
+        mbLoss.Value()->AsScalar<float>();
         MinibatchInfo info{ /*atEndOfData=*/false, /*sweepEnd=*/false, /*numberOfSamples=*/numLabels, mbLoss.Value(), mbLoss.Value() };
+        info.trainingLossValue->AsScalar<float>();
         learner->Update(gradients, info);
         let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
         totalLabels += info.numberOfSamples;

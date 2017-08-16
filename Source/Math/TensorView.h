@@ -180,6 +180,8 @@ public:
     Matrix<ElemType>&       GetSOB()       { return *m_sob; }
     friend Test::TensorTest<ElemType>;
 
+    shared_ptr<Matrix<ElemType>> GetSOBViewPtr() const;
+
     // -------------------------------------------------------------------
     // others
     // -------------------------------------------------------------------

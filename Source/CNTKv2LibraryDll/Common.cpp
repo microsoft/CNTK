@@ -362,6 +362,7 @@ namespace CNTK
             {
                 auto tempCPUDataView = view.DeepClone(DeviceDescriptor::CPUDevice());
                 return{ tempCPUDataView->WritableDataBuffer<ElementType>(), tempCPUDataView };
+                // Note: Returns the naked pointer but also the underlying view. Hence, the data buffer is not freed upon return.
             }
             
             LogicError("Invalid device type (%u).", (unsigned int)deviceType);
@@ -440,6 +441,7 @@ namespace CNTK
             else
             {
                 auto tempCPUMask = mask.DeepClone(DeviceDescriptor::CPUDevice());
+                // note: we return a naked pointer to the bufferm but also the tempCPUMask object itself, for correct ref counting
                 return{ tempCPUMask->DataBuffer(), tempCPUMask };
             }
         }

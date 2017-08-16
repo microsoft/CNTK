@@ -118,6 +118,7 @@ namespace Dynamite {
                     if (data->Shape().Dimensions().back() != 1)
                         CNTK::LogicError("FromCNTKMB: Streams declared as !isSequence must have a trailing dimension of 1.");
                     data = Index(data, 0); // slice off sample axis (the last in C++)
+                    // TODO: This is better done as an AsShape(), no? That would avoid updating the Matrix view
                 }
 #if 0 // needed for now since PlainTextDeserializer cannot deliver Linear data, and Dynamite metric blows up on Sparse
                 if (data->IsSparse())

@@ -384,6 +384,7 @@ public:
     bool operator!=(const TensorShape& other) const { return !operator==(other); } // duh!
 
     // check whether this refers to a dense matrix (contiguous in memory, no strides)
+    // A non-zero offset does not make it non-dense.
     bool IsDense() const
     {
         let rank = m_dims.size();
@@ -705,6 +706,19 @@ public:
         return *this;
     }
 
+    // reshape an existing one to a new shape
+    // The input must be dense. (We could relax this if needed.) The offset is retained.
+    template <class DimensionVector>
+    TensorShape& ReshapeInPlace(const DimensionVector& dims) // append trailing singleton dimensions
+    {
+        VerifyIsDense();
+        m_dims.assign(dims.begin(), dims.end());
+        let numElements = ComputeStridesDense();
+        if (numElements != GetNumElements())
+            InvalidArgument("ReshapeInPlace: New shape (%d) must have the same number of elements as current (%d).", (int)numElements, (int)GetNumElements());
+        return *this;
+    }
+
     // swap two existing dimensions (implements transposition)
     // This yields the same tensor but index positions are exchanged.
     // This tensor is now no longer stored as column-major.
@@ -809,14 +823,20 @@ public:
     }
 
 private:
+    // initialize m_strides[] based on m_dim
+    // Returns the total number of elements.
+    size_t ComputeStridesDense()
+    {
+        m_strides.resize(m_dims.size());
+        for (size_t k = 0; k < m_dims.size(); k++)
+            m_strides[k] = k > 0 ? m_strides[k - 1] * (ptrdiff_t)m_dims[k - 1] : 1;
+        return m_dims.empty() ? 1 : m_dims.back() * (size_t)m_strides.back(); // note: an empty shape means it's a scalar
+    }
     // reset m_strides and m_offset to represent a canonical no-strides column-major tensor
     void InitAsNoSlice()
     {
         m_offset = 0;
-        m_strides.resize(m_dims.size());
-        for (size_t k = 0; k < m_dims.size(); k++)
-            m_strides[k] = k > 0 ? m_strides[k - 1] * (ptrdiff_t) m_dims[k - 1] : 1;
-        m_allocation = m_dims.empty() ? 1 : m_dims.back() * (size_t) m_strides.back(); // TODO: Or should an empty shape mean it's a scalar?
+        m_allocation = ComputeStridesDense();
     }
 
 private:

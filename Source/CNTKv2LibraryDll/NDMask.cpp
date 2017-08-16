@@ -94,6 +94,7 @@ namespace CNTK
     {
         // First make sure that the underlying matrix is on the right device
         auto matrix = GetMatrix();
+        // BUGBUG: Should transfer the SOB before taking the view
         matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
         return (const MaskKind*)(matrix->Data());
     }

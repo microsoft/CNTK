@@ -30,7 +30,7 @@ namespace CNTK
                 LogicError("Variable '%S' Value(): The input and output rank for op Slice when indexing must differ by 1.", funcForErrMsg.AsString().c_str());
             auto startOffset = vector<size_t>(extent.size() + 1, 0);
             startOffset.back() = (size_t) index;
-            return arg->SliceView(startOffset, extent); // slice it
+            return arg->Slice(startOffset, extent, vector<size_t>(), NDArrayView::SliceMode::View, readOnly); // slice it
         }
         else
         {
@@ -107,6 +107,7 @@ namespace CNTK
                 return sliceView;
             }
             // operation is a no-op: return original argument as is
+            //arg->LogToFile(PrimitiveOpTypeName(primitiveOp), stderr);
             return arg;
         }
 
