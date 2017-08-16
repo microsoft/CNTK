@@ -51,7 +51,7 @@ __C.CNTK.INPUT_ROIS_PER_IMAGE = 50
 __C.CNTK.IMAGE_WIDTH = 850
 __C.CNTK.IMAGE_HEIGHT = 850
 
-__C.CNTK.RESULTS_NMS_THRESHOLD = 0.3 # see also: __C.TEST.NMS = 0.3
+__C.CNTK.RESULTS_NMS_THRESHOLD = 0.5 # see also: __C.TEST.NMS = 0.5
 __C.CNTK.RESULTS_NMS_CONF_THRESHOLD = 0.0
 __C.CNTK.RESULTS_BGR_PLOT_THRESHOLD = 0.1
 
@@ -198,7 +198,7 @@ __C.TEST = edict()
 
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
-__C.TEST.NMS = 0.3
+__C.TEST.NMS = 0.5
 
 # Test using bounding-box regressors
 __C.TEST.BBOX_REG = True
