@@ -322,7 +322,7 @@ def test(test_data, model_path, model_file, config_file):
     batch_size = 64 # in sequences
     num_batch = 0
     misc = {'rawctx':[], 'ctoken':[], 'answer':[], 'uid':[]}
-    tsv_reader = create_tsv_reader(loss, test_data, polymath, batch_size, is_test=True, misc=misc)
+    tsv_reader = create_tsv_reader(loss, test_data, polymath, batch_size, 1, is_test=True, misc=misc)
     results = {}
 
     from cntk.contrib.crosstalk import crosstalk_cntk as crct
