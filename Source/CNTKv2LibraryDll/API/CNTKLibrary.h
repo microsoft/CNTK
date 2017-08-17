@@ -3636,6 +3636,11 @@ namespace CNTK
     CNTK_API FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise atanh operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Atanh(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise tanh operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Tanh(const Variable& operand, const std::wstring& name = L"");

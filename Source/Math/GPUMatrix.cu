@@ -444,6 +444,8 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
         return _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opTanh:
         return _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opAtanh:
+        return _elementWiseAtanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opSqrt:
         return _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opExp:
@@ -2352,6 +2354,9 @@ DEF_ELEMWISE_ASSIGN_FUNC(Cosh)
 
 DEF_ELEMWISE_INPLACE_FUNC(Sinh)
 DEF_ELEMWISE_ASSIGN_FUNC(Sinh)
+
+DEF_ELEMWISE_INPLACE_FUNC(Atanh)
+DEF_ELEMWISE_ASSIGN_FUNC(Atanh)
 
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)

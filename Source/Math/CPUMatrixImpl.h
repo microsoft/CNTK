@@ -2363,6 +2363,45 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTanhOf(const CPUMatrix<ElemType>
     return *this;
 }
 
+//[this]=atanh([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceAtanh()
+{
+    return AssignAtanhOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAtanhOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAtanhOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+    long m = (long) GetNumRows(), n = (long) GetNumCols();
+#pragma omp parallel for
+    for (long j = 0; j < n; j++)
+    {
+        // four-way unrolling
+        for (long i = 0; i < (m & ~3); i += 4)
+        {
+            us(i, j) = atanh(a(i, j));
+            us(i + 1, j) = atanh(a(i + 1, j));
+            us(i + 2, j) = atanh(a(i + 2, j));
+            us(i + 3, j) = atanh(a(i + 3, j));
+        }
+        // handle remaining stuffs
+        for (long i = m & ~3; i < m; i++)
+        {
+            us(i, j) = atanh(a(i, j));
+        }
+    }
+
+    return *this;
+}
+
 //[this]=softmax([this]) element wise
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceLogSoftmax(const bool isColWise)

@@ -2851,6 +2851,39 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTanhOf(const Matrix<ElemType>& a)
     return *this;
 }
 
+//[this]=atanh([this]) element wise
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::InplaceAtanh()
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->InplaceAtanh(),
+                            m_GPUMatrix->InplaceAtanh(),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignAtanhOf(const Matrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAtanhOf: Matrix a is empty.");
+
+    DecideAndMoveToRightDevice(a, *this);
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            this,
+                            m_CPUMatrix->AssignAtanhOf(*a.m_CPUMatrix),
+                            m_GPUMatrix->AssignAtanhOf(*a.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
 //[this]=softmax([this]) element wise
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::InplaceLogSoftmax(const bool isColWise)

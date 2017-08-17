@@ -1050,6 +1050,11 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::StableSigmoid, operand, Dictionary(), name);
     }
 
+    FunctionPtr Atanh(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Atanh, operand, Dictionary(), name);
+    }
+
     FunctionPtr Tanh(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Tanh, operand, Dictionary(), name);
