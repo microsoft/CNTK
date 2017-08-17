@@ -48,6 +48,7 @@ You may learn more about CNTK with the following resources:
 * [Manual](https://github.com/Microsoft/CNTK/tree/master/Manual)
 * [Tutorials](https://docs.microsoft.com/en-us/cognitive-toolkit/tutorials)
 * [Examples](https://docs.microsoft.com/en-us/cognitive-toolkit/Examples)
+* [Pretrained models](./PretrainedModels)
 * [Blog](https://www.microsoft.com/en-us/cognitive-toolkit/blog/)
 * [Presentations](https://docs.microsoft.com/en-us/cognitive-toolkit/Presentations)
 * [License](./LICENSE.md)
