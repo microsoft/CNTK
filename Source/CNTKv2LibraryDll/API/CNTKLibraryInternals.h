@@ -375,11 +375,6 @@ namespace CNTK
             CNTK_API void WriteValue(const std::wstring& name, float value, uint64_t step);
 
             ///
-            /// Record an image for a CNTK value at a particular step.
-            ///
-            CNTK_API void WriteImage(const std::wstring& name, Value& value, uint64_t step);
-
-            ///
             /// Record an image for a CNTK NDArrayViewPtr at a particular step.
             ///
             CNTK_API void WriteImage(const std::wstring& name, NDArrayViewPtr NDPtr, uint64_t step);
@@ -399,7 +394,7 @@ namespace CNTK
             void Init();
             void WriteModel();
             void WriteRecord(const std::string& data);
-            void WriteVersion(time_t time);
+            void WriteVersion(time_t time);            
 
             // Disable copy-construction and assignment.
             TensorBoardFileWriter(const TensorBoardFileWriter& other) = delete;
