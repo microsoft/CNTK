@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(ImageSimpleCompositeAndBase64)
             0,
             1,
             false,
-            false,
+            true,
             true,
             additionalParameters);
     };
@@ -82,7 +82,8 @@ BOOST_AUTO_TEST_CASE(ImageSimpleCompositeAndBase64)
     test(
     {
         L"MapFile=\"$RootDir$/Base64ImageReaderSimple_map.txt\"",
-        L"DeserializerType=\"Base64ImageDeserializer\""
+        L"DeserializerType=\"Base64ImageDeserializer\"",
+        L"useNumericSequenceKeys=true"
     });
 };
 
@@ -112,11 +113,87 @@ BOOST_AUTO_TEST_CASE(InvalidImageSimpleCompositeAndBase64)
     test(
     {
         L"MapFile=\"$RootDir$/InvalidBase64ImageReaderSimple_map.txt\"",
-        L"DeserializerType=\"Base64ImageDeserializer\""
-        L"maxErrors=4"
+        L"DeserializerType=\"Base64ImageDeserializer\"",
+        L"maxErrors=4",
+        L"useNumericSequenceKeys=true"
     });
 };
 
+BOOST_AUTO_TEST_CASE(Base64WithWriteIds)
+{
+    auto test = [this](std::vector<std::wstring> additionalParameters, multiset<string>& actualKeys)
+    {
+        shared_ptr<StreamMinibatchInputs> inputs = CreateStreamMinibatchInputs<float>(1, 1, false, true, true);
+        shared_ptr<DataReader> reader = GetDataReader(testDataPath() + "/Config/ImageReaderSimple_Config.cntk",
+            "Composite_Test", "reader", additionalParameters);
+
+        reader->StartMinibatchLoop(2 /*mbSize*/, 0, inputs->GetStreamDescriptions(), 8/*epochSize*/);
+        for (auto index = 0; reader->GetMinibatch(*inputs); index++)
+        {
+            for (const auto s : inputs->GetInput(L"features").pMBLayout->GetAllSequences())
+            {
+                auto key = inputs->m_getKeyById(s.seqId);
+                actualKeys.insert(key);
+            }
+        }
+    };
+
+    {
+        multiset<string> expectedKeys
+        {
+            "image0", "image0",
+            "image1", "image1",
+            "image2", "image2",
+            "image3", "image3"
+        };
+
+        std::vector<std::wstring> additionalParameters
+        {
+            L"MapFile=\"$RootDir$/Base64WithStringIds_map.txt\"",
+            L"DeserializerType=\"Base64ImageDeserializer\"",
+            L"useNumericSequenceKeys=false"
+        };
+
+        multiset<string> actualKeys;
+        test(additionalParameters, actualKeys);
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(actualKeys.begin(), actualKeys.end(),
+            expectedKeys.begin(), expectedKeys.end());
+
+        additionalParameters.push_back(L"truncationLength=1");
+        actualKeys.clear();
+        test(additionalParameters, actualKeys);
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(actualKeys.begin(), actualKeys.end(),
+            expectedKeys.begin(), expectedKeys.end());
+    }
+
+    {
+        multiset<string> expectedKeys
+        {
+            "0", "0",
+            "1", "1",
+            "2", "2",
+            "3", "3"
+        };
+
+        std::vector<std::wstring> additionalParameters
+        {
+            L"MapFile=\"$RootDir$/Base64ImageReaderSimple_map.txt\"",
+            L"DeserializerType=\"Base64ImageDeserializer\"",
+            L"useNumericSequenceKeys=true"
+        };
+
+        multiset<string> actualKeys;
+        test(additionalParameters, actualKeys);
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(actualKeys.begin(), actualKeys.end(),
+            expectedKeys.begin(), expectedKeys.end());
+
+        additionalParameters.push_back(L"truncationLength=1");
+        actualKeys.clear();
+        test(additionalParameters, actualKeys);
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(actualKeys.begin(), actualKeys.end(),
+            expectedKeys.begin(), expectedKeys.end());
+    }
+};
 
 BOOST_AUTO_TEST_CASE(ImageAndImageReaderSimple)
 {
@@ -136,7 +213,8 @@ BOOST_AUTO_TEST_CASE(ImageAndImageReaderSimple)
         false,
         false,
         true,
-        { L"MapFile=\"$RootDir$/ImageReaderSimple_map.txt\"" });
+        { L"MapFile=\"$RootDir$/ImageReaderSimple_map.txt\"",
+          L"SecondMapFile=\"$RootDir$/ImageReaderSimple_map.txt\"" });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
@@ -157,6 +235,33 @@ BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
             1),
             std::runtime_error,
             [](std::runtime_error const& ex) { return string("Invalid map file format, must contain 2 or 3 tab-delimited columns, line 2 in file ./ImageReaderBadMap_map.txt.") == ex.what(); });
+}
+
+BOOST_AUTO_TEST_CASE(ImageAndImageTwoStreamsSameName)
+{
+    BOOST_REQUIRE_EXCEPTION(
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/ImageDeserializers.cntk",
+            testDataPath() + "/Control/ImageAndImageReaderSimple_Control.txt",
+            testDataPath() + "/Control/ImageAndImageReaderSimple_Output.txt",
+            "TwoStreamsSameName",
+            "reader",
+            4,
+            4,
+            1,
+            2,
+            2,
+            0,
+            1,
+            false,
+            false,
+            true,
+            { L"MapFile=\"$RootDir$/ImageReaderSimple_map.txt\"" }),
+        std::runtime_error,
+        [](std::runtime_error const& ex) 
+    { 
+        return string("Two streams with the same name 'feature' have been found. Please rename the duplicate.") == ex.what(); 
+    });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderBadLabel)
@@ -215,6 +320,28 @@ BOOST_AUTO_TEST_CASE(ImageReaderZip)
         0,
         1);
 }
+
+BOOST_AUTO_TEST_CASE(ImageReaderZipDuplicate)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageDeserializers.cntk",
+        testDataPath() + "/Control/ImageReaderZipDuplicate_Control.txt",
+        testDataPath() + "/Control/ImageReaderZipDuplicate_Output.txt",
+        "SimpleZip",
+        "reader",
+        4,
+        4,
+        1,
+        1,
+        0,
+        0,
+        1,
+        false,
+        false,
+        true,
+        { L"MapFile=\"$RootDir$/ImageReaderZipDuplicate_map.txt\"" });
+}
+
 
 BOOST_AUTO_TEST_CASE(ImageReaderZipMissingFile)
 {
@@ -392,6 +519,37 @@ BOOST_AUTO_TEST_CASE(ImageReaderMissingScaleTransforms)
         });
 }
 
+BOOST_AUTO_TEST_CASE(ImageReaderNoMatchingIds)
+{
+    BOOST_REQUIRE_EXCEPTION(
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/ImageDeserializers.cntk",
+            testDataPath() + "/Control/ImageReaderNoMatchingIds.txt",
+            testDataPath() + "/Control/ImageReaderNoMatchingIds_Output.txt",
+            "ImageAndImageReaderSimple_Test",
+            "reader",
+            2,
+            2,
+            1,
+            1,
+            0,
+            0,
+            1,
+            false,
+            false,
+            true,
+            { L"MapFile=\"$RootDir$/Base64WithStringIds_map.txt\"",
+              L"SecondMapFile=\"$RootDir$/Base64WithStringIdsAnother_map.txt\"",
+              L"Deserializer=\"Base64ImageDeserializer\"",
+              L"useNumericSequenceKeys=false" }),
+        std::runtime_error,
+        [](const std::runtime_error& ex)
+    {
+        return string("Could not reconcile data between different deserializers."
+            " Keys of logical sequences do not match.") == ex.what();
+    });
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 namespace
@@ -407,7 +565,7 @@ namespace
     BOOST_AUTO_TEST_CASE(ImageReader3DotsSyntaxInMapFile)
     {
         auto testDir = testDataPath();
-        std::wstring mapFileLocaton = std::wstring(testDir.begin(), testDir.end()) + L"/Data/ImageReader3Dots_map.txt";
+        std::wstring mapFileLocation = std::wstring(testDir.begin(), testDir.end()) + L"/Data/ImageReader3Dots_map.txt";
         HelperRunReaderTest<float>(
             testDataPath() + "/Config/ImageDeserializers.cntk",
             testDataPath() + "/Control/ImageReader3DotsSyntaxInMapFile_Control.txt",
@@ -424,7 +582,7 @@ namespace
             false,
             true,
             true,
-            { L"MapFile=\"" + mapFileLocaton + L"\"" });
+            { L"MapFile=\"" + mapFileLocation + L"\"" });
     }
 
     BOOST_AUTO_TEST_SUITE_END()

@@ -16,7 +16,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CNTK</RootNamespace>
-    <AssemblyName>CNTKLibraryManaged-2.0</AssemblyName>
+    <AssemblyName>Cntk.Core.Managed-$(CntkComponentVersion)</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -54,9 +54,51 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Helper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
+    <Compile Include="ShimApiClasses\AxisShim.cs" />
+    <Compile Include="ShimApiClasses\CNTKLibShim.cs" />
+    <Compile Include="ShimApiClasses\DeviceDescriptorShim.cs" />
+    <Compile Include="ShimApiClasses\FunctionShim.cs" />
+    <Compile Include="ShimApiClasses\MinibatchSourceShim.cs" />
+    <Compile Include="ShimApiClasses\NDArrayViewShim.cs" />
+    <Compile Include="ShimApiClasses\NDMaskShim.cs" />
+    <Compile Include="ShimApiClasses\NDShapeShim.cs" />
+    <Compile Include="ShimApiClasses\ParameterShim.cs" />
+    <Compile Include="ShimApiClasses\StreamConfigurationShim.cs" />
+    <Compile Include="ShimApiClasses\TrainerShim.cs" />
+    <Compile Include="ShimApiClasses\ValueShim.cs" />
+    <Compile Include="ShimApiClasses\VariableShim.cs" />
+    <Compile Include="SwigProxyClasses\AdditionalLearningOptions.cs" />
+    <Compile Include="SwigProxyClasses\CNTKDictionary.cs" />
+    <Compile Include="SwigProxyClasses\DictionaryValue.cs" />
+    <Compile Include="SwigProxyClasses\DictionaryVector.cs" />
+    <Compile Include="SwigProxyClasses\IntVector.cs" />
+    <Compile Include="SwigProxyClasses\Learner.cs" />
+    <Compile Include="SwigProxyClasses\LearnerVector.cs" />
+    <Compile Include="SwigProxyClasses\MinibatchData.cs" />
+    <Compile Include="SwigProxyClasses\MinibatchInfo.cs" />
+    <Compile Include="SwigProxyClasses\MinibatchSource.cs" />
+    <Compile Include="SwigProxyClasses\MinibatchSourceConfig.cs" />
+    <Compile Include="SwigProxyClasses\PairDoubleDouble.cs" />
+    <Compile Include="SwigProxyClasses\PairNDArrayViewPtrNDArrayViewPtr.cs" />
+    <Compile Include="SwigProxyClasses\PairSizeTDouble.cs" />
+    <Compile Include="SwigProxyClasses\PairSizeTSizeT.cs" />
+    <Compile Include="SwigProxyClasses\Parameter.cs" />
+    <Compile Include="SwigProxyClasses\ParameterVector.cs" />
+    <Compile Include="SwigProxyClasses\ProgressWriter.cs" />
+    <Compile Include="SwigProxyClasses\ProgressWriterVector.cs" />
+    <Compile Include="SwigProxyClasses\StreamConfiguration.cs" />
+    <Compile Include="SwigProxyClasses\StreamConfigurationVector.cs" />
+    <Compile Include="SwigProxyClasses\StreamInformation.cs" />
+    <Compile Include="SwigProxyClasses\Trainer.cs" />
+    <Compile Include="SwigProxyClasses\TrainingParameterScheduleDouble.cs" />
+    <Compile Include="SwigProxyClasses\UnorderedMapParameterNDArrayViewPtr.cs" />
+    <Compile Include="SwigProxyClasses\UnorderedMapStreamInformationMinibatchData.cs" />
+    <Compile Include="SwigProxyClasses\UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr.cs" />
+    <Compile Include="SwigProxyClasses\UnorderedMapStringDictionaryValue.cs" />
+    <Compile Include="SwigProxyClasses\UnorderedMapVariableMinibatchData.cs" />
+    <Compile Include="SwigProxyClasses\VectorPairSizeTDouble.cs" />
     <Compile Include="SwigProxyClasses\Axis.cs" />
     <Compile Include="SwigProxyClasses\AxisVector.cs" />
     <Compile Include="SwigProxyClasses\BoolVector.cs" />
@@ -73,14 +115,14 @@
     <Compile Include="SwigProxyClasses\Function.cs" />
     <Compile Include="SwigProxyClasses\MaskKind.cs" />
     <Compile Include="SwigProxyClasses\NDArrayView.cs" />
-    <Compile Include="SwigProxyClasses\NDArrayViewVector.cs" />
+    <Compile Include="SwigProxyClasses\NDArrayViewPtrVector.cs" />
     <Compile Include="SwigProxyClasses\NDMask.cs" />
     <Compile Include="SwigProxyClasses\NDShape.cs" />
     <Compile Include="SwigProxyClasses\ParameterCloningMethod.cs" />
     <Compile Include="SwigProxyClasses\SizeTVector.cs" />
     <Compile Include="SwigProxyClasses\SizeTVectorVector.cs" />
     <Compile Include="SwigProxyClasses\StorageFormat.cs" />
-    <Compile Include="SwigProxyClasses\SWIGTYPE_p_void.cs" />
+    <Compile Include="SwigProxyClasses\TraceLevel.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapVariableValuePtr.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapVariableVariable.cs" />
     <Compile Include="SwigProxyClasses\Value.cs" />
@@ -88,6 +130,7 @@
     <Compile Include="SwigProxyClasses\VariableKind.cs" />
     <Compile Include="SwigProxyClasses\VariableVector.cs" />
     <Compile Include="SwigProxyClasses\FunctionPtrVector.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup Condition="$(CpuOnlyBuild)">
     <Compile Include="CNTKLibraryManagedDll-CPUOnly-AssemblyInfo.cs" />
@@ -102,7 +145,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="Build" Condition="$(HasSwig)" DependsOnTargets="$(BuildDependsOn)" />
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-cntk-cnet-library-for-evaluation for installation instructions." />
+    <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#optional-swig for installation instructions." />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

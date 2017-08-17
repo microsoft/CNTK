@@ -36,15 +36,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <>
-vector<shared_ptr<Matrix<float>>>& MatrixPool::GetReleasedMatrices<float>()
+vector<MemRequestInfo<float>>& MatrixPool::GetMemRequestInfoVec<float>()
 {
-    return m_releasedFloatMatrices;
+    return m_memRequestInfoFloatVec;
 }
 
 template <>
-vector<shared_ptr<Matrix<double>>>& MatrixPool::GetReleasedMatrices<double>()
+vector<MemRequestInfo<double>>& MatrixPool::GetMemRequestInfoVec<double>()
 {
-    return m_releasedDoubleMatrices;
+    return m_memRequestInfoDoubleVec;
 }
 
 // -----------------------------------------------------------------------
@@ -84,7 +84,7 @@ void ComputationNetwork::ClearNetwork()
 // serialization
 // -----------------------------------------------------------------------
 
-// after after editing--network is possibly not validated/compiled
+// after editing--network is possibly not validated/compiled
 void ComputationNetwork::SaveEdited(const wstring& fileName, const FileOptions fileFormat)
 {
     if (!IsCompiled())
@@ -463,7 +463,7 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
         nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassificationErrorNode) ||
-        nodePtr->OperationName() == OperationNameOf(EditDistanceErrorNode) ||
+        nodePtr->OperationName() == OperationNameOf(ForwardBackwardNode) ||
 #ifdef COMING_SOON
         nodePtr->OperationName() == OperationNameOf(CRFNode) ||
 #endif
@@ -543,21 +543,19 @@ void ComputationNetwork::CollectInputAndLearnableParametersRec(const Computation
     }
 }
 
-template <class ElemType>
 /*static*/ void ComputationNetwork::SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate)
 {
     list<ComputationNodeBasePtr> dropoutNodes = net->GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
     if (dropoutRate != prevDropoutRate)
     {
         fprintf(stderr, "Setting dropout rate to %.8g.\n", dropoutRate);
-        // TODO: Change this to use an interface that is independent of <ElemType>.
         if (dropoutNodes.size() == 0 && dropoutRate > 0)
             fprintf(stderr, "WARNING: Attempting to set dropout rate, but there is no dropout node in the network.\n");
     }
 
     for (auto& nodeIter : dropoutNodes)
     {
-        auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeIter);
+        auto node = dynamic_pointer_cast<DropoutNodeBase>(nodeIter);
         if (dropoutRate != prevDropoutRate)
             node->SetDropoutRate(dropoutRate);
     }
@@ -565,7 +563,6 @@ template <class ElemType>
     prevDropoutRate = dropoutRate;
 }
 
-template <class ElemType>
 /* static */ void ComputationNetwork::SetIRngUserSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& node, size_t randSeedBase)
 {
     // Predicate checking if the node is derived from IRngUser
@@ -1000,7 +997,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
         {
             if (!regex_match(n->first, nameFilter))
             {
-                // if regexStr is not empty and the the node does not match with the regexStr
+                // if regexStr is not empty and the node does not match with the regexStr
                 continue;
             }
 
@@ -1524,8 +1521,6 @@ template void ComputationNetwork::InitLearnableParametersWithBilinearFill<float>
 template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(size_t modelVersion, File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
-template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
-template /*static*/ void ComputationNetwork::SetIRngUserSeed<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
@@ -1535,8 +1530,6 @@ template void ComputationNetwork::InitLearnableParametersWithBilinearFill<double
 template void ComputationNetwork::Read<double>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<double>(size_t modelVersion, File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
-template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
-template /*static*/ void ComputationNetwork::SetIRngUserSeed<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);

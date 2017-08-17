@@ -114,3 +114,18 @@ def test_random_sample_without_replacement(weights, num_samples, expected_count,
         denseResult = times(result, identity)
         observed_count = np.sum(denseResult.eval(), 0)
         assert np.allclose(observed_count, expected_count, atol=tolerance)
+
+def test_random_sample_with_explicit_seed(device_id, precision):
+    weights = AA([x for x in range(0, 10)], precision)
+    identity = np.identity(weights.size)
+    allow_duplicates = False  # sample without replacement
+    num_samples = 5;
+    seed = 123
+    to_dense = lambda x: times(x, identity).eval()
+    result1 = to_dense(random_sample(weights, num_samples, allow_duplicates, seed))
+    result2 = to_dense(random_sample(weights, num_samples, allow_duplicates, seed))
+    result3 = to_dense(random_sample(weights, num_samples, allow_duplicates, seed+1))
+    result4 = to_dense(random_sample(weights, num_samples, allow_duplicates))
+    assert np.allclose(result1, result2)
+    assert not np.allclose(result1, result3)
+    assert not np.allclose(result1, result4)

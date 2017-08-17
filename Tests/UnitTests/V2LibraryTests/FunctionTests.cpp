@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Common.h"
+#include <numeric>
 
 using namespace CNTK;
 
@@ -35,7 +36,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 
             bool reduceAll = (reductionAxis < 0);
             if (reduceAll)
-                reduceSumFunc = ReduceSum(inputVar);
+                reduceSumFunc = ReduceSum(inputVar, Axis::AllAxes());
             else
                 reduceSumFunc = ReduceSum(inputVar, Axis(useNegativeAxisIndex ? (reductionAxis - (int)sampleRank) : reductionAxis));
 
@@ -109,7 +110,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
             auto inputVar = InputVariable({ inputShape }, DataType::Float, L"input");
             FunctionPtr reduceSumFunc = Sequence::ReduceSum(inputVar);
 
-            NDShape maskShape = { 1, numSequences };
+            NDShape maskShape = { numSequences };
             NDShape outputShape = reduceSumFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape(maskShape);
 
@@ -163,7 +164,12 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
-            auto sliceFunc = Slice(inputVar, Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis), beginOffset, endOffset);
+            std::vector<Axis> axis; 
+            std::vector<int> beginOffsetVec, endOffsetVec; 
+            axis.push_back(Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis)); 
+            beginOffsetVec.push_back(beginOffset); 
+            endOffsetVec.push_back(endOffset); 
+            auto sliceFunc = Slice(inputVar, axis, beginOffsetVec, endOffsetVec);
 
             NDShape outputShape = sliceFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape({ maxActualSequenceLength, numSequences });
@@ -227,7 +233,10 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
 
             size_t outputSequenceAxisLength = maxSliceLength;
             size_t outputBatchAxisLength = numSequences;
-            NDShape outputShape = sliceFunc->Output().Shape().AppendShape({ outputSequenceAxisLength, outputBatchAxisLength });
+            NDShape outputShape = sliceFunc->Output().Shape();
+            if (endAndBeginOffsetDiff != 1)
+                outputShape = outputShape.AppendShape({ outputSequenceAxisLength });
+            outputShape = outputShape.AppendShape({ outputBatchAxisLength });
             std::vector<float> outputData(outputShape.TotalSize(), 0);
             NDMaskPtr mask;
             if (endAndBeginOffsetDiff < 0)
@@ -289,7 +298,7 @@ void TestRecurrentFunctionCloning()
     auto placeholderReplacement = PastValue(plusOutput);
     plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
 
-    auto reducedOutput = ReduceSum(plusOutput, L"sum");
+    auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
     auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
     std::unordered_set<FunctionPtr> visitedFunctions;
@@ -302,7 +311,7 @@ void TestRecurrentFunctionCloning()
     CompareFunctions(clonedFunctionWithParametersCloned, clonedFunctionWithParametersShared, ParameterCloningMethod::Share, {}, visitedFunctions);
 
     visitedFunctions.clear();
-    auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Float, false, L"input2");
+    auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Float, true, L"input2");
     std::unordered_map<Variable, Variable> cloningReplacements = { { *(clonedFunctionWithParametersShared->Arguments().begin()), replacementInputVar } };
     auto clonedFunctionWithParametersFrozen = clonedFunctionWithParametersShared->Clone(ParameterCloningMethod::Freeze, cloningReplacements);
     CompareFunctions(clonedFunctionWithParametersShared, clonedFunctionWithParametersFrozen, ParameterCloningMethod::Freeze, cloningReplacements, visitedFunctions);
@@ -443,11 +452,14 @@ void TestSplice()
 {
     srand(1);
 
-    TestSplice(4, 2, 0, DeviceDescriptor::CPUDevice());
-    TestSplice(3, 3, 2, DeviceDescriptor::CPUDevice());
-    TestSplice(2, 3, 3, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+    {
+        TestSplice(4, 2, 0, DeviceDescriptor::CPUDevice());
+        TestSplice(3, 3, 2, DeviceDescriptor::CPUDevice());
+        TestSplice(2, 3, 3, DeviceDescriptor::CPUDevice());
+    }
 
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestSplice(4, 3, 1, DeviceDescriptor::GPUDevice(0));
         TestSplice(3, 4, 2, DeviceDescriptor::GPUDevice(0));
@@ -514,6 +526,42 @@ void TestTimesNodeShapeInference()
     timesNodeShapeInferenceTest(2, 1, 1);
     timesNodeShapeInferenceTest(1, 2, 0);
     timesNodeShapeInferenceTest(3, 2, 2);
+}
+
+void TestTimesIndirectSparseInputGradientSparse(const DeviceDescriptor& device)
+{
+    size_t dim = 5;
+    size_t numSequences = 1;
+
+    auto timesParam = Parameter(NDShape({ 1, dim }), DataType::Float, 0.0, device);
+
+    auto input = InputVariable(NDShape({ dim }), /* isSparse*/ true, DataType::Float);
+    auto timesFunction = Times(timesParam, Sequence::First(input));
+
+    auto inputValue = Value::CreateSequence<float>(dim, { 2 }, device, true);
+    std::unordered_map<Variable, ValuePtr> inputMap;
+    inputMap.insert(std::make_pair(input, inputValue));
+
+    std::vector<float> outputData(numSequences);
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ 1, numSequences }), outputData, false));
+    std::unordered_map<Variable, ValuePtr> outputMap;
+    outputMap.insert(std::make_pair(timesFunction->Output(), outputValue));
+
+    auto backState = timesFunction->Forward(inputMap, outputMap, device, { timesFunction->Output() });
+
+    std::unordered_map<Variable, ValuePtr> rootGradients;
+    std::vector<float> rootGradient(numSequences, 1.0f);
+    rootGradients.insert(std::make_pair(timesFunction->Output(), MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ numSequences }), rootGradient, false))));
+
+    std::unordered_map<Variable, ValuePtr> inputGradients;
+    inputGradients.insert(std::make_pair(timesParam, nullptr));
+
+    timesFunction->Backward(backState, rootGradients, inputGradients);
+
+    ValuePtr paramGradient = inputGradients[timesParam];
+
+    if (!paramGradient->IsSparse())
+        ReportFailure("Gradient is expected to be sparse.");
 }
 
 template <typename ElementType>
@@ -624,7 +672,7 @@ void TestRecurrenceShapeInference()
         auto placeholderReplacement = PastValue(plusOutput);
         plusOutput = plusOutput->ReplacePlaceholders({ { recurrenceForwardReference, placeholderReplacement } });
 
-        auto reducedOutput = ReduceSum(plusOutput, L"sum");
+        auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
         auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
         auto inputVar = InputVariable(inputShape, false, DataType::Float, true, L"input", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });
@@ -695,7 +743,7 @@ void TestFunctionOutputs(const DeviceDescriptor& device)
     }
 }
 
-void TestOuputVariableName(const DeviceDescriptor& device)
+void TestOutputVariableName(const DeviceDescriptor& device)
 {
     size_t inputDim = 10;
     size_t outputDim = 20;
@@ -884,7 +932,7 @@ void TestFindName(const DeviceDescriptor& device)
     CheckFindByNameResult(minusFunc3->FindByName(minusFuncName), minusFunc3);
     CheckFindByNameResult(minusFunc3->FindByName(blockFuncName), blockFunc);
 
-    // Test FindByName with block funcitons, nestedSearchInsideBlockFunction is true
+    // Test FindByName with block functions, nestedSearchInsideBlockFunction is true
     CheckFindByNameResult(minusFunc3->FindByName(anotherPlusFuncName, true), anotherPlusFunc1);
     CheckFindByNameResult(minusFunc3->FindByName(anotherMinusFuncName, true), anotherMinusFunc1);
     CheckFindByNameResult(minusFunc3->FindByName(nonExistingFuncName, true), nullptr);
@@ -906,6 +954,18 @@ void TestFindName(const DeviceDescriptor& device)
         minusFunc3->FindByName(blockFuncName, true);
     }, "The expected exception has not been caugth: multiple functions with the same name.");
 
+    // Test FindByName with multiple block functions, nestedSearchInsideBlockFunction is true
+    auto placeholder1 = PlaceholderVariable(L"inputPlaceholder1");
+    auto firstBlockPlusFuncName = L"FirstBlockPlus";
+    auto blockRoot1 = Plus(placeholder1, Constant::Scalar(1.0f), firstBlockPlusFuncName);
+    auto placeholder2 = PlaceholderVariable(L"inputPlaceholder2");
+    auto secondBlockPlusFuncName = L"SecondBlockPlus";
+    auto blockRoot2 = Plus(placeholder2, Constant::Scalar(1.0f), secondBlockPlusFuncName);
+    auto block2 = AsBlock(std::move(blockRoot2), { { placeholder2, InputVariable({}, DataType::Float)} }, L"Plus");
+    auto block1 = AsBlock(std::move(blockRoot1), { { placeholder1, block2->Output() } }, L"Plus");
+    CheckFindByNameResult(block1->FindByName(firstBlockPlusFuncName, true), blockRoot1);
+    CheckFindByNameResult(block1->FindByName(secondBlockPlusFuncName, true), blockRoot2);
+
     // Test FindAllWithName with block functions, nestedSearchInsideBlockFunction is false.
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName), anotherPlusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherMinusFuncName), anotherMinusFuncName, 0);
@@ -918,7 +978,7 @@ void TestFindName(const DeviceDescriptor& device)
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(minusFuncName), minusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(blockFuncName), blockFuncName, 1);
 
-    // Test FindAllWithName with block funcitons, nestedSearchInsideBlockFunction is true
+    // Test FindAllWithName with block functions, nestedSearchInsideBlockFunction is true
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName, true), anotherPlusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherMinusFuncName, true), anotherMinusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(nonExistingFuncName, true), nonExistingFuncName, 0);
@@ -942,94 +1002,225 @@ void TestFindName(const DeviceDescriptor& device)
     CheckFindAllWithNameResult(minusFunc4->FindAllWithName(aliasFuncName, true), aliasFuncName, 1);
 }
 
+
+std::function<std::vector<float>(FunctionPtr)> CreateForwardFunctor(const DeviceDescriptor& device, const Variable& inputVar)
+{
+    auto shape = inputVar.Shape();
+    auto size = shape.TotalSize();
+    auto inputData = std::make_shared<std::vector<float>>(size, 1.0f);
+    ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape, *inputData, false));
+     
+    auto outputData = std::make_shared<std::vector<float>>(size, 0.0f);
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape.AppendShape({ 1, 1 }), *outputData, false));
+
+    return [device, inputVar, inputValue, outputValue, inputData, outputData](FunctionPtr f) -> std::vector<float> {
+        std::unordered_map<Variable, ValuePtr> inputMap { { inputVar, inputValue } };
+        std::unordered_map<Variable, ValuePtr> outputMap { { f->Output(), outputValue } };
+        f->Forward(inputMap, outputMap, device, { f->Output() });
+        return *outputData;
+    };
+}
+
+void SetDropoutRate(const DeviceDescriptor& device) 
+{
+    auto zeroCount = [](const std::vector<float>& v) 
+    {
+        size_t count = 0;
+        for (auto e : v) if (e == 0.0) count++;
+        return count;
+    };
+
+    auto shape = NDShape({ 10, 10, 10, 10 });
+    auto input = InputVariable(shape, DataType::Float);
+    auto dropout = Dropout(input, 0.0, 5336, L"Dropout");
+    auto forwardFunc = CreateForwardFunctor(device, input);
+
+    BOOST_TEST(zeroCount(forwardFunc(dropout)) == 0); // initially dropout is disabled;
+
+    for (auto dropoutRate : { 0.9, 0.4, 0.0, 0.1 }) 
+    {
+        dropout->SetAttribute(L"dropoutRate", dropoutRate);
+        BOOST_TEST(abs(zeroCount(forwardFunc(dropout)) - dropoutRate*shape.TotalSize()) < 100);
+    }
+
+    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>(shape, -0.5, 0.5, 1, device));
+    auto combine = Combine({ Plus(plusParam, Plus(dropout, ElementTimes(plusParam, Constant::Scalar(-1.0f)))) });
+
+    auto dropout2 = combine->FindByName(L"Dropout");
+
+    for (auto dropoutRate : { 0.3, 0.7, 0.2 })
+    {
+        dropout2->SetAttribute(L"dropoutRate", dropoutRate);
+        BOOST_TEST(abs(zeroCount(forwardFunc(combine)) - dropoutRate*shape.TotalSize()) < 100);
+    }
+}
+
+void SetRandomSeed(const DeviceDescriptor& device)
+{
+    auto diff = [](const std::vector<float>& a, const std::vector<float>& b)
+    {
+        bool foundDifference = false;
+        for (int i = 0; !foundDifference && i < a.size() && i < b.size(); ++i)
+        {
+            foundDifference = (a[i] != b[i]);
+        }
+        return foundDifference;
+    };
+
+    auto shape = NDShape({ 10, 10, 10, 10 });
+    auto input = InputVariable(shape, DataType::Float);
+    auto dropout = Dropout(input, 0.5, 5336, L"Dropout");
+    auto forwardFunc = CreateForwardFunctor(device, input);
+
+    auto result1 = forwardFunc(dropout);
+
+    dropout->SetAttribute(L"rngSeed", 5337);
+
+    auto result2 = forwardFunc(dropout);
+
+    BOOST_TEST(diff(result1, result2));
+
+    dropout->SetAttribute(L"rngSeed", 5336);
+    auto result3 = forwardFunc(dropout);
+    BOOST_TEST(!diff(result1, result3));
+
+    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>(shape, -0.5, 0.5, 1, device));
+    auto combine = Combine({ Plus(plusParam, Plus(dropout, ElementTimes(plusParam, Constant::Scalar(-1.0f)))) });
+ 
+    forwardFunc(combine); // this will force the composite function to construct a new computation network.
+
+    auto dropout2 = combine->FindByName(L"Dropout");
+    dropout2->SetAttribute(L"rngSeed", 5337);
+    auto result4 = forwardFunc(combine);
+    // there could be small differences between result2 and result4 due to rounding errors.
+    FloatingPointVectorCompare(result2, result4, "SetRandomSeed: output does match the expected after resetting the dropout seed.");
+}
+
 BOOST_AUTO_TEST_SUITE(FunctionSuite)
 
 BOOST_AUTO_TEST_CASE(FindNameInCPU)
 {
-    TestFindName(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestFindName(DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(FindNameInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestFindName(DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(Splice)
 {
+    // Handles device internally.
     TestSplice();
 }
 
 BOOST_AUTO_TEST_CASE(ChangingParameterValuesInCPU)
 {
-    TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
-    TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+    {
+        TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
+        TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+    }
 }
 
 BOOST_AUTO_TEST_CASE(ChangingParameterValuesInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestChangingParameterValues<double>(3, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(TimesNodeShapeInference)
 {
-    TestTimesNodeShapeInference();
+    if (ShouldRunOnCpu())
+        TestTimesNodeShapeInference();
 }
 
 BOOST_AUTO_TEST_CASE(RecurrenceShapeInference)
 {
-    TestRecurrenceShapeInference();
+    if (ShouldRunOnCpu())
+        TestRecurrenceShapeInference();
 }
 
 BOOST_AUTO_TEST_CASE(SliceInCPU)
 {
-    TestSlice(2, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestSlice(2, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(SliceInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestSlice(1, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(ReduceSumInCPU)
 {
-    TestReduceSum(1, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestReduceSum(1, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(ReduceSumInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestReduceSum(2, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(RecurrentFunctionCloning)
 {
-    TestRecurrentFunctionCloning();
+    if (ShouldRunOnCpu())
+        TestRecurrentFunctionCloning();
 }
 
 BOOST_AUTO_TEST_CASE(TransposeInCPU)
 {
-    TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(TransposeInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(OutputVariableNameInCPU)
 {
-    TestOuputVariableName(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestOutputVariableName(DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(FunctionOutputs)
 {
-    TestFunctionOutputs(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestFunctionOutputs(DeviceDescriptor::CPUDevice());
 }
 
+BOOST_AUTO_TEST_CASE(TimesIndirectSparseGradType)
+{
+    if (ShouldRunOnCpu())
+        TestTimesIndirectSparseInputGradientSparse(DeviceDescriptor::CPUDevice());
+}
+
+
+BOOST_AUTO_TEST_CASE(TestSettingDropoutRate)
+{
+    if (ShouldRunOnCpu())
+        SetDropoutRate(DeviceDescriptor::CPUDevice());
+    
+    if (ShouldRunOnGpu())
+        SetDropoutRate(DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_CASE(TestSettingRandomSeed)
+{
+    if (ShouldRunOnCpu())
+        SetRandomSeed(DeviceDescriptor::CPUDevice());
+
+    if (ShouldRunOnGpu())
+        SetRandomSeed(DeviceDescriptor::GPUDevice(0));
+}
 
 
 BOOST_AUTO_TEST_SUITE_END()

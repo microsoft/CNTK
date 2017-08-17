@@ -9,7 +9,7 @@
 #include "Packer.h"
 #include "SequenceEnumerator.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     // Base class for the reader.
     // Used for code sharing between different readers.
@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
     public:
         // Description of streams that this reader provides.
-        std::vector<StreamDescriptionPtr> GetStreamDescriptions() override;
+        std::vector<StreamInformation> GetStreamDescriptions() override;
 
         // Starts a new epoch with the provided configuration.
         void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& requiredStreams) override;
@@ -28,9 +28,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Minibatch ReadMinibatch() override;
 
         // Returns current position in the global timeline. The returned value is in samples.
-        size_t GetCurrentSamplePosition() override;
+        std::map<std::wstring, size_t> GetState() override;
 
-        void SetCurrentSamplePosition(size_t currentSamplePosition) override;
+        void SetState(const std::map<std::wstring, size_t>& state) override;
 
         void SetConfiguration(const ReaderConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) override;
 
@@ -38,7 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     protected:
         // Deserializer.
-        IDataDeserializerPtr m_deserializer;
+        DataDeserializerPtr m_deserializer;
 
         // Sequence provider.
         SequenceEnumeratorPtr m_sequenceEnumerator;
@@ -52,4 +52,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Memory provider per input.
         std::vector<MemoryProviderPtr> m_memoryProviders;
     };
-}}}
+}

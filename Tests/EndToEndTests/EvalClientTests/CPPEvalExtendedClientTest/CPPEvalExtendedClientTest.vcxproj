@@ -72,7 +72,7 @@
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>EvalDLL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Cntk.Eval-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
       <Profile>true</Profile>
     </Link>
@@ -108,7 +108,7 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\Examples\Evaluation\CPPEvalExtendedClient\CPPEvalExtendedClient.cpp" />
+    <ClCompile Include="..\..\..\..\Examples\Evaluation\LegacyEvalDll\CPPEvalExtendedClient\CPPEvalExtendedClient.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

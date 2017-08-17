@@ -9,23 +9,8 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Common">
-      <UniqueIdentifier>{b032f325-ad9c-49b8-8607-4ad5b4130f4f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Common\Include">
-      <UniqueIdentifier>{28ed042e-a64c-4248-ad9c-2b9e82bef354}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Common\DataWriter.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\File.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\fileutil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -46,18 +31,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\Include\DataReader.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DataWriter.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\File.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\fileutil.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="DSSMReader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -66,9 +39,6 @@
     </ClInclude>
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\RandomOrdering.h">
-      <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

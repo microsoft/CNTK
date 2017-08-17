@@ -5,20 +5,21 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
 #include <map>
-#include "Config.h"
 #include "Reader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+    class ConfigParameters;
+}}}
+
+namespace CNTK {
 
 // A helper class for binary specific parameters.
 // A simple wrapper around CNTK ConfigParameters.
 class BinaryConfigHelper
 {
 public:
-    explicit BinaryConfigHelper(const ConfigParameters& config);
+    explicit BinaryConfigHelper(const Microsoft::MSR::CNTK::ConfigParameters& config);
 
     // Get all input streams that are specified in the configuration.
     const std::map<std::wstring, std::wstring>& GetRename() const { return m_streams; }
@@ -26,23 +27,28 @@ public:
     // Get full path to the input file.
     const wstring& GetFilePath() const { return m_filepath; }
 
-    size_t GetRandomize() const { return m_randomize; }
-
     size_t GetRandomizationWindow() const { return m_randomizationWindow; }
+
+    bool UseSampleBasedRandomizationWindow() const { return m_sampleBasedRandomizationWindow; }
 
     unsigned int GetTraceLevel() const { return m_traceLevel; }
 
     bool ShouldKeepDataInMemory() const { return m_keepDataInMemory; }
+
+    DataType GetElementType() const { return m_elementType; }
 
     DISABLE_COPY_AND_MOVE(BinaryConfigHelper);
 
 private:
     std::wstring m_filepath;
     std::map<std::wstring, std::wstring> m_streams;
+    DataType m_elementType;
     size_t m_randomizationWindow;
-    bool m_randomize;
+    // Specifies how to interpret randomization window, if true randomization window == number of samples, else 
+    // randomization window = number of chunks (default).
+    bool m_sampleBasedRandomizationWindow;
     unsigned int m_traceLevel;
     bool m_keepDataInMemory; // if true the whole dataset is kept in memory
 };
 
-} } }
+}

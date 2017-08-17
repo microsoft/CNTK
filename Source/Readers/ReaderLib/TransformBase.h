@@ -11,20 +11,22 @@
 #include "Config.h"
 #include "StringUtil.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+namespace MSR_CNTK = ::Microsoft::MSR::CNTK;
 
 // Base class for transforms.
 class TransformBase : public Transformer
 {
 public:
-    explicit TransformBase(const ConfigParameters& config)
+    explicit TransformBase(const MSR_CNTK::ConfigParameters& config)
     {
         m_seed = config(L"seed", 0u);
         std::wstring precision = config(L"precision", L"float");
-        if (AreEqualIgnoreCase(precision, L"float"))
-            m_precision = ElementType::tfloat;
-        else if (AreEqualIgnoreCase(precision, L"double"))
-            m_precision = ElementType::tdouble;
+        if (MSR_CNTK::AreEqualIgnoreCase(precision, L"float"))
+            m_precision = DataType::Float;
+        else if (MSR_CNTK::AreEqualIgnoreCase(precision, L"double"))
+            m_precision = DataType::Double;
         else
             RuntimeError("Unsupported precision type is specified, '%ls'", precision.c_str());
     }
@@ -33,9 +35,9 @@ public:
 
     // The method describes how input stream is transformed to the output stream. Called once per applied stream.
     // Currently we only support transforms of dense streams.
-    StreamDescription Transform(const StreamDescription& inputStream) override
+    StreamInformation Transform(const StreamInformation& inputStream) override
     {
-        if (inputStream.m_storageType != StorageType::dense)
+        if (inputStream.m_storageFormat != StorageFormat::Dense)
         {
             LogicError("The class currently only supports transforms on dense input streams.");
         }
@@ -55,13 +57,13 @@ protected:
     }
 
     // Input stream.
-    StreamDescription m_inputStream;
+    StreamInformation m_inputStream;
     // Output stream.
-    StreamDescription m_outputStream;
+    StreamInformation m_outputStream;
     // Seed.
     unsigned int m_seed;
     // Required precision.
-    ElementType m_precision;
+    DataType m_precision;
 };
 
-}}}
+}

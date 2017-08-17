@@ -8,6 +8,7 @@
 *.orig
 \#*
 .\#*
+.vscode
 
 # Local build configuration
 Config.make
@@ -23,6 +24,8 @@ build/
 .run-*
 lib/
 bin/
+Generated Files/
+buildinfo.h$$
 
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
@@ -39,6 +42,7 @@ bin/
 *.obj
 *.pch
 *.pdb
+*.idb
 *.pgc
 *.pgd
 *.rsp
@@ -49,6 +53,7 @@ bin/
 *.tmp
 *.tmp_proj
 *.log
+*.tlog
 *.vspscc
 *.vssscc
 .builds
@@ -58,6 +63,8 @@ bin/
 *.dep
 *.o
 *.d
+*.intermediate
+*.resfiles
 
 # Visual C++ cache files
 ipch/
@@ -155,8 +162,6 @@ ModelManifest.xml
 # Python
 *.pyc
 __pycache__/
-Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc
-Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.h
 
 # =========================
 # Windows detritus
@@ -180,16 +185,19 @@ $RECYCLE.BIN/
 bin/
 LOG
 *.log
-core	
+core
 *.lyx#
 *.lyx#
 *.lyx~
 
-# prebuild file 
+# prebuild file
 Source/CNTK/buildinfo.h
 Source/CNTK/buildinfo.h$$
+Source/CNTKv2LibraryDll/buildinfo.h
+Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.h
+Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc
 
-# Unit test output
+# test output
 Tests/UnitTests/ReaderTests/Control/**/*_Output.txt
 Tests/UnitTests/NetworkTests/Output/
 Tests/EndToEndTests/UnitTests/MathTests/M.txt
@@ -207,6 +215,8 @@ Dependencies/CNTKCustomMKL/Publish
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Linux-*.tgz
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Windows-*.zip
 
+Tests/EndToEndTests/CNTKv2Python/Examples/models
+
 # Python bindings
 bindings/python/_cntk_py*.pyd
 bindings/python/cntk.egg-info/
@@ -215,6 +225,10 @@ bindings/python/cntk/libs/
 bindings/python/cntk/cntk_py_wrap.cpp
 bindings/python/cntk/cntk_py_wrap.h
 bindings/python/dist/
+bindings/python/doc/cntk.*.rst
+bindings/python/doc/cntk.rst
+bindings/python/doc/modules.rst
+bindings/python/doc/_build
 
 # Auto-generated sources from CNTK.proto
 Source/CNTKv2LibraryDll/proto/CNTK.pb.cc
@@ -228,6 +242,20 @@ bindings/python/cntk/i_plus_i_0.mod
 bindings/csharp/Swig/cntk_cs_wrap.h
 bindings/csharp/Swig/cntk_cs_wrap.cxx
 bindings/csharp/CNTKLibraryManagedDll/SwigProxyClasses/*.cs
+
+# Java bindings
+bindings/java/Swig/cntk_java_wrap.h
+bindings/java/Swig/cntk_java_wrap.cxx
+bindings/java/**/*.class
+bindings/java/Swig/com/
+bindings/java/**/target
+bindings/java/**/*.jar
+
+# Java Eval Tests
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/.idea
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/data
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/out
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/**/*.class
 
 # Examples and Tutorials
 Examples/Image/DataSets/Pascal/VOC*
@@ -245,22 +273,19 @@ Examples/Image/DataSets/CIFAR-10/train_map.txt
 Examples/Image/DataSets/CIFAR-10/train_regrLabels.txt
 Examples/Image/DataSets/MNIST/Test-28x28_cntk_text.txt
 Examples/Image/DataSets/MNIST/Train-28x28_cntk_text.txt
-Examples/Image/DataSets/Animals/Train/
-Examples/Image/DataSets/Animals/Test/
-Examples/Image/DataSets/Grocery/negative/
-Examples/Image/DataSets/Grocery/positive/
-Examples/Image/DataSets/Grocery/testImages/
-Examples/Image/DataSets/Grocery/*.txt
-Examples/Image/DataSets/Flowers/jpg/
-Examples/Image/DataSets/Flowers/*.txt
+Examples/Image/DataSets/grocery/negative/
+Examples/Image/DataSets/grocery/positive/
+Examples/Image/DataSets/grocery/testImages/
+Examples/Image/DataSets/grocery/*.txt
 Examples/Image/PretrainedModels/*.model
 Examples/Image/FeatureExtraction/*.txt
 Examples/Image/GettingStarted/Output/
-Examples/Image/TransferLearning/Output/
 Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
+Tests/EndToEndTests/CNTKv2Python/Keras/keras-*
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/
 Tutorials/.ipynb_checkpoints/
+tutorials/.ipynb_checkpoints/
 Tutorials/atis.test.ctf
 Tutorials/atis.train.ctf
 Tutorials/data/
@@ -268,7 +293,20 @@ Tutorials/dqn.mod
 Tutorials/pg.mod
 Tutorials/query.wl
 Tutorials/slots.wl
+bindings/python/tutorials/.ipynb_checkpoints
+Examples/Text/ATIS/Data
+Examples/Tutorials/ImageHandsOn/cifar-10-batches-py
+Examples/Video/DataSets/UCF11/action_youtube_naudio/
+Examples/Video/DataSets/UCF11/test_map.csv
+Examples/Video/DataSets/UCF11/train_map.csv
+Tutorials/zip
+Manual/*.tmp
+Manual/*.ckp
+Manual/.ipynb_checkpoints
+Examples/Text/LightRNN/LightRNN/*.so
+
+# other
 /packages
 /CNTK.VC.db
 /CNTK.VC.VC.opendb
-.cache
+/Local

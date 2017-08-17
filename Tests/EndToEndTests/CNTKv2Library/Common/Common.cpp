@@ -32,32 +32,21 @@ int HandleDebugAssert(int /* reportType */,
 }
 #endif
 
-bool IsGPUAvailable()
+bool ShouldRunOnCpu()
 {
-    static bool isGPUDeviceAvailable;
-    static bool isInitialized = false;
+  const char* p = getenv("TEST_DEVICE");
 
-    if (!isInitialized)
-    {
-#ifndef CPUONLY
-        const char* p = getenv("TEST_DEVICE");
+  return (p == nullptr) || !strcmp(p, "cpu");
+}
 
-        // Check the environment variable TEST_DEVICE to decide whether to run on a CPU-only device.
-        if (p != nullptr && !strcmp(p, "cpu"))
-        {
-            isGPUDeviceAvailable = false;
-        }
-        else
-        {
-            isGPUDeviceAvailable = true;
-        }
+bool ShouldRunOnGpu()
+{
+#ifdef CPUONLY
+  return false;
 #else
-        isGPUDeviceAvailable = false;
+  const char* p = getenv("TEST_DEVICE");
+  return (p == nullptr) || !strcmp(p, "gpu");
 #endif
-        isInitialized = true;
-    }
-
-    return isGPUDeviceAvailable;
 }
 
 bool Is1bitSGDAvailable()
@@ -69,7 +58,7 @@ bool Is1bitSGDAvailable()
     {
         const char* p = getenv("TEST_1BIT_SGD");
 
-        // Check the environment variable TEST_1BIT_SGD to decide whether to run on a CPU-only device.
+        // Check the environment variable TEST_1BIT_SGD to decide whether to run 1-bit SGD tests.
         if (p != nullptr && 0 == strcmp(p, "0"))
         {
             is1bitSGDAvailable = false;
@@ -84,43 +73,16 @@ bool Is1bitSGDAvailable()
     return is1bitSGDAvailable;
 }
 
- MinibatchSourcePtr CreateHTKMinibatchSource(size_t featureDim, size_t numOutputClasses, const Dictionary& readModeConfig, size_t epochSize, bool randomize = true)
+MinibatchSourceConfig GetHTKMinibatchSourceConfig(size_t featureDim, size_t numOutputClasses, size_t epochSize, bool randomize = true)
 {
     auto featuresFilePath = L"glob_0000.scp";
     auto labelsFilePath = L"glob_0000.mlf";
     auto labelMappingFile = L"state.list";
 
-    Dictionary featuresStreamConfig;
-    featuresStreamConfig[L"dim"] = featureDim;
-    featuresStreamConfig[L"scpFile"] = featuresFilePath;
+    Deserializer featureDeserializer = HTKFeatureDeserializer({ HTKFeatureConfiguration(L"features", featuresFilePath, featureDim, 0, 0, false) });
+    Deserializer labelDeserializer = HTKMLFDeserializer(L"labels", labelMappingFile, numOutputClasses, { labelsFilePath });
 
-    Dictionary featInputStreamsConfig;
-    featInputStreamsConfig[L"features"] = featuresStreamConfig;
-
-    Dictionary featDeserializerConfiguration;
-    featDeserializerConfiguration[L"type"] = L"HTKFeatureDeserializer";
-    featDeserializerConfiguration[L"input"] = featInputStreamsConfig;
-
-    Dictionary labelsStreamConfig;
-    labelsStreamConfig[L"dim"] = numOutputClasses;
-    labelsStreamConfig[L"mlfFile"] = labelsFilePath;
-    labelsStreamConfig[L"labelMappingFile"] = labelMappingFile;
-    labelsStreamConfig[L"scpFile"] = featuresFilePath;
-
-    Dictionary labelsInputStreamsConfig;
-    labelsInputStreamsConfig[L"labels"] = labelsStreamConfig;
-
-    Dictionary labelsDeserializerConfiguration;
-    labelsDeserializerConfiguration[L"type"] = L"HTKMLFDeserializer";
-    labelsDeserializerConfiguration[L"input"] = labelsInputStreamsConfig;
-
-    Dictionary minibatchSourceConfiguration;
-    if (randomize)
-        minibatchSourceConfiguration[L"randomize"] = true;
-
-    minibatchSourceConfiguration[L"epochSize"] = epochSize;
-    minibatchSourceConfiguration[L"deserializers"] = std::vector<DictionaryValue>({ featDeserializerConfiguration, labelsDeserializerConfiguration });
-    minibatchSourceConfiguration.Add(readModeConfig);
-
-    return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+    MinibatchSourceConfig config({ featureDeserializer, labelDeserializer }, randomize);
+    config.maxSamples = epochSize;
+    return config;
 }

@@ -9,11 +9,13 @@ import numpy as np
 import os
 import sys
 from cntk import Trainer, Axis
-from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
+from cntk.learners import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.ops import sequence
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
 from cntk.ops.functions import load_model
 from cntk.layers import LSTM, Stabilizer, Recurrence, Dense, For, Sequential
-from cntk.utils import log_number_of_parameters, ProgressPrinter
+from cntk.logging import log_number_of_parameters, ProgressPrinter
 
 # model hyperparameters
 hidden_dim = 256
@@ -129,17 +131,14 @@ def create_model(output_dim):
 
 # Model inputs
 def create_inputs(vocab_dim):
-    batch_axis = Axis.default_batch_axis()
     input_seq_axis = Axis('inputAxis')
-
-    input_dynamic_axes = [batch_axis, input_seq_axis]
-    input_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
-    label_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
+    input_sequence = sequence.input_variable(shape=vocab_dim, sequence_axis=input_seq_axis)
+    label_sequence = sequence.input_variable(shape=vocab_dim, sequence_axis=input_seq_axis)
     
     return input_sequence, label_sequence
 
 # Creates and trains a character-level language model
-def train_lm(training_file, max_num_minibatches):
+def train_lm(training_file, epochs, max_num_minibatches):
 
     # load the data and vocab
     data, char_to_ix, ix_to_char, data_size, vocab_dim = load_data_and_vocab(training_file)
@@ -165,49 +164,35 @@ def train_lm(training_file, max_num_minibatches):
     learner = momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
-    trainer = Trainer(z, (ce, errs), learner)
+    progress_printer = ProgressPrinter(freq=100, tag='Training')
+    trainer = Trainer(z, (ce, errs), learner, progress_printer)
 
     sample_freq = 1000
-    epochs = 50
-    minibatches_per_epoch = int((data_size / minibatch_size))
-    minibatches = min(epochs * minibatches_per_epoch, max_num_minibatches)
+    minibatches_per_epoch = min(data_size // minibatch_size, max_num_minibatches // epochs)
 
     # print out some useful training information
-    log_number_of_parameters(z) ; print()
-    progress_printer = ProgressPrinter(freq=100, tag='Training')    
-    
-    e = 0
-    p = 0
-    for i in range(0, minibatches):
+    log_number_of_parameters(z)
+    print ("Running %d epochs with %d minibatches per epoch" % (epochs, minibatches_per_epoch))
+    print()
 
-        if p + minibatch_size+1 >= data_size:
-            p = 0
-            e += 1
-            model_filename = "models/shakespeare_epoch%d.dnn" % e
-            z.save(model_filename)
-            print("Saved model to '%s'" % model_filename)
-
-        # get the data            
-        features, labels = get_data(p, minibatch_size, data, char_to_ix, vocab_dim)
-
+    for e in range(0, epochs):
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
         # If it's the start of the data, we specify that we are looking at a new sequence (True)
-        mask = [False] 
-        if p == 0:
-            mask = [True]
-        arguments = ({input_sequence : features, label_sequence : labels}, mask)
-        trainer.train_minibatch(arguments)
+        mask = [True]
+        for b in range(0, minibatches_per_epoch):
+            # get the data            
+            features, labels = get_data(b, minibatch_size, data, char_to_ix, vocab_dim)
+            arguments = ({input_sequence : features, label_sequence : labels}, mask)
+            mask = [False] 
+            trainer.train_minibatch(arguments)
 
-        progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
-        
-        if i % sample_freq == 0:
-            print(sample(z, ix_to_char, vocab_dim, char_to_ix))
+            global_minibatch = e*minibatches_per_epoch + b
+            if global_minibatch % sample_freq == 0:
+                print(sample(z, ix_to_char, vocab_dim, char_to_ix))
 
-        p += minibatch_size
-
-    # Do a final save of the model        
-    model_filename = "models/shakespeare_epoch%d.dnn" % e
-    z.save(model_filename)
+        model_filename = "models/shakespeare_epoch%d.dnn" % (e+1)
+        z.save(model_filename)
+        print("Saved model to '%s'" % model_filename)
 
 
 def load_and_sample(model_filename, vocab_filename, prime_text='', use_hardmax=False, length=1000, temperature=1.0):
@@ -223,18 +208,18 @@ def load_and_sample(model_filename, vocab_filename, prime_text='', use_hardmax=F
         
     return sample(model, ix_to_char, len(chars), char_to_ix, prime_text=prime_text, use_hardmax=use_hardmax, length=length, temperature=temperature)
     
-def train_and_eval_char_rnn(max_num_minibatches=sys.maxsize):
-    # train the LM    
-    train_lm("data/tinyshakespeare.txt", max_num_minibatches)
+def train_and_eval_char_rnn(epochs=50, max_num_minibatches=sys.maxsize):
+    # train the LM 
+    train_lm("data/tinyshakespeare.txt", epochs, max_num_minibatches)
 
     # load and sample
     text = "T"
-    return load_and_sample("models/shakespeare_epoch0.dnn", "data/tinyshakespeare.txt.vocab", prime_text=text, use_hardmax=False, length=100, temperature=0.95)
+    return load_and_sample("models/shakespeare_epoch%d.dnn" % (epochs), "data/tinyshakespeare.txt.vocab", prime_text=text, use_hardmax=False, length=100, temperature=0.95)
 
 if __name__=='__main__':    
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    #set_default_device(cpu())
+    #try_set_default_device(cpu())
 
     output = train_and_eval_char_rnn()
     ff = open('output.txt', 'w', encoding='utf-8')

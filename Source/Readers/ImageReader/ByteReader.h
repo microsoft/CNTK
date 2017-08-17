@@ -13,7 +13,9 @@
 #include "ConcStack.h"
 #endif
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using MultiMap = std::map<std::string, std::vector<size_t>>;
 
 class ByteReader
 {
@@ -21,7 +23,7 @@ public:
     ByteReader() = default;
     virtual ~ByteReader() = default;
 
-    virtual void Register(const std::map<std::string, size_t>& sequences) = 0;
+    virtual void Register(const MultiMap& sequences) = 0;
     virtual cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) = 0;
 
     DISABLE_COPY_AND_MOVE(ByteReader);
@@ -33,7 +35,7 @@ public:
     FileByteReader(const std::string& expandDirectory) : m_expandDirectory(expandDirectory)
     {}
 
-    void Register(const std::map<std::string, size_t>&) override {}
+    void Register(const MultiMap&) override {}
     cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) override;
 
     std::string m_expandDirectory;
@@ -45,7 +47,7 @@ class ZipByteReader : public ByteReader
 public:
     ZipByteReader(const std::string& zipPath);
 
-    void Register(const std::map<std::string, size_t>& sequences) override;
+    void Register(const std::map<std::string, std::vector<size_t>>& sequences) override;
     cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) override;
 
 private:
@@ -53,10 +55,10 @@ private:
     ZipPtr OpenZip();
 
     std::string m_zipPath;
-    conc_stack<ZipPtr> m_zips;
+    Microsoft::MSR::CNTK::conc_stack<ZipPtr> m_zips;
     std::unordered_map<size_t, std::pair<zip_uint64_t, zip_uint64_t>> m_seqIdToIndex;
-    conc_stack<std::vector<unsigned char>> m_workspace;
+    Microsoft::MSR::CNTK::conc_stack<std::vector<unsigned char>> m_workspace;
 };
 #endif
 
-}}}
+}

@@ -9,8 +9,10 @@ import pytest
 
 _DEFAULT_DEVICE_ID=-1
 
-import cntk.cntk_py
+import cntk
+import cntk.debugging
 cntk.cntk_py.always_allow_setting_default_device()
+cntk.debugging.set_checked_mode(True)
 
 def pytest_addoption(parser):
     parser.addoption("--deviceid", action="append", default=[_DEFAULT_DEVICE_ID],
@@ -55,40 +57,6 @@ def pytest_generate_tests(metafunc):
 
         metafunc.parametrize("is_1bit_sgd", is1bitsgd, scope='session')
 
-@pytest.fixture(scope='module')
-def nb(tmpdir_factory, request, device_id):
-    import nbformat
-    import os
-    import subprocess
-    from cntk.ops.tests.ops_test_utils import cntk_device
-    from cntk.cntk_py import DeviceKind_GPU
-    inPath = getattr(request.module, "notebook")
-
-    deviceIdsToRun = [-1, 0]
-    try:
-        deviceIdsToRun = getattr(request.module, "notebook_deviceIdsToRun")
-    except AttributeError:
-        pass
-
-    timeoutSeconds = 300
-    try:
-        timeoutSeconds = int(getattr(request.module, "notebook_timeoutSeconds"))
-    except AttributeError:
-        pass
-
-    # Pass along device_id type to child process
-    if cntk_device(device_id).type() == DeviceKind_GPU:
-        os.environ['TEST_DEVICE'] = 'gpu'
-    else:
-        os.environ['TEST_DEVICE'] = 'cpu'
-    if not device_id in deviceIdsToRun:
-        pytest.skip('test not configured to run on device ID {0}'.format(device_id))
-    outPath = str(tmpdir_factory.mktemp('notebook').join('out.ipynb'))
-    assert os.path.isfile(inPath)
-    kernel_name_opt = "--ExecutePreprocessor.kernel_name=python%d" % (sys.version_info[0])
-    args = ["jupyter", "nbconvert", "--to", "notebook", "--execute",
-            "--ExecutePreprocessor.timeout={0}".format(timeoutSeconds),
-            kernel_name_opt, "--output", outPath, inPath]
-    subprocess.check_call(args)
-    nb = nbformat.read(outPath, nbformat.current_nbformat)
-    return nb
+@pytest.fixture(autouse=True)
+def reset_random_seed():
+    cntk.cntk_py.reset_random_seed(0)

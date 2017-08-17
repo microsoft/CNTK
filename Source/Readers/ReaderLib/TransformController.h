@@ -11,7 +11,7 @@
 #include "SequenceEnumerator.h"
 #include "ExceptionCapture.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // A pair of a transformer and the stream name to which the transformer should be a applied.
 struct Transformation
@@ -31,20 +31,20 @@ public:
     {
         // Applying transformations to stream descriptions,
         // i.e. a transformation can change a stream from dense to sparse.
-        std::vector<StreamDescriptionPtr> transformedStreams = m_sequenceProvider->GetStreamDescriptions();
+        std::vector<StreamInformation> transformedStreams = m_sequenceProvider->GetStreamDescriptions();
         for (auto& t : transformations)
         {
             size_t streamId = GetStreamId(t.m_streamName, transformedStreams);
             m_transformations.push_back(std::make_pair(t, streamId));
-            transformedStreams[streamId] = std::make_shared<StreamDescription>(t.m_transformer->Transform(*transformedStreams[streamId]));
+            transformedStreams[streamId] = t.m_transformer->Transform(transformedStreams[streamId]);
         }
         m_outputStreams = transformedStreams;
     }
 
     // Returns current position in the global timeline. The returned value is in samples.
-    size_t GetCurrentSamplePosition() override
+    std::map<std::wstring, size_t> GetState() override
     {
-        return m_sequenceProvider->GetCurrentSamplePosition();
+        return m_sequenceProvider->GetState();
     }
 
     // Sets configuration for the current epoch.
@@ -60,13 +60,13 @@ public:
         m_sequenceProvider->StartEpoch(config);
     }
 
-    void SetCurrentSamplePosition(size_t currentSamplePosition) override
+    void SetState(const std::map<std::wstring, size_t>& state) override
     {
-        m_sequenceProvider->SetCurrentSamplePosition(currentSamplePosition);
+        m_sequenceProvider->SetState(state);
     }
 
     // Description of streams that the transformer provides.
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+    virtual std::vector<StreamInformation> GetStreamDescriptions() const override
     {
         return m_outputStreams;
     }
@@ -105,13 +105,13 @@ public:
     }
 
 private:
-    size_t GetStreamId(const std::wstring streamName, const std::vector<StreamDescriptionPtr>& streams) const
+    size_t GetStreamId(const std::wstring streamName, const std::vector<StreamInformation>& streams) const
     {
         for (const auto& s : streams)
         {
-            if (s->m_name == streamName)
+            if (s.m_name == streamName)
             {
-                return s->m_id;
+                return s.m_id;
             }
         }
 
@@ -120,8 +120,8 @@ private:
     }
 
     SequenceEnumeratorPtr m_sequenceProvider;
-    std::vector<StreamDescriptionPtr> m_outputStreams;
+    std::vector<StreamInformation> m_outputStreams;
     std::vector<std::pair<Transformation, size_t>> m_transformations;
 };
 
-}}}
+}

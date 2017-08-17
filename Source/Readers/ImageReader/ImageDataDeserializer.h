@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include "CorpusDescriptor.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Image data deserializer based on the OpenCV library.
 // The deserializer currently supports two output streams only: a feature and a label stream.
@@ -23,7 +23,7 @@ class ImageDataDeserializer : public ImageDeserializerBase
 public:
     // A new constructor to support new compositional configuration,
     // that allows composition of deserializers and transforms on inputs.
-    ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
+    ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
 
     // TODO: This constructor should be deprecated in the future. Compositional config should be used instead.
     explicit ImageDataDeserializer(const ConfigParameters& config);
@@ -32,23 +32,24 @@ public:
     virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
     // Gets chunk descriptions.
-    virtual ChunkDescriptions GetChunkDescriptions() override;
+    virtual std::vector<ChunkInfo> ChunkInfos() override;
 
     // Gets sequence descriptions for the chunk.
-    virtual void GetSequencesForChunk(ChunkIdType, std::vector<SequenceDescription>&) override;
+    virtual void SequenceInfosForChunk(ChunkIdType, std::vector<SequenceInfo>&) override;
 
     // Gets sequence description by key.
-    bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+    bool GetSequenceInfoByKey(const SequenceKey&, SequenceInfo&) override;
 
 private:
     // Creates a set of sequence descriptions.
     void CreateSequenceDescriptions(CorpusDescriptorPtr corpus, std::string mapPath, size_t labelDimension, bool isMultiCrop);
 
     // Image sequence descriptions. Currently, a sequence contains a single sample only.
-    struct ImageSequenceDescription : public SequenceDescription
+    struct ImageSequenceDescription : public SequenceInfo
     {
         std::string m_path;
         size_t m_classId;
+        uint8_t m_copyId;
     };
 
     class ImageChunk;
@@ -58,7 +59,7 @@ private:
 
     // Not using nocase_compare here as it's not correct on Linux.
     using PathReaderMap = std::unordered_map<std::string, std::shared_ptr<ByteReader>>;
-    using ReaderSequenceMap = std::map<std::string, std::map<std::string, size_t>>;
+    using ReaderSequenceMap = std::map<std::string, std::map<std::string, std::vector<size_t>>>;
     void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences, const std::string& expandDirectory);
     cv::Mat ReadImage(size_t seqId, const std::string& path, bool grayscale);
 
@@ -69,4 +70,4 @@ private:
     std::unique_ptr<FileByteReader> m_defaultReader;
 };
 
-}}}
+}

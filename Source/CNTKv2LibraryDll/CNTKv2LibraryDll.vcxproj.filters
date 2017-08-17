@@ -34,6 +34,9 @@
     <ClCompile Include="tensorboard\tensorboard.pb.cc.VS_wrapper.cpp">
       <Filter>tensorboard</Filter>
     </ClCompile>
+    <ClCompile Include="ProgressWriter.cpp" />
+    <ClCompile Include="Evaluator.cpp" />
+    <ClCompile Include="UserDefinedFunction.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -64,6 +67,8 @@
     </ClInclude>
     <ClInclude Include="BlockFunction.h" />
     <ClInclude Include="Variable.h" />
+    <ClInclude Include="UserFunctionFactory.h" />
+    <ClInclude Include="UserDefinedFunction.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

@@ -354,7 +354,7 @@ void CheckCopyToOutput(const std::vector<std::vector<ElementType>>& expected, co
 }
 
 template <typename ElementType>
-Variable CreateVariable(NDShape shape, int numOfDynamicAxes)
+Variable CreateVariable(NDShape shape, int numOfDynamicAxes, bool isSparse = false)
 {
     std::vector<Axis> dynamicAxes;
 
@@ -372,9 +372,9 @@ Variable CreateVariable(NDShape shape, int numOfDynamicAxes)
     default:
         RuntimeError("No more than 2 dynamic axes is allowed.");
     }
-    
+
     Variable sampleVariable(shape, VariableKind::Output, AsDataType<ElementType>(), nullptr, false,
-        dynamicAxes, false /*bool isSparse*/, L"sampleVariable", L"sampleVariableUid");
+        dynamicAxes, isSparse, L"sampleVariable", L"sampleVariableUid");
 
     return sampleVariable;
 }
@@ -627,6 +627,157 @@ void ValueCopyToOneHotTest(const DeviceDescriptor& device)
     }
 }
 
+template <typename ElementType>
+struct SparseCSCBuffersForTests
+{
+    size_t m_seqLen;
+    std::vector<SparseIndexType> m_colsStarts;
+    std::vector<SparseIndexType> m_rowIndices;
+    std::vector<ElementType> m_nonZeroValues;
+    size_t m_numNonZeroValues;
+};
+
+template <typename ElementType>
+void SortCSCBuffers(SparseCSCBuffersForTests<ElementType>& cscBuffers)
+{
+    for (size_t col = 0; col < cscBuffers.m_colsStarts.size() - 1; col++)
+    {
+        size_t colStart = cscBuffers.m_colsStarts[col];
+        size_t colEnd = cscBuffers.m_colsStarts[col + 1];
+        for (size_t i = colStart; i < colEnd; i++)
+        {
+            size_t min = i;
+            for (size_t j = i; j < colEnd; j++)
+            {
+                if (cscBuffers.m_rowIndices[min] > cscBuffers.m_rowIndices[j])
+                {
+                    min = j;
+                }
+            }
+
+            if (min != i)
+            {
+                SparseIndexType temp = cscBuffers.m_rowIndices[i];
+                cscBuffers.m_rowIndices[i] = cscBuffers.m_rowIndices[min];
+                cscBuffers.m_rowIndices[min] = temp;
+                ElementType tempVal = cscBuffers.m_nonZeroValues[i];
+                cscBuffers.m_nonZeroValues[i] = cscBuffers.m_nonZeroValues[min];
+                cscBuffers.m_nonZeroValues[min] = tempVal;
+            }
+        }
+    }
+}
+
+template <typename ElementType>
+bool AreEqualCSCBuffers(SparseCSCBuffersForTests<ElementType>& expected, SparseCSCBuffersForTests<ElementType>& output)
+{
+    return ((expected.m_seqLen == output.m_seqLen) && (expected.m_colsStarts == output.m_colsStarts) &&
+        (expected.m_rowIndices == output.m_rowIndices) && (expected.m_nonZeroValues == output.m_nonZeroValues) &&
+        (expected.m_numNonZeroValues == output.m_numNonZeroValues));
+}
+
+template <typename ElementType>
+void ValueCopyToSparseCSCTest(const DeviceDescriptor& device)
+{
+    size_t maxDimSize = 10;
+    std::default_random_engine dimSizeGenerator;
+    std::uniform_int_distribution<size_t> dimSizeDistribution(1, maxDimSize);
+    size_t maxSequenceLen = 15;
+    size_t dimSize;
+    ValuePtr sparseValue;
+    Variable sampleVariable;
+    NDShape sampleShape;
+    std::vector<ElementType> referenceDenseData;
+    SparseCSCBuffersForTests<ElementType> expected, output;
+
+    // Check single sample.
+    // No dynamic axis for the sampleVariable.
+    dimSize = dimSizeDistribution(dimSizeGenerator);
+    sampleShape = NDShape{ dimSize };
+    expected.m_seqLen = 1;
+    std::tie(referenceDenseData, expected.m_colsStarts, expected.m_rowIndices, expected.m_nonZeroValues, expected.m_numNonZeroValues) = GenerateSequenceInCSC<ElementType>(dimSize, expected.m_seqLen);
+    sparseValue = Value::CreateSequence<ElementType>(sampleShape, expected.m_seqLen, expected.m_colsStarts.data(), expected.m_rowIndices.data(), expected.m_nonZeroValues.data(), expected.m_numNonZeroValues, device);
+
+    sampleVariable = CreateVariable<ElementType>(sampleShape, 0, true /* isSparse */);
+    sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    SortCSCBuffers(expected);
+    SortCSCBuffers(output);
+    BOOST_TEST(AreEqualCSCBuffers(expected, output), "Single sample: the output data does not match expected.");
+
+    // 1 dynamic axis (as batch) for the sampleVariable
+    sampleVariable = CreateVariable<ElementType>(sampleShape, 1, true /* isSparse */);
+    sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    SortCSCBuffers(output);
+    BOOST_TEST(AreEqualCSCBuffers(expected, output), "Single sample with batch axis: the output data does not match expected.");
+
+    // 2 dynamic axes for the sampleVariable
+    sampleVariable = CreateVariable<ElementType>(sampleShape, 2, true /* isSparse */);
+    sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    SortCSCBuffers(output);
+    BOOST_TEST(AreEqualCSCBuffers(expected, output), "Single sample with batch and sequence axis: the output data does not match expected.");
+
+    // Random sequences
+    int testRun = 4;
+    for (int i = 0; i < testRun; i++)
+    {
+        // Test without using seqStartFlag
+        dimSize = dimSizeDistribution(dimSizeGenerator);
+        sampleShape = NDShape{ dimSize };
+        expected.m_seqLen = GenerateSequenceLengths(1, maxSequenceLen)[0];
+        std::tie(referenceDenseData, expected.m_colsStarts, expected.m_rowIndices, expected.m_nonZeroValues, expected.m_numNonZeroValues) = GenerateSequenceInCSC<ElementType>(dimSize, expected.m_seqLen);
+        sparseValue = Value::CreateSequence<ElementType>(sampleShape, expected.m_seqLen, expected.m_colsStarts.data(), expected.m_rowIndices.data(), expected.m_nonZeroValues.data(), expected.m_numNonZeroValues, device, true /* readOnly */);
+
+        sampleVariable = CreateVariable<ElementType>(sampleShape, 2, true /* isSparse */);
+        sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+        SortCSCBuffers(expected);
+        SortCSCBuffers(output);
+        BOOST_TEST(AreEqualCSCBuffers(expected, output), "The output data does not match expected.");
+
+        // Using seqStartFlag.
+        auto seqStartFlag = static_cast<int>(rand()) % 2 == 0 ? true : false;
+        sparseValue = Value::CreateSequence<ElementType>(sampleShape, expected.m_seqLen, expected.m_colsStarts.data(), expected.m_rowIndices.data(), expected.m_nonZeroValues.data(), expected.m_numNonZeroValues, seqStartFlag, device, false /*readOnly */);
+
+        sampleVariable = CreateVariable<ElementType>(sampleShape, 2, true /* isSparse */);
+        sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+        SortCSCBuffers(output);
+        BOOST_TEST(AreEqualCSCBuffers(expected, output), "The output data does not match expected.");
+    }
+
+    // Test N-Dimensional shape
+    dimSize = dimSizeDistribution(dimSizeGenerator);
+    sampleShape = NDShape{ dimSize, dimSize };
+    expected.m_seqLen = GenerateSequenceLengths(1, maxSequenceLen)[0];
+    std::tie(referenceDenseData, expected.m_colsStarts, expected.m_rowIndices, expected.m_nonZeroValues, expected.m_numNonZeroValues) = GenerateSequenceInCSC<ElementType>(dimSize, expected.m_seqLen * dimSize);
+    sparseValue = Value::CreateSequence<ElementType>(sampleShape, expected.m_seqLen, expected.m_colsStarts.data(), expected.m_rowIndices.data(), expected.m_nonZeroValues.data(), expected.m_numNonZeroValues, device);
+
+    sampleVariable = CreateVariable<ElementType>(sampleShape, 2, true /* isSparse */);
+    sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    SortCSCBuffers(expected);
+    SortCSCBuffers(output);
+    BOOST_TEST(AreEqualCSCBuffers(expected, output), "N-Dimensional shape: the output data does not match expected.");
+
+    // exception test: multiple sequences; dense format
+    // The variable is using the dense format.
+    sampleVariable = CreateVariable<ElementType>(sampleShape, 2);
+    VerifyException([&sparseValue, &sampleVariable, &output]() {
+        sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    }, "The expected exception has not been caught: The outputVariable must be in the sparse format.");
+
+    // The Value contains multiple sequences.
+    dimSize = dimSizeDistribution(dimSizeGenerator);
+    sampleShape = NDShape{ dimSize };
+    size_t numSequences = 2;
+    auto sequenceLengths = GenerateSequenceLengths(numSequences, maxSequenceLen);
+    std::vector<NDArrayViewPtr> denseSequences(numSequences), sparseSequences(numSequences);
+    for (size_t i = 0; i < numSequences; ++i)
+        std::tie(denseSequences[i], sparseSequences[i]) = GenerateSparseSequence<float>(dimSize, sequenceLengths[i], 5);
+    sparseValue = Value::Create({ dimSize }, sparseSequences, device);
+    sampleVariable = CreateVariable<ElementType>(sampleShape, 2, true /* isSparse */);
+    VerifyException([&sparseValue, &sampleVariable, &output]() {
+        sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    }, "The expected exception has not been caught: The Value cannot be copied to buffers in sparse format, since it contains multiple sequences. Only single sequence is supported now.");
+}
+
 void ValueCopyToExceptionsTest(const DeviceDescriptor& device)
 {
     std::vector<size_t> expectedSeqLens = {1};
@@ -641,7 +792,7 @@ void ValueCopyToExceptionsTest(const DeviceDescriptor& device)
     auto val = Value::Create(sampleShape, input, device);
 
     // Test variable with unknown shape
-    auto sampleVariable = CreateVariable<float>(NDShape::Unknown, 0);
+    auto sampleVariable = CreateVariable<float>(NDShape::Unknown(), 0);
     VerifyException([&val, &sampleVariable, &output]() {
         val->CopyVariableValueTo(sampleVariable, output);
     }, "The expected exception has not been caught: It is not supported that the outputVariable has a unknown shape or inferred dimension.");
@@ -711,9 +862,8 @@ void TestSettingParameterValuesManually(const DeviceDescriptor& device)
     BOOST_TEST(AreEqual(p4.Value(), v4), "Parameter value does match the expected value.");
 }
 
-void SparseSequenceBatchValueCreationTest(size_t vocabSize, size_t maxAllowedSequenceLength, const DeviceDescriptor& device)
+void ValueCreationSparseBatchOfSequencesTest(size_t vocabSize, size_t maxAllowedSequenceLength, const DeviceDescriptor& device)
 {
-    srand(1);
     size_t numSequences = 5;
     auto sequenceLengths = GenerateSequenceLengths(numSequences, maxAllowedSequenceLength);
     std::vector<NDArrayViewPtr> denseSequences(numSequences), sparseSequences(numSequences);
@@ -983,6 +1133,65 @@ void CreateBatchOfSequencesTestOneHot(const DeviceDescriptor device, bool readOn
     }
 }
 
+void CheckSparseValueEqualToDenseValue(ValuePtr sparseValue, ValuePtr denseValue, const DeviceDescriptor device)
+{
+    auto sparseValueInDenseView = MakeSharedObject<NDArrayView>(sparseValue->GetDataType(), sparseValue->Shape(), device);
+    sparseValueInDenseView->CopyFrom(*sparseValue->Data());
+    auto sparseValueInDense = MakeSharedObject<Value>(sparseValueInDenseView, sparseValue->Mask());
+    BOOST_TEST(Internal::AreEqual(*denseValue, *sparseValueInDense), "Value created using sparse input does not match expectation");
+}
+
+template <typename ElementType>
+void CreateSequenceTestSparse(const DeviceDescriptor device, bool readOnly)
+{
+    size_t maxDimSize = 11;
+    std::default_random_engine dimSizeGenerator;
+    std::uniform_int_distribution<size_t> dimSizeDistribution(1, maxDimSize);
+    size_t maxSequenceLen = 20;
+
+    std::vector<ElementType> referenceDenseData;
+    std::vector<SparseIndexType> colsStarts;
+    std::vector<SparseIndexType> rowIndices;
+    std::vector<ElementType> nonZeroValues;
+    size_t numNonZeroValues;
+    size_t dimSize;
+    size_t seqLen;
+    ValuePtr sparseValue, denseValue;
+
+    int testRun = 4;
+    for (int i = 0; i < testRun; i++)
+    {
+        // Test without using seqStartFlag
+        dimSize = dimSizeDistribution(dimSizeGenerator);
+        seqLen = GenerateSequenceLengths(1, maxSequenceLen)[0];
+        std::tie(referenceDenseData, colsStarts, rowIndices, nonZeroValues, numNonZeroValues) = GenerateSequenceInCSC<ElementType>(dimSize, seqLen);
+
+        // Not using seqStartFlag.
+        sparseValue = Value::CreateSequence<ElementType>( { dimSize }, seqLen, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, device, readOnly);
+        denseValue = Value::CreateSequence<ElementType>({ dimSize }, referenceDenseData, device, readOnly);
+        CheckSparseValueEqualToDenseValue(sparseValue, denseValue, device);
+
+        // Using seqStartFlag.
+        auto seqStartFlag = static_cast<int>(rand()) % 2 == 0 ? true : false;
+        sparseValue = Value::CreateSequence({ dimSize }, seqLen, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, seqStartFlag, device, readOnly);
+        denseValue = Value::CreateSequence({ dimSize }, referenceDenseData, seqStartFlag, device, readOnly);
+        CheckSparseValueEqualToDenseValue(sparseValue, denseValue, device);
+    }
+
+    dimSize = dimSizeDistribution(dimSizeGenerator);
+    seqLen = GenerateSequenceLengths(1, maxSequenceLen)[0];
+    std::tie(referenceDenseData, colsStarts, rowIndices, nonZeroValues, numNonZeroValues) = GenerateSequenceInCSC<ElementType>(dimSize * dimSize, seqLen);
+
+    sparseValue = Value::CreateSequence({ dimSize * dimSize }, seqLen, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, device, readOnly);
+    denseValue = Value::CreateSequence({ dimSize * dimSize }, referenceDenseData, device, readOnly);
+    CheckSparseValueEqualToDenseValue(sparseValue, denseValue, device);
+
+    std::tie(referenceDenseData, colsStarts, rowIndices, nonZeroValues, numNonZeroValues) = GenerateSequenceInCSC<ElementType>(dimSize, seqLen * dimSize);
+    sparseValue = Value::CreateSequence<ElementType>({ dimSize, dimSize }, seqLen, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, device, readOnly);
+    denseValue = Value::CreateSequence({ dimSize, dimSize }, referenceDenseData, device, readOnly);
+    CheckSparseValueEqualToDenseValue(sparseValue, denseValue, device);
+}
+
 struct ValueFixture
 {
     ValueFixture()
@@ -995,222 +1204,300 @@ BOOST_FIXTURE_TEST_SUITE(ValueSuite, ValueFixture)
 
 BOOST_AUTO_TEST_CASE(SettingParameterValuesManuallyInCPU)
 {
+    if (!ShouldRunOnCpu())
+        return;
+
     TestSettingParameterValuesManually(DeviceDescriptor::CPUDevice());
-}
-
-BOOST_AUTO_TEST_CASE(ValueCreationWithoutNDMaskInCPU)
-{
-    ValueCreationNoNDMaskTest<float>(DeviceDescriptor::CPUDevice(), false);
-    ValueCreationNoNDMaskTest<double>(DeviceDescriptor::CPUDevice(), true);
-}
-
-BOOST_AUTO_TEST_CASE(ValueCreationWithNDMaskInCPU)
-{
-    ValueCreationWithNDMaskTest<double>(DeviceDescriptor::CPUDevice(), false);
-    ValueCreationWithNDMaskTest<float>(DeviceDescriptor::CPUDevice(), true);
-}
-
-BOOST_AUTO_TEST_CASE(ValueCreationOneHotWithoutNDMaskInCPU)
-{
-    ValueCreationOneHotNoNDMaskTest<float>(DeviceDescriptor::CPUDevice(), false);
-    ValueCreationOneHotNoNDMaskTest<double>(DeviceDescriptor::CPUDevice(), true);
-}
-
-BOOST_AUTO_TEST_CASE(ValueCreationOneHotWithNDMaskInCPU)
-{
-    ValueCreationOneHotWithNDMaskTest<double>(DeviceDescriptor::CPUDevice(), false);
-    ValueCreationOneHotWithNDMaskTest<float>(DeviceDescriptor::CPUDevice(), true);
-}
-
-BOOST_AUTO_TEST_CASE(SparseSequenceBatchValueCreationInCPU)
-{
-    SparseSequenceBatchValueCreationTest(300, 7, DeviceDescriptor::CPUDevice());
-    SparseSequenceBatchValueCreationTest(2300, 1, DeviceDescriptor::CPUDevice());
-}
-
-BOOST_AUTO_TEST_CASE(ValueCopyToDenseInCPU)
-{
-    ValueCopyToDenseTest<float>(DeviceDescriptor::CPUDevice());
-    ValueCopyToDenseTest<double>(DeviceDescriptor::CPUDevice());
-}
-
-BOOST_AUTO_TEST_CASE(ValueCopyToOneHotTestInCPU)
-{
-    ValueCopyToOneHotTest<float>(DeviceDescriptor::CPUDevice());
-    ValueCopyToOneHotTest<double>(DeviceDescriptor::CPUDevice());
-}
-
-BOOST_AUTO_TEST_CASE(ValueCopyToExceptionsInCPU)
-{
-    ValueCopyToExceptionsTest(DeviceDescriptor::CPUDevice());
-}
-
-BOOST_AUTO_TEST_CASE(CreateBatchDenseInCPU)
-{
-    CreateBatchTestDense<float>(DeviceDescriptor::CPUDevice(), true);
-    CreateBatchTestDense<double>(DeviceDescriptor::CPUDevice(), false);
-}
-
-BOOST_AUTO_TEST_CASE(CreateSequenceDenseInCPU)
-{
-    CreateSequenceTestDense<float>(DeviceDescriptor::CPUDevice(), true);
-    CreateSequenceTestDense<double>(DeviceDescriptor::CPUDevice(), false);
-}
-
-BOOST_AUTO_TEST_CASE(CreateBatchOfSequencesDenseInCPU)
-{
-    CreateBatchOfSequencesTestDense<float>(DeviceDescriptor::CPUDevice(), true);
-    CreateBatchOfSequencesTestDense<double>(DeviceDescriptor::CPUDevice(), false);
-}
-
-BOOST_AUTO_TEST_CASE(CreateBatchOneHotInCPU)
-{
-    CreateBatchTestOneHot<float>(DeviceDescriptor::CPUDevice(), true);
-    CreateBatchTestOneHot<double>(DeviceDescriptor::CPUDevice(), false);
-}
-
-BOOST_AUTO_TEST_CASE(CreateSequenceOneHotInCPU)
-{
-    CreateSequenceTestOneHot<float>(DeviceDescriptor::CPUDevice(), true);
-    CreateSequenceTestOneHot<double>(DeviceDescriptor::CPUDevice(), false);
-}
-
-BOOST_AUTO_TEST_CASE(CreateBatchOfSequencesOneHotInCPU)
-{
-    CreateBatchOfSequencesTestOneHot<float>(DeviceDescriptor::CPUDevice(), true);
-    CreateBatchOfSequencesTestOneHot<double>(DeviceDescriptor::CPUDevice(), false);
 }
 
 BOOST_AUTO_TEST_CASE(SettingParameterValuesManuallyInGPU)
 {
-    if (IsGPUAvailable())
-    TestSettingParameterValuesManually(DeviceDescriptor::GPUDevice(0));
+    if (ShouldRunOnGpu())
+        TestSettingParameterValuesManually(DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_CASE(ValueCreationWithoutNDMaskInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    ValueCreationNoNDMaskTest<float>(DeviceDescriptor::CPUDevice(), false);
+    ValueCreationNoNDMaskTest<double>(DeviceDescriptor::CPUDevice(), true);
+}
+
+BOOST_AUTO_TEST_CASE(ValueCreationWithoutNDMaskInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        ValueCreationNoNDMaskTest<double>(DeviceDescriptor::GPUDevice(0), false);
+        ValueCreationNoNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), true);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(ValueCreationWithNDMaskInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    ValueCreationWithNDMaskTest<double>(DeviceDescriptor::CPUDevice(), false);
+    ValueCreationWithNDMaskTest<float>(DeviceDescriptor::CPUDevice(), true);
 }
 
 BOOST_AUTO_TEST_CASE(ValueCreationWithNDMaskInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         ValueCreationWithNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), false);
         ValueCreationWithNDMaskTest<double>(DeviceDescriptor::GPUDevice(0), true);
     }
 }
 
-BOOST_AUTO_TEST_CASE(ValueCreationWithoutNDMaskInGPU)
+BOOST_AUTO_TEST_CASE(ValueCreationOneHotWithoutNDMaskInCPU)
 {
-    if (IsGPUAvailable())
-    {
-        ValueCreationNoNDMaskTest<double>(DeviceDescriptor::GPUDevice(0), false);
-        ValueCreationNoNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), true);
-    }
+    if (!ShouldRunOnCpu())
+        return;
 
+    ValueCreationOneHotNoNDMaskTest<float>(DeviceDescriptor::CPUDevice(), false);
+    ValueCreationOneHotNoNDMaskTest<double>(DeviceDescriptor::CPUDevice(), true);
 }
 
 BOOST_AUTO_TEST_CASE(ValueCreationOneHotWithoutNDMaskInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         ValueCreationOneHotNoNDMaskTest<double>(DeviceDescriptor::GPUDevice(0), false);
         ValueCreationOneHotNoNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), true);
     }
+}
 
+BOOST_AUTO_TEST_CASE(ValueCreationOneHotWithNDMaskInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    ValueCreationOneHotWithNDMaskTest<double>(DeviceDescriptor::CPUDevice(), false);
+    ValueCreationOneHotWithNDMaskTest<float>(DeviceDescriptor::CPUDevice(), true);
 }
 
 BOOST_AUTO_TEST_CASE(ValueCreationOneHotWithNDMaskInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         ValueCreationOneHotWithNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), false);
         ValueCreationOneHotWithNDMaskTest<double>(DeviceDescriptor::GPUDevice(0), true);
     }
 }
 
-BOOST_AUTO_TEST_CASE(SparseSequenceBatchValueCreationInGPU)
+BOOST_AUTO_TEST_CASE(ValueCreationSparseBatchOfSequencesInCPU)
 {
-    if (IsGPUAvailable())
+    if (!ShouldRunOnCpu())
+        return;
+
+    ValueCreationSparseBatchOfSequencesTest(300, 7, DeviceDescriptor::CPUDevice());
+    ValueCreationSparseBatchOfSequencesTest(2300, 1, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ValueCreationSparseBatchOfSequencesInGPU)
+{
+    if (ShouldRunOnGpu())
     {
-        SparseSequenceBatchValueCreationTest(50000, 1, DeviceDescriptor::GPUDevice(0));
-        SparseSequenceBatchValueCreationTest(6000, 6, DeviceDescriptor::GPUDevice(0));
+        ValueCreationSparseBatchOfSequencesTest(50000, 1, DeviceDescriptor::GPUDevice(0));
+        ValueCreationSparseBatchOfSequencesTest(6000, 6, DeviceDescriptor::GPUDevice(0));
     }
 }
 
-BOOST_AUTO_TEST_CASE(ValueCopyToDenseInGPU)
+BOOST_AUTO_TEST_CASE(CreateBatchDenseInCPU)
 {
-    if (IsGPUAvailable())
-    {
-        ValueCopyToDenseTest<float>(DeviceDescriptor::GPUDevice(0));
-        ValueCopyToDenseTest<double>(DeviceDescriptor::GPUDevice(0));
-    }
-}
+    if (!ShouldRunOnCpu())
+        return;
 
-BOOST_AUTO_TEST_CASE(ValueCopyToOneHotInGPU)
-{
-    if (IsGPUAvailable())
-    {
-        ValueCopyToOneHotTest<float>(DeviceDescriptor::GPUDevice(0));
-        ValueCopyToOneHotTest<double>(DeviceDescriptor::GPUDevice(0));
-    }
-}
-
-BOOST_AUTO_TEST_CASE(ValueCopyToExceptionsInGPU)
-{
-    if (IsGPUAvailable())
-    {
-        ValueCopyToExceptionsTest(DeviceDescriptor::GPUDevice(0));
-    }
+    CreateBatchTestDense<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateBatchTestDense<double>(DeviceDescriptor::CPUDevice(), false);
 }
 
 BOOST_AUTO_TEST_CASE(CreateBatchDenseInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         CreateBatchTestDense<float>(DeviceDescriptor::GPUDevice(0), false);
         CreateBatchTestDense<double>(DeviceDescriptor::GPUDevice(0), true);
     }
 }
 
+BOOST_AUTO_TEST_CASE(CreateSequenceDenseInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    CreateSequenceTestDense<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateSequenceTestDense<double>(DeviceDescriptor::CPUDevice(), false);
+}
+
 BOOST_AUTO_TEST_CASE(CreateSequenceDenseInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         CreateSequenceTestDense<float>(DeviceDescriptor::GPUDevice(0), false);
         CreateSequenceTestDense<double>(DeviceDescriptor::GPUDevice(0), true);
     }
 }
 
+BOOST_AUTO_TEST_CASE(CreateBatchOfSequencesDenseInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    CreateBatchOfSequencesTestDense<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateBatchOfSequencesTestDense<double>(DeviceDescriptor::CPUDevice(), false);
+}
+
 BOOST_AUTO_TEST_CASE(CreateBatchOfSequencesDenseInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         CreateBatchOfSequencesTestDense<float>(DeviceDescriptor::GPUDevice(0), false);
         CreateBatchOfSequencesTestDense<double>(DeviceDescriptor::GPUDevice(0), true);
     }
 }
 
+BOOST_AUTO_TEST_CASE(CreateBatchOneHotInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    CreateBatchTestOneHot<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateBatchTestOneHot<double>(DeviceDescriptor::CPUDevice(), false);
+}
+
 BOOST_AUTO_TEST_CASE(CreateBatchOneHotInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         CreateBatchTestOneHot<float>(DeviceDescriptor::GPUDevice(0), false);
         CreateBatchTestOneHot<double>(DeviceDescriptor::GPUDevice(0), true);
     }
 }
+BOOST_AUTO_TEST_CASE(CreateSequenceOneHotInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    CreateSequenceTestOneHot<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateSequenceTestOneHot<double>(DeviceDescriptor::CPUDevice(), false);
+}
 
 BOOST_AUTO_TEST_CASE(CreateSequenceOneHotInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         CreateSequenceTestOneHot<float>(DeviceDescriptor::GPUDevice(0), false);
         CreateSequenceTestOneHot<double>(DeviceDescriptor::GPUDevice(0), true);
     }
 }
 
+BOOST_AUTO_TEST_CASE(CreateBatchOfSequencesOneHotInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    CreateBatchOfSequencesTestOneHot<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateBatchOfSequencesTestOneHot<double>(DeviceDescriptor::CPUDevice(), false);
+}
+
 BOOST_AUTO_TEST_CASE(CreateBatchOfSequencesOneHotInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         CreateBatchOfSequencesTestOneHot<float>(DeviceDescriptor::GPUDevice(0), false);
         CreateBatchOfSequencesTestOneHot<double>(DeviceDescriptor::GPUDevice(0), true);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateSequenceSparseInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    CreateSequenceTestSparse<float>(DeviceDescriptor::CPUDevice(), false);
+    CreateSequenceTestSparse<double>(DeviceDescriptor::CPUDevice(), true);
+}
+
+BOOST_AUTO_TEST_CASE(CreateSequenceSparseInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        CreateSequenceTestSparse<float>(DeviceDescriptor::GPUDevice(0), false);
+        CreateSequenceTestSparse<double>(DeviceDescriptor::GPUDevice(0), true);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(ValueCopyToDenseInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    ValueCopyToDenseTest<float>(DeviceDescriptor::CPUDevice());
+    ValueCopyToDenseTest<double>(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ValueCopyToDenseInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        ValueCopyToDenseTest<float>(DeviceDescriptor::GPUDevice(0));
+        ValueCopyToDenseTest<double>(DeviceDescriptor::GPUDevice(0));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(ValueCopyToOneHotInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    ValueCopyToOneHotTest<float>(DeviceDescriptor::CPUDevice());
+    ValueCopyToOneHotTest<double>(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ValueCopyToOneHotInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        ValueCopyToOneHotTest<float>(DeviceDescriptor::GPUDevice(0));
+        ValueCopyToOneHotTest<double>(DeviceDescriptor::GPUDevice(0));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(ValueCopyToSparseCSCInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    ValueCopyToSparseCSCTest<float>(DeviceDescriptor::CPUDevice());
+    ValueCopyToSparseCSCTest<double>(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ValueCopyToSparseCSCInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        ValueCopyToSparseCSCTest<float>(DeviceDescriptor::GPUDevice(0));
+        ValueCopyToSparseCSCTest<double>(DeviceDescriptor::GPUDevice(0));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(ValueCopyToExceptionsInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    ValueCopyToExceptionsTest(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ValueCopyToExceptionsInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        ValueCopyToExceptionsTest(DeviceDescriptor::GPUDevice(0));
     }
 }
 

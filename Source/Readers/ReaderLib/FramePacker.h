@@ -7,7 +7,7 @@
 
 #include "SequencePacker.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 //A packer optimized for the case of single-frame sequences.
 class FramePacker : public SequencePacker
@@ -15,10 +15,11 @@ class FramePacker : public SequencePacker
 public:
     FramePacker(
         SequenceEnumeratorPtr sequenceEnumerator,
-        const std::vector<StreamDescriptionPtr>& streams,
+        const std::vector<StreamInformation>& streams,
         size_t numberOfBuffers = 2,
-        bool useLocalTimeline = false) :
-        SequencePacker(sequenceEnumerator, streams, numberOfBuffers, useLocalTimeline)
+        bool useLocalTimeline = false,
+        CorpusDescriptorPtr corpus = nullptr) :
+        SequencePacker(sequenceEnumerator, streams, numberOfBuffers, useLocalTimeline, corpus)
     {}
 
 protected:
@@ -26,4 +27,4 @@ protected:
 };
 
 typedef std::shared_ptr<FramePacker> FramePackerPtr;
-} } }
+}
