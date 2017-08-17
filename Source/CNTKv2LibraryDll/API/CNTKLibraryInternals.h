@@ -385,15 +385,15 @@ namespace CNTK
             ///
             CNTK_API bool Close();
 
+            // Disable copy-construction and assignment.
+            TensorBoardFileWriter(const TensorBoardFileWriter& other) = delete;
+            TensorBoardFileWriter& operator=(const TensorBoardFileWriter& other) = delete;
+
         private:
             void Init();
             void WriteModel();
             void WriteRecord(const std::string& data);
             void WriteVersion(time_t time);
-
-            // Disable copy-construction and assignment.
-            TensorBoardFileWriter(const TensorBoardFileWriter& other) = delete;
-            TensorBoardFileWriter& operator=(const TensorBoardFileWriter& other) = delete;
 
             const FunctionPtr m_model;
             const std::wstring m_dir;
