@@ -73,17 +73,16 @@ TernaryModel AttentionModel(size_t attentionDim1)
     auto Q = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
     //auto K = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"K"); // keys projection
     auto v = Parameter({ attentionDim1 }, DTYPE, GlorotUniformInitializer(), device, L"v"); // tanh projection
-    auto scale = Parameter({ }, DTYPE, 1.0, device, L"scale");
     let normQ = LengthNormalization(device);
-    return TernaryModel({ Q, /*K,*/ v /*,scale*/ }, { { L"normQ", normQ } },
+    return TernaryModel({ Q, /*K,*/ v }, { { L"normQ", normQ } },
     [=](const Variable& query, const Variable& projectedKeys/*keys*/, const Variable& data) -> Variable
     {
         // compute attention weights
-        let projectedQuery = normQ(Times(Q, query)); // [A x 1]
+        let projectedQuery = normQ(Times(Q, query, L"Q")); // [A x 1]
         DOLOG(projectedQuery);
         //let projectedKeys  = Times(K, keys);  // [A x T]
         //LOG(projectedKeys);
-        let tanh = Tanh((projectedQuery + projectedKeys) /** scale*/); // [A x T]
+        let tanh = Tanh((projectedQuery + projectedKeys), L"attTanh"); // [A x T]
 #if 0 // this fails auto-batching
         let u = Times(v, tanh, L"vProj"); // [T] vector                         // [128] * [128 x 4 x 7] -> [4 x 7]
         let w = Dynamite::Softmax(u);                                           // [4 x 7]
@@ -92,7 +91,6 @@ TernaryModel AttentionModel(size_t attentionDim1)
         let u = TransposeTimes(tanh, v, L"vProj"); // [T] col vector            // [128 x 4 x 7]' * [128] = [7 x 4]         [128] * [128 x 4 x 7] -> [4 x 7]
         DOLOG(Q);
         DOLOG(v);
-        DOLOG(scale);
         DOLOG(tanh);
         DOLOG(u);
         let w = Dynamite::Softmax(u);                                           // [7 x 4]                                  [4 x 7]
@@ -114,9 +112,9 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
     for (size_t i = 0; i < numLayers; i++)
         lstms.push_back(GRU(hiddenDim, device));
     let attentionModel = AttentionModel(attentionDim); // (state, encoding) -> interpolated encoding
-    let encBarrier = Barrier();
-    let outBarrier = Barrier();
-    let embedBarrier = Barrier();
+    let encBarrier = Barrier(L"encBarrier");
+    let outBarrier = Barrier(L"outBarrier");
+    let embedBarrier = Barrier(L"embedTargetBarrier");
     auto merge = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
     auto linear1 = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
     auto linear2 = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
@@ -139,7 +137,7 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
         { L"attentionModel", attentionModel },
         { L"merge", merge },
         { L"dense", dense },
-        { L"embed", embed } // note: seems not in the reference model
+        { L"embedTarget", embed } // note: seems not in the reference model
     });
     return BinarySequenceModel({ K }, nestedLayers,
     [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
@@ -147,9 +145,8 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
         res.resize(history.size());
         // TODO: this is one layer only for now
         // convert encoder sequence into a dense tensor, so that we can do matrix products along the sequence axis - 1
-        Variable hEncsTensor = Splice(hEncs, Axis(1)); // [2*hiddenDim, inputLen]
-        //hEncsTensor = encBarrier(hEncsTensor);
-        // ...this makes it worse... why?
+        Variable hEncsTensor = Splice(hEncs, Axis(1), L"hEncsTensor"); // [2*hiddenDim, inputLen]
+        hEncsTensor = encBarrier(hEncsTensor); // this syncs after the Splice; not the inputs. Those are synced by Recurrence(). Seems to make things worse though. Why?
         // decoding loop
         Variable state = initialState;
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
@@ -162,21 +159,16 @@ BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double 
             // do recurrent step
             // In inference, history[t] would become res[t-1].
             // TODO: Why not learn the output of the first step, and skip the <s> and funky initial attention context?
-            //let pred = history[t];
-            let pred = embedBarrier(embed(history[t]));
+            let pred = embed(embedBarrier(history[t]));
             let input = Splice({ pred, attentionContext }, Axis(0), L"augInput");
             state = lstms[0](state, input);
-            DOLOG(state);
             // compute attention vector
             attentionContext = attentionModel(state, projectedKeys/*keys*/, /*data=*/hEncsTensor);
             // compute an enhanced hidden state with attention value merged in
             let state1 = outBarrier(state);
-            let m = Tanh(merge(Splice({ state1, attentionContext }, Axis(0)))) + state1;
-            //let m = state; // normal s2s: predict from hidden state
-            DOLOG(m);
+            let m = Tanh(merge(Splice({ state1, attentionContext }, Axis(0))), L"mergeTanh") + state1;
             // compute output
             let z = dense(m);
-            DOLOG(z);
             res[t] = z;
         }
         DOLOG(hEncsTensor);
@@ -193,8 +185,8 @@ BinarySequenceModel CreateModelFunction()
     vector<Variable> e, h;
     return BinarySequenceModel({},
     {
-        { L"embed",   embed },
-        { L"encoder", encode },
+        { L"embedInput",   embed },
+        { L"encode", encode },
         { L"decode",  decode }
     },
     [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& history) mutable
@@ -334,9 +326,21 @@ void Train()
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples,
                 learner->LearningRate());
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
-#if 0   // for debugging: reduce #sequences to 2
-        args[0].resize(2);
-        args[1].resize(2);
+#if 1   // for debugging: reduce #sequences to 3, and reduce their lengths
+        args[0].resize(3);
+        args[1].resize(3);
+        let TrimLength = [](Variable& seq, size_t len) // chop off all frames after 'len', assuming the last axis is the length
+        {
+            seq = Slice(seq, Axis(seq.Shape().Rank()-1), 0, (int)len);
+        };
+        // input
+        TrimLength(args[0][0], 2);
+        TrimLength(args[0][1], 4);
+        TrimLength(args[0][2], 3);
+        // target
+        TrimLength(args[1][0], 3);
+        TrimLength(args[1][1], 2);
+        TrimLength(args[1][2], 2);
 #endif
         // train minibatch
         let mbLoss = criterion_fn(args[0], args[1]);
@@ -369,6 +373,7 @@ void Train()
         //    break;
         if (std::isnan(lossPerLabel))
             throw runtime_error("Loss is NaN.");
+        exit(0);
     }
 }
 

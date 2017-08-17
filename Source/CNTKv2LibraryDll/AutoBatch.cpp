@@ -20,8 +20,8 @@
 #include <vector>
 #include <string>
 
-//#define LOG_DETAILS   // if defined, log all forward and backward operations
-//#define LOG_STATS     // if defined, log statistics (#operations)
+#define LOG_DETAILS   // if defined, log all forward and backward operations
+#define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
@@ -345,6 +345,7 @@ namespace CNTK
         // 
         // A barrier means that all other ops available for batching get executed first, as long as there
         // is a barrier pending.
+        // BUGBUG: We reuse the NoOp opcode, but Barrier has an additional attribute. This is not accounted for in the OpSpecificConditionKind.
 
         // BatchNormalization()
         // --------------------
@@ -791,6 +792,11 @@ class Variable::AutoBatch
         NonOwningFunctionListBuilder m_viewOps;
         vector<NonOwningFunctionListBuilder> m_regularOps; // m_regularOps[] is a linked list
         NonOwningFunctionListBuilder m_barrierOps; // TODO: currently dead
+        template <typename FunctionPtr> // PrimitiveFunctionPtr or PrimitiveFunction*
+        static bool IsBarrier(const FunctionPtr& f)
+        {
+            return f->m_op == PrimitiveOpType::BarrierOp && f->m_attributes.Size() > 0;
+        }
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b)
@@ -799,7 +805,7 @@ class Variable::AutoBatch
             let op = a->m_op;
             let opClass = g_oscTable[op]; // operation-specific auto-batching class
             // free ops always get batched; even if they have different op-codes
-            if (IsViewOp(op) && op != PrimitiveOpType::BarrierOp)
+            if (IsViewOp(op) && !IsBarrier(a))
                 LogicError("should not get here for view ops or barrier ops");
             // op codes must match
             if (op != b->m_op)
@@ -842,7 +848,7 @@ class Variable::AutoBatch
         {
             let op = f->m_op;
             // we manage three ready sets, since two common kinds are very simple
-            if (op == PrimitiveOpType::BarrierOp)
+            if (IsBarrier(f))
                 // BUGBUG: We never get here since we now see through barriers for efficiency...
                 LogicError("m_barrierOps.push_back(f) should no longer be done"); // m_barrierOps.push_back(f);
             else if (IsViewOp(op))
@@ -851,18 +857,19 @@ class Variable::AutoBatch
             {
                 // determine the priority. This is for Barriers after short-circuiting NoOps...
                 // This is highly inefficient, always reaching through the Owner pointer. Needs a flag.
-                int pri = 0; // normal
+                int pri = 0; // normal priority
                 for (let& input : f->m_inputs)
                 {
-                    if (input.IsOutput() && input.OutputOwner()->m_op == PrimitiveOpType::BarrierOp)
+                    if (input.IsOutput() && IsBarrier(input.OutputOwner()))
                     {
-                        pri = -1;
+                        pri = -1; // lower priority: Can only execute when anything else of normal priority (not depending on a barrier) is gone
                         break;
                     }
                 }
                 f->m_priority = pri;
                 // this naive implementation just scans linearly
                 // scan through all op sets to see if one is batchable with 'f'
+                // So far this does not show up in profiling.
                 for (auto iter = m_regularOps.begin(); iter != m_regularOps.end(); iter++)
                 {
                     if (AreBatchable(f, iter->front()))
@@ -893,7 +900,7 @@ class Variable::AutoBatch
         NonOwningFunctionList pop_best()
         {
             // try all three queues, in priority order
-            if (!m_viewOps.empty()) // view ops always go first
+            if (!m_viewOps.empty()) // view ops always go first, since they are free
                 return move(m_viewOps);
             else if (!m_regularOps.empty()) // regular ops
             {
@@ -907,6 +914,28 @@ class Variable::AutoBatch
                     if (diff > 0)
                         best = iter;
                 }
+#ifdef LOG_DETAILS
+                // log
+                let f = best->front();
+                if (f->m_priority < 0)
+                {
+                    const wchar_t* name = nullptr;
+                    size_t id = SIZE_MAX;
+                    for (let& input : f->m_inputs)
+                    {
+                        if (!input.IsOutput())
+                            continue;
+                        let& f = input.OutputOwner();
+                        if (IsBarrier(f))
+                        {
+                            name = f->Name().c_str();
+                            id = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+                            break;
+                        }
+                    }
+                    fprintf(stderr, "\n--- %d %S\n\n", (int)id, (name && name[0]) ? name : L"Barrier");
+                }
+#endif
                 // and remove this one from the list
                 NonOwningFunctionList out = *best; // since NonOwningFunctionListBuilder uses unmanaged pointers, we can just copy it
                 m_regularOps.erase(best); // TODO: suboptimal complexity; but a list has the same problem. Priority queue?
@@ -1039,9 +1068,9 @@ class Variable::AutoBatch
             }
             else
                 fprintf(stderr, "%s%s%S%S", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input).c_str(), input.Shape().AsString().c_str());
-            if (i == 4 && inputs.size() > 5) // skip the middle ones
+            if (i == 4 && inputs.size() > 6) // skip the middle ones
             {
-                fprintf(stderr, ", ...+%d", (int)(inputs.size() - 5));
+                fprintf(stderr, ", ...+%d", (int)(inputs.size() - 6));
                 i = inputs.size() - 2;
             }
         }

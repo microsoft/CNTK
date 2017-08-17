@@ -381,7 +381,7 @@ static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& d
 static UnaryModel Barrier(const wstring& name = wstring())
 {
     static size_t id = 0;
-    auto thisId = id++; // note: don't use 'id' in lambda; it will access the static variable directly
+    auto thisId = id++;
     return [=](const Variable& x) -> Variable
     {
         return BatchSync(x, thisId, name);

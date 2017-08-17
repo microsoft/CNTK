@@ -1232,10 +1232,10 @@ namespace CNTK
         return Slice(operand, axis, beginIndex, endIndex, strides, name);
     }
 
-    FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, int beginIndex, int endIndex, const std::wstring& name)
+    FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name)
     {
         // TODO: avoid the vectors altogether; they get elided one level down anyway
-        return Slice(operand, axis, vector<int>{ beginIndex }, vector<int>{ endIndex }, name);
+        return Slice(operand, vector<Axis>{ axis }, vector<int>{ beginIndex }, vector<int>{ endIndex }, name);
     }
 
     FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name)
@@ -1813,6 +1813,13 @@ namespace CNTK
     FunctionPtr Alias(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::NoOp, operand, Dictionary(), name);
+    }
+
+    FunctionPtr BatchSync(const Variable& operand, size_t id, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameSyncId] = id;
+        return UnaryOp(PrimitiveOpType::NoOp, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName)

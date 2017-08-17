@@ -106,6 +106,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSpatialScale = L"spatialScale";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStrides = L"sliceStrides";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStridesVec = L"sliceStridesVec";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSyncId = L"syncId";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {

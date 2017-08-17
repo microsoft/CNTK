@@ -270,6 +270,7 @@ namespace CNTK
         static const std::wstring AttributeNameSpatialScale;
         static const std::wstring AttributeNameSliceStrides;
         static const std::wstring AttributeNameSliceStridesVec;
+        static const std::wstring AttributeNameSyncId;
 
     protected:
         // base constructor, called by all others except the move one

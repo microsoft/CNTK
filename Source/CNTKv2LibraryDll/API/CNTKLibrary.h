@@ -3896,7 +3896,7 @@ namespace CNTK
     ///
     /// Create an instance of the slice operation on specified tensor input operand
     ///
-    CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, int beginIndex, int endIndex, const std::wstring& name = std::wstring());
+    CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the slice operation on specified tensor input operand
@@ -4393,6 +4393,11 @@ namespace CNTK
     /// Creates a new Function instance which is just an alias of the specified operand.
     ///
     CNTK_API FunctionPtr Alias(const Variable& operand, const std::wstring& name = std::wstring());
+
+    ///
+    /// Creates a new Function instance which is just an alias of the specified operand, and enforces all values to be synchronized in auto-batching.
+    ///
+    CNTK_API FunctionPtr BatchSync(const Variable& operand, size_t id, const std::wstring& name = std::wstring());
 
     ///
     /// Creates a Block Function that encapsulates a composite to create an opaque Function object that
