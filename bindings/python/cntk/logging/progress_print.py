@@ -9,7 +9,8 @@ from __future__ import division
 import sys
 import time
 
-from cntk import cntk_py
+from cntk import cntk_py, core
+from ..device import cpu 
 
 def _warn_deprecated(message):
     from warnings import warn
@@ -470,12 +471,15 @@ class TensorBoardProgressWriter(cntk_py.ProgressWriter):
         if self.writer:
             self.writer.write_value(str(name), float(value), int(step))
 
-    def write_image(self, name, value, step):
+    def write_image(self, name, data, step):
         if self.closed:
             raise RuntimeError('Attempting to use a closed TensorBoardProgressWriter')
 
         if self.writer:
-            self.writer.write_image(str(name), value, int(step))
+            for k in data:
+                value = core.Value._as_best_data_type(k, data[k])
+                ndav = core.NDArrayView.from_data(value, cpu())
+                self.writer.write_image(str(name), ndav, int(step))
 
 
     def flush(self):
