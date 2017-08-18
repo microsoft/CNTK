@@ -78,7 +78,7 @@ BinarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim,
 //  - keys used for the weights
 //  - data gets interpolated
 // Here they are the same.
-TernaryModel AttentionModel(size_t attentionDim1)
+TernaryModel AttentionModelBahdanau(size_t attentionDim1)
 {
     auto Q = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
     auto v = Parameter({ attentionDim1 }, DTYPE, GlorotUniformInitializer(), device, L"v"); // tanh projection
@@ -96,6 +96,24 @@ TernaryModel AttentionModel(size_t attentionDim1)
      });
 }
 
+// reference attention model
+QuaternaryModel AttentionModelReference(size_t attentionDim1)
+{
+    auto H = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
+    let normH = LengthNormalization(device);
+    return QuaternaryModel({ H }, { { L"normH", normH } },
+        [=](const Variable& h, const Variable& historyProjectedKey, const Variable& encodingProjectedKey, const Variable& encodingrojectedData) -> Variable
+    {
+        // compute attention weights
+        let hProjected = normH(Times(H, h, L"H")); // [A x 1]
+        let tanh = Tanh(hProjected + historyProjectedKey, L"attTanh"); // [A x T]
+        let u = ReduceSum(ElementTimes(tanh, encodingProjectedKey, L"vProj"), Axis(0))->Output(); // [1 x T] col vector
+        let w = Reshape(Dynamite::Softmax(u), { u.Shape().TotalSize() }); // [T] this is a transposition (Transpose does not work yet)
+        let res = Times(encodingrojectedData, w, L"att"); // [A x T] x [T] -> [A]
+        return res;
+    });
+}
+
 BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
@@ -103,7 +121,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     let encBarrier = Barrier(L"encBarrier");
     let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x); }), device);
     let stepFunction = GRU(decoderRecurrentDim, device);
-    let attentionModel = AttentionModel(attentionDim); // (state, encoding) -> interpolated encoding
+    let attentionModel = AttentionModelBahdanau(attentionDim);
     let projBarrier = Barrier(L"projBarrier");
     let firstHiddenProjection = Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x); }), device);
     vector<UnaryBroadcastingModel> resnets;
@@ -279,12 +297,12 @@ void Train()
 #else
     // AdaGrad correction-correction:
     //  - LR is specified for av gradient
-    //  - numer should be /32
-    //  - denom should be /sqrt(32)
+    //  - numer should be /minibatchSize
+    //  - denom should be /sqrt(minibatchSize)
     let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;
     let lr0 = 0.0003662109375 * f;
     auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
-                                   MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000), /*eps=*/1e-8, /*adamax=*/false,
+                                   MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
                                    learnerOptions);
 #endif
     let communicator = MPICommunicator();

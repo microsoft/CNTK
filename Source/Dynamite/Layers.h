@@ -159,6 +159,7 @@ public:
 typedef TModel<function<Variable(const Variable&)>> UnaryModel;
 typedef TModel<function<Variable(const Variable&, const Variable&)>> BinaryModel;
 typedef TModel<function<Variable(const Variable&, const Variable&, const Variable&)>> TernaryModel;
+typedef TModel<function<Variable(const Variable&, const Variable&, const Variable&, const Variable&)>> QuaternaryModel;
 typedef TModel<function<void(vector<Variable>&, const vector<Variable>&)>> UnarySequenceModel;
 typedef TModel<function<void(vector<Variable>&, const vector<Variable>&, const vector<Variable>&)>> BinarySequenceModel;
 typedef TModel<function<Variable(const vector<Variable>&)>> UnaryFoldingModel;
