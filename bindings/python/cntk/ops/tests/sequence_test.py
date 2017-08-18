@@ -54,7 +54,7 @@ def test_lstm_over_lstm_thought_vectors(device_id):
     label_seq_data = [_to_csr(seq1_label_data), _to_csr(seq2_label_data)]
     param_grads, loss_result = ce.grad({x_seq_input : x_seq_data, label_seq_input : label_seq_data},
                                        wrt=ce.parameters, outputs=[ce], as_numpy=False)
-    
+
     loss_result = loss_result.as_sequences()
 
     absolute_tolerance = 0.02
@@ -83,7 +83,7 @@ class UtteranceBatchReshape(C.ops.functions.UserFunction):
 
         if (num_utterances % num_conversations) != 0:
             raise ValueError("Utterance count={} is not a multiple of specified number of conversations={}.".format(num_utterances, num_conversations))
-        
+
         # TODO: Also verify that the max conversation length matches actual data
         max_conversation_length = num_utterances / num_conversations
         result = arguments[0].data().as_shape((num_conversations, max_conversation_length,) + self.arguments[0].shape)
@@ -130,7 +130,7 @@ def test_lstm_over_lstm_thought_vectors_2(device_id):
     label_data = [_to_csr(seq1_label_data), _to_csr(seq2_label_data), _to_csr(seq3_label_data)]
     param_grads, loss_result = ce.grad({utterances_input : all_utt_data, label_input : label_data, conversation_lengths_input : conversation_lengths_data},
                                        wrt=ce.parameters, outputs=[ce], as_numpy=False)
-    
+
     loss_result = loss_result.as_sequences()
 
     absolute_tolerance = 0.01
@@ -144,8 +144,9 @@ def test_sequence_max():
   src = C.sequence.input_variable(shape=(8), sequence_axis=C.Axis("Seq"))
   out = C.sequence.reduce_max(src)
   val = out.eval({src:a})
-  expected = np.max(a, 1) 
+  expected = np.max(a, 1)
   assert np.allclose(val, expected)
+
 
 def test_neg_sequence_max():
   np.random.seed(0)
@@ -153,23 +154,56 @@ def test_neg_sequence_max():
   src = C.sequence.input_variable(shape=(8), sequence_axis=C.Axis("Seq"))
   out = C.sequence.reduce_max(src)
   val = out.eval({src:a})
-  expected = np.max(a, 1) 
+  expected = np.max(a, 1)
   assert np.allclose(val, expected)
 
-def np_softmax(a):
-  m = np.max(a, 1, keepdims=True)
+def np_softmax(a, axis):
+  m = np.max(a, axis, keepdims=True)
   e = np.exp((a-m))
-  s = np.sum(e,1, keepdims=True)
+  s = np.sum(e, axis, keepdims=True)
   return e/s
-  
+
 def test_sequence_softmax():
   np.random.seed(0)
   a = np.float32(np.random.rand(20,100,8))
   src = C.sequence.input_variable(shape=(8), sequence_axis=C.Axis("Seq"))
   out = C.sequence.softmax(src)
   val = out.eval({src:a})
-  expected = np_softmax(a)
+  expected = np_softmax(a, 1)
   assert np.allclose(val, expected)
+
+
+def test_sequence_max_with_variable_lengths():
+    np.random.seed(0)
+    a = [-np.ones(i, dtype=np.float32) for i in (7, 11, 13)]
+    src = C.sequence.input_variable(shape=(1), sequence_axis=C.Axis("Seq"))
+    out = C.sequence.reduce_max(src)
+    val = out.eval({src: a})
+    expected = [np.max(a_i) for a_i in a]
+    for val_i, expected_i in zip(val, expected):
+        assert np.allclose(val_i, expected_i)
+
+
+def test_sequence_softmax_with_variable_lengths():
+    np.random.seed(0)
+    a = [-5*np.ones(i, dtype=np.float32) for i in (7, 11, 13)]
+    src = C.sequence.input_variable(shape=(1), sequence_axis=C.Axis("Seq"))
+    out = C.sequence.softmax(src)
+    val = out.eval({src: a})
+    expected = [np_softmax(a_i, 0) for a_i in a]
+    for val_i, expected_i in zip(val, expected):
+        assert np.allclose(val_i, expected_i)
+
+
+def test_sequence_softmax_with_large_numbers():
+    np.random.seed(0)
+    a = [500000*np.ones(i, dtype=np.float32) for i in (7, 7, 7)]
+    src = C.sequence.input_variable(shape=(1), sequence_axis=C.Axis("Seq"))
+    out = C.sequence.softmax(src)
+    val = out.eval({src: a})
+    expected = [np_softmax(a_i, 0) for a_i in a]
+    for val_i, expected_i in zip(val, expected):
+        assert np.allclose(val_i, expected_i)
 
 
 def test_to_sequence_basic(device_id):
@@ -185,7 +219,7 @@ def test_to_sequence_basic(device_id):
     x = C.input_variable((C.FreeDimension, 2, 3), is_sparse=True)
     x_seq_lens = C.input_variable(())
     x_seq = C.to_sequence(x, x_seq_lens)
-    
+
     seq1_data = [[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]]
     csr_seq1 = _to_csr(seq1_data)
     ndarrayview1 = C.NDArrayView.from_csr(csr_seq1, shape=(2, 2, 3), device=C.cpu())
@@ -224,8 +258,8 @@ def test_to_sequence_backprop(device_id):
     label_seq_data = [_to_csr(seq1_label_data), _to_csr(seq2_label_data)]
     param_grads_1, loss_result_1 = ce.grad({x_seq_input : [_to_csr(seq1_data), _to_csr(seq2_data)], label_seq_input : label_seq_data},
                                            wrt=ce.parameters, outputs=[ce], as_numpy=False)
-    
-    # Create a clone of the model that uses a non-sequence input 
+
+    # Create a clone of the model that uses a non-sequence input
     # and converts it to a sequence using to_sequence
     x_non_seq_input = C.input_variable((C.FreeDimension, input_vocab_size), is_sparse=True, name='non_seq_features')
     x_seq_lens = C.input_variable((), name='sequence_lengths')
@@ -245,7 +279,7 @@ def test_to_sequence_backprop(device_id):
 
     assert np.array_equal(loss_result_1.as_sequences()[0], loss_result_2.as_sequences()[0])
     assert np.array_equal(loss_result_1.as_sequences()[1], loss_result_2.as_sequences()[1])
-    
+
     for param in param_grads_1:
         if not param_grads_1[param].is_sparse:
             reference_grad_value = param_grads_1[param].asarray()
@@ -302,14 +336,14 @@ def test_sequence_unpack_backprop(device_id):
     label_data = _to_csr([[0, 1], [1, 0]])
     param_grads_1, loss_result_1 = ce.grad({x_seq_input : [_to_csr(seq1_data), _to_csr(seq2_data)], label_input : label_data},
                                            wrt=ce.parameters, outputs=[ce], as_numpy=False)
-    
+
     z = C.sequence.reduce_sum(model)
     ce = C.cross_entropy_with_softmax(z, label_input)
     param_grads_2, loss_result_2 = ce.grad({x_seq_input : [_to_csr(seq1_data), _to_csr(seq2_data)], label_input : label_data},
                                            wrt=ce.parameters, outputs=[ce], as_numpy=False)
 
     assert np.allclose(loss_result_1.asarray(), loss_result_2.asarray())
-    
+
     for param in param_grads_1:
         if not param_grads_1[param].is_sparse:
             reference_grad_value = param_grads_1[param].asarray()
@@ -493,7 +527,7 @@ def test_op_sequence_reduce_sum(device_id, precision):
     assert np.array_equal(res[1], np.asarray([5.]))
     assert np.array_equal(res[2], np.asarray([9.]))
 
-def test_sequence_unpack_with_convolution(device_id, precision): 
+def test_sequence_unpack_with_convolution(device_id, precision):
     x = C.sequence.input((20, 20))
     y = C.sequence.unpack(x, 0, no_mask_output=True)
     z = C.reshape(y, (3, 20, 20))

@@ -2046,11 +2046,11 @@ namespace CNTK
             auto broadcastAsPlaceholder = PlaceholderVariable(L"broadcastAs");
             return AsBlock(ReconcileDynamicAxes(operandPlaceholder, broadcastAsPlaceholder), { { operandPlaceholder, operand }, { broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
         }
-        
+
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, bool keepReducedDimensions, const std::wstring& name)
         {
             auto operandPlaceholder = PlaceholderVariable(L"operand");
-            auto unpackedSequence = Unpack(operandPlaceholder, ReductionIdentityValue(PrimitiveFunction::InternalSumReductionOpName), /*suppressMaskOutput =*/ true, name);
+            auto unpackedSequence = Unpack(operandPlaceholder, ReductionIdentityValue(reductionOpName), /*suppressMaskOutput =*/ true, name);
             auto reductionResult = Internal::ReduceElements(unpackedSequence, reductionOpName, Axis(-1), keepReducedDimensions);
 
             return AsBlock(std::move(reductionResult), { { operandPlaceholder, operand } }, L"Sequence::ReduceElements", name);
@@ -2074,9 +2074,10 @@ namespace CNTK
         FunctionPtr Softmax(const Variable& operand, const std::wstring& name)
         {
             auto operandPlaceholder = PlaceholderVariable(L"operand");
-            auto reducedLogSumExp = ReduceElements(operandPlaceholder, PrimitiveFunction::InternalLogSumReductionOpName, name);
-            auto logZ = BroadcastAs(reducedLogSumExp, operandPlaceholder);
-            return AsBlock(Exp(operandPlaceholder - logZ), { { operandPlaceholder, operand } }, L"Sequence::Softmax", name);
+            auto operandDelta = operandPlaceholder - BroadcastAs(ReduceMax(operandPlaceholder, L""), operandPlaceholder);
+            auto expOperandDelta = Exp(operandDelta);
+            auto denominator = BroadcastAs(ReduceSum(expOperandDelta), operandPlaceholder);
+            return AsBlock(ElementDivide(expOperandDelta, denominator), { { operandPlaceholder, operand } }, L"Sequence::Softmax", name);
         }
 
         FunctionPtr Unpack(const Variable& operand, double paddingValue, bool supressMaskOutput, const std::wstring& name)
