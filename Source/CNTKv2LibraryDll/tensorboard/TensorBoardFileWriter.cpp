@@ -181,7 +181,7 @@ namespace CNTK
   
         void TensorBoardFileWriter::WriteImage(const std::wstring& name, NDArrayViewPtr NDPtr, uint64_t step)
         {
-            assert(value != nullptr);
+            assert(NDPtr != nullptr);
             tensorflow::Event event;
             event.set_wall_time(static_cast<double>(std::time(0)));
             tensorflow::Summary* summary = event.mutable_summary();
