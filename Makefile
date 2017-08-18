@@ -432,6 +432,8 @@ L_READER_LIBS := -l$(CNTKMATH) -l$(PERF_PROFILER)
 # CNTKLibrary
 ########################################
 
+ifdef OPENCV_PATH
+
 CNTK_COMMON_SRC =\
 	$(SOURCEDIR)/Common/BestGpu.cpp \
 	$(SOURCEDIR)/Common/MPIWrapper.cpp \
@@ -516,6 +518,9 @@ ALL_LIBS+=$(CNTKLIBRARY_LIB)
 PYTHON_LIBS+=$(CNTKLIBRARY_LIB)
 JAVA_LIBS+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
+
+INCLUDEPATH += $(OPENCV_PATH)/include
+LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
