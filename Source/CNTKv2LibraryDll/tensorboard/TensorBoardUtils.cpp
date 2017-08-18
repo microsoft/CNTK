@@ -266,7 +266,7 @@ namespace CNTK
 
         void writeImageToBuffer(void* matrix, int h, int w, int type, std::vector<uchar>& buf) {
             assert(matrix != nullptr);
-            assert(buf != nullptr);
+            assert(&buf != nullptr);
             vector<int> param = vector<int>(2);
             param[0] = CV_IMWRITE_PNG_COMPRESSION;
             param[1] = 3;//default(3)  0-9
