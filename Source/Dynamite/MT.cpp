@@ -23,41 +23,51 @@ using namespace std;
 
 using namespace Dynamite;
 
+// reference config [Arul]:
+// \\mt-data\training_archive\mtmain_backend\rom_enu_generalnn\vCurrent\2017_06_10_00h_35m_31s\train_1\network_v3_src-3gru_tgt-1gru-4fcsc-1gru_coverage.xml
+// differences:
+//  - dropout not implemented yet
+//  - GRU instead of LSTM
+//  - ReLU not clipped/scaled
+//  - no coverage/alignment model
+//  - length normalization
+//  - different attention model
+//  - no weight norm
+
 const DeviceDescriptor device(DeviceDescriptor::UseDefaultDevice());
 //const DeviceDescriptor device(DeviceDescriptor::GPUDevice(0));
 //const DeviceDescriptor device(DeviceDescriptor::CPUDevice());
-const size_t srcVocabSize = 27579 + 3; // 2330;
-const size_t tgtVocabSize = 21163 + 3; // 2330;
-const size_t embeddingDim = 512;// 300;
-const size_t attentionDim = 128;
-const size_t numEncoderLayers = 2;
-const size_t encoderHiddenDim = 256;// 128;
-const size_t numDecoderLayers = 1;
-const size_t decoderHiddenDim = 512;// 128;
+const size_t srcVocabSize = 27579 + 3;
+const size_t tgtVocabSize = 21163 + 3;
+const size_t embeddingDim = 512;
+const size_t attentionDim = 512;
+const size_t numEncoderLayers = 3;
+const size_t encoderRecurrentDim = 512;
+const size_t decoderRecurrentDim = 1024;
+const size_t numDecoderResNetProjections = 4;
+const size_t decoderProjectionDim = 768;
+const size_t topHiddenProjectionDim = 1024;
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
 #define DOLOG(var) (var)//((mbCount % 100 == 99) ? LOG(var) : 0)
 
-UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
+BinarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
 {
     dropoutInputKeepProb;
-    vector<UnarySequenceModel> layers;
+    vector<BinarySequenceModel> layers;
     for (size_t i = 0; i < numLayers; i++)
         layers.push_back(Dynamite::Sequence::BiRecurrence(GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"fwdInitialValue"),
                                                           GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"fwdInitialValue")));
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
-    return UnarySequenceModel(vector<ModelParametersPtr>(layers.begin(), layers.end()),
-    [=](vector<Variable>& res, const vector<Variable>& x) mutable
+    return BinarySequenceModel(vector<ModelParametersPtr>(layers.begin(), layers.end()),
+    [=](vector<Variable>& res, const vector<Variable>& xFwd, const vector<Variable>& xBwd) mutable
     {
         for (size_t i = 0; i < numLayers; i++)
         {
-            const vector<Variable>& in = (i == 0) ? x : hs[i % 2];
+            const vector<Variable>& inFwd = (i == 0) ? xFwd : hs[i % 2];
+            const vector<Variable>& inBwd = (i == 0) ? xBwd : hs[i % 2];
             vector<Variable>& out = (i == numLayers - 1) ? res : hs[(i+1) % 2];
-            layers[i](out, in);
-            // skip connection
-            if (i > 0)
-                for (size_t t = 0; t < out.size(); t++)
-                    out[t] = out[t] + in[t];
+            layers[i](out, inFwd, inBwd);
         }
         hs[0].clear(); hs[1].clear();
     });
@@ -71,7 +81,6 @@ UnarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, 
 TernaryModel AttentionModel(size_t attentionDim1)
 {
     auto Q = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
-    //auto K = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"K"); // keys projection
     auto v = Parameter({ attentionDim1 }, DTYPE, GlorotUniformInitializer(), device, L"v"); // tanh projection
     let normQ = LengthNormalization(device);
     return TernaryModel({ Q, /*K,*/ v }, { { L"normQ", normQ } },
@@ -79,125 +88,111 @@ TernaryModel AttentionModel(size_t attentionDim1)
     {
         // compute attention weights
         let projectedQuery = normQ(Times(Q, query, L"Q")); // [A x 1]
-        DOLOG(projectedQuery);
-        //let projectedKeys  = Times(K, keys);  // [A x T]
-        //LOG(projectedKeys);
         let tanh = Tanh((projectedQuery + projectedKeys), L"attTanh"); // [A x T]
-#if 0 // this fails auto-batching
-        let u = Times(v, tanh, L"vProj"); // [T] vector                         // [128] * [128 x 4 x 7] -> [4 x 7]
-        let w = Dynamite::Softmax(u);                                           // [4 x 7]
-        let res = Times(data, w, L"att"); // [A]                                // [128 x 4 x 7] * [4 x 7]
-#else
-        let u = TransposeTimes(tanh, v, L"vProj"); // [T] col vector            // [128 x 4 x 7]' * [128] = [7 x 4]         [128] * [128 x 4 x 7] -> [4 x 7]
-        DOLOG(Q);
-        DOLOG(v);
-        DOLOG(tanh);
-        DOLOG(u);
-        let w = Dynamite::Softmax(u);                                           // [7 x 4]                                  [4 x 7]
-        DOLOG(w);
-        let res = Times(data, w, L"att"); // [A]                                // [128 x 4 x 7] * [7 x 4]                  [128 x 4 x 7] * [4 x 7]
-        DOLOG(res);
-#endif
+        let u = TransposeTimes(tanh, v, L"vProj"); // [T] col vector
+        let w = Dynamite::Softmax(u);
+        let res = Times(data, w, L"att"); // [A]
         return res;
      });
 }
 
-BinarySequenceModel AttentionDecoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
+BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
-    dropoutInputKeepProb;
     // create all the layer objects
-    let initialState = Constant({ hiddenDim }, DTYPE, 0.0, device, L"initialState");
-    let initialContext = Constant({ 2 * encoderHiddenDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
-    vector<BinaryModel> lstms;
-    for (size_t i = 0; i < numLayers; i++)
-        lstms.push_back(GRU(hiddenDim, device));
-    let attentionModel = AttentionModel(attentionDim); // (state, encoding) -> interpolated encoding
+    let initialContext = Constant({ 2 * encoderRecurrentDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let encBarrier = Barrier(L"encBarrier");
-    let outBarrier = Barrier(L"outBarrier");
+    let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x); }), device);
+    let stepFunction = GRU(decoderRecurrentDim, device);
+    let attentionModel = AttentionModel(attentionDim); // (state, encoding) -> interpolated encoding
+    let projBarrier = Barrier(L"projBarrier");
+    let firstHiddenProjection = Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x); }), device);
+    vector<UnaryBroadcastingModel> resnets;
+    for (size_t n = 0; n < numDecoderResNetProjections; n++)
+        resnets.push_back(ResidualNet(decoderProjectionDim, device));
+    let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { return Tanh(x); }), device);
     let embedBarrier = Barrier(L"embedTargetBarrier");
-    auto merge = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
-    auto linear1 = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
-    auto linear2 = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
-    auto linear3 = Linear(hiddenDim, device); // one additional transform to merge attention into hidden state
-    auto dense = Linear(tgtVocabSize, device); // dense layer without non-linearity
-    auto embed = Embedding(embeddingDim, device); // target embeddding
-    auto K = Parameter({ attentionDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"K"); // keys projection
+    let outputProjection = Linear(tgtVocabSize, device);  // output layer without non-linearity (no sampling yet)
+    let embedTarget = Embedding(embeddingDim, device);    // target embeddding
+    let K = Parameter({ attentionDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"K"); // keys projection for attention
     let normK = LengthNormalization(device);
 
-    vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
     // decode from a top layer of an encoder, using history as history
-    // A real decoder version would do something here, e.g. if history is empty then use its own output,
-    // and maybe also take a reshuffling matrix for beam decoding.
     map<wstring, ModelParametersPtr> nestedLayers;
-    for (let& lstm : lstms)
-        nestedLayers[L"lstm[" + std::to_wstring(nestedLayers.size()) + L"]"] = lstm;
-    nestedLayers.insert(
-    {
-        { L"normK", normK },
-        { L"attentionModel", attentionModel },
-        { L"merge", merge },
-        { L"dense", dense },
-        { L"embedTarget", embed } // note: seems not in the reference model
+    for (let& resnet : resnets)
+        nestedLayers[L"resnet[" + std::to_wstring(nestedLayers.size()) + L"]"] = resnet;
+    nestedLayers.insert({
+        { L"normK",                  normK },
+        { L"initialStateProjection", initialStateProjection },
+        { L"embedTarget",            embedTarget }
+        { L"stepFunction",           stepFunction },
+        { L"attentionModel",         attentionModel },
+        { L"firstHiddenProjection",  firstHiddenProjection },
+        { L"topHiddenProjection",    topHiddenProjection },
+        { L"outputProjection",       outputProjection },
     });
     return BinarySequenceModel({ K }, nestedLayers,
     [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
     {
         res.resize(history.size());
-        // TODO: this is one layer only for now
-        // convert encoder sequence into a dense tensor, so that we can do matrix products along the sequence axis - 1
+        // convert encoder sequence into a outputProjection tensor, so that we can do matrix products along the sequence axis - 1
         Variable hEncsTensor = Splice(hEncs, Axis(1), L"hEncsTensor"); // [2*hiddenDim, inputLen]
         hEncsTensor = encBarrier(hEncsTensor); // this syncs after the Splice; not the inputs. Those are synced by Recurrence(). Seems to make things worse though. Why?
         // decoding loop
-        Variable state = initialState;
+        Variable state = Slice(hEncs.front(), Axis(0), encoderRecurrentDim, 2 * encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
+        state = initialStateProjection(state);      // match the dimensions
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
         // common subexpression of attention
         let keys = hEncsTensor;
-        DOLOG(K);
         let projectedKeys = normK(Times(K, keys));  // [A x T]
         for (size_t t = 0; t < history.size(); t++)
         {
-            // do recurrent step
-            // In inference, history[t] would become res[t-1].
-            // TODO: Why not learn the output of the first step, and skip the <s> and funky initial attention context?
-            let pred = embed(embedBarrier(history[t]));
+            // do recurrent step (in inference, history[t] would become res[t-1])
+            let pred = embedTarget(embedBarrier(history[t]));
             let input = Splice({ pred, attentionContext }, Axis(0), L"augInput");
-            state = lstms[0](state, input);
+            state = stepFunction(state, input);
             // compute attention vector
-            attentionContext = attentionModel(state, projectedKeys/*keys*/, /*data=*/hEncsTensor);
-            // compute an enhanced hidden state with attention value merged in
-            let state1 = outBarrier(state);
-            let m = Tanh(merge(Splice({ state1, attentionContext }, Axis(0))), L"mergeTanh") + state1;
+            attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
+            // stack of non-recurrent projections
+            auto state1 = projBarrier(state);
+            state1 = firstHiddenProjection(state1);
+            for (auto& resnet : resnets)
+                state1 = resnet(state1);
+            // one more transform, bringing back the attention context
+            let topHidden = topHiddenProjection(Splice({ state1, attentionContext }, Axis(0)));
+            // TODO: dropout layer here
+            dropoutInputKeepProb;
             // compute output
-            let z = dense(m);
+            let z = outputProjection(topHidden);
             res[t] = z;
         }
-        DOLOG(hEncsTensor);
-        // ...unused for now
-        hs[0].clear(); hs[1].clear();
     });
 }
 
 BinarySequenceModel CreateModelFunction()
 {
-    auto embed = Embedding(embeddingDim, device);
-    auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderHiddenDim, 0.8);
-    auto decode = AttentionDecoder(numDecoderLayers, decoderHiddenDim, 0.8);
-    vector<Variable> e, h;
+    auto embedFwd = Embedding(embeddingDim, device);
+    auto embedBwd = Embedding(embeddingDim, device);
+    auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
+    auto decode = AttentionDecoder(0.8);
+    vector<Variable> eFwd,eBwd, h;
     return BinarySequenceModel({},
     {
-        { L"embedInput",   embed },
+        { L"embedSourceFwd", embedFwd },
+        { L"embedSourceBwd", embedBwd },
         { L"encode", encode },
         { L"decode",  decode }
     },
     [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& history) mutable
     {
+        // embedding
+        embedFwd(eFwd, x);
+        embedBwd(eBwd, x);
         // encoder
-        embed(e, x);
-        DOLOG(e);
-        encode(h, e);
+        encode(h, eFwd, eBwd);
+        eFwd.clear(); eBwd.clear();
         // decoder (outputting logprobs of words)
         decode(res, history, h);
-        e.clear(); h.clear();
+        h.clear();
     });
 }
 
@@ -271,8 +266,12 @@ void Train()
     model_fn.LogParameters();
 
     let parameters = model_fn.Parameters();
+    size_t numParameters = 0;
+    for (let& p : parameters)
+        numParameters += p.Shape().TotalSize();
+    fprintf(stderr, "Total number of learnable parameters: %u\n", (unsigned int)numParameters);
     let epochSize = 10000000; // 10M is a bit more than half an epoch of ROM-ENG (~16M words)
-    let minibatchSize = 4*1384; // TODO: change to 4k or 8k
+    let minibatchSize = 4096;
     AdditionalLearningOptions learnerOptions;
     learnerOptions.gradientClippingThresholdPerSample = 2;
 #if 0
@@ -282,8 +281,9 @@ void Train()
     //  - LR is specified for av gradient
     //  - numer should be /32
     //  - denom should be /sqrt(32)
-    let f = 1 / sqrt(32.0)/*AdaGrad correction-correction*/;
-    auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.0001*f, 0.00005*f, 0.000025*f, 0.000025*f, 0.000025*f, 0.00001*f }, epochSize),
+    let f = 1 / sqrt(4096.0)/*AdaGrad correction-correction*/   /4;
+    let lr0 = 0.0003662109375 * f;
+    auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
                                    MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000), /*eps=*/1e-8, /*adamax=*/false,
                                    learnerOptions);
 #endif

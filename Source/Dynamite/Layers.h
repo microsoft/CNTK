@@ -55,8 +55,11 @@ struct ModelParameters
     typedef shared_ptr<ModelParameters> ModelParametersPtr;
     map<wstring, ModelParametersPtr> m_nestedParameters;
     ModelParameters(const vector<Parameter>& parameters, const map<wstring, ModelParametersPtr>& parentParameters)
-        : m_nestedParameters(parentParameters)
     {
+        // remove nested parameters that are empty (which happens for plain lambdas without parameters)
+        for (let& kv : parentParameters)
+            if (kv.second)
+                m_nestedParameters.insert(kv);
         for (const auto& p : parameters)
             if (p.Name().empty())
                 LogicError("parameters must be named");
@@ -393,7 +396,7 @@ static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 
-static UnaryBroadcastingModel Linear(size_t outputDim, bool bias, const DeviceDescriptor& device)
+static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, bool bias, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
 #ifdef DISABLE_NORMALIZATIONS
@@ -409,17 +412,49 @@ static UnaryBroadcastingModel Linear(size_t outputDim, bool bias, const DeviceDe
     if (bias)
     {
         auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
-        return UnaryModel({ W, scale, b }, [=](const Variable& x) { return Times(W, x * scale) + b; });
+        return UnaryModel({ W, scale, b }, { { L"activation", activation}  }, [=](const Variable& x) { return Times(W, x * scale) + b; });
     }
     else
-        return UnaryModel({ W, scale    }, [=](const Variable& x) { return Times(W, x * scale); });
+        return UnaryModel({ W, scale    }, { { L"activation", activation } }, [=](const Variable& x) { return Times(W, x * scale); });
 #endif
+}
+
+// by default we have a bias
+static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, const DeviceDescriptor& device)
+{
+    return Dense(outputDim, activation, true, device);
+}
+
+// create an identity function; makes it easy to disable stuff
+static UnaryModel Identity = [](const Variable& x) { return x; };
+
+static UnaryBroadcastingModel Linear(size_t outputDim, bool bias, const DeviceDescriptor& device)
+{
+    return Dense(outputDim, Identity, bias, device);
 }
 
 // by default we have a bias
 static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
 {
     return Linear(outputDim, true, device);
+}
+
+// ResNet layer
+// Two Dense(ReLU) with skip connection
+static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescriptor& device)
+{
+    auto W1 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W1");
+    auto W2 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W2");
+    auto scale1 = Parameter({}, DTYPE, 1.0, device, L"Wscale1");
+    auto scale2 = Parameter({}, DTYPE, 1.0, device, L"Wscale2");
+    auto b1 = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b1");
+    auto b2 = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b2");
+    return UnaryModel({ W1, W2, scale1, scale2, b1, b2 }, [=](const Variable& x)
+    {
+        let h = ReLU(Times(W1, x * scale1) + b1);
+        let r = ReLU(Times(W2, h * scale2) + b2 + x);
+        return r;
+    });
 }
 
 // create a Barrier function
@@ -431,12 +466,6 @@ static UnaryModel Barrier(const wstring& name = wstring())
     {
         return BatchSync(x, thisId, name);
     };
-}
-
-// create an identity function; makes it easy to disable stuff
-static UnaryModel Identity()
-{
-    return [](const Variable& x) -> Variable { return x; };
 }
 
 struct Sequence
@@ -500,19 +529,20 @@ struct Sequence
         });
     }
 
-    static UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const Variable& initialStateFwd, 
-                                           const BinaryModel& stepBwd, const Variable& initialStateBwd)
+    // this layer takes two inputs, one forward one backward, to mimic Frantic's config
+    static BinarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const Variable& initialStateFwd, 
+                                            const BinaryModel& stepBwd, const Variable& initialStateBwd)
     {
         let fwd = Recurrence(stepFwd, initialStateFwd);
         let bwd = Recurrence(stepBwd, initialStateBwd, true);
         let barrier = Barrier(L"BiRecurrence");
-        let splice = Sequence::Map(BinaryModel([=](const Variable& a, const Variable& b) { return Splice({ barrier(a), b }, Axis(0), L"biH"); }));
+        let splice = Sequence::Map(BinaryModel([=](const Variable& a, const Variable& b) { return Splice({ barrier(a), b }, Axis(0), L"bidi"); }));
         vector<Variable> rFwd, rBwd;
-        return UnarySequenceModel({}, { { L"stepFwd", stepFwd },{ L"stepBwd", stepBwd } },
-        [=](vector<Variable>& res, const vector<Variable>& seq) mutable
+        return BinarySequenceModel({}, { { L"stepFwd", stepFwd },{ L"stepBwd", stepBwd } },
+        [=](vector<Variable>& res, const vector<Variable>& inFwd, const vector<Variable>& inBwd) mutable
         {
-            fwd(rFwd, seq);
-            bwd(rBwd, seq);
+            fwd(rFwd, inFwd);
+            bwd(rBwd, inBwd);
             splice(res, rFwd, rBwd);
             rFwd.clear(); rBwd.clear(); // don't hold references
         });
