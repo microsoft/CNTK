@@ -60,10 +60,14 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, add_loss_functions=True,
 def create_proposal_incl_reshape(rpn_cls_score, rpn_bbox_pred, im_info, proposal_layer_param_string):
     # apply softmax to get (bg, fg) probabilities and reshape predictions back to grid of (18, H, W)
     num_predictions = int(rpn_cls_score.shape[0] / 2)
-    rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions, rpn_cls_score.shape[1], rpn_cls_score.shape[2]), name="rpn_cls_score_rshp")
-    p_rpn_cls_score_rshp = cntk.placeholder()
-    rpn_cls_sm = softmax(p_rpn_cls_score_rshp, axis=0)
-    rpn_cls_prob = cntk.as_block(rpn_cls_sm, [(p_rpn_cls_score_rshp, rpn_cls_score_rshp)], 'Softmax', 'rpn_cls_prob')
+    #rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions, rpn_cls_score.shape[1], rpn_cls_score.shape[2]), name="rpn_cls_score_rshp")
+    rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions), 0, 1, name="rpn_cls_score_rshp")
+    #rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions, -1), name="rpn_cls_score_rshp")
+    #p_rpn_cls_score_rshp = cntk.placeholder()
+    #rpn_cls_sm = softmax(p_rpn_cls_score_rshp, axis=0)
+    #rpn_cls_prob = cntk.as_block(rpn_cls_sm, [(p_rpn_cls_score_rshp, rpn_cls_score_rshp)], 'Softmax', 'rpn_cls_prob')
+    rpn_cls_prob = softmax(rpn_cls_score_rshp, axis=0)
+
     rpn_cls_prob_reshape = reshape(rpn_cls_prob, rpn_cls_score.shape, name="rpn_cls_prob_reshape")
 
     # proposal layer
@@ -84,14 +88,19 @@ def create_rpn_bottom(rpn_cls_score, rpn_bbox_pred, scaled_gt_boxes, im_info, ad
         rpn_bbox_inside_weights = atl.outputs[2]
 
         # classification loss
-        p_rpn_labels = cntk.placeholder()
-        p_rpn_cls_score_rshp = cntk.placeholder()
+        #p_rpn_labels = cntk.placeholder()
+        #p_rpn_cls_score_rshp = cntk.placeholder()
+        p_rpn_labels = rpn_labels
+        p_rpn_cls_score_rshp = alias(rpn_cls_score_rshp, name = 'rpn_cls_score_rshp_b2')
 
         keeps = cntk.greater_equal(p_rpn_labels, 0.0)
         fg_labels = element_times(p_rpn_labels, keeps, name="fg_targets")
         bg_labels = minus(1, fg_labels, name="bg_targets")
         rpn_labels_ignore = splice(bg_labels, fg_labels, axis=0)
+
         rpn_ce = cross_entropy_with_softmax(p_rpn_cls_score_rshp, rpn_labels_ignore, axis=0)
+        #rpn_ce = cntk.reduce_log_sum_exp(rpn_labels_ignore, axis=0) - reduce_sum(cntk.element_times(p_rpn_cls_score_rshp, rpn_labels_ignore), axis=0)
+
         rpn_loss_cls = element_times(rpn_ce, keeps)
 
         # The terms that are accounted for in the cls loss are those that have a label >= 0
@@ -99,9 +108,10 @@ def create_rpn_bottom(rpn_cls_score, rpn_bbox_pred, scaled_gt_boxes, im_info, ad
         cls_normalization_factor = 1.0 / cls_num_terms
         normalized_rpn_cls_loss = reduce_sum(rpn_loss_cls) * cls_normalization_factor
 
-        reduced_rpn_loss_cls = cntk.as_block(normalized_rpn_cls_loss,
-                                         [(p_rpn_labels, rpn_labels), (p_rpn_cls_score_rshp, rpn_cls_score_rshp)],
-                                         'CE_with_ignore', 'norm_rpn_cls_loss')
+        reduced_rpn_loss_cls = normalized_rpn_cls_loss
+        #reduced_rpn_loss_cls = cntk.as_block(normalized_rpn_cls_loss,
+        #                                 [(p_rpn_labels, rpn_labels), (p_rpn_cls_score_rshp, rpn_cls_score_rshp)],
+        #                                 'CE_with_ignore', 'norm_rpn_cls_loss')
 
         # regression loss
         p_rpn_bbox_pred = cntk.placeholder()

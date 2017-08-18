@@ -500,7 +500,7 @@ def train_model2(image_input, roi_input, dims_input, loss, pred_error,
             current_input_var = input_variable(current_input_shape, dynamic_axes=[Axis.default_batch_axis()], name=feature_node_name)
             data[current_input_var] = image_data
 
-            if False:
+            if True:
                 # this works for arbitrary but fixed input sizes
                 cloned_net = clone_model(loss, [feature_node_name], [loss.outputs[0].name], CloneMethod.share)
                 loss = cloned_net(current_input_var, roi_input, dims_input)

@@ -19,7 +19,7 @@ cfg = __C
 
 __C.CNTK = edict()
 
-__C.CNTK.FIXED_SIZE = True
+__C.CNTK.FIXED_SIZE = False
 __C.CNTK.MAKE_MODE = False
 __C.CNTK.TRAIN_E2E = True # E2E or 4-stage training
 __C.CNTK.TRAIN_CONV_LAYERS = True
@@ -59,7 +59,7 @@ __C.CNTK.RESULTS_BGR_PLOT_THRESHOLD = 0.1
 
 __C.CNTK.GRAPH_TYPE = "png" # "png" or "pdf"
 __C.CNTK.DEBUG_OUTPUT = True
-__C.CNTK.VISUALIZE_RESULTS = True
+__C.CNTK.VISUALIZE_RESULTS = False
 __C.CNTK.DRAW_NEGATIVE_ROIS = False
 __C.CNTK.DRAW_UNREGRESSED_ROIS = False
 
