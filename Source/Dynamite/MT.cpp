@@ -313,8 +313,16 @@ void Train()
         }
     } smoothedLoss;
     Microsoft::MSR::CNTK::Timer timer;
+    wstring modelPath = L"c:/work/cntk/dynamite_model.cmf";
+    size_t saveEvery = 3;
     for (mbCount = 0; true; mbCount++)
     {
+        // save model
+        if (mbCount % saveEvery == 0)
+        {
+            //model_fn.SaveParameters   (modelPath + L"." + to_wstring(mbCount));
+            //model_fn.RestoreParameters(modelPath + L"." + to_wstring(mbCount));
+        }
         timer.Restart();
         // get next minibatch
         auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, (size_t)minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);

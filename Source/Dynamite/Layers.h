@@ -47,6 +47,8 @@ static inline FunctionPtr operator/(const Variable& leftOperand, const Variable&
     return ElementDivide(leftOperand, rightOperand);
 }
 
+// structure to hold model parameters of a Dynamite layer
+// The actual Model instance doubles up as a shared_ptr to this.
 struct ModelParameters
 {
     map<wstring, Parameter> m_parameters;
@@ -76,22 +78,15 @@ struct ModelParameters
             LogicError("no such captured model: %ls", name.c_str());
         return *iter->second;
     }
-    // recursively traverse and collect all Parameters
 public:
-    struct ParameterLessPredicate { bool operator() (const Parameter& a, const Parameter& b) { return &a < &b; } };
-    void CollectParameters(set<Parameter, ParameterLessPredicate>& res) const
+    // recursively traverse and collect all Parameters
+    void CollectParameters(vector<Parameter>& res, unordered_set<Variable>& visited) const
     {
         for (let& kv : m_parameters)
-            res.insert(kv.second);
+            if (visited.insert(kv.second).second)
+                res.push_back(kv.second);
         for (let& kv : m_nestedParameters)
-            kv.second->CollectParameters(res);
-    }
-public:
-    set<Parameter, ParameterLessPredicate> CollectParameters() const
-    {
-        set<Parameter, ParameterLessPredicate> res;
-        CollectParameters(res);
-        return res;
+            kv.second->CollectParameters(res, visited);
     }
     void LogParameters(const wstring& prefix = L"") const
     {
@@ -111,7 +106,6 @@ typedef ModelParameters::ModelParametersPtr ModelParametersPtr;
 template<class Base>
 class TModel : public Base, public ModelParametersPtr
 {
-    const ModelParameters& ParameterSet() const { return **this; }
 public:
     TModel(const Base& f) : Base(f){}
     // constructor with parameters (their names are the Name() properties)
@@ -134,16 +128,30 @@ private:
             res[L"[" + std::to_wstring(res.size()) + L"]"] = p;
         return res;
     }
+    FunctionPtr ParametersCombined() const
+    {
+        auto parameters = Parameters();
+        return Combine(vector<Variable>(parameters.begin(), parameters.end())); // need to cast from Parameter to Variable
+    }
 public:
     TModel(const vector<ModelParametersPtr>& nested, const Base& f)
         : Base(f), ModelParametersPtr(make_shared<ModelParameters>(vector<Parameter>(), NameNumberedParameters(nested)))
     {
     }
     // TODO: would be neat to support a vector of strings for tested paths, or even . separated paths
-    const Parameter& operator[](const wstring& name) { return ParameterSet()[name]; }
-    const ModelParameters& Nested(const wstring& name) { return ParameterSet().Nested(name); }
-    vector<Parameter> Parameters() const { let res = ParameterSet().CollectParameters(); return vector<Parameter>(res.begin(), res.end()); }
-    void LogParameters() const { ParameterSet().LogParameters(); }
+    const Parameter& operator[](const wstring& name) { return (*get())[name]; } // TODO: This may not have a test currently.
+    const ModelParameters& Nested(const wstring& name) { return get()->Nested(name); }
+    vector<Parameter> Parameters() const
+    {
+        vector<Parameter> res;
+        unordered_set<Variable> visited;
+        get()->CollectParameters(res, visited);
+        return res;
+    }
+    void LogParameters() const { get()->LogParameters(); }
+    // saving and loading--we go through a proxy Combine() function so that we can use the standard CNTK functions
+    void SaveParameters   (const std::wstring& filepath) { ParametersCombined()->Save   (filepath); }
+    void RestoreParameters(const std::wstring& filepath) { ParametersCombined()->Restore(filepath); }
 };
 typedef TModel<function<Variable(const Variable&)>> UnaryModel;
 typedef TModel<function<Variable(const Variable&, const Variable&)>> BinaryModel;
@@ -299,6 +307,7 @@ static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 
+#if 1
 // TODO: change outputDim to an NDShape
 static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 {
@@ -348,6 +357,28 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         return ht;
     });
 }
+#else
+
+// Frantic's GRU kernel:
+int input_width = attention_size + 3 * recurrent_size;
+int source_width = 3 * recurrent_size;
+int aur_recurrent_width = attention_size + 2 * recurrent_size;
+float u_x = aurc_input[i*input_width + attention_size + j];
+float u_s = urc_source[i*source_width + j];
+float u_r = aur_recurrent[i*aur_recurrent_width + attention_size + j];
+float u_b = u_bias[j];
+float update = LogisticFunction(u_x + u_s + u_r + u_b);
+
+float c_x = aurc_input[i*input_width + attention_size + 2 * recurrent_size + j];
+float c_s = urc_source[i*source_width + 2 * recurrent_size + j];
+float c_r = c_recurrent[i*recurrent_size + j];
+float c_b = c_bias[j];
+float cand_value = TanhFunction(c_x + c_s + c_r + c_b);
+
+float prev_value = prev_recurrent[i*recurrent_size + j];
+output[idx] = update*cand_value + (1.0f - update)*prev_value;
+
+#endif
 
 static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
 {
