@@ -432,8 +432,6 @@ L_READER_LIBS := -l$(CNTKMATH) -l$(PERF_PROFILER)
 # CNTKLibrary
 ########################################
 
-ifdef OPENCV_PATH
-
 CNTK_COMMON_SRC =\
 	$(SOURCEDIR)/Common/BestGpu.cpp \
 	$(SOURCEDIR)/Common/MPIWrapper.cpp \
@@ -519,8 +517,11 @@ PYTHON_LIBS+=$(CNTKLIBRARY_LIB)
 JAVA_LIBS+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
+ifdef OPENCV_PATH
 INCLUDEPATH += $(OPENCV_PATH)/include
 LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
+
+endif
 
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
@@ -528,9 +529,7 @@ $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) $(INCLUDEPATH:%=-I%) -o $@ $^ $(LIBS) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a -ldl -fopenmp
 
-endif
 
-endif
 
 ########################################
 # C++ extensibility examples library
