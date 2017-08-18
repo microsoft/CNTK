@@ -499,7 +499,7 @@ CNTKLIBRARY_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/MinibatchSource.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/TrainingSession.cpp \
 
-CNTKLIBRARY_SRC+=$(CNTKLIBRARY_COMMON_SRC)
+CNTKLIBRARY_SRC+=$(CNTKLIBRARY_COMMON_SRC)$
 CNTKLIBRARY_SRC+=$(CNTK_COMMON_SRC)
 CNTKLIBRARY_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
 CNTKLIBRARY_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
@@ -517,17 +517,14 @@ PYTHON_LIBS+=$(CNTKLIBRARY_LIB)
 JAVA_LIBS+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
-ifdef OPENCV_PATH
-INCLUDEPATH += $(OPENCV_PATH)/include
-LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
-
-endif
+OPENCV_LIB_LIST := := opencv_core opencv_imgproc opencv_imgcodecs
+OPENCV_LIBS:= $(addprefix -l,$(OPENCV_LIBS_LIST))
 
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) $(INCLUDEPATH:%=-I%) -o $@ $^ $(LIBS) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a -ldl -fopenmp
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH))  -o $@ $^ $(LIBS) $(OPENCV_LIBS) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a -ldl -fopenmp
 
 
 
