@@ -16,6 +16,8 @@
 #include <set>
 #include <vector>
 
+//#define DISABLE_NORMALIZATIONS // #define this to disable LengthNormalization and Droppo scaling
+
 #define let const auto
 
 using namespace CNTK;
@@ -257,15 +259,18 @@ static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescrip
 // layer normalization without bias term (which makes not much sense since we have a bias outside anyway in many cases)
 static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device, const Axis& axis = Axis(0))
 {
+#ifdef DISABLE_NORMALIZATIONS
+    axis; device;
+    return UnaryModel(vector<Parameter>{ }, [=](const Variable& x)
+    {
+        return x;
+    });
+#else
     auto scale = Parameter({ }, DTYPE, 1.0, device, L"scale");
     let eps = Constant::Scalar(DTYPE, 1e-16, device);
     let minusHalf = Constant::Scalar(DTYPE, -0.5, device);
     return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x)
     {
-#if 0
-        axis;
-        return x;// *scale;
-#else
         let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
         let x0 = x - mean;
         //LOG(x0);
@@ -277,10 +282,10 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
         //let res = x * (invLen /*+ eps*/) * scale;
         //LOG(scale);
         //LOG(res);
-        let res = x0 * scale;
+        let res = x0 * invLen * scale;
         return res;
-#endif
     });
+#endif
 }
 
 static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
@@ -325,7 +330,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         let rt_proj = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim) + Slice(projh2, stackAxis, 1 * stackedDim, 2 * stackedDim);
         let ct_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim);
 
-        let zt = Sigmoid(zt_proj)->Output();        // fun update gate z(t)
+        let zt = Sigmoid(zt_proj)->Output();        // update gate z(t)
 
         let rt = Sigmoid(rt_proj);                  // reset gate r(t)
 
@@ -360,8 +365,16 @@ static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
 static UnaryBroadcastingModel Linear(size_t outputDim, bool bias, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
+#ifdef DISABLE_NORMALIZATIONS
+    if (bias)
+    {
+        auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
+        return UnaryModel({ W,  b }, [=](const Variable& x) { return Times(W, x) + b; });
+    }
+    else
+        return UnaryModel({ W, }, [=](const Variable& x) { return Times(W, x); });
+#else
     auto scale = Parameter({ }, DTYPE, 1.0, device, L"Wscale");
-    // BUGBUG: ^^ this causes it to no longer converge or budge, it seems
     if (bias)
     {
         auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
@@ -369,6 +382,7 @@ static UnaryBroadcastingModel Linear(size_t outputDim, bool bias, const DeviceDe
     }
     else
         return UnaryModel({ W, scale    }, [=](const Variable& x) { return Times(W, x * scale); });
+#endif
 }
 
 // by default we have a bias
@@ -381,11 +395,17 @@ static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& d
 static UnaryModel Barrier(const wstring& name = wstring())
 {
     static size_t id = 0;
-    auto thisId = id++; // note: don't use 'id' in lambda; it will access the static variable directly
+    auto thisId = ++id; // note: don't use 'id' in lambda; it will access the static variable directly
     return [=](const Variable& x) -> Variable
     {
         return BatchSync(x, thisId, name);
     };
+}
+
+// create an identity function; makes it easy to disable stuff
+static UnaryModel Identity()
+{
+    return [](const Variable& x) -> Variable { return x; };
 }
 
 struct Sequence
@@ -444,10 +464,8 @@ struct Sequence
                     res[len - 1 - t] = step(prev, seq[len - 1 - t]);
                 }
             }
-            if (!goBackwards)
-                res.back() = barrier(res.back());
-            else
-                res.front() = barrier(res.front());
+            for (size_t t = 0; t < len; t++)
+                res[t] = barrier(res[t]);
         });
     }
 

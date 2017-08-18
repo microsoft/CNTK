@@ -876,9 +876,12 @@ namespace CNTK
     std::wstring Axis::AsString() const
     {
         std::wstringstream wss;
-        wss << "Axis('";
-        wss << m_name;
-        wss << "')";
+        wss << "Axis(";
+        if (IsStaticAxis() && m_name == Axis::StaticAxisNamePrefix + std::to_wstring(StaticAxisIndex(false)))
+            wss << StaticAxisIndex(false);
+        else
+            wss << "'" << m_name << "'";
+        wss << ")";
 
         return wss.str();
     }

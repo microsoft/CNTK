@@ -20,8 +20,8 @@
 #include <vector>
 #include <string>
 
-#define LOG_DETAILS   // if defined, log all forward and backward operations
-#define LOG_STATS     // if defined, log statistics (#operations)
+//#define LOG_DETAILS   // if defined, log all forward and backward operations
+//#define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
@@ -766,9 +766,17 @@ class Variable::AutoBatch
             //(op == PrimitiveOpType::Plus && inputIndex == 0);
     }
 
+    // helper to test whether a FunctionPtr is a barrier operation
+    template <typename FunctionPtr> // PrimitiveFunctionPtr or PrimitiveFunction*
+    static bool IsBarrier(const FunctionPtr& f)
+    {
+        return f->m_op == PrimitiveOpType::BarrierOp && f->m_attributes.Size() > 0;
+    }
+
     // see through no-ops, such as barrier, Pass, or StopGradient
-    // Use this for ANY access to PrimitiveFunction::m_inputs EXCEPT when directly getting the shape.
-    static const Variable& SeeThroughNoOps(const vector<Variable>& inputs, size_t index)
+    // Use this for ANY access to PrimitiveFunction::m_inputs EXCEPT not needed (and possibly wrong one day) when directly getting the shape.
+    // This function also determines the top-most barrier id that this input may depend on.
+    static const Variable& SeeThroughNoOps(const vector<Variable>& inputs, size_t index, size_t& topBarrierId)
     {
         let& input = inputs[index];
         let& fields = *input.m_dataFields;
@@ -782,8 +790,15 @@ class Variable::AutoBatch
         // op is not an alias
         if (!IsAlias(f->m_op))
             return input;
-        // it is an alias: see right through
-        return SeeThroughNoOps(f->m_inputs, 0); // (all aliases are unary functions)
+        // it is an alias (including barrier): register barrier id and see right through
+        if (topBarrierId == SIZE_MAX && IsBarrier(f))
+            topBarrierId = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+        return SeeThroughNoOps(f->m_inputs, 0, topBarrierId); // (all aliases are unary functions)
+    }
+    static const Variable& SeeThroughNoOps(const vector<Variable>& inputs, size_t index)
+    {
+        size_t barrierId = 0; // (not passing SIZE_MAX will short-circuit the test)
+        return SeeThroughNoOps(inputs, index, barrierId);
     }
 
     // class to manage the set of ready operations (the schedule)
@@ -792,11 +807,7 @@ class Variable::AutoBatch
         NonOwningFunctionListBuilder m_viewOps;
         vector<NonOwningFunctionListBuilder> m_regularOps; // m_regularOps[] is a linked list
         NonOwningFunctionListBuilder m_barrierOps; // TODO: currently dead
-        template <typename FunctionPtr> // PrimitiveFunctionPtr or PrimitiveFunction*
-        static bool IsBarrier(const FunctionPtr& f)
-        {
-            return f->m_op == PrimitiveOpType::BarrierOp && f->m_attributes.Size() > 0;
-        }
+        vector<size_t> m_barrierPendingCounts; // [barrier id] number of consumers of a barrier id that are not yet ready
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b)
@@ -819,22 +830,30 @@ class Variable::AutoBatch
             // all input dimensions must match (with exception of a few special cases)
             for (size_t i = 0; i < a->m_inputs.size(); i++)
             {
+                // see through no-ops for testing the input
+                size_t aBarrierId = SIZE_MAX;
+                size_t bBarrierId = SIZE_MAX;
+                let& aInput = SeeThroughNoOps(a->m_inputs, i, aBarrierId);
+                let& bInput = SeeThroughNoOps(b->m_inputs, i, bBarrierId);
+                // barrier id, if any, must match
+                if (aBarrierId != bBarrierId)
+                    return false;
                 // there are a few special cases
                 if (opClass == OpSpecificConditionKind::MatrixProduct && i == 0)
                 {
                     // for Times, the first arg must be the same object, not just the same shape
                     // TODO: a special case is a dot product, which we can write as ReduceSum(ElementTimes(a,b))
                     //       This would require to rewrite the graph though; can we do that?
-                    if (SeeThroughNoOps(a->m_inputs, i).m_dataFields != SeeThroughNoOps(b->m_inputs, i).m_dataFields)
+                    if (aInput.m_dataFields != bInput.m_dataFields)
                         return false;
                 }
                 else
                 {
                     // shapes must match
-                    if (a->m_inputs[i].Shape() != b->m_inputs[i].Shape())
+                    // (TODO: Do we ever see through a reshape? Then which shape should match?)
+                    if (aInput.Shape() != bInput.Shape())
                         return false;
                 }
-                // another special case is reduction over all axes
             }
             // attributes must also match
             if (a->m_attributes != b->m_attributes)
@@ -843,6 +862,15 @@ class Variable::AutoBatch
             return true;
         }
     public:
+        // count an occurrence of a barrier with a given id
+        void CountBarrier(size_t barrierId)
+        {
+            if (barrierId == SIZE_MAX)
+                return;
+            if (barrierId >= m_barrierPendingCounts.size())
+                m_barrierPendingCounts.resize(barrierId * 10, 0);
+            m_barrierPendingCounts[barrierId]++;
+        }
         // schedule an operation that has been confirmed ready
         void Schedule(PrimitiveFunction* f)
         {
@@ -857,9 +885,19 @@ class Variable::AutoBatch
             {
                 // determine the priority. This is for Barriers after short-circuiting NoOps...
                 // This is highly inefficient, always reaching through the Owner pointer. Needs a flag.
+                // TODO: Once we have fixed the barrier, this goes away.
                 int pri = 0; // normal priority
-                for (let& input : f->m_inputs)
+                let& inputs = f->m_inputs;
+                for (size_t i = 0; i < inputs.size(); i++)
                 {
+                    size_t barrierId = SIZE_MAX;
+                    SeeThroughNoOps(inputs, i, barrierId);
+                    if (barrierId != SIZE_MAX)
+                    {
+                        fail_if(m_barrierPendingCounts[barrierId] == 0, "barrierPendingCounts decreased more than increased??");
+                        m_barrierPendingCounts[barrierId]--;
+                    }
+                    let& input = inputs[i];
                     if (input.IsOutput() && IsBarrier(input.OutputOwner()))
                     {
                         pri = -1; // lower priority: Can only execute when anything else of normal priority (not depending on a barrier) is gone
@@ -896,6 +934,27 @@ class Variable::AutoBatch
         bool empty() const { return m_viewOps.empty() && m_regularOps.empty() && m_barrierOps.empty(); }
         size_t size() const { return (m_viewOps.size() > 0) +  + (m_barrierOps.size() > 0); }
         size_t numBatchableOpsPending() const { return m_regularOps.size(); }
+        // helper to determine how many barrier ops are unfulfilled
+        template <typename IteratorType>
+        int GetBarrierGap(const IteratorType& iter)
+        {
+            let& f = iter->front();
+            let batchSize = (int)iter->size();
+            let& inputs = f->m_inputs;
+            int gap = 0;
+            // TODO: This is highly inefficient; we should remember somewhere whether a function depends on a barrier
+            for (size_t i = 0; i < inputs.size(); i++)
+            {
+                size_t barrierId = SIZE_MAX;
+                SeeThroughNoOps(inputs, i, barrierId); // TODO: this is inefficient; better have a second version that stops once it found the first barrier
+                if (barrierId == SIZE_MAX)
+                    continue;
+                let thisGap = (int)m_barrierPendingCounts[barrierId]; // how many outstanding (not ready) barrier consumers do we have?
+                if (thisGap > gap)
+                    gap = thisGap; // determine the largest gap
+            }
+            return gap;
+        }
         // select the next batched op to execute
         NonOwningFunctionList pop_best()
         {
@@ -908,7 +967,11 @@ class Variable::AutoBatch
                 for (auto iter = best + 1; iter != m_regularOps.end(); iter++)
                 {
                     // barrier is realized through priority
-                    int diff = iter->front()->m_priority - best->front()->m_priority;
+                    int diff = 0;
+                    if (diff == 0)
+                        diff = -(GetBarrierGap(iter) - GetBarrierGap(best)); // lower gap is better
+                    if (diff == 0)
+                        diff = iter->front()->m_priority - best->front()->m_priority;
                     if (diff == 0)
                         diff = (int)iter->size() - (int)best->size();
                     if (diff > 0)
@@ -917,23 +980,24 @@ class Variable::AutoBatch
 #ifdef LOG_DETAILS
                 // log
                 let f = best->front();
-                if (f->m_priority < 0)
+                let& inputs = f->m_inputs;
+                for (size_t i = 0; i < inputs.size(); i++)
                 {
-                    const wchar_t* name = nullptr;
-                    size_t id = SIZE_MAX;
-                    for (let& input : f->m_inputs)
+                    size_t barrierId = SIZE_MAX;
+                    SeeThroughNoOps(inputs, i, barrierId);
+                    if (barrierId != SIZE_MAX)
                     {
-                        if (!input.IsOutput())
-                            continue;
-                        let& f = input.OutputOwner();
-                        if (IsBarrier(f))
+                        let& input = inputs[i]; // we are lazy and only print the name if the barrier is the immediate input, so that we don't have to duplicate the traversal in SeeThroughNoOps()
+                        const wchar_t* name = nullptr;
+                        size_t id = SIZE_MAX;
+                        if (input.IsOutput())
                         {
+                            let& f = input.OutputOwner();
                             name = f->Name().c_str();
                             id = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
-                            break;
                         }
+                        fprintf(stderr, "\n--- %d (%S): %d pending\n\n", (int)id, (name && name[0]) ? name : L"?", id != SIZE_MAX ? (int)m_barrierPendingCounts[id] : -1);
                     }
-                    fprintf(stderr, "\n--- %d %S\n\n", (int)id, (name && name[0]) ? name : L"Barrier");
                 }
 #endif
                 // and remove this one from the list
@@ -988,7 +1052,9 @@ class Variable::AutoBatch
         let& inputs = f.m_inputs;
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            let& input = SeeThroughNoOps(inputs, i);
+            size_t barrierId = SIZE_MAX;
+            let& input = SeeThroughNoOps(inputs, i, barrierId);
+            m_schedule.CountBarrier(barrierId);
             auto& fields = *input.m_dataFields;
             // recursively traverse
             if (!fields.m_value)
@@ -1072,6 +1138,32 @@ class Variable::AutoBatch
             {
                 fprintf(stderr, ", ...+%d", (int)(inputs.size() - 6));
                 i = inputs.size() - 2;
+            }
+        }
+        let& attributes = f.m_attributes;
+        if (attributes.Size() > 0)
+        {
+            for (let& kv : attributes)
+            {
+                fprintf(stderr, ", %S=", kv.first.c_str());
+                let& val = kv.second;
+                if (val.HasValue())
+                {
+                    switch (val.ValueType())
+                    {
+                    case DictionaryValue::Type::Bool:    fprintf(stderr, "%s",     val.Value<bool  >() ? "true" : "false"); break;
+                    case DictionaryValue::Type::Int:     fprintf(stderr, "%d",     val.Value<int   >()); break;
+                    case DictionaryValue::Type::SizeT:   fprintf(stderr, "%d",     (int)val.Value<size_t>()); break;
+                    case DictionaryValue::Type::Float:   fprintf(stderr, "%f",     val.Value<float >()); break;
+                    case DictionaryValue::Type::Double:  fprintf(stderr, "%f",     val.Value<double>()); break;
+                    case DictionaryValue::Type::String:  fprintf(stderr, "\"%S\"", val.Value<wstring>().c_str()); break;
+                    case DictionaryValue::Type::NDShape: fprintf(stderr, "%S",     val.Value<NDShape>().AsString().c_str()); break;
+                    case DictionaryValue::Type::Axis:    fprintf(stderr, "%S",     val.Value<Axis   >().AsString().c_str()); break;
+                    default: fprintf(stderr, "(type%d)", (int)val.ValueType()); break;
+                    }
+                }
+                else
+                    fprintf(stderr, "(empty)");
             }
         }
         fprintf(stderr, ")\n");
@@ -1531,13 +1623,13 @@ public:
     //     - Any newly created batched ops are referenced this way.
     NDArrayViewPtr BatchedForward(const Variable& v)
     {
-#ifdef LOG_DETAILS
-        Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), "[r] "); });
-#endif
         auto& fields = *v.m_dataFields;
         // if value already there then just return it
         if (fields.m_value)
             return fields.m_value;
+#ifdef LOG_DETAILS
+        Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), "[r] "); });
+#endif
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
         if (!fields.m_value)
         {
