@@ -313,15 +313,19 @@ void Train()
         }
     } smoothedLoss;
     Microsoft::MSR::CNTK::Timer timer;
-    wstring modelPath = L"c:/work/cntk/dynamite_model.cmf";
+    wstring modelPath = L"d:/me/tmp_dynamite_model.cmf";
     size_t saveEvery = 3;
     for (mbCount = 0; true; mbCount++)
     {
-        // save model
+        // test model saving
         if (mbCount % saveEvery == 0)
         {
-            //model_fn.SaveParameters   (modelPath + L"." + to_wstring(mbCount));
-            //model_fn.RestoreParameters(modelPath + L"." + to_wstring(mbCount));
+            let path = modelPath + L"." + to_wstring(mbCount) + L"@" + to_wstring(communicator->CurrentWorker().m_globalRank);
+            fprintf(stderr, "saving and restoring: %S\n", path.c_str());
+            model_fn.SaveParameters(path);
+            for (auto& param : parameters) // destroy parameters as to prove that we reloaded them correctly.
+                param.Value()->SetValue(0.0);
+            model_fn.RestoreParameters(path);
         }
         timer.Restart();
         // get next minibatch

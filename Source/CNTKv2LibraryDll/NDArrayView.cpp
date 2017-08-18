@@ -176,10 +176,15 @@ namespace CNTK
 
     void NDArrayView::SetValue(double value)
     {
-        if (IsSparse() && value != 0)
-            LogicError("NDArrayView::SetValue: Setting a NDArrayView contents to a non-zero scalar is only allowed for objects with dense storage format.");
+        if (GetDataType() == DataType::Float && (float)value == value) // useful for setting stuff to 0 or 1
+            SetValue((float)value);
+        else
+        {
+            if (IsSparse() && value != 0)
+                LogicError("NDArrayView::SetValue: Setting a NDArrayView contents to a non-zero scalar is only allowed for objects with dense storage format.");
 
-        GetWritableMatrix<double>()->SetValue(value);
+            GetWritableMatrix<double>()->SetValue(value);
+        }
     }
 
     // determine matrix shape from TensorShape
