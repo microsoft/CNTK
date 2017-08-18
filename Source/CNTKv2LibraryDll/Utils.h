@@ -227,7 +227,7 @@ namespace CNTK
         {
             const auto& valueDictionary = value.Value<Dictionary>();
             s << L"[" << std::endl;
-            for (const auto& keyValuePair : *(valueDictionary.m_dictionaryData))
+            for (const auto& keyValuePair : valueDictionary.GetDictionaryData())
             {
                 AddConfigString(s, keyValuePair.first, keyValuePair.second, numIndentationSpaces + perLevelIndentSize);
             }

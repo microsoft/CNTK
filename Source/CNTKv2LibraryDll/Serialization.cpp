@@ -553,7 +553,7 @@ namespace CNTK
 
     void Serializer::Copy(const proto::Dictionary& src, Dictionary& dst)
     {
-        dst.m_dictionaryData->reserve(src.data_size());
+        dst.GetDictionaryData().reserve(src.data_size());
         for (const auto& kv : src.data())
         {
             Serializer::Copy(kv.second, dst[ToWString(kv.first)]);
@@ -774,14 +774,14 @@ namespace CNTK
 
     std::istream& operator>>(std::istream& stream, Dictionary& dictionary)
     {
-        if (!Serializer(dictionary).Read(stream, dictionary)) 
+        if (!Serializer(dictionary).Read(stream, dictionary))
             RuntimeError("Failed to parse Dictionary from the input stream.");
         return stream;
     }
 
     std::istream& operator>>(std::istream& stream, DictionaryValue& value)
     {
-        if (!Serializer(value).Read(stream, value)) 
+        if (!Serializer(value).Read(stream, value))
             RuntimeError("Failed to parse DictionaryValue from the input stream.");
         return stream;
     }
