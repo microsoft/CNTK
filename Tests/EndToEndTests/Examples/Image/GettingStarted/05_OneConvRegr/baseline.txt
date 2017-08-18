@@ -1,58 +1,60 @@
 CPU info:
-    CPU Model Name: Intel(R) Xeon(R) CPU X5680 @ 3.33GHz
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
     Hardware threads: 12
-    Total Memory: 33537232 kB
+    Total Memory: 264106564 kB
 -------------------------------------------------------------------
-=== Running /cygdrive/d/GitHub/CNTK/x64/release/cntk.exe configFile=D:\GitHub\CNTK\Examples\Image\GettingStarted/05_OneConvRegr.cntk currentDirectory=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData RunDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu DataDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData ConfigDir=D:\GitHub\CNTK\Examples\Image\GettingStarted OutputDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=- trainNetwork=[SGD=[maxEpochs=3]]
-CNTK 2.0.beta6.0+ (chazhang/rmse 8f552e, Dec 20 2016 11:06:33) on CHAZHANG at 2016/12/20 19:44:31
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/05_OneConvRegr/../../../../../../Examples/Image/GettingStarted/05_OneConvRegr.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST RunDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_05_OneConvRegr@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/05_OneConvRegr/../../../../../../Examples/Image/GettingStarted OutputDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_05_OneConvRegr@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=- trainNetwork=[SGD=[maxEpochs=3]]
+CNTK 2.1+ (HEAD 572609, Aug 21 2017 08:22:49) on ad5c3ab446a4 at 2017/08/21 08:54:18
 
-D:\GitHub\CNTK\x64\release\cntk.exe  configFile=D:\GitHub\CNTK\Examples\Image\GettingStarted/05_OneConvRegr.cntk  currentDirectory=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData  RunDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu  DataDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData  ConfigDir=D:\GitHub\CNTK\Examples\Image\GettingStarted  OutputDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-  trainNetwork=[SGD=[maxEpochs=3]]
-Changed current directory to C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData
-12/20/2016 19:44:31: Redirecting stderr to file -_trainNetwork_testNetwork.log
-12/20/2016 19:44:31: -------------------------------------------------------------------
-12/20/2016 19:44:31: Build info: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/05_OneConvRegr/../../../../../../Examples/Image/GettingStarted/05_OneConvRegr.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST  RunDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_05_OneConvRegr@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/05_OneConvRegr/../../../../../../Examples/Image/GettingStarted  OutputDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_05_OneConvRegr@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-  trainNetwork=[SGD=[maxEpochs=3]]
+Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST
+08/21/2017 08:54:18: Redirecting stderr to file -_trainNetwork_testNetwork.log
+08/21/2017 08:54:18: -------------------------------------------------------------------
+08/21/2017 08:54:18: Build info: 
 
-12/20/2016 19:44:31: 		Built time: Dec 20 2016 11:06:33
-12/20/2016 19:44:31: 		Last modified date: Mon Dec 19 16:21:48 2016
-12/20/2016 19:44:31: 		Build type: Release
-12/20/2016 19:44:31: 		Build target: GPU
-12/20/2016 19:44:31: 		With 1bit-SGD: no
-12/20/2016 19:44:31: 		With ASGD: yes
-12/20/2016 19:44:31: 		Math lib: mkl
-12/20/2016 19:44:31: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
-12/20/2016 19:44:31: 		CUB_PATH: C:\src\cub-1.4.1
-12/20/2016 19:44:31: 		CUDNN_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
-12/20/2016 19:44:31: 		Build Branch: chazhang/rmse
-12/20/2016 19:44:31: 		Build SHA1: 8f552eb944007e43031ebd259ba4d6d998b2658a (modified)
-12/20/2016 19:44:31: 		Built by chazhang on CHAZHANG
-12/20/2016 19:44:31: 		Build Path: D:\GitHub\CNTK\Source\CNTK\
-12/20/2016 19:44:31: -------------------------------------------------------------------
-12/20/2016 19:44:32: -------------------------------------------------------------------
-12/20/2016 19:44:32: GPU info:
+08/21/2017 08:54:18: 		Built time: Aug 21 2017 08:20:29
+08/21/2017 08:54:18: 		Last modified date: Thu Aug  3 09:47:36 2017
+08/21/2017 08:54:18: 		Build type: release
+08/21/2017 08:54:18: 		Build target: GPU
+08/21/2017 08:54:18: 		With 1bit-SGD: no
+08/21/2017 08:54:18: 		With ASGD: yes
+08/21/2017 08:54:18: 		Math lib: mkl
+08/21/2017 08:54:18: 		CUDA_PATH: /usr/local/cuda-8.0
+08/21/2017 08:54:18: 		CUB_PATH: /usr/local/cub-1.4.1
+08/21/2017 08:54:18: 		CUDNN_PATH: /usr/local/cudnn-6.0
+08/21/2017 08:54:18: 		Build Branch: HEAD
+08/21/2017 08:54:18: 		Build SHA1: 57260963c605c12d3796e37783433518ab8ba039
+08/21/2017 08:54:18: 		Built by Source/CNTK/buildinfo.h$$0 on 516c40771854
+08/21/2017 08:54:18: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+08/21/2017 08:54:18: 		MPI distribution: Open MPI
+08/21/2017 08:54:18: 		MPI version: 1.10.7
+08/21/2017 08:54:18: -------------------------------------------------------------------
+08/21/2017 08:54:18: -------------------------------------------------------------------
+08/21/2017 08:54:18: GPU info:
 
-12/20/2016 19:44:32: 		Device[0]: cores = 2688; computeCapability = 3.5; type = "GeForce GTX TITAN"; memory = 6144 MB
-12/20/2016 19:44:32: -------------------------------------------------------------------
+08/21/2017 08:54:18: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; total memory = 3020 MB; free memory = 3018 MB
+08/21/2017 08:54:18: -------------------------------------------------------------------
 
 Configuration After Processing and Variable Resolution:
 
 configparameters: 05_OneConvRegr.cntk:command=trainNetwork:testNetwork
-configparameters: 05_OneConvRegr.cntk:ConfigDir=D:\GitHub\CNTK\Examples\Image\GettingStarted
-configparameters: 05_OneConvRegr.cntk:currentDirectory=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData
-configparameters: 05_OneConvRegr.cntk:dataDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData
+configparameters: 05_OneConvRegr.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/05_OneConvRegr/../../../../../../Examples/Image/GettingStarted
+configparameters: 05_OneConvRegr.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST
+configparameters: 05_OneConvRegr.cntk:dataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST
 configparameters: 05_OneConvRegr.cntk:deviceId=0
 configparameters: 05_OneConvRegr.cntk:forceDeterministicAlgorithms=true
-configparameters: 05_OneConvRegr.cntk:modelPath=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr
-configparameters: 05_OneConvRegr.cntk:outputDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu
+configparameters: 05_OneConvRegr.cntk:modelPath=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr
+configparameters: 05_OneConvRegr.cntk:outputDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_05_OneConvRegr@release_gpu
 configparameters: 05_OneConvRegr.cntk:precision=float
 configparameters: 05_OneConvRegr.cntk:rootDir=..
-configparameters: 05_OneConvRegr.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu
+configparameters: 05_OneConvRegr.cntk:RunDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_05_OneConvRegr@release_gpu
 configparameters: 05_OneConvRegr.cntk:stderr=-
 configparameters: 05_OneConvRegr.cntk:testNetwork={
     action = "test"
 minibatchSize = 1024    
     reader = {
         readerType = "CNTKTextFormatReader"
-        file = "C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData/Test-28x28_cntk_text.txt"
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST/Test-28x28_cntk_text.txt"
         input = {
             features = { dim = 784 ; format = "dense" }
             labels =   { dim = 10  ; format = "dense" }
@@ -98,7 +100,7 @@ labelDim = 10
     }
     reader = {
         readerType = "CNTKTextFormatReader"
-        file = "C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData/Train-28x28_cntk_text.txt"
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST/Train-28x28_cntk_text.txt"
         input = {
             features   = { dim = 784 ; format = "dense" }
             labels =   { dim = 10  ; format = "dense" }
@@ -106,17 +108,17 @@ labelDim = 10
     }   
 } [SGD=[maxEpochs=3]]
 
-12/20/2016 19:44:32: Commands: trainNetwork testNetwork
-12/20/2016 19:44:32: precision = "float"
-12/20/2016 19:44:32: WARNING: forceDeterministcAlgorithms flag is specified. Using 1 CPU thread for processing.
+08/21/2017 08:54:18: Commands: trainNetwork testNetwork
+08/21/2017 08:54:18: precision = "float"
+08/21/2017 08:54:18: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
 
-12/20/2016 19:44:32: ##############################################################################
-12/20/2016 19:44:32: #                                                                            #
-12/20/2016 19:44:32: # trainNetwork command (train action)                                        #
-12/20/2016 19:44:32: #                                                                            #
-12/20/2016 19:44:32: ##############################################################################
+08/21/2017 08:54:18: ##############################################################################
+08/21/2017 08:54:18: #                                                                            #
+08/21/2017 08:54:18: # trainNetwork command (train action)                                        #
+08/21/2017 08:54:18: #                                                                            #
+08/21/2017 08:54:18: ##############################################################################
 
-12/20/2016 19:44:32: 
+08/21/2017 08:54:18: 
 Creating virgin network.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as glorotUniform later when dimensions are fully known.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[64 x 0] as glorotUniform later when dimensions are fully known.
@@ -174,86 +176,112 @@ _z.x._.x: using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Outp
 
 Post-processing network complete.
 
-12/20/2016 19:44:32: 
+08/21/2017 08:54:19: 
 Model has 25 nodes. Using GPU 0.
 
-12/20/2016 19:44:32: Training criterion:   rmse = Sqrt
+08/21/2017 08:54:19: Training criterion:   rmse = Sqrt
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 45 matrices, 28 are shared as 11, and 17 are not shared.
+Gradient Memory Aliasing: 8 are aliased.
+	z.PlusArgs[0] (gradient) reuses z (gradient)
+	z.x._.x.PlusArgs[0] (gradient) reuses z.x._.x (gradient)
+	labels (gradient) reuses diff (gradient)
+	z.x._.x.x._.c (gradient) reuses z.x._.x.x._.res.x (gradient)
 
-	{ model.arrayOfFunctions[1].W : [5 x 5 x 1 x 16] (gradient)
-	  z.x._.x.x._.res.x : [28 x 28 x 16 x *] }
-	{ z.x : [64 x *]
-	  z.x._.x.PlusArgs[0] : [64 x *] (gradient) }
+Memory Sharing: Out of 45 matrices, 31 are shared as 8, and 14 are not shared.
+
+Here are the ones that share memory:
+	{ _z.x._.x : [14 x 14 x 16 x *] (gradient)
+	  z.x : [64 x *]
+	  z.x._.x.PlusArgs[0] : [64 x *] }
 	{ diff : [10 x *]
-	  z.PlusArgs[0] : [10 x *] (gradient) }
-	{ model.arrayOfFunctions[6].W : [10 x 64] (gradient)
-	  sqerr._ : [10 x *]
-	  z : [10 x *] (gradient) }
-	{ z.x._.x.x : [28 x 28 x 16 x *]
-	  z.x._.x.x._.c : [28 x 28 x 16 x *] (gradient) }
+	  model.arrayOfFunctions[6].W : [10 x 64] (gradient) }
 	{ model.arrayOfFunctions[4].arrayOfFunctions[0].W : [64 x 14 x 14 x 16] (gradient)
-	  z.x._.x : [64 x *] }
-	{ diff : [10 x *] (gradient)
-	  model.arrayOfFunctions[6].b : [10] (gradient)
+	  rmse.z : [1 x *] (gradient)
+	  sqerr._ : [10 x *]
+	  sqerr._ : [10 x *] (gradient)
+	  z.PlusArgs[0] : [10 x *]
+	  z.x : [64 x *] (gradient) }
+	{ model.arrayOfFunctions[1].W : [5 x 5 x 1 x 16] (gradient)
+	  z.x._.x.x : [28 x 28 x 16 x *]
+	  z.x._.x.x._.c : [28 x 28 x 16 x *] }
+	{ model.arrayOfFunctions[4].arrayOfFunctions[0].b : [64] (gradient)
 	  sqerr : [1 x *] }
 	{ model.arrayOfFunctions[1].b : [1 x 1 x 16] (gradient)
-	  z.x._.x.PlusArgs[0] : [64 x *]
+	  sqerr : [1 x *] (gradient)
+	  z : [10 x *]
+	  z : [10 x *] (gradient)
+	  z.PlusArgs[0] : [10 x *] (gradient)
+	  z.x._.x : [64 x *]
+	  z.x._.x : [64 x *] (gradient)
+	  z.x._.x.PlusArgs[0] : [64 x *] (gradient)
 	  z.x._.x.x : [28 x 28 x 16 x *] (gradient) }
-	{ _z.x._.x : [14 x 14 x 16 x *] (gradient)
-	  z.PlusArgs[0] : [10 x *]
-	  z.x._.x : [64 x *] (gradient) }
-	{ model.arrayOfFunctions[4].arrayOfFunctions[0].b : [64] (gradient)
-	  rmse.z : [1 x *]
-	  sqerr._ : [10 x *] (gradient)
-	  z.x : [64 x *] (gradient) }
+	{ rmse : [1 x *] (gradient)
+	  rmse.z : [1 x *] }
 	{ _z.x._.x : [14 x 14 x 16 x *]
+	  z.x._.x.x._.c : [28 x 28 x 16 x *] (gradient)
+	  z.x._.x.x._.res.x : [28 x 28 x 16 x *]
 	  z.x._.x.x._.res.x : [28 x 28 x 16 x *] (gradient) }
 
-
-12/20/2016 19:44:32: Training 201834 parameters in 6 out of 6 parameter tensors and 20 nodes with gradient:
-
-12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation) : [5 x 5 x 1 x 16]
-12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[1].b' (LearnableParameter operation) : [1 x 1 x 16]
-12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].W' (LearnableParameter operation) : [64 x 14 x 14 x 16]
-12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].b' (LearnableParameter operation) : [64]
-12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[6].W' (LearnableParameter operation) : [10 x 64]
-12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[6].b' (LearnableParameter operation) : [10]
-
-12/20/2016 19:44:32: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
-
-12/20/2016 19:44:32: Starting Epoch 1: learning rate per sample = 0.001000  effective momentum = 0.939413  momentum as time constant = 1024.0 samples
-
-12/20/2016 19:44:32: Starting minibatch loop.
-12/20/2016 19:44:36:  Epoch[ 1 of 3]-Minibatch[   1- 500]: rmse = 0.19692780 * 32000; time = 3.5997s; samplesPerSecond = 8889.6
-12/20/2016 19:44:38: Finished Epoch[ 1 of 3]: [Training] rmse = 0.16610838 * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.001; epochTime=5.13347s
-12/20/2016 19:44:38: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr.1'
-
-12/20/2016 19:44:38: Starting Epoch 2: learning rate per sample = 0.001000  effective momentum = 0.939413  momentum as time constant = 1024.0 samples
-
-12/20/2016 19:44:38: Starting minibatch loop.
-12/20/2016 19:44:39:  Epoch[ 2 of 3]-Minibatch[   1- 500, 100.00%]: rmse = 0.10913648 * 32000; time = 1.7382s; samplesPerSecond = 18409.5
-12/20/2016 19:44:41: Finished Epoch[ 2 of 3]: [Training] rmse = 0.10355435 * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.001; epochTime=3.27313s
-12/20/2016 19:44:41: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr.2'
-
-12/20/2016 19:44:41: Starting Epoch 3: learning rate per sample = 0.001000  effective momentum = 0.939413  momentum as time constant = 1024.0 samples
-
-12/20/2016 19:44:41: Starting minibatch loop.
-12/20/2016 19:44:43:  Epoch[ 3 of 3]-Minibatch[   1- 500, 100.00%]: rmse = 0.08839038 * 32000; time = 1.7339s; samplesPerSecond = 18455.8
-12/20/2016 19:44:44: Finished Epoch[ 3 of 3]: [Training] rmse = 0.08518207 * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.001; epochTime=3.26846s
-12/20/2016 19:44:44: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr'
-
-12/20/2016 19:44:44: Action "train" complete.
+Here are the ones that don't share memory:
+	{labels : [10 x *]}
+	{model.arrayOfFunctions[6].W : [10 x 64]}
+	{_rmse.z : [1]}
+	{model.arrayOfFunctions[6].b : [10]}
+	{model.arrayOfFunctions[4].arrayOfFunctions[0].W : [64 x 14 x 14 x 16]}
+	{model.arrayOfFunctions[1].W : [5 x 5 x 1 x 16]}
+	{rmse : [1 x *]}
+	{model.arrayOfFunctions[1].b : [1 x 1 x 16]}
+	{features : [28 x 28 x 1 x *]}
+	{z.x._.x.x._.x.ElementTimesArgs[0] : [1 x 1]}
+	{model.arrayOfFunctions[4].arrayOfFunctions[0].b : [64]}
+	{z.x._.x.x._.x : [28 x 28 x 1 x *]}
+	{diff : [10 x *] (gradient)}
+	{model.arrayOfFunctions[6].b : [10] (gradient)}
 
 
-12/20/2016 19:44:44: ##############################################################################
-12/20/2016 19:44:44: #                                                                            #
-12/20/2016 19:44:44: # testNetwork command (test action)                                          #
-12/20/2016 19:44:44: #                                                                            #
-12/20/2016 19:44:44: ##############################################################################
+08/21/2017 08:54:19: Training 201834 parameters in 6 out of 6 parameter tensors and 20 nodes with gradient:
+
+08/21/2017 08:54:19: 	Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation) : [5 x 5 x 1 x 16]
+08/21/2017 08:54:19: 	Node 'model.arrayOfFunctions[1].b' (LearnableParameter operation) : [1 x 1 x 16]
+08/21/2017 08:54:19: 	Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].W' (LearnableParameter operation) : [64 x 14 x 14 x 16]
+08/21/2017 08:54:19: 	Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].b' (LearnableParameter operation) : [64]
+08/21/2017 08:54:19: 	Node 'model.arrayOfFunctions[6].W' (LearnableParameter operation) : [10 x 64]
+08/21/2017 08:54:19: 	Node 'model.arrayOfFunctions[6].b' (LearnableParameter operation) : [10]
+
+08/21/2017 08:54:19: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+08/21/2017 08:54:19: Starting Epoch 1: learning rate per sample = 0.001  effective momentum = 0.939413  momentum as time constant = 1024.0 samples
+
+08/21/2017 08:54:19: Starting minibatch loop.
+08/21/2017 08:54:22:  Epoch[ 1 of 3]-Minibatch[   1- 500]: rmse = 0.19081726 * 32000; time = 3.3972s; samplesPerSecond = 9419.5
+08/21/2017 08:54:23: Finished Epoch[ 1 of 3]: [Training] rmse = 0.16214149 * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.001; epochTime=4.45574s
+08/21/2017 08:54:23: SGD: Saving checkpoint model '/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr.1'
+
+08/21/2017 08:54:24: Starting Epoch 2: learning rate per sample = 0.001  effective momentum = 0.939413  momentum as time constant = 1024.0 samples
+
+08/21/2017 08:54:24: Starting minibatch loop.
+08/21/2017 08:54:25:  Epoch[ 2 of 3]-Minibatch[   1- 500, 100.00%]: rmse = 0.10944039 * 32000; time = 1.2013s; samplesPerSecond = 26637.0
+08/21/2017 08:54:26: Finished Epoch[ 2 of 3]: [Training] rmse = 0.10432612 * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.001; epochTime=2.26179s
+08/21/2017 08:54:26: SGD: Saving checkpoint model '/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr.2'
+
+08/21/2017 08:54:26: Starting Epoch 3: learning rate per sample = 0.001  effective momentum = 0.939413  momentum as time constant = 1024.0 samples
+
+08/21/2017 08:54:26: Starting minibatch loop.
+08/21/2017 08:54:27:  Epoch[ 3 of 3]-Minibatch[   1- 500, 100.00%]: rmse = 0.09035979 * 32000; time = 1.2027s; samplesPerSecond = 26607.3
+08/21/2017 08:54:28: Finished Epoch[ 3 of 3]: [Training] rmse = 0.08720698 * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.001; epochTime=2.25952s
+08/21/2017 08:54:28: SGD: Saving checkpoint model '/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr'
+
+08/21/2017 08:54:28: Action "train" complete.
+
+
+08/21/2017 08:54:28: ##############################################################################
+08/21/2017 08:54:28: #                                                                            #
+08/21/2017 08:54:28: # testNetwork command (test action)                                          #
+08/21/2017 08:54:28: #                                                                            #
+08/21/2017 08:54:28: ##############################################################################
 
 
 Post-processing network...
@@ -307,12 +335,40 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 25 matrices, 0 are shared as 0, and 25 are not shared.
+Memory Sharing: Out of 25 matrices, 14 are shared as 3, and 11 are not shared.
 
+Here are the ones that share memory:
+	{ diff : [10 x *1]
+	  sqerr : [1 x *1]
+	  z.PlusArgs[0] : [10 x *1]
+	  z.x._.x.PlusArgs[0] : [64 x *1] }
+	{ z.x._.x : [64 x *1]
+	  z.x._.x.x : [28 x 28 x 16 x *1]
+	  z.x._.x.x._.c : [28 x 28 x 16 x *1] }
+	{ _z.x._.x : [14 x 14 x 16 x *1]
+	  rmse.z : [1 x *1]
+	  sqerr._ : [10 x *1]
+	  z : [10 x *1]
+	  z.x : [64 x *1]
+	  z.x._.x.x._.res.x : [28 x 28 x 16 x *1]
+	  z.x._.x.x._.x : [28 x 28 x 1 x *1] }
 
-12/20/2016 19:44:46: Minibatch[1-10]: rmse = 0.07736671 * 10000
-12/20/2016 19:44:46: Final Results: Minibatch[1-10]: rmse = 0.07736671 * 10000
+Here are the ones that don't share memory:
+	{model.arrayOfFunctions[6].W : [10 x 64]}
+	{z.x._.x.x._.x.ElementTimesArgs[0] : [1 x 1]}
+	{rmse : [1 x *1]}
+	{model.arrayOfFunctions[6].b : [10]}
+	{model.arrayOfFunctions[4].arrayOfFunctions[0].b : [64]}
+	{model.arrayOfFunctions[4].arrayOfFunctions[0].W : [64 x 14 x 14 x 16]}
+	{model.arrayOfFunctions[1].b : [1 x 1 x 16]}
+	{model.arrayOfFunctions[1].W : [5 x 5 x 1 x 16]}
+	{labels : [10 x *1]}
+	{features : [28 x 28 x 1 x *1]}
+	{_rmse.z : [1]}
 
-12/20/2016 19:44:46: Action "test" complete.
+08/21/2017 08:54:29: Minibatch[1-10]: rmse = 0.07923899 * 10000
+08/21/2017 08:54:29: Final Results: Minibatch[1-10]: rmse = 0.07923899 * 10000
 
-12/20/2016 19:44:46: __COMPLETED__
+08/21/2017 08:54:29: Action "test" complete.
+
+08/21/2017 08:54:29: __COMPLETED__

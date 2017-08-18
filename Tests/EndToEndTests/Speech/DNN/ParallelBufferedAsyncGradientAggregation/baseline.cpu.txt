@@ -1,613 +1,766 @@
 CPU info:
-    CPU Model Name: Intel(R) Xeon(R) CPU W3530 @ 2.80GHz
-    Hardware threads: 4
-    Total Memory: 12580404 kB
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 12
+    Total Memory: 264106564 kB
 -------------------------------------------------------------------
-=== Running C:\Program Files\Microsoft MPI\Bin\/mpiexec.exe -n 3 C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu DeviceId=-1 timestamping=true numCPUThreads=1 precision=double speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]] speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]] speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]] speechTrain=[SGD=[maxEpochs=4]] speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]] stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
-CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:31:19) on cntk-muc03 at 2016/12/15 08:45:01
+=== Running mpiexec -n 3 /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/1bitsgd/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/../cntk.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/.. OutputDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu DeviceId=-1 timestamping=true numCPUThreads=4 precision=double speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]] speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]] speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]] speechTrain=[SGD=[maxEpochs=4]] speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]] stderr=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
+CNTK 2.1+ (HEAD 572609, Aug 21 2017 08:24:29) on a0296eea6817 at 2017/08/21 14:36:13
 
-C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=1  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
-Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
-requestnodes [MPIWrapper]: using 3 out of 3 MPI nodes on a single host (3 requested); we (1) are in (participating)
-CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:31:19) on cntk-muc03 at 2016/12/15 08:45:01
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/1bitsgd/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/../cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/..  OutputDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=4  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderrCNTK 2.1+ (HEAD 572609, Aug 21 2017 08:24:29) on a0296eea6817 at 2017/08/21 14:36:13
 
-C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=1  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
-Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
-requestnodes [MPIWrapper]: using 3 out of 3 MPI nodes on a single host (3 requested); we (2) are in (participating)
-CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:31:19) on cntk-muc03 at 2016/12/15 08:45:01
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/1bitsgd/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/../cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/..  OutputDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=4  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
 
-C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=1  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
-Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
-requestnodes [MPIWrapper]: using 3 out of 3 MPI nodes on a single host (3 requested); we (0) are in (participating)
-MPI Rank 0: 12/15/2016 08:45:01: Redirecting stderr to file C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr_speechTrain.logrank0
-MPI Rank 0: CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:31:19) on cntk-muc03 at 2016/12/15 08:45:01
+CNTK 2.1+ (HEAD 572609, Aug 21 2017 08:24:29) on a0296eea6817 at 2017/08/21 14:36:13
+
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/1bitsgd/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/../cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/..  OutputDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=4  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
+Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
+  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
+Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
+ping [requestnodes (before change)]: 3 nodes pinging each other
+ping [requestnodes (before change)]: 3 nodes pinging each other
+ping [requestnodes (before change)]: 3 nodes pinging each other
+ping [requestnodes (after change)]: 3 nodes pinging each other
+ping [requestnodes (after change)]: 3 nodes pinging each other
+requestnodes [MPIWrapperMpi]: using 3 out of 3 MPI nodes on a single host (3 requested); we (0) are in (participating)
+ping [requestnodes (after change)]: 3 nodes pinging each other
+requestnodes [MPIWrapperMpi]: using 3 out of 3 MPI nodes on a single host (3 requested); we (2) are in (participating)
+ping [mpihelper]: 3 nodes pinging each other
+requestnodes [MPIWrapperMpi]: using 3 out of 3 MPI nodes on a single host (3 requested); we (1) are in (participating)
+ping [mpihelper]: 3 nodes pinging each other
+ping [mpihelper]: 3 nodes pinging each other
+08/21/2017 14:36:13: Redirecting stderr to file /tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr_speechTrain.logrank0
+08/21/2017 14:36:13: Redirecting stderr to file /tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr_speechTrain.logrank1
+08/21/2017 14:36:14: Redirecting stderr to file /tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr_speechTrain.logrank2
+MPI Rank 0: CNTK 2.1+ (HEAD 572609, Aug 21 2017 08:24:29) on a0296eea6817 at 2017/08/21 14:36:13
 MPI Rank 0: 
-MPI Rank 0: C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=1  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
-MPI Rank 0: 12/15/2016 08:45:01: Using 1 CPU threads.
+MPI Rank 0: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/1bitsgd/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/../cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/..  OutputDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=4  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
+MPI Rank 0: 08/21/2017 14:36:13: -------------------------------------------------------------------
+MPI Rank 0: 08/21/2017 14:36:13: Build info: 
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:01: ##############################################################################
-MPI Rank 0: 12/15/2016 08:45:01: #                                                                            #
-MPI Rank 0: 12/15/2016 08:45:01: # speechTrain command (train action)                                         #
-MPI Rank 0: 12/15/2016 08:45:01: #                                                                            #
-MPI Rank 0: 12/15/2016 08:45:01: ##############################################################################
+MPI Rank 0: 08/21/2017 14:36:13: 		Built time: Aug 21 2017 08:20:36
+MPI Rank 0: 08/21/2017 14:36:13: 		Last modified date: Thu Aug  3 09:31:40 2017
+MPI Rank 0: 08/21/2017 14:36:13: 		Build type: release
+MPI Rank 0: 08/21/2017 14:36:13: 		Build target: GPU
+MPI Rank 0: 08/21/2017 14:36:13: 		With 1bit-SGD: yes
+MPI Rank 0: 08/21/2017 14:36:13: 		With ASGD: yes
+MPI Rank 0: 08/21/2017 14:36:13: 		Math lib: mkl
+MPI Rank 0: 08/21/2017 14:36:13: 		CUDA_PATH: /usr/local/cuda-8.0
+MPI Rank 0: 08/21/2017 14:36:13: 		CUB_PATH: /usr/local/cub-1.4.1
+MPI Rank 0: 08/21/2017 14:36:13: 		CUDNN_PATH: /usr/local/cudnn-6.0
+MPI Rank 0: 08/21/2017 14:36:13: 		Build Branch: HEAD
+MPI Rank 0: 08/21/2017 14:36:13: 		Build SHA1: 57260963c605c12d3796e37783433518ab8ba039
+MPI Rank 0: 08/21/2017 14:36:13: 		Built by Source/CNTK/buildinfo.h$$0 on d477618ede0f
+MPI Rank 0: 08/21/2017 14:36:13: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux_2
+MPI Rank 0: 08/21/2017 14:36:13: 		MPI distribution: Open MPI
+MPI Rank 0: 08/21/2017 14:36:13: 		MPI version: 1.10.7
+MPI Rank 0: 08/21/2017 14:36:13: -------------------------------------------------------------------
+MPI Rank 0: 08/21/2017 14:36:13: -------------------------------------------------------------------
+MPI Rank 0: 08/21/2017 14:36:13: GPU info:
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:01: 
+MPI Rank 0: 08/21/2017 14:36:13: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; total memory = 3020 MB; free memory = 3018 MB
+MPI Rank 0: 08/21/2017 14:36:13: -------------------------------------------------------------------
+MPI Rank 0: 08/21/2017 14:36:13: Using 4 CPU threads.
+MPI Rank 0: 
+MPI Rank 0: 08/21/2017 14:36:13: ##############################################################################
+MPI Rank 0: 08/21/2017 14:36:13: #                                                                            #
+MPI Rank 0: 08/21/2017 14:36:13: # speechTrain command (train action)                                         #
+MPI Rank 0: 08/21/2017 14:36:13: #                                                                            #
+MPI Rank 0: 08/21/2017 14:36:13: ##############################################################################
+MPI Rank 0: 
+MPI Rank 0: 08/21/2017 14:36:13: 
 MPI Rank 0: Creating virgin network.
 MPI Rank 0: SimpleNetworkBuilder Using CPU
-MPI Rank 0: reading script file glob_0000.scp ... 948 entries
-MPI Rank 0: total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list
-MPI Rank 0: htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
-MPI Rank 0: ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
-MPI Rank 0: label set 0: 129 classes
-MPI Rank 0: minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-MPI Rank 0: 12/15/2016 08:45:02: 
+MPI Rank 0: Reading script file glob_0000.scp ... 948 entries
+MPI Rank 0: HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+MPI Rank 0: HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
+MPI Rank 0: Total (133) state names in state list '/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/state.list'
+MPI Rank 0: MLFDeserializer: '948' utterances with '252734' frames
+MPI Rank 0: 08/21/2017 14:36:13: 
 MPI Rank 0: Model has 25 nodes. Using CPU.
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:02: Training criterion:   CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
-MPI Rank 0: 12/15/2016 08:45:02: Evaluation criterion: EvalClassificationError = ClassificationError
+MPI Rank 0: 08/21/2017 14:36:13: Training criterion:   CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+MPI Rank 0: 08/21/2017 14:36:13: Evaluation criterion: EvalClassificationError = ClassificationError
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
 MPI Rank 0: 
-MPI Rank 0: Memory Sharing: Out of 40 matrices, 19 are shared as 8, and 21 are not shared.
+MPI Rank 0: Gradient Memory Aliasing: 4 are aliased.
+MPI Rank 0: 	W2*H1 (gradient) reuses HLast (gradient)
+MPI Rank 0: 	W1*H1 (gradient) reuses W1*H1+B1 (gradient)
 MPI Rank 0: 
-MPI Rank 0: 	{ B0 : [512 x 1] (gradient)
-MPI Rank 0: 	  H1 : [512 x 1 x *] (gradient)
-MPI Rank 0: 	  W1*H1+B1 : [512 x 1 x *] (gradient)
-MPI Rank 0: 	  W2*H1 : [132 x 1 x *] }
-MPI Rank 0: 	{ HLast : [132 x 1 x *]
-MPI Rank 0: 	  W2 : [132 x 512] (gradient) }
-MPI Rank 0: 	{ W0 : [512 x 363] (gradient)
-MPI Rank 0: 	  W0*features+B0 : [512 x 1 x *] }
-MPI Rank 0: 	{ H2 : [512 x 1 x *]
-MPI Rank 0: 	  W1*H1 : [512 x 1 x *] (gradient) }
-MPI Rank 0: 	{ B1 : [512 x 1] (gradient)
+MPI Rank 0: Memory Sharing: Out of 40 matrices, 21 are shared as 5, and 19 are not shared.
+MPI Rank 0: 
+MPI Rank 0: Here are the ones that share memory:
+MPI Rank 0: 	{ PosteriorProb : [132 x 1 x *]
+MPI Rank 0: 	  ScaledLogLikelihood : [132 x 1 x *] }
+MPI Rank 0: 	{ H1 : [512 x 1 x *] (gradient)
 MPI Rank 0: 	  H2 : [512 x 1 x *] (gradient)
-MPI Rank 0: 	  HLast : [132 x 1 x *] (gradient) }
-MPI Rank 0: 	{ W0*features+B0 : [512 x 1 x *] (gradient)
-MPI Rank 0: 	  W1*H1 : [512 x 1 x *] }
-MPI Rank 0: 	{ W1 : [512 x 512] (gradient)
-MPI Rank 0: 	  W1*H1+B1 : [512 x 1 x *] }
-MPI Rank 0: 	{ H1 : [512 x 1 x *]
+MPI Rank 0: 	  HLast : [132 x 1 x *]
+MPI Rank 0: 	  W0*features : [512 x *]
 MPI Rank 0: 	  W0*features : [512 x *] (gradient) }
+MPI Rank 0: 	{ B0 : [512 x 1] (gradient)
+MPI Rank 0: 	  H1 : [512 x 1 x *] }
+MPI Rank 0: 	{ H2 : [512 x 1 x *]
+MPI Rank 0: 	  W0*features+B0 : [512 x 1 x *]
+MPI Rank 0: 	  W1 : [512 x 512] (gradient)
+MPI Rank 0: 	  W1*H1 : [512 x 1 x *] }
+MPI Rank 0: 	{ HLast : [132 x 1 x *] (gradient)
+MPI Rank 0: 	  W0 : [512 x 363] (gradient)
+MPI Rank 0: 	  W0*features+B0 : [512 x 1 x *] (gradient)
+MPI Rank 0: 	  W1*H1 : [512 x 1 x *] (gradient)
+MPI Rank 0: 	  W1*H1+B1 : [512 x 1 x *]
+MPI Rank 0: 	  W1*H1+B1 : [512 x 1 x *] (gradient)
+MPI Rank 0: 	  W2*H1 : [132 x 1 x *]
+MPI Rank 0: 	  W2*H1 : [132 x 1 x *] (gradient) }
+MPI Rank 0: 
+MPI Rank 0: Here are the ones that don't share memory:
+MPI Rank 0: 	{InvStdOfFeatures : [363]}
+MPI Rank 0: 	{features : [363 x *]}
+MPI Rank 0: 	{MeanOfFeatures : [363]}
+MPI Rank 0: 	{W0 : [512 x 363]}
+MPI Rank 0: 	{B0 : [512 x 1]}
+MPI Rank 0: 	{W1 : [512 x 512]}
+MPI Rank 0: 	{B1 : [512 x 1]}
+MPI Rank 0: 	{W2 : [132 x 512]}
+MPI Rank 0: 	{B2 : [132 x 1]}
+MPI Rank 0: 	{labels : [132 x *]}
+MPI Rank 0: 	{Prior : [132]}
+MPI Rank 0: 	{W2 : [132 x 512] (gradient)}
+MPI Rank 0: 	{EvalClassificationError : [1]}
+MPI Rank 0: 	{CrossEntropyWithSoftmax : [1]}
+MPI Rank 0: 	{LogOfPrior : [132]}
+MPI Rank 0: 	{B2 : [132 x 1] (gradient)}
+MPI Rank 0: 	{CrossEntropyWithSoftmax : [1] (gradient)}
+MPI Rank 0: 	{MVNormalizedFeatures : [363 x *]}
+MPI Rank 0: 	{B1 : [512 x 1] (gradient)}
 MPI Rank 0: 
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:02: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
+MPI Rank 0: 08/21/2017 14:36:13: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:02: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
-MPI Rank 0: 12/15/2016 08:45:02: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
-MPI Rank 0: 12/15/2016 08:45:02: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
-MPI Rank 0: 12/15/2016 08:45:02: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
-MPI Rank 0: 12/15/2016 08:45:02: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
-MPI Rank 0: 12/15/2016 08:45:02: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
+MPI Rank 0: 08/21/2017 14:36:13: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
+MPI Rank 0: 08/21/2017 14:36:13: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
+MPI Rank 0: 08/21/2017 14:36:13: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
+MPI Rank 0: 08/21/2017 14:36:13: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
+MPI Rank 0: 08/21/2017 14:36:13: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
+MPI Rank 0: 08/21/2017 14:36:13: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
 MPI Rank 0: 
 MPI Rank 0: Initializing dataParallelSGD for 1-bit quantization.
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:02: Precomputing --> 3 PreCompute nodes found.
+MPI Rank 0: 08/21/2017 14:36:13: Precomputing --> 3 PreCompute nodes found.
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:02: 	MeanOfFeatures = Mean()
-MPI Rank 0: 12/15/2016 08:45:02: 	InvStdOfFeatures = InvStdDev()
-MPI Rank 0: 12/15/2016 08:45:02: 	Prior = Mean()
-MPI Rank 0: minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
-MPI Rank 0: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+MPI Rank 0: 08/21/2017 14:36:13: 	MeanOfFeatures = Mean()
+MPI Rank 0: 08/21/2017 14:36:13: 	InvStdOfFeatures = InvStdDev()
+MPI Rank 0: 08/21/2017 14:36:13: 	Prior = Mean()
+MPI Rank 0: OMP: Warning #96: Cannot form a team with 12 threads, using 10 instead.
+MPI Rank 0: OMP: Hint: Consider unsetting KMP_ALL_THREADS and OMP_THREAD_LIMIT (if either is set).
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:05: Precomputing --> Completed.
+MPI Rank 0: 08/21/2017 14:36:18: Precomputing --> Completed.
 MPI Rank 0: 
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:06: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
-MPI Rank 0: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+MPI Rank 0: 08/21/2017 14:36:19: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:06: Starting minibatch loop.
-MPI Rank 0: 12/15/2016 08:45:06:  Epoch[ 1 of 4]-Minibatch[   1-  10, 3.13%]: CrossEntropyWithSoftmax = 4.59755198 * 640; EvalClassificationError = 0.93125000 * 640; time = 0.2622s; samplesPerSecond = 2440.9
-MPI Rank 0: 12/15/2016 08:45:06:  Epoch[ 1 of 4]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.34610349 * 640; EvalClassificationError = 0.92031250 * 640; time = 0.2583s; samplesPerSecond = 2477.8
-MPI Rank 0: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98222516 * 640; EvalClassificationError = 0.89062500 * 640; time = 0.2540s; samplesPerSecond = 2520.0
-MPI Rank 0: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.74152814 * 640; EvalClassificationError = 0.84531250 * 640; time = 0.2483s; samplesPerSecond = 2577.9
-MPI Rank 0: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  41-  50, 15.63%]: CrossEntropyWithSoftmax = 3.83818572 * 640; EvalClassificationError = 0.86718750 * 640; time = 0.2509s; samplesPerSecond = 2551.2
-MPI Rank 0: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71641238 * 640; EvalClassificationError = 0.87500000 * 640; time = 0.2546s; samplesPerSecond = 2514.0
-MPI Rank 0: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.41802791 * 640; EvalClassificationError = 0.79687500 * 640; time = 0.2567s; samplesPerSecond = 2493.6
-MPI Rank 0: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.53832947 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.2573s; samplesPerSecond = 2487.3
-MPI Rank 0: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  81-  90, 28.13%]: CrossEntropyWithSoftmax = 3.50628076 * 640; EvalClassificationError = 0.81718750 * 640; time = 0.2603s; samplesPerSecond = 2459.0
-MPI Rank 0: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.41478252 * 640; EvalClassificationError = 0.80781250 * 640; time = 0.2683s; samplesPerSecond = 2385.0
-MPI Rank 0: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.51031210 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.2675s; samplesPerSecond = 2392.1
-MPI Rank 0: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.28365485 * 640; EvalClassificationError = 0.79375000 * 640; time = 0.2573s; samplesPerSecond = 2486.9
-MPI Rank 0: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 121- 130, 40.63%]: CrossEntropyWithSoftmax = 3.20932117 * 640; EvalClassificationError = 0.79531250 * 640; time = 0.2748s; samplesPerSecond = 2329.1
-MPI Rank 0: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.07460534 * 640; EvalClassificationError = 0.75468750 * 640; time = 0.2580s; samplesPerSecond = 2480.5
-MPI Rank 0: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.97529104 * 640; EvalClassificationError = 0.72031250 * 640; time = 0.2510s; samplesPerSecond = 2549.4
-MPI Rank 0: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.11968882 * 640; EvalClassificationError = 0.74531250 * 640; time = 0.2493s; samplesPerSecond = 2567.7
-MPI Rank 0: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 161- 170, 53.13%]: CrossEntropyWithSoftmax = 2.84172140 * 640; EvalClassificationError = 0.71093750 * 640; time = 0.2492s; samplesPerSecond = 2568.6
-MPI Rank 0: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.74031745 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.2504s; samplesPerSecond = 2556.3
-MPI Rank 0: 12/15/2016 08:45:11:  Epoch[ 1 of 4]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.83858085 * 640; EvalClassificationError = 0.72656250 * 640; time = 0.2555s; samplesPerSecond = 2504.4
-MPI Rank 0: 12/15/2016 08:45:11:  Epoch[ 1 of 4]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.74632253 * 640; EvalClassificationError = 0.69218750 * 640; time = 0.2535s; samplesPerSecond = 2524.9
-MPI Rank 0: 12/15/2016 08:45:11:  Epoch[ 1 of 4]-Minibatch[ 201- 210, 65.63%]: CrossEntropyWithSoftmax = 2.61033254 * 640; EvalClassificationError = 0.66250000 * 640; time = 0.2536s; samplesPerSecond = 2523.8
-MPI Rank 0: 12/15/2016 08:45:11:  Epoch[ 1 of 4]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.61330754 * 640; EvalClassificationError = 0.65000000 * 640; time = 0.2634s; samplesPerSecond = 2429.6
-MPI Rank 0: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.54591810 * 640; EvalClassificationError = 0.66406250 * 640; time = 0.2542s; samplesPerSecond = 2517.6
-MPI Rank 0: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.57566512 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.2641s; samplesPerSecond = 2423.0
-MPI Rank 0: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 241- 250, 78.13%]: CrossEntropyWithSoftmax = 2.49164945 * 640; EvalClassificationError = 0.63281250 * 640; time = 0.2655s; samplesPerSecond = 2410.5
-MPI Rank 0: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.39954796 * 640; EvalClassificationError = 0.62812500 * 640; time = 0.2630s; samplesPerSecond = 2433.9
-MPI Rank 0: 12/15/2016 08:45:13:  Epoch[ 1 of 4]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.27034227 * 640; EvalClassificationError = 0.59375000 * 640; time = 0.2682s; samplesPerSecond = 2386.6
-MPI Rank 0: 12/15/2016 08:45:13:  Epoch[ 1 of 4]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.52112387 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.2565s; samplesPerSecond = 2495.5
-MPI Rank 0: 12/15/2016 08:45:13:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.63%]: CrossEntropyWithSoftmax = 2.27800991 * 640; EvalClassificationError = 0.59062500 * 640; time = 0.2532s; samplesPerSecond = 2527.9
-MPI Rank 0: 12/15/2016 08:45:14:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.26783634 * 640; EvalClassificationError = 0.61093750 * 640; time = 0.2553s; samplesPerSecond = 2507.0
-MPI Rank 0: 12/15/2016 08:45:14:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.24590355 * 640; EvalClassificationError = 0.58593750 * 640; time = 0.2611s; samplesPerSecond = 2451.3
-MPI Rank 0: 12/15/2016 08:45:14:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.24415615 * 640; EvalClassificationError = 0.59843750 * 640; time = 0.2518s; samplesPerSecond = 2541.8
-MPI Rank 0: 12/15/2016 08:45:14: Finished Epoch[ 1 of 4]: [Training] CrossEntropyWithSoftmax = 3.04696987 * 20480; EvalClassificationError = 0.73583984 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=8.26s
-MPI Rank 0: 12/15/2016 08:45:14: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/models/cntkSpeech.dnn.1'
+MPI Rank 0: 08/21/2017 14:36:19: Starting minibatch loop.
+MPI Rank 0: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.59755198 * 640; EvalClassificationError = 0.93125000 * 640; time = 0.1643s; samplesPerSecond = 3895.4
+MPI Rank 0: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.34610349 * 640; EvalClassificationError = 0.92031250 * 640; time = 0.0733s; samplesPerSecond = 8734.2
+MPI Rank 0: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98222516 * 640; EvalClassificationError = 0.89062500 * 640; time = 0.2007s; samplesPerSecond = 3189.6
+MPI Rank 0: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.74152814 * 640; EvalClassificationError = 0.84531250 * 640; time = 0.1293s; samplesPerSecond = 4951.4
+MPI Rank 0: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  41-  50, 15.62%]: CrossEntropyWithSoftmax = 3.83818572 * 640; EvalClassificationError = 0.86718750 * 640; time = 0.1337s; samplesPerSecond = 4786.4
+MPI Rank 0: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71641238 * 640; EvalClassificationError = 0.87500000 * 640; time = 0.1517s; samplesPerSecond = 4220.2
+MPI Rank 0: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.41802791 * 640; EvalClassificationError = 0.79687500 * 640; time = 0.0786s; samplesPerSecond = 8142.8
+MPI Rank 0: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.53832947 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.1542s; samplesPerSecond = 4149.9
+MPI Rank 0: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  81-  90, 28.12%]: CrossEntropyWithSoftmax = 3.50628076 * 640; EvalClassificationError = 0.81718750 * 640; time = 0.1090s; samplesPerSecond = 5871.5
+MPI Rank 0: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.41478252 * 640; EvalClassificationError = 0.80781250 * 640; time = 0.1330s; samplesPerSecond = 4811.7
+MPI Rank 0: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.51031210 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.1785s; samplesPerSecond = 3585.6
+MPI Rank 0: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.28365485 * 640; EvalClassificationError = 0.79375000 * 640; time = 0.1406s; samplesPerSecond = 4551.2
+MPI Rank 0: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 121- 130, 40.62%]: CrossEntropyWithSoftmax = 3.20932117 * 640; EvalClassificationError = 0.79531250 * 640; time = 0.1181s; samplesPerSecond = 5420.1
+MPI Rank 0: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.07460534 * 640; EvalClassificationError = 0.75468750 * 640; time = 0.0898s; samplesPerSecond = 7124.7
+MPI Rank 0: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.97529104 * 640; EvalClassificationError = 0.72031250 * 640; time = 0.1493s; samplesPerSecond = 4286.7
+MPI Rank 0: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.11968882 * 640; EvalClassificationError = 0.74531250 * 640; time = 0.1233s; samplesPerSecond = 5191.6
+MPI Rank 0: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 161- 170, 53.12%]: CrossEntropyWithSoftmax = 2.84172140 * 640; EvalClassificationError = 0.71093750 * 640; time = 0.1619s; samplesPerSecond = 3952.0
+MPI Rank 0: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.74031745 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.1466s; samplesPerSecond = 4365.3
+MPI Rank 0: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.83858085 * 640; EvalClassificationError = 0.72656250 * 640; time = 0.1764s; samplesPerSecond = 3627.5
+MPI Rank 0: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.74632253 * 640; EvalClassificationError = 0.69218750 * 640; time = 0.1402s; samplesPerSecond = 4563.8
+MPI Rank 0: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 201- 210, 65.62%]: CrossEntropyWithSoftmax = 2.61033254 * 640; EvalClassificationError = 0.66250000 * 640; time = 0.1063s; samplesPerSecond = 6023.4
+MPI Rank 0: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.61330754 * 640; EvalClassificationError = 0.65000000 * 640; time = 0.1497s; samplesPerSecond = 4274.1
+MPI Rank 0: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.54591810 * 640; EvalClassificationError = 0.66406250 * 640; time = 0.1217s; samplesPerSecond = 5259.7
+MPI Rank 0: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.57566512 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.1435s; samplesPerSecond = 4460.8
+MPI Rank 0: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 241- 250, 78.12%]: CrossEntropyWithSoftmax = 2.49164945 * 640; EvalClassificationError = 0.63281250 * 640; time = 0.1400s; samplesPerSecond = 4571.0
+MPI Rank 0: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.39954796 * 640; EvalClassificationError = 0.62812500 * 640; time = 0.2184s; samplesPerSecond = 2930.8
+MPI Rank 0: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.27034227 * 640; EvalClassificationError = 0.59375000 * 640; time = 0.1406s; samplesPerSecond = 4550.7
+MPI Rank 0: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.52112387 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.1508s; samplesPerSecond = 4243.6
+MPI Rank 0: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.62%]: CrossEntropyWithSoftmax = 2.27800991 * 640; EvalClassificationError = 0.59062500 * 640; time = 0.1280s; samplesPerSecond = 5000.7
+MPI Rank 0: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.26783634 * 640; EvalClassificationError = 0.61093750 * 640; time = 0.1037s; samplesPerSecond = 6171.6
+MPI Rank 0: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.24590355 * 640; EvalClassificationError = 0.58593750 * 640; time = 0.1587s; samplesPerSecond = 4032.7
+MPI Rank 0: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.24415615 * 640; EvalClassificationError = 0.59843750 * 640; time = 0.1458s; samplesPerSecond = 4389.4
+MPI Rank 0: 08/21/2017 14:36:23: Finished Epoch[ 1 of 4]: [Training] CrossEntropyWithSoftmax = 3.04696987 * 20480; EvalClassificationError = 0.73583984 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=4.46361s
+MPI Rank 0: 08/21/2017 14:36:24: SGD: Saving checkpoint model '/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/models/cntkSpeech.dnn.1'
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:14: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
-MPI Rank 0: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 3, with 1 datapasses
+MPI Rank 0: 08/21/2017 14:36:24: Starting Epoch 2: learning rate per sample = 0.00195312  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:14: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
-MPI Rank 0: Actual gradient aggregation time: 0.017159
-MPI Rank 0: Async gradient aggregation wait time: 4e-006
-MPI Rank 0: Actual gradient aggregation time: 0.022209
-MPI Rank 0: 12/15/2016 08:45:15:  Epoch[ 2 of 4]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.23258828 * 2304; EvalClassificationError = 0.61414931 * 2304; time = 0.6861s; samplesPerSecond = 3358.2
-MPI Rank 0: Async gradient aggregation wait time: 0.007336
-MPI Rank 0: Actual gradient aggregation time: 0.062504
-MPI Rank 0: Async gradient aggregation wait time: 4e-006
-MPI Rank 0: Actual gradient aggregation time: 0.017296
-MPI Rank 0: 12/15/2016 08:45:15:  Epoch[ 2 of 4]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.23901091 * 2560; EvalClassificationError = 0.58320313 * 2560; time = 0.5216s; samplesPerSecond = 4908.2
-MPI Rank 0: Async gradient aggregation wait time: 0.022689
-MPI Rank 0: Actual gradient aggregation time: 0.041876
-MPI Rank 0: Async gradient aggregation wait time: 3e-006
-MPI Rank 0: Actual gradient aggregation time: 0.045387
-MPI Rank 0: 12/15/2016 08:45:16:  Epoch[ 2 of 4]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.16822363 * 2560; EvalClassificationError = 0.57773438 * 2560; time = 0.6671s; samplesPerSecond = 3837.3
-MPI Rank 0: Async gradient aggregation wait time: 0.00641
-MPI Rank 0: Actual gradient aggregation time: 0.043876
-MPI Rank 0: Async gradient aggregation wait time: 4e-006
-MPI Rank 0: Actual gradient aggregation time: 0.027536
-MPI Rank 0: 12/15/2016 08:45:17:  Epoch[ 2 of 4]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.19927971 * 2560; EvalClassificationError = 0.62187500 * 2560; time = 0.5975s; samplesPerSecond = 4284.5
-MPI Rank 0: Async gradient aggregation wait time: 0.006883
-MPI Rank 0: Actual gradient aggregation time: 0.045305
-MPI Rank 0: Async gradient aggregation wait time: 0.062512
-MPI Rank 0: Actual gradient aggregation time: 0.05298
-MPI Rank 0: 12/15/2016 08:45:17:  Epoch[ 2 of 4]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.22075939 * 2560; EvalClassificationError = 0.59648437 * 2560; time = 0.5649s; samplesPerSecond = 4531.5
-MPI Rank 0: Async gradient aggregation wait time: 0.012483
-MPI Rank 0: Actual gradient aggregation time: 0.049937
-MPI Rank 0: Async gradient aggregation wait time: 0.010496
-MPI Rank 0: Actual gradient aggregation time: 0.046163
-MPI Rank 0: 12/15/2016 08:45:18:  Epoch[ 2 of 4]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 2.11227615 * 2560; EvalClassificationError = 0.57382813 * 2560; time = 0.5057s; samplesPerSecond = 5062.7
-MPI Rank 0: Async gradient aggregation wait time: 3e-006
-MPI Rank 0: Actual gradient aggregation time: 0.025722
-MPI Rank 0: Async gradient aggregation wait time: 3e-006
-MPI Rank 0: Actual gradient aggregation time: 0.018403
-MPI Rank 0: 12/15/2016 08:45:18:  Epoch[ 2 of 4]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 2.17322591 * 2560; EvalClassificationError = 0.61914063 * 2560; time = 0.5979s; samplesPerSecond = 4281.6
-MPI Rank 0: Async gradient aggregation wait time: 2e-006
-MPI Rank 0: Actual gradient aggregation time: 0.026228
-MPI Rank 0: Async gradient aggregation wait time: 3e-006
-MPI Rank 0: Actual gradient aggregation time: 0.027207
-MPI Rank 0: 12/15/2016 08:45:19:  Epoch[ 2 of 4]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 2.13027284 * 2560; EvalClassificationError = 0.60820312 * 2560; time = 0.6650s; samplesPerSecond = 3849.4
-MPI Rank 0: Async gradient aggregation wait time: 0.015012
-MPI Rank 0: Actual gradient aggregation time: 0.024411
-MPI Rank 0: 12/15/2016 08:45:19: Finished Epoch[ 2 of 4]: [Training] CrossEntropyWithSoftmax = 2.18324277 * 20480; EvalClassificationError = 0.59892578 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=4.85012s
-MPI Rank 0: 12/15/2016 08:45:19: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/models/cntkSpeech.dnn.2'
+MPI Rank 0: 08/21/2017 14:36:24: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 0: Actual gradient aggregation time: 0.00903826
+MPI Rank 0: Async gradient aggregation wait time: 0.0585132
+MPI Rank 0: Actual gradient aggregation time: 0.0232478
+MPI Rank 0: 08/21/2017 14:36:24:  Epoch[ 2 of 4]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.23258828 * 2304; EvalClassificationError = 0.61414931 * 2304; time = 0.4296s; samplesPerSecond = 5362.7
+MPI Rank 0: Async gradient aggregation wait time: 8.426e-06
+MPI Rank 0: Actual gradient aggregation time: 0.0416224
+MPI Rank 0: Async gradient aggregation wait time: 8.246e-06
+MPI Rank 0: Actual gradient aggregation time: 0.0292337
+MPI Rank 0: 08/21/2017 14:36:24:  Epoch[ 2 of 4]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.23901091 * 2560; EvalClassificationError = 0.58320313 * 2560; time = 0.3718s; samplesPerSecond = 6885.8
+MPI Rank 0: Async gradient aggregation wait time: 0.0163733
+MPI Rank 0: Actual gradient aggregation time: 0.0284784
+MPI Rank 0: Async gradient aggregation wait time: 0.0109195
+MPI Rank 0: Actual gradient aggregation time: 0.0208618
+MPI Rank 0: 08/21/2017 14:36:25:  Epoch[ 2 of 4]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.16822363 * 2560; EvalClassificationError = 0.57773438 * 2560; time = 0.2967s; samplesPerSecond = 8627.4
+MPI Rank 0: Async gradient aggregation wait time: 0.0955407
+MPI Rank 0: Actual gradient aggregation time: 0.036233
+MPI Rank 0: Async gradient aggregation wait time: 0.0138289
+MPI Rank 0: Actual gradient aggregation time: 0.0440214
+MPI Rank 0: 08/21/2017 14:36:25:  Epoch[ 2 of 4]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.19927971 * 2560; EvalClassificationError = 0.62187500 * 2560; time = 0.5054s; samplesPerSecond = 5065.6
+MPI Rank 0: Async gradient aggregation wait time: 9.206e-06
+MPI Rank 0: Actual gradient aggregation time: 0.0126585
+MPI Rank 0: Async gradient aggregation wait time: 0.0229823
+MPI Rank 0: Actual gradient aggregation time: 0.0240762
+MPI Rank 0: 08/21/2017 14:36:25:  Epoch[ 2 of 4]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.22075939 * 2560; EvalClassificationError = 0.59648437 * 2560; time = 0.3487s; samplesPerSecond = 7341.9
+MPI Rank 0: Async gradient aggregation wait time: 8.139e-06
+MPI Rank 0: Actual gradient aggregation time: 0.0156062
+MPI Rank 0: Async gradient aggregation wait time: 0.0202395
+MPI Rank 0: Actual gradient aggregation time: 0.0411116
+MPI Rank 0: 08/21/2017 14:36:26:  Epoch[ 2 of 4]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 2.11227615 * 2560; EvalClassificationError = 0.57382813 * 2560; time = 0.3756s; samplesPerSecond = 6816.6
+MPI Rank 0: Async gradient aggregation wait time: 0.0314626
+MPI Rank 0: Actual gradient aggregation time: 0.0613691
+MPI Rank 0: Async gradient aggregation wait time: 0.0496015
+MPI Rank 0: Actual gradient aggregation time: 0.0456922
+MPI Rank 0: 08/21/2017 14:36:26:  Epoch[ 2 of 4]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 2.17322591 * 2560; EvalClassificationError = 0.61914062 * 2560; time = 0.5673s; samplesPerSecond = 4512.3
+MPI Rank 0: Async gradient aggregation wait time: 8.312e-06
+MPI Rank 0: Actual gradient aggregation time: 0.0103072
+MPI Rank 0: Async gradient aggregation wait time: 8.443e-06
+MPI Rank 0: Actual gradient aggregation time: 0.0393503
+MPI Rank 0: 08/21/2017 14:36:27:  Epoch[ 2 of 4]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 2.13027284 * 2560; EvalClassificationError = 0.60820312 * 2560; time = 0.4419s; samplesPerSecond = 5793.8
+MPI Rank 0: Async gradient aggregation wait time: 0.0335365
+MPI Rank 0: Actual gradient aggregation time: 0.0452773
+MPI Rank 0: 08/21/2017 14:36:27: Finished Epoch[ 2 of 4]: [Training] CrossEntropyWithSoftmax = 2.18324277 * 20480; EvalClassificationError = 0.59892578 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=3.41951s
+MPI Rank 0: 08/21/2017 14:36:27: SGD: Saving checkpoint model '/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/models/cntkSpeech.dnn.2'
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:19: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
-MPI Rank 0: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 3, with 1 datapasses
+MPI Rank 0: 08/21/2017 14:36:27: Starting Epoch 3: learning rate per sample = 9.76563e-05  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:19: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
-MPI Rank 0: Async gradient aggregation wait time: 3e-006
-MPI Rank 0: Actual gradient aggregation time: 0.01979
-MPI Rank 0: Async gradient aggregation wait time: 3e-006
-MPI Rank 0: Actual gradient aggregation time: 0.017679
-MPI Rank 0: 12/15/2016 08:45:20:  Epoch[ 3 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 2.20597127 * 9216; EvalClassificationError = 0.58593750 * 9216; time = 1.3442s; samplesPerSecond = 6856.0
-MPI Rank 0: Async gradient aggregation wait time: 3e-006
-MPI Rank 0: Actual gradient aggregation time: 0.065355
-MPI Rank 0: Async gradient aggregation wait time: 3e-006
-MPI Rank 0: Actual gradient aggregation time: 0.066516
-MPI Rank 0: 12/15/2016 08:45:22:  Epoch[ 3 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 2.14626719 * 10240; EvalClassificationError = 0.58886719 * 10240; time = 1.2738s; samplesPerSecond = 8039.0
-MPI Rank 0: 12/15/2016 08:45:22: Finished Epoch[ 3 of 4]: [Training] CrossEntropyWithSoftmax = 2.16917041 * 20480; EvalClassificationError = 0.58637695 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-005; epochTime=2.73964s
-MPI Rank 0: 12/15/2016 08:45:22: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/models/cntkSpeech.dnn.3'
+MPI Rank 0: 08/21/2017 14:36:27: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 0: Async gradient aggregation wait time: 9.451e-06
+MPI Rank 0: Actual gradient aggregation time: 0.0137963
+MPI Rank 0: Async gradient aggregation wait time: 9.265e-06
+MPI Rank 0: Actual gradient aggregation time: 0.0103325
+MPI Rank 0: 08/21/2017 14:36:28:  Epoch[ 3 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 2.20597127 * 9216; EvalClassificationError = 0.58593750 * 9216; time = 0.8183s; samplesPerSecond = 11262.2
+MPI Rank 0: Async gradient aggregation wait time: 9.653e-06
+MPI Rank 0: Actual gradient aggregation time: 0.021922
+MPI Rank 0: Async gradient aggregation wait time: 6.822e-06
+MPI Rank 0: Actual gradient aggregation time: 0.0537377
+MPI Rank 0: 08/21/2017 14:36:29:  Epoch[ 3 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 2.14626719 * 10240; EvalClassificationError = 0.58886719 * 10240; time = 0.8397s; samplesPerSecond = 12195.3
+MPI Rank 0: 08/21/2017 14:36:29: Finished Epoch[ 3 of 4]: [Training] CrossEntropyWithSoftmax = 2.16917041 * 20480; EvalClassificationError = 0.58637695 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=1.79264s
+MPI Rank 0: 08/21/2017 14:36:29: SGD: Saving checkpoint model '/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/models/cntkSpeech.dnn.3'
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:22: Starting Epoch 4: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
-MPI Rank 0: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 0 of 3, with 1 datapasses
+MPI Rank 0: 08/21/2017 14:36:29: Starting Epoch 4: learning rate per sample = 9.76563e-05  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:22: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
-MPI Rank 0: Async gradient aggregation wait time: 3e-006
-MPI Rank 0: Actual gradient aggregation time: 0.04443
-MPI Rank 0: Async gradient aggregation wait time: 0.012333
-MPI Rank 0: Actual gradient aggregation time: 0.126445
-MPI Rank 0: 12/15/2016 08:45:23:  Epoch[ 4 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.99117050 * 9216; EvalClassificationError = 0.54427083 * 9216; time = 1.2882s; samplesPerSecond = 7154.4
-MPI Rank 0: Async gradient aggregation wait time: 0.029068
-MPI Rank 0: Actual gradient aggregation time: 0.108564
-MPI Rank 0: Async gradient aggregation wait time: 0.006866
-MPI Rank 0: Actual gradient aggregation time: 0.123917
-MPI Rank 0: 12/15/2016 08:45:24:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.97438950 * 10240; EvalClassificationError = 0.54345703 * 10240; time = 1.3228s; samplesPerSecond = 7741.2
-MPI Rank 0: Async gradient aggregation wait time: 0.022913
-MPI Rank 0: 12/15/2016 08:45:25: Finished Epoch[ 4 of 4]: [Training] CrossEntropyWithSoftmax = 1.98353069 * 20480; EvalClassificationError = 0.54428711 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 9.7656251e-005; epochTime=2.76533s
-MPI Rank 0: 12/15/2016 08:45:25: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/models/cntkSpeech.dnn'
+MPI Rank 0: 08/21/2017 14:36:29: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 0: Async gradient aggregation wait time: 9.162e-06
+MPI Rank 0: Actual gradient aggregation time: 0.0136873
+MPI Rank 0: Async gradient aggregation wait time: 9.682e-06
+MPI Rank 0: Actual gradient aggregation time: 0.0785534
+MPI Rank 0: 08/21/2017 14:36:30:  Epoch[ 4 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.99117050 * 9216; EvalClassificationError = 0.54427083 * 9216; time = 0.7806s; samplesPerSecond = 11806.3
+MPI Rank 0: Async gradient aggregation wait time: 1.0325e-05
+MPI Rank 0: Actual gradient aggregation time: 0.0191148
+MPI Rank 0: Async gradient aggregation wait time: 0.00285427
+MPI Rank 0: Actual gradient aggregation time: 0.0542866
+MPI Rank 0: 08/21/2017 14:36:30:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.97438950 * 10240; EvalClassificationError = 0.54345703 * 10240; time = 0.6284s; samplesPerSecond = 16294.7
+MPI Rank 0: Async gradient aggregation wait time: 0.0199752
+MPI Rank 0: 08/21/2017 14:36:30: Finished Epoch[ 4 of 4]: [Training] CrossEntropyWithSoftmax = 1.98353069 * 20480; EvalClassificationError = 0.54428711 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 9.7656251e-05; epochTime=1.5023s
+MPI Rank 0: 08/21/2017 14:36:30: SGD: Saving checkpoint model '/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/models/cntkSpeech.dnn'
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:25: Action "train" complete.
+MPI Rank 0: 08/21/2017 14:36:30: Action "train" complete.
 MPI Rank 0: 
-MPI Rank 0: 12/15/2016 08:45:25: __COMPLETED__
-MPI Rank 1: 12/15/2016 08:45:02: Redirecting stderr to file C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr_speechTrain.logrank1
-MPI Rank 1: CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:31:19) on cntk-muc03 at 2016/12/15 08:45:01
+MPI Rank 0: 08/21/2017 14:36:30: __COMPLETED__
+MPI Rank 1: CNTK 2.1+ (HEAD 572609, Aug 21 2017 08:24:29) on a0296eea6817 at 2017/08/21 14:36:13
 MPI Rank 1: 
-MPI Rank 1: C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=1  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
-MPI Rank 1: 12/15/2016 08:45:02: Using 1 CPU threads.
+MPI Rank 1: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/1bitsgd/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/../cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/..  OutputDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=4  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
+MPI Rank 1: 08/21/2017 14:36:13: -------------------------------------------------------------------
+MPI Rank 1: 08/21/2017 14:36:13: Build info: 
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:02: ##############################################################################
-MPI Rank 1: 12/15/2016 08:45:02: #                                                                            #
-MPI Rank 1: 12/15/2016 08:45:02: # speechTrain command (train action)                                         #
-MPI Rank 1: 12/15/2016 08:45:02: #                                                                            #
-MPI Rank 1: 12/15/2016 08:45:02: ##############################################################################
+MPI Rank 1: 08/21/2017 14:36:13: 		Built time: Aug 21 2017 08:20:36
+MPI Rank 1: 08/21/2017 14:36:13: 		Last modified date: Thu Aug  3 09:31:40 2017
+MPI Rank 1: 08/21/2017 14:36:13: 		Build type: release
+MPI Rank 1: 08/21/2017 14:36:13: 		Build target: GPU
+MPI Rank 1: 08/21/2017 14:36:13: 		With 1bit-SGD: yes
+MPI Rank 1: 08/21/2017 14:36:13: 		With ASGD: yes
+MPI Rank 1: 08/21/2017 14:36:13: 		Math lib: mkl
+MPI Rank 1: 08/21/2017 14:36:13: 		CUDA_PATH: /usr/local/cuda-8.0
+MPI Rank 1: 08/21/2017 14:36:13: 		CUB_PATH: /usr/local/cub-1.4.1
+MPI Rank 1: 08/21/2017 14:36:13: 		CUDNN_PATH: /usr/local/cudnn-6.0
+MPI Rank 1: 08/21/2017 14:36:13: 		Build Branch: HEAD
+MPI Rank 1: 08/21/2017 14:36:13: 		Build SHA1: 57260963c605c12d3796e37783433518ab8ba039
+MPI Rank 1: 08/21/2017 14:36:13: 		Built by Source/CNTK/buildinfo.h$$0 on d477618ede0f
+MPI Rank 1: 08/21/2017 14:36:13: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux_2
+MPI Rank 1: 08/21/2017 14:36:13: 		MPI distribution: Open MPI
+MPI Rank 1: 08/21/2017 14:36:13: 		MPI version: 1.10.7
+MPI Rank 1: 08/21/2017 14:36:13: -------------------------------------------------------------------
+MPI Rank 1: 08/21/2017 14:36:13: -------------------------------------------------------------------
+MPI Rank 1: 08/21/2017 14:36:13: GPU info:
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:02: 
+MPI Rank 1: 08/21/2017 14:36:13: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; total memory = 3020 MB; free memory = 3018 MB
+MPI Rank 1: 08/21/2017 14:36:13: -------------------------------------------------------------------
+MPI Rank 1: 08/21/2017 14:36:13: Using 4 CPU threads.
+MPI Rank 1: 
+MPI Rank 1: 08/21/2017 14:36:13: ##############################################################################
+MPI Rank 1: 08/21/2017 14:36:13: #                                                                            #
+MPI Rank 1: 08/21/2017 14:36:13: # speechTrain command (train action)                                         #
+MPI Rank 1: 08/21/2017 14:36:13: #                                                                            #
+MPI Rank 1: 08/21/2017 14:36:13: ##############################################################################
+MPI Rank 1: 
+MPI Rank 1: 08/21/2017 14:36:13: 
 MPI Rank 1: Creating virgin network.
 MPI Rank 1: SimpleNetworkBuilder Using CPU
-MPI Rank 1: reading script file glob_0000.scp ... 948 entries
-MPI Rank 1: total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list
-MPI Rank 1: htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
-MPI Rank 1: ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
-MPI Rank 1: label set 0: 129 classes
-MPI Rank 1: minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-MPI Rank 1: 12/15/2016 08:45:02: 
+MPI Rank 1: Reading script file glob_0000.scp ... 948 entries
+MPI Rank 1: HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+MPI Rank 1: HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
+MPI Rank 1: Total (133) state names in state list '/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/state.list'
+MPI Rank 1: MLFDeserializer: '948' utterances with '252734' frames
+MPI Rank 1: 08/21/2017 14:36:13: 
 MPI Rank 1: Model has 25 nodes. Using CPU.
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:02: Training criterion:   CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
-MPI Rank 1: 12/15/2016 08:45:02: Evaluation criterion: EvalClassificationError = ClassificationError
+MPI Rank 1: 08/21/2017 14:36:13: Training criterion:   CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+MPI Rank 1: 08/21/2017 14:36:13: Evaluation criterion: EvalClassificationError = ClassificationError
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
 MPI Rank 1: 
-MPI Rank 1: Memory Sharing: Out of 40 matrices, 19 are shared as 8, and 21 are not shared.
+MPI Rank 1: Gradient Memory Aliasing: 4 are aliased.
+MPI Rank 1: 	W2*H1 (gradient) reuses HLast (gradient)
+MPI Rank 1: 	W1*H1 (gradient) reuses W1*H1+B1 (gradient)
 MPI Rank 1: 
-MPI Rank 1: 	{ B1 : [512 x 1] (gradient)
+MPI Rank 1: Memory Sharing: Out of 40 matrices, 21 are shared as 5, and 19 are not shared.
+MPI Rank 1: 
+MPI Rank 1: Here are the ones that share memory:
+MPI Rank 1: 	{ PosteriorProb : [132 x 1 x *]
+MPI Rank 1: 	  ScaledLogLikelihood : [132 x 1 x *] }
+MPI Rank 1: 	{ H1 : [512 x 1 x *] (gradient)
 MPI Rank 1: 	  H2 : [512 x 1 x *] (gradient)
-MPI Rank 1: 	  HLast : [132 x 1 x *] (gradient) }
-MPI Rank 1: 	{ W1 : [512 x 512] (gradient)
-MPI Rank 1: 	  W1*H1+B1 : [512 x 1 x *] }
-MPI Rank 1: 	{ W0 : [512 x 363] (gradient)
-MPI Rank 1: 	  W0*features+B0 : [512 x 1 x *] }
-MPI Rank 1: 	{ H1 : [512 x 1 x *]
+MPI Rank 1: 	  HLast : [132 x 1 x *]
+MPI Rank 1: 	  W0*features : [512 x *]
 MPI Rank 1: 	  W0*features : [512 x *] (gradient) }
-MPI Rank 1: 	{ W0*features+B0 : [512 x 1 x *] (gradient)
-MPI Rank 1: 	  W1*H1 : [512 x 1 x *] }
 MPI Rank 1: 	{ H2 : [512 x 1 x *]
-MPI Rank 1: 	  W1*H1 : [512 x 1 x *] (gradient) }
+MPI Rank 1: 	  W0*features+B0 : [512 x 1 x *]
+MPI Rank 1: 	  W1 : [512 x 512] (gradient)
+MPI Rank 1: 	  W1*H1 : [512 x 1 x *] }
 MPI Rank 1: 	{ B0 : [512 x 1] (gradient)
-MPI Rank 1: 	  H1 : [512 x 1 x *] (gradient)
+MPI Rank 1: 	  H1 : [512 x 1 x *] }
+MPI Rank 1: 	{ HLast : [132 x 1 x *] (gradient)
+MPI Rank 1: 	  W0 : [512 x 363] (gradient)
+MPI Rank 1: 	  W0*features+B0 : [512 x 1 x *] (gradient)
+MPI Rank 1: 	  W1*H1 : [512 x 1 x *] (gradient)
+MPI Rank 1: 	  W1*H1+B1 : [512 x 1 x *]
 MPI Rank 1: 	  W1*H1+B1 : [512 x 1 x *] (gradient)
-MPI Rank 1: 	  W2*H1 : [132 x 1 x *] }
-MPI Rank 1: 	{ HLast : [132 x 1 x *]
-MPI Rank 1: 	  W2 : [132 x 512] (gradient) }
+MPI Rank 1: 	  W2*H1 : [132 x 1 x *]
+MPI Rank 1: 	  W2*H1 : [132 x 1 x *] (gradient) }
+MPI Rank 1: 
+MPI Rank 1: Here are the ones that don't share memory:
+MPI Rank 1: 	{MeanOfFeatures : [363]}
+MPI Rank 1: 	{InvStdOfFeatures : [363]}
+MPI Rank 1: 	{features : [363 x *]}
+MPI Rank 1: 	{W0 : [512 x 363]}
+MPI Rank 1: 	{B0 : [512 x 1]}
+MPI Rank 1: 	{W1 : [512 x 512]}
+MPI Rank 1: 	{B1 : [512 x 1]}
+MPI Rank 1: 	{W2 : [132 x 512]}
+MPI Rank 1: 	{B2 : [132 x 1]}
+MPI Rank 1: 	{labels : [132 x *]}
+MPI Rank 1: 	{Prior : [132]}
+MPI Rank 1: 	{W2 : [132 x 512] (gradient)}
+MPI Rank 1: 	{EvalClassificationError : [1]}
+MPI Rank 1: 	{B1 : [512 x 1] (gradient)}
+MPI Rank 1: 	{MVNormalizedFeatures : [363 x *]}
+MPI Rank 1: 	{CrossEntropyWithSoftmax : [1]}
+MPI Rank 1: 	{LogOfPrior : [132]}
+MPI Rank 1: 	{CrossEntropyWithSoftmax : [1] (gradient)}
+MPI Rank 1: 	{B2 : [132 x 1] (gradient)}
 MPI Rank 1: 
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:02: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
+MPI Rank 1: 08/21/2017 14:36:13: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:02: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
-MPI Rank 1: 12/15/2016 08:45:02: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
-MPI Rank 1: 12/15/2016 08:45:02: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
-MPI Rank 1: 12/15/2016 08:45:02: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
-MPI Rank 1: 12/15/2016 08:45:02: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
-MPI Rank 1: 12/15/2016 08:45:02: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
+MPI Rank 1: 08/21/2017 14:36:13: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
+MPI Rank 1: 08/21/2017 14:36:13: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
+MPI Rank 1: 08/21/2017 14:36:13: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
+MPI Rank 1: 08/21/2017 14:36:13: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
+MPI Rank 1: 08/21/2017 14:36:13: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
+MPI Rank 1: 08/21/2017 14:36:13: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
 MPI Rank 1: 
 MPI Rank 1: Initializing dataParallelSGD for 1-bit quantization.
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:02: Precomputing --> 3 PreCompute nodes found.
+MPI Rank 1: 08/21/2017 14:36:13: Precomputing --> 3 PreCompute nodes found.
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:02: 	MeanOfFeatures = Mean()
-MPI Rank 1: 12/15/2016 08:45:02: 	InvStdOfFeatures = InvStdDev()
-MPI Rank 1: 12/15/2016 08:45:02: 	Prior = Mean()
-MPI Rank 1: minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
-MPI Rank 1: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+MPI Rank 1: 08/21/2017 14:36:13: 	MeanOfFeatures = Mean()
+MPI Rank 1: 08/21/2017 14:36:13: 	InvStdOfFeatures = InvStdDev()
+MPI Rank 1: 08/21/2017 14:36:13: 	Prior = Mean()
+MPI Rank 1: OMP: Warning #96: Cannot form a team with 12 threads, using 10 instead.
+MPI Rank 1: OMP: Hint: Consider unsetting KMP_ALL_THREADS and OMP_THREAD_LIMIT (if either is set).
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:05: Precomputing --> Completed.
+MPI Rank 1: 08/21/2017 14:36:15: Precomputing --> Completed.
 MPI Rank 1: 
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:06: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
-MPI Rank 1: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+MPI Rank 1: 08/21/2017 14:36:19: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:06: Starting minibatch loop.
-MPI Rank 1: 12/15/2016 08:45:06:  Epoch[ 1 of 4]-Minibatch[   1-  10, 3.13%]: CrossEntropyWithSoftmax = 4.59755198 * 640; EvalClassificationError = 0.93125000 * 640; time = 0.2913s; samplesPerSecond = 2197.1
-MPI Rank 1: 12/15/2016 08:45:06:  Epoch[ 1 of 4]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.34610349 * 640; EvalClassificationError = 0.92031250 * 640; time = 0.2671s; samplesPerSecond = 2396.1
-MPI Rank 1: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98222516 * 640; EvalClassificationError = 0.89062500 * 640; time = 0.2515s; samplesPerSecond = 2544.4
-MPI Rank 1: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.74152814 * 640; EvalClassificationError = 0.84531250 * 640; time = 0.2473s; samplesPerSecond = 2588.5
-MPI Rank 1: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  41-  50, 15.63%]: CrossEntropyWithSoftmax = 3.83818572 * 640; EvalClassificationError = 0.86718750 * 640; time = 0.2596s; samplesPerSecond = 2465.4
-MPI Rank 1: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71641238 * 640; EvalClassificationError = 0.87500000 * 640; time = 0.2641s; samplesPerSecond = 2423.6
-MPI Rank 1: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.41802791 * 640; EvalClassificationError = 0.79687500 * 640; time = 0.2588s; samplesPerSecond = 2472.9
-MPI Rank 1: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.53832947 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.2569s; samplesPerSecond = 2491.1
-MPI Rank 1: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  81-  90, 28.13%]: CrossEntropyWithSoftmax = 3.50628076 * 640; EvalClassificationError = 0.81718750 * 640; time = 0.2589s; samplesPerSecond = 2471.6
-MPI Rank 1: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.41478252 * 640; EvalClassificationError = 0.80781250 * 640; time = 0.2676s; samplesPerSecond = 2391.9
-MPI Rank 1: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.51031210 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.2688s; samplesPerSecond = 2381.2
-MPI Rank 1: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.28365485 * 640; EvalClassificationError = 0.79375000 * 640; time = 0.2586s; samplesPerSecond = 2475.0
-MPI Rank 1: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 121- 130, 40.63%]: CrossEntropyWithSoftmax = 3.20932117 * 640; EvalClassificationError = 0.79531250 * 640; time = 0.2710s; samplesPerSecond = 2361.7
-MPI Rank 1: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.07460534 * 640; EvalClassificationError = 0.75468750 * 640; time = 0.2622s; samplesPerSecond = 2440.6
-MPI Rank 1: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.97529104 * 640; EvalClassificationError = 0.72031250 * 640; time = 0.2595s; samplesPerSecond = 2466.3
-MPI Rank 1: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.11968882 * 640; EvalClassificationError = 0.74531250 * 640; time = 0.2516s; samplesPerSecond = 2543.9
-MPI Rank 1: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 161- 170, 53.13%]: CrossEntropyWithSoftmax = 2.84172140 * 640; EvalClassificationError = 0.71093750 * 640; time = 0.2499s; samplesPerSecond = 2560.6
-MPI Rank 1: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.74031745 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.2585s; samplesPerSecond = 2476.0
-MPI Rank 1: 12/15/2016 08:45:11:  Epoch[ 1 of 4]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.83858085 * 640; EvalClassificationError = 0.72656250 * 640; time = 0.2595s; samplesPerSecond = 2466.6
-MPI Rank 1: 12/15/2016 08:45:11:  Epoch[ 1 of 4]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.74632253 * 640; EvalClassificationError = 0.69218750 * 640; time = 0.2609s; samplesPerSecond = 2452.9
-MPI Rank 1: 12/15/2016 08:45:11:  Epoch[ 1 of 4]-Minibatch[ 201- 210, 65.63%]: CrossEntropyWithSoftmax = 2.61033254 * 640; EvalClassificationError = 0.66250000 * 640; time = 0.2680s; samplesPerSecond = 2387.9
-MPI Rank 1: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.61330754 * 640; EvalClassificationError = 0.65000000 * 640; time = 0.2573s; samplesPerSecond = 2487.7
-MPI Rank 1: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.54591810 * 640; EvalClassificationError = 0.66406250 * 640; time = 0.2515s; samplesPerSecond = 2544.7
-MPI Rank 1: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.57566512 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.2533s; samplesPerSecond = 2526.8
-MPI Rank 1: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 241- 250, 78.13%]: CrossEntropyWithSoftmax = 2.49164945 * 640; EvalClassificationError = 0.63281250 * 640; time = 0.2568s; samplesPerSecond = 2492.4
-MPI Rank 1: 12/15/2016 08:45:13:  Epoch[ 1 of 4]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.39954796 * 640; EvalClassificationError = 0.62812500 * 640; time = 0.2552s; samplesPerSecond = 2507.7
-MPI Rank 1: 12/15/2016 08:45:13:  Epoch[ 1 of 4]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.27034227 * 640; EvalClassificationError = 0.59375000 * 640; time = 0.2580s; samplesPerSecond = 2480.8
-MPI Rank 1: 12/15/2016 08:45:13:  Epoch[ 1 of 4]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.52112387 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.2551s; samplesPerSecond = 2508.4
-MPI Rank 1: 12/15/2016 08:45:13:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.63%]: CrossEntropyWithSoftmax = 2.27800991 * 640; EvalClassificationError = 0.59062500 * 640; time = 0.2533s; samplesPerSecond = 2526.6
-MPI Rank 1: 12/15/2016 08:45:14:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.26783634 * 640; EvalClassificationError = 0.61093750 * 640; time = 0.2562s; samplesPerSecond = 2497.6
-MPI Rank 1: 12/15/2016 08:45:14:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.24590355 * 640; EvalClassificationError = 0.58593750 * 640; time = 0.2600s; samplesPerSecond = 2461.6
-MPI Rank 1: 12/15/2016 08:45:14:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.24415615 * 640; EvalClassificationError = 0.59843750 * 640; time = 0.2475s; samplesPerSecond = 2585.6
-MPI Rank 1: 12/15/2016 08:45:14: Finished Epoch[ 1 of 4]: [Training] CrossEntropyWithSoftmax = 3.04696987 * 20480; EvalClassificationError = 0.73583984 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=8.30884s
+MPI Rank 1: 08/21/2017 14:36:19: Starting minibatch loop.
+MPI Rank 1: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.59755198 * 640; EvalClassificationError = 0.93125000 * 640; time = 0.0566s; samplesPerSecond = 11300.6
+MPI Rank 1: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.34610349 * 640; EvalClassificationError = 0.92031250 * 640; time = 0.0513s; samplesPerSecond = 12483.3
+MPI Rank 1: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98222516 * 640; EvalClassificationError = 0.89062500 * 640; time = 0.0431s; samplesPerSecond = 14862.2
+MPI Rank 1: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.74152814 * 640; EvalClassificationError = 0.84531250 * 640; time = 0.0592s; samplesPerSecond = 10807.5
+MPI Rank 1: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  41-  50, 15.62%]: CrossEntropyWithSoftmax = 3.83818572 * 640; EvalClassificationError = 0.86718750 * 640; time = 0.0435s; samplesPerSecond = 14703.6
+MPI Rank 1: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71641238 * 640; EvalClassificationError = 0.87500000 * 640; time = 0.0429s; samplesPerSecond = 14934.7
+MPI Rank 1: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.41802791 * 640; EvalClassificationError = 0.79687500 * 640; time = 0.0431s; samplesPerSecond = 14857.9
+MPI Rank 1: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.53832947 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.0429s; samplesPerSecond = 14901.4
+MPI Rank 1: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  81-  90, 28.12%]: CrossEntropyWithSoftmax = 3.50628076 * 640; EvalClassificationError = 0.81718750 * 640; time = 0.0429s; samplesPerSecond = 14926.1
+MPI Rank 1: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.41478252 * 640; EvalClassificationError = 0.80781250 * 640; time = 0.0433s; samplesPerSecond = 14765.2
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.51031210 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.0430s; samplesPerSecond = 14899.5
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.28365485 * 640; EvalClassificationError = 0.79375000 * 640; time = 0.0428s; samplesPerSecond = 14967.9
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 121- 130, 40.62%]: CrossEntropyWithSoftmax = 3.20932117 * 640; EvalClassificationError = 0.79531250 * 640; time = 0.0484s; samplesPerSecond = 13221.8
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.07460534 * 640; EvalClassificationError = 0.75468750 * 640; time = 0.0430s; samplesPerSecond = 14890.0
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.97529104 * 640; EvalClassificationError = 0.72031250 * 640; time = 0.0429s; samplesPerSecond = 14904.2
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.11968882 * 640; EvalClassificationError = 0.74531250 * 640; time = 0.0484s; samplesPerSecond = 13227.4
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 161- 170, 53.12%]: CrossEntropyWithSoftmax = 2.84172140 * 640; EvalClassificationError = 0.71093750 * 640; time = 0.0429s; samplesPerSecond = 14918.4
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.74031745 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.0425s; samplesPerSecond = 15046.2
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.83858085 * 640; EvalClassificationError = 0.72656250 * 640; time = 0.0434s; samplesPerSecond = 14745.7
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.74632253 * 640; EvalClassificationError = 0.69218750 * 640; time = 0.0428s; samplesPerSecond = 14946.7
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 201- 210, 65.62%]: CrossEntropyWithSoftmax = 2.61033254 * 640; EvalClassificationError = 0.66250000 * 640; time = 0.0428s; samplesPerSecond = 14949.4
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.61330754 * 640; EvalClassificationError = 0.65000000 * 640; time = 0.0454s; samplesPerSecond = 14097.2
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.54591810 * 640; EvalClassificationError = 0.66406250 * 640; time = 0.0432s; samplesPerSecond = 14801.4
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.57566512 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.0436s; samplesPerSecond = 14670.0
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 241- 250, 78.12%]: CrossEntropyWithSoftmax = 2.49164945 * 640; EvalClassificationError = 0.63281250 * 640; time = 0.0432s; samplesPerSecond = 14829.8
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.39954796 * 640; EvalClassificationError = 0.62812500 * 640; time = 0.0486s; samplesPerSecond = 13173.6
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.27034227 * 640; EvalClassificationError = 0.59375000 * 640; time = 0.0430s; samplesPerSecond = 14896.9
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.52112387 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.0431s; samplesPerSecond = 14860.2
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.62%]: CrossEntropyWithSoftmax = 2.27800991 * 640; EvalClassificationError = 0.59062500 * 640; time = 0.0429s; samplesPerSecond = 14923.7
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.26783634 * 640; EvalClassificationError = 0.61093750 * 640; time = 0.0430s; samplesPerSecond = 14890.4
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.24590355 * 640; EvalClassificationError = 0.58593750 * 640; time = 0.0429s; samplesPerSecond = 14926.2
+MPI Rank 1: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.24415615 * 640; EvalClassificationError = 0.59843750 * 640; time = 0.0424s; samplesPerSecond = 15084.3
+MPI Rank 1: 08/21/2017 14:36:20: Finished Epoch[ 1 of 4]: [Training] CrossEntropyWithSoftmax = 3.04696987 * 20480; EvalClassificationError = 0.73583984 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=1.43728s
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:14: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
-MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 3, with 1 datapasses
+MPI Rank 1: 08/21/2017 14:36:24: Starting Epoch 2: learning rate per sample = 0.00195312  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:14: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
-MPI Rank 1: Actual gradient aggregation time: 0.042853
-MPI Rank 1: Async gradient aggregation wait time: 2e-006
-MPI Rank 1: Actual gradient aggregation time: 0.025159
-MPI Rank 1: 12/15/2016 08:45:15:  Epoch[ 2 of 4]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.23258828 * 2304; EvalClassificationError = 0.61414931 * 2304; time = 0.7137s; samplesPerSecond = 3228.3
-MPI Rank 1: Async gradient aggregation wait time: 0.011636
-MPI Rank 1: Actual gradient aggregation time: 0.05291
-MPI Rank 1: Async gradient aggregation wait time: 3e-006
-MPI Rank 1: Actual gradient aggregation time: 0.06182
-MPI Rank 1: 12/15/2016 08:45:15:  Epoch[ 2 of 4]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.23901091 * 2560; EvalClassificationError = 0.58320313 * 2560; time = 0.5390s; samplesPerSecond = 4749.4
-MPI Rank 1: Async gradient aggregation wait time: 3e-006
-MPI Rank 1: Actual gradient aggregation time: 0.021365
-MPI Rank 1: Async gradient aggregation wait time: 0.03829
-MPI Rank 1: Actual gradient aggregation time: 0.067366
-MPI Rank 1: 12/15/2016 08:45:16:  Epoch[ 2 of 4]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.16822363 * 2560; EvalClassificationError = 0.57773438 * 2560; time = 0.6390s; samplesPerSecond = 4006.2
-MPI Rank 1: Async gradient aggregation wait time: 0.016716
-MPI Rank 1: Actual gradient aggregation time: 0.046773
-MPI Rank 1: Async gradient aggregation wait time: 3e-006
-MPI Rank 1: Actual gradient aggregation time: 0.035357
-MPI Rank 1: 12/15/2016 08:45:17:  Epoch[ 2 of 4]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.19927971 * 2560; EvalClassificationError = 0.62187500 * 2560; time = 0.6239s; samplesPerSecond = 4103.2
-MPI Rank 1: Async gradient aggregation wait time: 2e-006
-MPI Rank 1: Actual gradient aggregation time: 0.01908
-MPI Rank 1: Async gradient aggregation wait time: 2e-006
-MPI Rank 1: Actual gradient aggregation time: 0.019362
-MPI Rank 1: 12/15/2016 08:45:17:  Epoch[ 2 of 4]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.22075939 * 2560; EvalClassificationError = 0.59648437 * 2560; time = 0.5690s; samplesPerSecond = 4499.2
-MPI Rank 1: Async gradient aggregation wait time: 3e-006
-MPI Rank 1: Actual gradient aggregation time: 0.019096
-MPI Rank 1: Async gradient aggregation wait time: 3e-006
-MPI Rank 1: Actual gradient aggregation time: 0.028039
-MPI Rank 1: 12/15/2016 08:45:18:  Epoch[ 2 of 4]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 2.11227615 * 2560; EvalClassificationError = 0.57382813 * 2560; time = 0.4738s; samplesPerSecond = 5403.2
-MPI Rank 1: Async gradient aggregation wait time: 2e-006
-MPI Rank 1: Actual gradient aggregation time: 0.051405
-MPI Rank 1: Async gradient aggregation wait time: 2e-006
-MPI Rank 1: Actual gradient aggregation time: 0.050967
-MPI Rank 1: 12/15/2016 08:45:18:  Epoch[ 2 of 4]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 2.17322591 * 2560; EvalClassificationError = 0.61914063 * 2560; time = 0.6206s; samplesPerSecond = 4125.0
-MPI Rank 1: Async gradient aggregation wait time: 2e-006
-MPI Rank 1: Actual gradient aggregation time: 0.023017
-MPI Rank 1: Async gradient aggregation wait time: 0.03727
-MPI Rank 1: Actual gradient aggregation time: 0.037849
-MPI Rank 1: 12/15/2016 08:45:19:  Epoch[ 2 of 4]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 2.13027284 * 2560; EvalClassificationError = 0.60820312 * 2560; time = 0.6112s; samplesPerSecond = 4188.6
-MPI Rank 1: Async gradient aggregation wait time: 0.04738
-MPI Rank 1: Actual gradient aggregation time: 0.01977
-MPI Rank 1: 12/15/2016 08:45:19: Finished Epoch[ 2 of 4]: [Training] CrossEntropyWithSoftmax = 2.18324277 * 20480; EvalClassificationError = 0.59892578 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=4.86625s
+MPI Rank 1: 08/21/2017 14:36:24: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 1: Actual gradient aggregation time: 0.0353174
+MPI Rank 1: Async gradient aggregation wait time: 0.0672167
+MPI Rank 1: Actual gradient aggregation time: 0.0547333
+MPI Rank 1: 08/21/2017 14:36:24:  Epoch[ 2 of 4]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.23258828 * 2304; EvalClassificationError = 0.61414931 * 2304; time = 0.4163s; samplesPerSecond = 5534.3
+MPI Rank 1: Async gradient aggregation wait time: 0.0106231
+MPI Rank 1: Actual gradient aggregation time: 0.0684898
+MPI Rank 1: Async gradient aggregation wait time: 0.0316523
+MPI Rank 1: Actual gradient aggregation time: 0.0416078
+MPI Rank 1: 08/21/2017 14:36:24:  Epoch[ 2 of 4]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.23901091 * 2560; EvalClassificationError = 0.58320313 * 2560; time = 0.3733s; samplesPerSecond = 6858.6
+MPI Rank 1: Async gradient aggregation wait time: 0.0404001
+MPI Rank 1: Actual gradient aggregation time: 0.035839
+MPI Rank 1: Async gradient aggregation wait time: 0.020758
+MPI Rank 1: Actual gradient aggregation time: 0.0255097
+MPI Rank 1: 08/21/2017 14:36:25:  Epoch[ 2 of 4]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.16822363 * 2560; EvalClassificationError = 0.57773438 * 2560; time = 0.3083s; samplesPerSecond = 8302.7
+MPI Rank 1: Async gradient aggregation wait time: 0.0485296
+MPI Rank 1: Actual gradient aggregation time: 0.0749987
+MPI Rank 1: Async gradient aggregation wait time: 0.0218887
+MPI Rank 1: Actual gradient aggregation time: 0.030871
+MPI Rank 1: 08/21/2017 14:36:25:  Epoch[ 2 of 4]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.19927971 * 2560; EvalClassificationError = 0.62187500 * 2560; time = 0.4874s; samplesPerSecond = 5252.1
+MPI Rank 1: Async gradient aggregation wait time: 0.0217406
+MPI Rank 1: Actual gradient aggregation time: 0.0319392
+MPI Rank 1: Async gradient aggregation wait time: 0.0251533
+MPI Rank 1: Actual gradient aggregation time: 0.0409341
+MPI Rank 1: 08/21/2017 14:36:25:  Epoch[ 2 of 4]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.22075939 * 2560; EvalClassificationError = 0.59648437 * 2560; time = 0.3437s; samplesPerSecond = 7447.6
+MPI Rank 1: Async gradient aggregation wait time: 0.0356943
+MPI Rank 1: Actual gradient aggregation time: 0.0247678
+MPI Rank 1: Async gradient aggregation wait time: 0.0238805
+MPI Rank 1: Actual gradient aggregation time: 0.0603096
+MPI Rank 1: 08/21/2017 14:36:26:  Epoch[ 2 of 4]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 2.11227615 * 2560; EvalClassificationError = 0.57382813 * 2560; time = 0.3841s; samplesPerSecond = 6665.2
+MPI Rank 1: Async gradient aggregation wait time: 0.0250503
+MPI Rank 1: Actual gradient aggregation time: 0.07972
+MPI Rank 1: Async gradient aggregation wait time: 0.0493322
+MPI Rank 1: Actual gradient aggregation time: 0.0672021
+MPI Rank 1: 08/21/2017 14:36:26:  Epoch[ 2 of 4]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 2.17322591 * 2560; EvalClassificationError = 0.61914062 * 2560; time = 0.5674s; samplesPerSecond = 4511.6
+MPI Rank 1: Async gradient aggregation wait time: 0.0241914
+MPI Rank 1: Actual gradient aggregation time: 0.0222388
+MPI Rank 1: Async gradient aggregation wait time: 0.0367081
+MPI Rank 1: Actual gradient aggregation time: 0.0440188
+MPI Rank 1: 08/21/2017 14:36:27:  Epoch[ 2 of 4]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 2.13027284 * 2560; EvalClassificationError = 0.60820312 * 2560; time = 0.4194s; samplesPerSecond = 6104.1
+MPI Rank 1: Async gradient aggregation wait time: 0.0705589
+MPI Rank 1: Actual gradient aggregation time: 0.0358087
+MPI Rank 1: 08/21/2017 14:36:27: Finished Epoch[ 2 of 4]: [Training] CrossEntropyWithSoftmax = 2.18324277 * 20480; EvalClassificationError = 0.59892578 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=3.40849s
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:19: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
-MPI Rank 1: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 1 of 3, with 1 datapasses
+MPI Rank 1: 08/21/2017 14:36:27: Starting Epoch 3: learning rate per sample = 9.76563e-05  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:19: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
-MPI Rank 1: Async gradient aggregation wait time: 3e-006
-MPI Rank 1: Actual gradient aggregation time: 0.048671
-MPI Rank 1: Async gradient aggregation wait time: 2e-006
-MPI Rank 1: Actual gradient aggregation time: 0.162308
-MPI Rank 1: 12/15/2016 08:45:20:  Epoch[ 3 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 2.20597127 * 9216; EvalClassificationError = 0.58593750 * 9216; time = 1.4064s; samplesPerSecond = 6553.0
-MPI Rank 1: Async gradient aggregation wait time: 2e-006
-MPI Rank 1: Actual gradient aggregation time: 0.029329
-MPI Rank 1: Async gradient aggregation wait time: 2e-006
-MPI Rank 1: Actual gradient aggregation time: 0.028563
-MPI Rank 1: 12/15/2016 08:45:22:  Epoch[ 3 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 2.14626719 * 10240; EvalClassificationError = 0.58886719 * 10240; time = 1.2755s; samplesPerSecond = 8028.1
-MPI Rank 1: 12/15/2016 08:45:22: Finished Epoch[ 3 of 4]: [Training] CrossEntropyWithSoftmax = 2.16917041 * 20480; EvalClassificationError = 0.58637695 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-005; epochTime=2.74129s
+MPI Rank 1: 08/21/2017 14:36:27: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 1: Async gradient aggregation wait time: 0.0524459
+MPI Rank 1: Actual gradient aggregation time: 0.0846844
+MPI Rank 1: Async gradient aggregation wait time: 0.0510634
+MPI Rank 1: Actual gradient aggregation time: 0.0902393
+MPI Rank 1: 08/21/2017 14:36:28:  Epoch[ 3 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 2.20597127 * 9216; EvalClassificationError = 0.58593750 * 9216; time = 0.7744s; samplesPerSecond = 11900.7
+MPI Rank 1: Async gradient aggregation wait time: 0.0185328
+MPI Rank 1: Actual gradient aggregation time: 0.0765566
+MPI Rank 1: Async gradient aggregation wait time: 0.0645582
+MPI Rank 1: Actual gradient aggregation time: 0.0515374
+MPI Rank 1: 08/21/2017 14:36:29:  Epoch[ 3 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 2.14626719 * 10240; EvalClassificationError = 0.58886719 * 10240; time = 0.8557s; samplesPerSecond = 11967.3
+MPI Rank 1: 08/21/2017 14:36:29: Finished Epoch[ 3 of 4]: [Training] CrossEntropyWithSoftmax = 2.16917041 * 20480; EvalClassificationError = 0.58637695 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=1.79242s
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:22: Starting Epoch 4: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
-MPI Rank 1: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 1 of 3, with 1 datapasses
+MPI Rank 1: 08/21/2017 14:36:29: Starting Epoch 4: learning rate per sample = 9.76563e-05  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:22: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
-MPI Rank 1: Async gradient aggregation wait time: 3e-006
-MPI Rank 1: Actual gradient aggregation time: 0.078784
-MPI Rank 1: Async gradient aggregation wait time: 3e-006
-MPI Rank 1: Actual gradient aggregation time: 0.020759
-MPI Rank 1: 12/15/2016 08:45:23:  Epoch[ 4 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.99117050 * 9216; EvalClassificationError = 0.54427083 * 9216; time = 1.3985s; samplesPerSecond = 6589.8
-MPI Rank 1: Async gradient aggregation wait time: 3e-006
-MPI Rank 1: Actual gradient aggregation time: 0.022602
-MPI Rank 1: Async gradient aggregation wait time: 3e-006
-MPI Rank 1: Actual gradient aggregation time: 0.019065
-MPI Rank 1: 12/15/2016 08:45:25:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.97438950 * 10240; EvalClassificationError = 0.54345703 * 10240; time = 1.3151s; samplesPerSecond = 7786.7
-MPI Rank 1: Async gradient aggregation wait time: 0.022045
-MPI Rank 1: 12/15/2016 08:45:25: Finished Epoch[ 4 of 4]: [Training] CrossEntropyWithSoftmax = 1.98353069 * 20480; EvalClassificationError = 0.54428711 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 9.7656251e-005; epochTime=2.76637s
+MPI Rank 1: 08/21/2017 14:36:29: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 1: Async gradient aggregation wait time: 0.0656956
+MPI Rank 1: Actual gradient aggregation time: 0.0719482
+MPI Rank 1: Async gradient aggregation wait time: 0.0451104
+MPI Rank 1: Actual gradient aggregation time: 0.0930775
+MPI Rank 1: 08/21/2017 14:36:30:  Epoch[ 4 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.99117050 * 9216; EvalClassificationError = 0.54427083 * 9216; time = 0.7190s; samplesPerSecond = 12818.6
+MPI Rank 1: Async gradient aggregation wait time: 0.0526693
+MPI Rank 1: Actual gradient aggregation time: 0.0647917
+MPI Rank 1: Async gradient aggregation wait time: 0.017233
+MPI Rank 1: Actual gradient aggregation time: 0.0668459
+MPI Rank 1: 08/21/2017 14:36:30:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.97438950 * 10240; EvalClassificationError = 0.54345703 * 10240; time = 0.6895s; samplesPerSecond = 14850.3
+MPI Rank 1: Async gradient aggregation wait time: 0.0210741
+MPI Rank 1: 08/21/2017 14:36:30: Finished Epoch[ 4 of 4]: [Training] CrossEntropyWithSoftmax = 1.98353069 * 20480; EvalClassificationError = 0.54428711 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 9.7656251e-05; epochTime=1.50229s
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:25: Action "train" complete.
+MPI Rank 1: 08/21/2017 14:36:30: Action "train" complete.
 MPI Rank 1: 
-MPI Rank 1: 12/15/2016 08:45:25: __COMPLETED__
-MPI Rank 2: 12/15/2016 08:45:02: Redirecting stderr to file C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr_speechTrain.logrank2
-MPI Rank 2: CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:31:19) on cntk-muc03 at 2016/12/15 08:45:01
+MPI Rank 1: 08/21/2017 14:36:30: __COMPLETED__
+MPI Rank 2: CNTK 2.1+ (HEAD 572609, Aug 21 2017 08:24:29) on a0296eea6817 at 2017/08/21 14:36:13
 MPI Rank 2: 
-MPI Rank 2: C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=1  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215084323.697388\Speech\DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
-MPI Rank 2: 12/15/2016 08:45:02: Using 1 CPU threads.
+MPI Rank 2: /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/1bitsgd/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/../cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/ParallelBufferedAsyncGradientAggregation/..  OutputDir=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=4  precision=double  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=1]]]]  speechTrain=[SGD=[ParallelTrain=[DataParallelSGD=[useBufferedAsyncGradientAggregation=true]]]]  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  speechTrain=[SGD=[maxEpochs=4]]  speechTrain=[SGD=[ParallelTrain=[syncPerfStats=5]]]  stderr=/tmp/cntk-test-20170821143307.151267/Speech/DNN_ParallelBufferedAsyncGradientAggregation@release_cpu/stderr
+MPI Rank 2: 08/21/2017 14:36:14: -------------------------------------------------------------------
+MPI Rank 2: 08/21/2017 14:36:14: Build info: 
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:02: ##############################################################################
-MPI Rank 2: 12/15/2016 08:45:02: #                                                                            #
-MPI Rank 2: 12/15/2016 08:45:02: # speechTrain command (train action)                                         #
-MPI Rank 2: 12/15/2016 08:45:02: #                                                                            #
-MPI Rank 2: 12/15/2016 08:45:02: ##############################################################################
+MPI Rank 2: 08/21/2017 14:36:14: 		Built time: Aug 21 2017 08:20:36
+MPI Rank 2: 08/21/2017 14:36:14: 		Last modified date: Thu Aug  3 09:31:40 2017
+MPI Rank 2: 08/21/2017 14:36:14: 		Build type: release
+MPI Rank 2: 08/21/2017 14:36:14: 		Build target: GPU
+MPI Rank 2: 08/21/2017 14:36:14: 		With 1bit-SGD: yes
+MPI Rank 2: 08/21/2017 14:36:14: 		With ASGD: yes
+MPI Rank 2: 08/21/2017 14:36:14: 		Math lib: mkl
+MPI Rank 2: 08/21/2017 14:36:14: 		CUDA_PATH: /usr/local/cuda-8.0
+MPI Rank 2: 08/21/2017 14:36:14: 		CUB_PATH: /usr/local/cub-1.4.1
+MPI Rank 2: 08/21/2017 14:36:14: 		CUDNN_PATH: /usr/local/cudnn-6.0
+MPI Rank 2: 08/21/2017 14:36:14: 		Build Branch: HEAD
+MPI Rank 2: 08/21/2017 14:36:14: 		Build SHA1: 57260963c605c12d3796e37783433518ab8ba039
+MPI Rank 2: 08/21/2017 14:36:14: 		Built by Source/CNTK/buildinfo.h$$0 on d477618ede0f
+MPI Rank 2: 08/21/2017 14:36:14: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux_2
+MPI Rank 2: 08/21/2017 14:36:14: 		MPI distribution: Open MPI
+MPI Rank 2: 08/21/2017 14:36:14: 		MPI version: 1.10.7
+MPI Rank 2: 08/21/2017 14:36:14: -------------------------------------------------------------------
+MPI Rank 2: 08/21/2017 14:36:14: -------------------------------------------------------------------
+MPI Rank 2: 08/21/2017 14:36:14: GPU info:
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:02: 
+MPI Rank 2: 08/21/2017 14:36:14: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; total memory = 3020 MB; free memory = 3018 MB
+MPI Rank 2: 08/21/2017 14:36:14: -------------------------------------------------------------------
+MPI Rank 2: 08/21/2017 14:36:14: Using 4 CPU threads.
+MPI Rank 2: 
+MPI Rank 2: 08/21/2017 14:36:14: ##############################################################################
+MPI Rank 2: 08/21/2017 14:36:14: #                                                                            #
+MPI Rank 2: 08/21/2017 14:36:14: # speechTrain command (train action)                                         #
+MPI Rank 2: 08/21/2017 14:36:14: #                                                                            #
+MPI Rank 2: 08/21/2017 14:36:14: ##############################################################################
+MPI Rank 2: 
+MPI Rank 2: 08/21/2017 14:36:14: 
 MPI Rank 2: Creating virgin network.
 MPI Rank 2: SimpleNetworkBuilder Using CPU
-MPI Rank 2: reading script file glob_0000.scp ... 948 entries
-MPI Rank 2: total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list
-MPI Rank 2: htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
-MPI Rank 2: ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
-MPI Rank 2: label set 0: 129 classes
-MPI Rank 2: minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-MPI Rank 2: 12/15/2016 08:45:03: 
+MPI Rank 2: Reading script file glob_0000.scp ... 948 entries
+MPI Rank 2: HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+MPI Rank 2: HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
+MPI Rank 2: Total (133) state names in state list '/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/state.list'
+MPI Rank 2: MLFDeserializer: '948' utterances with '252734' frames
+MPI Rank 2: 08/21/2017 14:36:14: 
 MPI Rank 2: Model has 25 nodes. Using CPU.
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:03: Training criterion:   CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
-MPI Rank 2: 12/15/2016 08:45:03: Evaluation criterion: EvalClassificationError = ClassificationError
+MPI Rank 2: 08/21/2017 14:36:14: Training criterion:   CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+MPI Rank 2: 08/21/2017 14:36:14: Evaluation criterion: EvalClassificationError = ClassificationError
 MPI Rank 2: 
 MPI Rank 2: 
 MPI Rank 2: Allocating matrices for forward and/or backward propagation.
 MPI Rank 2: 
-MPI Rank 2: Memory Sharing: Out of 40 matrices, 19 are shared as 8, and 21 are not shared.
+MPI Rank 2: Gradient Memory Aliasing: 4 are aliased.
+MPI Rank 2: 	W2*H1 (gradient) reuses HLast (gradient)
+MPI Rank 2: 	W1*H1 (gradient) reuses W1*H1+B1 (gradient)
 MPI Rank 2: 
-MPI Rank 2: 	{ H1 : [512 x 1 x *]
-MPI Rank 2: 	  W0*features : [512 x *] (gradient) }
-MPI Rank 2: 	{ B0 : [512 x 1] (gradient)
-MPI Rank 2: 	  H1 : [512 x 1 x *] (gradient)
+MPI Rank 2: Memory Sharing: Out of 40 matrices, 21 are shared as 5, and 19 are not shared.
+MPI Rank 2: 
+MPI Rank 2: Here are the ones that share memory:
+MPI Rank 2: 	{ PosteriorProb : [132 x 1 x *]
+MPI Rank 2: 	  ScaledLogLikelihood : [132 x 1 x *] }
+MPI Rank 2: 	{ HLast : [132 x 1 x *] (gradient)
+MPI Rank 2: 	  W0 : [512 x 363] (gradient)
+MPI Rank 2: 	  W0*features+B0 : [512 x 1 x *] (gradient)
+MPI Rank 2: 	  W1*H1 : [512 x 1 x *] (gradient)
+MPI Rank 2: 	  W1*H1+B1 : [512 x 1 x *]
 MPI Rank 2: 	  W1*H1+B1 : [512 x 1 x *] (gradient)
-MPI Rank 2: 	  W2*H1 : [132 x 1 x *] }
-MPI Rank 2: 	{ B1 : [512 x 1] (gradient)
+MPI Rank 2: 	  W2*H1 : [132 x 1 x *]
+MPI Rank 2: 	  W2*H1 : [132 x 1 x *] (gradient) }
+MPI Rank 2: 	{ H1 : [512 x 1 x *] (gradient)
 MPI Rank 2: 	  H2 : [512 x 1 x *] (gradient)
-MPI Rank 2: 	  HLast : [132 x 1 x *] (gradient) }
-MPI Rank 2: 	{ W0 : [512 x 363] (gradient)
-MPI Rank 2: 	  W0*features+B0 : [512 x 1 x *] }
-MPI Rank 2: 	{ W0*features+B0 : [512 x 1 x *] (gradient)
-MPI Rank 2: 	  W1*H1 : [512 x 1 x *] }
-MPI Rank 2: 	{ W1 : [512 x 512] (gradient)
-MPI Rank 2: 	  W1*H1+B1 : [512 x 1 x *] }
+MPI Rank 2: 	  HLast : [132 x 1 x *]
+MPI Rank 2: 	  W0*features : [512 x *]
+MPI Rank 2: 	  W0*features : [512 x *] (gradient) }
 MPI Rank 2: 	{ H2 : [512 x 1 x *]
-MPI Rank 2: 	  W1*H1 : [512 x 1 x *] (gradient) }
-MPI Rank 2: 	{ HLast : [132 x 1 x *]
-MPI Rank 2: 	  W2 : [132 x 512] (gradient) }
+MPI Rank 2: 	  W0*features+B0 : [512 x 1 x *]
+MPI Rank 2: 	  W1 : [512 x 512] (gradient)
+MPI Rank 2: 	  W1*H1 : [512 x 1 x *] }
+MPI Rank 2: 	{ B0 : [512 x 1] (gradient)
+MPI Rank 2: 	  H1 : [512 x 1 x *] }
+MPI Rank 2: 
+MPI Rank 2: Here are the ones that don't share memory:
+MPI Rank 2: 	{InvStdOfFeatures : [363]}
+MPI Rank 2: 	{features : [363 x *]}
+MPI Rank 2: 	{MeanOfFeatures : [363]}
+MPI Rank 2: 	{W0 : [512 x 363]}
+MPI Rank 2: 	{B0 : [512 x 1]}
+MPI Rank 2: 	{W1 : [512 x 512]}
+MPI Rank 2: 	{B1 : [512 x 1]}
+MPI Rank 2: 	{W2 : [132 x 512]}
+MPI Rank 2: 	{B2 : [132 x 1]}
+MPI Rank 2: 	{labels : [132 x *]}
+MPI Rank 2: 	{Prior : [132]}
+MPI Rank 2: 	{W2 : [132 x 512] (gradient)}
+MPI Rank 2: 	{CrossEntropyWithSoftmax : [1]}
+MPI Rank 2: 	{EvalClassificationError : [1]}
+MPI Rank 2: 	{LogOfPrior : [132]}
+MPI Rank 2: 	{B2 : [132 x 1] (gradient)}
+MPI Rank 2: 	{CrossEntropyWithSoftmax : [1] (gradient)}
+MPI Rank 2: 	{B1 : [512 x 1] (gradient)}
+MPI Rank 2: 	{MVNormalizedFeatures : [363 x *]}
 MPI Rank 2: 
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:03: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
+MPI Rank 2: 08/21/2017 14:36:14: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:03: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
-MPI Rank 2: 12/15/2016 08:45:03: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
-MPI Rank 2: 12/15/2016 08:45:03: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
-MPI Rank 2: 12/15/2016 08:45:03: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
-MPI Rank 2: 12/15/2016 08:45:03: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
-MPI Rank 2: 12/15/2016 08:45:03: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
+MPI Rank 2: 08/21/2017 14:36:14: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
+MPI Rank 2: 08/21/2017 14:36:14: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
+MPI Rank 2: 08/21/2017 14:36:14: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
+MPI Rank 2: 08/21/2017 14:36:14: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
+MPI Rank 2: 08/21/2017 14:36:14: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
+MPI Rank 2: 08/21/2017 14:36:14: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
 MPI Rank 2: 
 MPI Rank 2: Initializing dataParallelSGD for 1-bit quantization.
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:03: Precomputing --> 3 PreCompute nodes found.
+MPI Rank 2: 08/21/2017 14:36:14: Precomputing --> 3 PreCompute nodes found.
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:03: 	MeanOfFeatures = Mean()
-MPI Rank 2: 12/15/2016 08:45:03: 	InvStdOfFeatures = InvStdDev()
-MPI Rank 2: 12/15/2016 08:45:03: 	Prior = Mean()
-MPI Rank 2: minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
-MPI Rank 2: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+MPI Rank 2: 08/21/2017 14:36:14: 	MeanOfFeatures = Mean()
+MPI Rank 2: 08/21/2017 14:36:14: 	InvStdOfFeatures = InvStdDev()
+MPI Rank 2: 08/21/2017 14:36:14: 	Prior = Mean()
+MPI Rank 2: OMP: Warning #96: Cannot form a team with 12 threads, using 10 instead.
+MPI Rank 2: OMP: Hint: Consider unsetting KMP_ALL_THREADS and OMP_THREAD_LIMIT (if either is set).
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:06: Precomputing --> Completed.
+MPI Rank 2: 08/21/2017 14:36:19: Precomputing --> Completed.
 MPI Rank 2: 
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:06: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
-MPI Rank 2: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+MPI Rank 2: 08/21/2017 14:36:19: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:06: Starting minibatch loop.
-MPI Rank 2: 12/15/2016 08:45:06:  Epoch[ 1 of 4]-Minibatch[   1-  10, 3.13%]: CrossEntropyWithSoftmax = 4.59755198 * 640; EvalClassificationError = 0.93125000 * 640; time = 0.2718s; samplesPerSecond = 2354.8
-MPI Rank 2: 12/15/2016 08:45:06:  Epoch[ 1 of 4]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.34610349 * 640; EvalClassificationError = 0.92031250 * 640; time = 0.2665s; samplesPerSecond = 2401.4
-MPI Rank 2: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98222516 * 640; EvalClassificationError = 0.89062500 * 640; time = 0.2495s; samplesPerSecond = 2564.7
-MPI Rank 2: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.74152814 * 640; EvalClassificationError = 0.84531250 * 640; time = 0.2478s; samplesPerSecond = 2583.0
-MPI Rank 2: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  41-  50, 15.63%]: CrossEntropyWithSoftmax = 3.83818572 * 640; EvalClassificationError = 0.86718750 * 640; time = 0.2617s; samplesPerSecond = 2445.2
-MPI Rank 2: 12/15/2016 08:45:07:  Epoch[ 1 of 4]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71641238 * 640; EvalClassificationError = 0.87500000 * 640; time = 0.2624s; samplesPerSecond = 2439.0
-MPI Rank 2: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.41802791 * 640; EvalClassificationError = 0.79687500 * 640; time = 0.2531s; samplesPerSecond = 2529.1
-MPI Rank 2: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.53832947 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.2515s; samplesPerSecond = 2545.2
-MPI Rank 2: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  81-  90, 28.13%]: CrossEntropyWithSoftmax = 3.50628076 * 640; EvalClassificationError = 0.81718750 * 640; time = 0.2510s; samplesPerSecond = 2549.4
-MPI Rank 2: 12/15/2016 08:45:08:  Epoch[ 1 of 4]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.41478252 * 640; EvalClassificationError = 0.80781250 * 640; time = 0.2601s; samplesPerSecond = 2460.8
-MPI Rank 2: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.51031210 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.2549s; samplesPerSecond = 2511.1
-MPI Rank 2: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.28365485 * 640; EvalClassificationError = 0.79375000 * 640; time = 0.2507s; samplesPerSecond = 2553.2
-MPI Rank 2: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 121- 130, 40.63%]: CrossEntropyWithSoftmax = 3.20932117 * 640; EvalClassificationError = 0.79531250 * 640; time = 0.2712s; samplesPerSecond = 2359.7
-MPI Rank 2: 12/15/2016 08:45:09:  Epoch[ 1 of 4]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.07460534 * 640; EvalClassificationError = 0.75468750 * 640; time = 0.2609s; samplesPerSecond = 2453.0
-MPI Rank 2: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.97529104 * 640; EvalClassificationError = 0.72031250 * 640; time = 0.2888s; samplesPerSecond = 2216.0
-MPI Rank 2: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.11968882 * 640; EvalClassificationError = 0.74531250 * 640; time = 0.2517s; samplesPerSecond = 2543.0
-MPI Rank 2: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 161- 170, 53.13%]: CrossEntropyWithSoftmax = 2.84172140 * 640; EvalClassificationError = 0.71093750 * 640; time = 0.2497s; samplesPerSecond = 2563.3
-MPI Rank 2: 12/15/2016 08:45:10:  Epoch[ 1 of 4]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.74031745 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.2535s; samplesPerSecond = 2524.7
-MPI Rank 2: 12/15/2016 08:45:11:  Epoch[ 1 of 4]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.83858085 * 640; EvalClassificationError = 0.72656250 * 640; time = 0.2557s; samplesPerSecond = 2503.3
-MPI Rank 2: 12/15/2016 08:45:11:  Epoch[ 1 of 4]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.74632253 * 640; EvalClassificationError = 0.69218750 * 640; time = 0.2673s; samplesPerSecond = 2394.1
-MPI Rank 2: 12/15/2016 08:45:11:  Epoch[ 1 of 4]-Minibatch[ 201- 210, 65.63%]: CrossEntropyWithSoftmax = 2.61033254 * 640; EvalClassificationError = 0.66250000 * 640; time = 0.2666s; samplesPerSecond = 2401.0
-MPI Rank 2: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.61330754 * 640; EvalClassificationError = 0.65000000 * 640; time = 0.2671s; samplesPerSecond = 2396.5
-MPI Rank 2: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.54591810 * 640; EvalClassificationError = 0.66406250 * 640; time = 0.2558s; samplesPerSecond = 2502.1
-MPI Rank 2: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.57566512 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.2641s; samplesPerSecond = 2423.5
-MPI Rank 2: 12/15/2016 08:45:12:  Epoch[ 1 of 4]-Minibatch[ 241- 250, 78.13%]: CrossEntropyWithSoftmax = 2.49164945 * 640; EvalClassificationError = 0.63281250 * 640; time = 0.2622s; samplesPerSecond = 2441.3
-MPI Rank 2: 12/15/2016 08:45:13:  Epoch[ 1 of 4]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.39954796 * 640; EvalClassificationError = 0.62812500 * 640; time = 0.2661s; samplesPerSecond = 2405.1
-MPI Rank 2: 12/15/2016 08:45:13:  Epoch[ 1 of 4]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.27034227 * 640; EvalClassificationError = 0.59375000 * 640; time = 0.2646s; samplesPerSecond = 2418.5
-MPI Rank 2: 12/15/2016 08:45:13:  Epoch[ 1 of 4]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.52112387 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.2509s; samplesPerSecond = 2550.4
-MPI Rank 2: 12/15/2016 08:45:13:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.63%]: CrossEntropyWithSoftmax = 2.27800991 * 640; EvalClassificationError = 0.59062500 * 640; time = 0.2504s; samplesPerSecond = 2555.4
-MPI Rank 2: 12/15/2016 08:45:14:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.26783634 * 640; EvalClassificationError = 0.61093750 * 640; time = 0.2533s; samplesPerSecond = 2527.0
-MPI Rank 2: 12/15/2016 08:45:14:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.24590355 * 640; EvalClassificationError = 0.58593750 * 640; time = 0.2514s; samplesPerSecond = 2545.2
-MPI Rank 2: 12/15/2016 08:45:14:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.24415615 * 640; EvalClassificationError = 0.59843750 * 640; time = 0.2466s; samplesPerSecond = 2594.9
-MPI Rank 2: 12/15/2016 08:45:14: Finished Epoch[ 1 of 4]: [Training] CrossEntropyWithSoftmax = 3.04696987 * 20480; EvalClassificationError = 0.73583984 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=8.29154s
+MPI Rank 2: 08/21/2017 14:36:19: Starting minibatch loop.
+MPI Rank 2: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.59755198 * 640; EvalClassificationError = 0.93125000 * 640; time = 0.1413s; samplesPerSecond = 4530.4
+MPI Rank 2: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.34610349 * 640; EvalClassificationError = 0.92031250 * 640; time = 0.1320s; samplesPerSecond = 4848.3
+MPI Rank 2: 08/21/2017 14:36:19:  Epoch[ 1 of 4]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98222516 * 640; EvalClassificationError = 0.89062500 * 640; time = 0.1784s; samplesPerSecond = 3586.9
+MPI Rank 2: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.74152814 * 640; EvalClassificationError = 0.84531250 * 640; time = 0.1828s; samplesPerSecond = 3500.5
+MPI Rank 2: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  41-  50, 15.62%]: CrossEntropyWithSoftmax = 3.83818572 * 640; EvalClassificationError = 0.86718750 * 640; time = 0.1493s; samplesPerSecond = 4286.3
+MPI Rank 2: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71641238 * 640; EvalClassificationError = 0.87500000 * 640; time = 0.1588s; samplesPerSecond = 4030.0
+MPI Rank 2: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.41802791 * 640; EvalClassificationError = 0.79687500 * 640; time = 0.0820s; samplesPerSecond = 7804.1
+MPI Rank 2: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.53832947 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.1322s; samplesPerSecond = 4841.5
+MPI Rank 2: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  81-  90, 28.12%]: CrossEntropyWithSoftmax = 3.50628076 * 640; EvalClassificationError = 0.81718750 * 640; time = 0.0738s; samplesPerSecond = 8672.7
+MPI Rank 2: 08/21/2017 14:36:20:  Epoch[ 1 of 4]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.41478252 * 640; EvalClassificationError = 0.80781250 * 640; time = 0.1505s; samplesPerSecond = 4251.8
+MPI Rank 2: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.51031210 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.1723s; samplesPerSecond = 3715.3
+MPI Rank 2: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.28365485 * 640; EvalClassificationError = 0.79375000 * 640; time = 0.1335s; samplesPerSecond = 4795.3
+MPI Rank 2: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 121- 130, 40.62%]: CrossEntropyWithSoftmax = 3.20932117 * 640; EvalClassificationError = 0.79531250 * 640; time = 0.1047s; samplesPerSecond = 6115.5
+MPI Rank 2: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.07460534 * 640; EvalClassificationError = 0.75468750 * 640; time = 0.1247s; samplesPerSecond = 5130.4
+MPI Rank 2: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.97529104 * 640; EvalClassificationError = 0.72031250 * 640; time = 0.1495s; samplesPerSecond = 4282.3
+MPI Rank 2: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.11968882 * 640; EvalClassificationError = 0.74531250 * 640; time = 0.1166s; samplesPerSecond = 5488.8
+MPI Rank 2: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 161- 170, 53.12%]: CrossEntropyWithSoftmax = 2.84172140 * 640; EvalClassificationError = 0.71093750 * 640; time = 0.1048s; samplesPerSecond = 6108.8
+MPI Rank 2: 08/21/2017 14:36:21:  Epoch[ 1 of 4]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.74031745 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.1129s; samplesPerSecond = 5669.1
+MPI Rank 2: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.83858085 * 640; EvalClassificationError = 0.72656250 * 640; time = 0.1294s; samplesPerSecond = 4944.6
+MPI Rank 2: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.74632253 * 640; EvalClassificationError = 0.69218750 * 640; time = 0.1986s; samplesPerSecond = 3223.0
+MPI Rank 2: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 201- 210, 65.62%]: CrossEntropyWithSoftmax = 2.61033254 * 640; EvalClassificationError = 0.66250000 * 640; time = 0.1410s; samplesPerSecond = 4539.0
+MPI Rank 2: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.61330754 * 640; EvalClassificationError = 0.65000000 * 640; time = 0.0800s; samplesPerSecond = 8002.5
+MPI Rank 2: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.54591810 * 640; EvalClassificationError = 0.66406250 * 640; time = 0.1223s; samplesPerSecond = 5232.8
+MPI Rank 2: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.57566512 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.1388s; samplesPerSecond = 4612.2
+MPI Rank 2: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 241- 250, 78.12%]: CrossEntropyWithSoftmax = 2.49164945 * 640; EvalClassificationError = 0.63281250 * 640; time = 0.0973s; samplesPerSecond = 6577.6
+MPI Rank 2: 08/21/2017 14:36:22:  Epoch[ 1 of 4]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.39954796 * 640; EvalClassificationError = 0.62812500 * 640; time = 0.1320s; samplesPerSecond = 4848.9
+MPI Rank 2: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.27034227 * 640; EvalClassificationError = 0.59375000 * 640; time = 0.1658s; samplesPerSecond = 3859.8
+MPI Rank 2: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.52112387 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.2089s; samplesPerSecond = 3063.7
+MPI Rank 2: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.62%]: CrossEntropyWithSoftmax = 2.27800991 * 640; EvalClassificationError = 0.59062500 * 640; time = 0.1308s; samplesPerSecond = 4891.6
+MPI Rank 2: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.26783634 * 640; EvalClassificationError = 0.61093750 * 640; time = 0.1267s; samplesPerSecond = 5052.7
+MPI Rank 2: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.24590355 * 640; EvalClassificationError = 0.58593750 * 640; time = 0.1426s; samplesPerSecond = 4487.9
+MPI Rank 2: 08/21/2017 14:36:23:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.24415615 * 640; EvalClassificationError = 0.59843750 * 640; time = 0.0959s; samplesPerSecond = 6674.1
+MPI Rank 2: 08/21/2017 14:36:23: Finished Epoch[ 1 of 4]: [Training] CrossEntropyWithSoftmax = 3.04696987 * 20480; EvalClassificationError = 0.73583984 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=4.31662s
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:14: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
-MPI Rank 2: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 2 of 3, with 1 datapasses
+MPI Rank 2: 08/21/2017 14:36:24: Starting Epoch 2: learning rate per sample = 0.00195312  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:14: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
-MPI Rank 2: Actual gradient aggregation time: 0.045254
-MPI Rank 2: Async gradient aggregation wait time: 0.01563
-MPI Rank 2: Actual gradient aggregation time: 0.034825
-MPI Rank 2: 12/15/2016 08:45:15:  Epoch[ 2 of 4]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.23258828 * 2304; EvalClassificationError = 0.61414931 * 2304; time = 0.7033s; samplesPerSecond = 3275.8
-MPI Rank 2: Async gradient aggregation wait time: 0.025709
-MPI Rank 2: Actual gradient aggregation time: 0.062272
-MPI Rank 2: Async gradient aggregation wait time: 0.008646
-MPI Rank 2: Actual gradient aggregation time: 0.074517
-MPI Rank 2: 12/15/2016 08:45:15:  Epoch[ 2 of 4]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.23901091 * 2560; EvalClassificationError = 0.58320313 * 2560; time = 0.5417s; samplesPerSecond = 4725.6
-MPI Rank 2: Async gradient aggregation wait time: 0.005925
-MPI Rank 2: Actual gradient aggregation time: 0.04346
-MPI Rank 2: Async gradient aggregation wait time: 0.058485
-MPI Rank 2: Actual gradient aggregation time: 0.06787
-MPI Rank 2: 12/15/2016 08:45:16:  Epoch[ 2 of 4]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.16822363 * 2560; EvalClassificationError = 0.57773438 * 2560; time = 0.6751s; samplesPerSecond = 3791.9
-MPI Rank 2: Async gradient aggregation wait time: 4e-006
-MPI Rank 2: Actual gradient aggregation time: 0.038691
-MPI Rank 2: Async gradient aggregation wait time: 0.014519
-MPI Rank 2: Actual gradient aggregation time: 0.044701
-MPI Rank 2: 12/15/2016 08:45:17:  Epoch[ 2 of 4]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.19927971 * 2560; EvalClassificationError = 0.62187500 * 2560; time = 0.5667s; samplesPerSecond = 4517.2
-MPI Rank 2: Async gradient aggregation wait time: 0.026562
-MPI Rank 2: Actual gradient aggregation time: 0.04628
-MPI Rank 2: Async gradient aggregation wait time: 3e-006
-MPI Rank 2: Actual gradient aggregation time: 0.048649
-MPI Rank 2: 12/15/2016 08:45:17:  Epoch[ 2 of 4]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.22075939 * 2560; EvalClassificationError = 0.59648437 * 2560; time = 0.5674s; samplesPerSecond = 4511.8
-MPI Rank 2: Async gradient aggregation wait time: 0.026443
-MPI Rank 2: Actual gradient aggregation time: 0.049981
-MPI Rank 2: Async gradient aggregation wait time: 0.017769
-MPI Rank 2: Actual gradient aggregation time: 0.037914
-MPI Rank 2: 12/15/2016 08:45:18:  Epoch[ 2 of 4]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 2.11227615 * 2560; EvalClassificationError = 0.57382813 * 2560; time = 0.5163s; samplesPerSecond = 4958.2
-MPI Rank 2: Async gradient aggregation wait time: 3e-006
-MPI Rank 2: Actual gradient aggregation time: 0.054407
-MPI Rank 2: Async gradient aggregation wait time: 0.009165
-MPI Rank 2: Actual gradient aggregation time: 0.06387
-MPI Rank 2: 12/15/2016 08:45:18:  Epoch[ 2 of 4]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 2.17322591 * 2560; EvalClassificationError = 0.61914063 * 2560; time = 0.5886s; samplesPerSecond = 4349.3
-MPI Rank 2: Async gradient aggregation wait time: 0.008188
-MPI Rank 2: Actual gradient aggregation time: 0.039783
-MPI Rank 2: Async gradient aggregation wait time: 0.140833
-MPI Rank 2: Actual gradient aggregation time: 0.047561
-MPI Rank 2: 12/15/2016 08:45:19:  Epoch[ 2 of 4]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 2.13027284 * 2560; EvalClassificationError = 0.60820312 * 2560; time = 0.6432s; samplesPerSecond = 3979.9
-MPI Rank 2: Async gradient aggregation wait time: 0.035015
-MPI Rank 2: Actual gradient aggregation time: 0.022108
-MPI Rank 2: 12/15/2016 08:45:19: Finished Epoch[ 2 of 4]: [Training] CrossEntropyWithSoftmax = 2.18324277 * 20480; EvalClassificationError = 0.59892578 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=4.86587s
+MPI Rank 2: 08/21/2017 14:36:24: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 2: Actual gradient aggregation time: 0.0253902
+MPI Rank 2: Async gradient aggregation wait time: 0.0775231
+MPI Rank 2: Actual gradient aggregation time: 0.0103152
+MPI Rank 2: 08/21/2017 14:36:24:  Epoch[ 2 of 4]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.23258828 * 2304; EvalClassificationError = 0.61414931 * 2304; time = 0.4156s; samplesPerSecond = 5544.0
+MPI Rank 2: Async gradient aggregation wait time: 7.492e-06
+MPI Rank 2: Actual gradient aggregation time: 0.0704502
+MPI Rank 2: Async gradient aggregation wait time: 0.0324551
+MPI Rank 2: Actual gradient aggregation time: 0.0516865
+MPI Rank 2: 08/21/2017 14:36:24:  Epoch[ 2 of 4]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.23901091 * 2560; EvalClassificationError = 0.58320313 * 2560; time = 0.3687s; samplesPerSecond = 6942.4
+MPI Rank 2: Async gradient aggregation wait time: 0.0329354
+MPI Rank 2: Actual gradient aggregation time: 0.031593
+MPI Rank 2: Async gradient aggregation wait time: 0.0158718
+MPI Rank 2: Actual gradient aggregation time: 0.0198929
+MPI Rank 2: 08/21/2017 14:36:25:  Epoch[ 2 of 4]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.16822363 * 2560; EvalClassificationError = 0.57773438 * 2560; time = 0.3087s; samplesPerSecond = 8293.7
+MPI Rank 2: Async gradient aggregation wait time: 0.0812188
+MPI Rank 2: Actual gradient aggregation time: 0.0506409
+MPI Rank 2: Async gradient aggregation wait time: 7.121e-06
+MPI Rank 2: Actual gradient aggregation time: 0.0151458
+MPI Rank 2: 08/21/2017 14:36:25:  Epoch[ 2 of 4]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.19927971 * 2560; EvalClassificationError = 0.62187500 * 2560; time = 0.4885s; samplesPerSecond = 5240.8
+MPI Rank 2: Async gradient aggregation wait time: 0.00521625
+MPI Rank 2: Actual gradient aggregation time: 0.0252652
+MPI Rank 2: Async gradient aggregation wait time: 0.00483646
+MPI Rank 2: Actual gradient aggregation time: 0.0302539
+MPI Rank 2: 08/21/2017 14:36:25:  Epoch[ 2 of 4]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.22075939 * 2560; EvalClassificationError = 0.59648437 * 2560; time = 0.3419s; samplesPerSecond = 7486.8
+MPI Rank 2: Async gradient aggregation wait time: 0.0377881
+MPI Rank 2: Actual gradient aggregation time: 0.0207646
+MPI Rank 2: Async gradient aggregation wait time: 0.0184506
+MPI Rank 2: Actual gradient aggregation time: 0.0449406
+MPI Rank 2: 08/21/2017 14:36:26:  Epoch[ 2 of 4]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 2.11227615 * 2560; EvalClassificationError = 0.57382813 * 2560; time = 0.3925s; samplesPerSecond = 6522.1
+MPI Rank 2: Async gradient aggregation wait time: 0.0467307
+MPI Rank 2: Actual gradient aggregation time: 0.0556774
+MPI Rank 2: Async gradient aggregation wait time: 0.0604347
+MPI Rank 2: Actual gradient aggregation time: 0.0428887
+MPI Rank 2: 08/21/2017 14:36:26:  Epoch[ 2 of 4]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 2.17322591 * 2560; EvalClassificationError = 0.61914062 * 2560; time = 0.5604s; samplesPerSecond = 4567.8
+MPI Rank 2: Async gradient aggregation wait time: 0.0179591
+MPI Rank 2: Actual gradient aggregation time: 0.0222636
+MPI Rank 2: Async gradient aggregation wait time: 9.211e-06
+MPI Rank 2: Actual gradient aggregation time: 0.029508
+MPI Rank 2: 08/21/2017 14:36:27:  Epoch[ 2 of 4]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 2.13027284 * 2560; EvalClassificationError = 0.60820312 * 2560; time = 0.4558s; samplesPerSecond = 5616.8
+MPI Rank 2: Async gradient aggregation wait time: 0.0325302
+MPI Rank 2: Actual gradient aggregation time: 0.0327932
+MPI Rank 2: 08/21/2017 14:36:27: Finished Epoch[ 2 of 4]: [Training] CrossEntropyWithSoftmax = 2.18324277 * 20480; EvalClassificationError = 0.59892578 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=3.40547s
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:19: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
-MPI Rank 2: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 2 of 3, with 1 datapasses
+MPI Rank 2: 08/21/2017 14:36:27: Starting Epoch 3: learning rate per sample = 9.76563e-05  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:19: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
-MPI Rank 2: Async gradient aggregation wait time: 0.058171
-MPI Rank 2: Actual gradient aggregation time: 0.126685
-MPI Rank 2: Async gradient aggregation wait time: 0.054589
-MPI Rank 2: Actual gradient aggregation time: 0.248473
-MPI Rank 2: 12/15/2016 08:45:20:  Epoch[ 3 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 2.20597127 * 9216; EvalClassificationError = 0.58593750 * 9216; time = 1.3300s; samplesPerSecond = 6929.2
-MPI Rank 2: Async gradient aggregation wait time: 0.030365
-MPI Rank 2: Actual gradient aggregation time: 0.141699
-MPI Rank 2: Async gradient aggregation wait time: 0.04912
-MPI Rank 2: Actual gradient aggregation time: 0.131064
-MPI Rank 2: 12/15/2016 08:45:22:  Epoch[ 3 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 2.14626719 * 10240; EvalClassificationError = 0.58886719 * 10240; time = 1.2240s; samplesPerSecond = 8366.0
-MPI Rank 2: 12/15/2016 08:45:22: Finished Epoch[ 3 of 4]: [Training] CrossEntropyWithSoftmax = 2.16917041 * 20480; EvalClassificationError = 0.58637695 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-005; epochTime=2.72378s
+MPI Rank 2: 08/21/2017 14:36:27: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 2: Async gradient aggregation wait time: 9.369e-06
+MPI Rank 2: Actual gradient aggregation time: 0.0766263
+MPI Rank 2: Async gradient aggregation wait time: 0.0120877
+MPI Rank 2: Actual gradient aggregation time: 0.0902775
+MPI Rank 2: 08/21/2017 14:36:28:  Epoch[ 3 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 2.20597127 * 9216; EvalClassificationError = 0.58593750 * 9216; time = 0.7750s; samplesPerSecond = 11891.2
+MPI Rank 2: Async gradient aggregation wait time: 1.0189e-05
+MPI Rank 2: Actual gradient aggregation time: 0.0649551
+MPI Rank 2: Async gradient aggregation wait time: 0.00205273
+MPI Rank 2: Actual gradient aggregation time: 0.0512419
+MPI Rank 2: 08/21/2017 14:36:29:  Epoch[ 3 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 2.14626719 * 10240; EvalClassificationError = 0.58886719 * 10240; time = 0.8704s; samplesPerSecond = 11764.3
+MPI Rank 2: 08/21/2017 14:36:29: Finished Epoch[ 3 of 4]: [Training] CrossEntropyWithSoftmax = 2.16917041 * 20480; EvalClassificationError = 0.58637695 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=1.78357s
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:22: Starting Epoch 4: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
-MPI Rank 2: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 2 of 3, with 1 datapasses
+MPI Rank 2: 08/21/2017 14:36:29: Starting Epoch 4: learning rate per sample = 9.76563e-05  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:22: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
-MPI Rank 2: Async gradient aggregation wait time: 3e-006
-MPI Rank 2: Actual gradient aggregation time: 0.129446
-MPI Rank 2: Async gradient aggregation wait time: 0.040623
-MPI Rank 2: Actual gradient aggregation time: 0.126456
-MPI Rank 2: 12/15/2016 08:45:23:  Epoch[ 4 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.99117050 * 9216; EvalClassificationError = 0.54427083 * 9216; time = 1.2583s; samplesPerSecond = 7324.0
-MPI Rank 2: Async gradient aggregation wait time: 0.054145
-MPI Rank 2: Actual gradient aggregation time: 0.120512
-MPI Rank 2: Async gradient aggregation wait time: 0.044203
-MPI Rank 2: Actual gradient aggregation time: 0.115423
-MPI Rank 2: 12/15/2016 08:45:24:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.97438950 * 10240; EvalClassificationError = 0.54345703 * 10240; time = 1.3223s; samplesPerSecond = 7744.0
-MPI Rank 2: Async gradient aggregation wait time: 0.019428
-MPI Rank 2: 12/15/2016 08:45:25: Finished Epoch[ 4 of 4]: [Training] CrossEntropyWithSoftmax = 1.98353069 * 20480; EvalClassificationError = 0.54428711 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 9.7656251e-005; epochTime=2.73407s
+MPI Rank 2: 08/21/2017 14:36:29: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 1), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 2: Async gradient aggregation wait time: 0.0648523
+MPI Rank 2: Actual gradient aggregation time: 0.0719271
+MPI Rank 2: Async gradient aggregation wait time: 9.089e-06
+MPI Rank 2: Actual gradient aggregation time: 0.0492638
+MPI Rank 2: 08/21/2017 14:36:30:  Epoch[ 4 of 4]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.99117050 * 9216; EvalClassificationError = 0.54427083 * 9216; time = 0.7383s; samplesPerSecond = 12482.0
+MPI Rank 2: Async gradient aggregation wait time: 0.0529754
+MPI Rank 2: Actual gradient aggregation time: 0.073278
+MPI Rank 2: Async gradient aggregation wait time: 1.0676e-05
+MPI Rank 2: Actual gradient aggregation time: 0.0166102
+MPI Rank 2: 08/21/2017 14:36:30:  Epoch[ 4 of 4]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.97438950 * 10240; EvalClassificationError = 0.54345703 * 10240; time = 0.7194s; samplesPerSecond = 14233.6
+MPI Rank 2: Async gradient aggregation wait time: 0.0207767
+MPI Rank 2: 08/21/2017 14:36:30: Finished Epoch[ 4 of 4]: [Training] CrossEntropyWithSoftmax = 1.98353069 * 20480; EvalClassificationError = 0.54428711 * 20480; totalSamplesSeen = 81920; learningRatePerSample = 9.7656251e-05; epochTime=1.50229s
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:25: Action "train" complete.
+MPI Rank 2: 08/21/2017 14:36:30: Action "train" complete.
 MPI Rank 2: 
-MPI Rank 2: 12/15/2016 08:45:25: __COMPLETED__
+MPI Rank 2: 08/21/2017 14:36:30: __COMPLETED__

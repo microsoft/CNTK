@@ -1,46 +1,46 @@
 CPU info:
-    CPU Model Name: Intel(R) Xeon(R) CPU X5680 @ 3.33GHz
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
     Hardware threads: 12
-    Total Memory: 33537232 kB
+    Total Memory: 264106564 kB
 -------------------------------------------------------------------
-=== Running /cygdrive/d/GitHub/CNTK/x64/release/cntk.exe configFile=D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript/ResNet20_CIFAR10.cntk currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10 RunDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10 ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript OutputDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=- TrainConvNet=[SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=8,learningRatesPerMB=1.28]]
-CNTK 2.0rc2+ (HEAD fbb53d, May  8 2017 10:15:58) on CHAZHANG at 2017/05/09 15:33:53
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_CIFAR/ResNet20_CIFAR10/../../../../../../../Examples/Image/Classification/ResNet/BrainScript/ResNet20_CIFAR10.cntk currentDirectory=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/TestData RunDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu DataDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/TestData ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_CIFAR/ResNet20_CIFAR10/../../../../../../../Examples/Image/Classification/ResNet/BrainScript OutputDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=- TrainConvNet=[SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=8,learningRatesPerMB=1.28]]
+CNTK 2.1+ (HEAD 572609, Aug 21 2017 08:22:49) on ad5c3ab446a4 at 2017/08/21 08:41:38
 
-D:\GitHub\CNTK\x64\release\cntk.exe  configFile=D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript/ResNet20_CIFAR10.cntk  currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10  RunDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu  DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10  ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript  OutputDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-  TrainConvNet=[SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=8,learningRatesPerMB=1.28]]
-Changed current directory to D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
-05/09/2017 15:33:53: Redirecting stderr to file -_TrainConvNet_Eval.log
--------------------------------------------------------------------
-Build info: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_CIFAR/ResNet20_CIFAR10/../../../../../../../Examples/Image/Classification/ResNet/BrainScript/ResNet20_CIFAR10.cntk  currentDirectory=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/TestData  RunDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu  DataDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/TestData  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_CIFAR/ResNet20_CIFAR10/../../../../../../../Examples/Image/Classification/ResNet/BrainScript  OutputDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-  TrainConvNet=[SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=8,learningRatesPerMB=1.28]]
+Changed current directory to /tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/TestData
+08/21/2017 08:41:38: Redirecting stderr to file -_TrainConvNet_Eval.log
+08/21/2017 08:41:38: -------------------------------------------------------------------
+08/21/2017 08:41:38: Build info: 
 
-		Built time: May  8 2017 10:09:53
-		Last modified date: Mon May  8 09:12:53 2017
-		Build type: Release
-		Build target: GPU
-		With 1bit-SGD: yes
-		With ASGD: yes
-		Math lib: mkl
-		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
-		CUB_PATH: C:\src\cub-1.4.1
-		CUDNN_PATH: C:\local\cudnn-8.0-v5.1\cuda
-		Build Branch: master
-		Build SHA1: 190dc1b3042d62c20aeba5bd336bbeaa8a6466ca
-		Built by chazhang on CHAZHANG
-		Build Path: D:\GitHub\CNTK\Source\CNTKv2LibraryDll\
-		MPI distribution: Microsoft MPI
-		MPI version: 7.0.12437.6
--------------------------------------------------------------------
--------------------------------------------------------------------
-GPU info:
+08/21/2017 08:41:38: 		Built time: Aug 21 2017 08:20:29
+08/21/2017 08:41:38: 		Last modified date: Thu Aug  3 09:47:36 2017
+08/21/2017 08:41:38: 		Build type: release
+08/21/2017 08:41:38: 		Build target: GPU
+08/21/2017 08:41:38: 		With 1bit-SGD: no
+08/21/2017 08:41:38: 		With ASGD: yes
+08/21/2017 08:41:38: 		Math lib: mkl
+08/21/2017 08:41:38: 		CUDA_PATH: /usr/local/cuda-8.0
+08/21/2017 08:41:38: 		CUB_PATH: /usr/local/cub-1.4.1
+08/21/2017 08:41:38: 		CUDNN_PATH: /usr/local/cudnn-6.0
+08/21/2017 08:41:38: 		Build Branch: HEAD
+08/21/2017 08:41:38: 		Build SHA1: 57260963c605c12d3796e37783433518ab8ba039
+08/21/2017 08:41:38: 		Built by Source/CNTK/buildinfo.h$$0 on 516c40771854
+08/21/2017 08:41:38: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+08/21/2017 08:41:38: 		MPI distribution: Open MPI
+08/21/2017 08:41:38: 		MPI version: 1.10.7
+08/21/2017 08:41:38: -------------------------------------------------------------------
+08/21/2017 08:41:38: -------------------------------------------------------------------
+08/21/2017 08:41:38: GPU info:
 
-		Device[0]: cores = 2688; computeCapability = 3.5; type = "GeForce GTX TITAN"; total memory = 6144 MB; free memory = 5648 MB
--------------------------------------------------------------------
+08/21/2017 08:41:38: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; total memory = 3020 MB; free memory = 3018 MB
+08/21/2017 08:41:38: -------------------------------------------------------------------
 
 Configuration After Processing and Variable Resolution:
 
 configparameters: ResNet20_CIFAR10.cntk:command=TrainConvNet:Eval
-configparameters: ResNet20_CIFAR10.cntk:configDir=D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript
-configparameters: ResNet20_CIFAR10.cntk:currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
-configparameters: ResNet20_CIFAR10.cntk:dataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
+configparameters: ResNet20_CIFAR10.cntk:configDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_CIFAR/ResNet20_CIFAR10/../../../../../../../Examples/Image/Classification/ResNet/BrainScript
+configparameters: ResNet20_CIFAR10.cntk:currentDirectory=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/TestData
+configparameters: ResNet20_CIFAR10.cntk:dataDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/TestData
 configparameters: ResNet20_CIFAR10.cntk:deviceId=0
 configparameters: ResNet20_CIFAR10.cntk:Eval={
     action = "eval"
@@ -50,11 +50,11 @@ evalNodeNames = errs:top5Errs
         verbosity = 0 ; randomize = false
         deserializers = ({
             type = "ImageDeserializer" ; module = "ImageReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/test_map.txt"
+            file = "/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/TestData/test_map.txt"
             input = {
                 features = { transforms = (
                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                   { type = "Mean"; meanFile = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/CIFAR-10_mean.xml" } : 
+                   { type = "Mean"; meanFile = "/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/TestData/CIFAR-10_mean.xml" } : 
                    { type = "Transpose" }
                 )}
                 labels = { labelDim = 10 }
@@ -64,18 +64,18 @@ evalNodeNames = errs:top5Errs
 }
 
 configparameters: ResNet20_CIFAR10.cntk:forceDeterministicAlgorithms=true
-configparameters: ResNet20_CIFAR10.cntk:modelPath=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug
-configparameters: ResNet20_CIFAR10.cntk:outputDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu
+configparameters: ResNet20_CIFAR10.cntk:modelPath=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug
+configparameters: ResNet20_CIFAR10.cntk:outputDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu
 configparameters: ResNet20_CIFAR10.cntk:precision=float
 configparameters: ResNet20_CIFAR10.cntk:rootDir=../../..
-configparameters: ResNet20_CIFAR10.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu
+configparameters: ResNet20_CIFAR10.cntk:RunDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu
 configparameters: ResNet20_CIFAR10.cntk:stderr=-
 configparameters: ResNet20_CIFAR10.cntk:timestamping=true
 configparameters: ResNet20_CIFAR10.cntk:traceLevel=1
 configparameters: ResNet20_CIFAR10.cntk:TrainConvNet={
     action = "train"
     BrainScriptNetworkBuilder = {
-        include "D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript/Macros.bs"
+        include "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_CIFAR/ResNet20_CIFAR10/../../../../../../../Examples/Image/Classification/ResNet/BrainScript/Macros.bs"
         imageShape = 32:32:3
         labelDim = 10
         featScale = 1/256
@@ -119,12 +119,12 @@ evaluationNodes = (errs)
         verbosity = 0 ; randomize = true
         deserializers = ({
             type = "ImageDeserializer" ; module = "ImageReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/train_map.txt"
+            file = "/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/TestData/train_map.txt"
             input = {
                 features = { transforms = (
                     { type = "Crop" ; cropType = "RandomSide" ; sideRatio = 0.8 ; jitterType = "UniRatio" } :
                     { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Mean" ; meanFile = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/CIFAR-10_mean.xml" } : 
+                    { type = "Mean" ; meanFile = "/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/TestData/CIFAR-10_mean.xml" } : 
                     { type = "Transpose" }
                 )}
                 labels = { labelDim = 10 }
@@ -133,17 +133,17 @@ evaluationNodes = (errs)
     }
 } [SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=8,learningRatesPerMB=1.28]]
 
-05/09/2017 15:33:53: Commands: TrainConvNet Eval
-05/09/2017 15:33:53: precision = "float"
-05/09/2017 15:33:53: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
+08/21/2017 08:41:38: Commands: TrainConvNet Eval
+08/21/2017 08:41:38: precision = "float"
+08/21/2017 08:41:38: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
 
-05/09/2017 15:33:53: ##############################################################################
-05/09/2017 15:33:53: #                                                                            #
-05/09/2017 15:33:53: # TrainConvNet command (train action)                                        #
-05/09/2017 15:33:53: #                                                                            #
-05/09/2017 15:33:53: ##############################################################################
+08/21/2017 08:41:38: ##############################################################################
+08/21/2017 08:41:38: #                                                                            #
+08/21/2017 08:41:38: # TrainConvNet command (train action)                                        #
+08/21/2017 08:41:38: #                                                                            #
+08/21/2017 08:41:38: ##############################################################################
 
-05/09/2017 15:33:53: 
+08/21/2017 08:41:38: 
 Creating virgin network.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as glorotUniform later when dimensions are fully known.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 64] as heNormal later when dimensions are fully known.
@@ -737,472 +737,486 @@ z.x: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 1 x
 
 Post-processing network complete.
 
-05/09/2017 15:33:55: 
+08/21/2017 08:41:39: 
 Model has 209 nodes. Using GPU 0.
 
-05/09/2017 15:33:55: Training criterion:   ce = CrossEntropyWithSoftmax
-05/09/2017 15:33:55: Evaluation criterion: errs = ClassificationError
+08/21/2017 08:41:39: Training criterion:   ce = CrossEntropyWithSoftmax
+08/21/2017 08:41:39: Evaluation criterion: errs = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 348 matrices, 185 are shared as 43, and 163 are not shared.
+Gradient Memory Aliasing: 22 are aliased.
+	_z.x.x.x.b (gradient) reuses _z.x.x.x.p (gradient)
+	z.x.x.x.s (gradient) reuses _z.x.x.x.p (gradient)
+	z.x.x.x.x.x.s (gradient) reuses _z.x.x.x.x.x.p (gradient)
+	z.x.x.x.b (gradient) reuses z.x.x.x.p (gradient)
+	_z.x.x.x.x.x.b (gradient) reuses _z.x.x.x.x.x.p (gradient)
+	z.PlusArgs[0] (gradient) reuses z (gradient)
+	z.x.x.x.x.x.b (gradient) reuses z.x.x.x.x.x.p (gradient)
+	z.x.x.x.x.b (gradient) reuses z.x.x.x.x.p (gradient)
+	z.x.x.x.x.x.x.x.x.b (gradient) reuses z.x.x.x.x.x.x.x.x.p (gradient)
+	z.x.x.x.x.x.x.x.b (gradient) reuses z.x.x.x.x.x.x.x.p (gradient)
+	z.x.x.b (gradient) reuses z.x.x.p (gradient)
+	z.x.x.x.x.x.x.b (gradient) reuses z.x.x.x.x.x.x.p (gradient)
+
+Memory Sharing: Out of 348 matrices, 182 are shared as 41, and 166 are not shared.
 
 Here are the ones that share memory:
-	{ z : [10 x *] (gradient)
-	  z.PlusArgs[0] : [10 x *]
-	  z.x : [1 x 1 x 64 x *] (gradient)
-	  z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient) }
-	{ _z.x.x.x.x.x.b.x : [16 x 16 x 32 x *] (gradient)
-	  _z.x.x.x.x.x.p : [16 x 16 x 32 x *]
-	  z.x.x.x.b.x._ : [8 x 8 x 64 x *]
-	  z.x.x.x.b.x.c : [8 x 8 x 64 x *]
-	  z.x.x.x.x.b.x.c : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.p : [16 x 16 x 32 x *]
-	  z.x.x.x.x.p : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *]
-	  z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.p : [16 x 16 x 32 x *]
-	  z.x.x.x.x.x.x.x : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *] (gradient) }
-	{ z.x.x.x.b : [8 x 8 x 64 x *]
-	  z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)
-	  z.x.x.x.r : [8 x 8 x 64 x *] }
-	{ _z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *]
-	  z.x.x.x.x.b.x._ : [16 x 16 x 32 x *]
-	  z.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.b.x.c : [16 x 16 x 32 x *]
-	  z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.p : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 16 x 32] (gradient) }
-	{ _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)
-	  z.x.x.b.x._.x.c : [8 x 8 x 64 x *]
-	  z.x.x.x.p : [8 x 8 x 64 x *] }
-	{ z.PlusArgs[0] : [10 x *] (gradient)
-	  z.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 32 x 64] (gradient) }
-	{ z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)
-	  z.x.x.b.x._ : [8 x 8 x 64 x *]
-	  z.x.x.b.x.c : [8 x 8 x 64 x *] }
-	{ _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 64] (gradient)
-	  z.x.x.b.x : [8 x 8 x 64 x *] }
-	{ _z.x.x.x.b : [8 x 8 x 64 x *]
-	  _z.x.x.x.b.x._ : [8 x 8 x 64 x *]
-	  _z.x.x.x.b.x._ : [8 x 8 x 64 x *] (gradient)
-	  _z.x.x.x.b.x.c : [8 x 8 x 64 x *] (gradient)
-	  _z.x.x.x.p : [8 x 8 x 64 x *] (gradient)
-	  z.x : [1 x 1 x 64 x *]
-	  z.x.x.b.x._ : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.b.x.c : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.p : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.x.b.x._ : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.x.b.x.c : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.x.p : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.x.s.x.c : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1] (gradient) }
-	{ _z.x.x.x.r : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.b : [8 x 8 x 64 x *]
-	  z.x.x.r : [8 x 8 x 64 x *]
-	  z.x.x.x.r : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.x.s : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient) }
-	{ _z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *]
-	  _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1] (gradient) }
-	{ _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1] (gradient)
-	  _z.x.x.x.b.x.c : [8 x 8 x 64 x *] }
-	{ _z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.s.x.c : [16 x 16 x 32 x *]
-	  z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1] (gradient) }
-	{ _z.x.x.x.b : [8 x 8 x 64 x *] (gradient)
-	  _z.x.x.x.b.x : [8 x 8 x 64 x *] (gradient)
-	  _z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *] (gradient)
-	  z : [10 x *]
-	  z.x.x.b : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.b.x : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.b.x._.x.c : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.p : [8 x 8 x 64 x *]
-	  z.x.x.r : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.x.b : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.x.b.x : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *] (gradient)
-	  z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient) }
-	{ _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1] (gradient)
-	  z.x.x.x.s.x.c : [8 x 8 x 64 x *] }
-	{ z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)
-	  z.x.x.x.b.x : [8 x 8 x 64 x *] }
-	{ _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1] (gradient)
-	  _z.x.x.x.b.x : [8 x 8 x 64 x *] }
-	{ _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient)
-	  z.x.x.x.x.b : [16 x 16 x 32 x *]
-	  z.x.x.x.x.b : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.b.x._ : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.r : [16 x 16 x 32 x *]
-	  z.x.x.x.x.x.b : [16 x 16 x 32 x *] }
-	{ z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *]
-	  z.x.x.x.x.x.s.x.c : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient) }
-	{ z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient)
-	  z.x.x.x.x.b.x : [16 x 16 x 32 x *] }
-	{ _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1] (gradient)
-	  _z.x.x.x.x.x.b.x : [16 x 16 x 32 x *] }
-	{ _z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *]
-	  z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient) }
-	{ _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 32] (gradient)
-	  z.x.x.x.x.x.b.x : [16 x 16 x 32 x *]
-	  z.x.x.x.x.x.s : [16 x 16 x 32 x *] (gradient) }
-	{ _z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] (gradient)
-	  _z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *]
-	  z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient) }
-	{ _z.x.x.x.x.x.p : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.b : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.r : [16 x 16 x 32 x *]
-	  z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient) }
-	{ z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient)
-	  z.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] }
-	{ _z.x.x.x.r : [8 x 8 x 64 x *]
-	  z.x.x.x.s : [8 x 8 x 64 x *]
-	  z.x.x.x.x.x.b.x : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.r : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.s : [16 x 16 x 32 x *]
-	  z.x.x.x.x.x.s.arrayOfFunctions[1].scale : [32 x 1] (gradient) }
-	{ z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient)
-	  z.x.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] }
-	{ model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient)
-	  z.x.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] }
-	{ _z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *]
+	{ z.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient)
+	  z.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *] }
+	{ z.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient)
+	  z.x.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *] (gradient) }
+	{ z.x.x.x.x.x.x.b : [32 x 32 x 16 x *]
 	  z.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] (gradient)
 	  z.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.p : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.p : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.r : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] (gradient)
 	  z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient) }
-	{ z.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1] (gradient) }
-	{ _z.x.x.x.x.x.r : [16 x 16 x 32 x *]
-	  model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient)
+	{ z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient)
+	  z.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] }
+	{ model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 3 x 16] (gradient)
+	  z.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *] (gradient) }
+	{ z.x.x.x.x.x.r : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *] (gradient)
 	  z.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.p : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient) }
+	{ model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient)
+	  z.x.x.x.x.b.x : [16 x 16 x 32 x *]
 	  z.x.x.x.x.x.x.r : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *] (gradient) }
-	{ _z.x.x.x.x.x.b : [16 x 16 x 32 x *] (gradient)
-	  _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1] (gradient)
-	  _z.x.x.x.x.x.r : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] }
-	{ z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient)
-	  z.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *] }
-	{ z.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.x._ : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *] (gradient) }
-	{ z.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.x._.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *] (gradient)
 	  z.x.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *] (gradient)
 	  z.x.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *] (gradient) }
-	{ z.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1] (gradient) }
-	{ _z.x.x.x.p : [8 x 8 x 64 x *]
-	  _z.x.x.x.x.x.b : [16 x 16 x 32 x *]
-	  z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *]
-	  z.x.x.x.x.b.x : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *] (gradient) }
+	{ _z.x.x.x.x.x.b : [16 x 16 x 32 x *] (gradient)
+	  _z.x.x.x.x.x.p : [16 x 16 x 32 x *] (gradient)
+	  z : [10 x *]
+	  z.x : [1 x 1 x 64 x *] (gradient)
+	  z.x.x.b : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.p : [8 x 8 x 64 x *]
+	  z.x.x.p : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.x.b : [16 x 16 x 32 x *]
+	  z.x.x.x.x.b.x._ : [16 x 16 x 32 x *]
 	  z.x.x.x.x.r : [16 x 16 x 32 x *] (gradient)
-	  z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient)
-	  z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *] (gradient) }
-	{ model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 3 x 16] (gradient)
-	  z.x.x.x.x.x.x.x : [32 x 32 x 16 x *] }
-	{ z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient)
-	  z.x.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] }
-	{ z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient)
-	  z.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] }
-	{ z.x.x.x.x.x.x.b : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.b.x : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.r : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.s : [16 x 16 x 32 x *] (gradient)
 	  z.x.x.x.x.x.x.b : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.r : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.x._ : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *] (gradient)
-	  z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient)
+	  z.x.x.x.x.x.x.p : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x._ : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] (gradient) }
+	{ z.x.x.x.x.x.x.x._ : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x._.x.c : [32 x 32 x 16 x *] (gradient)
 	  z.x.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *]
-	  z.x.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *] }
-	{ z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] }
+	{ model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient)
+	  z.x.x.x.x.x.x.x : [32 x 32 x 16 x *] }
+	{ z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] }
+	{ z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1] (gradient)
 	  z.x.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *] }
+	{ z.x.x.x.x.x.x.x : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] }
+	{ z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient)
+	  z.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] }
+	{ z.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient) }
+	{ z.x.x.x.x.b.x._ : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.b.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.b : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient)
+	  z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.p : [16 x 16 x 32 x *] (gradient) }
+	{ _z.x.x.x.b : [8 x 8 x 64 x *] (gradient)
+	  _z.x.x.x.p : [8 x 8 x 64 x *] (gradient)
+	  _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient)
+	  _z.x.x.x.x.x.r : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.b.x._ : [8 x 8 x 64 x *]
+	  z.x.x.b.x.c : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.r : [8 x 8 x 64 x *]
+	  z.x.x.x.s : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.x.b : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.b.x : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.p : [16 x 16 x 32 x *]
+	  z.x.x.x.x.p : [16 x 16 x 32 x *] (gradient) }
+	{ _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 32] (gradient)
+	  _z.x.x.x.x.x.p : [16 x 16 x 32 x *]
+	  z.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.b.x.c : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.r : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.p : [16 x 16 x 32 x *] }
+	{ _z.x.x.x.x.x.r : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.s : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient) }
+	{ _z.x.x.x.x.x.b : [16 x 16 x 32 x *]
+	  z.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.b : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient)
+	  z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *] }
+	{ _z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *] (gradient)
+	  _z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.s.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1] (gradient) }
+	{ _z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] (gradient)
+	  _z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient) }
+	{ _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1] (gradient)
+	  _z.x.x.x.x.x.b.x : [16 x 16 x 32 x *] }
+	{ _z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1] (gradient) }
+	{ _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1] (gradient)
+	  _z.x.x.x.x.x.b.x : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] }
+	{ z.x.x.x.x.x.b.x : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 16 x 32] (gradient) }
+	{ _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1] (gradient)
+	  _z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.s.x.c : [16 x 16 x 32 x *] (gradient) }
+	{ _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)
+	  _z.x.x.x.r : [8 x 8 x 64 x *] (gradient)
+	  z : [10 x *] (gradient)
+	  z.PlusArgs[0] : [10 x *]
+	  z.PlusArgs[0] : [10 x *] (gradient)
+	  z.x.x.b : [8 x 8 x 64 x *]
+	  z.x.x.b.x : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.r : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.s.x.c : [8 x 8 x 64 x *] (gradient) }
+	{ z.x.x.b.x._ : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.b.x.c : [8 x 8 x 64 x *]
+	  z.x.x.x.b : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)
+	  z.x.x.x.b.x : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.p : [8 x 8 x 64 x *] (gradient) }
+	{ _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 64] (gradient)
+	  _z.x.x.x.b.x.c : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.b.x : [8 x 8 x 64 x *]
+	  z.x.x.b.x._.x.c : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.b.x._ : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.b.x.c : [8 x 8 x 64 x *] (gradient) }
+	{ _z.x.x.x.p : [8 x 8 x 64 x *]
+	  z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.b.x.c : [8 x 8 x 64 x *]
+	  z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient) }
+	{ z.x : [1 x 1 x 64 x *]
+	  z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)
+	  z.x.x.x.p : [8 x 8 x 64 x *]
+	  z.x.x.x.r : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.s : [8 x 8 x 64 x *] }
+	{ _z.x.x.x.b : [8 x 8 x 64 x *]
+	  _z.x.x.x.b.x._ : [8 x 8 x 64 x *]
+	  z.x.x.b.x._.x.c : [8 x 8 x 64 x *]
+	  z.x.x.x.b : [8 x 8 x 64 x *]
+	  z.x.x.x.b.x._ : [8 x 8 x 64 x *]
+	  z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient) }
+	{ _z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *]
+	  z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1] (gradient) }
+	{ _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1] (gradient)
+	  _z.x.x.x.b.x : [8 x 8 x 64 x *] }
+	{ _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1] (gradient)
+	  _z.x.x.x.b.x.c : [8 x 8 x 64 x *] }
+	{ _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1] (gradient)
+	  z.x.x.x.s.x.c : [8 x 8 x 64 x *] }
+	{ _z.x.x.x.r : [8 x 8 x 64 x *]
+	  z.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 32 x 64] (gradient) }
+	{ _z.x.x.x.b.x._ : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *]
+	  z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1] (gradient) }
+	{ _z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.b.x : [8 x 8 x 64 x *]
+	  z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1] (gradient) }
+	{ _z.x.x.x.b.x : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.r : [8 x 8 x 64 x *]
+	  z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1] (gradient) }
 
 Here are the ones that don't share memory:
 	{top5Errs : [1]}
-	{labels : [10 x *]}
-	{model.arrayOfFunctions[8].W : [10 x 1 x 1 x 64]}
-	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 64]}
-	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
-	{z.x.x.x.x.x.s.arrayOfFunctions[1].scale : [32 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
-	{z.x.x.x.x.x.s.arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.s.arrayOfFunctions[1].bias : [32 x 1]}
-	{z.x.x.x.x.x.s.arrayOfFunctions[1].runMean : [32 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
-	{z.x.x.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 16 x 32]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 32]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
-	{z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance : [32 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
-	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
-	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
-	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{features : [32 x 32 x 3 x *]}
-	{_z.x.x.x.x.x.x.x.x : [1]}
-	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 3 x 16]}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
-	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
-	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
-	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
-	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
-	{z.x.x.x.s.arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.x.s.arrayOfFunctions[1].scale : [64 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
-	{z.x.x.x.s.arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.x.s.arrayOfFunctions[1].runMean : [64 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
-	{z.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 32 x 64]}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
-	{model.arrayOfFunctions[8].b : [10]}
-	{z.x.x.x.s.arrayOfFunctions[1].runVariance : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
-	{inputs.inputs[2] : [1 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
 	{errs : [1]}
 	{ce : [1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient)}
-	{model.arrayOfFunctions[8].b : [10] (gradient)}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1] (gradient)}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1] (gradient)}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1] (gradient)}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1] (gradient)}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1] (gradient)}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1] (gradient)}
-	{z.x.x.x.x.x.s.arrayOfFunctions[1].bias : [32 x 1] (gradient)}
-	{z.x.x.x.s.arrayOfFunctions[1].bias : [64 x 1] (gradient)}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
-	{ce : [1] (gradient)}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1] (gradient)}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
-	{z.x.x.x.s.arrayOfFunctions[1].scale : [64 x 1] (gradient)}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1] (gradient)}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
-	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1] (gradient)}
-	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1] (gradient)}
-	{model.arrayOfFunctions[8].W : [10 x 1 x 1 x 64] (gradient)}
-	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
-	{z.x.x.x.x.x.x.x.x : [32 x 32 x 3 x *]}
 	{z.x.x.x.x.x.x.x._.x.c : [32 x 32 x 16 x *]}
+	{z.x.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *]}
+	{z.x.x.x.x.x.x.x.x : [32 x 32 x 3 x *]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)}
+	{model.arrayOfFunctions[8].W : [10 x 1 x 1 x 64] (gradient)}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
+	{z.x.x.x.s.arrayOfFunctions[1].scale : [64 x 1] (gradient)}
+	{z.x.x.x.s.arrayOfFunctions[1].bias : [64 x 1] (gradient)}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1] (gradient)}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1] (gradient)}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].scale : [32 x 1] (gradient)}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].bias : [32 x 1] (gradient)}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1] (gradient)}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1] (gradient)}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1] (gradient)}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient)}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1] (gradient)}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1] (gradient)}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient)}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1] (gradient)}
+	{model.arrayOfFunctions[8].b : [10] (gradient)}
+	{ce : [1] (gradient)}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 3 x 16]}
+	{features : [32 x 32 x 3 x *]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 32 x 64]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 64]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 16 x 32]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].bias : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.s.arrayOfFunctions[1].runMean : [64 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 32]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.s.arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].runMean : [32 x 1]}
+	{model.arrayOfFunctions[8].W : [10 x 1 x 1 x 64]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.s.arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{model.arrayOfFunctions[8].b : [10]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
+	{_z.x.x.x.x.x.x.x.x : [1]}
+	{inputs.inputs[2] : [1 x 1]}
+	{labels : [10 x *]}
 
 
-05/09/2017 15:33:55: Training 272474 parameters in 65 out of 65 parameter tensors and 139 nodes with gradient:
+08/21/2017 08:41:39: Training 272474 parameters in 65 out of 65 parameter tensors and 139 nodes with gradient:
 
-05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 64]
-05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
-05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 32]
-05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
-05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 3 x 16]
-05/09/2017 15:33:55: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'model.arrayOfFunctions[8].W' (LearnableParameter operation) : [10 x 1 x 1 x 64]
-05/09/2017 15:33:55: 	Node 'model.arrayOfFunctions[8].b' (LearnableParameter operation) : [10]
-05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
-05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
-05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) : [1 x 1 x 32 x 64]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) : [1 x 1 x 16 x 32]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
-05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 64]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 32]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 3 x 16]
+08/21/2017 08:41:39: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'model.arrayOfFunctions[8].W' (LearnableParameter operation) : [10 x 1 x 1 x 64]
+08/21/2017 08:41:39: 	Node 'model.arrayOfFunctions[8].b' (LearnableParameter operation) : [10]
+08/21/2017 08:41:39: 	Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+08/21/2017 08:41:39: 	Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+08/21/2017 08:41:39: 	Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) : [1 x 1 x 32 x 64]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) : [1 x 1 x 16 x 32]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+08/21/2017 08:41:39: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
 
-05/09/2017 15:33:55: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+08/21/2017 08:41:39: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-05/09/2017 15:33:55: Starting Epoch 1: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 1214.9 samples
+08/21/2017 08:41:39: Starting Epoch 1: learning rate per sample = 0.01  effective momentum = 0.900000  momentum as time constant = 1214.9 samples
 
-05/09/2017 15:33:55: Starting minibatch loop.
-05/09/2017 15:33:58:  Epoch[ 1 of 3]-Minibatch[   1-   8, 50.00%]: ce = 2.32579994 * 1024; errs = 84.766% * 1024; time = 2.8681s; samplesPerSecond = 357.0
-05/09/2017 15:33:59:  Epoch[ 1 of 3]-Minibatch[   9-  16, 100.00%]: ce = 2.15781784 * 1024; errs = 75.684% * 1024; time = 0.7752s; samplesPerSecond = 1321.0
-05/09/2017 15:33:59: Finished Epoch[ 1 of 3]: [Training] ce = 2.24180889 * 2048; errs = 80.225% * 2048; totalSamplesSeen = 2048; learningRatePerSample = 0.0099999998; epochTime=3.65022s
-05/09/2017 15:33:59: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug.1'
+08/21/2017 08:41:39: Starting minibatch loop.
+08/21/2017 08:41:41:  Epoch[ 1 of 3]-Minibatch[   1-   8, 50.00%]: ce = 2.32426214 * 1024; errs = 85.156% * 1024; time = 1.2174s; samplesPerSecond = 841.1
+08/21/2017 08:41:41:  Epoch[ 1 of 3]-Minibatch[   9-  16, 100.00%]: ce = 2.23375368 * 1024; errs = 77.246% * 1024; time = 0.5840s; samplesPerSecond = 1753.5
+08/21/2017 08:41:41: Finished Epoch[ 1 of 3]: [Training] ce = 2.27900791 * 2048; errs = 81.201% * 2048; totalSamplesSeen = 2048; learningRatePerSample = 0.0099999998; epochTime=1.80517s
+08/21/2017 08:41:41: SGD: Saving checkpoint model '/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug.1'
 
-05/09/2017 15:33:59: Starting Epoch 2: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 1214.9 samples
+08/21/2017 08:41:41: Starting Epoch 2: learning rate per sample = 0.01  effective momentum = 0.900000  momentum as time constant = 1214.9 samples
 
-05/09/2017 15:33:59: Starting minibatch loop.
-05/09/2017 15:34:00:  Epoch[ 2 of 3]-Minibatch[   1-   8, 50.00%]: ce = 2.10416532 * 1024; errs = 79.395% * 1024; time = 0.8114s; samplesPerSecond = 1262.0
-05/09/2017 15:34:01:  Epoch[ 2 of 3]-Minibatch[   9-  16, 100.00%]: ce = 2.06084943 * 1024; errs = 74.121% * 1024; time = 0.7764s; samplesPerSecond = 1318.9
-05/09/2017 15:34:01: Finished Epoch[ 2 of 3]: [Training] ce = 2.08250737 * 2048; errs = 76.758% * 2048; totalSamplesSeen = 4096; learningRatePerSample = 0.0099999998; epochTime=1.59023s
-05/09/2017 15:34:01: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug.2'
+08/21/2017 08:41:41: Starting minibatch loop.
+08/21/2017 08:41:42:  Epoch[ 2 of 3]-Minibatch[   1-   8, 50.00%]: ce = 2.14239359 * 1024; errs = 80.273% * 1024; time = 0.5986s; samplesPerSecond = 1710.6
+08/21/2017 08:41:42:  Epoch[ 2 of 3]-Minibatch[   9-  16, 100.00%]: ce = 2.01681328 * 1024; errs = 76.953% * 1024; time = 0.5852s; samplesPerSecond = 1749.7
+08/21/2017 08:41:42: Finished Epoch[ 2 of 3]: [Training] ce = 2.07960343 * 2048; errs = 78.613% * 2048; totalSamplesSeen = 4096; learningRatePerSample = 0.0099999998; epochTime=1.18487s
+08/21/2017 08:41:42: SGD: Saving checkpoint model '/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug.2'
 
-05/09/2017 15:34:01: Starting Epoch 3: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 1214.9 samples
+08/21/2017 08:41:42: Starting Epoch 3: learning rate per sample = 0.01  effective momentum = 0.900000  momentum as time constant = 1214.9 samples
 
-05/09/2017 15:34:01: Starting minibatch loop.
-05/09/2017 15:34:02:  Epoch[ 3 of 3]-Minibatch[   1-   8, 50.00%]: ce = 1.91900182 * 1024; errs = 70.117% * 1024; time = 0.8091s; samplesPerSecond = 1265.7
-05/09/2017 15:34:02:  Epoch[ 3 of 3]-Minibatch[   9-  16, 100.00%]: ce = 1.80923724 * 1024; errs = 67.285% * 1024; time = 0.7747s; samplesPerSecond = 1321.8
-05/09/2017 15:34:02: Finished Epoch[ 3 of 3]: [Training] ce = 1.86411953 * 2048; errs = 68.701% * 2048; totalSamplesSeen = 6144; learningRatePerSample = 0.0099999998; epochTime=1.58629s
-05/09/2017 15:34:02: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug'
+08/21/2017 08:41:42: Starting minibatch loop.
+08/21/2017 08:41:43:  Epoch[ 3 of 3]-Minibatch[   1-   8, 50.00%]: ce = 1.91945922 * 1024; errs = 71.582% * 1024; time = 0.5983s; samplesPerSecond = 1711.6
+08/21/2017 08:41:44:  Epoch[ 3 of 3]-Minibatch[   9-  16, 100.00%]: ce = 1.76666105 * 1024; errs = 67.383% * 1024; time = 0.5846s; samplesPerSecond = 1751.6
+08/21/2017 08:41:44: Finished Epoch[ 3 of 3]: [Training] ce = 1.84306014 * 2048; errs = 69.482% * 2048; totalSamplesSeen = 6144; learningRatePerSample = 0.0099999998; epochTime=1.18402s
+08/21/2017 08:41:44: SGD: Saving checkpoint model '/tmp/cntk-test-20170821083849.769346/Examples/Image/Classification/ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug'
 
-05/09/2017 15:34:02: Action "train" complete.
+08/21/2017 08:41:44: Action "train" complete.
 
 
-05/09/2017 15:34:02: ##############################################################################
-05/09/2017 15:34:02: #                                                                            #
-05/09/2017 15:34:02: # Eval command (eval action)                                                 #
-05/09/2017 15:34:02: #                                                                            #
-05/09/2017 15:34:02: ##############################################################################
+08/21/2017 08:41:44: ##############################################################################
+08/21/2017 08:41:44: #                                                                            #
+08/21/2017 08:41:44: # Eval command (eval action)                                                 #
+08/21/2017 08:41:44: #                                                                            #
+08/21/2017 08:41:44: ##############################################################################
 
 
 Post-processing network...
@@ -1484,221 +1498,221 @@ Allocating matrices for forward and/or backward propagation.
 Memory Sharing: Out of 209 matrices, 74 are shared as 4, and 135 are not shared.
 
 Here are the ones that share memory:
-	{ _z.x.x.x.x.x.b : [16 x 16 x 32 x *1]
-	  _z.x.x.x.x.x.r : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.b : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x._.x.c : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *1] }
-	{ _z.x.x.x.b.x._ : [8 x 8 x 64 x *1]
-	  _z.x.x.x.b.x.c : [8 x 8 x 64 x *1]
-	  _z.x.x.x.p : [8 x 8 x 64 x *1]
-	  z.x.x.b.x._ : [8 x 8 x 64 x *1]
-	  z.x.x.b.x.c : [8 x 8 x 64 x *1]
-	  z.x.x.p : [8 x 8 x 64 x *1]
-	  z.x.x.x.b.x._ : [8 x 8 x 64 x *1]
-	  z.x.x.x.b.x.c : [8 x 8 x 64 x *1]
-	  z.x.x.x.p : [8 x 8 x 64 x *1]
-	  z.x.x.x.s.x.c : [8 x 8 x 64 x *1]
-	  z.x.x.x.x.b.x._ : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.b.x.c : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.x.b.x : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.x.x.b : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.r : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x._ : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *1] }
-	{ _z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *1]
-	  _z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *1]
-	  z : [10 x *1]
-	  z.x : [1 x 1 x 64 x *1]
-	  z.x.x.b : [8 x 8 x 64 x *1]
-	  z.x.x.b.x : [8 x 8 x 64 x *1]
-	  z.x.x.b.x._.x.c : [8 x 8 x 64 x *1]
-	  z.x.x.x.b : [8 x 8 x 64 x *1]
-	  z.x.x.x.b.x : [8 x 8 x 64 x *1]
-	  z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *1]
-	  z.x.x.x.s : [8 x 8 x 64 x *1]
-	  z.x.x.x.x.r : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.x.b : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.x.r : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.x.s : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.p : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *1] }
 	{ _z.x.x.x.b : [8 x 8 x 64 x *1]
 	  _z.x.x.x.b.x : [8 x 8 x 64 x *1]
 	  _z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *1]
 	  _z.x.x.x.r : [8 x 8 x 64 x *1]
-	  _z.x.x.x.x.x.b.x : [16 x 16 x 32 x *1]
-	  _z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *1]
-	  _z.x.x.x.x.x.p : [16 x 16 x 32 x *1]
-	  z.PlusArgs[0] : [10 x *1]
-	  z.x.x.r : [8 x 8 x 64 x *1]
-	  z.x.x.x.r : [8 x 8 x 64 x *1]
-	  z.x.x.x.x.b.x : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *1]
+	  z : [10 x *1]
+	  z.x : [1 x 1 x 64 x *1]
+	  z.x.x.b.x._ : [8 x 8 x 64 x *1]
+	  z.x.x.b.x.c : [8 x 8 x 64 x *1]
+	  z.x.x.p : [8 x 8 x 64 x *1]
+	  z.x.x.x.x.b.x._ : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.b.x.c : [16 x 16 x 32 x *1]
 	  z.x.x.x.x.p : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.b.x : [16 x 16 x 32 x *1]
 	  z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *1]
 	  z.x.x.x.x.x.p : [16 x 16 x 32 x *1]
-	  z.x.x.x.x.x.s.x.c : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.s : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.x.b : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.r : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x._.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *1] }
+	{ _z.x.x.x.x.x.b : [16 x 16 x 32 x *1]
+	  _z.x.x.x.x.x.b.x : [16 x 16 x 32 x *1]
+	  _z.x.x.x.x.x.r : [16 x 16 x 32 x *1]
+	  z.x.x.x.r : [8 x 8 x 64 x *1]
+	  z.x.x.x.x.x.r : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.x.x._ : [32 x 32 x 16 x *1]
 	  z.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *1]
 	  z.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *1]
 	  z.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *1]
-	  z.x.x.x.x.x.x.x.x : [32 x 32 x 3 x *1]
-	  z.x.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *1] }
+	  z.x.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *1] }
+	{ _z.x.x.x.b.x._ : [8 x 8 x 64 x *1]
+	  _z.x.x.x.b.x.c : [8 x 8 x 64 x *1]
+	  _z.x.x.x.p : [8 x 8 x 64 x *1]
+	  _z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *1]
+	  z.PlusArgs[0] : [10 x *1]
+	  z.x.x.b : [8 x 8 x 64 x *1]
+	  z.x.x.b.x : [8 x 8 x 64 x *1]
+	  z.x.x.b.x._.x.c : [8 x 8 x 64 x *1]
+	  z.x.x.r : [8 x 8 x 64 x *1]
+	  z.x.x.x.b : [8 x 8 x 64 x *1]
+	  z.x.x.x.b.x : [8 x 8 x 64 x *1]
+	  z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *1]
+	  z.x.x.x.s.x.c : [8 x 8 x 64 x *1]
+	  z.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.b : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.x.x.x : [32 x 32 x 3 x *1] }
+	{ _z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *1]
+	  _z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *1]
+	  _z.x.x.x.x.x.p : [16 x 16 x 32 x *1]
+	  z.x.x.x.b.x._ : [8 x 8 x 64 x *1]
+	  z.x.x.x.b.x.c : [8 x 8 x 64 x *1]
+	  z.x.x.x.p : [8 x 8 x 64 x *1]
+	  z.x.x.x.s : [8 x 8 x 64 x *1]
+	  z.x.x.x.x.b : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.b.x : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.r : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.s.x.c : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.p : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *1] }
 
 Here are the ones that don't share memory:
 	{ce : [1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
-	{top5Errs : [1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{errs : [1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
-	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
-	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
 	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
 	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
-	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
-	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
-	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 64]}
-	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 32]}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
-	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
 	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
 	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
-	{_z.x.x.x.x.x.x.x.x : [1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
 	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
 	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
-	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
 	{features : [32 x 32 x 3 x *1]}
+	{_z.x.x.x.x.x.x.x.x : [1]}
 	{inputs.inputs[2] : [1 x 1]}
-	{model.arrayOfFunctions[8].b : [10]}
-	{labels : [10 x *1]}
-	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
 	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 3 x 16]}
-	{model.arrayOfFunctions[8].W : [10 x 1 x 1 x 64]}
-	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
 	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
 	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
 	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
-	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{model.arrayOfFunctions[8].b : [10]}
+	{model.arrayOfFunctions[8].W : [10 x 1 x 1 x 64]}
 	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
 	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
 	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
 	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
 	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
 	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
 	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.x.s.arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.s.arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
 	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
 	{z.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 32 x 64]}
 	{z.x.x.x.s.arrayOfFunctions[1].bias : [64 x 1]}
-	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
-	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.s.arrayOfFunctions[1].runMean : [64 x 1]}
 	{z.x.x.x.s.arrayOfFunctions[1].runVariance : [64 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
 	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
 	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.s.arrayOfFunctions[1].scale : [64 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
 	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
-	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
 	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 32]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
 	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
 	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
 	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
 	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
 	{z.x.x.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 16 x 32]}
 	{z.x.x.x.x.x.s.arrayOfFunctions[1].bias : [32 x 1]}
 	{z.x.x.x.x.x.s.arrayOfFunctions[1].runCount : [1]}
-	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance : [32 x 1]}
 	{z.x.x.x.x.x.s.arrayOfFunctions[1].scale : [32 x 1]}
 	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{z.x.x.x.x.x.s.arrayOfFunctions[1].runMean : [32 x 1]}
 	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
-	{z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance : [32 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
 	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
-	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
 	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
 	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{top5Errs : [1]}
+	{errs : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{labels : [10 x *1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 64]}
 
-05/09/2017 15:34:05: Minibatch[1-79]: errs = 86.140% * 10000; top5Errs = 37.470% * 10000
-05/09/2017 15:34:05: Final Results: Minibatch[1-79]: errs = 86.140% * 10000; top5Errs = 37.470% * 10000
+08/21/2017 08:41:45: Minibatch[1-79]: errs = 87.410% * 10000; top5Errs = 35.070% * 10000
+08/21/2017 08:41:45: Final Results: Minibatch[1-79]: errs = 87.410% * 10000; top5Errs = 35.070% * 10000
 
-05/09/2017 15:34:05: Action "eval" complete.
+08/21/2017 08:41:45: Action "eval" complete.
 
-05/09/2017 15:34:05: __COMPLETED__
+08/21/2017 08:41:45: __COMPLETED__

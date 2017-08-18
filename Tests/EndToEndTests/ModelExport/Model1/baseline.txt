@@ -1,2 +1,72 @@
-Post-processing network complete.
-__COMPLETED__
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 12
+    Total Memory: 264106564 kB
+-------------------------------------------------------------------
+DataDir : /tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu/TestData
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/ModelExport/Model1/1.cntk currentDirectory=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu/TestData RunDir=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu DataDir=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu/TestData ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/ModelExport/Model1 OutputDir=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu DeviceId=0 timestamping=true
+CNTK 2.1+ (HEAD 572609, Aug 21 2017 08:22:49) on ad5c3ab446a4 at 2017/08/21 08:55:25
+
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/ModelExport/Model1/1.cntk  currentDirectory=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu/TestData  RunDir=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu  DataDir=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu/TestData  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/ModelExport/Model1  OutputDir=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu  DeviceId=0  timestamping=true
+Changed current directory to /tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu/TestData
+08/21/2017 08:55:25: -------------------------------------------------------------------
+08/21/2017 08:55:25: Build info: 
+
+08/21/2017 08:55:25: 		Built time: Aug 21 2017 08:20:29
+08/21/2017 08:55:25: 		Last modified date: Thu Aug  3 09:47:36 2017
+08/21/2017 08:55:25: 		Build type: release
+08/21/2017 08:55:25: 		Build target: GPU
+08/21/2017 08:55:25: 		With 1bit-SGD: no
+08/21/2017 08:55:25: 		With ASGD: yes
+08/21/2017 08:55:25: 		Math lib: mkl
+08/21/2017 08:55:25: 		CUDA_PATH: /usr/local/cuda-8.0
+08/21/2017 08:55:25: 		CUB_PATH: /usr/local/cub-1.4.1
+08/21/2017 08:55:25: 		CUDNN_PATH: /usr/local/cudnn-6.0
+08/21/2017 08:55:25: 		Build Branch: HEAD
+08/21/2017 08:55:25: 		Build SHA1: 57260963c605c12d3796e37783433518ab8ba039
+08/21/2017 08:55:25: 		Built by Source/CNTK/buildinfo.h$$0 on 516c40771854
+08/21/2017 08:55:25: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+08/21/2017 08:55:25: 		MPI distribution: Open MPI
+08/21/2017 08:55:25: 		MPI version: 1.10.7
+08/21/2017 08:55:25: -------------------------------------------------------------------
+08/21/2017 08:55:25: -------------------------------------------------------------------
+08/21/2017 08:55:25: GPU info:
+
+08/21/2017 08:55:25: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; total memory = 3020 MB; free memory = 3018 MB
+08/21/2017 08:55:25: -------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: 1.cntk:]=true
+configparameters: 1.cntk:command=export
+configparameters: 1.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/ModelExport/Model1
+configparameters: 1.cntk:currentDirectory=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu/TestData
+configparameters: 1.cntk:DataDir=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu/TestData
+configparameters: 1.cntk:dbnModelPath=1_export.dbn
+configparameters: 1.cntk:deviceId=0
+configparameters: 1.cntk:export=[
+    action = "exportdbn"
+    ]
+
+configparameters: 1.cntk:imageLayout=legacy
+configparameters: 1.cntk:modelPath=1_model.cntk
+configparameters: 1.cntk:numMBsToShowResult=500
+configparameters: 1.cntk:OutputDir=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu
+configparameters: 1.cntk:precision=float
+configparameters: 1.cntk:RunDir=/tmp/cntk-test-20170821083849.769346/ModelExport_Model1@release_gpu
+configparameters: 1.cntk:timestamping=true
+configparameters: 1.cntk:traceLevel=1
+08/21/2017 08:55:25: Commands: export
+08/21/2017 08:55:25: precision = "float"
+
+08/21/2017 08:55:25: ##############################################################################
+08/21/2017 08:55:25: #                                                                            #
+08/21/2017 08:55:25: # export command (exportdbn action)                                          #
+08/21/2017 08:55:25: #                                                                            #
+08/21/2017 08:55:25: ##############################################################################
+
+
+08/21/2017 08:55:26: Action "exportdbn" complete.
+
+08/21/2017 08:55:26: __COMPLETED__
+Comparing exported file to base file

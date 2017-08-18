@@ -1,61 +1,111 @@
 CPU info:
     CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
-    Hardware threads: 24
-    Total Memory: 268381192 kB
+    Hardware threads: 12
+    Total Memory: 264106564 kB
 -------------------------------------------------------------------
-=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config/seqcla.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu DeviceId=-1 timestamping=true
-CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:29:34) on dphaim-26-new at 2016/12/15 08:37:37
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data RunDir=/tmp/cntk-test-20170821143007.584817/Text_SequenceClassification@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config OutputDir=/tmp/cntk-test-20170821143007.584817/Text_SequenceClassification@release_cpu DeviceId=-1 timestamping=true
+CNTK 2.1+ (HEAD 572609, Aug 21 2017 08:22:49) on c50b4c06f4af at 2017/08/21 14:31:09
 
-C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config/seqcla.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu  DeviceId=-1  timestamping=true
-Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data  RunDir=/tmp/cntk-test-20170821143007.584817/Text_SequenceClassification@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config  OutputDir=/tmp/cntk-test-20170821143007.584817/Text_SequenceClassification@release_cpu  DeviceId=-1  timestamping=true
+Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+08/21/2017 14:31:09: -------------------------------------------------------------------
+08/21/2017 14:31:09: Build info: 
 
-12/15/2016 08:37:38: ##############################################################################
-12/15/2016 08:37:38: #                                                                            #
-12/15/2016 08:37:38: # Train command (train action)                                               #
-12/15/2016 08:37:38: #                                                                            #
-12/15/2016 08:37:38: ##############################################################################
+08/21/2017 14:31:09: 		Built time: Aug 21 2017 08:20:29
+08/21/2017 14:31:09: 		Last modified date: Thu Aug  3 09:47:36 2017
+08/21/2017 14:31:09: 		Build type: release
+08/21/2017 14:31:09: 		Build target: GPU
+08/21/2017 14:31:09: 		With 1bit-SGD: no
+08/21/2017 14:31:09: 		With ASGD: yes
+08/21/2017 14:31:09: 		Math lib: mkl
+08/21/2017 14:31:09: 		CUDA_PATH: /usr/local/cuda-8.0
+08/21/2017 14:31:09: 		CUB_PATH: /usr/local/cub-1.4.1
+08/21/2017 14:31:09: 		CUDNN_PATH: /usr/local/cudnn-6.0
+08/21/2017 14:31:09: 		Build Branch: HEAD
+08/21/2017 14:31:09: 		Build SHA1: 57260963c605c12d3796e37783433518ab8ba039
+08/21/2017 14:31:09: 		Built by Source/CNTK/buildinfo.h$$0 on 516c40771854
+08/21/2017 14:31:09: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+08/21/2017 14:31:09: 		MPI distribution: Open MPI
+08/21/2017 14:31:09: 		MPI version: 1.10.7
+08/21/2017 14:31:09: -------------------------------------------------------------------
+08/21/2017 14:31:09: -------------------------------------------------------------------
+08/21/2017 14:31:09: GPU info:
+
+08/21/2017 14:31:09: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; total memory = 3020 MB; free memory = 3018 MB
+08/21/2017 14:31:09: -------------------------------------------------------------------
+
+08/21/2017 14:31:09: ##############################################################################
+08/21/2017 14:31:09: #                                                                            #
+08/21/2017 14:31:09: # Train command (train action)                                               #
+08/21/2017 14:31:09: #                                                                            #
+08/21/2017 14:31:09: ##############################################################################
 
 Node 'model.arrayOfFunctions[1].lstm.W' (LearnableParameter operation) operation: Tensor shape was inferred as [100 x 50].
 Node 'model.arrayOfFunctions[3].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [5 x 25].
-12/15/2016 08:37:38: 
+08/21/2017 14:31:10: 
 Model has 42 nodes. Using CPU.
 
-12/15/2016 08:37:38: Training criterion:   ce = CrossEntropyWithSoftmax
-12/15/2016 08:37:38: Evaluation criterion: err = ClassificationError
+08/21/2017 14:31:10: Training criterion:   ce = CrossEntropyWithSoftmax
+08/21/2017 14:31:10: Evaluation criterion: err = ClassificationError
 
-12/15/2016 08:37:38: Training 7730 parameters in 5 parameter tensors.
+08/21/2017 14:31:10: Training 7730 parameters in 5 parameter tensors.
 
-12/15/2016 08:37:39: Finished Epoch[ 1 of 5]: [Training] ce = 1.57972053 * 1247; err = 0.47072975 * 1247; totalSamplesSeen = 1247; learningRatePerSample = 0.00050000002; epochTime=0.828774s
-12/15/2016 08:37:39: Finished Epoch[ 2 of 5]: [Training] ce = 1.49164146 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 2494; learningRatePerSample = 0.00050000002; epochTime=0.391561s
-12/15/2016 08:37:40: Finished Epoch[ 3 of 5]: [Training] ce = 1.41872016 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 3741; learningRatePerSample = 0.00050000002; epochTime=0.442264s
-12/15/2016 08:37:40: Finished Epoch[ 4 of 5]: [Training] ce = 1.36587116 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 4988; learningRatePerSample = 0.00050000002; epochTime=0.365941s
-12/15/2016 08:37:41: Finished Epoch[ 5 of 5]: [Training] ce = 1.32881073 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 6235; learningRatePerSample = 0.00050000002; epochTime=0.876245s
+08/21/2017 14:31:10: Finished Epoch[ 1 of 5]: [Training] ce = 1.57684644 * 1247; err = 0.44827586 * 1247; totalSamplesSeen = 1247; learningRatePerSample = 0.00050000002; epochTime=0.856162s
+08/21/2017 14:31:11: Finished Epoch[ 2 of 5]: [Training] ce = 1.48922316 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 2494; learningRatePerSample = 0.00050000002; epochTime=0.629883s
+08/21/2017 14:31:11: Finished Epoch[ 3 of 5]: [Training] ce = 1.41660141 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 3741; learningRatePerSample = 0.00050000002; epochTime=0.470647s
+08/21/2017 14:31:12: Finished Epoch[ 4 of 5]: [Training] ce = 1.36397902 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 4988; learningRatePerSample = 0.00050000002; epochTime=0.453017s
+08/21/2017 14:31:13: Finished Epoch[ 5 of 5]: [Training] ce = 1.32711868 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 6235; learningRatePerSample = 0.00050000002; epochTime=0.768218s
 
-12/15/2016 08:37:41: __COMPLETED__
+08/21/2017 14:31:13: __COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
-=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config/seqcla.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu DeviceId=-1 timestamping=true makeMode=true
-CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:29:34) on dphaim-26-new at 2016/12/15 08:37:46
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data RunDir=/tmp/cntk-test-20170821143007.584817/Text_SequenceClassification@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config OutputDir=/tmp/cntk-test-20170821143007.584817/Text_SequenceClassification@release_cpu DeviceId=-1 timestamping=true makeMode=true
+CNTK 2.1+ (HEAD 572609, Aug 21 2017 08:22:49) on c50b4c06f4af at 2017/08/21 14:31:13
 
-C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config/seqcla.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu  DeviceId=-1  timestamping=true  makeMode=true
-Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data  RunDir=/tmp/cntk-test-20170821143007.584817/Text_SequenceClassification@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Config  OutputDir=/tmp/cntk-test-20170821143007.584817/Text_SequenceClassification@release_cpu  DeviceId=-1  timestamping=true  makeMode=true
+Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Text/SequenceClassification/Data
+08/21/2017 14:31:13: -------------------------------------------------------------------
+08/21/2017 14:31:13: Build info: 
 
-12/15/2016 08:37:46: ##############################################################################
-12/15/2016 08:37:46: #                                                                            #
-12/15/2016 08:37:46: # Train command (train action)                                               #
-12/15/2016 08:37:46: #                                                                            #
-12/15/2016 08:37:46: ##############################################################################
+08/21/2017 14:31:13: 		Built time: Aug 21 2017 08:20:29
+08/21/2017 14:31:13: 		Last modified date: Thu Aug  3 09:47:36 2017
+08/21/2017 14:31:13: 		Build type: release
+08/21/2017 14:31:13: 		Build target: GPU
+08/21/2017 14:31:13: 		With 1bit-SGD: no
+08/21/2017 14:31:13: 		With ASGD: yes
+08/21/2017 14:31:13: 		Math lib: mkl
+08/21/2017 14:31:13: 		CUDA_PATH: /usr/local/cuda-8.0
+08/21/2017 14:31:13: 		CUB_PATH: /usr/local/cub-1.4.1
+08/21/2017 14:31:13: 		CUDNN_PATH: /usr/local/cudnn-6.0
+08/21/2017 14:31:13: 		Build Branch: HEAD
+08/21/2017 14:31:13: 		Build SHA1: 57260963c605c12d3796e37783433518ab8ba039
+08/21/2017 14:31:13: 		Built by Source/CNTK/buildinfo.h$$0 on 516c40771854
+08/21/2017 14:31:13: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+08/21/2017 14:31:13: 		MPI distribution: Open MPI
+08/21/2017 14:31:13: 		MPI version: 1.10.7
+08/21/2017 14:31:13: -------------------------------------------------------------------
+08/21/2017 14:31:13: -------------------------------------------------------------------
+08/21/2017 14:31:13: GPU info:
 
-12/15/2016 08:37:46: 
-Starting from checkpoint. Loading network from 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu/Models/seqcla.dnn.4'.
-12/15/2016 08:37:46: 
+08/21/2017 14:31:13: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; total memory = 3020 MB; free memory = 3018 MB
+08/21/2017 14:31:13: -------------------------------------------------------------------
+
+08/21/2017 14:31:13: ##############################################################################
+08/21/2017 14:31:13: #                                                                            #
+08/21/2017 14:31:13: # Train command (train action)                                               #
+08/21/2017 14:31:13: #                                                                            #
+08/21/2017 14:31:13: ##############################################################################
+
+08/21/2017 14:31:13: 
+Starting from checkpoint. Loading network from '/tmp/cntk-test-20170821143007.584817/Text_SequenceClassification@release_cpu/Models/seqcla.dnn.4'.
+08/21/2017 14:31:13: 
 Model has 42 nodes. Using CPU.
 
-12/15/2016 08:37:46: Training criterion:   ce = CrossEntropyWithSoftmax
-12/15/2016 08:37:46: Evaluation criterion: err = ClassificationError
+08/21/2017 14:31:13: Training criterion:   ce = CrossEntropyWithSoftmax
+08/21/2017 14:31:13: Evaluation criterion: err = ClassificationError
 
-12/15/2016 08:37:46: Training 7730 parameters in 5 parameter tensors.
+08/21/2017 14:31:13: Training 7730 parameters in 5 parameter tensors.
 
-12/15/2016 08:37:47: Finished Epoch[ 5 of 5]: [Training] ce = 1.32881073 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 6235; learningRatePerSample = 0.00050000002; epochTime=0.856345s
+08/21/2017 14:31:14: Finished Epoch[ 5 of 5]: [Training] ce = 1.32711868 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 6235; learningRatePerSample = 0.00050000002; epochTime=0.984574s
 
-12/15/2016 08:37:47: __COMPLETED__
+08/21/2017 14:31:14: __COMPLETED__

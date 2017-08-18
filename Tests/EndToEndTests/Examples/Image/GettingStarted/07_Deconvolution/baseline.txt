@@ -1,57 +1,55 @@
 CPU info:
     CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
-    Hardware threads: 24
-    Total Memory: 264172964 kB
+    Hardware threads: 12
+    Total Memory: 264106564 kB
 -------------------------------------------------------------------
-=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/07_Deconvolution/../../../../../../Examples/Image/GettingStarted/07_Deconvolution.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST RunDir=/tmp/cntk-test-20170118154257.999319/Examples/Image/GettingStarted_07_Deconvolution@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/07_Deconvolution/../../../../../../Examples/Image/GettingStarted OutputDir=/tmp/cntk-test-20170118154257.999319/Examples/Image/GettingStarted_07_Deconvolution@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=-
-CNTK 2.0.beta8.0+ (HEAD 986800, Jan 18 2017 15:17:31) on localhost at 2017/01/18 15:46:17
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/07_Deconvolution/../../../../../../Examples/Image/GettingStarted/07_Deconvolution_BS.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST RunDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_07_Deconvolution@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/07_Deconvolution/../../../../../../Examples/Image/GettingStarted OutputDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_07_Deconvolution@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=-
+CNTK 2.1+ (HEAD 572609, Aug 21 2017 08:22:49) on ad5c3ab446a4 at 2017/08/21 08:54:40
 
-/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/07_Deconvolution/../../../../../../Examples/Image/GettingStarted/07_Deconvolution.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST  RunDir=/tmp/cntk-test-20170118154257.999319/Examples/Image/GettingStarted_07_Deconvolution@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/07_Deconvolution/../../../../../../Examples/Image/GettingStarted  OutputDir=/tmp/cntk-test-20170118154257.999319/Examples/Image/GettingStarted_07_Deconvolution@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/07_Deconvolution/../../../../../../Examples/Image/GettingStarted/07_Deconvolution_BS.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST  RunDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_07_Deconvolution@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/07_Deconvolution/../../../../../../Examples/Image/GettingStarted  OutputDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_07_Deconvolution@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-
 Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST
-01/18/2017 15:46:17: Redirecting stderr to file -_trainNetwork_testNetwork.log
-01/18/2017 15:46:17: -------------------------------------------------------------------
-01/18/2017 15:46:17: Build info: 
+08/21/2017 08:54:40: Redirecting stderr to file -_trainNetwork_testNetwork.log
+08/21/2017 08:54:40: -------------------------------------------------------------------
+08/21/2017 08:54:40: Build info: 
 
-01/18/2017 15:46:17: 		Built time: Jan 18 2017 15:17:31
-01/18/2017 15:46:17: 		Last modified date: Wed Jan 18 14:20:28 2017
-01/18/2017 15:46:17: 		Build type: release
-01/18/2017 15:46:17: 		Build target: GPU
-01/18/2017 15:46:17: 		With 1bit-SGD: no
-01/18/2017 15:46:17: 		With ASGD: yes
-01/18/2017 15:46:17: 		Math lib: mkl
-01/18/2017 15:46:17: 		CUDA_PATH: /usr/local/cuda-8.0
-01/18/2017 15:46:17: 		CUB_PATH: /usr/local/cub-1.4.1
-01/18/2017 15:46:17: 		CUDNN_PATH: /usr/local
-01/18/2017 15:46:17: 		Build Branch: HEAD
-01/18/2017 15:46:17: 		Build SHA1: 9868006eead294385f4a867ea7363369364c1fa1
-01/18/2017 15:46:17: 		Built by Source/CNTK/buildinfo.h$$0 on e70c5b6e6849
-01/18/2017 15:46:17: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
-01/18/2017 15:46:17: 		MPI distribution: Open MPI
-01/18/2017 15:46:17: 		MPI version: 1.10.3
-01/18/2017 15:46:17: -------------------------------------------------------------------
-01/18/2017 15:46:18: -------------------------------------------------------------------
-01/18/2017 15:46:18: GPU info:
+08/21/2017 08:54:40: 		Built time: Aug 21 2017 08:20:29
+08/21/2017 08:54:40: 		Last modified date: Thu Aug  3 09:47:36 2017
+08/21/2017 08:54:40: 		Build type: release
+08/21/2017 08:54:40: 		Build target: GPU
+08/21/2017 08:54:40: 		With 1bit-SGD: no
+08/21/2017 08:54:40: 		With ASGD: yes
+08/21/2017 08:54:40: 		Math lib: mkl
+08/21/2017 08:54:40: 		CUDA_PATH: /usr/local/cuda-8.0
+08/21/2017 08:54:40: 		CUB_PATH: /usr/local/cub-1.4.1
+08/21/2017 08:54:40: 		CUDNN_PATH: /usr/local/cudnn-6.0
+08/21/2017 08:54:40: 		Build Branch: HEAD
+08/21/2017 08:54:40: 		Build SHA1: 57260963c605c12d3796e37783433518ab8ba039
+08/21/2017 08:54:40: 		Built by Source/CNTK/buildinfo.h$$0 on 516c40771854
+08/21/2017 08:54:40: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+08/21/2017 08:54:40: 		MPI distribution: Open MPI
+08/21/2017 08:54:40: 		MPI version: 1.10.7
+08/21/2017 08:54:40: -------------------------------------------------------------------
+08/21/2017 08:54:40: -------------------------------------------------------------------
+08/21/2017 08:54:40: GPU info:
 
-01/18/2017 15:46:18: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3020 MB
-01/18/2017 15:46:18: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3020 MB
-01/18/2017 15:46:18: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3020 MB
-01/18/2017 15:46:18: -------------------------------------------------------------------
+08/21/2017 08:54:40: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; total memory = 3020 MB; free memory = 3018 MB
+08/21/2017 08:54:40: -------------------------------------------------------------------
 
 Configuration After Processing and Variable Resolution:
 
-configparameters: 07_Deconvolution.cntk:command=trainNetwork:testNetwork
-configparameters: 07_Deconvolution.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/07_Deconvolution/../../../../../../Examples/Image/GettingStarted
-configparameters: 07_Deconvolution.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST
-configparameters: 07_Deconvolution.cntk:dataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST
-configparameters: 07_Deconvolution.cntk:deviceId=0
-configparameters: 07_Deconvolution.cntk:forceDeterministicAlgorithms=true
-configparameters: 07_Deconvolution.cntk:modelPath=/tmp/cntk-test-20170118154257.999319/Examples/Image/GettingStarted_07_Deconvolution@release_gpu/Models/07_Deconvolution.model
-configparameters: 07_Deconvolution.cntk:outputDir=/tmp/cntk-test-20170118154257.999319/Examples/Image/GettingStarted_07_Deconvolution@release_gpu
-configparameters: 07_Deconvolution.cntk:precision=float
-configparameters: 07_Deconvolution.cntk:rootDir=..
-configparameters: 07_Deconvolution.cntk:RunDir=/tmp/cntk-test-20170118154257.999319/Examples/Image/GettingStarted_07_Deconvolution@release_gpu
-configparameters: 07_Deconvolution.cntk:stderr=-
-configparameters: 07_Deconvolution.cntk:testNetwork={
+configparameters: 07_Deconvolution_BS.cntk:command=trainNetwork:testNetwork
+configparameters: 07_Deconvolution_BS.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/GettingStarted/07_Deconvolution/../../../../../../Examples/Image/GettingStarted
+configparameters: 07_Deconvolution_BS.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST
+configparameters: 07_Deconvolution_BS.cntk:dataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Image/DataSets/MNIST
+configparameters: 07_Deconvolution_BS.cntk:deviceId=0
+configparameters: 07_Deconvolution_BS.cntk:forceDeterministicAlgorithms=true
+configparameters: 07_Deconvolution_BS.cntk:modelPath=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_07_Deconvolution@release_gpu/Models/07_Deconvolution_BS.model
+configparameters: 07_Deconvolution_BS.cntk:outputDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_07_Deconvolution@release_gpu
+configparameters: 07_Deconvolution_BS.cntk:precision=float
+configparameters: 07_Deconvolution_BS.cntk:rootDir=..
+configparameters: 07_Deconvolution_BS.cntk:RunDir=/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_07_Deconvolution@release_gpu
+configparameters: 07_Deconvolution_BS.cntk:stderr=-
+configparameters: 07_Deconvolution_BS.cntk:testNetwork={
     action = "test"
 minibatchSize = 1024    
     reader = {
@@ -64,34 +62,30 @@ minibatchSize = 1024
     }
 }
 
-configparameters: 07_Deconvolution.cntk:timestamping=true
-configparameters: 07_Deconvolution.cntk:traceLevel=1
-configparameters: 07_Deconvolution.cntk:trainNetwork={
+configparameters: 07_Deconvolution_BS.cntk:timestamping=true
+configparameters: 07_Deconvolution_BS.cntk:traceLevel=1
+configparameters: 07_Deconvolution_BS.cntk:trainNetwork={
     action = "train"
     BrainScriptNetworkBuilder = {
         cMap = 1
         model = inputFeatures => {
-            c1      = ConvolutionalLayer {cMap, (5:5), pad = true}(inputFeatures)
-            r1      = ReLU(c1)
-            p1      = MaxPoolingLayer {(4:4), stride=(4:4)}(r1)
-            unpool1 = MaxUnpoolingLayer {(4:4), stride=(4:4)}(p1, r1)
-            deconv1 = DeconvLayer {1, (5:5), cMap, lowerPad=(2:2:0), upperPad=(2:2:0)}(unpool1)
+            conv1   = ConvolutionalLayer {cMap, (5:5), pad=true, activation=ReLU}(inputFeatures)
+            pool1   = MaxPoolingLayer {(4:4), stride=(4:4)}(conv1)
+            unpool1 = MaxUnpoolingLayer {(4:4), stride=(4:4)}(pool1, conv1)
+            deconv1 = ConvolutionTransposeLayer {1, (5:5), cMap, pad=true, bias=false}(unpool1)
         }.deconv1
         imageShape = 28:28:1
         features = Input {imageShape}
-        labelDim = 10
-        labels = Input (labelDim)
         featScale = 1/256
         Scale{f} = x => Constant(f) .* x
         f1 = Scale{featScale} (features)
         z = model (f1)
         f2 = Scale{featScale} (features)
         err = z - f2
-        sqErr = err .* err
+        sqErr = ElementTimes(err, err)
         mse = ReduceMean(sqErr)
         rmse = Sqrt(mse)
         featureNodes = (features)
-        labelNodes = (labels)
         criterionNodes = (rmse)
         evaluationNodes = (rmse)
         outputNodes = (z)
@@ -115,10 +109,10 @@ configparameters: 07_Deconvolution.cntk:trainNetwork={
     }   
 }
 
-configparameters: 07_Deconvolution.cntk:writeResults={
+configparameters: 07_Deconvolution_BS.cntk:writeResults={
     action = "write"
     minibatchSize = 1
-    outputPath = "/tmp/cntk-test-20170118154257.999319/Examples/Image/GettingStarted_07_Deconvolution@release_gpu/decoder_output_bs.txt"
+    outputPath = "/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_07_Deconvolution@release_gpu/decoder_output_bs.txt"
     reader = {
         randomize = False
         readerType = "CNTKTextFormatReader"
@@ -130,43 +124,41 @@ configparameters: 07_Deconvolution.cntk:writeResults={
     }
 }
 
-01/18/2017 15:46:18: Commands: trainNetwork testNetwork
-01/18/2017 15:46:18: precision = "float"
-01/18/2017 15:46:18: WARNING: forceDeterministcAlgorithms flag is specified. Using 1 CPU thread for processing.
+08/21/2017 08:54:40: Commands: trainNetwork testNetwork
+08/21/2017 08:54:40: precision = "float"
+08/21/2017 08:54:40: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
 
-01/18/2017 15:46:18: ##############################################################################
-01/18/2017 15:46:18: #                                                                            #
-01/18/2017 15:46:18: # trainNetwork command (train action)                                        #
-01/18/2017 15:46:18: #                                                                            #
-01/18/2017 15:46:18: ##############################################################################
+08/21/2017 08:54:40: ##############################################################################
+08/21/2017 08:54:40: #                                                                            #
+08/21/2017 08:54:40: # trainNetwork command (train action)                                        #
+08/21/2017 08:54:40: #                                                                            #
+08/21/2017 08:54:40: ##############################################################################
 
-01/18/2017 15:46:18: 
+08/21/2017 08:54:40: 
 Creating virgin network.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[5 x 5 x 0 x 1] as glorotUniform later when dimensions are fully known.
 
 Post-processing network...
 
-3 roots:
-	labels = InputValue()
+2 roots:
 	rmse = Sqrt()
 	z = Convolution()
 
-Validating network. 19 nodes to process in pass 1.
+Validating network. 18 nodes to process in pass 1.
 
-Validating --> labels = InputValue() :  -> [10 x *]
 Validating --> z.deconv1.W = LearnableParameter() :  -> [5 x 5 x 1 x 1]
-Validating --> z.c1.W = LearnableParameter() :  -> [5 x 5 x 0 x 1]
+Validating --> z.conv1.W = LearnableParameter() :  -> [5 x 5 x 0 x 1]
 Validating --> f1.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
 Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
 Validating --> f1 = ElementTimes (f1.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
-Node 'z.c1.W' (LearnableParameter operation) operation: Tensor shape was inferred as [5 x 5 x 1 x 1].
-Node 'z.c1.W' (LearnableParameter operation): Initializing Parameter[5 x 5 x 1 x 1] <- glorotUniform(seed=2, init dims=[25 x 25], range=0.346410(0.346410*1.000000), onCPU=true.
-)Validating --> z.c1.c = Convolution (z.c1.W, f1) : [5 x 5 x 1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
-Validating --> z.c1.b = LearnableParameter() :  -> [1 x 1 x 1]
-Validating --> z.c1.res.x = Plus (z.c1.c, z.c1.b) : [28 x 28 x 1 x *], [1 x 1 x 1] -> [28 x 28 x 1 x *]
-Validating --> z.r1 = RectifiedLinear (z.c1.res.x) : [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
-Validating --> z.p1 = Pooling (z.r1) : [28 x 28 x 1 x *] -> [7 x 7 x 1 x *]
-Validating --> z.unpool1 = MaxUnpooling (z.p1, z.r1) : [7 x 7 x 1 x *], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Node 'z.conv1.W' (LearnableParameter operation) operation: Tensor shape was inferred as [5 x 5 x 1 x 1].
+Node 'z.conv1.W' (LearnableParameter operation): Initializing Parameter[5 x 5 x 1 x 1] <- glorotUniform(seed=2, init dims=[25 x 25], range=0.346410(0.346410*1.000000), onCPU=true.
+)Validating --> z.conv1.c = Convolution (z.conv1.W, f1) : [5 x 5 x 1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Validating --> z.conv1.b = LearnableParameter() :  -> [1 x 1 x 1]
+Validating --> z.conv1.res._ = Plus (z.conv1.c, z.conv1.b) : [28 x 28 x 1 x *], [1 x 1 x 1] -> [28 x 28 x 1 x *]
+Validating --> z.conv1.res = RectifiedLinear (z.conv1.res._) : [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Validating --> z.pool1 = Pooling (z.conv1.res) : [28 x 28 x 1 x *] -> [7 x 7 x 1 x *]
+Validating --> z.unpool1 = MaxUnpooling (z.pool1, z.conv1.res) : [7 x 7 x 1 x *], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
 Validating --> z = Convolution (z.deconv1.W, z.unpool1) : [5 x 5 x 1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
 Validating --> f2.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
 Validating --> f2 = ElementTimes (f2.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
@@ -180,127 +172,144 @@ Validating network. 12 nodes to process in pass 2.
 
 Validating network, final pass.
 
-z.c1.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 1, Kernel: 5 x 5 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-z.p1: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 7 x 7 x 1, Kernel: 4 x 4 x 1, Map: 1, Stride: 4 x 4 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-z.unpool1: using reference convolution engine for geometry: Input: 28 x 28 x 1, Output: 7 x 7 x 1, Kernel: 4 x 4 x 1, Map: 1, Stride: 4 x 4 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-z: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 1, Kernel: 5 x 5 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 2 x 2 x 0, UpperPad: 2 x 2 x 0.
+z.conv1.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 1, Kernel: 5 x 5 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.pool1: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 7 x 7 x 1, Kernel: 4 x 4 x 1, Map: 1, Stride: 4 x 4 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.unpool1: using reference convolution engine for geometry, could be VERY SLOW: Input: 28 x 28 x 1, Output: 7 x 7 x 1, Kernel: 4 x 4 x 1, Map: 1, Stride: 4 x 4 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 1, Kernel: 5 x 5 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 1), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 
 
 
 Post-processing network complete.
 
-01/18/2017 15:46:19: 
-Model has 19 nodes. Using GPU 0.
+08/21/2017 08:54:41: 
+Model has 18 nodes. Using GPU 0.
 
-01/18/2017 15:46:19: Training criterion:   rmse = Sqrt
+08/21/2017 08:54:41: Training criterion:   rmse = Sqrt
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 32 matrices, 19 are shared as 6, and 13 are not shared.
+Gradient Memory Aliasing: 4 are aliased.
+	z.conv1.c (gradient) reuses z.conv1.res._ (gradient)
+	z (gradient) reuses err (gradient)
 
-	{ z.c1.W : [5 x 5 x 1 x 1] (gradient)
-	  z.c1.res.x : [28 x 28 x 1 x *]
-	  z.c1.res.x : [28 x 28 x 1 x *] (gradient)
-	  z.p1 : [7 x 7 x 1 x *] }
-	{ z.c1.c : [28 x 28 x 1 x *] (gradient)
-	  z.r1 : [28 x 28 x 1 x *] }
+Memory Sharing: Out of 31 matrices, 21 are shared as 6, and 10 are not shared.
+
+Here are the ones that share memory:
+	{ z.conv1.res._ : [28 x 28 x 1 x *]
+	  z.unpool1 : [28 x 28 x 1 x *] }
+	{ mse : [1 x *] (gradient)
+	  z.deconv1.W : [5 x 5 x 1 x 1] (gradient) }
+	{ z.conv1.c : [28 x 28 x 1 x *]
+	  z.conv1.res : [28 x 28 x 1 x *] }
 	{ err : [28 x 28 x 1 x *] (gradient)
-	  f2 : [28 x 28 x 1 x *]
-	  mse : [1 x *] (gradient)
 	  sqErr : [28 x 28 x 1 x *]
+	  z : [28 x 28 x 1 x *]
+	  z : [28 x 28 x 1 x *] (gradient)
+	  z.conv1.b : [1 x 1 x 1] (gradient)
+	  z.conv1.res : [28 x 28 x 1 x *] (gradient) }
+	{ f2 : [28 x 28 x 1 x *]
+	  mse : [1 x *]
+	  sqErr : [28 x 28 x 1 x *] (gradient)
+	  z.conv1.W : [5 x 5 x 1 x 1] (gradient)
 	  z.unpool1 : [28 x 28 x 1 x *] (gradient) }
 	{ err : [28 x 28 x 1 x *]
-	  z.deconv1.W : [5 x 5 x 1 x 1] (gradient) }
-	{ mse : [1 x *]
-	  rmse : [1 x *] (gradient) }
-	{ sqErr : [28 x 28 x 1 x *] (gradient)
-	  z : [28 x 28 x 1 x *] (gradient)
-	  z.c1.b : [1 x 1 x 1] (gradient)
-	  z.r1 : [28 x 28 x 1 x *] (gradient) }
+	  z.conv1.c : [28 x 28 x 1 x *] (gradient)
+	  z.conv1.res._ : [28 x 28 x 1 x *] (gradient)
+	  z.pool1 : [7 x 7 x 1 x *] (gradient) }
+
+Here are the ones that don't share memory:
+	{z.deconv1.W : [5 x 5 x 1 x 1]}
+	{z.conv1.W : [5 x 5 x 1 x 1]}
+	{f2.ElementTimesArgs[0] : [1 x 1]}
+	{f1.ElementTimesArgs[0] : [1 x 1]}
+	{features : [28 x 28 x 1 x *]}
+	{z.conv1.b : [1 x 1 x 1]}
+	{rmse : [1 x *]}
+	{z.pool1 : [7 x 7 x 1 x *]}
+	{f1 : [28 x 28 x 1 x *]}
+	{rmse : [1 x *] (gradient)}
 
 
-01/18/2017 15:46:19: Training 51 parameters in 3 out of 3 parameter tensors and 13 nodes with gradient:
+08/21/2017 08:54:41: Training 51 parameters in 3 out of 3 parameter tensors and 13 nodes with gradient:
 
-01/18/2017 15:46:19: 	Node 'z.c1.W' (LearnableParameter operation) : [5 x 5 x 1 x 1]
-01/18/2017 15:46:19: 	Node 'z.c1.b' (LearnableParameter operation) : [1 x 1 x 1]
-01/18/2017 15:46:19: 	Node 'z.deconv1.W' (LearnableParameter operation) : [5 x 5 x 1 x 1]
+08/21/2017 08:54:41: 	Node 'z.conv1.W' (LearnableParameter operation) : [5 x 5 x 1 x 1]
+08/21/2017 08:54:41: 	Node 'z.conv1.b' (LearnableParameter operation) : [1 x 1 x 1]
+08/21/2017 08:54:41: 	Node 'z.deconv1.W' (LearnableParameter operation) : [5 x 5 x 1 x 1]
 
-01/18/2017 15:46:19: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+08/21/2017 08:54:41: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-01/18/2017 15:46:19: Starting Epoch 1: learning rate per sample = 0.000150  effective momentum = 0.898824  momentum as time constant = 600.0 samples
+08/21/2017 08:54:41: Starting Epoch 1: learning rate per sample = 0.00015  effective momentum = 0.898824  momentum as time constant = 600.0 samples
 
-01/18/2017 15:46:19: Starting minibatch loop.
-01/18/2017 15:46:20:  Epoch[ 1 of 3]-Minibatch[   1-   1, 0.11%]: rmse = 0.33060616 * 64; time = 1.0510s; samplesPerSecond = 60.9
-01/18/2017 15:46:20:  Epoch[ 1 of 3]-Minibatch[   2-   2, 0.21%]: rmse = 0.33320040 * 64; time = 0.0039s; samplesPerSecond = 16587.4
-01/18/2017 15:46:20:  Epoch[ 1 of 3]-Minibatch[   3-   3, 0.32%]: rmse = 0.33131015 * 64; time = 0.0037s; samplesPerSecond = 17368.9
-01/18/2017 15:46:20:  Epoch[ 1 of 3]-Minibatch[   4-   4, 0.43%]: rmse = 0.32819903 * 64; time = 0.0037s; samplesPerSecond = 17442.4
-01/18/2017 15:46:20:  Epoch[ 1 of 3]-Minibatch[   5-   5, 0.53%]: rmse = 0.31959152 * 64; time = 0.0037s; samplesPerSecond = 17168.5
-01/18/2017 15:46:21:  Epoch[ 1 of 3]-Minibatch[   6- 235, 25.07%]: rmse = 0.32555936 * 14720; time = 0.8070s; samplesPerSecond = 18240.1
-01/18/2017 15:46:21:  Epoch[ 1 of 3]-Minibatch[ 236- 470, 50.13%]: rmse = 0.32040581 * 15040; time = 0.8249s; samplesPerSecond = 18233.3
-01/18/2017 15:46:22:  Epoch[ 1 of 3]-Minibatch[ 471- 705, 75.20%]: rmse = 0.31193653 * 15040; time = 0.8245s; samplesPerSecond = 18240.3
-01/18/2017 15:46:23: Finished Epoch[ 1 of 3]: [Training] rmse = 0.31387936 * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.00015000001; epochTime=4.34712s
-01/18/2017 15:46:23: SGD: Saving checkpoint model '/tmp/cntk-test-20170118154257.999319/Examples/Image/GettingStarted_07_Deconvolution@release_gpu/Models/07_Deconvolution.model.1'
+08/21/2017 08:54:41: Starting minibatch loop.
+08/21/2017 08:54:43:  Epoch[ 1 of 3]-Minibatch[   1-   1, 0.11%]: rmse = 0.33039281 * 64; time = 2.2193s; samplesPerSecond = 28.8
+08/21/2017 08:54:43:  Epoch[ 1 of 3]-Minibatch[   2-   2, 0.21%]: rmse = 0.33298734 * 64; time = 0.0044s; samplesPerSecond = 14397.8
+08/21/2017 08:54:43:  Epoch[ 1 of 3]-Minibatch[   3-   3, 0.32%]: rmse = 0.33108723 * 64; time = 0.0038s; samplesPerSecond = 16736.7
+08/21/2017 08:54:43:  Epoch[ 1 of 3]-Minibatch[   4-   4, 0.43%]: rmse = 0.32798755 * 64; time = 0.0038s; samplesPerSecond = 16878.4
+08/21/2017 08:54:43:  Epoch[ 1 of 3]-Minibatch[   5-   5, 0.53%]: rmse = 0.31937551 * 64; time = 0.0039s; samplesPerSecond = 16490.6
+08/21/2017 08:54:44:  Epoch[ 1 of 3]-Minibatch[   6- 235, 25.07%]: rmse = 0.32532999 * 14720; time = 0.7863s; samplesPerSecond = 18721.5
+08/21/2017 08:54:45:  Epoch[ 1 of 3]-Minibatch[ 236- 470, 50.13%]: rmse = 0.32005018 * 15040; time = 0.8043s; samplesPerSecond = 18700.0
+08/21/2017 08:54:45:  Epoch[ 1 of 3]-Minibatch[ 471- 705, 75.20%]: rmse = 0.31127261 * 15040; time = 0.8044s; samplesPerSecond = 18696.4
+08/21/2017 08:54:46: Finished Epoch[ 1 of 3]: [Training] rmse = 0.31327113 * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.00015000001; epochTime=5.44823s
+08/21/2017 08:54:46: SGD: Saving checkpoint model '/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_07_Deconvolution@release_gpu/Models/07_Deconvolution_BS.model.1'
 
-01/18/2017 15:46:23: Starting Epoch 2: learning rate per sample = 0.000150  effective momentum = 0.898824  momentum as time constant = 600.0 samples
+08/21/2017 08:54:46: Starting Epoch 2: learning rate per sample = 0.00015  effective momentum = 0.898824  momentum as time constant = 600.0 samples
 
-01/18/2017 15:46:23: Starting minibatch loop.
-01/18/2017 15:46:23:  Epoch[ 2 of 3]-Minibatch[   1-   1, 0.11%]: rmse = 0.28123459 * 64; time = 0.0042s; samplesPerSecond = 15360.5
-01/18/2017 15:46:23:  Epoch[ 2 of 3]-Minibatch[   2-   2, 0.21%]: rmse = 0.28310087 * 64; time = 0.0037s; samplesPerSecond = 17289.2
-01/18/2017 15:46:23:  Epoch[ 2 of 3]-Minibatch[   3-   3, 0.32%]: rmse = 0.29036343 * 64; time = 0.0037s; samplesPerSecond = 17303.4
-01/18/2017 15:46:23:  Epoch[ 2 of 3]-Minibatch[   4-   4, 0.43%]: rmse = 0.28486598 * 64; time = 0.0037s; samplesPerSecond = 17492.3
-01/18/2017 15:46:23:  Epoch[ 2 of 3]-Minibatch[   5-   5, 0.53%]: rmse = 0.28214753 * 64; time = 0.0037s; samplesPerSecond = 17370.3
-01/18/2017 15:46:24:  Epoch[ 2 of 3]-Minibatch[   6- 235, 25.07%]: rmse = 0.27489018 * 14720; time = 0.8076s; samplesPerSecond = 18227.8
-01/18/2017 15:46:25:  Epoch[ 2 of 3]-Minibatch[ 236- 470, 50.13%]: rmse = 0.25065681 * 15040; time = 0.8255s; samplesPerSecond = 18218.6
-01/18/2017 15:46:26:  Epoch[ 2 of 3]-Minibatch[ 471- 705, 75.20%]: rmse = 0.23514388 * 15040; time = 0.8254s; samplesPerSecond = 18220.9
-01/18/2017 15:46:26: Finished Epoch[ 2 of 3]: [Training] rmse = 0.24754557 * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.00015000001; epochTime=3.30302s
-01/18/2017 15:46:26: SGD: Saving checkpoint model '/tmp/cntk-test-20170118154257.999319/Examples/Image/GettingStarted_07_Deconvolution@release_gpu/Models/07_Deconvolution.model.2'
+08/21/2017 08:54:46: Starting minibatch loop.
+08/21/2017 08:54:46:  Epoch[ 2 of 3]-Minibatch[   1-   1, 0.11%]: rmse = 0.27983215 * 64; time = 0.0124s; samplesPerSecond = 5158.7
+08/21/2017 08:54:46:  Epoch[ 2 of 3]-Minibatch[   2-   2, 0.21%]: rmse = 0.28157493 * 64; time = 0.0041s; samplesPerSecond = 15687.6
+08/21/2017 08:54:46:  Epoch[ 2 of 3]-Minibatch[   3-   3, 0.32%]: rmse = 0.28870308 * 64; time = 0.0037s; samplesPerSecond = 17248.3
+08/21/2017 08:54:46:  Epoch[ 2 of 3]-Minibatch[   4-   4, 0.43%]: rmse = 0.28343225 * 64; time = 0.0041s; samplesPerSecond = 15702.1
+08/21/2017 08:54:46:  Epoch[ 2 of 3]-Minibatch[   5-   5, 0.53%]: rmse = 0.28061187 * 64; time = 0.0039s; samplesPerSecond = 16587.5
+08/21/2017 08:54:47:  Epoch[ 2 of 3]-Minibatch[   6- 235, 25.07%]: rmse = 0.27323578 * 14720; time = 0.7908s; samplesPerSecond = 18615.2
+08/21/2017 08:54:48:  Epoch[ 2 of 3]-Minibatch[ 236- 470, 50.13%]: rmse = 0.24927891 * 15040; time = 0.8041s; samplesPerSecond = 18703.2
+08/21/2017 08:54:49:  Epoch[ 2 of 3]-Minibatch[ 471- 705, 75.20%]: rmse = 0.23447441 * 15040; time = 0.8039s; samplesPerSecond = 18707.7
+08/21/2017 08:54:50: Finished Epoch[ 2 of 3]: [Training] rmse = 0.24656893 * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.00015000001; epochTime=3.2501s
+08/21/2017 08:54:50: SGD: Saving checkpoint model '/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_07_Deconvolution@release_gpu/Models/07_Deconvolution_BS.model.2'
 
-01/18/2017 15:46:26: Starting Epoch 3: learning rate per sample = 0.000150  effective momentum = 0.898824  momentum as time constant = 600.0 samples
+08/21/2017 08:54:50: Starting Epoch 3: learning rate per sample = 0.00015  effective momentum = 0.898824  momentum as time constant = 600.0 samples
 
-01/18/2017 15:46:26: Starting minibatch loop.
-01/18/2017 15:46:26:  Epoch[ 3 of 3]-Minibatch[   1-   1, 0.11%]: rmse = 0.22149123 * 64; time = 0.0040s; samplesPerSecond = 15869.9
-01/18/2017 15:46:26:  Epoch[ 3 of 3]-Minibatch[   2-   2, 0.21%]: rmse = 0.22923820 * 64; time = 0.0037s; samplesPerSecond = 17502.8
-01/18/2017 15:46:26:  Epoch[ 3 of 3]-Minibatch[   3-   3, 0.32%]: rmse = 0.23696321 * 64; time = 0.0037s; samplesPerSecond = 17337.3
-01/18/2017 15:46:26:  Epoch[ 3 of 3]-Minibatch[   4-   4, 0.43%]: rmse = 0.23677623 * 64; time = 0.0036s; samplesPerSecond = 17655.5
-01/18/2017 15:46:26:  Epoch[ 3 of 3]-Minibatch[   5-   5, 0.53%]: rmse = 0.22999597 * 64; time = 0.0036s; samplesPerSecond = 17541.4
-01/18/2017 15:46:27:  Epoch[ 3 of 3]-Minibatch[   6- 235, 25.07%]: rmse = 0.22747214 * 14720; time = 0.8081s; samplesPerSecond = 18215.0
-01/18/2017 15:46:28:  Epoch[ 3 of 3]-Minibatch[ 236- 470, 50.13%]: rmse = 0.22575997 * 15040; time = 0.8286s; samplesPerSecond = 18150.5
-01/18/2017 15:46:29:  Epoch[ 3 of 3]-Minibatch[ 471- 705, 75.20%]: rmse = 0.22405295 * 15040; time = 0.8256s; samplesPerSecond = 18217.6
-01/18/2017 15:46:30: Finished Epoch[ 3 of 3]: [Training] rmse = 0.22494451 * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.00015000001; epochTime=3.30635s
-01/18/2017 15:46:30: SGD: Saving checkpoint model '/tmp/cntk-test-20170118154257.999319/Examples/Image/GettingStarted_07_Deconvolution@release_gpu/Models/07_Deconvolution.model'
+08/21/2017 08:54:50: Starting minibatch loop.
+08/21/2017 08:54:50:  Epoch[ 3 of 3]-Minibatch[   1-   1, 0.11%]: rmse = 0.22122100 * 64; time = 0.0119s; samplesPerSecond = 5357.1
+08/21/2017 08:54:50:  Epoch[ 3 of 3]-Minibatch[   2-   2, 0.21%]: rmse = 0.22912928 * 64; time = 0.0040s; samplesPerSecond = 16110.3
+08/21/2017 08:54:50:  Epoch[ 3 of 3]-Minibatch[   3-   3, 0.32%]: rmse = 0.23687983 * 64; time = 0.0038s; samplesPerSecond = 16654.1
+08/21/2017 08:54:50:  Epoch[ 3 of 3]-Minibatch[   4-   4, 0.43%]: rmse = 0.23658812 * 64; time = 0.0040s; samplesPerSecond = 15960.5
+08/21/2017 08:54:50:  Epoch[ 3 of 3]-Minibatch[   5-   5, 0.53%]: rmse = 0.22987401 * 64; time = 0.0038s; samplesPerSecond = 16969.7
+08/21/2017 08:54:50:  Epoch[ 3 of 3]-Minibatch[   6- 235, 25.07%]: rmse = 0.22736411 * 14720; time = 0.7868s; samplesPerSecond = 18707.9
+08/21/2017 08:54:51:  Epoch[ 3 of 3]-Minibatch[ 236- 470, 50.13%]: rmse = 0.22564296 * 15040; time = 0.8089s; samplesPerSecond = 18592.7
+08/21/2017 08:54:52:  Epoch[ 3 of 3]-Minibatch[ 471- 705, 75.20%]: rmse = 0.22394029 * 15040; time = 0.8035s; samplesPerSecond = 18719.2
+08/21/2017 08:54:53: Finished Epoch[ 3 of 3]: [Training] rmse = 0.22483312 * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.00015000001; epochTime=3.25229s
+08/21/2017 08:54:53: SGD: Saving checkpoint model '/tmp/cntk-test-20170821083849.769346/Examples/Image/GettingStarted_07_Deconvolution@release_gpu/Models/07_Deconvolution_BS.model'
 
-01/18/2017 15:46:30: Action "train" complete.
+08/21/2017 08:54:53: Action "train" complete.
 
 
-01/18/2017 15:46:30: ##############################################################################
-01/18/2017 15:46:30: #                                                                            #
-01/18/2017 15:46:30: # testNetwork command (test action)                                          #
-01/18/2017 15:46:30: #                                                                            #
-01/18/2017 15:46:30: ##############################################################################
+08/21/2017 08:54:53: ##############################################################################
+08/21/2017 08:54:53: #                                                                            #
+08/21/2017 08:54:53: # testNetwork command (test action)                                          #
+08/21/2017 08:54:53: #                                                                            #
+08/21/2017 08:54:53: ##############################################################################
 
 
 Post-processing network...
 
-3 roots:
-	labels = InputValue()
+2 roots:
 	rmse = Sqrt()
 	z = Convolution()
 
-Validating network. 19 nodes to process in pass 1.
+Validating network. 18 nodes to process in pass 1.
 
-Validating --> labels = InputValue() :  -> [10 x *1]
 Validating --> z.deconv1.W = LearnableParameter() :  -> [5 x 5 x 1 x 1]
-Validating --> z.c1.W = LearnableParameter() :  -> [5 x 5 x 1 x 1]
+Validating --> z.conv1.W = LearnableParameter() :  -> [5 x 5 x 1 x 1]
 Validating --> f1.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
 Validating --> features = InputValue() :  -> [28 x 28 x 1 x *1]
 Validating --> f1 = ElementTimes (f1.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
-Validating --> z.c1.c = Convolution (z.c1.W, f1) : [5 x 5 x 1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
-Validating --> z.c1.b = LearnableParameter() :  -> [1 x 1 x 1]
-Validating --> z.c1.res.x = Plus (z.c1.c, z.c1.b) : [28 x 28 x 1 x *1], [1 x 1 x 1] -> [28 x 28 x 1 x *1]
-Validating --> z.r1 = RectifiedLinear (z.c1.res.x) : [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
-Validating --> z.p1 = Pooling (z.r1) : [28 x 28 x 1 x *1] -> [7 x 7 x 1 x *1]
-Validating --> z.unpool1 = MaxUnpooling (z.p1, z.r1) : [7 x 7 x 1 x *1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
+Validating --> z.conv1.c = Convolution (z.conv1.W, f1) : [5 x 5 x 1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
+Validating --> z.conv1.b = LearnableParameter() :  -> [1 x 1 x 1]
+Validating --> z.conv1.res._ = Plus (z.conv1.c, z.conv1.b) : [28 x 28 x 1 x *1], [1 x 1 x 1] -> [28 x 28 x 1 x *1]
+Validating --> z.conv1.res = RectifiedLinear (z.conv1.res._) : [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
+Validating --> z.pool1 = Pooling (z.conv1.res) : [28 x 28 x 1 x *1] -> [7 x 7 x 1 x *1]
+Validating --> z.unpool1 = MaxUnpooling (z.pool1, z.conv1.res) : [7 x 7 x 1 x *1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
 Validating --> z = Convolution (z.deconv1.W, z.unpool1) : [5 x 5 x 1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
 Validating --> f2.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
 Validating --> f2 = ElementTimes (f2.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
@@ -314,10 +323,10 @@ Validating network. 12 nodes to process in pass 2.
 
 Validating network, final pass.
 
-z.c1.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 1, Kernel: 5 x 5 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-z.p1: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 7 x 7 x 1, Kernel: 4 x 4 x 1, Map: 1, Stride: 4 x 4 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-z.unpool1: using reference convolution engine for geometry: Input: 28 x 28 x 1, Output: 7 x 7 x 1, Kernel: 4 x 4 x 1, Map: 1, Stride: 4 x 4 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-z: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 1, Kernel: 5 x 5 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 2 x 2 x 0, UpperPad: 2 x 2 x 0.
+z.conv1.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 1, Kernel: 5 x 5 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.pool1: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 7 x 7 x 1, Kernel: 4 x 4 x 1, Map: 1, Stride: 4 x 4 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z.unpool1: using reference convolution engine for geometry, could be VERY SLOW: Input: 28 x 28 x 1, Output: 7 x 7 x 1, Kernel: 4 x 4 x 1, Map: 1, Stride: 4 x 4 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+z: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 1, Kernel: 5 x 5 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 1), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 
 
 
@@ -328,23 +337,33 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 19 matrices, 11 are shared as 4, and 8 are not shared.
+Memory Sharing: Out of 18 matrices, 11 are shared as 3, and 7 are not shared.
 
-	{ z : [28 x 28 x 1 x *1]
-	  z.c1.c : [28 x 28 x 1 x *1]
-	  z.r1 : [28 x 28 x 1 x *1] }
-	{ f2 : [28 x 28 x 1 x *1]
-	  sqErr : [28 x 28 x 1 x *1]
-	  z.unpool1 : [28 x 28 x 1 x *1] }
+Here are the ones that share memory:
+	{ sqErr : [28 x 28 x 1 x *1]
+	  z : [28 x 28 x 1 x *1]
+	  z.conv1.c : [28 x 28 x 1 x *1]
+	  z.conv1.res : [28 x 28 x 1 x *1] }
 	{ f1 : [28 x 28 x 1 x *1]
-	  z.c1.res.x : [28 x 28 x 1 x *1]
-	  z.p1 : [7 x 7 x 1 x *1] }
+	  f2 : [28 x 28 x 1 x *1]
+	  z.conv1.res._ : [28 x 28 x 1 x *1]
+	  z.unpool1 : [28 x 28 x 1 x *1] }
 	{ err : [28 x 28 x 1 x *1]
-	  mse : [1 x *1] }
+	  mse : [1 x *1]
+	  z.pool1 : [7 x 7 x 1 x *1] }
 
-01/18/2017 15:46:30: Minibatch[1-10]: rmse = 0.22258680 * 10000
-01/18/2017 15:46:30: Final Results: Minibatch[1-10]: rmse = 0.22258680 * 10000
+Here are the ones that don't share memory:
+	{z.deconv1.W : [5 x 5 x 1 x 1]}
+	{z.conv1.W : [5 x 5 x 1 x 1]}
+	{rmse : [1 x *1]}
+	{z.conv1.b : [1 x 1 x 1]}
+	{features : [28 x 28 x 1 x *1]}
+	{f2.ElementTimesArgs[0] : [1 x 1]}
+	{f1.ElementTimesArgs[0] : [1 x 1]}
 
-01/18/2017 15:46:30: Action "test" complete.
+08/21/2017 08:54:53: Minibatch[1-10]: rmse = 0.22248480 * 10000
+08/21/2017 08:54:53: Final Results: Minibatch[1-10]: rmse = 0.22248480 * 10000
 
-01/18/2017 15:46:30: __COMPLETED__
+08/21/2017 08:54:53: Action "test" complete.
+
+08/21/2017 08:54:53: __COMPLETED__
