@@ -310,8 +310,7 @@ static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 
-#if 1
-// TODO: change outputDim to an NDShape
+#if 0
 static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 {
     let activation = [](const Variable& x) { return Tanh(x); };
@@ -361,26 +360,51 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 #else
+static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
+{
+    // matrices are stacked in order (i, r, h)
+    auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
+    auto R  = Parameter({ outputDim * 3, outputDim                  }, DTYPE, GlorotUniformInitializer(), device, L"R");
+    auto b  = Parameter({ outputDim * 3 }, DTYPE, 0.0f, device, L"b");
+    let normW = LengthNormalization(device);
+    let normR = LengthNormalization(device);
+    let normR1 = LengthNormalization(device);
+    let stackAxis = Axis(0);
+    let stackedDim = (int)outputDim;
+    // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
+    return BinaryModel({ W, R, b },
+    {
+        { L"normW",  normW  },
+        { L"normR",  normR  },
+    },
+    [=](const Variable& dh, const Variable& x)
+    {
+        // projected contribution from input(s), hidden, and bias
+        let projx3  = b + normW(Times(W, x));
+        let projdh3 =     normR(Times(R, dh));
+        let i_proj  = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim) + Slice(projdh3, stackAxis, 0 * stackedDim, 1 * stackedDim);
+        let r_proj  = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim) + Slice(projdh3, stackAxis, 1 * stackedDim, 2 * stackedDim);
+        let cx_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim);
+        let ch_proj =                                                            Slice(projdh3, stackAxis, 2 * stackedDim, 3 * stackedDim);
 
-// Frantic's GRU kernel:
-int input_width = attention_size + 3 * recurrent_size;
-int source_width = 3 * recurrent_size;
-int aur_recurrent_width = attention_size + 2 * recurrent_size;
-float u_x = aurc_input[i*input_width + attention_size + j];
-float u_s = urc_source[i*source_width + j];
-float u_r = aur_recurrent[i*aur_recurrent_width + attention_size + j];
-float u_b = u_bias[j];
-float update = LogisticFunction(u_x + u_s + u_r + u_b);
+        let i = Sigmoid(i_proj);                  // update gate z(t)  --if 1 then take new input; if 0 then retain state
+        let r = Sigmoid(r_proj);                  // reset gate r(t)   --new input + projected old state mixed in
 
-float c_x = aurc_input[i*input_width + attention_size + 2 * recurrent_size + j];
-float c_s = urc_source[i*source_width + 2 * recurrent_size + j];
-float c_r = c_recurrent[i*recurrent_size + j];
-float c_b = c_bias[j];
-float cand_value = TanhFunction(c_x + c_s + c_r + c_b);
+        let c_proj = cx_proj + r * ch_proj;
+        let c = Tanh(c_proj);                     // "cell"
 
-float prev_value = prev_recurrent[i*recurrent_size + j];
-output[idx] = update*cand_value + (1.0f - update)*prev_value;
+        let h = dh + i * (c - dh);                // state
+        //    = i * c  +  (1 - i) * dh;
 
+        //# for comparison: CUDNN_GRU
+        //# i(t) = sigmoid(W_i x(t) + R_i h(t - 1) + b_Wi + b_Ru)
+        //# r(t) = sigmoid(W_r x(t) + R_r h(t - 1) + b_Wr + b_Rr)   --same up to here
+        //# h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
+        //# h(t) = (1 - i(t).*h'(t)) + i(t) .* h(t-1)                     --TODO: need to confirm bracketing with NVIDIA
+
+        return h;
+    });
+}
 #endif
 
 static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)

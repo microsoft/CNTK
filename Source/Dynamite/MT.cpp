@@ -123,7 +123,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     nestedLayers.insert({
         { L"normK",                  normK },
         { L"initialStateProjection", initialStateProjection },
-        { L"embedTarget",            embedTarget }
+        { L"embedTarget",            embedTarget },
         { L"stepFunction",           stepFunction },
         { L"attentionModel",         attentionModel },
         { L"firstHiddenProjection",  firstHiddenProjection },
@@ -281,7 +281,7 @@ void Train()
     //  - LR is specified for av gradient
     //  - numer should be /32
     //  - denom should be /sqrt(32)
-    let f = 1 / sqrt(4096.0)/*AdaGrad correction-correction*/   /4;
+    let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;
     let lr0 = 0.0003662109375 * f;
     auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
                                    MomentumAsTimeConstantSchedule(500), true, MomentumAsTimeConstantSchedule(50000), /*eps=*/1e-8, /*adamax=*/false,
