@@ -137,20 +137,20 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     vector<Variable> encodingProjectedKeys, encodingProjectedData;
 
     // decode from a top layer of an encoder, using history as history
-    map<wstring, ModelParametersPtr> nestedLayers;
-    for (let& resnet : resnets)
-        nestedLayers[L"resnet[" + std::to_wstring(nestedLayers.size()) + L"]"] = resnet;
-    nestedLayers.insert({
+    map<wstring, ModelParametersPtr> nestedLayers =
+    {
         { L"encoderKeysProjection",  encoderKeysProjection },
         { L"encoderDataProjection",  encoderDataProjection },
-        { L"initialStateProjection", initialStateProjection },
         { L"embedTarget",            embedTarget },
+        { L"initialStateProjection", initialStateProjection },
         { L"stepFunction",           stepFunction },
         { L"attentionModel",         attentionModel },
         { L"firstHiddenProjection",  firstHiddenProjection },
         { L"topHiddenProjection",    topHiddenProjection },
         { L"outputProjection",       outputProjection },
-    });
+    };
+    for (let& resnet : resnets)
+        nestedLayers[L"resnet[" + std::to_wstring(nestedLayers.size()) + L"]"] = resnet;
     return BinarySequenceModel({ }, nestedLayers,
     [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
     {
