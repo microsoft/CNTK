@@ -367,41 +367,52 @@ def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, p
 
     input_data1 = AA(input_data1, dtype=PRECISION_TO_TYPE[precision])
     input_data2 = AA(input_data2, dtype=PRECISION_TO_TYPE[precision])
-    a = C.input_variable(shape=input_data1.shape,
-                dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
-                needs_gradient=True,
-                name='a')
-    b = C.input_variable(shape=input_data2.shape,
-                dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
-                needs_gradient=True,
-                name='b')
 
-    # create batch
-    input_data1.shape = (1,) + input_data1.shape
-    input_data2.shape = (1,) + input_data2.shape
+    def test_splice(shape1, shape2):
+        a = C.input_variable(shape=shape1,
+                    dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+                    needs_gradient=True,
+                    name='a')
+        b = C.input_variable(shape=shape2,
+                    dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+                    needs_gradient=True,
+                    name='b')
 
-    # splice using the operator
-    root_op = C.splice(a, b, axis=axis, name='splice_ab')
+        # create batch
+        input_data1.shape = (1,) + input_data1.shape
+        input_data2.shape = (1,) + input_data2.shape
 
-    forward_input = {a: input_data1, b: input_data2}
+        # splice using the operator
+        root_op = C.splice(a, b, axis=axis, name='splice_ab')
 
-    # Backward pass test
-    # ==================
-    # The gradient of the splice operator is all ones in the shape of the input
+        forward_input = {a: input_data1, b: input_data2}
 
-    def grad_splice(x):
-        return np.ones_like(x)
+        # Backward pass test
+        # ==================
+        # The gradient of the splice operator is all ones in the shape of the input
 
-    expected_forward = [expected_result]
-    expected_backward = {
-        a: grad_splice(np.asarray(input_data1)),
-        b: grad_splice(np.asarray(input_data2))
-    }
+        def grad_splice(x):
+            return np.ones_like(x)
 
-    unittest_helper(root_op,
-                    forward_input, expected_forward, expected_backward,
-                    device_id=device_id, precision=precision)
+        expected_forward = [expected_result]
+        expected_backward = {
+            a: grad_splice(np.asarray(input_data1)),
+            b: grad_splice(np.asarray(input_data2))
+        }
 
+        unittest_helper(root_op,
+                        forward_input, expected_forward, expected_backward,
+                        device_id=device_id, precision=precision)
+
+    test_splice(input_data1.shape, input_data2.shape)
+    # test with free dimension axis
+    if axis is int and axis >= 0:
+        input_shape1 = list(input_data1.shape)
+        input_shape2 = list(input_data2.shape)
+
+        input_shape1[axis] = C.FreeDimension
+        input_shape2[axis] = C.FreeDimension
+        test_splice(input_shape1, input_shape2)
 
 
 def test_swapaxes_0d_1d_operands():
