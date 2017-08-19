@@ -21,7 +21,7 @@
 #include <string>
 
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
-//#define LOG_STATS     // if defined, log statistics (#operations)
+#define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
@@ -1535,10 +1535,11 @@ class Variable::AutoBatch
             // special case: BatchNormalization
             if (op == PrimitiveOpType::BatchNormalization)
             {
-                // BatchNorm requires two additional parameters for the current mean and invstdDev. These must be kept for backprop.
+                // BatchNorm requires three additional parameters for the current mean and invStdDev, and the zero-mean/unit-variance intermediate. These must be kept for backprop.
                 let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
                 m_batchedInputs.push_back(Parameter(m_arena.NewNDArrayView(statShape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, m_batchedInputs[0].m_dataFields->m_value->Device())));
                 m_batchedInputs.push_back(Parameter(m_arena.NewNDArrayView(statShape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, m_batchedInputs[0].m_dataFields->m_value->Device())));
+                m_batchedInputs.push_back(Parameter(m_arena.NewNDArrayView(m_batchedInputs[0].Shape(), m_batchedInputs[0].GetDataType(), StorageFormat::Dense, m_batchedInputs[0].m_dataFields->m_value->Device())));
                 anyBatchedInputs = true; // BUGBUG: If all operands are the same, then BatchNorm does not make sense (variance=0). Should we throw an error?
             }
             // execute the operation and implant the results

@@ -479,24 +479,6 @@ static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& d
     return Linear(outputDim, true, device);
 }
 
-// ResNet layer
-// Two Dense(ReLU) with skip connection
-static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescriptor& device)
-{
-    auto W1 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W1");
-    auto W2 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W2");
-    auto scale1 = Parameter({}, DTYPE, 1.0, device, L"Wscale1");
-    auto scale2 = Parameter({}, DTYPE, 1.0, device, L"Wscale2");
-    auto b1 = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b1");
-    auto b2 = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b2");
-    return UnaryModel({ W1, W2, scale1, scale2, b1, b2 }, [=](const Variable& x)
-    {
-        let h = ReLU(Times(W1, x * scale1) + b1);
-        let r = ReLU(Times(W2, h * scale2) + b2 + x);
-        return r;
-    });
-}
-
 // create a Barrier function
 static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
 {
@@ -521,6 +503,26 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
     return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount }, [=](const Variable& x) -> Variable
     {
         return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
+    });
+}
+
+// ResNet layer
+// Two Dense(ReLU) with skip connection and batch normalization after the matrix product.
+static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescriptor& device)
+{
+    auto W1 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W1");
+    auto W2 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W2");
+    auto scale1 = Parameter({}, DTYPE, 1.0, device, L"Wscale1");
+    auto scale2 = Parameter({}, DTYPE, 1.0, device, L"Wscale2");
+    //auto b1 = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b1");
+    //auto b2 = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b2");
+    auto bn1 = BatchNormalization(device, L"bn1");
+    auto bn2 = BatchNormalization(device, L"bn2");
+    return UnaryModel({ W1, W2, scale1, scale2 /*,b1, b2*/ }, { { L"bn1", bn1 },{ L"bn2", bn2 } }, [=](const Variable& x)
+    {
+        let h = ReLU(bn1(Times(W1, x * scale1)));
+        let r = ReLU(bn2(Times(W2, h * scale2)) + x);
+        return r;
     });
 }
 

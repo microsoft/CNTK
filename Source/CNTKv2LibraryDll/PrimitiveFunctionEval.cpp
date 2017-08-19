@@ -219,35 +219,37 @@ namespace CNTK
         case PrimitiveOpType::BatchNormalization:
             // batch normalization is a little tricky
             {
-                if (args.size() != 8)
-                    LogicError("Variable '%S' Value(): Operation %S requires 2 additional arguments.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+                if (args.size() != 9)
+                    LogicError("Variable '%S' Value(): Operation %S requires 3 additional arguments.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
                 let& arg = args[0];
                 let& scale = args[1];
                 let& bias = args[2];
                 // BUGBUG: TODO: implement aggregation
                 let& meanTmp = args[6];
-                let& invStdDevTmp = args[7];
+                let& stdDevOverScaleTmp = args[7];
+                let& normedTmp = args[8]; // zero-mean/unit-variance intermediate goes here  --TODO: this can be optimized away by a joint kernel
                 // mean
-                arg->LogToFile(L"bn:arg", stderr);
+                //arg->LogToFile(L"bn:arg", stderr);
                 NDArrayView::NumericOperation({ arg }, (double)meanTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, meanTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                meanTmp->LogToFile(L"bn:meanTmp", stderr);
-                // variance
-                NDArrayView::NumericOperation({ arg, meanTmp }, (double)invStdDevTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, invStdDevTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                invStdDevTmp->LogToFile(L"bn:var", stderr);
-                NDArrayView::NumericOperation({ invStdDevTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, invStdDevTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // note: in-place
-                invStdDevTmp->LogToFile(L"bn:stddev", stderr);
+                //meanTmp->LogToFile(L"bn:meanTmp", stderr);
+                // variance  --TODO: do we need a reduction opSqrSum, or an opDivBySqrt?
+                NDArrayView::NumericOperation({ arg, meanTmp }, (double)stdDevOverScaleTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, stdDevOverScaleTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                //stdDevOverScaleTmp->LogToFile(L"bn:var", stderr);
+                NDArrayView::NumericOperation({ stdDevOverScaleTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, stdDevOverScaleTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // note: in-place
+                //stdDevOverScaleTmp->LogToFile(L"bn:stddev", stderr);
                 //double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                 //if (epsilon > 0) // TODO: are nullary ops actually implemented??
-                //    NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, invStdDevTmp, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                // normalize
-                NDArrayView::NumericOperation({ arg, meanTmp },      1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opDifference,          out, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                out->LogToFile(L"bn:arg-mean", stderr);
-                NDArrayView::NumericOperation({ out, invStdDevTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, out, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                out->LogToFile(L"bn:(arg-mean)/stddev", stderr);
-                NDArrayView::NumericOperation({ out, scale },        1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct,  out, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                out->LogToFile(L"bn:(arg-mean)/stddev*scale", stderr);
-                NDArrayView::NumericOperation({ bias },              1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,                out, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                out->LogToFile(L"bn:(arg-mean)/stddev*scale+bias", stderr);
+                //    NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, stdDevOverScaleTmp, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                NDArrayView::NumericOperation({ stdDevOverScaleTmp, scale }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, stdDevOverScaleTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // note: in-place
+                // scale must not be larger than stddev; so better have them at the same shape
+                //stdDevOverScaleTmp->LogToFile(L"bn:scale/stddev", stderr);
+                // normalize into normedTmp --TODO: use a single kernel for this
+                NDArrayView::NumericOperation({ arg, meanTmp },         1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opDifference, normedTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                //normedTmp->LogToFile(L"bn:arg-mean", stderr);
+                NDArrayView::NumericOperation({ normedTmp, stdDevOverScaleTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, normedTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // in-place
+                //normedTmp->LogToFile(L"bn:(arg-mean)/stddev*scale", stderr);
+                NDArrayView::NumericOperation({ normedTmp, bias },                 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum,                out, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                //out->LogToFile(L"bn:(arg-mean)/stddev*scale+bias", stderr);
             }
             break;
         case PrimitiveOpType::OneHot:
@@ -485,6 +487,49 @@ namespace CNTK
         case PrimitiveOpType::GreaterEqual:
         case PrimitiveOpType::Floor:
             op0 = true; // will be set to zero below
+            break;
+        case PrimitiveOpType::BatchNormalization:
+            {
+                if (i == 0) // input argument
+                {
+                    let& stdDevOverScaleTmp = inputValues[7];
+                    let& normedTmp = inputValues[8]; // (x - mean) / sigma * scale
+                    // TODO: check the math
+                    // dy_i/dx_i = (1-1/N)/sigma - 1/N y/sigma
+                    // TODO: separate N for mean and variance
+                    let OneOverN = (double)stdDevOverScaleTmp->Shape().TotalSize() / (double)inputValues[0]->Shape().TotalSize();
+                    NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),
+                                                    const_cast<NDArrayView*>(stdDevOverScaleTmp)->shared_from_this() },
+                                                  /*alpha=*/(1.0 - OneOverN),
+                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, gradient, beta,
+                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                    NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),
+                                                    const_cast<NDArrayView*>(normedTmp)->shared_from_this(),
+                                                    const_cast<NDArrayView*>(stdDevOverScaleTmp)->shared_from_this() },
+                                                  /*alpha=*/-OneOverN,
+                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithQuotient, gradient, /*beta=*/1.0,
+                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                    handled = true;
+                }
+                else if (i == 1) // scale
+                {
+                    let& scale = inputValues[1];
+                    let& normedTmp = inputValues[8]; // (x - mean) / sigma * scale
+                    NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),
+                                                    const_cast<NDArrayView*>(normedTmp)->shared_from_this(),
+                                                    const_cast<NDArrayView*>(scale)->shared_from_this() },
+                                                  /*alpha=*/1.0,
+                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithQuotient, gradient, beta,
+                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                    handled = true;
+                }
+                else if (i == 2) // bias
+                {
+                    op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
+                }
+                else
+                    op0 = true; // no gradients except for
+            }
             break;
         default:
             //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());

@@ -30,8 +30,7 @@ using namespace Dynamite;
 //  - GRU instead of LSTM
 //  - ReLU not clipped/scaled
 //  - no coverage/alignment model
-//  - length normalization
-//  - different attention model
+//  - batch/length normalization
 //  - no weight norm
 
 const DeviceDescriptor device(DeviceDescriptor::UseDefaultDevice());
@@ -58,8 +57,15 @@ BinarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim,
     for (size_t i = 0; i < numLayers; i++)
         layers.push_back(Dynamite::Sequence::BiRecurrence(GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"fwdInitialValue"),
                                                           GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"bwdInitialValue")));
+    vector<UnaryBroadcastingModel> bns;
+    for (size_t i = 0; i < numLayers-1; i++)
+        bns.push_back(Dynamite::BatchNormalization(device, L"bnBidi"));
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
-    return BinarySequenceModel(vector<ModelParametersPtr>(layers.begin(), layers.end()),
+    vector<Variable> hBn;
+    vector<ModelParametersPtr> nested;
+    nested.insert(nested.end(), layers.begin(), layers.end());
+    nested.insert(nested.end(), bns.begin(), bns.end());
+    return BinarySequenceModel(nested,
     [=](vector<Variable>& res, const vector<Variable>& xFwd, const vector<Variable>& xBwd) mutable
     {
         for (size_t i = 0; i < numLayers; i++)
@@ -67,7 +73,14 @@ BinarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim,
             const vector<Variable>& inFwd = (i == 0) ? xFwd : hs[i % 2];
             const vector<Variable>& inBwd = (i == 0) ? xBwd : hs[i % 2];
             vector<Variable>& out = (i == numLayers - 1) ? res : hs[(i+1) % 2];
-            layers[i](out, inFwd, inBwd);
+            if (i > 0)
+            {
+                layers[i](hBn, inFwd, inBwd);
+                bns[i - 1](out, hBn);
+                hBn.clear();
+            }
+            else
+                layers[i](out, inFwd, inBwd);
         }
         hs[0].clear(); hs[1].clear();
     });
@@ -118,9 +131,9 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(L"encBarrier");
-    let encoderKeysProjection = encBarrier >> Linear(attentionDim, false, device) >> LengthNormalization(device); // keys projection for attention
-    let encoderDataProjection = encBarrier >> Linear(attentionDim, false, device);                                // data projection for attention
-    let embedTarget = Barrier(L"embedTargetBarrier") >> Embedding(embeddingDim, device);    // target embeddding
+    let encoderKeysProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, L"bnEncoderKeysProjection"); // keys projection for attention
+    let encoderDataProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, L"bnEncoderDataProjection"); // data projection for attention
+    let embedTarget = Barrier(L"embedTargetBarrier") >> Embedding(embeddingDim, device) >> BatchNormalization(device, L"bnEmbedTarget");     // target embeddding
     let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x); }), device);
     let stepFunction = GRU(decoderRecurrentDim, device);
@@ -193,18 +206,16 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 
 BinarySequenceModel CreateModelFunction()
 {
-    auto embedFwd = Embedding(embeddingDim, device);
-    auto embedBwd = Embedding(embeddingDim, device);
+    auto embedFwd = Embedding(embeddingDim, device) >> BatchNormalization(device, L"bnEmbedFwd");
+    auto embedBwd = Embedding(embeddingDim, device) >> BatchNormalization(device, L"bnEmbedBwd");
     auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
-    auto bn = Dynamite::BatchNormalization(device, L"bnEnc");
     auto decode = AttentionDecoder(0.8);
-    vector<Variable> eFwd,eBwd, hBn, h;
+    vector<Variable> eFwd,eBwd, h;
     return BinarySequenceModel({},
     {
         { L"embedSourceFwd", embedFwd },
         { L"embedSourceBwd", embedBwd },
         { L"encode",         encode   },
-        { L"bn",             bn       },
         { L"decode",         decode   }
     },
     [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& history) mutable
@@ -215,12 +226,9 @@ BinarySequenceModel CreateModelFunction()
         // encoder
         encode(h, eFwd, eBwd);
         eFwd.clear(); eBwd.clear();
-        // batch-normalize
-        bn(hBn, h);
-        h.clear();
         // decoder (outputting logprobs of words)
-        decode(res, history, hBn);
-        hBn.clear();
+        decode(res, history, h);
+        h.clear();
     });
 }
 
@@ -301,7 +309,7 @@ void Train()
     let epochSize = 10000000; // 10M is a bit more than half an epoch of ROM-ENG (~16M words)
     let minibatchSize = 4096;
     AdditionalLearningOptions learnerOptions;
-    learnerOptions.gradientClippingThresholdPerSample = 2;
+    learnerOptions.gradientClippingThresholdPerSample = 0.2;
 #if 0
     auto baseLearner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005), learnerOptions);
 #else
@@ -366,7 +374,7 @@ void Train()
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples,
                 learner->LearningRate());
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
-#if 1   // for debugging: reduce #sequences to 3, and reduce their lengths
+#if 0   // for debugging: reduce #sequences to 3, and reduce their lengths
         args[0].resize(3);
         args[1].resize(3);
         let TrimLength = [](Variable& seq, size_t len) // chop off all frames after 'len', assuming the last axis is the length
