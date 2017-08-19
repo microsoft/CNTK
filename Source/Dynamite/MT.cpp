@@ -102,14 +102,14 @@ QuaternaryModel AttentionModelReference(size_t attentionDim1)
     auto H = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
     let normH = LengthNormalization(device);
     return QuaternaryModel({ H }, { { L"normH", normH } },
-        [=](const Variable& h, const Variable& historyProjectedKey, const Variable& encodingProjectedKey, const Variable& encodingrojectedData) -> Variable
+        [=](const Variable& h, const Variable& historyProjectedKey, const Variable& encodingProjectedKey, const Variable& encodingProjectedData) -> Variable
     {
         // compute attention weights
-        let hProjected = normH(Times(H, h, L"H")); // [A x 1]
-        let tanh = Tanh(hProjected + historyProjectedKey, L"attTanh"); // [A x T]
-        let u = ReduceSum(ElementTimes(tanh, encodingProjectedKey, L"vProj"), Axis(0))->Output(); // [1 x T] col vector
+        let hProjected = Times(H, h, L"H"); // [A x 1]
+        let tanh = Tanh(normH(hProjected + historyProjectedKey), L"attTanh"); // [A x T]
+        let u = ReduceSum(ElementTimes(tanh, Tanh(encodingProjectedKey), L"attDot"), Axis(0))->Output(); // [1 x T] col vector
         let w = Reshape(Dynamite::Softmax(u), { u.Shape().TotalSize() }); // [T] this is a transposition (Transpose does not work yet)
-        let res = Times(encodingrojectedData, w, L"att"); // [A x T] x [T] -> [A]
+        let res = Times(encodingProjectedData, w, L"attContext"); // [A x T] x [T] -> [A]
         return res;
     });
 }
@@ -121,7 +121,8 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     let encBarrier = Barrier(L"encBarrier");
     let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x); }), device);
     let stepFunction = GRU(decoderRecurrentDim, device);
-    let attentionModel = AttentionModelBahdanau(attentionDim);
+    //let attentionModel = AttentionModelBahdanau(attentionDim);
+    let attentionModel = AttentionModelReference(attentionDim);
     let projBarrier = Barrier(L"projBarrier");
     let firstHiddenProjection = Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x); }), device);
     vector<UnaryBroadcastingModel> resnets;
@@ -132,6 +133,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     let outputProjection = Linear(tgtVocabSize, device);  // output layer without non-linearity (no sampling yet)
     let embedTarget = Embedding(embeddingDim, device);    // target embeddding
     let K = Parameter({ attentionDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"K"); // keys projection for attention
+    let D = Parameter({ attentionDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"D"); // data projection for attention
     let normK = LengthNormalization(device);
 
     // decode from a top layer of an encoder, using history as history
@@ -148,7 +150,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
         { L"topHiddenProjection",    topHiddenProjection },
         { L"outputProjection",       outputProjection },
     });
-    return BinarySequenceModel({ K }, nestedLayers,
+    return BinarySequenceModel({ K, D }, nestedLayers,
     [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
     {
         res.resize(history.size());
@@ -161,15 +163,17 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
         // common subexpression of attention
         let keys = hEncsTensor;
-        let projectedKeys = normK(Times(K, keys));  // [A x T]
+        let encodingProjectedKey = normK(Times(K, keys));  // [A x T]
+        let encodingProjectedData = Times(D, keys);  // [A x T]
         for (size_t t = 0; t < history.size(); t++)
         {
             // do recurrent step (in inference, history[t] would become res[t-1])
-            let pred = embedTarget(embedBarrier(history[t]));
-            let input = Splice({ pred, attentionContext }, Axis(0), L"augInput");
+            let historyProjectedKey = embedTarget(embedBarrier(history[t]));
+            let input = Splice({ historyProjectedKey, attentionContext }, Axis(0), L"augInput");
             state = stepFunction(state, input);
             // compute attention vector
-            attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
+            //attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
+            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKey, encodingProjectedData);
             // stack of non-recurrent projections
             auto state1 = projBarrier(state);
             state1 = firstHiddenProjection(state1);

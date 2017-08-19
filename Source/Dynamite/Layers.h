@@ -483,14 +483,14 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
 }
 
 // create a Barrier function
-static UnaryModel Barrier(const wstring& name = wstring())
+static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
 {
     static size_t id = 0;
     auto thisId = ++id; // note: don't use 'id' in lambda; it will access the static variable directly
-    return [=](const Variable& x) -> Variable
+    return UnaryModel([=](const Variable& x) -> Variable
     {
         return BatchSync(x, thisId, name);
-    };
+    });
 }
 
 struct Sequence
