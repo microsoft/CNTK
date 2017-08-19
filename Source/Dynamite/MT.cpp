@@ -57,7 +57,7 @@ BinarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim,
     vector<BinarySequenceModel> layers;
     for (size_t i = 0; i < numLayers; i++)
         layers.push_back(Dynamite::Sequence::BiRecurrence(GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"fwdInitialValue"),
-                                                          GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"fwdInitialValue")));
+                                                          GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"bwdInitialValue")));
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
     return BinarySequenceModel(vector<ModelParametersPtr>(layers.begin(), layers.end()),
     [=](vector<Variable>& res, const vector<Variable>& xFwd, const vector<Variable>& xBwd) mutable
@@ -196,14 +196,16 @@ BinarySequenceModel CreateModelFunction()
     auto embedFwd = Embedding(embeddingDim, device);
     auto embedBwd = Embedding(embeddingDim, device);
     auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
+    auto bn = Dynamite::BatchNormalization(device, L"bnEnc");
     auto decode = AttentionDecoder(0.8);
-    vector<Variable> eFwd,eBwd, h;
+    vector<Variable> eFwd,eBwd, hBn, h;
     return BinarySequenceModel({},
     {
         { L"embedSourceFwd", embedFwd },
         { L"embedSourceBwd", embedBwd },
-        { L"encode", encode },
-        { L"decode",  decode }
+        { L"encode",         encode   },
+        { L"bn",             bn       },
+        { L"decode",         decode   }
     },
     [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& history) mutable
     {
@@ -213,9 +215,12 @@ BinarySequenceModel CreateModelFunction()
         // encoder
         encode(h, eFwd, eBwd);
         eFwd.clear(); eBwd.clear();
-        // decoder (outputting logprobs of words)
-        decode(res, history, h);
+        // batch-normalize
+        bn(hBn, h);
         h.clear();
+        // decoder (outputting logprobs of words)
+        decode(res, history, hBn);
+        hBn.clear();
     });
 }
 
@@ -361,7 +366,7 @@ void Train()
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples,
                 learner->LearningRate());
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
-#if 0   // for debugging: reduce #sequences to 3, and reduce their lengths
+#if 1   // for debugging: reduce #sequences to 3, and reduce their lengths
         args[0].resize(3);
         args[1].resize(3);
         let TrimLength = [](Variable& seq, size_t len) // chop off all frames after 'len', assuming the last axis is the length

@@ -500,11 +500,27 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
 // create a Barrier function
 static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
 {
-    static size_t id = 0;
-    auto thisId = ++id; // note: don't use 'id' in lambda; it will access the static variable directly
+    static size_t id = 0; // unique id
+    auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
     return UnaryModel([=](const Variable& x) -> Variable
     {
         return BatchSync(x, thisId, name);
+    });
+}
+
+// create a Barrier function
+static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const wstring& name = wstring())
+{
+    static size_t id = 0; // unique id
+    auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
+    auto scale = Parameter({ NDShape::InferredDimension }, DTYPE, 1.0, device, L"scale");
+    auto bias  = Parameter({ NDShape::InferredDimension }, DTYPE, 0.0, device, L"bias");
+    auto runningMean   = Parameter({ NDShape::InferredDimension }, DTYPE, 0.0, device, L"runningMean");
+    auto runningInvStd = Parameter({ NDShape::InferredDimension }, DTYPE, 1.0, device, L"runningInvStd");
+    auto runningCount  = Parameter({                            }, DTYPE, 0.0, device, L"runningCount");
+    return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount }, [=](const Variable& x) -> Variable
+    {
+        return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
     });
 }
 

@@ -827,7 +827,7 @@ class Variable::AutoBatch
             if (a->m_inputs.size() != b->m_inputs.size())
                 return false;
             // special case BatchNormalization
-            if (opClass == OpSpecificConditionKind::BatchNormalization)
+            if (op == PrimitiveOpType::BatchNormalization)
             {
                 let aId = a->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
                 let bId = b->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
@@ -837,7 +837,7 @@ class Variable::AutoBatch
                 if (a->m_inputs[0].Shape() != b->m_inputs[0].Shape())
                     InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different shapes %S and %S.",
                         PrimitiveOpTypeName(op).c_str(), (int)aId, a->m_inputs[0].Shape().AsString().c_str(), b->m_inputs[0].Shape().AsString().c_str());
-                for (size_t i = 1; i < 5; i++)
+                for (size_t i = 1; i < 6; i++)
                 {
                     if (a->m_inputs[i].m_dataFields != b->m_inputs[i].m_dataFields)
                         InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different %d-th argument.",
@@ -986,6 +986,15 @@ class Variable::AutoBatch
             }
             return gap;
         }
+        // helper to check whether this is a BatchNormalization op that still has some instances pending
+        int GetBatchNormPending(const vector<NonOwningFunctionListBuilder>::const_iterator& iter)
+        {
+            let& f = iter->front();
+            if (f->m_op != PrimitiveOpType::BatchNormalization)
+                return 0;
+            else
+                return m_bnPendingCounts[f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>()] > 0;
+        }
         // select the next batched op to execute
         NonOwningFunctionList pop_best()
         {
@@ -1002,12 +1011,18 @@ class Variable::AutoBatch
                     if (diff == 0)
                         diff = -(GetBarrierGap(iter) - GetBarrierGap(best)); // lower gap is better
                     if (diff == 0)
+                        diff = -(GetBatchNormPending(iter) - GetBatchNormPending(best)); // BatchNormalization with pending inputs always loses
+                    if (diff == 0)
                         diff = iter->front()->m_priority - best->front()->m_priority;
                     if (diff == 0)
                         diff = (int)iter->size() - (int)best->size();
                     if (diff > 0)
                         best = iter;
                 }
+                // special case BatchNormalization
+                if (GetBatchNormPending(best)) // the only ready op is BN with some instances still pending -> error (I am not sure under which circumstances this may ever happen)
+                    InvalidArgument("Primitive op '%S' with id %d must not be used in a recurrent loop (must not depend on its own output).",
+                        PrimitiveOpTypeName(best->front()->m_op).c_str(), (int)best->front()->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
 #ifdef LOG_DETAILS
                 // log
                 let f = best->front();
@@ -1081,7 +1096,7 @@ class Variable::AutoBatch
         // special case BatchNormalization: we must account for all occurences before normalizing
         if (f.m_op == PrimitiveOpType::BatchNormalization)
         {
-            if (!f.m_attributes.Contains(PrimitiveFunction::AttributeNameReductionKeepDimensions))
+            if (!f.m_attributes.Contains(PrimitiveFunction::AttributeNameSyncId))
                 InvalidArgument("Primitive op '%S' requires an id parameter. Please use the version that takes an id.",
                     PrimitiveOpTypeName(f.m_op).c_str());
             let bnId = f.m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
@@ -1279,8 +1294,6 @@ class Variable::AutoBatch
             LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of Convolution() not implemented yet.");
         case OpSpecificConditionKind::Pooling:
             LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of Pooling ops not implemented yet.");
-        case OpSpecificConditionKind::BatchNormalization:
-            LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of BatchNormalization() not implemented yet.");
         case OpSpecificConditionKind::OptimizedRNNStack:
             LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of OptimizedRNNStack() not implemented yet.");
         case OpSpecificConditionKind::RandomDistribution:

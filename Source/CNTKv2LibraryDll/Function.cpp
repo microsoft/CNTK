@@ -1792,7 +1792,6 @@ namespace CNTK
                                    double normalizationTimeConstant,
                                    double blendTimeConstant,
                                    double epsilon,
-                                   bool useCuDNNEngine,
                                    const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
@@ -1800,7 +1799,6 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameNormalizationTimeConstant] = normalizationTimeConstant;
         additionalProperties[PrimitiveFunction::AttributeNameBlendTimeConstant] = blendTimeConstant;
         additionalProperties[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
-        additionalProperties[PrimitiveFunction::AttributeNameUseCuDNNEngine] = useCuDNNEngine;
         additionalProperties[PrimitiveFunction::AttributeNameSyncId] = id; // the Dynamite version takes an extra parameter
 
         std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd, runningCount };
