@@ -1532,6 +1532,15 @@ class Variable::AutoBatch
                 // release shared_ptrs asap
                 spliceInputs.clear();
             }
+            // special case: BatchNormalization
+            if (op == PrimitiveOpType::BatchNormalization)
+            {
+                // BatchNorm requires two additional parameters for the current mean and invstdDev. These must be kept for backprop.
+                let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
+                m_batchedInputs.push_back(Parameter(m_arena.NewNDArrayView(statShape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, m_batchedInputs[0].m_dataFields->m_value->Device())));
+                m_batchedInputs.push_back(Parameter(m_arena.NewNDArrayView(statShape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, m_batchedInputs[0].m_dataFields->m_value->Device())));
+                anyBatchedInputs = true; // BUGBUG: If all operands are the same, then BatchNorm does not make sense (variance=0). Should we throw an error?
+            }
             // execute the operation and implant the results
             // BUGBUG: The newly created PrimitiveFunction objects must get their consumer chain set up.
             PrimitiveFunctionPtr batchedOp;

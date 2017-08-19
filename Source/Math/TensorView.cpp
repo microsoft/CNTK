@@ -624,12 +624,13 @@ static __declspec(noinline) size_t TensorDataAsString(string& res,
 template <class ElemType>
 string TensorView<ElemType>::AsString(size_t maxItems /*= 6*/, bool columnMajor /*= true*/) const
 {
-    unique_ptr<ElemType[]> data(m_sob->CopyToArray());
+    let& sobViewPtr = GetSOBViewPtr();
+    unique_ptr<ElemType[]> data(sobViewPtr->CopyToArray());
     let dims    = m_shape.GetDims();
     let strides = m_shape.GetStrides();
     let rank = m_shape.GetRank();
     string res;
-    res.reserve(m_sob->GetNumElements() * 5);
+    res.reserve(sobViewPtr->GetNumElements() * 5);
     TensorDataAsString(res, data.get(), dims, strides, rank, rank, 0, maxItems, columnMajor);
     return res;
 }

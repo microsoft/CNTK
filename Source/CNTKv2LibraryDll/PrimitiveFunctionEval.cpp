@@ -217,6 +217,39 @@ namespace CNTK
             LogicError("Variable '%S' Value(): Memoziation of ternary operator %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // the following operations are not TensorView, and may be implementable through relatively simple calls to Matrix
         case PrimitiveOpType::BatchNormalization:
+            // batch normalization is a little tricky
+            {
+                if (args.size() != 8)
+                    LogicError("Variable '%S' Value(): Operation %S requires 2 additional arguments.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+                let& arg = args[0];
+                let& scale = args[1];
+                let& bias = args[2];
+                // BUGBUG: TODO: implement aggregation
+                let& meanTmp = args[6];
+                let& invStdDevTmp = args[7];
+                // mean
+                arg->LogToFile(L"bn:arg", stderr);
+                NDArrayView::NumericOperation({ arg }, (double)meanTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, meanTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                meanTmp->LogToFile(L"bn:meanTmp", stderr);
+                // variance
+                NDArrayView::NumericOperation({ arg, meanTmp }, (double)invStdDevTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, invStdDevTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                invStdDevTmp->LogToFile(L"bn:var", stderr);
+                NDArrayView::NumericOperation({ invStdDevTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, invStdDevTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // note: in-place
+                invStdDevTmp->LogToFile(L"bn:stddev", stderr);
+                //double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
+                //if (epsilon > 0) // TODO: are nullary ops actually implemented??
+                //    NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, invStdDevTmp, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                // normalize
+                NDArrayView::NumericOperation({ arg, meanTmp },      1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opDifference,          out, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                out->LogToFile(L"bn:arg-mean", stderr);
+                NDArrayView::NumericOperation({ out, invStdDevTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, out, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                out->LogToFile(L"bn:(arg-mean)/stddev", stderr);
+                NDArrayView::NumericOperation({ out, scale },        1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct,  out, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                out->LogToFile(L"bn:(arg-mean)/stddev*scale", stderr);
+                NDArrayView::NumericOperation({ bias },              1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,                out, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                out->LogToFile(L"bn:(arg-mean)/stddev*scale+bias", stderr);
+            }
+            break;
         case PrimitiveOpType::OneHot:
             LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // the following operations are not TensorView, and hence should be routed through V1 ComputationNodes
