@@ -102,12 +102,12 @@ QuaternaryModel AttentionModelReference(size_t attentionDim1)
     auto H = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
     let normH = LengthNormalization(device);
     return QuaternaryModel({ H }, { { L"normH", normH } },
-        [=](const Variable& h, const Variable& historyProjectedKey, const Variable& encodingProjectedKey, const Variable& encodingProjectedData) -> Variable
+        [=](const Variable& h, const Variable& historyProjectedKey, const Variable& encodingProjectedNormedKey, const Variable& encodingProjectedData) -> Variable
     {
         // compute attention weights
         let hProjected = Times(H, h, L"H"); // [A x 1]
         let tanh = Tanh(normH(hProjected + historyProjectedKey), L"attTanh"); // [A x T]
-        let u = ReduceSum(ElementTimes(tanh, Tanh(encodingProjectedKey), L"attDot"), Axis(0))->Output(); // [1 x T] col vector
+        let u = ReduceSum(ElementTimes(tanh, Tanh(encodingProjectedNormedKey), L"attDot"), Axis(0))->Output(); // [1 x T] col vector
         let w = Reshape(Dynamite::Softmax(u), { u.Shape().TotalSize() }); // [T] this is a transposition (Transpose does not work yet)
         let res = Times(encodingProjectedData, w, L"attContext"); // [A x T] x [T] -> [A]
         return res;
@@ -117,31 +117,32 @@ QuaternaryModel AttentionModelReference(size_t attentionDim1)
 BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
-    let initialContext = Constant({ 2 * encoderRecurrentDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let encBarrier = Barrier(L"encBarrier");
+    let encoderKeysProjection = encBarrier >> Linear(attentionDim, false, device) >> LengthNormalization(device); // keys projection for attention
+    let encoderDataProjection = encBarrier >> Linear(attentionDim, false, device);                                // data projection for attention
+    let embedTarget = Barrier(L"embedTargetBarrier") >> Embedding(embeddingDim, device);    // target embeddding
+    let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x); }), device);
     let stepFunction = GRU(decoderRecurrentDim, device);
     //let attentionModel = AttentionModelBahdanau(attentionDim);
     let attentionModel = AttentionModelReference(attentionDim);
-    let projBarrier = Barrier(L"projBarrier");
-    let firstHiddenProjection = Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x); }), device);
+    let firstHiddenProjection = Barrier(L"projBarrier") >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x); }), device);
     vector<UnaryBroadcastingModel> resnets;
     for (size_t n = 0; n < numDecoderResNetProjections; n++)
         resnets.push_back(ResidualNet(decoderProjectionDim, device));
     let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { return Tanh(x); }), device);
-    let embedBarrier = Barrier(L"embedTargetBarrier");
     let outputProjection = Linear(tgtVocabSize, device);  // output layer without non-linearity (no sampling yet)
-    let embedTarget = Embedding(embeddingDim, device);    // target embeddding
-    let K = Parameter({ attentionDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"K"); // keys projection for attention
-    let D = Parameter({ attentionDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"D"); // data projection for attention
-    let normK = LengthNormalization(device);
+
+    // buffers
+    vector<Variable> encodingProjectedKeys, encodingProjectedData;
 
     // decode from a top layer of an encoder, using history as history
     map<wstring, ModelParametersPtr> nestedLayers;
     for (let& resnet : resnets)
         nestedLayers[L"resnet[" + std::to_wstring(nestedLayers.size()) + L"]"] = resnet;
     nestedLayers.insert({
-        { L"normK",                  normK },
+        { L"encoderKeysProjection",  encoderKeysProjection },
+        { L"encoderDataProjection",  encoderDataProjection },
         { L"initialStateProjection", initialStateProjection },
         { L"embedTarget",            embedTarget },
         { L"stepFunction",           stepFunction },
@@ -150,34 +151,34 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
         { L"topHiddenProjection",    topHiddenProjection },
         { L"outputProjection",       outputProjection },
     });
-    return BinarySequenceModel({ K, D }, nestedLayers,
+    return BinarySequenceModel({ }, nestedLayers,
     [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
     {
         res.resize(history.size());
-        // convert encoder sequence into a outputProjection tensor, so that we can do matrix products along the sequence axis - 1
-        Variable hEncsTensor = Splice(hEncs, Axis(1), L"hEncsTensor"); // [2*hiddenDim, inputLen]
-        hEncsTensor = encBarrier(hEncsTensor); // this syncs after the Splice; not the inputs. Those are synced by Recurrence(). Seems to make things worse though. Why?
         // decoding loop
         Variable state = Slice(hEncs.front(), Axis(0), encoderRecurrentDim, 2 * encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
         state = initialStateProjection(state);      // match the dimensions
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
-        // common subexpression of attention
-        let keys = hEncsTensor;
-        let encodingProjectedKey = normK(Times(K, keys));  // [A x T]
-        let encodingProjectedData = Times(D, keys);  // [A x T]
+        // common subexpression of attention.
+        // We pack the result into a dense matrix; but only after the matrix product, to allow for it to be batched.
+        encoderKeysProjection(encodingProjectedKeys, hEncs);
+        encoderDataProjection(encodingProjectedData, hEncs);
+        let encodingProjectedKeysTensor = Splice(encodingProjectedKeys, Axis(1), L"encodingProjectedKeysTensor");  // [A x T]
+        encodingProjectedKeys.clear();
+        let encodingProjectedDataTensor = Splice(encodingProjectedData, Axis(1), L"encodingProjectedDataTensor");  // [A x T]
+        encodingProjectedData.clear();
         for (size_t t = 0; t < history.size(); t++)
         {
             // do recurrent step (in inference, history[t] would become res[t-1])
-            let historyProjectedKey = embedTarget(embedBarrier(history[t]));
+            let historyProjectedKey = embedTarget(history[t]);
             let input = Splice({ historyProjectedKey, attentionContext }, Axis(0), L"augInput");
             state = stepFunction(state, input);
             // compute attention vector
             //attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
-            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKey, encodingProjectedData);
+            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeysTensor, encodingProjectedDataTensor);
             // stack of non-recurrent projections
-            auto state1 = projBarrier(state);
-            state1 = firstHiddenProjection(state1);
-            for (auto& resnet : resnets)
+            auto state1 = firstHiddenProjection(state); // first one brings it into the right dimension
+            for (auto& resnet : resnets)                // then a bunch of ResNet layers
                 state1 = resnet(state1);
             // one more transform, bringing back the attention context
             let topHidden = topHiddenProjection(Splice({ state1, attentionContext }, Axis(0)));

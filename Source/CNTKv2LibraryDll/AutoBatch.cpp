@@ -1184,7 +1184,7 @@ class Variable::AutoBatch
         let& outputShape = output.Shape();
         // logging
 #ifdef LOG_DETAILS
-        LogFunction(f, "[bf] ");
+        LogFunction(f, "[bf]  ");
 #endif
         auto outValue = isFree
             ? nullptr

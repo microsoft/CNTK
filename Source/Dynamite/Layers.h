@@ -239,7 +239,6 @@ struct Batch
     }
 };
 
-// UNTESTED
 struct UnaryBroadcastingModel : public UnaryModel
 {
     typedef UnaryModel Base;
@@ -253,11 +252,21 @@ struct UnaryBroadcastingModel : public UnaryModel
         res = Batch::map(*this, x);
     }
     // TODO: get rid if this variant:
-    vector<Variable> operator() (const vector<Variable>& x) const
-    {
-        return Batch::map(*this, x);
-    }
+    //vector<Variable> operator() (const vector<Variable>& x) const
+    //{
+    //    return Batch::map(*this, x);
+    //}
 };
+
+// function composition
+// TODO: Do we need other overloads as well? SequenceModel, and going back and forth?
+static inline UnaryBroadcastingModel operator>> (const UnaryBroadcastingModel& before, const UnaryBroadcastingModel& after)
+{
+    return UnaryModel({}, { { L"f", before },{ L"g", after } }, [=](const Variable& x) -> Variable
+    {
+        return after(before(x));
+    });
+}
 
 static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
@@ -437,10 +446,16 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     if (bias)
     {
         auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
-        return UnaryModel({ W, scale, b }, { { L"activation", activation}  }, [=](const Variable& x) { return Times(W, x * scale) + b; });
+        return UnaryModel({ W, scale, b }, { { L"activation", activation}  }, [=](const Variable& x)
+        {
+            return Times(W, x * scale) + b;
+        });
     }
     else
-        return UnaryModel({ W, scale    }, { { L"activation", activation } }, [=](const Variable& x) { return Times(W, x * scale); });
+        return UnaryModel({ W, scale    }, { { L"activation", activation } }, [=](const Variable& x)
+        {
+            return Times(W, x * scale);
+        });
 #endif
 }
 
