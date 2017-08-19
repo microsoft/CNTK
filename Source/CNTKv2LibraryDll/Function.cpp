@@ -1781,6 +1781,32 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization, operands, std::move(additionalProperties), name));
     }
 
+    FunctionPtr BatchNormalization(const Variable& operand,
+                                   size_t id,
+                                   const Variable& scale,
+                                   const Variable& bias,
+                                   const Variable& runningMean,
+                                   const Variable& runningInvStd,
+                                   const Variable& runningCount,
+                                   bool spatial,
+                                   double normalizationTimeConstant,
+                                   double blendTimeConstant,
+                                   double epsilon,
+                                   bool useCuDNNEngine,
+                                   const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameSpatial] = spatial;
+        additionalProperties[PrimitiveFunction::AttributeNameNormalizationTimeConstant] = normalizationTimeConstant;
+        additionalProperties[PrimitiveFunction::AttributeNameBlendTimeConstant] = blendTimeConstant;
+        additionalProperties[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
+        additionalProperties[PrimitiveFunction::AttributeNameUseCuDNNEngine] = useCuDNNEngine;
+        additionalProperties[PrimitiveFunction::AttributeNameSyncId] = id; // the Dynamite version takes an extra parameter
+
+        std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd, runningCount };
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization, operands, std::move(additionalProperties), name));
+    }
+
     FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand, min, max };

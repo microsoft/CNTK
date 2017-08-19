@@ -4348,8 +4348,24 @@ namespace CNTK
     ///
     /// TODO:
     ///
-    // TODO: Do we need a separate "spatial" parameter or can it be inferred from the tensor dimensions
     CNTK_API FunctionPtr BatchNormalization(const Variable& operand,
+                                            const Variable& scale,
+                                            const Variable& bias,
+                                            const Variable& runningMean,
+                                            const Variable& runningInvStd,
+                                            const Variable& runningCount,
+                                            bool spatial,
+                                            double normalizationTimeConstant = 0,
+                                            double blendTimeConstant = 0,
+                                            double epsilon = 0.00001,
+                                            bool useCuDNNEngine = true,
+                                            const std::wstring& name = std::wstring());
+
+    ///
+    /// BatchNormalization, Dynamite version. This variant requires a unique id for cross-sequence synchronization.
+    ///
+    CNTK_API FunctionPtr BatchNormalization(const Variable& operand,
+                                            size_t id,
                                             const Variable& scale,
                                             const Variable& bias,
                                             const Variable& runningMean,

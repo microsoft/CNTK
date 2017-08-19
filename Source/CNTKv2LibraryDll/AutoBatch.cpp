@@ -365,8 +365,6 @@ namespace CNTK
         // invocations within the same Batch::Map() call, an error is thrown (i.e. the full unique
         // id is (user id, Batch::Map invocation id)).
         // Note: This makes the threaded parallelization of batch ops mandatory.
-        // 
-        // TODO: We may want to support BN along the last axis, to reduce overhead.
 
         // OptimizedRNNStack()
         // -------------------
@@ -807,7 +805,8 @@ class Variable::AutoBatch
         NonOwningFunctionListBuilder m_viewOps;
         vector<NonOwningFunctionListBuilder> m_regularOps; // m_regularOps[] is a linked list
         NonOwningFunctionListBuilder m_barrierOps; // TODO: currently dead
-        vector<size_t> m_barrierPendingCounts; // [barrier id] number of consumers of a barrier id that are not yet ready
+        vector<size_t> m_barrierPendingCounts;  // [barrier id] number of consumers of a barrier id that are not yet ready
+        vector<size_t> m_bnPendingCounts;       // [bn id] number of pending (non-ready) BatchNormalization operations
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b)
@@ -827,14 +826,33 @@ class Variable::AutoBatch
             // some operations have variable number of arguments. Those cannot be batched, e.g. Splice().
             if (a->m_inputs.size() != b->m_inputs.size())
                 return false;
+            // special case BatchNormalization
+            if (opClass == OpSpecificConditionKind::BatchNormalization)
+            {
+                let aId = a->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+                let bId = b->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+                if (aId != bId)
+                    return false;
+                // shape of first argument and object identities of all other arguments must match, otherwise it's an error
+                if (a->m_inputs[0].Shape() != b->m_inputs[0].Shape())
+                    InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different shapes %S and %S.",
+                        PrimitiveOpTypeName(op).c_str(), (int)aId, a->m_inputs[0].Shape().AsString().c_str(), b->m_inputs[0].Shape().AsString().c_str());
+                for (size_t i = 1; i < 5; i++)
+                {
+                    if (a->m_inputs[i].m_dataFields != b->m_inputs[i].m_dataFields)
+                        InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different %d-th argument.",
+                            PrimitiveOpTypeName(op).c_str(), (int)aId, (int)i);
+                }
+                return true; // these *must* be batched
+            }
             // all input dimensions must match (with exception of a few special cases)
             for (size_t i = 0; i < a->m_inputs.size(); i++)
             {
                 // see through no-ops for testing the input
                 size_t aBarrierId = SIZE_MAX;
                 size_t bBarrierId = SIZE_MAX;
-                let& aInput = SeeThroughNoOps(a->m_inputs, i, aBarrierId);
-                let& bInput = SeeThroughNoOps(b->m_inputs, i, bBarrierId);
+                /*let& aInput =*/ SeeThroughNoOps(a->m_inputs, i, aBarrierId);
+                /*let& bInput =*/ SeeThroughNoOps(b->m_inputs, i, bBarrierId);
                 // barrier id, if any, must match
                 if (aBarrierId != bBarrierId)
                     return false;
@@ -844,14 +862,13 @@ class Variable::AutoBatch
                     // for Times, the first arg must be the same object, not just the same shape
                     // TODO: a special case is a dot product, which we can write as ReduceSum(ElementTimes(a,b))
                     //       This would require to rewrite the graph though; can we do that?
-                    if (aInput.m_dataFields != bInput.m_dataFields)
+                    if (a->m_inputs[i].m_dataFields != b->m_inputs[i].m_dataFields)
                         return false;
                 }
                 else
                 {
-                    // shapes must match
-                    // (TODO: Do we ever see through a reshape? Then which shape should match?)
-                    if (aInput.Shape() != bInput.Shape())
+                    // shapes must match (we don't see through no-ops since the target shape is the right one to test)
+                    if (a->m_inputs[i].Shape() != b->m_inputs[i].Shape())
                         return false;
                 }
             }
@@ -871,10 +888,24 @@ class Variable::AutoBatch
                 m_barrierPendingCounts.resize(barrierId * 10, 0);
             m_barrierPendingCounts[barrierId]++;
         }
+        // count an occurrence of a BatchNormalization with a given id
+        void CountBatchNorm(size_t bnId)
+        {
+            if (bnId >= m_bnPendingCounts.size())
+                m_bnPendingCounts.resize(bnId * 10, 0);
+            m_bnPendingCounts[bnId]++;
+        }
         // schedule an operation that has been confirmed ready
         void Schedule(PrimitiveFunction* f)
         {
             let op = f->m_op;
+            // special case BatchNormalization: we must account for all occurences
+            if (op == PrimitiveOpType::BatchNormalization)
+            {
+                let bnId = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+                fail_if(m_bnPendingCounts[bnId] == 0, "m_bnPendingCounts decreased more than increased??");
+                m_bnPendingCounts[bnId]--; // only those with pending count 0 are ready
+            }
             // we manage three ready sets, since two common kinds are very simple
             if (IsBarrier(f))
                 // BUGBUG: We never get here since we now see through barriers for efficiency...
@@ -1047,6 +1078,15 @@ class Variable::AutoBatch
         }
         // not a leaf
         auto& f = *fields.m_ownerFunction.lock();
+        // special case BatchNormalization: we must account for all occurences before normalizing
+        if (f.m_op == PrimitiveOpType::BatchNormalization)
+        {
+            if (!f.m_attributes.Contains(PrimitiveFunction::AttributeNameReductionKeepDimensions))
+                InvalidArgument("Primitive op '%S' requires an id parameter. Please use the version that takes an id.",
+                    PrimitiveOpTypeName(f.m_op).c_str());
+            let bnId = f.m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+            m_schedule.CountBatchNorm(bnId);
+        }
         // determine how many inputs are pending; and also recurse and set up the consumer list
         size_t pendingInputs = 0;
         let& inputs = f.m_inputs;
