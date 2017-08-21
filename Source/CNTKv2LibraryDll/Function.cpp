@@ -2088,13 +2088,13 @@ namespace CNTK
         }
     }
 
-    FunctionPtr Crop(const Variable& input,
-        const Variable& ref,
-        size_t offsetX,
-        size_t offsetY,
-        const std::wstring& name)
+    // Creates an instance of crop node with explicitly specified crop offsets.
+    // nodeInput: input node to be cropped.
+    // nodeReferent: input node which determines the spatial size of output.
+    // offsetX, offsetY: offset values in pixel which determine the position of crop rectangle.
+    FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, size_t offsetX, size_t offsetY, const std::wstring& name)
     {
-        std::vector<Variable> operands = { input, ref };
+        std::vector<Variable> operands = { nodeInput, nodeReferent };
         Dictionary additionalAttributes;
         additionalAttributes[PrimitiveFunction::AttributeNameOffset] = DictionaryValue({ offsetX, offsetY });
         return AsComposite(MakeSharedObject<PrimitiveFunction>(
@@ -2102,23 +2102,26 @@ namespace CNTK
             operands, std::move(additionalAttributes), name), name);
     }
 
-    FunctionPtr Crop(const Variable& input,
-        const Variable& ref,
-        const std::wstring& name)
+    // Creates an instance of crop node with automatically computed crop offsets.
+    // nodeInput: input node to be cropped.
+    // nodeReferent: input node which determines the spatial size of output.
+    FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, const std::wstring& name)
     {
-        std::vector<Variable> operands = { input, ref };
+        std::vector<Variable> operands = { nodeInput, nodeReferent };
         return AsComposite(MakeSharedObject<PrimitiveFunction>(
             PrimitiveOpType::Crop,
             operands, Dictionary(), name), name);
     }
 
-    FunctionPtr Crop(const Variable& input,
-        const Variable& ref,
-        const Variable& eqNodeInput,
-        const Variable& eqNodeRef,
-        const std::wstring& name)
+    // Creates an instance of crop node with automatically computed crop offsets and specified ancestor nodes.
+    // This is used in cases when input nodes do not have common ancestor in the network.
+    // nodeInput: input node to be cropped.
+    // nodeReferent: input node which determines the spatial size of output.
+    // eqNodeInput: ancestor of nodeInput.
+    // eqNodeReferent: ancestor of nodeReferent which is treated as equal to eqNodeInput for the purpose of computing crop offsets.
+    FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, const Variable& eqNodeInput, const Variable& eqNodeReferent, const std::wstring& name)
     {
-        std::vector<Variable> operands = { input, ref, eqNodeInput, eqNodeRef };
+        std::vector<Variable> operands = { nodeInput, nodeReferent, eqNodeInput, eqNodeReferent };
         return AsComposite(MakeSharedObject<PrimitiveFunction>(
             PrimitiveOpType::Crop,
             operands, Dictionary(), name), name);

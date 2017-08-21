@@ -1102,8 +1102,21 @@ namespace CNTK
                             assert(m_inputs.size() == 2 || m_inputs.size() == 4);
                             outputShape = m_inputs[1].Shape();
                             const NDShape& input0Shape = m_inputs[0].Shape();
-                            assert(input0Shape.Rank() == outputShape.Rank());
-                            assert(input0Shape.Rank() >= 2);
+                            if (input0Shape.Rank() != outputShape.Rank())
+                            {
+                                RuntimeError("Function '%S': cropped input '%S' and reference input '%S' have different ranks.",
+                                    AsString().c_str(),
+                                    m_inputs[0].AsString().c_str(),
+                                    m_inputs[1].AsString().c_str()
+                                );
+                            }
+                            if (input0Shape.Rank() < 2)
+                            {
+                                RuntimeError("Function '%S': cropped input '%S' must have rank at least 2.",
+                                    AsString().c_str(),
+                                    m_inputs[0].AsString().c_str()
+                                );
+                            }
                             for (int i = 2; i < input0Shape.Rank(); ++i)
                             {
                                 outputShape[i] = input0Shape[i];

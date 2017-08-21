@@ -222,17 +222,17 @@ namespace CNTK
         ///
         /// Returns a reference to dimension size for the specified axis.
         ///
-        size_t& operator[](size_t axisId) 
+        size_t& operator[](size_t axisId)
         {
-            return m_shapeDims.at(axisId); 
+            return m_shapeDims.at(axisId);
         }
 
         ///
         /// Returns the dimension size for the specified axis.
         ///
-        size_t operator[](size_t axisId) const 
+        size_t operator[](size_t axisId) const
         {
-            return m_shapeDims.at(axisId); 
+            return m_shapeDims.at(axisId);
         }
 
         ///
@@ -394,7 +394,7 @@ namespace CNTK
     /// Checked mode enables additional runtime verification such as:
     /// - Tracking NaN occurrences in sequence gaps.
     /// - Function graph verification after binding of free static axes to actual values at runtime
-    ///
+    /// 
     /// Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
     ///
     CNTK_API void SetCheckedMode(bool enable);
@@ -4318,7 +4318,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-
+ 
     ///
     /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
     ///
@@ -5182,12 +5182,12 @@ namespace CNTK
         MinibatchData(ValuePtr value) : MinibatchData(value, 0)
         {}
 
-        MinibatchData(ValuePtr value, size_t numSamples, bool sweepEnd = false) 
+        MinibatchData(ValuePtr value, size_t numSamples, bool sweepEnd = false)
             : MinibatchData(value, numSamples, numSamples, sweepEnd)
         {}
 
-        MinibatchData(ValuePtr value, size_t numSequences, size_t numSamples, bool sweepEnd) 
-            : data(value), numberOfSequences(numSequences), numberOfSamples(numSamples), sweepEnd(sweepEnd) 
+        MinibatchData(ValuePtr value, size_t numSequences, size_t numSamples, bool sweepEnd)
+            : data(value), numberOfSequences(numSequences), numberOfSamples(numSamples), sweepEnd(sweepEnd)
         {}
 
         std::wstring AsString() const
@@ -5200,7 +5200,7 @@ namespace CNTK
         ValuePtr data;
         size_t numberOfSequences;
         size_t numberOfSamples;
-        bool sweepEnd; 
+        bool sweepEnd;
     };
 
     ///
@@ -5293,7 +5293,7 @@ namespace CNTK
     };
 
     typedef Dictionary Deserializer;
-    
+
     ///
     /// A configuration required to instantiate the CNTK built-in composite minibatch source.
     /// 
@@ -5414,8 +5414,8 @@ namespace CNTK
     CNTK_API ImageTransform ReaderCrop(const wchar_t* cropType = L"center",
         std::pair<int, int> cropSize = std::make_pair(0, 0),
         std::pair<float, float> sideRatio = std::make_pair(0.0f, 0.0f),
-        std::pair<float, float> areaRatio = std::make_pair(0.0f, 0.0f), 
-        std::pair<float, float> aspectRatio = std::make_pair(1.0f, 1.0f), 
+        std::pair<float, float> areaRatio = std::make_pair(0.0f, 0.0f),
+        std::pair<float, float> aspectRatio = std::make_pair(1.0f, 1.0f),
         const wchar_t* jitterType = L"none");
 
     /// 
@@ -5976,21 +5976,35 @@ namespace CNTK
         const TestConfig& test = { nullptr });
 
     ///
-    /// Creates an instance of crop node.
+    /// Creates an instance of crop node, which crops one of its inputs along spatial dimensions only.
+    /// The size of the crop rectangle is determined by another input node.
+    /// The offset of the crop rectangle is either given explicitly or computed automatically by examining the network.
     ///
-    CNTK_API FunctionPtr Crop(const Variable& input,
-        const Variable& ref,
-        size_t offsetX,
-        size_t offsetY,
-        const std::wstring& name = L"");
-    CNTK_API FunctionPtr Crop(const Variable& input,
-        const Variable& ref,
-        const std::wstring& name = L"");
-    CNTK_API FunctionPtr Crop(const Variable& input,
-        const Variable& ref,
-        const Variable& eqNodeInput,
-        const Variable& eqNodeRef,
-        const std::wstring& name = L"");
+
+    ///
+    /// Creates an instance of crop node with explicitly specified crop offsets.
+    /// nodeInput: input node to be cropped.
+    /// nodeReferent: input node which determines the spatial size of output.
+    /// offsetX, offsetY: offset values in pixel which determine the position of crop rectangle.
+    ///
+    CNTK_API FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, size_t offsetX, size_t offsetY, const std::wstring& name = L"");
+
+    ///
+    /// Creates an instance of crop node with automatically computed crop offsets.
+    /// nodeInput: input node to be cropped.
+    /// nodeReferent: input node which determines the spatial size of output.
+    ///
+    CNTK_API FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, const std::wstring& name = L"");
+
+    ///
+    /// Creates an instance of crop node with automatically computed crop offsets and specified ancestor nodes.
+    /// This is used in cases when input nodes do not have common ancestor in the network.
+    /// nodeInput: input node to be cropped.
+    /// nodeReferent: input node which determines the spatial size of output.
+    /// eqNodeInput: ancestor of nodeInput.
+    /// eqNodeReferent: ancestor of nodeReferent which is treated as equal to eqNodeInput for the purpose of computing crop offsets.
+    ///
+    CNTK_API FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, const Variable& eqNodeInput, const Variable& eqNodeReferent, const std::wstring& name = L"");
 
 #endif // !CNTK_HEADERONLY_DEFINITIONS
 }
