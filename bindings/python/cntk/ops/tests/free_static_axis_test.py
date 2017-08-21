@@ -155,7 +155,8 @@ def test_free_static_times():
     assert np.array_equal(w_grad, np.asarray([[0.6, .6], [.8, .8]], dtype=np.float32))
 
     x_data = np.asarray([[0.5, 0.2]], np.float32)
-    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])    assert np.array_equal(t_val, np.asarray([[[1.2, 3.1]]], dtype=np.float32))
+    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])
+    assert np.array_equal(t_val, np.asarray([[[1.2, 3.1]]], dtype=np.float32))
     assert np.array_equal(w_grad, np.asarray([[0.5, .5], [.2, .2]], dtype=np.float32))
 
 
