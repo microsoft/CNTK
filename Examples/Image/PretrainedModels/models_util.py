@@ -29,7 +29,8 @@ def download_model_by_name(model_name):
         'AlexNet.model':   'https://www.cntk.ai/Models/AlexNet/AlexNet.model',
         'AlexNetBS.model': 'https://www.cntk.ai/Models/AlexNet/AlexNetBS.model',
         'ResNet_18.model': 'https://www.cntk.ai/Models/ResNet/ResNet_18.model',
-        'Fast-RCNN_grocery100.model' : 'https://www.cntk.ai/Models/FRCN_Grocery/Fast-RCNN_grocery100.model'
+        'Fast-RCNN_grocery100.model' : 'https://www.cntk.ai/Models/FRCN_Grocery/Fast-RCNN_grocery100.model',
+        'VGG16_ImageNet_Caffe.model' : 'https://www.cntk.ai/Models/Caffe_Converted/VGG16_ImageNet_Caffe.model'
     }
 
     if not model_name in modelNameToUrl:
