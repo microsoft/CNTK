@@ -1405,7 +1405,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                   nodeDependentLearningRatePerSample, momentumPerSample,
                                   numSamplesInMinibatch,
                                   m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
-                                  m_needAveMultiplier, m_useNesterovMomentum);
+                                  m_needAveMultiplier, m_useNesterovMomentum, m_useMomentumCorrection);
                     node->BumpEvalTimeStamp();
 #ifdef _DEBUG
                     if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
@@ -2341,10 +2341,11 @@ template <class ElemType>
 void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
                                   Matrix<ElemType>& smoothedGradientValues, double& smoothedCount,
                                   const double learnRatePerSample, const double momentumPerSample,
-                                              size_t actualMBSize,
+                                  size_t actualMBSize,
                                   const double L2RegWeight, const double L1RegWeight,
-                                              const bool needAveMultiplier,
-                                  const bool useNesterovMomentum) const
+                                  const bool needAveMultiplier,
+                                  const bool useNesterovMomentum,
+                                  const bool useMomentumCorrection) const
 {
     // we use simple linear (instead of log linear) exponentiation here
     const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
@@ -2389,13 +2390,21 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
         // the momentum value for the next epoch is non-zero.
         if (!useNesterovMomentum)
         {
-            functionValues.MomentumSGDUpdate(gradientValues, smoothedGradientValues, 
-                                             ElemType(learnRatePerSample), ElemType(momentum));
+            if (useMomentumCorrection)
+                functionValues.MomentumCorrectionSGDUpdate(gradientValues, smoothedGradientValues,
+                                                           ElemType(learnRatePerSample), ElemType(momentum), actualMBSize);
+            else
+                functionValues.MomentumSGDUpdate(gradientValues, smoothedGradientValues,
+                                                 ElemType(learnRatePerSample), ElemType(momentum));
         }
         else
         {
-            functionValues.NesterovAcceleratedMomentumSGDUpdate(gradientValues, smoothedGradientValues, 
-                                                                ElemType(learnRatePerSample), ElemType(momentum));
+            if (useMomentumCorrection)
+                functionValues.NesterovAcceleratedMomentumCorrectionSGDUpdate(gradientValues, smoothedGradientValues,
+                                                                              ElemType(learnRatePerSample), ElemType(momentum), actualMBSize);
+            else
+                functionValues.NesterovAcceleratedMomentumSGDUpdate(gradientValues, smoothedGradientValues, 
+                                                                    ElemType(learnRatePerSample), ElemType(momentum));
         }
     }
     else if (adpType == GradientsUpdateType::AdaGrad)
@@ -2958,6 +2967,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     floatargvector momentumPerSample = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
     floatargvector momentumAsTimeConstant = configSGD(L"momentumAsTimeConstant", ConfigRecordType::Array(floatargvector()));
     bool useNesterovMomentum = configSGD(L"useNAG", false);
+    bool useMomentumCorrection = configSGD(L"momentumCorrection", false);
 
     m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t) 0);
 
@@ -3093,6 +3103,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         m_momentumSpecifiedForMBSize = m_mbSize;
     }
     m_useNesterovMomentum = useNesterovMomentum;
+    m_useMomentumCorrection = useMomentumCorrection;
 
     for (int i = 0; i < m_momentumParam.size(); i++)
     {

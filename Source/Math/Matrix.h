@@ -206,7 +206,9 @@ public:
 
     void SGDUpdate(Matrix<ElemType>& gradients, ElemType learnRatePerSample);
     void MomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, bool unitGainMomentum = true);
+    void MomentumCorrectionSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, size_t actualMBSize, bool unitGainMomentum = true);
     void NesterovAcceleratedMomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, bool unitGainMomentum = true);
+    void NesterovAcceleratedMomentumCorrectionSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, size_t actualMBSize, bool unitGainMomentum = true);
 
     ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
     void FSAdagradUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
