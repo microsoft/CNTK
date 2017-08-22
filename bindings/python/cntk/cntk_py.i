@@ -62,6 +62,7 @@
 %rename(_register_udf_deserialize_callback) CNTK::Internal::RegisterUDFDeserializeCallbackWrapper;
 %rename(base64_image_deserializer) CNTK::Base64ImageDeserializer;
 %rename(_none) CNTK::DictionaryValue::Type::None;
+%rename(nce_loss) CNTK::NCELoss;
 
 %rename(_register_deserializer_factory) CNTK::RegisterDeserializerFactory;
 %rename(_stream_infos) CNTK::SwigDataDeserializer::_GetStreamInfos;

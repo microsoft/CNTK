@@ -4012,6 +4012,14 @@ namespace CNTK
         return ClassificationError(prediction, labels, Axis(0), name);
     }
 
+
+    ///
+    /// Create an instance of the CNTK built-in noise contrastive estimation loss for specified operands. 
+    ///
+    CNTK_API FunctionPtr NCELoss(const Variable& weights, const Variable& biases, const Variable& inputs, const Variable& labels, 
+        const Constant& noiseWeights, size_t numSamples, bool allowDuplicates=true, unsigned long seed = SentinelValueForAutoSelectRandomSeed,
+        const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in LambdaRank loss an effective proxy for optimizing the NDCG metric
     ///
