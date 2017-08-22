@@ -5,16 +5,15 @@
 # ==============================================================================
 
 import os
-import numpy as np
-from matplotlib.pyplot import imsave
 import cv2
+import numpy as np
 import cntk
 from cntk import input_variable, Axis
 from utils.map_helpers import evaluate_detections
 from utils.plot_helpers import resize_and_pad
 from utils.rpn.bbox_transform import regress_rois
 from utils.od_mb_source import ObjectDetectionMinibatchSource
-from utils.proposal_helpers import ProposalProvider, compute_proposals, compute_image_stats
+from utils.proposal_helpers import ProposalProvider, compute_image_stats, compute_proposals
 
 class FastRCNN_Evaluator:
     def __init__(self, eval_model, cfg):
@@ -26,9 +25,7 @@ class FastRCNN_Evaluator:
         roi_proposals = input_variable((cfg.NUM_ROI_PROPOSALS, 4), dynamic_axes=[Axis.default_batch_axis()],
                                        name="roi_proposals")
         self._eval_model = eval_model(image_input, roi_proposals)
-        self._min_w = cfg['PROPOSALS_MIN_W']
-        self._min_h = cfg['PROPOSALS_MIN_H']
-        self._num_proposals = cfg['NUM_ROI_PROPOSALS']
+        self._cfg = cfg
 
     def process_image(self, img_path):
         out_cls_pred, out_rpn_rois, out_bbox_regr, dims = self.process_image_detailed(img_path)
@@ -41,8 +38,6 @@ class FastRCNN_Evaluator:
         img = cv2.imread(img_path)
         _, cntk_img_input, dims = resize_and_pad(img, self._img_shape[2], self._img_shape[1])
 
-        #import pdb; pdb.set_trace()
-
         # compute ROI proposals and apply scaling and padding to them
         # [target_w, target_h, img_width, img_height, top, bottom, left, right, scale_factor]
         img_stats = compute_image_stats(len(img[0]), len(img), self._img_shape[2], self._img_shape[1])
@@ -50,7 +45,8 @@ class FastRCNN_Evaluator:
         top = img_stats[4]
         left = img_stats[6]
 
-        proposals = compute_proposals(img, self._num_proposals, self._min_w, self._min_h)
+        num_proposals = self._cfg['NUM_ROI_PROPOSALS']
+        proposals = compute_proposals(img, num_proposals, self._cfg)
         proposals = proposals * scale_factor
         proposals += (left, top, left, top)
 
@@ -76,7 +72,18 @@ def compute_test_set_aps(eval_model, cfg):
     frcn_eval = eval_model(image_input, roi_proposals)
 
     # Create the minibatch source
-    proposal_provider = ProposalProvider.fromconfig(cfg)
+    if cfg.USE_PRECOMPUTED_PROPOSALS:
+        try:
+            cfg["DATA"].TEST_PRECOMPUTED_PROPOSALS_FILE = os.path.join(cfg["DATA"].MAP_FILE_PATH, cfg["DATA"].TEST_PRECOMPUTED_PROPOSALS_FILE)
+            proposal_provider = ProposalProvider.fromfile(cfg["DATA"].TEST_PRECOMPUTED_PROPOSALS_FILE, cfg.NUM_ROI_PROPOSALS)
+        except:
+            print("To use precomputed proposals please specify the following parameters in your configuration:\n"
+                  "__C.DATA.TRAIN_PRECOMPUTED_PROPOSALS_FILE\n"
+                  "__C.DATA.TEST_PRECOMPUTED_PROPOSALS_FILE")
+            exit(-1)
+    else:
+        proposal_provider = ProposalProvider.fromconfig(cfg)
+
     minibatch_source = ObjectDetectionMinibatchSource(
         cfg["DATA"].TEST_MAP_FILE,
         cfg["DATA"].TEST_ROI_FILE,

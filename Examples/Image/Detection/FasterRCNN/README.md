@@ -5,7 +5,7 @@
 This folder contains an end-to-end solution for using Faster R-CNN to perform object detection. 
 The original research paper for Faster R-CNN can be found at [https://arxiv.org/abs/1506.01497](https://arxiv.org/abs/1506.01497).
 Base models that are supported by the current configuration are AlexNet and VGG16. 
-Two image set that are preconfigured are Pascal VOC 2007 and Grocery. 
+Two image sets that are preconfigured are Pascal VOC 2007 and Grocery. 
 Other base models or image sets can be used by adding a configuration file similar to the examples in `utils/configs` and importing it in `run_faster_rcnn.py`.
 
 ## Running the example
@@ -15,7 +15,7 @@ Other base models or image sets can be used by adding a configuration file simil
 To run Faster R-CNN you need a CNTK Python environment. Install the following additional packages:
 
 ```
-pip install opencv-python easydict pyyaml future
+pip install opencv-python easydict pyyaml
 ```
 
 The code uses prebuild Cython modules for parts of the region proposal network (see `Examples/Image/Detection/utils/cython_modules`). 
@@ -112,7 +112,7 @@ and run `python run_faster_rcnn.py` to train and evaluate Faster R-CNN on your d
 
 ### Parameters
 
-All options and parameters are in `config.py` in the `FasterRCNN` folder and all of them are explained there. These include
+All options and parameters are in `FasterRCNN_config.py` in the `FasterRCNN` folder and all of them are explained there. These include
 
 ```
 # E2E or 4-stage training
@@ -134,4 +134,4 @@ Most of the code is in `FasterRCNN_train.py` and `FasterRCNN_eval.py` (and `Exam
 
 ### Algorithm 
 
-All details regarding the Faster R-CNN algortihm can be found in the original research paper: [https://arxiv.org/abs/1506.01497](https://arxiv.org/abs/1506.01497).
+All details regarding the Faster R-CNN algorithm can be found in the original research paper: [https://arxiv.org/abs/1506.01497](https://arxiv.org/abs/1506.01497).

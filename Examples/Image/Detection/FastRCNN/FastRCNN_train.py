@@ -58,9 +58,17 @@ def prepare(cfg, use_arg_parser=True):
     cfg["DATA"].TEST_MAP_FILE = os.path.join(data_path, cfg["DATA"].TEST_MAP_FILE)
     cfg["DATA"].TRAIN_ROI_FILE = os.path.join(data_path, cfg["DATA"].TRAIN_ROI_FILE)
     cfg["DATA"].TEST_ROI_FILE = os.path.join(data_path, cfg["DATA"].TEST_ROI_FILE)
+    if cfg.USE_PRECOMPUTED_PROPOSALS:
+        try:
+            cfg["DATA"].TRAIN_PRECOMPUTED_PROPOSALS_FILE = os.path.join(data_path, cfg["DATA"].TRAIN_PRECOMPUTED_PROPOSALS_FILE)
+        except:
+            print("To use precomputed proposals please specify the following parameters in your configuration:\n"
+                  "__C.DATA.TRAIN_PRECOMPUTED_PROPOSALS_FILE\n"
+                  "__C.DATA.TEST_PRECOMPUTED_PROPOSALS_FILE")
+            exit(-1)
 
     cfg['MODEL_PATH'] = os.path.join(cfg.OUTPUT_PATH, "fast_rcnn_eval_{}.model".format(cfg["MODEL"].BASE_MODEL))
-    cfg['BASE_MODEL_PATH'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "PretrainedModels",
+    cfg['BASE_MODEL_PATH'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "PretrainedModels",
                                           cfg["MODEL"].BASE_MODEL_FILE)
 
     cfg["DATA"].CLASSES = parse_class_map_file(cfg["DATA"].CLASS_MAP_FILE)
@@ -300,7 +308,11 @@ def train_fast_rcnn(cfg):
         log_number_of_parameters(loss)
 
         # Create the minibatch source
-        proposal_provider = ProposalProvider.fromconfig(cfg)
+        if cfg.USE_PRECOMPUTED_PROPOSALS:
+            proposal_provider = ProposalProvider.fromfile(cfg["DATA"].TRAIN_PRECOMPUTED_PROPOSALS_FILE, cfg.NUM_ROI_PROPOSALS)
+        else:
+            proposal_provider = ProposalProvider.fromconfig(cfg)
+
         od_minibatch_source = ObjectDetectionMinibatchSource(
             cfg["DATA"].TRAIN_MAP_FILE, cfg["DATA"].TRAIN_ROI_FILE,
             max_annotations_per_image=cfg.INPUT_ROIS_PER_IMAGE,

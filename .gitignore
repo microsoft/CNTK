@@ -291,6 +291,7 @@ Examples/Image/DataSets/grocery/positive/
 Examples/Image/DataSets/grocery/testImages/
 Examples/Image/DataSets/grocery/*.txt
 PretrainedModels/*.model
+Examples/Image/Detection/FastRCNN/BrainScript/Output/
 Examples/Image/Detection/FastRCNN/BrainScript/proc/
 Examples/Image/Detection/FastRCNN/Output/
 Examples/Image/Detection/FasterRCNN/Output/

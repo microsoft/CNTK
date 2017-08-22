@@ -5,7 +5,7 @@
 This folder contains an end-to-end solution for using Fast R-CNN to perform object detection. 
 The original research paper for Fast R-CNN can be found at [https://arxiv.org/abs/1504.08083](https://arxiv.org/abs/1504.08083).
 Base models that are supported by the current configuration are AlexNet and VGG16. 
-Two image set that are preconfigured are Pascal VOC 2007 and Grocery. 
+Two image sets that are preconfigured are Pascal VOC 2007 and Grocery. 
 Other base models or image sets can be used by adding a configuration file similar to the examples in `utils/configs` and importing it in `run_fast_rcnn.py`.
 
 ## Running the example
@@ -15,14 +15,14 @@ Other base models or image sets can be used by adding a configuration file simil
 To run Fast R-CNN you need a CNTK Python environment. Install the following additional packages:
 
 ```
-pip install opencv-python easydict pyyaml future
+pip install opencv-python easydict pyyaml dlib
 ```
 
 The code uses prebuild Cython modules for parts of the region proposal network (see `Examples/Image/Detection/utils/cython_modules`). 
 These binaries are contained in the repository for Python 3.5 under Windows and Python 3.4 under Linux.
 If you require other versions please follow the instructions at [https://github.com/rbgirshick/py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#installation-sufficient-for-the-demo).
 
-If you want to use the debug output you need to run ' pip install pydot_ng) ([website](https://pypi.python.org/pypi/pydot-ng)) and install [graphviz](http://graphviz.org/) (GraphViz executable has to be in the system’s PATH) to be able to plot the CNTK graphs.
+If you want to use the debug output you need to run `pip install pydot_ng` ([website](https://pypi.python.org/pypi/pydot-ng)) and install [graphviz](http://graphviz.org/) (GraphViz executable has to be in the system’s PATH) to be able to plot the CNTK graphs.
 
 ### Getting the data and AlexNet model
 
@@ -90,7 +90,7 @@ and run `python run_fast_rcnn.py` to train and evaluate Fast R-CNN on your data.
 
 ### Parameters
 
-All options and parameters are in `config.py` in the `FastRCNN` folder and all of them are explained there. These include
+All options and parameters are in `FastRCNN_config.py` in the `FastRCNN` folder and all of them are explained there. These include
 
 ```
 # learning parameters
@@ -99,9 +99,10 @@ __C.CNTK.LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 10 + [0.00001]
 
 # Number of regions of interest [ROIs] proposals
 __C.NUM_ROI_PROPOSALS = 1000
-# minimum width and height for proposals in pixels
-__C.PROPOSALS_MIN_W = 20
-__C.PROPOSALS_MIN_H = 20
+# minimum relative width/height of an ROI
+__C.roi_min_side_rel = 0.01
+# maximum relative width/height of an ROI
+__C.roi_max_side_rel = 1.0
 ```
 
 ### Fast R-CNN CNTK code
@@ -110,4 +111,4 @@ Most of the code is in `FastRCNN_train.py` and `FastRCNN_eval.py` (and `Examples
 
 ### Algorithm 
 
-All details regarding the Fast R-CNN algortihm can be found in the original research paper: [https://arxiv.org/abs/1504.08083](https://arxiv.org/abs/1504.08083).
+All details regarding the Fast R-CNN algorithm can be found in the original research paper: [https://arxiv.org/abs/1504.08083](https://arxiv.org/abs/1504.08083).

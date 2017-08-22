@@ -13,7 +13,7 @@ This folder contains an end-to-end demo to try different object detectors, base 
 
 ### Setup
 
-To run Fast R-CNN you need a CNTK Python environment. Install the following additional packages:
+To run the object detection demo you need a CNTK Python environment. Install the following additional packages:
 
 ```
 pip install opencv-python easydict pyyaml future

@@ -25,7 +25,7 @@ from _cntk_py import force_deterministic_algorithms
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, ".."))
-from utils.rpn.rpn_helpers import create_rpn, create_proposal_target_layer, add_proposal_layer
+from utils.rpn.rpn_helpers import create_rpn, create_proposal_target_layer, create_proposal_layer
 from utils.annotations.annotations_helper import parse_class_map_file
 from utils.od_mb_source import ObjectDetectionMinibatchSource
 from utils.proposal_helpers import ProposalProvider
@@ -64,13 +64,11 @@ def prepare(cfg, use_arg_parser=True):
 
     cfg['MODEL_PATH'] = os.path.join(cfg.OUTPUT_PATH, "faster_rcnn_eval_{}_{}.model"
                                      .format(cfg["MODEL"].BASE_MODEL, "e2e" if cfg["CNTK"].TRAIN_E2E else "4stage"))
-    cfg['BASE_MODEL_PATH'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "PretrainedModels",
+    cfg['BASE_MODEL_PATH'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "PretrainedModels",
                                           cfg["MODEL"].BASE_MODEL_FILE)
 
     cfg["DATA"].CLASSES = parse_class_map_file(cfg["DATA"].CLASS_MAP_FILE)
     cfg["DATA"].NUM_CLASSES = len(cfg["DATA"].CLASSES)
-    cfg.PROPOSAL_LAYER_PARAMS = "'feat_stride': {}\n'scales':\n - {}".\
-        format(cfg["MODEL"].FEATURE_STRIDE, "\n - ".join([str(v) for v in cfg["DATA"].PROPOSAL_LAYER_SCALES]))
 
     if cfg["CNTK"].FAST_MODE:
         cfg["CNTK"].E2E_MAX_EPOCHS = 1
@@ -207,7 +205,7 @@ def create_faster_rcnn_eval_model(model, image_input, dims_input, cfg, rpn_model
     rpn = clone_model(model_with_rpn, [last_conv_node_name], ["rpn_cls_prob_reshape", "rpn_bbox_pred"], CloneMethod.freeze)
     rpn_out = rpn(conv_out)
     # we need to add the proposal layer anew to account for changing configs when buffering proposals in 4-stage training
-    rpn_rois = add_proposal_layer(rpn_out.outputs[0], rpn_out.outputs[1], dims_input, cfg)
+    rpn_rois = create_proposal_layer(rpn_out.outputs[0], rpn_out.outputs[1], dims_input, cfg)
 
     roi_fc_layers = clone_model(model, [last_conv_node_name, "rpn_target_rois"], ["cls_score", "bbox_regr"], CloneMethod.freeze)
     pred_net = roi_fc_layers(conv_out, rpn_rois)
@@ -224,6 +222,27 @@ def create_faster_rcnn_eval_model(model, image_input, dims_input, cfg, rpn_model
     eval_model = combine([cls_pred, rpn_rois, bbox_regr])
 
     return eval_model
+
+def store_eval_model_with_native_udf(eval_model, cfg):
+    import copy
+    sys.path.append(os.path.join(abs_path, "..", "..", "Extensibility", "ProposalLayer"))
+    cntk.ops.register_native_user_function('ProposalLayerOp',
+                                           'Cntk.ProposalLayerLib-' + cntk.__version__.rstrip('+'),
+                                           'CreateProposalLayer')
+
+    def filter(x):
+        return type(x) == cntk.Function and x.op_name == 'UserFunction' and x.name == 'ProposalLayer'
+
+    def converter(x):
+        layer_config = copy.deepcopy(x.attributes)
+        return cntk.ops.native_user_function('ProposalLayerOp', list(x.inputs), layer_config, 'native_proposal_layer')
+
+
+    model_w_native_udf = cntk.misc.convert(eval_model, filter, converter)
+    model_path = cfg['MODEL_PATH']
+    new_model_path = model_path[:-6] + '_native.model'
+    model_w_native_udf.save(new_model_path)
+    print("Stored eval model with native UDF to {}".format(new_model_path))
 
 def compute_rpn_proposals(rpn_model, image_input, roi_input, dims_input, cfg):
     num_images = cfg["DATA"].NUM_TRAIN_IMAGES

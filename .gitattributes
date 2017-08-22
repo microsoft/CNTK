@@ -146,8 +146,8 @@ Examples/Text/LightRNN/test/word-0.location text
 *.vsdm binary
 *.zip binary
 *.dnn binary
-Examples/Image/Detection/FastRCNN/fastRCNN/*/*.pyd binary
-Examples/Image/Detection/FastRCNN/fastRCNN/*/*.so binary
+Examples/Image/Detection/FastRCNN/BrainScript/fastRCNN/*/*.pyd binary
+Examples/Image/Detection/FastRCNN/BrainScript/fastRCNN/*/*.so binary
 Examples/Image/Detection/utils/cython_modules/*.pyd binary
 Examples/Image/Detection/utils/cython_modules/*.so binary
 Tests/UnitTests/V2LibraryTests/data/*.bin binary

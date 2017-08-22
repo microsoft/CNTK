@@ -23,13 +23,15 @@ __C.CNTK = edict()
 __C.CNTK.MAKE_MODE = False
 # E2E or 4-stage training
 __C.CNTK.TRAIN_E2E = True
-# set to 'True' to use determininistic algorithms
+# set to 'True' to use deterministic algorithms
 __C.CNTK.FORCE_DETERMINISTIC = False
 # set to 'True' to run only a single epoch
-__C.CNTK.FAST_MODE = True
+__C.CNTK.FAST_MODE = False
 # Debug parameters
 __C.CNTK.DEBUG_OUTPUT = False
 __C.CNTK.GRAPH_TYPE = "png" # "png" or "pdf"
+# Set to True if you want to store an eval model with native UDFs (e.g. for inference using C++ or C#)
+__C.STORE_EVAL_MODEL_WITH_NATIVE_UDF = False
 
 # Learning parameters
 __C.CNTK.L2_REG_WEIGHT = 0.0005
@@ -62,7 +64,7 @@ __C.RESULTS_NMS_THRESHOLD = 0.5
 __C.RESULTS_NMS_CONF_THRESHOLD = 0.0
 
 # Enable plotting of results generally / also plot background boxes / also plot unregressed boxes
-__C.VISUALIZE_RESULTS = True
+__C.VISUALIZE_RESULTS = False
 __C.DRAW_NEGATIVE_ROIS = False
 __C.DRAW_UNREGRESSED_ROIS = False
 # only for plotting results: boxes with a score lower than this threshold will be considered background

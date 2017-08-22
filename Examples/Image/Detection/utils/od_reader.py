@@ -222,7 +222,7 @@ class ObjectDetectionReader:
         if self._flip_image:
             resized_with_pad = cv2.flip(resized_with_pad, 1)
 
-        # transpose(2,0,1) converts the image to the HWC format which CNTK accepts
+        # transpose(2,0,1) converts the image to the HWC format which CNTK expects
         model_arg_rep = np.ascontiguousarray(np.array(resized_with_pad, dtype=np.float32).transpose(2, 0, 1))
 
         # dims = pad_width, pad_height, scaled_image_width, scaled_image_height, orig_img_width, orig_img_height

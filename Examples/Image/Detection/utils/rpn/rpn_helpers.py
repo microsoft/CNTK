@@ -6,7 +6,7 @@
 
 import numpy as np
 import cntk
-from cntk import reduce_sum
+from cntk import reduce_sum, ops
 from cntk import user_function, relu, softmax, slice, splice, reshape, element_times, plus, minus, alias, classification_error
 from cntk.initializer import glorot_uniform, normal
 from cntk.layers import Convolution
@@ -16,7 +16,6 @@ from utils.rpn.proposal_layer import ProposalLayer
 from utils.rpn.proposal_target_layer import ProposalTargetLayer
 from utils.rpn.cntk_smoothL1_loss import SmoothL1Loss
 
-# Please keep in sync with Readme.md
 def create_rpn(conv_out, scaled_gt_boxes, im_info, cfg, add_loss_functions=True):
     '''
     Creates a region proposal network for object detection as proposed in the "Faster R-CNN" paper:
@@ -59,19 +58,21 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, cfg, add_loss_functions=True)
     rpn_cls_prob_reshape = reshape(rpn_cls_prob, rpn_cls_score.shape, name="rpn_cls_prob_reshape")
 
     # proposal layer
-    rpn_rois = add_proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, cfg)
+    rpn_rois = create_proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, cfg)
 
     rpn_losses = None
     if(add_loss_functions):
         # RPN targets
         # Comment: rpn_cls_score is only passed   vvv   to get width and height of the conv feature map ...
+        proposal_layer_params = "'feat_stride': {}\n'scales':\n - {}". \
+            format(cfg["MODEL"].FEATURE_STRIDE, "\n - ".join([str(v) for v in cfg["DATA"].PROPOSAL_LAYER_SCALES]))
         atl = user_function(AnchorTargetLayer(rpn_cls_score, scaled_gt_boxes, im_info,
                                               rpn_batch_size=cfg["TRAIN"].RPN_BATCHSIZE,
                                               rpn_fg_fraction=cfg["TRAIN"].RPN_FG_FRACTION,
                                               clobber_positives=cfg["TRAIN"].RPN_CLOBBER_POSITIVES,
                                               positive_overlap=cfg["TRAIN"].RPN_POSITIVE_OVERLAP,
                                               negative_overlap=cfg["TRAIN"].RPN_NEGATIVE_OVERLAP,
-                                              param_str=cfg.PROPOSAL_LAYER_PARAMS))
+                                              param_str=proposal_layer_params))
         rpn_labels = atl.outputs[0]
         rpn_bbox_targets = atl.outputs[1]
         rpn_bbox_inside_weights = atl.outputs[2]
@@ -114,17 +115,30 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, cfg, add_loss_functions=True)
 
     return rpn_rois, rpn_losses
 
-def add_proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, cfg):
-    rpn_rois_raw = user_function(ProposalLayer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info,
-                                               train_pre_nms_topN=cfg["TRAIN"].RPN_PRE_NMS_TOP_N,
-                                               train_post_nms_topN=cfg["TRAIN"].RPN_POST_NMS_TOP_N,
-                                               train_nms_thresh=cfg["TRAIN"].RPN_NMS_THRESH,
-                                               train_min_size=cfg["TRAIN"].RPN_MIN_SIZE,
-                                               test_pre_nms_topN=cfg["TEST"].RPN_PRE_NMS_TOP_N,
-                                               test_post_nms_topN=cfg["TEST"].RPN_POST_NMS_TOP_N,
-                                               test_nms_thresh=cfg["TEST"].RPN_NMS_THRESH,
-                                               test_min_size=cfg["TEST"].RPN_MIN_SIZE,
-                                               param_str=cfg.PROPOSAL_LAYER_PARAMS))
+def create_proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, cfg, use_native_proposal_layer=False):
+    layer_config = {}
+    layer_config["feat_stride"] = cfg["MODEL"].FEATURE_STRIDE
+    layer_config["scales"] = cfg["DATA"].PROPOSAL_LAYER_SCALES
+
+    layer_config["train_pre_nms_topN"] = cfg["TRAIN"].RPN_PRE_NMS_TOP_N
+    layer_config["train_post_nms_topN"] = cfg["TRAIN"].RPN_POST_NMS_TOP_N
+    layer_config["train_nms_thresh"] = float(cfg["TRAIN"].RPN_NMS_THRESH)
+    layer_config["train_min_size"] = float(cfg["TRAIN"].RPN_MIN_SIZE)
+
+    layer_config["test_pre_nms_topN"] = cfg["TEST"].RPN_PRE_NMS_TOP_N
+    layer_config["test_post_nms_topN"] = cfg["TEST"].RPN_POST_NMS_TOP_N
+    layer_config["test_nms_thresh"] = float(cfg["TEST"].RPN_NMS_THRESH)
+    layer_config["test_min_size"] = float(cfg["TEST"].RPN_MIN_SIZE)
+
+    if use_native_proposal_layer:
+        cntk.ops.register_native_user_function('ProposalLayerOp',
+                                               'Cntk.ProposalLayerLib-' + cntk.__version__.rstrip('+'),
+                                               'CreateProposalLayer')
+        rpn_rois_raw = ops.native_user_function('ProposalLayerOp', [rpn_cls_prob_reshape, rpn_bbox_pred, im_info],
+                                                layer_config, 'native_proposal_layer')
+    else:
+        rpn_rois_raw = user_function(ProposalLayer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, layer_config))
+
     return alias(rpn_rois_raw, name='rpn_rois')
 
 def create_proposal_target_layer(rpn_rois, scaled_gt_boxes, cfg):
