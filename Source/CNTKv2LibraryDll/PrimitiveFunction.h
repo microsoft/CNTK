@@ -631,7 +631,10 @@ namespace CNTK
 
             for (size_t i = 0; i < numReductionAxes; ++i)
             {
-                if ((leftOperandShape[outputRank + i] != NDShape::InferredDimension) && (rightOperandShape[i] != NDShape::InferredDimension))
+                if ((leftOperandShape[outputRank + i] != NDShape::InferredDimension
+                     && leftOperandShape[outputRank + i] != NDShape::FreeDimension) && 
+                     (rightOperandShape[i] != NDShape::InferredDimension
+                      && rightOperandShape[i] != NDShape::FreeDimension))
                 {
                     if (leftOperandShape[outputRank + i] != rightOperandShape[i])
                         InvalidArgument("Times: The %d %s dimensions of the %s operand with shape '%S' do not match the %s operand's %s dimensions with shape '%S'",
@@ -643,7 +646,7 @@ namespace CNTK
                                         Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
                                         rightOperandShape.AsString().c_str());
                 }
-                else if (leftOperandShape[outputRank + i] == NDShape::InferredDimension)
+                else if (leftOperandShape[outputRank + i] == NDShape::InferredDimension || leftOperandShape[outputRank + i] == NDShape::FreeDimension)
                 {
                     if (rightOperandShape[i] == NDShape::FreeDimension)
                         InvalidArgument("Times: %s operand '%S' shape '%S' dimension cannot be inferred from a %s operand '%S' shape '%S' free dimension.",
@@ -656,7 +659,7 @@ namespace CNTK
 
                     leftOperandShape[outputRank + i] = rightOperandShape[i];
                 }
-                else if (rightOperandShape[i] == NDShape::InferredDimension)
+                else if (rightOperandShape[i] == NDShape::InferredDimension || rightOperandShape[i] == NDShape::FreeDimension)
                 {
                     if (leftOperandShape[outputRank + i] == NDShape::FreeDimension)
                         InvalidArgument("Times: %s operand '%S' shape '%S' dimension cannot be inferred from a %s operand '%S' shape '%S' free dimension.",
