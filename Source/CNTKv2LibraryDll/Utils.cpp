@@ -561,20 +561,25 @@ namespace CNTK
             ((valueShape.Rank() < varShape.Rank()) || (valueShape.SubShape(0, varShape.Rank()) != varShape)) &&
             (valueShape.SubShape(1).Rank() <= maxAddionalValueAxes))
         {
-            // If the leading dim of the value shape is same as the total size of the varShape,
-            // lets expand the leading dim to varShape for the purposes of the rest of the validation
-            if (allowFreeOrInferredDimensionsInVar && varShape.HasUnboundDimension())
+            auto numberOfDynamicAxesInPackedValue = std::dynamic_pointer_cast<PackedValue>(value)->DynamicAxes().size();
+            // The reader always provide sequence and batch axes
+            if ((numberOfDynamicAxesInPackedValue == 2) && (numberOfDynamicAxesInPackedValue + 1 == valueShape.Rank()))
             {
-                auto newVarShape = varShape;
-                for (size_t i = 0; i < newVarShape.Rank(); ++i)
-                    if (newVarShape[i] == NDShape::FreeDimension)
-                        newVarShape[i] = NDShape::InferredDimension;
+                // If the leading dim of the value shape is same as the total size of the varShape,
+                // lets expand the leading dim to varShape for the purposes of the rest of the validation
+                if (allowFreeOrInferredDimensionsInVar && varShape.HasUnboundDimension())
+                {
+                    auto newVarShape = varShape;
+                    for (size_t i = 0; i < newVarShape.Rank(); ++i)
+                        if (newVarShape[i] == NDShape::FreeDimension)
+                            newVarShape[i] = NDShape::InferredDimension;
 
-                PrimitiveFunction::ReshapeOutputShape({ valueShape[0] }, newVarShape, Axis(0), Axis(1), /*inferDimensions =*/ true);
-                valueShape = newVarShape.AppendShape(valueShape.SubShape(1));
+                    PrimitiveFunction::ReshapeOutputShape({ valueShape[0] }, newVarShape, Axis(0), Axis(1), /*inferDimensions =*/ true);
+                    valueShape = newVarShape.AppendShape(valueShape.SubShape(1));
+                }
+                else if (valueShape[0] == varShape.TotalSize())
+                    valueShape = varShape.AppendShape(valueShape.SubShape(1));
             }
-            else if (valueShape[0] == varShape.TotalSize())
-                valueShape = varShape.AppendShape(valueShape.SubShape(1));
         }
 
         if (valueShape.Rank() < varShape.Rank())

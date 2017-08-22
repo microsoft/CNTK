@@ -2809,7 +2809,6 @@ namespace CNTK
         template<typename ElementType>
         ElementType AsScalar() const;
 
-
         ///
         /// Returns whether this object has been invalidated (by another forward and/or backward pass)
         ///
@@ -2846,7 +2845,7 @@ namespace CNTK
         void CopyVariableValueToImpl(const Variable& outputVariable, std::vector<std::vector<DestType>>& sequences);
 
     private:
-        CNTK_API std::pair<size_t, size_t> GetSequenceAndBatchLength(const Variable& outputVariable);
+        CNTK_API std::pair<size_t, size_t> GetSequenceAndBatchLength(const Variable& outputVariable, NDShape* inferredVarShape = nullptr);
 
         template <typename ElementType>
         CNTK_API std::tuple<size_t, size_t, size_t> ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable);
@@ -2866,19 +2865,20 @@ namespace CNTK
         template <typename ElementType>
         void ResizeOutputBuffer(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
-            auto shape = outputVariable.Shape();
-            if (shape.IsUnknown() || shape.HasUnboundDimension())
-                RuntimeError("The outputVariable '%S' shape '%S' is unknown shape, has inferred dimension or free dimension for at least one axis.",
-                              outputVariable.AsString().c_str(), shape.AsString().c_str());
+            if (outputVariable.Shape().IsUnknown())
+                RuntimeError("The outputVariable '%S' shape '%S' is unknown shape.",
+                              outputVariable.AsString().c_str(), outputVariable.Shape().AsString().c_str());
 
+            NDShape inferredVarShape;
             size_t numOfSequences;
             size_t maxSequenceLen;
-            std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable);
+            // Verify compatibility of 'this' value and outputVariable, get sequence and batch length, and get the inferred shape if the variable has a free dimension.
+            std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable, &inferredVarShape);
 
             // Calculate the number of elements is needed to represent a sample in output buffer.
             // For dense output, it is the total size of the shape.
             // For one-hot output, only 1 index is needed to represent the sample.
-            size_t outputSizeOfSample = (std::is_same<ElementType, size_t>::value) ? 1 : shape.TotalSize();
+            size_t outputSizeOfSample = (std::is_same<ElementType, size_t>::value) ? 1 : inferredVarShape.TotalSize();
 
             // resize the output buffer size to reflect the number of sequences in output.
             sequences.resize(numOfSequences);

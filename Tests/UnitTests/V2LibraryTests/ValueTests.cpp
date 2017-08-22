@@ -797,12 +797,6 @@ void ValueCopyToExceptionsTest(const DeviceDescriptor& device)
         val->CopyVariableValueTo(sampleVariable, output);
     }, "The expected exception has not been caught: It is not supported that the outputVariable has a unknown shape or inferred dimension.");
 
-    // Test variable having shape with InferredDimentsion.
-    sampleVariable = CreateVariable<float>(NDShape(2), 0);
-    VerifyException([&val, &sampleVariable, &output]() {
-        val->CopyVariableValueTo(sampleVariable, output);
-    }, "The expected exception has not been caught: It is not supported that the outputVariable has a unknown shape or inferred dimension.");
-
     // Test variable having incorrect data type.
     sampleVariable = CreateVariable<double>(sampleShape, 0);
     VerifyException([&val, &sampleVariable, &output]() {
