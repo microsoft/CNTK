@@ -1,0 +1,183 @@
+# ResNet-50 with ImageNet -- 50 layers bottleneck ResNet for image classification
+# Reference: "Deep Residual Learning for Image Recognition" https://arxiv.org/abs/1512.03385
+
+command = TrainNetwork:Eval
+
+precision = "float"; traceLevel = 1 ; deviceId = "auto"
+
+rootDir = "."
+configDir = "$RootDir$"
+dataDir = "$RootDir$"
+outputDir = "$RootDir$/Output"
+modelDir = "$OutputDir$/Models"
+
+meanDir = "$dataDir$"
+modelPath = "$modelDir$/ResNet_50"
+stderr = "$outputDir$/ResNet_50_BS_out"
+
+parallelTrain = true
+
+TrainNetwork = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        include "$configDir$/Macros.bs"
+
+        imageShape  = 224:224:3                 # image dimensions
+        labelDim    = 1000                      # number of distinct labels
+
+        cMap        = 64:128:256:512:1024:2048  
+        numLayers   = 2:3:5:2
+        bnTimeConst = 4096
+
+        # stride in BottleneckInc
+        stride1x1 = (1:1)
+        stride3x3 = (2:2)
+
+        model = Sequential(
+            # conv1 and max pooling
+            ConvBNReLULayer {cMap[0], (7:7), (2:2), bnTimeConst} :
+            MaxPoolingLayer {(3:3), stride = 2, pad = true} :
+
+            # conv2_x
+            ResNetBottleneckInc {cMap[2], cMap[0], (1:1), (1:1), bnTimeConst} :
+            ResNetBottleneckStack {numLayers[0], cMap[2], cMap[0], bnTimeConst} :
+
+            # conv3_x
+            ResNetBottleneckInc {cMap[3], cMap[1], stride1x1, stride3x3, bnTimeConst} :
+            ResNetBottleneckStack {numLayers[1], cMap[3], cMap[1], bnTimeConst} :
+
+            # conv4_x
+            ResNetBottleneckInc {cMap[4], cMap[2], stride1x1, stride3x3, bnTimeConst} :
+            ResNetBottleneckStack {numLayers[2], cMap[4], cMap[2], bnTimeConst} :
+
+            # conv5_x
+            ResNetBottleneckInc {cMap[5], cMap[3], stride1x1, stride3x3, bnTimeConst} :
+            ResNetBottleneckStack {numLayers[3], cMap[5], cMap[3], bnTimeConst} :
+
+            # avg pooling
+            AveragePoolingLayer {(7: 7), stride = 1} :
+
+            # FC
+            LinearLayer {labelDim, init = 'normal', initValueScale=0.01}
+        )
+
+        # inputs
+        features    = Input {imageShape}
+        labels      = Input {labelDim}
+
+        # apply model to features
+        z           = model (features)
+
+        # loss and error computation
+        ce          = CrossEntropyWithSoftmax   (labels, z)
+        errs        = ClassificationError       (labels, z)
+        top5Errs    = ClassificationError       (labels, z, topN = 5)
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs) # top5Errs only used in Eval
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize = 0
+        minibatchSize = 8192
+        numSubminibatches = 32
+        maxEpochs = 90
+        learningRatesPerMB = 32*30: 3.2*30: 0.32*20: 0.032
+
+        warmupEpochs = 5
+        datasetSize = 1281167
+        startLearnRatePerMB = 1
+        endLearnRatePerMB = 32
+
+        momentumPerMB = 0.9
+        useNAG = true               # use Nesterov Momentum
+        momentumCorrection = true   # use momentum correction
+        gradUpdateType = "None"
+        L2RegWeight = 0.0001
+        dropoutRate = 0
+        numMBsToShowResult = 100
+
+        disableRegInBatchNormalization = true
+
+        ParallelTrain = {
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = true
+            parallelizationStartEpoch = 1
+            DataParallelSGD = {
+                gradientBits = 32
+            }
+        }
+    }
+
+    reader = {
+        readerType = "ImageReader"
+        file = "$DataDir$/train_map.txt"
+        randomize = "Auto"
+        features = {
+            width = 224
+            height = 224
+            channels = 3
+            cropType = "RandomArea"
+            jitterType = "UniRatio"
+            areaRatio = 0.08:1.0
+            aspectRatio = 0.75:1.3333
+            interpolations = "cubic"
+            brightnessRadius = 0.4
+            contrastRadius = 0.4
+            saturationRadius = 0.4
+            hflip = true
+            meanFile = "$meanDir$/ImageNet1K_mean.xml"
+        }
+        labels = {
+            labelDim = 1000
+        }
+    }
+
+    cvReader = {
+        readerType = "ImageReader"
+        file = "$DataDir$/val_map.txt"
+        randomize = "None"
+        features = {
+            width = 224
+            height = 224
+            channels = 3
+            cropType = "Center"
+            sideRatio = 0.875
+            interpolations = "cubic"
+            meanFile = "$meanDir$/ImageNet1K_mean.xml"
+        }
+        labels = {
+            labelDim = 1000
+        }
+    }
+}
+
+Eval = {
+    action = "test"
+    modelPath = "$modelPath$"
+    minibatchSize = 200
+    evalNodeNames = errs:top5Errs
+
+    reader={
+        readerType = "ImageReader"
+        file = "$DataDir$/val_map.txt"
+        randomize = "None"
+        features = {
+            width = 224
+            height = 224
+            channels = 3
+            cropType = "Center"
+            sideRatio = 0.875
+            interpolations = "cubic"
+            meanFile = "$meanDir$/ImageNet1K_mean.xml"
+        }
+        labels = {
+            labelDim = 1000
+        }
+    } 
+}
