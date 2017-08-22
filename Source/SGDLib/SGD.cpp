@@ -978,7 +978,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const int epochNumber,
                                     const size_t epochSize,
                                     IDataReader* trainSetDataReader,
-                                    const double learnRatePerSample,
+                                    double learnRatePerSample,
                                     size_t tunedMBSize,
                                     const std::vector<ComputationNodeBasePtr>& featureNodes,
                                     const std::vector<ComputationNodeBasePtr>& labelNodes,
@@ -1225,6 +1225,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                               (ElemType)(1.0 - m_adaptationRegWeight),
                                               dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[0])->Value());
             }
+
+            double warmupLr = GetWarmupLearningRate(epochNumber, numMBsRun, trainSetDataReader->GetNumParallelSequencesForFixingBPTTMode());
+            learnRatePerSample = warmupLr == -1 ? learnRatePerSample : warmupLr;
 
             // do forward and back propagation
 
@@ -2937,6 +2940,13 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     // the total number of epochs to run.
     m_maxEpochs = configSGD(L"maxEpochs");
+
+    // parameters for large scale warmup
+    m_warmupEpochs = configSGD(L"warmupEpochs", (size_t)0);
+    size_t datasetSize = configSGD(L"datasetSize", (size_t)0);
+    m_mbNumsPerEpoch = (int)datasetSize / m_mbSize[0] + 1;
+    m_startLearnRatePerMB = configSGD(L"startLearnRatePerMB", (double)0);
+    m_endLearnRatePerMB = configSGD(L"endLearnRatePerMB", (double)learningRatesPerMB[0]);
 
     // Note: Momentum is best specified as a MB-size agnostic fashion.
     // Because momentum per sample is a number very close to 1, it is more handy to use a logarithmic specification.
