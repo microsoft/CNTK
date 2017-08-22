@@ -30,7 +30,7 @@
 
 
 #ifdef SWIGCSHARP
-// make swig generated classes partial in order to put thim layer classes as partial of it.
+// make swig generated classes partial in order to put shim layer classes as partial of it.
 %pragma(csharp) moduleclassmodifiers="public partial class"
 %typemap(csclassmodifiers) CNTK::DeviceDescriptor "public partial class"
 %typemap(csclassmodifiers) CNTK::Axis "public partial class"
@@ -370,6 +370,7 @@ IGNORE_FUNCTION CNTK::CTFDeserializer;
 IGNORE_FUNCTION CNTK::CBFDeserializer;
 IGNORE_FUNCTION CNTK::HTKFeatureDeserializer;
 IGNORE_FUNCTION CNTK::HTKMLFDeserializer;
+IGNORE_FUNCTION CNTK::NCELoss;
 
 IGNORE_NAMESPACE CNTK::Sequence;
 
@@ -722,7 +723,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindByName);
 %typemap(freearg) (char* buffer) ""
 #endif  // SWIGJAVA
 
-// class Varaiable
+// class Variable
 #ifndef SWIGCSHARP
 %ignore CNTK::Variable::Variable;
 %ignore CNTK::Variable::operator FunctionPtr;
