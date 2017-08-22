@@ -323,7 +323,7 @@ private:
                 ElemType* reductionBuffer;
                 // currentGradientIndex will load the index from m_gradientIndexToAggregate
                 size_t currentGradientIndex = m_gradientIndexToAggregate[0];
-                size_t nextGradientIndex = -2;
+                size_t nextGradientIndex = 0; // 0 is for initialization only
                 // Get the first Gradient, and do async D-to-H copy
                 if (currentGradientIndex != -1)
                 {
@@ -336,7 +336,9 @@ private:
                 }
                 // First sync_g_to_c_copy
                 // TODO: we need a CopyGPUToCPUSync
+                #ifndef CPUONLY
                 cudaMemcpy(m_intermediateCPUBuffers[gpuToCpuIndex].get(), gpuCopyBuffer->Data(), gpuCopyBuffer->GetNumElements() * sizeof(ElemType), cudaMemcpyDeviceToHost);
+                #endif
                 gpuToCpuIndex++;
 
                 for (size_t i = 1; i <= numGradientIndex; i ++)
