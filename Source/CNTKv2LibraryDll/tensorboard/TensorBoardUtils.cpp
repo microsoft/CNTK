@@ -12,8 +12,6 @@
 
 #include "Utils.h"
 
-using namespace cv;
-
 namespace CNTK {
 namespace Internal {
 typedef google::protobuf::Map<std::string, tensorflow::AttrValue> AttrMap;
@@ -263,6 +261,8 @@ void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst)
     }
 }
 
+#ifndef CNTK_UWP
+
 void writeImageToBuffer(void* matrix, int h, int w, int type, std::vector<uchar>& buf) {
     assert(matrix != nullptr);
     assert(&buf != nullptr);
@@ -277,5 +277,6 @@ void writeImageToBuffer(void* matrix, int h, int w, int type, std::vector<uchar>
     }
 }
 
+#endif // !CNTK_UWP
 }
 }
