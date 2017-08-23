@@ -6001,10 +6001,10 @@ namespace CNTK
     /// This is used in cases when input nodes do not have common ancestor in the network.
     /// nodeInput: input node to be cropped.
     /// nodeReferent: input node which determines the spatial size of output.
-    /// eqNodeInput: ancestor of nodeInput.
-    /// eqNodeReferent: ancestor of nodeReferent which is treated as equal to eqNodeInput for the purpose of computing crop offsets.
+    /// ancestorInput: ancestor of nodeInput.
+    /// ancestorReferent: ancestor of nodeReferent which is treated as equal to ancestorInput for the purpose of computing crop offsets.
     ///
-    CNTK_API FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, const Variable& eqNodeInput, const Variable& eqNodeReferent, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, const Variable& ancestorInput, const Variable& ancestorReferent, const std::wstring& name = L"");
 
 #endif // !CNTK_HEADERONLY_DEFINITIONS
 }
