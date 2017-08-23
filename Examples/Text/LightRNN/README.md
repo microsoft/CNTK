@@ -100,7 +100,7 @@ Run the [Makefile](Makefile) in this directory by `make`.
 
 __For Windows User__
 
-Use the Visual Studio to open the project under the [DLL](https://github.com/Microsoft/LightRNN/tree/master/DLL) folder and build, put the dll file under the [LightRNN](LightRNN/).
+Use the Visual Studio to open the project under the [DLL](DLL/) folder and build, put the dll file under the [LightRNN](LightRNN/).
 
 ## Experiment
 
