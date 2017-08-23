@@ -57,10 +57,10 @@ TensorView<ElemType>::TensorView(const MatrixBasePtr& sob, const TensorShape& sh
 // elementwise operations
 // -------------------------------------------------------------------
 
-static bool Matches(size_t d1, size_t d2)
+static bool Matches(size_t d1, size_t d2) // do two dimensions match?
 {
-    return d1 == 1 || d2 == 1 || d1 == d2;
-} // do two dimensions match?
+    return d1 == d2 || d1 == 1 || d2 == 1; // same or broadcasting
+}
 
 template <class ElemType, size_t N>
 static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>& offsets,
@@ -256,9 +256,11 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
     // static int cc = 0; if (cc++ == 0)
     //    fprintf(stderr, "Tensor Op: Op %d: %s op %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(GetShape()).c_str());
 
-    array<size_t, 3> offsets;
-    array<SmallVector<ptrdiff_t>, 3> regularStrides, reducingStrides;
-    SmallVector<size_t> regularOpDims, reducingOpDims;
+    // TODO: route matrix product (and convolution later) through this API as well.
+
+    array<size_t, 3> offsets;                                         // [argIndex] (where result goes into last arg)
+    array<SmallVector<ptrdiff_t>, 3> regularStrides, reducingStrides; // [argIndex][axisIndex] (axisIndex after flattening; same dims as regular/reducingOpDims)
+    SmallVector<size_t> regularOpDims, reducingOpDims;                // [axisIndex]
     PrepareTensorOperands<ElemType, 3>(array<TensorShape, 3>{a.GetShape(), b.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // output cannot be input when reducing
@@ -266,12 +268,39 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
         CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this);
 
     // special support for sparse data: ReduceSum(ElementWiseProduct(x,y)) (same as batched Times(x,y))
-    // Note: User writes Times(), and Dynamite will map it to this instead.
-    if (op == ElementWiseOperator::opElementwiseProduct && reductionOp == ElementWiseOperator::opSum)
+    // This is used for batched cross-entropy computation.
+    // Note: Because CNTK API does not allow ElementTimes with ReduceSum in one op, user writes Times() instead, and Dynamite will map it to this instead.
+    let IsDotProduct = [&]() -> bool // helper to decide
     {
-        // TODO: ...
+        if (op != ElementWiseOperator::opElementwiseProduct || reductionOp != ElementWiseOperator::opSum) // basic operation must be reduce(a.*b)
+            return false;
+        // must be reducing consecutive input values into one result value
+        // regularXX represents the map dimension; e.g. [13 x 3  x  42 x 5] * [13 x 3  x  42 x 5] --> [1 x 1  x  42 x 5]
+        // gets a reduction over 13*3 consecutive values, with result being consecutive in memory arranged in a 42 x 5 grid
+        if (reducingOpDims.size() != 1 || reducingStrides[0][0] != 1 || reducingStrides[1][0] != 1 || reducingStrides[2][0] != 0)
+            return false;
+        // inputs must be consecutive in memory also for the non-reduced axes (which gets flattened into one if condition is true)
+        if (regularOpDims.size() != 0) // (only if there are non-reduced axes)
+        {
+            let reducedElements = (int)reducingOpDims[0];
+            if (regularOpDims.size() != 1 || regularStrides[0][0] != reducedElements || regularStrides[1][0] != reducedElements || regularStrides[2][0] != 1)
+                return false;
+        }
+        return true; // that's it
+    };
+    if (IsDotProduct())
+    {
+        let remainingElements =   GetShape().GetNumElements();                   // keeping this many elements
+        let reducedElements = a.GetShape().GetNumElements() / remainingElements; // summing up this many elements per result
+        let inShape  = TensorShape(reducedElements, remainingElements);
+        let outShape = TensorShape(1,               remainingElements);
+        let  A = a.Reshaped(inShape).AsMatrix();
+        let  B = b.Reshaped(inShape).AsMatrix();
+        auto C =   Reshaped(outShape).AsMatrix();
+        return Matrix<ElemType>::InnerProduct(*A, *B, *C, true/*isColWise*/);
     }
 
+    // regular case
     GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 

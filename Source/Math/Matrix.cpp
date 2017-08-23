@@ -5530,14 +5530,17 @@ void Matrix<ElemType>::Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a)
 template <class ElemType>
 void Matrix<ElemType>::InnerProduct(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise)
 {
+    // we only support a being sparse/dense. Both b and c should be dense
+    if (b.GetMatrixType() != DENSE)
+        if (a.GetMatrixType() == DENSE) // if it can be made so by swapping, then do
+            return InnerProduct(b, a, c, isColWise);
+        else
+            NOT_IMPLEMENTED;
+
     if (a.IsEmpty() || b.IsEmpty())
-        LogicError("InnerProduct:  one of the input matrix is empty.");
+        LogicError("InnerProduct: arguments must not be empty");
 
     DecideAndMoveToRightDevice(a, b, c);
-
-    // TODO: consider swapping the arguments in this case
-    if (b.GetMatrixType() != DENSE) // only support a being sparse/dense. Both b and c should be dense
-        NOT_IMPLEMENTED;
 
     c.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
 
@@ -5553,7 +5556,7 @@ template <class ElemType>
 ElemType Matrix<ElemType>::InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
 {
     if (a.IsEmpty() || b.IsEmpty())
-        LogicError("InnerProductOfMatrices:  one of the input matrices is empty.");
+        LogicError("InnerProductOfMatrices: arguments must not be empty");
 
     DecideAndMoveToRightDevice(a, b);
 
@@ -5581,7 +5584,7 @@ template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignInnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
 {
     if (a.IsEmpty() || b.IsEmpty())
-        LogicError("InnerProductOfMatrices:  one of the input matrices is empty.");
+        LogicError("AssignInnerProductOfMatrices: arguments must not be empty");
 
     Resize(1, 1);
 
