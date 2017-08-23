@@ -154,7 +154,7 @@ namespace CNTK
 
     /*virtual*/ const std::wstring& Function::OpName() const
     {
-        static const std::wstring defaultUserFunctionOpName = L"UserFunction"; 
+        static const std::wstring defaultUserFunctionOpName = L"UserFunction";
         return defaultUserFunctionOpName;
     }
 
@@ -320,7 +320,7 @@ namespace CNTK
         auto primitiveRootFunctionPtr = dynamic_cast<const PrimitiveFunction*>(primitiveRootFunction.get());
         if (primitiveRootFunctionPtr && (primitiveRootFunctionPtr->OpType() == PrimitiveOpType::Combine))
         {
-            // Combine's outputs are just a copy of its inputs and any replacements need to be properly 
+            // Combine's outputs are just a copy of its inputs and any replacements need to be properly
             // reflected in the outputs as well
             for (auto& outputVar : InitOutputs())
                 ReplacePlaceholderInPlace(outputVar, placeholderReplacements, replacedPlaceholders);
@@ -612,7 +612,7 @@ namespace CNTK
         if (placeholders.size() != 1)
             InvalidArgument("ReplacePlaceholder called with a single replacement Variable '%S' but this Function '%S' has %d placeholders '%S'",
                             placeholderReplacement.AsString().c_str(),
-                            this->AsString().c_str(),                            
+                            this->AsString().c_str(),
                             (int)placeholders.size(),
                             NamedListString(placeholders).c_str());
 
@@ -790,7 +790,7 @@ namespace CNTK
             }
 
             // We will not have the block's internal composite create new clones of Parameters/Constants since
-            // in the case we want to really clone, they have been cloned as part of cloning the inputs of the 
+            // in the case we want to really clone, they have been cloned as part of cloning the inputs of the
             // block and will be handled through the replacements
             auto clonedComposite = cloneeComposite->Clone(ParameterCloningMethod::Share, cloneeCompositeReplacements);
 
@@ -810,7 +810,7 @@ namespace CNTK
             auto clonedFunctionInputs = clonedFunction->Inputs();
             if (clonedFunctionInputs != inputs)
                 LogicError("Block Function '%S': Inputs '%S' of the new clone do not match the cloned inputs '%S' of the clonee Block Function.",
-                            clonedFunction->AsString().c_str(), 
+                            clonedFunction->AsString().c_str(),
                             NamedListString(clonedFunctionInputs).c_str(),
                             NamedListString(inputs).c_str());
         }
@@ -829,7 +829,7 @@ namespace CNTK
 
         auto compositeRootFunction = compositeFunction->RootFunction();
 
-        // Handle the scenario when the root Function outputs themselves are specified to be replaced. 
+        // Handle the scenario when the root Function outputs themselves are specified to be replaced.
         auto compositeRootFunctionOutputs = compositeRootFunction->RawOutputs();
         std::vector<Variable> rootFunctionOutputReplacements;
         for (auto output : compositeRootFunctionOutputs)
@@ -925,7 +925,7 @@ namespace CNTK
 
         auto restoredFunction = Function::Deserialize(modelDictionary, DeviceDescriptor::CPUDevice());
         //TODO (backcompat): when loading a stale model we can still pass this test
-        // by patching up restored functions on the fly during deserialization (e.g., by 
+        // by patching up restored functions on the fly during deserialization (e.g., by
         // inserting an extra input for the sample count in case of BatchNorm).
         if (!Internal::AreEquivalent(shared_from_this(), restoredFunction))
             InvalidArgument("Function '%S' being restored is not equivalent (isomorphic) to the Function '%S' loaded from checkpoint.",
@@ -984,20 +984,20 @@ namespace CNTK
         Function* functionPtr = !(this->IsComposite()) ? this : this->RootFunction().get();
         PrimitiveFunction* primitiveFunctionPtr = dynamic_cast<PrimitiveFunction*>(functionPtr);
 
-        if (primitiveFunctionPtr == nullptr) 
+        if (primitiveFunctionPtr == nullptr)
         {
             // Possibly, a udf...
             LogicError("SetAttribute cannot be invoked on an instance of function '%S'.", AsString().c_str());
         }
 
-        if (name == PrimitiveFunction::AttributeNameDropoutRate) 
+        if (name == PrimitiveFunction::AttributeNameDropoutRate)
         {
             double dropout;
             if (value.ValueType() == DictionaryValue::Type::Float)
                 dropout = value.Value<float>();
             else
                 dropout = value.Value<double>();
-            
+
             primitiveFunctionPtr->SetDropoutRate(dropout);
         }
         else if (name == PrimitiveFunction::AttributeNameRngSeed)
@@ -1010,7 +1010,7 @@ namespace CNTK
 
             primitiveFunctionPtr->SetRandomSeed(seed);
         }
-        else 
+        else
         {
             LogicError("SetAttribute: '%S' is not supported (this attribute cannot be updated).", name.c_str());
         }
@@ -1133,7 +1133,7 @@ namespace CNTK
         if (!axis.IsStaticAxis() && (axis != Axis::AllStaticAxes()))
             LogicError("Softmax: support only static axes.");
 
-        if (((operand.Shape().Rank() == 1) && (axis.StaticAxisIndex() == 0)) || 
+        if (((operand.Shape().Rank() == 1) && (axis.StaticAxisIndex() == 0)) ||
             (axis == Axis::AllStaticAxes()))
         {
             return UnaryOp(PrimitiveOpType::Softmax, operand, Dictionary(), name);
@@ -1237,9 +1237,9 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
 
         return UnaryOp(PrimitiveOpType::Dropout, operand, std::move(additionalProperties), name);
-    } 
+    }
 
-    Dictionary CreateRandomDistributionAttributes(const wstring& type, const std::vector<double>& args, unsigned long seed) 
+    Dictionary CreateRandomDistributionAttributes(const wstring& type, const std::vector<double>& args, unsigned long seed)
     {
         auto additionalProperties = Dictionary();
 
@@ -1779,6 +1779,7 @@ namespace CNTK
         const NDShape& strides,
         const std::vector<bool>& sharing,
         const std::vector<bool>& autoPadding,
+        const NDShape& dilation,
         size_t maxTempMemSizeInSamples,
         const std::wstring& name)
     {
@@ -1787,6 +1788,7 @@ namespace CNTK
             strides,
             sharing,
             autoPadding,
+            dilation,
             false,
             { 0 },
             maxTempMemSizeInSamples,
@@ -1799,6 +1801,7 @@ namespace CNTK
         const std::vector<bool>& sharing,
         const std::vector<bool>& autoPadding,
         const NDShape& outputShape,
+        const NDShape& dilation,
         size_t maxTempMemSizeInSamples,
         const std::wstring& name)
     {
@@ -1807,17 +1810,18 @@ namespace CNTK
             strides,
             sharing,
             autoPadding,
+            dilation,
             true,
             outputShape,
             maxTempMemSizeInSamples,
             name);
     }
 
-    FunctionPtr ROIPooling(const Variable& operand, 
-                           const Variable& rois, 
-                           PoolingType poolingType, 
-                           const NDShape& roiOutputShape, 
-                           double spatialScale, 
+    FunctionPtr ROIPooling(const Variable& operand,
+                           const Variable& rois,
+                           PoolingType poolingType,
+                           const NDShape& roiOutputShape,
+                           double spatialScale,
                            const std::wstring& name/* = L""*/)
     {
         auto additionalProperties = Dictionary();
@@ -2254,7 +2258,7 @@ namespace CNTK
         {
             return Internal::ScatterPacked(operand, Internal::PackedIndex(/*layout of*/ condition, Where(condition, newDerivedSequenceAxisScalingAndAdditiveFactor)), /*layout of*/ condition, name);
         }
-        
+
         FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name)
         {
             auto additionalProperties = Dictionary();
@@ -2295,7 +2299,7 @@ namespace CNTK
             LogicError("ReduceElements: operand %S; Invalid axis argument provided. To reduce an operand along its ordered dynamic axis use Sequence::ReduceElements.",
                        operand.AsString().c_str());
         }
- 
+
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
         {
             bool keepReducedDimensions = true;
@@ -2304,7 +2308,7 @@ namespace CNTK
 
             return ReduceElements(operand, reductionOpName, axis, keepReducedDimensions, name);
         }
-         
+
         FunctionPtr ComposeReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::vector<Axis>& axes, bool keepReducedDimensions, const std::wstring& name)
         {
             if (
@@ -2374,7 +2378,7 @@ namespace CNTK
             if (!static_axes.empty())
             {
                 res = ComposeReduceElements(res, reductionOpName, static_axes, keepReducedDimensions, name + L"_static_axes_subop");
-            }            
+            }
             if (!sequence_axes.empty())
             {
                 res = CNTK::Sequence::ReduceElements(res, reductionOpName, keepReducedDimensions, name + L"_sequence_axes_subop");
@@ -2401,19 +2405,21 @@ namespace CNTK
             const NDShape& strides,
             const std::vector<bool>& sharing,
             const std::vector<bool>& autoPadding,
+            const NDShape& dilation,
             bool transpose,
             const NDShape& outputShape,
             size_t maxTempMemSizeInSamples,
             const std::wstring& name)
         {
             // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
-            // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as 
+            // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as
             // the sample shape and considering the rest to be part of the batch axis
             if (operand.DynamicAxes().empty())
                 LogicError("Convolution currently requires the main operand to have dynamic axes");
 
             auto additionalProperties = Dictionary();
             additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
+            additionalProperties[PrimitiveFunction::AttributeNameDilation] = dilation;
             additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
             additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
             additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape({0});

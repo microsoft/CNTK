@@ -84,6 +84,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     #reductionRank = 1,          # TODO: support this
                     stride = 1, pad = false,
                     lowerPad = 0, upperPad = 0,
+                    dilation = 1,
                     maxTempMemSizeInSamples = 0} =
 {
     reductionRank = 1 # TODO: shall become an optional parameter
@@ -94,7 +95,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)                                                       # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     apply (x) = {
-        c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+        c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, dilation = dilation, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
         res = activation (if bias then c + b else c)
     }.res
 }.apply
@@ -103,24 +104,25 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
 ConvolutionTransposeLayer {numOutputChannels,
                            filterShape,         # e.g. (3:3)
                            numInputChannels,
-                           bias = true, 
-                           activation = (x=>x), 
-                           init = 'glorotUniform', 
-                           initValueScale = 0.001, 
-                           initBias = 0, 
-                           stride = 1, pad = false, 
-                           lowerPad = 0, upperPad = 0, 
-                           outputShape = None, 
+                           bias = true,
+                           activation = (x=>x),
+                           init = 'glorotUniform',
+                           initValueScale = 0.001,
+                           initBias = 0,
+                           stride = 1, pad = false,
+                           lowerPad = 0, upperPad = 0,
+                           outputShape = None,
+                           dilation = 1,
                            maxTempMemSizeInSamples = 0} =
 {
     outputChannelsShape = _AsArray (numOutputChannels)
-    kernelShape = _ConcatArrays (filterShape, outputChannelsShape) 
-    paramShape = _ConcatArrays (kernelShape, _AsArray (numInputChannels)) 
+    kernelShape = _ConcatArrays (filterShape, outputChannelsShape)
+    paramShape = _ConcatArrays (kernelShape, _AsArray (numInputChannels))
     W = ParameterTensor{paramShape, init=init, initValueScale=initValueScale, initOnCPUOnly=true}
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)
     sharing = true    # TODO: support this
     apply (x) = {
-        c = ConvolutionTranspose (W, x, kernelShape, mapDims=numInputChannels, stride=stride, sharing=sharing, autoPadding=pad, lowerPad=lowerPad, upperPad=upperPad, outputShape = outputShape, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+        c = ConvolutionTranspose (W, x, kernelShape, mapDims=numInputChannels, stride=stride, sharing=sharing, autoPadding=pad, lowerPad=lowerPad, upperPad=upperPad, outputShape = outputShape, dilation = dilation, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
         res = activation (if bias then c + b else c)
     }.res
 }.apply
@@ -151,14 +153,14 @@ AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPa
     _PoolingLayer {"average", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad, ceilOutDim = ceilOutDim, includePad = includePad}
 
 MaxUnpoolingLayer {filterShape,     # e.g. (3:3)
-                   stride = 1, 
+                   stride = 1,
                    pad = false,
-                   lowerPad = 0, 
-                   upperPad = 0} = 
+                   lowerPad = 0,
+                   upperPad = 0} =
 {
     apply (unpoolInput, poolInput) = MaxUnpooling (unpoolInput, poolInput, filterShape, stride = stride, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
 }.apply
-    
+
 # RecurrentLSTMLayer -- create an LSTM layer
 RecurrentLSTMLayer {outputDim,
                     cellShape = None, # if set then use a projection
@@ -393,10 +395,10 @@ _AsNodes (inputs) = {
 }.arr
 
 ##############################################################################
-# "Stable API" with the purpose of staying compatible towards 2.0. 
+# "Stable API" with the purpose of staying compatible towards 2.0.
 # - Use only tensors as concept. Move away from matrices.
 # - Main input goes first
-# - Main input is called "_" (becomes either self, or is moved to the end, 
+# - Main input is called "_" (becomes either self, or is moved to the end,
 #   depending on language binding)
 # - tensor shape is called "shape"
 # - output shape before input shape
@@ -413,11 +415,11 @@ CNTK2 = [
 
     // 2. Variables and constants
     // Changes: ParameterTensor -> _Parameter; "dims" -> "shape"
-    // Python API: 
+    // Python API:
     // - constant(value, name=None) - value: the tensor constant passed as numpy array. Forwards to parameter() with learningRateMultiplier=0 and initFromLiteral
     // - parameter: Like below, but can take an NDArray on the "init_from_literal" parameter, in which case it is serialized and turned into "initFromLiteral".
     //              (TODO: should be the value parameter instead)
-    // TODO: The API for Parameter is different in current 2.0 design, getting a constant as input for the initial values. 
+    // TODO: The API for Parameter is different in current 2.0 design, getting a constant as input for the initial values.
     // This needs to be fixed to follow the way the Constant() is exposed in Python
     // Making this an internal node with "_" until we agree on the final interface:
     _Parameter(shape, value = 0, initValue = '', learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
@@ -467,7 +469,7 @@ CNTK2 = [
     Square(_, tag='') = ElementTimes(_, _, tag=tag)
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _AsNodes (_) /*plus the function args*/ ]
 
-    // 6. Reductions    
+    // 6. Reductions
     ReduceSum   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "Sum"    /*plus the function args*/ ]}.r
     ReduceLogSum(_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "LogSum" /*plus the function args*/ ]}.r
     ReduceMean  (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "Mean"   /*plus the function args*/ ]}.r
@@ -494,9 +496,9 @@ CNTK2 = [
     Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _AsNodes (_) /*plus the function args*/ ]
 
     // 11. Criterion nodes
-    // No changes here - we said the default input would be the label sequence here, against which the 
+    // No changes here - we said the default input would be the label sequence here, against which the
     // empirical sequence is compared to. Keeping this for now.
-    CrossEntropyWithSoftmax(labelSequence, outProbVectorSequence, axis=0, tag='') = 
+    CrossEntropyWithSoftmax(labelSequence, outProbVectorSequence, axis=0, tag='') =
         if axis==0 then new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
         else [ tag1 = tag; out = Minus (ReduceLogSum (outProbVectorSequence, axis=axis), ReduceSum (labelSequence .* outProbVectorSequence, axis=axis), tag=tag1) ].out
     # Classification error along a specific axis: account only for missed labels, i.e.
@@ -530,7 +532,7 @@ CNTK2 = [
     Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Identity = Pass
 
-    // The value of GetRandomSample(weights /* vector of length nClasses */, numSamples, sampleWithReplacement) randomly samples numSamples using the specified sampling weights. 
+    // The value of GetRandomSample(weights /* vector of length nClasses */, numSamples, sampleWithReplacement) randomly samples numSamples using the specified sampling weights.
     // The result is a sparse matrix of num samples one-hot vectors as columns.
     GetRandomSample(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [
                                                                                         operation = 'RandomSample' ;
@@ -551,7 +553,7 @@ CNTK2 = [
 # Parameter{} can do several forms of initialization.
 #  - initValue=scalar, value=array --> initialize from this value  --array form not implemented yet
 #  - initFromFilePath="..." --> read from a data file
-#  - init="uniform|gaussian" (random init scaled by initValueScale). 
+#  - init="uniform|gaussian" (random init scaled by initValueScale).
 #  - init="zero"
 # deprecated:
 #  - initFromLiteral="..." (deprecated) --> parse a string literal (obsolete with value=array form)
@@ -605,9 +607,9 @@ Slice(beginIndex, endIndex, input, axis=1, tag='') =
     else new ComputationNode [ operation = 'Slice' ; inputs = _AsNodes (input) /*plus the function args*/ ] # non-time axis
 Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 NewReshape(input, dims, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = _AsNodes (input) ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
-ReshapeDimension(x, axis, tensorShape) = NewReshape(x, tensorShape, beginAxis=axis, endAxis=axis + 1) 
-FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis + num) 
-SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N) 
+ReshapeDimension(x, axis, tensorShape) = NewReshape(x, tensorShape, beginAxis=axis, endAxis=axis + 1)
+FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis + num)
+SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N)
 # TODO: make input the last arg!
 Transpose(x) = TransposeDimensions(x, 1, 2)
 LambdaRank(gain, prediction, queryId, tag='') = new ComputationNode [ operation = 'LambdaRank' ; inputs = _AsNodes (gain : prediction : queryId) /*plus the function args*/ ]
@@ -618,17 +620,17 @@ ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ ope
 ReconcileMBLayout = ReconcileDynamicAxis # back compat
 CastAs (type, data) = ReconcileDynamicAxis (data, type) # read as CastAs<type>(data) where the cast may consist of rearranging the data w.r.t. MBLayout or broadcasting across sequence items
 # ND convo & pooling/unpooling   --why is autoPadding true? Normally one would want to reduce dimensions, no?
-Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = _AsNodes (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] ; transpose = false; dimOutputShape = new TensorShape [ dims = 0 ]  /*plus the function args*/ ]
-ConvolutionTranspose(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, outputShape = None, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = _AsNodes (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] ; transpose = true; dimOutputShape = new TensorShape [ dims = if BS.Constants.IsNone (outputShape) then 0 else outputShape ]  /*plus the function args*/ ]
+Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, dilation = 1, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = _AsNodes (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] ; dimDilation = new TensorShape [ dims = dilation ] ; transpose = false; dimOutputShape = new TensorShape [ dims = 0 ]  /*plus the function args*/ ]
+ConvolutionTranspose(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, outputShape = None, dilation = 1, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = _AsNodes (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] ; dimDilation = new TensorShape [ dims = dilation ] ; transpose = true; dimOutputShape = new TensorShape [ dims = if BS.Constants.IsNone (outputShape) then 0 else outputShape ]  /*plus the function args*/ ]
 Pooling(input, poolKind/*'max'|'average'*/, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, ceilOutDim = false, includePad = false, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Pooling' ; inputs = _AsNodes (input); pool = poolKind ; kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] ; ceilOut = ceilOutDim ; poolIncludePad = includePad /*plus the function args*/ ]
 MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxUnpooling' ; inputs = _AsNodes (unpoolInput : poolInput); kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 # 2D pooling
 MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
-ROIPooling (input, ROIs, shape, spatialScale = 0.0625) = new ComputationNode { operation = 'ROIPooling' ; inputs = _AsNodes (input : ROIs) ; pool = 'max' ; roiOutputShape = new TensorShape [ dims = shape ] ; featureScale = spatialScale ; tag='' /*plus the function args*/ } 
-ColumnwiseCrossProduct = KhatriRaoProduct // deprecated 
+ROIPooling (input, ROIs, shape, spatialScale = 0.0625) = new ComputationNode { operation = 'ROIPooling' ; inputs = _AsNodes (input : ROIs) ; pool = 'max' ; roiOutputShape = new TensorShape [ dims = shape ] ; featureScale = spatialScale ; tag='' /*plus the function args*/ }
+ColumnwiseCrossProduct = KhatriRaoProduct // deprecated
 ErrorPrediction = ClassificationError   # legacy name
-Delay = PastValue 
+Delay = PastValue
 
 Acos(x, tag='') = new ComputationNode [ operation = 'Acos' ; inputs = _AsNodes (x) /*plus the function args*/ ]
 Asin(x, tag='') = new ComputationNode [ operation = 'Asin' ; inputs = _AsNodes (x) /*plus the function args*/ ]
@@ -707,13 +709,13 @@ Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = _AsNo
 # non-neural-network functions
 ##############################################################################
 
-Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] 
+Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ]
 Fail(what) = new FailAction [ /*what*/ ]
-Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] 
-Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
-Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
-Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] 
-Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] 
+Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ]
+Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ]
+Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ]
+Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ]
+Length(x) = new NumericFunction [ what = 'Length' ; arg = x ]
 Repeat (N, what) = if N <= 0 then BS.Constants.None else (Repeat (N-1, what) : what) # can also be used to turn a scalar into a 1-element array
 _ForceResizeArray (N, arrayOrScalar) = { # bring an array to a given length, either by chopping or by duplicating its last value
     arr = _AsArray (arrayOrScalar)
@@ -744,14 +746,14 @@ IntDiv(x, y) = new NumericFunction [ what = 'IntDiv' ;  args = (x:y) ]
 ##############################################################################
 
 # deprecated--use LinearLayer{} and DenseLayer{} instead
-BFF(in, rows, cols) = [ B = Parameter(rows, 1, initValue = 0) ; W = Parameter(rows, cols) ; z = W*in+B ] 
-SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] 
+BFF(in, rows, cols) = [ B = Parameter(rows, 1, initValue = 0) ; W = Parameter(rows, cols) ; z = W*in+B ]
+SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ]
 
 # deprecated--use FeatureMVNLayer{} instead
-MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) 
+MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat))
 
 # deprecated--use LogPriorLayer{} instead
-LogPrior(labels) = Log(Mean(labels)) 
+LogPrior(labels) = Log(Mean(labels))
 
 # specify one of these two for initialization:
 #  - init = "uniform"|"gaussian"
@@ -1181,7 +1183,7 @@ RNNs =
        c = Loop.Next (lstmState.c, initialState=if BS.Constants.IsNone (initialState) then None else initialState.c)  # cell(t-1)
        dim = lstmState.dim
     }
-    
+
     PreviousHCWithTrainedInitialState{shape=(0)} = {  # default (0) will infer to all elements for inputs of rank 0
         initialH = ParameterTensor {shape, initValue=0}
         initialC = ParameterTensor {shape, initValue=0}
@@ -1260,7 +1262,7 @@ RNNs =
     # GRU -- GRU function with projection and self-stabilization
     # It returns a dictionary with three members: the hidden state h, the cell state c, and dim=h.dim.
     # While c isn't required, we return it for implementations like seq2seq that expect it so that this can be a proper drop-in replacement for LSTM
-    # Like the LSTM function, it also takes an optional auxiliary input, e.g. for supporting attention models.  
+    # Like the LSTM function, it also takes an optional auxiliary input, e.g. for supporting attention models.
     GRU (outputDim, cellDim=outputDim, x, inputDim=x.dim, aux=Constants.None, auxDim=aux.dim, prevState, enableSelfStabilization=false) =
     [
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
@@ -1269,7 +1271,7 @@ RNNs =
         _ = [     // encapsulate the inner workings
 
             dh = prevState.h   // previous value
-            dhs = S(dh)        // previous value, stabilized       
+            dhs = S(dh)        // previous value, stabilized
             # note: input does not get a stabilizer here, user is meant to do that outside
 
             // parameter macros
@@ -1305,8 +1307,8 @@ RNNs =
             htp = Wmr * S(_.ht)
         ].htp
         else _.ht                       // no projection
-        
-        c = _.ct        
+
+        c = _.ct
         dim = outputDim
     ]
 
@@ -1593,8 +1595,8 @@ Seq2Seq =
         # tokens.from:
         # before dropping the first dimension: [V x Dprev x Dnew]
         #   +-----+
-        #   |0 1 0|       means input hyp[1] gave rise to the best    
-        #   +-----+-+  
+        #   |0 1 0|       means input hyp[1] gave rise to the best
+        #   +-----+-+
         #     |1 0 0|     means input hyp[0] gave rise to second best
         #     +-----+-+
         #       |0 0 1|   means input hyp[2] gave rise to third best
