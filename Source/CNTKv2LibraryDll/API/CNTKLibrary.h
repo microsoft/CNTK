@@ -515,7 +515,7 @@ namespace CNTK
         /// Static method to specify a list of excluded devices that cannot be used as globally default (neither auto-selected
         /// nor explicitly specified by 'TrySetDefaultDevice'). For example, to avoid auto-selecting the CPU, invoke 
         /// 'SetExcludedDevices({DeviceDescriptor::CPUDevice()})'. However, after the default device has been selected and 
-        /// frozen (by a call to UseDefaultDevice()), invoking this methods has no effect, it becomes essentially a no-op.
+        /// frozen (by a call to UseDefaultDevic()), invoking this methods has no effect, it becomes essentially a no-op.
         ///
         CNTK_API static void SetExcludedDevices(const std::vector<DeviceDescriptor>& excluded);
 
@@ -1230,6 +1230,8 @@ namespace std {
 
 namespace CNTK
 {
+    template <typename T>
+    class TrainingParameterSchedule;
     ///
     /// A serializable value represents one of:
     /// a) Boolean
@@ -1240,6 +1242,8 @@ namespace CNTK
     /// f) vector<DictionaryValue>
     /// g) Dictionary
     /// h) NDArrayView
+    /// i) FunctionPtr
+    /// j) TrainingParameterSchedule<double>
     ///
     /// TODO: We need to have native support for DictionaryValue<vector> and DictionaryValue<NDArrayView>.
     class DictionaryValue final
@@ -1260,6 +1264,8 @@ namespace CNTK
             Vector,
             Dictionary,
             NDArrayView,
+            TrainingParameterSchedule,
+            CNTKFunction
         };
 
         static const char* TypeName(Type type)
@@ -1290,6 +1296,10 @@ namespace CNTK
                 return "Dictionary";
             case Type::NDArrayView:
                 return "NDArrayView";
+            case Type::TrainingParameterSchedule:
+                return "TrainingParameterSchedule";
+            case Type::CNTKFunction:
+                return "CNTKFunction";
             default:
                 LogicError("Unknown DictionaryValue::Type.");
             }
@@ -1343,6 +1353,8 @@ namespace CNTK
                 std::is_same<T, std::wstring>::value ||
                 std::is_same<T, std::vector<DictionaryValue>>::value ||
                 std::is_same<T, Dictionary>::value ||
+                std::is_same<T, FunctionPtr>::value ||
+                std::is_same<T, TrainingParameterSchedule<double>>::value ||
                 std::is_same<T, NDArrayView>::value),
                 "Unsupported ValueType");
 
@@ -1383,6 +1395,10 @@ namespace CNTK
                     AllocateDataPtr(other.Value<Dictionary>());
                 else if (other.m_valueType == Type::NDArrayView)
                     AllocateDataPtr(other.Value<NDArrayView>());
+                else if (other.m_valueType == Type::CNTKFunction)
+                    AllocateDataPtr(other.Value<FunctionPtr>());
+                else if (other.m_valueType == Type::TrainingParameterSchedule)
+                    AllocateDataPtr(other.Value<TrainingParameterSchedule<double>>());
             }
 
             return *this;
@@ -1400,6 +1416,8 @@ namespace CNTK
                 other.m_valueType == Type::Axis ||
                 other.m_valueType == Type::Vector ||
                 other.m_valueType == Type::Dictionary ||
+                other.m_valueType == Type::CNTKFunction ||
+                other.m_valueType == Type::TrainingParameterSchedule ||
                 other.m_valueType == Type::NDArrayView)
             {
                 other.m_data.m_ptr = nullptr;
@@ -1489,6 +1507,8 @@ namespace CNTK
             std::is_same<T, std::wstring>::value ||
             std::is_same<T, std::vector<DictionaryValue>>::value ||
             std::is_same<T, Dictionary>::value ||
+            std::is_same<T, FunctionPtr>::value ||
+            std::is_same<T, TrainingParameterSchedule<double>>::value ||
             std::is_same<T, NDArrayView>::value>::type* = nullptr>
             const T& Value() const
         {
@@ -1501,6 +1521,8 @@ namespace CNTK
             std::is_same<T, std::wstring>::value ||
             std::is_same<T, std::vector<DictionaryValue>>::value ||
             std::is_same<T, Dictionary>::value ||
+            std::is_same<T, FunctionPtr>::value ||
+            std::is_same<T, TrainingParameterSchedule<double>>::value ||
             std::is_same<T, NDArrayView>::value>::type* = nullptr>
             T& Value()
         {
@@ -1541,6 +1563,8 @@ namespace CNTK
                            std::is_same<T, Axis>::value ||
                            std::is_same<T, std::vector<DictionaryValue>>::value ||
                            std::is_same<T, Dictionary>::value ||
+                           std::is_same<T, FunctionPtr>::value ||
+                           std::is_same<T, TrainingParameterSchedule<double>>::value ||
                            std::is_same<T, NDArrayView>::value),
                            "Unsupported ValueType");
 
@@ -1555,6 +1579,8 @@ namespace CNTK
             if (std::is_same<T, std::vector<DictionaryValue>>::value)              return Type::Vector;
             if (std::is_same<T, Dictionary>::value)                                return Type::Dictionary;
             if (std::is_same<T, NDArrayView>::value)                               return Type::NDArrayView;
+            if (std::is_same<T, FunctionPtr>::value)                                  return Type::CNTKFunction;
+            if (std::is_same<T, TrainingParameterSchedule<double>>::value)          return Type::TrainingParameterSchedule;
         }
 
         template <typename T>
@@ -1582,8 +1608,10 @@ namespace CNTK
                 FreePtrAsType<std::vector<DictionaryValue>>();
             else if (m_valueType == Type::Dictionary)
                 FreePtrAsType<Dictionary>();
-            else if (m_valueType == Type::NDArrayView)
-                FreePtrAsType<NDArrayView>();
+            else if (m_valueType == Type::CNTKFunction)
+                FreePtrAsType<FunctionPtr>();
+            else if (m_valueType == Type::TrainingParameterSchedule)
+                FreePtrAsType<TrainingParameterSchedule<double>>();
         }
 
         Type m_valueType;
@@ -1630,6 +1658,17 @@ namespace CNTK
         const DictionaryValue& operator[](const std::wstring& key) const
         {
             return operator[](key.c_str());
+        }
+
+        template<typename T>
+        const T& GetOrElse(const std::wstring& key, const T& else_val) const
+        {
+            if (Contains(key))
+            {
+                const DictionaryValue& val = operator[](key);
+                return val.Value<T>();
+            }
+            else return else_val;
         }
 
         CNTK_API bool Contains(const wchar_t* key) const;
@@ -4396,31 +4435,24 @@ namespace CNTK
     {
     public:
         ///
-        /// Indicates whether the values in the schedule are specified on the per-sample or 
-        /// per-minibatch basis.
-        ///
-        enum class UnitType : unsigned int
-        {
-            Sample = 0,
-            Minibatch = 1,
-        };
-
-        ///
         /// A special value that can be used for the epochSize to indicate that the schedule is sweep-based.
         ///
         static const size_t FullDataSweep = 0;
+        static const size_t UnkownRefMBSize = 0;
 
         ///
         /// Create a schedule with a constant parameter value.
         ///
-        CNTK_API TrainingParameterSchedule(T value, UnitType unit);
+        CNTK_API TrainingParameterSchedule(T value, size_t ref_mbsize = 0);
 
+#ifndef SWIG
         ///
         /// Create a schedule where the parameter changes its value every 'epochSize' samples:
         /// schedule[0] is used for the first 'epochSize' samples, schedule[1] -- for the second,
         /// and so on. The last value is then used repeatedly until the end of training.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, UnitType unit, size_t epochSize = FullDataSweep);
+        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, size_t epochSize = FullDataSweep, size_t ref_mbsize = UnkownRefMBSize);
+#endif
 
         ///
         /// Create a schedule using the list of key-value pairs, where the key specifies 
@@ -4431,20 +4463,14 @@ namespace CNTK
         /// the first 100 samples, then '0.1' is used for the second 200 samples, 
         /// after which the values is switched to '0.005'.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, UnitType unit, size_t epochSize = FullDataSweep);
+        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = FullDataSweep, size_t ref_mbsize = UnkownRefMBSize);
+
 
         ///
         /// Returns a value corresponding to the absolute sample (or sweep) 
         /// count from the beginning of training.
         ///
         CNTK_API const T& operator[](size_t count) const;
-
-        ///
-        /// Returns the unit type for 'this' training parameter schedule. 
-        /// In case when the values are specified on the per-Minibatch basis, they are
-        /// re-scaled by the learner using the actual minibatch size in samples.
-        ///
-        UnitType Unit() const { return m_unit; }
 
         bool IsSweepBased() const { return m_epochSize == FullDataSweep; }
 
@@ -4461,6 +4487,25 @@ namespace CNTK
 
         CNTK_API static TrainingParameterSchedule<T> Deserialize(const Dictionary& dictionary);
 
+#ifdef SWIGPYTHON // for Python interop (adds indexer)
+        const T __getitem__(size_t count) const
+        {
+            return TrainingParameterSchedule<T>::operator[](count);
+        }
+#endif
+
+        CNTK_API bool operator==(const TrainingParameterSchedule<T>& right)
+        {
+            return this->m_schedule == right.m_schedule
+                && this->m_epochSize == right.m_epochSize
+                && this->m_ref_mbsize == right.m_ref_mbsize;
+        }
+
+        CNTK_API TrainingParameterSchedule<T>& transform(std::function<T(const T&)> func);
+
+        CNTK_API size_t GetRefMBSize() const { return m_ref_mbsize; }
+        CNTK_API void SetRefMBSize(size_t ref_mbsize) { m_ref_mbsize = ref_mbsize; }
+        CNTK_API bool IsRefMBSizeUnknown() const { return m_ref_mbsize == UnkownRefMBSize; }
     private:
 
         friend class Learner;
@@ -4473,98 +4518,27 @@ namespace CNTK
 
     protected:           
         std::map<size_t, T> m_schedule;
-        UnitType m_unit;
+        //TODO: enable reference mb size for each rate
+        size_t m_ref_mbsize; ///< reference design minibatch size the training parameter schedule are targeting at
         size_t m_epochSize;
     };
 
-    template <typename T, typename TrainingParameterSchedule<T>::UnitType U>
-    class TrainingParameterPerUnitSchedule : public TrainingParameterSchedule<T>
-    {
-    public:
-        TrainingParameterPerUnitSchedule(T value)
-            : TrainingParameterSchedule<T>::TrainingParameterSchedule(value, U)
-        { }
-
-        TrainingParameterPerUnitSchedule(const std::vector<T>& schedule, 
-                                         size_t epochSize = TrainingParameterSchedule<T>::FullDataSweep)
-            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, U, epochSize)
-        { }
-
-
-        TrainingParameterPerUnitSchedule(const std::vector<std::pair<size_t, T>>& schedule, 
-                                         size_t epochSize = TrainingParameterSchedule<T>::FullDataSweep)
-            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, U, epochSize)
-        { }
-
-#ifdef SWIGPYTHON // for Python interop (adds indexer)
-        const T __getitem__(size_t count) const
-        {
-            return TrainingParameterSchedule<T>::operator[](count);
-        }
-#endif
-    };
-
-// Swig does not understand type aliasing.
-#ifndef SWIG
-    ///
-    /// Training parameter schedule with per-sample values.
-    ///
-    template <typename T>
-    using TrainingParameterPerSampleSchedule = TrainingParameterPerUnitSchedule<T, TrainingParameterSchedule<T>::UnitType::Sample>;
-
-    ///
-    /// Training parameter schedule with per-minibatch values.
-    ///
-    template <typename T>
-    using TrainingParameterPerMinibatchSchedule = TrainingParameterPerUnitSchedule<T, TrainingParameterSchedule<T>::UnitType::Minibatch>;
-
-    typedef TrainingParameterPerSampleSchedule<double> LearningRatePerSampleSchedule;
-    typedef TrainingParameterPerMinibatchSchedule<double> LearningRatePerMinibatchSchedule;
-
-    typedef TrainingParameterPerSampleSchedule<double> MomentumPerSampleSchedule;
-    typedef TrainingParameterPerMinibatchSchedule<double> MomentumPerMinibatchSchedule;
-#endif
-
-    typedef TrainingParameterPerUnitSchedule<size_t, TrainingParameterSchedule<size_t>::UnitType::Sample> MinibatchSizeSchedule;
     typedef TrainingParameterSchedule<double> LearningRateSchedule;
     typedef TrainingParameterSchedule<double> MomentumSchedule;
+    typedef TrainingParameterSchedule<size_t> MinibatchSizeSchedule;
 
-    ///
-    /// This class allows to specify momentum as time constant in place of momentum per sample in 
-    /// all of Learners factory methods. The specified values are then automatically converted into 
-    /// per sample values.
-    ///
-    class MomentumAsTimeConstantSchedule: public TrainingParameterSchedule<double>
+    ///Compute the momentum from time constant.
+    ///For backward compatability only. *Should be deprecated*.
+    inline double MomentumFromTimeConstant(double momTC)
     {
-    public:
-        MomentumAsTimeConstantSchedule(double value) 
-            : TrainingParameterSchedule<double>::TrainingParameterSchedule(value, UnitType::Sample)
-        { 
-            ConvertToPerSampleValues();
-        }
-        
-        MomentumAsTimeConstantSchedule(const std::vector<double>& schedule, size_t epochSize = FullDataSweep) 
-            : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, UnitType::Sample, epochSize) 
-        { 
-            ConvertToPerSampleValues();
-        }
-        
-        MomentumAsTimeConstantSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epochSize = FullDataSweep) 
-            : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, UnitType::Sample, epochSize)
-        { 
-            ConvertToPerSampleValues();
-        }
+        return momTC == 0.0 ? 0 : exp(-1.0 / momTC);
+    }
 
-#ifdef SWIGPYTHON // for Python interop (adds indexer)
-        const double __getitem__(size_t count) const
-        {
-            return operator[](count);
-        }
-#endif
+    ///Construct MomentumAsTimeCosntantSchedule. *Will be deprecated*.
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(double time_constant);
+    ///Construct MomentumAsTimeCosntantSchedule. *Will be deprecated*.
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const MomentumSchedule& schedule);
 
-    private:
-        CNTK_API void ConvertToPerSampleValues();
-    };
 
     ///
     /// A collection of additional options that affect parameter updates and 
@@ -4574,17 +4548,12 @@ namespace CNTK
     {
         double l1RegularizationWeight = 0.0;
         double l2RegularizationWeight = 0.0;
-#ifdef SWIG //for python interop (swig does not fully support "using")
-        TrainingParameterPerUnitSchedule<double, TrainingParameterSchedule<double>::UnitType::Minibatch> gaussianNoiseInjectionStdDev = 0.0;
-#else
-        TrainingParameterPerMinibatchSchedule<double> gaussianNoiseInjectionStdDev = 0.0;
-#endif
+        TrainingParameterSchedule<double> gaussianNoiseInjectionStdDev = 0.0;
         double gradientClippingThresholdPerSample = std::numeric_limits<double>::infinity();
         bool gradientClippingWithTruncation = true;
 
-        // This option results in the mean value of the gradients across the samples in the minibatch to be used by the learner.
-        // The mean gradient is computed by dividing the gradient values accumulated across all samples by the actual number of samples (labels) in the minibatch.
-        bool useMeanGradient = false;
+        //TODO: replace the struct option with dictionary options
+        Dictionary dictOptions;
     };
 
     ///  
@@ -4614,6 +4583,15 @@ namespace CNTK
     ///
     class Learner
     {
+    public:
+        CNTK_API static const std::wstring RefMBSizeK;
+        CNTK_API static const std::wstring FunctionK;
+        CNTK_API static const std::wstring RateK;
+        CNTK_API static const std::wstring LearningRateScheduleK;
+        CNTK_API static const std::wstring MomentumScheduleK;
+        CNTK_API static const std::wstring MomentumVarianceScheduleK;
+        CNTK_API static const std::wstring CompatModeK;
+
     public:
         //
         // Method to update the parameters associated with this learner. By returning false, this method indicates that
@@ -4680,6 +4658,19 @@ namespace CNTK
             m_progressWriters.insert(progressWriters.begin(), progressWriters.end());
         }
 
+        CNTK_API Dictionary& GetOptions() { return m_additionalOptions.dictOptions; }
+        CNTK_API const Dictionary& GetOptions() const { return m_additionalOptions.dictOptions; }
+        CNTK_API Dictionary& GetContext() { return m_learningContext; }
+        CNTK_API const Dictionary& GetContext() const { return m_learningContext; }
+
+        ///Set the learner to use the learning rates and momentum in a mode that is compatiable to the literature.
+        ///There might be efficiency lost with the compatible mode. It is recommended not to set to this mode but 
+        ///keep the default setting which is false. Under the CNTK mode, users can provide the learning rates and 
+        ///momentum along with the minibatch size that these rates are targeting for.
+        ///CNTK will try its best to convert these rates internally to fully utilize the CNTK optimization power.
+        CNTK_API void SetCompatibleModel(bool is_compatible = false) { GetOptions().Add(CompatModeK, is_compatible); }
+        CNTK_API bool IsCompatibleModel() const { return GetOptions().GetOrElse(CompatModeK, false); }
+
     protected:
         ///
         /// Retrieves and returns current value from the training parameter schedule.
@@ -4691,9 +4682,10 @@ namespace CNTK
             return schedule[count];
         }
 
-        Learner(const std::vector<Parameter>& parameters, const LearningRateSchedule& learningRateSchedule)
+        Learner(const std::vector<Parameter>& parameters, const LearningRateSchedule& learningRateSchedule, const AdditionalLearningOptions& additionalOptions = AdditionalLearningOptions())
             : m_parameters(parameters),
             m_learningRateSchedule(learningRateSchedule),
+            m_additionalOptions(additionalOptions),
             m_sampleCount(0),
             m_minibatchCount(0),
             m_sweepCount(0)
@@ -4704,6 +4696,9 @@ namespace CNTK
         size_t m_sampleCount;
         size_t m_minibatchCount;
         size_t m_sweepCount;
+        AdditionalLearningOptions m_additionalOptions;
+        ///A dictionary to hold and update learning context.
+        Dictionary m_learningContext;
         mutable std::unordered_set<ProgressWriterPtr> m_progressWriters;
     };
 
@@ -4867,7 +4862,7 @@ namespace CNTK
     protected:
         DistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
             : Learner(learner? learner->Parameters() : std::vector<Parameter>(),
-                      LearningRateSchedule(0, LearningRateSchedule::UnitType::Sample)),
+                      LearningRateSchedule(0)),
               m_learner(learner),
               m_communicator(communicator),
               m_distributeAfterSamples(distributeAfterSamples)
@@ -5091,6 +5086,8 @@ namespace CNTK
         ///
         CNTK_API void SummarizeTrainingProgress();
 
+        CNTK_API const Dictionary& GetTrainingContext() const { return m_trainingContext; }
+        CNTK_API Dictionary& GetTrainingContext() { return m_trainingContext; }
     private:
         template <typename T1, typename ...CtorArgTypes>
         friend std::shared_ptr<T1> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
@@ -5117,6 +5114,7 @@ namespace CNTK
         void UpdateTrainingProgress(size_t numSamples, const ValuePtr& loss, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
         void AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters);
 
+        Dictionary m_trainingContext;
         FunctionPtr m_model;
         FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_lossFunction;

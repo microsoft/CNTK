@@ -16,11 +16,17 @@ from cntk.logging import ProgressPrinter
 from cntk.learners import sgd, learning_rate_schedule, UnitType, universal
 from cntk.layers import Dense, Sequential
 
+#For backward compatibility test
 LR_SCHEDULE_PARAMS = [
-        ((0.2, UnitType.sample), [0.2]),
-        ((0.2, UnitType.sample), [0.2, 0.2, 0.2, 0.2]),
-        (([0.2,0.4], UnitType.sample, 5), [0.2]*5+[0.4]*20),
-        (([(3,0.2),(2,0.4),(1,0.8)], UnitType.sample, 5), [0.2]*15+[0.4]*10+[0.8]*20),
+        ((0.2, UnitType.sample), [0.2], 1),
+        ((0.2, UnitType.sample), [0.2, 0.2, 0.2, 0.2], 1),
+        (([0.2,0.4], UnitType.sample, 5), [0.2]*5+[0.4]*20, 1),
+        (([(3,0.2),(2,0.4),(1,0.8)], UnitType.sample, 5), [0.2]*15+[0.4]*10+[0.8]*20, 1),
+        #all the minibatch unit type should have unknown reference mb size
+        ((0.2, UnitType.minibatch), [0.2], 0),
+        ((0.2, UnitType.minibatch), [0.2, 0.2, 0.2, 0.2], 0),
+        (([0.2,0.4], UnitType.minibatch, 5), [0.2]*5+[0.4]*20, 0),
+        (([(3,0.2),(2,0.4),(1,0.8)], UnitType.minibatch, 5), [0.2]*15+[0.4]*10+[0.8]*20, 0),
         ]
 
 MOMENTUM_SCHEDULE_PARAMS = [
@@ -40,9 +46,10 @@ LEARNER_LAMBDAS = [
     lambda params: C.sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch)),
     lambda params: C.momentum_sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9))]
 
-@pytest.mark.parametrize("params, expectation", LR_SCHEDULE_PARAMS)
-def test_learning_rate_schedule(params, expectation):
+@pytest.mark.parametrize("params, expectation, ref_mbsize", LR_SCHEDULE_PARAMS)
+def test_learning_rate_schedule(params, expectation, ref_mbsize):
     l = learning_rate_schedule(*params)
+    assert l.ref_mbsize == ref_mbsize
     assert [l[i] for i in range(len(expectation))] == expectation
 
 def sweep_based_schedule_fails():
@@ -52,13 +59,17 @@ def sweep_based_schedule_fails():
 def test_momentum_schedule():
     m = 2500
     ms = C.momentum_as_time_constant_schedule([m])
+    #all the timeconstant schedule is for per sample
+    assert ms.ref_mbsize == 1
     assert ms[0] ==  np.exp(-1.0 / np.asarray(m))
 
     ms = C.momentum_as_time_constant_schedule(m)
+    assert ms.ref_mbsize == 1
     assert ms[0] ==  np.exp(-1.0 / np.asarray(m))
 
     mlist = [980, 520]
     msl = C.momentum_as_time_constant_schedule(mlist)
+    assert ms.ref_mbsize == 1
     expected = np.exp(-1.0 / np.asarray(mlist))
     assert all(mi == ei for mi,ei in zip(msl,expected))
 
@@ -376,8 +387,8 @@ def test_universal():
     my_sgd = lambda ps, gs: C.combine([C.assign(p, p - 0.125/25 * g) for p, g in zip(ps, gs)])
     universal_sgd = lambda params: universal(my_sgd, params)
     my_last_avg_error, my_avg_error, _ = ffnet(universal_sgd)
-    assert np.allclose(my_last_avg_error, builtin_last_avg_error)
-    assert np.allclose(my_avg_error, builtin_avg_error)
+    assert np.all(np.less_equal(my_last_avg_error, builtin_last_avg_error))
+    assert np.all(np.less_equal(my_avg_error, builtin_avg_error))
 
 def test_0d_1d_parameter_set_value():
     x = C.input_variable(2)

@@ -375,8 +375,6 @@ IGNORE_NAMESPACE CNTK::Sequence;
 
 #ifndef SWIGCSHARP
 IGNORE_CLASS CNTK::TrainingParameterSchedule;
-IGNORE_CLASS CNTK::TrainingParameterPerUnitSchedule;
-IGNORE_CLASS CNTK::TrainingParameterPerSampleSchedule;
 #else
 %ignore CNTK::TrainingParameterSchedule::TrainingParameterSchedule(TrainingParameterSchedule<T>&&); 
 %ignore CNTK::TrainingParameterSchedule::operator=;

@@ -86,8 +86,7 @@ def set_default_use_mean_gradient_value(value):
 
 def _verify_learning_rate_type(learning_rate):
     if not isinstance(learning_rate,
-                      (cntk_py.training_parameter_per_sample_schedule,
-                       cntk_py.training_parameter_per_minibatch_schedule)):
+                      cntk_py.training_double_parameter_schedule):
 
         raise ValueError('learning_rate type (%s) not supported. '
                          'learning_rate must be a training schedule '
@@ -101,8 +100,7 @@ def _verify_learning_rate_type(learning_rate):
 
 def _verify_momentum_type(momentum):
     if not isinstance(momentum,
-                      (cntk_py.training_parameter_per_minibatch_schedule,
-                       cntk_py.momentum_as_time_constant_schedule)):
+                      cntk_py.training_double_parameter_schedule):
 
         raise ValueError('momentum type (%s) not supported. '
                          'momentum must be a training schedule '
@@ -226,9 +224,51 @@ class UserLearner(cntk_py.Learner):
         '''
         raise NotImplementedError('UserLearner.update must be overriden')
 
+def _prepare_training_parameter_list(schedule):
+    if isinstance(schedule, list):
+        return [(1, v) if isinstance(v, (float, int)) else v for v in schedule]
+    else:
+        return schedule
+
+#for back compatibility
+def _infer_and_verify_ref_mbsize_and_unit(ref_mbsize, unit):
+    #for back compatibility when unit is in the position of ref_mbsize of the training_parameter_schedule call
+    if ref_mbsize is not None and (isinstance(ref_mbsize, UnitType) or UnitType(ref_mbsize) in [UnitType.sample, UnitType.minibatch]):
+        unit = ref_mbsize
+    unit = UnitType(unit) if unit is not None else unit
+    if ref_mbsize is not None or isinstance(ref_mbsize, UnitType):
+        ref_mbsize = None
+
+    if unit is not None:
+        if unit == UnitType.minibatch:
+            #ref_mbsize should be 0 or None, otherwise raise error
+            if ref_mbsize is not None and ref_mbsize != cntk_py.training_double_parameter_schedule.unknown_ref_mbsize:
+                raise ValueError('Backcompatibility error: unit is specified to be per Minibatch but ref_mbsize is not specified to be unknown_ref_mbsize.')
+            ref_mbsize = cntk_py.training_double_parameter_schedule.unknown_ref_mbsize
+        elif unit == UnitType.sample:
+            if ref_mbsize is not None and ref_mbsize != 1:
+                raise ValueError('Backcompatibility error: unit is specified to be sample but ref_mbsize is not specified to be 1.')
+            ref_mbsize = 1
+    if ref_mbsize is None:
+        ref_mbsize = cntk_py.training_double_parameter_schedule.unknown_ref_mbsize
+    return ref_mbsize, unit
+
+#for back compatibility
+def _infer_and_verify_compatible_mode(unit):
+    #if not able to infer the compatible model, return None
+    compatible_mode = None
+    if unit is not None:
+        if unit == UnitType.minibatch:
+            compatible_mode = True
+        elif unit == UnitType.sample:
+            #if the unit is per sample, the compatible mode is False; setting the value to check against trainner
+            #and learner setting. This is for API backward compatible only, in the new API, the literature
+            #compatible mode should be set at the trainer or learner level.
+            compatible_mode = False
+    return compatible_mode
 
 @typemap
-def training_parameter_schedule(schedule, unit, epoch_size=None):
+def training_parameter_schedule(schedule, ref_mbsize = None, epoch_size=None, unit=None):
     '''
     Create a training parameter schedule containing either per-sample (default)
     or per-minibatch values.
@@ -272,35 +312,34 @@ def training_parameter_schedule(schedule, unit, epoch_size=None):
     See also:
         :func:`learning_rate_schedule`
     '''
-    if unit == UnitType.sample:
-        if isinstance(schedule, cntk_py.training_parameter_per_sample_schedule):
-            return schedule
-    else:
-        if isinstance(schedule, cntk_py.training_parameter_per_minibatch_schedule):
-            return schedule
+    ref_mbsize, unit = _infer_and_verify_ref_mbsize_and_unit(ref_mbsize,unit)
+    compatible_mode = _infer_and_verify_compatible_mode(unit)
+    epoch_size = epoch_size if epoch_size is not None else cntk_py.training_double_parameter_schedule.full_data_sweep
+
+    if isinstance(schedule, cntk_py.training_double_parameter_schedule):
+        return schedule
 
     if isinstance(schedule, (int, float)):
         if epoch_size is not None:
             warnings.warn('When providing the schedule as a number, epoch_size is ignored', RuntimeWarning)
-        if UnitType(unit) is UnitType.sample:
-            return cntk_py.training_parameter_per_sample_schedule(schedule)
-        else:
-            return cntk_py.training_parameter_per_minibatch_schedule(schedule)
+        schedule = cntk_py.training_double_parameter_schedule(*[schedule, ref_mbsize])
+        schedule.compatible_model = compatible_mode
+        return schedule
 
-    args = [schedule] if epoch_size is None else [schedule, epoch_size]
 
     if isinstance(schedule, list):
-        if UnitType(unit) is UnitType.sample:
-            return cntk_py.training_parameter_per_sample_schedule(*args)
-        else:
-            return cntk_py.training_parameter_per_minibatch_schedule(*args)
+        schedule = _prepare_training_parameter_list(schedule)
+        args = [schedule, epoch_size, ref_mbsize]
+        res = cntk_py.training_double_parameter_schedule(*args)
+        res.compatible_model = compatible_mode
+        return res
 
     raise ValueError(
         'schedule must be either a float or a list, not %s' % type(schedule))
 
 
 @typemap
-def learning_rate_schedule(lr, unit, epoch_size=None):
+def learning_rate_schedule(lr, ref_mbsize = None, epoch_size=None, unit=None):
     '''
     Create a learning rate schedule (using the same semantics as
     :func:`training_parameter_schedule`).
@@ -319,11 +358,11 @@ def learning_rate_schedule(lr, unit, epoch_size=None):
     See also:
         :func:`training_parameter_schedule`
     '''
-    return training_parameter_schedule(lr, unit, epoch_size)
+    return training_parameter_schedule(lr, ref_mbsize, epoch_size, unit)
 
 
 @typemap
-def momentum_schedule(momentum, epoch_size=None):
+def momentum_schedule(momentum, epoch_size=None, ref_mbsize = None):
     '''
     Create a per-minibatch momentum schedule (using the same semantics as
     :func:`training_parameter_schedule` with the `unit=UnitType.minibatch`).
@@ -357,11 +396,11 @@ def momentum_schedule(momentum, epoch_size=None):
     Returns:
         momentum schedule
     '''
-    return training_parameter_schedule(momentum, UnitType.minibatch, epoch_size)
+    return training_parameter_schedule(momentum, ref_mbsize, epoch_size, unit=UnitType.minibatch)
 
 
 @typemap
-def momentum_as_time_constant_schedule(momentum, epoch_size=None):
+def momentum_as_time_constant_schedule(momentum, epoch_size=None, ref_mbsize = None):
     '''
     Create a momentum schedule in a minibatch-size agnostic way
     (using the same semantics as :func:`training_parameter_schedule`
@@ -392,7 +431,10 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=None):
     Returns:
         momentum as time constant schedule
     '''
-    if isinstance(momentum, (cntk_py.momentum_as_time_constant_schedule)):
+    ref_mbsize = 0 if ref_mbsize is None or isinstance(ref_mbsize, UnitType) else ref_mbsize
+    epoch_size = epoch_size if epoch_size is not None else cntk_py.training_double_parameter_schedule.full_data_sweep
+
+    if isinstance(momentum, (cntk_py.training_double_parameter_schedule)):
         return momentum
 
     if isinstance(momentum, (int, float)):
@@ -401,8 +443,11 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=None):
         return cntk_py.momentum_as_time_constant_schedule(momentum)
 
     if isinstance(momentum, list):
-        args = [momentum] if epoch_size is None else [momentum, epoch_size]
-        return cntk_py.momentum_as_time_constant_schedule(*args)
+        momentum = _prepare_training_parameter_list(momentum)
+        args = [momentum, epoch_size, 1] #momentum constant schedule's reference minibatch size is always per sample
+        momentum = cntk_py.training_double_parameter_schedule(*args)
+        momentum = cntk_py.momentum_as_time_constant_schedule(momentum)
+        return momentum
 
     raise ValueError(
         'momentum must be either a float or a list, not %s' % type(momentum))
@@ -414,7 +459,8 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=None):
 def sgd(parameters, lr,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-        gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
+        gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(),
+        compatible_mode=None):
     '''sgd(parameters, lr, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an SGD learner instance to learn the parameters. See [1] for more
     information on how to set the parameters.
@@ -457,7 +503,8 @@ def sgd(parameters, lr,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.use_mean_gradient = use_mean_gradient
+    infer_compatible_mode = use_mean_gradient or lr.compatible_model
+    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = infer_compatible_mode
 
     return cntk_py.sgd_learner(parameters, lr, additional_options)
 
@@ -507,7 +554,7 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.use_mean_gradient = use_mean_gradient
+    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
 
     return cntk_py.momentum_sgd_learner(parameters, lr, momentum, unit_gain,
                                         additional_options)
@@ -569,7 +616,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.use_mean_gradient = use_mean_gradient
+    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
 
     return cntk_py.nesterov_learner(parameters, lr, momentum, unit_gain,
                                     additional_options)
@@ -620,7 +667,7 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.use_mean_gradient = use_mean_gradient
+    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
 
     return cntk_py.ada_delta_learner(parameters, lr, rho, epsilon,
                                     additional_options)
@@ -674,7 +721,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.use_mean_gradient = use_mean_gradient
+    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
 
     return cntk_py.ada_grad_learner(parameters, lr, need_ave_multiplier,
                                     additional_options)
@@ -730,7 +777,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.use_mean_gradient = use_mean_gradient
+    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
 
     return cntk_py.fsada_grad_learner(parameters, lr, momentum, unit_gain,
                                       variance_momentum, additional_options)
@@ -795,7 +842,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.use_mean_gradient = use_mean_gradient
+    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
 
     return cntk_py.adam_learner(parameters, lr, momentum, unit_gain,
                                 variance_momentum, epsilon, adamax, additional_options)
@@ -849,7 +896,7 @@ def rmsprop(parameters, lr,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.use_mean_gradient = use_mean_gradient
+    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
 
     return cntk_py.rmsprop_learner(parameters, lr, gamma, inc, dec, max, min,
                                    need_ave_multiplier, additional_options)

@@ -27,7 +27,7 @@ namespace CNTK
         virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
 
         virtual void ResetSmoothedGradients() override;
-
+    
     protected:
         // allocateSmoothGradients flag specifies whether NDArrayViews for smoothed gradients can be allocated 
         // in the base class constructor (in which case they are allocated with the shapes identical to the shapes of
@@ -49,8 +49,15 @@ namespace CNTK
         double LearningRate(size_t minibatchSize) const
         {
             auto learningRate = Learner::LearningRate();
-            if (m_learningRateSchedule.Unit() == LearningRateSchedule::UnitType::Minibatch)
+            if (GetOptions().GetOrElse(CompatModeK, false))
             {
+                //if (GetOptions().Contains(RefMBSizeK)) 
+                //{
+                //    //for compatible model, the reference minibatch size should be equal to the encounter minibatch size:
+                //    size_t ref_mbsize = m_additionalOptions.dictOptions[RefMBSizeK].Value<size_t>();
+                //    if (ref_mbsize != minibatchSize) //TODO: However, end of sweep might not have the same size yet
+                //        LogicError("Minibatch size should be equal to the designed reference minibatch size");
+                //}
                 // learning rate needs to be converted to the per-sample value.
                 return (minibatchSize == 0) ? 0.0 : learningRate / minibatchSize;
             }
@@ -63,8 +70,6 @@ namespace CNTK
         // A map cointaining hyperparameter names and corresponging values that's used to track and report changes 
         // in hyperparameter values.
         mutable std::map <std::wstring, double> m_trainingParametersMap;
-
-        AdditionalLearningOptions m_additionalOptions;
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
 

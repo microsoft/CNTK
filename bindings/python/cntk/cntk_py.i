@@ -88,8 +88,13 @@
 %ignore CNTK::Dictionary::operator=;
 %ignore CNTK::Dictionary::operator[];
 
+%ignore CNTK::TrainingParameterSchedule::TrainingParameterSchedule(TrainingParameterSchedule<T>&&); 
+%ignore CNTK::TrainingParameterSchedule(const std::vector<T>&, std::size_t);
 %ignore CNTK::TrainingParameterSchedule::operator=;
 %ignore CNTK::TrainingParameterSchedule::operator[];
+%attribute(CNTK::TrainingParameterSchedule<double>, std::size_t, ref_mbsize, GetRefMBSize, SetRefMBSize);
+%attribute(CNTK::TrainingParameterSchedule<std::size_t>, std::size_t, ref_mbsize, GetRefMBSize, SetRefMBSize);
+
 
 %ignore CNTK::GetCheckedMode;
 
@@ -107,6 +112,17 @@
 
 %rename(l1_regularization_weight) CNTK::AdditionalLearningOptions::l1RegularizationWeight;
 %rename(l2_regularization_weight) CNTK::AdditionalLearningOptions::l2RegularizationWeight;
+%rename(unknown_ref_mbsize) CNTK::TrainingParameterSchedule<double>::UnkownRefMBSize;
+%rename(unknown_ref_mbsize) CNTK::TrainingParameterSchedule<std::size_t>::UnkownRefMBSize;
+%rename(REF_MB_SIZE) CNTK::Learner::RefMBSizeK;
+%rename(FUNCTION) CNTK::Learner::FunctionK;
+%rename(RATE) CNTK::Learner::RateK;
+%rename(LEARNING_RATE_SCHEDULE)  CNTK::Learner::LearningRateScheduleK;
+%rename(MOMENTUM_SCHEDULE) CNTK::Learner::MomentumScheduleK;
+%rename(MOMENTUM_VARIANCE_SCEDULE) CNTK::Learner::MomentumVarianceScheduleK;
+%rename(COMPATIBLE_MODE)  CNTK::Learner::CompatModeK;
+%attribute(CNTK::Learner, bool, compatible_mode, IsCompatibleModel, SetCompatibleModel);
+
 %rename(ndcg_at_1) CNTK::NDCGAt1;
 
 // if we don't except RandomUniform the corresponding template functions will not be generated
@@ -457,6 +473,19 @@ fail:   return false;
             case CNTK::DictionaryValue::Type::NDShape:
                 val = NDShapeToTuple(dictVal.Value<CNTK::NDShape>());
                 break;
+            case CNTK::DictionaryValue::Type::CNTKFunction:
+            {
+                CNTK::FunctionPtr* funcPtr = new CNTK::FunctionPtr(dictVal.Value<CNTK::FunctionPtr>());
+                val = SWIG_NewPointerObj(funcPtr, $descriptor(CNTK::FunctionPtr), 1);
+                break;
+            }
+            case CNTK::DictionaryValue::Type::TrainingParameterSchedule:
+            {
+                CNTK::TrainingParameterSchedule<double>* schedulePtr = new CNTK::TrainingParameterSchedule<double>(dictVal.Value<CNTK::TrainingParameterSchedule<double>>());
+                
+                val = SWIG_NewPointerObj(schedulePtr, $descriptor(CNTK::TrainingParameterSchedule<double>), 1);
+                break;
+            }
             case CNTK::DictionaryValue::Type::Axis:
                 val = PyTuple_New(3);
                 if (val == NULL)
@@ -1458,6 +1487,9 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::SwigMinibatchSource)
 %shared_ptr(CNTK::SwigDataDeserializer)
 %shared_ptr(CNTK::SwigChunk)
+%shared_ptr(CNTK::TrainingParameterSchedule<double>)
+%shared_ptr(CNTK::TrainingParameterSchedule<size_t>)
+
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibraryExperimental.h"
@@ -1918,11 +1950,11 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 %template(DictionaryValueFromNDArrayView) CNTK::DictionaryValue::DictionaryValue<CNTK::NDArrayView>;
 
-%template(training_parameter_per_sample_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
-%template(training_parameter_per_minibatch_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Minibatch>;
 
-typedef CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample> MinibatchSizeSchedule;
-%template(minibatch_size_schedule) CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample>;
+typedef CNTK::TrainingParameterSchedule<size_t> MinibatchSizeSchedule;
+%template(minibatch_size_schedule)  CNTK::TrainingParameterSchedule<size_t>;
+typedef CNTK::TrainingParameterSchedule<double> TrainingDoubleParameterSchedule;
+%template(training_double_parameter_schedule) CNTK::TrainingParameterSchedule<double>;
 
 %template(OptionalBool) CNTK::Internal::Optional<bool>;
 
