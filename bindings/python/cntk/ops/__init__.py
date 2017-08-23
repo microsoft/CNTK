@@ -220,7 +220,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-                auto_padding=[True], max_temp_mem_size_in_samples=0, name=''):
+                auto_padding=[True], dilation=(1,), max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -274,12 +274,13 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
     strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
-    return convolution(convolution_map, operand, strides, sharing, auto_padding,
+    dilation = sanitize_shape(dilation)
+    return convolution(convolution_map, operand, strides, sharing, auto_padding, dilation,
                        max_temp_mem_size_in_samples, name)
 
 @typemap
 def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
-                          auto_padding=[True], output_shape=None, max_temp_mem_size_in_samples=0, name=''):
+                          auto_padding=[True], dilation=(1,), output_shape=None, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the transposed convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -338,7 +339,8 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     if output_shape is None:
         output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
-    return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
+    dilation = sanitize_shape(dilation)
+    return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding, dilation,
                                  output_shape, max_temp_mem_size_in_samples, name)
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average

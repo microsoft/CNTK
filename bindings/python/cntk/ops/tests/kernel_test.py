@@ -1,4 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
+# Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -196,7 +197,7 @@ def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, 
                          dtype=sanitize_dtype_cntk(precision),
                          needs_gradient=True,
                          name='a')
-                
+
     backward = (1 / np.prod(pooling_window)) * np.ones_like(input_operand)
 
     from cntk import pooling
@@ -507,7 +508,7 @@ CONVOLUTION_TRANSPOSE_OUTPUT_DATA = [
      [[[[ 0, 3, 4, 11, 8, 10],
         [ 3, 12, 11, 28, 19, 26],
         [ 12, 27, 16, 35, 20, 25],
-        [ 27, 60, 35, 76, 43, 56], 
+        [ 27, 60, 35, 76, 43, 56],
         [ 24, 51, 28, 59, 32, 40]]]]) # result
 ]
 # this test handles convolution transpose, without specifying output shape
@@ -543,13 +544,13 @@ def test_convolution_transpose_with_output(input_size, conv_size, result, device
 
 
 def test_conv_incorrect_shapes():
-    input = C.input_variable(())    
+    input = C.input_variable(())
     with pytest.raises(ValueError):
         h = C.layers.Convolution(filter_shape=(5,5), num_filters=8, strides=(1,1), pad=True)(input)
     with pytest.raises(ValueError):
         h = C.layers.MaxPooling(filter_shape=(2,2), strides=(2,2))(input)
 
-    input = C.input_variable(28)    
+    input = C.input_variable(28)
     with pytest.raises(ValueError):
         h = C.layers.Convolution(filter_shape=(5,5), num_filters=8, strides=(1,1), pad=True)(input)
     with pytest.raises(ValueError):
@@ -572,3 +573,41 @@ def test_conv_cudnn_batch_size_change(device_id):
         seq_lens = [[int(x*msl+1) for x in np.random.random((batch_size))] for msl in max_seq_len]
         output.grad({input1:[np.random.random((sl,) + input_shape).astype(np.float32) for sl in seq_lens[0]],
                      input2:[np.random.random((sl,) + input_shape).astype(np.float32) for sl in seq_lens[1]]})
+
+DILATED_CONVOLUTION_DATA = [
+    ([1, 1, 5, 5], # input_size
+     [1, 3, 3], # convolution size
+     [[[[624]]]]) # result
+]
+@pytest.mark.parametrize("input_size, conv_size, result", DILATED_CONVOLUTION_DATA)
+def test_convolution_dilated(input_size, conv_size, result, device_id, precision):
+    if device_id == -1:
+        pytest.skip('Test only runs on GPU')
+
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    # fill input operand with a sequence 0,1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(total_size, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = C.input_variable(shape=input_operand.shape[1:],
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
+
+    # do the same for convolution kernel
+    total_size = np.prod(conv_size)
+    y = np.arange(total_size, dtype=dt)
+    conv_map = constant(value=y.reshape(conv_size), device=dev)
+
+    from cntk.ops import convolution
+    input_op = convolution(conv_map, a, auto_padding=[False], dilation=2)
+
+    forward_input = {a: input_operand}
+    expected_forward = AA(result)
+
+    unittest_helper(input_op, forward_input, expected_forward,
+                    None, device_id=device_id, precision=precision)
