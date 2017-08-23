@@ -554,3 +554,21 @@ def test_conv_incorrect_shapes():
         h = C.layers.Convolution(filter_shape=(5,5), num_filters=8, strides=(1,1), pad=True)(input)
     with pytest.raises(ValueError):
         h = C.layers.MaxPooling(filter_shape=(2,2), strides=(2,2))(input)
+
+def test_conv_cudnn_batch_size_change(device_id):
+    if device_id == -1:
+        pytest.skip('Test only runs on GPU')
+
+    np.random.seed(0)
+    input_shape = (1, 16, 100)
+    input1 = C.sequence.input_variable(input_shape, needs_gradient=True, sequence_axis=C.Axis.new_unique_dynamic_axis('c'))
+    input2 = C.sequence.input_variable(input_shape, needs_gradient=True, sequence_axis=C.Axis.new_unique_dynamic_axis('q'))
+    conv = C.layers.Convolution2D((5,8), 100, activation=C.relu, init=C.glorot_uniform(), bias=True, init_bias=0)
+    output = C.reduce_sum(conv(input1), axis=C.Axis.all_axes()) + C.reduce_sum(conv(input2), axis=C.Axis.all_axes())
+    num_batches = 100 # change to greater value for a more thorough test
+    batch_size = 1
+    max_seq_len = [100, 10]
+    for batch in range(num_batches):
+        seq_lens = [[int(x*msl+1) for x in np.random.random((batch_size))] for msl in max_seq_len]
+        output.grad({input1:[np.random.random((sl,) + input_shape).astype(np.float32) for sl in seq_lens[0]],
+                     input2:[np.random.random((sl,) + input_shape).astype(np.float32) for sl in seq_lens[1]]})
