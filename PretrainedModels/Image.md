@@ -62,13 +62,13 @@ This page contains pre-trained image models either converted from other toolkits
 |Single crop top 1 / top 5 error | 23.862% / 7.180%
 
 #### ResNet20 for CIFAR-10
-|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet20_CIFAR10_Python.model
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet20_CIFAR10_CNTK.model
 |:-------|:---
 |Training script | [TrainResNet_CIFAR10.py --network resnet20](../Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py)
 |Single crop top 1 error | 8.17%
 
 #### ResNet110 for CIFAR-10
-|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet110_CIFAR10_Python.model
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet110_CIFAR10_CNTK.model
 |:-------|:---
 |Training script | [TrainResNet_CIFAR10.py --network resnet110](../Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py)
 |Single crop top 1 error | 6.08%
