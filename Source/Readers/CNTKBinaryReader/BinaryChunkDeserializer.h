@@ -81,8 +81,6 @@ typedef unique_ptr<ChunkTable> ChunkTablePtr;
 class CorpusDescriptor;
 typedef std::shared_ptr<CorpusDescriptor> CorpusDescriptorPtr;
 
-class FileWrapper;
-
 // TODO: more details when tracing warnings 
 class BinaryChunkDeserializer : public DataDeserializerBase {
 public:
@@ -106,8 +104,8 @@ private:
     void Initialize(const std::map<std::wstring, std::wstring>& rename, DataType precision);
 
     // Reads the chunk table from disk into memory
-    void ReadChunkTable(FileWrapper& infile, uint32_t firstChunkIdx, uint32_t numChunks);
-    void ReadChunkTable(FileWrapper& infile);
+    void ReadChunkTable(FILE* infile, uint32_t firstChunkIdx, uint32_t numChunks);
+    void ReadChunkTable(FILE* infile);
 
     // Reads a chunk from disk into buffer
     unique_ptr<byte[]> ReadChunk(ChunkIdType chunkId);
@@ -118,7 +116,7 @@ private:
 
 private:
     const wstring m_filename;
-    std::shared_ptr<FileWrapper> m_file;
+    FILE* m_file;
 
     int64_t m_headerOffset, m_chunkTableOffset;
 

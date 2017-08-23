@@ -9,7 +9,6 @@
 #include "BinaryChunkDeserializer.h"
 #include "BinaryDataChunk.h"
 #include "FileHelper.h"
-#include "FileWrapper.h"
 #include <vector>
 
 namespace CNTK {
@@ -24,12 +23,12 @@ enum class MatrixEncodingType : unsigned char
 };
 
 
-void BinaryChunkDeserializer::ReadChunkTable(FileWrapper& infile)
+void BinaryChunkDeserializer::ReadChunkTable(FILE* infile)
 {
     ReadChunkTable(infile, 0, m_numChunks);
 }
 
-void BinaryChunkDeserializer::ReadChunkTable(FileWrapper& infile, uint32_t firstChunkIdx, uint32_t numChunks)
+void BinaryChunkDeserializer::ReadChunkTable(FILE* infile, uint32_t firstChunkIdx, uint32_t numChunks)
 {
     if (firstChunkIdx + numChunks > m_numChunks) 
     {
@@ -40,26 +39,26 @@ void BinaryChunkDeserializer::ReadChunkTable(FileWrapper& infile, uint32_t first
 
     uint64_t firstChunkOffset = firstChunkIdx * sizeof(BinaryChunkInfo) + m_chunkTableOffset;
 
-    // Seek to the start of the offset info for the first requested chunk
-    infile.SeekOrDie(firstChunkOffset, SEEK_SET);
+    // Seek to the start of the offset info for the first requested chunk 
+    CNTKBinaryFileHelper::SeekOrDie(infile, firstChunkOffset, SEEK_SET);
 
     // Note we create numChunks + 1 since we want to be consistent with determining the size of each chunk.
     BinaryChunkInfo* chunks = new BinaryChunkInfo[numChunks + 1];
 
     // Read in all of the offsets for the chunks of interest
-    infile.ReadOrDie(chunks, sizeof(BinaryChunkInfo), numChunks);
+    CNTKBinaryFileHelper::ReadOrDie(chunks, sizeof(BinaryChunkInfo), numChunks, infile);
 
     // Now read the final entry. It is either the next offset entry (if we're reading a subset and the
     // entry exists), or we just fill it with the correct information based on file size if it doesn't
     if (firstChunkIdx + numChunks == m_numChunks)
     {
-        auto position = infile.TellOrDie();
+        auto position = CNTKBinaryFileHelper::TellOrDie(infile);
         chunks[numChunks].offset = position;
         chunks[numChunks].numSamples = 0;
         chunks[numChunks].numSequences = 0;
     }
     else
-        infile.ReadOrDie(chunks + numChunks, sizeof(BinaryChunkInfo), 1);
+        CNTKBinaryFileHelper::ReadOrDie(chunks + numChunks, sizeof(BinaryChunkInfo), 1, infile);
 
     m_chunkTable = make_unique<ChunkTable>(numChunks, chunks);
 
@@ -86,35 +85,38 @@ BinaryChunkDeserializer::BinaryChunkDeserializer(const std::wstring& filename) :
 
 BinaryChunkDeserializer::~BinaryChunkDeserializer()
 {
+    if (m_file)
+        CNTKBinaryFileHelper::CloseOrDie(m_file);
 }
 
 
 void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstring>& rename, DataType precision)
 {
-    m_file = std::make_shared<FileWrapper>(m_filename, L"rb");
-    m_file->CheckIsOpenOrDie();
+    if (m_file)
+        CNTKBinaryFileHelper::CloseOrDie(m_file);
+
+    m_file = CNTKBinaryFileHelper::OpenOrDie(m_filename, L"rb");
 
     // First, verify the magic number.
-    CNTKBinaryFileHelper::FindMagicOrDie(*m_file);
+    CNTKBinaryFileHelper::FindMagicOrDie(m_file, m_filename);
     
     // Second, read the version number of the data file, and (for now) make sure the reader version is the same.
-    uint32_t versionNumber = CNTKBinaryFileHelper::GetVersionNumber(*m_file);
+    uint32_t versionNumber = CNTKBinaryFileHelper::GetVersionNumber(m_file);
     if (versionNumber != s_currentVersion)
         LogicError("The reader version is %" PRIu32 ", but the data file was created for version %" PRIu32 ".",
             s_currentVersion, versionNumber);
 
     // Now, find where the header is.
-    m_headerOffset = CNTKBinaryFileHelper::GetHeaderOffset(*m_file);
-    m_file->SeekOrDie(m_headerOffset, SEEK_SET);
-
+    m_headerOffset = CNTKBinaryFileHelper::GetHeaderOffset(m_file);
+    CNTKBinaryFileHelper::SeekOrDie(m_file, m_headerOffset, SEEK_SET);
     // Once again, make sure that the header is well-formed and starts with a magic number.
-    CNTKBinaryFileHelper::FindMagicOrDie(*m_file);
+    CNTKBinaryFileHelper::FindMagicOrDie(m_file, m_filename);
 
     // Next is the number of chunks in the input file.
-    m_file->ReadOrDie(m_numChunks);
+    CNTKBinaryFileHelper::ReadOrDie(&m_numChunks, sizeof(m_numChunks), 1, m_file);
 
     // Next is the number of inputs
-    m_file->ReadOrDie(m_numInputs);
+    CNTKBinaryFileHelper::ReadOrDie(&m_numInputs, sizeof(m_numInputs), 1, m_file);
 
     // Reserve space for all of the inputs, and then read them in.
     m_streams.resize(m_numInputs);
@@ -123,11 +125,11 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
     for (decltype(m_numInputs) i = 0; i < m_numInputs; i++)
     {
         MatrixEncodingType type;
-        m_file->ReadOrDie(type);
+        CNTKBinaryFileHelper::ReadOrDie(&type, sizeof(type), 1, m_file);
         if (type == MatrixEncodingType::dense)
-            m_deserializers[i] = make_shared<DenseBinaryDataDeserializer>(*m_file, precision);
+            m_deserializers[i] = make_shared<DenseBinaryDataDeserializer>(m_file, precision);
         else if (type == MatrixEncodingType::sparse_csc)
-            m_deserializers[i] = make_shared<SparseBinaryDataDeserializer>(*m_file, precision);
+            m_deserializers[i] = make_shared<SparseBinaryDataDeserializer>(m_file, precision);
         else
             RuntimeError("Unknown encoding type %u requested.", (unsigned int)type);
 
@@ -144,12 +146,12 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
     }
 
     // We just finished the header. So we're now at the chunk table.
-    m_chunkTableOffset = m_file->TellOrDie();
+    m_chunkTableOffset = CNTKBinaryFileHelper::TellOrDie(m_file);
 
     // We only have to read in the offsets table once, so do that now.
     // Note it's possible in distributed reading mode to only want to read
     // a subset of the offsets table.
-    ReadChunkTable(*m_file);
+    ReadChunkTable(m_file);
 }
 
 std::vector<ChunkInfo> BinaryChunkDeserializer::ChunkInfos()
@@ -177,9 +179,9 @@ void BinaryChunkDeserializer::SequenceInfosForChunk(ChunkIdType chunkId, std::ve
     unique_ptr<uint32_t[]> numSamplesPerSequence(new uint32_t[numberOfSequences]);
 
     // Seek to the start of the chunk
-    m_file->SeekOrDie(offset, SEEK_SET);
+    CNTKBinaryFileHelper::SeekOrDie(m_file, offset, SEEK_SET);
     // read 'numberOfSequences' unsigned ints
-    m_file->ReadOrDie(numSamplesPerSequence.get(), sizeof(uint32_t), numberOfSequences);
+    CNTKBinaryFileHelper::ReadOrDie(numSamplesPerSequence.get(), sizeof(uint32_t), numberOfSequences, m_file);
 
     auto startId = m_chunkTable->GetStartIndex(chunkId);
     for (decltype(numberOfSequences) i = 0; i < numberOfSequences; i++)
@@ -198,7 +200,7 @@ void BinaryChunkDeserializer::SequenceInfosForChunk(ChunkIdType chunkId, std::ve
 unique_ptr<byte[]> BinaryChunkDeserializer::ReadChunk(ChunkIdType chunkId)
 {
     // Seek to the start of the data portion in the chunk
-    m_file->SeekOrDie(m_chunkTable->GetDataStartOffset(chunkId), SEEK_SET);
+    CNTKBinaryFileHelper::SeekOrDie(m_file, m_chunkTable->GetDataStartOffset(chunkId), SEEK_SET);
 
     // Determine how big the chunk is.
     size_t chunkSize = m_chunkTable->GetChunkSize(chunkId);
@@ -208,7 +210,7 @@ unique_ptr<byte[]> BinaryChunkDeserializer::ReadChunk(ChunkIdType chunkId)
     unique_ptr<byte[]> buffer(new byte[chunkSize]);
 
     // Read the chunk from disk
-    m_file->ReadOrDie(buffer.get(), sizeof(byte), chunkSize);
+    CNTKBinaryFileHelper::ReadOrDie(buffer.get(), sizeof(byte), chunkSize, m_file);
 
     return buffer;
 }
