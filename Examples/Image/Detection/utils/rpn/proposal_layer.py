@@ -154,7 +154,7 @@ class ProposalLayer(UserFunction):
 
         # 4. sort all (proposal, score) pairs by score from highest to lowest
         # 5. take top pre_nms_topN (e.g. 6000)
-        order = scores.ravel().argsort()[::-1]
+        order = scores.ravel().argsort(kind='mergesort')[::-1]
         if pre_nms_topN > 0:
             order = order[:pre_nms_topN]
         proposals = proposals[order, :]

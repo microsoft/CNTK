@@ -50,11 +50,10 @@ def bbox_transform_inv(boxes, deltas):
     ctr_x = boxes[:, 0] + 0.5 * widths
     ctr_y = boxes[:, 1] + 0.5 * heights
 
-    # avoid overflow in exp
-    dx = np.clip(deltas[:, 0::4], None, 10)
-    dy = np.clip(deltas[:, 1::4], None, 10)
-    dw = np.clip(deltas[:, 2::4], None, 10)
-    dh = np.clip(deltas[:, 3::4], None, 10)
+    dx = deltas[:, 0::4]
+    dy = deltas[:, 1::4]
+    dw = deltas[:, 2::4]
+    dh = deltas[:, 3::4]
 
     pred_ctr_x = dx * widths[:, np.newaxis] + ctr_x[:, np.newaxis]
     pred_ctr_y = dy * heights[:, np.newaxis] + ctr_y[:, np.newaxis]
