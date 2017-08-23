@@ -8,8 +8,9 @@
 #include "DataDeserializerBase.h"
 #include "BinaryConfigHelper.h"
 #include "BinaryDataChunk.h"
-#include "FileWrapper.h"
+#include "FileHelper.h"
 #include "Reader.h"
+
 
 namespace CNTK {
 
@@ -18,7 +19,7 @@ class BinaryDataDeserializer
 {
 public:
 
-    BinaryDataDeserializer(FileWrapper& file, DataType precision = DataType::Float)
+    BinaryDataDeserializer(FILE* file, DataType precision = DataType::Float)
     {
         ReadName(file);
         ReadDataType(file);
@@ -77,26 +78,26 @@ protected:
 
     virtual ~BinaryDataDeserializer() = default;
 
-    void ReadName(FileWrapper& file)
+    void ReadName(FILE* file)
     {
         uint32_t len;
         // read the name
-        file.ReadOrDie(len);
+        CNTKBinaryFileHelper::ReadOrDie(&len, sizeof(len), 1, file);
         vector<char> temp(len + 1 , '\0');
-        file.ReadOrDie(temp.data(), sizeof(char), len);
+        CNTKBinaryFileHelper::ReadOrDie(temp.data(), sizeof(char), len, file);
         m_name = msra::strfun::utf16(temp.data());
     }
 
-    void ReadDataType(FileWrapper& file)
+    void ReadDataType(FILE* file)
     {
-        file.ReadOrDie(m_dataType);
+        CNTKBinaryFileHelper::ReadOrDie(&m_dataType, sizeof(m_dataType), 1, file);
         if (m_dataType> ReaderDataType::tdouble)
             RuntimeError("Unsupported input data type %u.", (unsigned int)m_dataType);
     }
 
-    void ReadSampleSize(FileWrapper& file)
+    void ReadSampleSize(FILE* file)
     {
-        file.ReadOrDie(m_sampleDimension);
+        CNTKBinaryFileHelper::ReadOrDie(&m_sampleDimension, sizeof(m_sampleDimension), 1, file);
     }
 
     struct DenseInputStreamBuffer : DenseSequenceData
@@ -176,7 +177,7 @@ public:
 class SparseBinaryDataDeserializer : public BinaryDataDeserializer
 {
 public:
-    SparseBinaryDataDeserializer(FileWrapper& file, DataType precision = DataType::Float)
+    SparseBinaryDataDeserializer(FILE* file, DataType precision = DataType::Float)
         :BinaryDataDeserializer(file, precision)
     {
         if (IndexType(m_sampleDimension) < 0)

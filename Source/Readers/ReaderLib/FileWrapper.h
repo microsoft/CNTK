@@ -131,7 +131,7 @@ public:
 
     // This method should not be used if T has bare pointers as its members.
     template <typename T, typename std::enable_if<std::is_pod<T>::value>::type* = nullptr>
-    inline void ReadOrDie(T& value)
+    inline bool ReadOrDie(T& value)
     {
         if (!TryRead(value))
             RuntimeError("Error reading file '%ls': %s.", m_filename.c_str(), strerror(errno));
