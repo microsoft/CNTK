@@ -14,7 +14,7 @@ class FileWrapper;
 namespace CNTK {
 
 // Implementation of a helper class for reading binary files with FileWrapper class
-class CBFUtils
+class CNTKBinaryFileHelper
 {
 public:
     static const uint64_t MAGIC_NUMBER = 0x636e746b5f62696eU;
@@ -23,7 +23,7 @@ public:
     {
         // Read the magic number and make sure we're given a proper CBF file.
         uint64_t number;
-        f.ReadOrDie(number);
+        f.TryRead(number);
 
         if (number != MAGIC_NUMBER)
             RuntimeError("The input (%S) is not a valid CNTK binary format file.",
@@ -47,7 +47,7 @@ public:
     }
 
 private:
-    CBFUtils();
+    CNTKBinaryFileHelper();
 };
 
 }
