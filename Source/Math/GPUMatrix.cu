@@ -315,6 +315,14 @@ void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId)
     CUDA_CALL(cudaSetDevice(deviceId));
 }
 
+template <class ElemType>
+/*static*/ void GPUMatrix<ElemType>::SyncDevice(DEVICEID_TYPE deviceId)
+{
+    assert(deviceId >= 0);
+    Microsoft::MSR::CNTK::PrepareDevice(deviceId);
+    SyncGuard syncGuard(/*forceSync=*/true);
+}
+
 // PrepareDevice - Set up the correct cuda context for an operation
 // deviceId - the device on which the operation will take place
 //            defaults to -1, which means use matrices current device

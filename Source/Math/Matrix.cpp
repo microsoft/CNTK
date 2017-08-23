@@ -597,6 +597,13 @@ void Matrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId)
 }
 
 template <class ElemType>
+/*static*/ void Matrix<ElemType>::SyncDevice(DEVICEID_TYPE deviceId)
+{
+    if (deviceId >= 0)
+        GPUMatrix<ElemType>::SyncDevice(deviceId);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::Read(File& stream)
 {
     Matrix<ElemType>& M = *this;

@@ -953,6 +953,11 @@ namespace CNTK
         ///
         CNTK_API void LogToFile(const std::wstring& name, FILE* f = stderr, size_t maxItems = 6, bool columnMajor = true) const;
 
+        ///
+        /// For debugging/timing: Synchronize the device. That is, wait until any pending operation has been completed.
+        ///
+        CNTK_API static void Sync(const DeviceDescriptor& device);
+
     private:
         // Disallow copy and move construction and assignment
         NDArrayView(const NDArrayView&) = delete; NDArrayView& operator=(const NDArrayView&) = delete; NDArrayView& operator=(NDArrayView&&) = delete; NDArrayView(NDArrayView&& other) = delete;

@@ -123,7 +123,7 @@ namespace CNTK
 
     bool DataParallelDistributedLearner::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& info)
     {
-        if (m_sampleCount >= m_distributeAfterSamples)
+        if (m_sampleCount >= m_distributeAfterSamples && m_communicator->Workers().size() > 1)
         {
             auto profGradientAgg = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainGradient);
 

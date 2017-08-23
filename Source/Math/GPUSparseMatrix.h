@@ -149,8 +149,12 @@ public:
     // and for diagnostics
     void VerifyCachedNzCount(GPUSPARSE_INDEX_TYPE nzCount) const
     {
+#if 1   // this branch disables the verification
+        nzCount;
+#else   // verification is costly and completely undoes the benefit of caching
         if (FetchNzCount() != nzCount)
             LogicError("VerifyCachedNzCount: GPU-side NzCount unexpectedly changed/not synced??");
+#endif
     }
 
     inline size_t NzSize() const { return sizeof(ElemType) * NzCount(); } // actual number of element bytes in use

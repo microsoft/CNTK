@@ -199,6 +199,8 @@ public:
     static void SetDevice(DEVICEID_TYPE deviceId);
     DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
+    static void SyncDevice(DEVICEID_TYPE deviceId);
+
     static cublasHandle_t GetCublasHandle(int computeDevice = -1);
     ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
     size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; // allocated by the callee but need to be deleted by the caller

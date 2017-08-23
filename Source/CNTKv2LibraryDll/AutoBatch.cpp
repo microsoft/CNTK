@@ -21,7 +21,7 @@
 #include <string>
 
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
-#define LOG_STATS     // if defined, log statistics (#operations)
+//#define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
@@ -1246,6 +1246,16 @@ class Variable::AutoBatch
             : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
         // execute it
         output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
+#if 0   // run multiple times to get a feel for the runtime cost
+        for (size_t i = 1; i < 5; i++)
+        {
+            outValue =
+                  isFree ? nullptr
+                //: !output.IsSparse() ? output.m_dataFields->m_value;
+                : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
+            output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
+        }
+#endif
         // stats
         let primitiveOp = f.m_op;
         if (isFree) // means we did not pass a data buffer for the result; any one we pass a buffer does actual work

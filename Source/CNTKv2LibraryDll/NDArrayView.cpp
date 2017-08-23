@@ -174,6 +174,11 @@ namespace CNTK
         }
     }
 
+    /*static*/ void NDArrayView::Sync(const DeviceDescriptor& device)
+    {
+        Matrix<float>::SyncDevice(AsCNTKImplDeviceId(device));
+    }
+
     void NDArrayView::SetValue(double value)
     {
         if (GetDataType() == DataType::Float && (float)value == value) // useful for setting stuff to 0 or 1

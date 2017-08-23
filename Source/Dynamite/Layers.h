@@ -19,6 +19,8 @@
 //#define DISABLE_NORMALIZATIONS // #define this to disable LengthNormalization and Droppo scaling
 
 #define let const auto
+#define Named(n) (L##n)
+//#define Named(n) (std::wstring())
 
 using namespace CNTK;
 using namespace std;
@@ -226,7 +228,7 @@ struct Batch
     {
         let& shape = batch.front().Shape();
         let axis = (int)shape.Rank(); // add a new axis
-        return Reshape(ReduceSum(Splice(batch, Axis(axis)), Axis(axis)), shape, L"sum");
+        return Reshape(ReduceSum(Splice(batch, Axis(axis)), Axis(axis)), shape, Named("sum"));
     }
 
     static Variable sum(const vector<vector<Variable>>& batch)
@@ -316,7 +318,7 @@ static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
     auto b = Parameter({ outputDim }, DTYPE, 0.0, device, L"b");
     return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
     {
-        return /*Sigmoid*/ReLU(Times(W, input) + b + Times(R, prevOutput), L"RNNStep.h");
+        return /*Sigmoid*/ReLU(Times(W, input) + b + Times(R, prevOutput), Named("RNNStep.h"));
     });
 }
 
@@ -559,7 +561,7 @@ struct Sequence
 
     static UnarySequenceModel Recurrence(const BinaryModel& step, const Variable& initialState, bool goBackwards = false)
     {
-        let barrier = Barrier(L"Recurrence");
+        let barrier = Barrier(Named("Recurrence"));
         // if initialState is a learnable parameter, then we must keep it
         vector<Parameter> rememberedInitialState;
         if (initialState.IsParameter())
@@ -593,8 +595,8 @@ struct Sequence
     {
         let fwd = Recurrence(stepFwd, initialStateFwd);
         let bwd = Recurrence(stepBwd, initialStateBwd, true);
-        let barrier = Barrier(L"BiRecurrence");
-        let splice = Sequence::Map(BinaryModel([=](const Variable& a, const Variable& b) { return Splice({ barrier(a), b }, Axis(0), L"bidi"); }));
+        let barrier = Barrier(Named("BiRecurrence"));
+        let splice = Sequence::Map(BinaryModel([=](const Variable& a, const Variable& b) { return Splice({ barrier(a), b }, Axis(0), Named("bidi")); }));
         vector<Variable> rFwd, rBwd;
         return BinarySequenceModel({}, { { L"stepFwd", stepFwd },{ L"stepBwd", stepBwd } },
         [=](vector<Variable>& res, const vector<Variable>& inFwd, const vector<Variable>& inBwd) mutable
@@ -608,7 +610,7 @@ struct Sequence
 
     static UnaryFoldingModel Fold(const BinaryModel& step, const Variable& initialState)
     {
-        let barrier = Barrier(L"Fold");
+        let barrier = Barrier(Named("Fold"));
         return UnaryFoldingModel({}, { { L"step", step }  },
         [=](const vector<Variable>& x) -> Variable
         {
@@ -637,14 +639,14 @@ static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStatic
 {
     //LOG(z);
     //LOG(ReduceLogSum(z, axis, L"smLogDenom"));
-    return z - ReduceLogSum(z, axis, L"smLogDenom");
+    return z - ReduceLogSum(z, axis, Named("smLogDenom"));
 }
 
 // built-in Softmax requires temp memory, so we use an explicit expression instead
 static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes())
 {
     //LOG(LogSoftmax(z, axis));
-    return Exp(LogSoftmax(z, axis), L"sm");
+    return Exp(LogSoftmax(z, axis), Named("sm"));
 }
 
 // built-in Softplus is a BlockFunction, so need to replace it here
@@ -663,10 +665,10 @@ static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label
     // TODO: Dynamite should rewrite Times() that is really a dot product
     Variable ceLogNumer;
     if (label.IsSparse() && label.Shape().Rank() == 1)
-        ceLogNumer = Times(label, z, /*outputRank=*/0, L"ceLogNumer");
+        ceLogNumer = Times(label, z, /*outputRank=*/0, Named("ceLogNumer"));
     else
-        ceLogNumer = ReduceSum(ElementTimes(label, z, L"ceLabel"), axis, L"ceLogNumer");
-    let loss = Minus(ReduceLogSum(z, axis, L"ceLogDenom"), ceLogNumer, L"ce");
+        ceLogNumer = ReduceSum(ElementTimes(label, z, Named("ceLabel")), axis, Named("ceLogNumer"));
+    let loss = Minus(ReduceLogSum(z, axis, Named("ceLogDenom")), ceLogNumer, Named("ce"));
     //return Reshape(loss, NDShape(), L"ce");
     return loss; // Reshape(loss, NDShape());
 }

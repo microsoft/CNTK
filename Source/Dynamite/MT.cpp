@@ -59,7 +59,7 @@ BinarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim,
                                                           GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"bwdInitialValue")));
     vector<UnaryBroadcastingModel> bns;
     for (size_t i = 0; i < numLayers-1; i++)
-        bns.push_back(Dynamite::BatchNormalization(device, L"bnBidi"));
+        bns.push_back(Dynamite::BatchNormalization(device, Named("bnBidi")));
     vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
     vector<Variable> hBn;
     vector<ModelParametersPtr> nested;
@@ -100,11 +100,11 @@ TernaryModel AttentionModelBahdanau(size_t attentionDim1)
     [=](const Variable& query, const Variable& projectedKeys/*keys*/, const Variable& data) -> Variable
     {
         // compute attention weights
-        let projectedQuery = normQ(Times(Q, query, L"Q")); // [A x 1]
-        let tanh = Tanh((projectedQuery + projectedKeys), L"attTanh"); // [A x T]
-        let u = TransposeTimes(tanh, v, L"vProj"); // [T] col vector
+        let projectedQuery = normQ(Times(Q, query, Named("Q"))); // [A x 1]
+        let tanh = Tanh((projectedQuery + projectedKeys), Named("attTanh")); // [A x T]
+        let u = TransposeTimes(tanh, v, Named("vProj")); // [T] col vector
         let w = Dynamite::Softmax(u);
-        let res = Times(data, w, L"att"); // [A]
+        let res = Times(data, w, Named("att")); // [A]
         return res;
      });
 }
@@ -118,11 +118,11 @@ QuaternaryModel AttentionModelReference(size_t attentionDim1)
         [=](const Variable& h, const Variable& historyProjectedKey, const Variable& encodingProjectedNormedKey, const Variable& encodingProjectedData) -> Variable
     {
         // compute attention weights
-        let hProjected = Times(H, h, L"H"); // [A x 1]
-        let tanh = Tanh(normH(hProjected + historyProjectedKey), L"attTanh"); // [A x T]
-        let u = ReduceSum(ElementTimes(tanh, Tanh(encodingProjectedNormedKey), L"attDot"), Axis(0))->Output(); // [1 x T] col vector
+        let hProjected = Times(H, h, Named("H")); // [A x 1]
+        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A x T]
+        let u = ReduceSum(ElementTimes(tanh, Tanh(encodingProjectedNormedKey), Named("attDot")), Axis(0))->Output(); // [1 x T] col vector
         let w = Reshape(Dynamite::Softmax(u), { u.Shape().TotalSize() }); // [T] this is a transposition (Transpose does not work yet)
-        let res = Times(encodingProjectedData, w, L"attContext"); // [A x T] x [T] -> [A]
+        let res = Times(encodingProjectedData, w, Named("attContext")); // [A x T] x [T] -> [A]
         return res;
     });
 }
@@ -131,15 +131,15 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(L"encBarrier");
-    let encoderKeysProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, L"bnEncoderKeysProjection"); // keys projection for attention
-    let encoderDataProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, L"bnEncoderDataProjection"); // data projection for attention
+    let encoderKeysProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")); // keys projection for attention
+    let encoderDataProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")); // data projection for attention
     let embedTarget = Barrier(L"embedTargetBarrier") >> Embedding(embeddingDim, device) >> BatchNormalization(device, L"bnEmbedTarget");     // target embeddding
     let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x); }), device);
     let stepFunction = GRU(decoderRecurrentDim, device);
     //let attentionModel = AttentionModelBahdanau(attentionDim);
     let attentionModel = AttentionModelReference(attentionDim);
-    let firstHiddenProjection = Barrier(L"projBarrier") >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x); }), device);
+    let firstHiddenProjection = Barrier(Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x); }), device);
     vector<UnaryBroadcastingModel> resnets;
     for (size_t n = 0; n < numDecoderResNetProjections; n++)
         resnets.push_back(ResidualNet(decoderProjectionDim, device));
@@ -176,15 +176,15 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
         // We pack the result into a dense matrix; but only after the matrix product, to allow for it to be batched.
         encoderKeysProjection(encodingProjectedKeys, hEncs);
         encoderDataProjection(encodingProjectedData, hEncs);
-        let encodingProjectedKeysTensor = Splice(encodingProjectedKeys, Axis(1), L"encodingProjectedKeysTensor");  // [A x T]
+        let encodingProjectedKeysTensor = Splice(encodingProjectedKeys, Axis(1), Named("encodingProjectedKeysTensor"));  // [A x T]
         encodingProjectedKeys.clear();
-        let encodingProjectedDataTensor = Splice(encodingProjectedData, Axis(1), L"encodingProjectedDataTensor");  // [A x T]
+        let encodingProjectedDataTensor = Splice(encodingProjectedData, Axis(1), Named("encodingProjectedDataTensor"));  // [A x T]
         encodingProjectedData.clear();
         for (size_t t = 0; t < history.size(); t++)
         {
             // do recurrent step (in inference, history[t] would become res[t-1])
             let historyProjectedKey = embedTarget(history[t]);
-            let input = Splice({ historyProjectedKey, attentionContext }, Axis(0), L"augInput");
+            let input = Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput"));
             state = stepFunction(state, input);
             // compute attention vector
             //attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
@@ -206,8 +206,8 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 
 BinarySequenceModel CreateModelFunction()
 {
-    auto embedFwd = Embedding(embeddingDim, device) >> BatchNormalization(device, L"bnEmbedFwd");
-    auto embedBwd = Embedding(embeddingDim, device) >> BatchNormalization(device, L"bnEmbedBwd");
+    auto embedFwd = Embedding(embeddingDim, device) >> BatchNormalization(device, Named("bnEmbedFwd"));
+    auto embedBwd = Embedding(embeddingDim, device) >> BatchNormalization(device, Named("bnEmbedBwd"));
     auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
     vector<Variable> eFwd,eBwd, h;
@@ -267,8 +267,8 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
     [=](const /*batch*/vector<Variable>& features, const /*batch*/vector<Variable>& labels) mutable -> Variable
     {
         batchModel(lossesPerSequence, features, labels);             // batch-compute the criterion
-        let collatedLosses = Splice(lossesPerSequence, Axis(0), L"cesPerSeq");     // collate all seq lossesPerSequence
-        let mbLoss = ReduceSum(collatedLosses, Axis(0), L"ceBatch");  // aggregate over entire minibatch
+        let collatedLosses = Splice(lossesPerSequence, Axis(0), Named("cesPerSeq"));     // collate all seq lossesPerSequence
+        let mbLoss = ReduceSum(collatedLosses, Axis(0), Named("ceBatch"));  // aggregate over entire minibatch
         lossesPerSequence.clear();
         return mbLoss;
     });
@@ -283,11 +283,11 @@ void Train()
     // data
     auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(
         {
-            //PlainTextStreamConfiguration(L"src", srcVocabSize, { L"d:/work/Karnak/sample-model/data/train.src" }, { L"d:/work/Karnak/sample-model/data/vocab.src", L"<s>", L"</s>", L"<unk>" }),
-            //PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/train.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk>" })
-            PlainTextStreamConfiguration(L"src", srcVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.vocab", L"<s>", L"</s>", L"<unk>" }),
-            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.vocab", L"<s>", L"</s>", L"<unk>" })
-        }) },
+        //PlainTextStreamConfiguration(L"src", srcVocabSize, { L"d:/work/Karnak/sample-model/data/train.src" }, { L"d:/work/Karnak/sample-model/data/vocab.src", L"<s>", L"</s>", L"<unk>" }),
+        //PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/train.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk>" })
+        PlainTextStreamConfiguration(L"src", srcVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.vocab", L"<s>", L"</s>", L"<unk>" }),
+        PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.vocab", L"<s>", L"</s>", L"<unk>" })
+    }) },
         /*randomize=*/true);
     minibatchSourceConfig.maxSamples = MinibatchSource::InfinitelyRepeat;
     let minibatchSource = CreateCompositeMinibatchSource(minibatchSourceConfig);
@@ -320,8 +320,8 @@ void Train()
     let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;
     let lr0 = 0.0003662109375 * f;
     auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
-                                   MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
-                                   learnerOptions);
+        MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
+        learnerOptions);
 #endif
     let communicator = MPICommunicator();
     let& learner = CreateDataParallelDistributedLearner(communicator, baseLearner, /*distributeAfterSamples =*/ 0, /*useAsyncBufferedParameterUpdate =*/ false);
@@ -349,31 +349,70 @@ void Train()
         }
     } smoothedLoss;
     Microsoft::MSR::CNTK::Timer timer;
-    wstring modelPath = L"d:/me/tmp_dynamite_model.cmf";
-    size_t saveEvery = 1000;
-    for (mbCount = 0; true; mbCount++)
+    class // helper for timing GPU-side operations
     {
-        // test model saving
-        if (mbCount % saveEvery == 0 && communicator->CurrentWorker().IsMain())
+        bool enabled = false; // set to true to enable, false to disable
+        Microsoft::MSR::CNTK::Timer m_timer;
+        void syncGpu() { CNTK::NDArrayView::Sync(device); }
+    public:
+        void Restart()
+        {
+            if (enabled)
+            {
+                syncGpu();
+                m_timer.Restart();
+            }
+        }
+        void Log(const char* what, size_t numItems)
+        {
+            if (enabled)
+            {
+                syncGpu();
+                let elapsed = m_timer.ElapsedSeconds();
+                fprintf(stderr, "%s: %d items, items/sec=%.2f, ms/item=%.2f\n", what, (int)numItems, numItems / elapsed, 1000.0/*ms*/ * elapsed / numItems);
+            }
+        }
+    } partTimer;
+    wstring modelPath = L"d:/me/tmp_dynamite_model.cmf";
+    size_t saveEvery = 100;
+    size_t startMbCount = 0;
+    if (startMbCount > 0)
+    {
+        // restarting after crash. Note: not checkpointing the reader yet.
+        let path = modelPath + L"." + to_wstring(startMbCount);
+        fprintf(stderr, "restarting from: %S\n", path.c_str());
+        model_fn.RestoreParameters(path);
+    }
+    for (mbCount = startMbCount; true; mbCount++)
+    {
+        // checkpoint
+        if (mbCount % saveEvery == 0 &&
+            (startMbCount == 0 || mbCount > startMbCount) && // don't overwrite the starting model
+            communicator->CurrentWorker().IsMain())
         {
             let path = modelPath + L"." + to_wstring(mbCount);
             fprintf(stderr, "saving: %S\n", path.c_str());
             model_fn.SaveParameters(path);
+            // test model saving
             //for (auto& param : parameters) // destroy parameters as to prove that we reloaded them correctly.
             //    param.Value()->SetValue(0.0);
             //model_fn.RestoreParameters(path);
         }
         timer.Restart();
         // get next minibatch
+        partTimer.Restart();
         auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, (size_t)minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);
         if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
             break;
         let numLabels = minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples;
+        partTimer.Log("GetNextMinibatch", numLabels);
         fprintf(stderr, "#seq: %d, #words: %d, lr=%.8f\n",
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences,
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples,
                 learner->LearningRate());
+        partTimer.Restart();
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
+        partTimer.Log("FromCNTKMB", numLabels);
 #if 0   // for debugging: reduce #sequences to 3, and reduce their lengths
         args[0].resize(3);
         args[1].resize(3);
@@ -391,14 +430,22 @@ void Train()
         TrimLength(args[1][2], 2);
 #endif
         // train minibatch
+        partTimer.Restart();
         let mbLoss = criterion_fn(args[0], args[1]);
+        partTimer.Log("criterion_fn", numLabels);
         // backprop and model update
+        partTimer.Restart();
         mbLoss.Value()->AsScalar<float>();
+        partTimer.Log("ForwardProp", numLabels);
+        partTimer.Restart();
         mbLoss.Backward(gradients);
+        partTimer.Log("BackProp", numLabels);
         mbLoss.Value()->AsScalar<float>();
         MinibatchInfo info{ /*atEndOfData=*/false, /*sweepEnd=*/false, /*numberOfSamples=*/numLabels, mbLoss.Value(), mbLoss.Value() };
         info.trainingLossValue->AsScalar<float>();
+        partTimer.Restart();
         learner->Update(gradients, info);
+        partTimer.Log("Update", numLabels);
         let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
         totalLabels += info.numberOfSamples;
         // I once saw a strange (impossible) -1e23 or so CE loss, no idea where that comes from. Skip it in smoothed loss. Does not seem to hurt the convergence.
@@ -410,9 +457,10 @@ void Train()
             continue;
         }
         let smoothedLossVal = smoothedLoss.Update(lossPerLabel, info.numberOfSamples);
-        fprintf(stderr, "%d: CrossEntropy loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d, words/sec=%.1f\n",
+        let elapsed = timer.ElapsedSeconds(); // [sec]
+        fprintf(stderr, "%d: CrossEntropy loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d, words/sec=%.1f, ms/word=%.1f\n",
                         (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
-                        info.numberOfSamples / timer.ElapsedSeconds());
+                        info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples);
         // log
         // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
         if (mbCount < 400 || mbCount % 5 == 0)
@@ -421,7 +469,8 @@ void Train()
         //    break;
         if (std::isnan(lossPerLabel))
             throw runtime_error("Loss is NaN.");
-        //exit(0);
+        //if (mbCount == 2)
+        //    exit(0);
     }
 }
 
