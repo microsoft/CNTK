@@ -7,9 +7,12 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
+
+#ifndef CNTK_UWP
 #include <opencv2/core/mat.hpp>
 #include <opencv2/opencv.hpp>
 #include "opencv2/core/types.hpp"
+#endif 
 
 namespace tensorflow
 {
@@ -23,7 +26,9 @@ namespace Internal {
 ///
 void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst);
 
+#ifndef CNTK_UWP
 void writeImageToBuffer(void* matrix, int h, int w, int type, std::vector<uchar>& buf);
+#endif // !CNTK_UWP
 
 }
 }
