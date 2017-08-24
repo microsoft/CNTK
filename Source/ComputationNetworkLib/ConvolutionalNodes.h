@@ -560,20 +560,21 @@ public:
 
         if (isFinalValidationPass)
         {
-            if (m_convEng == nullptr)
+            bool recomputeConvGeometry = (m_convEng == nullptr) ? false : // For first minibatch, this flag must be false, so initial mem allocation can happen.
+                                          (outputShape != m_convEng->Geometry()->OutputShape()) || (inputShape != m_convEng->Geometry()->InputShape());
+            if ((m_convEng == nullptr) || ((m_convEng != nullptr) && recomputeConvGeometry))
             {
                 auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
-                                                                   m_kernelShape, m_mapCount, m_stride, 
+                                                                   m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
-                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms());
+                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
+                                                                false, recomputeConvGeometry);
             }
 
             if (Input(0)->GetSampleLayout().GetNumElements() != m_kernelShape.GetNumElements() * m_convEng->Geometry()->KernelCount())
             {
-                //LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [kernelCount, kernelWidth * kernelHeight * inputChannels]",
-                //           Input(0)->NodeName().c_str(), (int)m_convEng->Geometry()->KernelCount(), (int)m_kernelShape.GetNumElements());
                 LogicError("Convolution weight matrix %ls should have dimension [(filter shape) x (input channels) x (output channels)]",
                            Input(0)->NodeName().c_str());
             }

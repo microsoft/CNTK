@@ -847,9 +847,6 @@ namespace CNTK
                             auto originalKernelShape = kernelShape;
 
                             auto inputShape = m_inputs[1].Shape();
-                            if (inputShape.HasFreeDimension())
-                                LogicError("Function '%S': Currently convolution does not support operands with free static axes dimensions.", AsString().c_str());
-
                             if (!transpose || tmpShape.IsUnknown() || tmpShape[0] == 0)
                                 outputShape = ConvolutionOpOutputShape(m_op, inputShape, kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, true);
                             else
