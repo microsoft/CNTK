@@ -3,6 +3,10 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+// define half type since __half is device only
+// TODO: remove fake
+// TODO: investigate performance of implementation
+
 #pragma once
 
 #ifndef CPUONLY
@@ -31,7 +35,7 @@ public:
     // construction from build-in types
     __CUDA_HOSTDEVICE__ half(float f) {
 #ifndef __CUDA_ARCH__
-        __x = 0U; //fake
+        __x = 0U; // fake: need to implement float to half conversion here
 #else
         //__x = __float2half(f).__x;
         //*this = reinterpret_cast<half>(__float2half(f))
@@ -42,7 +46,7 @@ public:
     // cast to build-in types
     __CUDA_HOSTDEVICE__ half& operator=(float f) {
 #ifndef __CUDA_ARCH__
-        __x = 0U; return *this; //fake
+        __x = 0U; return *this; // fake: need to implement float to half conversion here
 #else
         //__x = __float2half(f).__x; return *this;
         *this = half(__float2half(f)); return *this;

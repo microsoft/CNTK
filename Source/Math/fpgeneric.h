@@ -4,6 +4,11 @@
 //
 
 // Make generic operators for floating point types
+/* This file contains:
+   - host/device operator for half type. TODO: use native fp16 math on sm_60/sm_70
+   - overload of operator between half and build-in type as default. TODO: clean up code doing such thing and remove these defaults
+   - overload libaray calls to remove 'sizeof(float)' usage. TODO: put them at same place. gemm/axpy are already in GPUMatrix, and overload of math functions are in TensorOp
+*/
 
 
 #pragma once
@@ -18,8 +23,6 @@
 
 /* Global-space operator functions are only available to nvcc compilation */
 #if defined(__CUDACC__)
-/* Arithmetic FP16 operations only supported on arch >= 5.3 */
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 530
 /* Some basic arithmetic operations expected of a builtin */
 __host__ __device__ __forceinline__ half operator+(const half &lh, const half &rh) { return (half)((float)lh + (float)rh); }
 __host__ __device__ __forceinline__ half operator-(const half &lh, const half &rh) { return (half)((float)lh - (float)rh); }
@@ -31,15 +34,14 @@ __host__ __device__ __forceinline__ half &operator-=(half &lh, const half &rh) {
 __host__ __device__ __forceinline__ half &operator*=(half &lh, const half &rh) { lh = lh * rh; return lh; }
 __host__ __device__ __forceinline__ half &operator/=(half &lh, const half &rh) { lh = lh / rh; return lh; }
 
-/* Note for increment and decrement we use the raw value 0x3C00 equating to half(1.0f), to avoid the extra conversion */
-__host__ __device__ __forceinline__ half &operator++(half &h)      { __half_raw one; one.x = 0x3C00; h += (__half)one; return h; }
-__host__ __device__ __forceinline__ half &operator--(half &h)      { __half_raw one; one.x = 0x3C00; h -= (__half)one; return h; }
-__host__ __device__ __forceinline__ half  operator++(half &h, int) { half ret = h; __half_raw one; one.x = 0x3C00; h += (__half)one; return ret; }
-__host__ __device__ __forceinline__ half  operator--(half &h, int) { half ret = h; __half_raw one; one.x = 0x3C00; h -= (__half)one; return ret; }
+__host__ __device__ __forceinline__ half &operator++(half &h)      { h += half(1.0f); return h; }
+__host__ __device__ __forceinline__ half &operator--(half &h)      { h -= half(1.0f); return h; }
+__host__ __device__ __forceinline__ half  operator++(half &h, int) { half ret = h; h += half(1.0f); return ret; }
+__host__ __device__ __forceinline__ half  operator--(half &h, int) { half ret = h; h -= half(1.0f); return ret; }
 
 /* Unary plus and inverse operators */
 __host__ __device__ __forceinline__ half operator+(const half &h) { return h; }
-__host__ __device__ __forceinline__ half operator-(const half &h) { half zero; zero = __float2half(0.0); return zero - h; }
+__host__ __device__ __forceinline__ half operator-(const half &h) { return half(0.0f) - h; }
 
 /* Some basic comparison operations to make it look like a builtin */
 __host__ __device__ __forceinline__ bool operator==(const half &lh, const half &rh) { return (float)lh == (float)rh; }
@@ -48,7 +50,6 @@ __host__ __device__ __forceinline__ bool operator> (const half &lh, const half &
 __host__ __device__ __forceinline__ bool operator< (const half &lh, const half &rh) { return (float)lh < (float)rh; }
 __host__ __device__ __forceinline__ bool operator>=(const half &lh, const half &rh) { return (float)lh >= (float)rh; }
 __host__ __device__ __forceinline__ bool operator<=(const half &lh, const half &rh) { return (float)lh <= (float)rh; }
-#endif /* __CUDA_ARCH__ < 530 */
 #endif /* defined(__CUDACC__) */
 
 // overload binary operators between 'half' and build-in type. TODO: This should be handled in a better way

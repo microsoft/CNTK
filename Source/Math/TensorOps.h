@@ -320,19 +320,19 @@ template <class ElemType>
 DECL ElemType Sqrt(ElemType z)
 {
     // BUGBUG: Why clip to 0? An invalid sqrt() should show up as a NaN in the result, instead of hiding it.
-    return sqrt_(z > 0 ? z : 0);
+    return sqrt_(z > 0 ? z : (ElemType)0);
 }
 
 template <class ElemType>
 DECL ElemType ClippedLog(ElemType z)
 {
-    return z < EPS_IN_LOG ? LOG_OF_EPS_IN_LOG : log_(z);
+    return z < EPS_IN_LOG ? (ElemType)LOG_OF_EPS_IN_LOG : log_(z);
 }
 
 template <class ElemType>
 DECL ElemType ClippedQuotient(ElemType a, ElemType b)
 {
-    if (fabs(b) < EPS_IN_INVERSE) // clip the denominator
+    if (fabs_(b) < EPS_IN_INVERSE) // clip the denominator
     {
         if (b > 0)
             b = EPS_IN_INVERSE;
@@ -400,11 +400,11 @@ DefUnaryOp(Sqr, Sqr(a));
 DefUnaryOp(Sqrt, Sqrt(a));
 DefUnaryOp(Exp, exp_(a));
 DefUnaryOp(Log, ClippedLog(a));
-DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
+DefUnaryOp(LinearRectifier, a > 0 ? a : (ElemType)0);
 DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Sin, sin_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
-DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (exp_(a)-1));
+DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (ElemType)(exp_(a)-1));
 DefUnaryOp(StableSigmoid, StableSigmoid(a));
 DefUnaryOp(Asin, asin_(a));
 DefUnaryOp(Acos, acos_(a));
@@ -420,8 +420,8 @@ DefUnaryOp(Cosh, cosh_(a));
         return expr;                             \
     }
 //#define DefBinaryOp(op, expr) template<class ElemType> DECL ElemType Op ## op(const ElemType & a, ElemType b, int i = 0) { UNUSED(i); return expr; }
-DefBinaryOp(CopyIf, a != 0 ? b : 0);
-DefBinaryOp(CopyIfNot, a == 0 ? b : 0);
+DefBinaryOp(CopyIf, a != 0 ? b : (ElemType)0);
+DefBinaryOp(CopyIfNot, a == 0 ? b : (ElemType)0);
 DefBinaryOp(Sum, a + b);
 DefBinaryOp(Difference, a - b);
 DefBinaryOp(ElementwiseProduct, a* b);
@@ -439,10 +439,10 @@ DefBinaryOp(LessEqual, a <= b);
 DefBinaryOp(And, (float)((!!a) && (!!b)));
 DefBinaryOp(Or, (float)((!!a) || (!!b)));
 DefBinaryOp(Xor, (float)((!!a) ^ (!!b)));
-DefBinaryOp(MaskNegative, b >= 0 ? a : 0);
+DefBinaryOp(MaskNegative, b >= (ElemType)0 ? a : (ElemType)0);
 DefBinaryOp(ElementwiseProductWithSigmoidDerivativeFromOutput, a*(b*(1 - b))); // b = output
 DefBinaryOp(ElementwiseProductWithTanhDerivativeFromOutput, a*(1 - b * b));
-DefBinaryOp(ElementwiseProductWithLinearRectifierDerivativeFromOutput, b > 0 ? a : 0);
+DefBinaryOp(ElementwiseProductWithLinearRectifierDerivativeFromOutput, b > (ElemType)0 ? a : (ElemType)0);
 DefBinaryOp(ElementwiseProductWithLogDerivativeFromOutput, a* exp_(-b));
 DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b)); // note: b = input for cos()
 DefBinaryOp(ElementwiseProductWithSinDerivative, a * cos_(b)); // note: b = input for sin()
@@ -452,7 +452,7 @@ DefBinaryOp(ElementwiseProductWithAbsDerivative, a * Sgn(b)); // note: b = input
 DefBinaryOp(ElementwiseProductWithReciprocalDerivative, a * -Sqr(b)); // b = output
 DefBinaryOp(ElementwiseProductWithSqrtDerivative, a / (2 * b)); // b = output; d/dx sqrt(x) = 1/(2 * sqrt(x)) --> note this is the same as ElementwiseQuotient w a constant; if more show up like this we should add more template params
 DefBinaryOp(SqrOfDifference, Sqr(a - b));
-DefBinaryOp(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, b >= 0 ? a : a*(1+b)); // b = output;
+DefBinaryOp(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, b >= 0 ? a : a*((ElemType)1+b)); // b = output;
 DefBinaryOp(ElementwiseProductWithSinhDerivative, a * cosh_(b)); // note: b = input for sinh()
 DefBinaryOp(ElementwiseProductWithCoshDerivative, a * sinh_(b)); // note: b = input for cosh()
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
@@ -468,13 +468,13 @@ DefBinaryOp(ElementwiseProductWithCoshDerivative, a * sinh_(b)); // note: b = in
     }
 
 DefTernaryOp(Cond, a ? b : c);
-DefTernaryOp(CopyIfEqual, a == b ? c : 0); // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
+DefTernaryOp(CopyIfEqual, a == b ? c : (ElemType) 0); // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
 DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min, b=max, c=data
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * StableSigmoid(c - b));
 DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
 DefTernaryOp(ElementwiseProductWithQuotient, a * b * OpReciprocal(c));
-DefTernaryOp(ElementwiseProductWithPowExponentDerivative, c <= 0 ? 0 : a * b * log_(c)); // same behavior as other toolkits
-DefTernaryOp(ElementwiseProductWithPowBaseDerivative, a * c * OpPow(b, c - 1)); // Using the output of pow would be faster but it requires a quaternary op and users will likely only use pow in forward mode
+DefTernaryOp(ElementwiseProductWithPowExponentDerivative, c <= 0 ? (ElemType)0 : (ElemType)(a * b * log_(c))); // same behavior as other toolkits
+DefTernaryOp(ElementwiseProductWithPowBaseDerivative, (ElemType)(a * c * OpPow(b, c - (ElemType)1))); // Using the output of pow would be faster but it requires a quaternary op and users will likely only use pow in forward mode
 
 #pragma pop_macro("DefTernaryOp")
 
