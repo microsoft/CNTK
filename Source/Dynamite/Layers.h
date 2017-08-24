@@ -16,7 +16,7 @@
 #include <set>
 #include <vector>
 
-#define DISABLE_NORMALIZATIONS // #define this to disable LengthNormalization and Droppo scaling
+//#define DISABLE_NORMALIZATIONS // #define this to disable LengthNormalization and Droppo scaling
 
 #define let const auto
 //#define Named(n) (L##n)

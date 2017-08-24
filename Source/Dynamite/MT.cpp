@@ -124,11 +124,17 @@ QuaternaryModel AttentionModelReference(size_t attentionDim1)
         [=](const Variable& h, const Variable& historyProjectedKey, const Variable& encodingProjectedNormedKey, const Variable& encodingProjectedData) -> Variable
     {
         // compute attention weights
-        let hProjected = Times(H, h, Named("H")); // [A x 1]
-        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A x T]
+        let hProjected = Times(H, h, Named("H")); // [A x 1]. Batchable.
+        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A x T]. Batchable by stacking.
+#if 1
+        let u = InnerProduct(tanh, Tanh(encodingProjectedNormedKey), Axis(0)); // [1 x T] row vector. Batchable by stacking.
+        let w = Dynamite::Softmax(u, Axis(1)); // [1 x T] ReduceLogSum() not parallelizable. Pad? E.g. bucket-pad?
+        let res = Reshape(InnerProduct(encodingProjectedData, w, Axis(1), Named("attContext")), NDShape{ attentionDim1 }); // [A x T] x [1 x T] -> [A x 1] Batchable with bucket-padding.
+#else
         let u = ReduceSum(ElementTimes(tanh, Tanh(encodingProjectedNormedKey), Named("attDot")), Axis(0))->Output(); // [1 x T] col vector
         let w = Reshape(Dynamite::Softmax(u), { u.Shape().TotalSize() }); // [T] this is a transposition (Transpose does not work yet)
         let res = Times(encodingProjectedData, w, Named("attContext")); // [A x T] x [T] -> [A]
+#endif
         return res;
     });
 }
@@ -313,7 +319,8 @@ void Train()
         numParameters += p.Shape().TotalSize();
     fprintf(stderr, "Total number of learnable parameters: %u\n", (unsigned int)numParameters);
     let epochSize = 10000000; // 10M is a bit more than half an epoch of ROM-ENG (~16M words)
-    let minibatchSize = 4096;
+    let communicator = MPICommunicator();
+    let minibatchSize = 4096      * communicator->Workers().size() /6; // for debugging: switch to smaller MB when running without MPI
     AdditionalLearningOptions learnerOptions;
     learnerOptions.gradientClippingThresholdPerSample = 0.2;
 #if 0
@@ -329,7 +336,6 @@ void Train()
         MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
         learnerOptions);
 #endif
-    let communicator = MPICommunicator();
     let& learner = CreateDataParallelDistributedLearner(communicator, baseLearner, /*distributeAfterSamples =*/ 0, /*useAsyncBufferedParameterUpdate =*/ false);
     unordered_map<Parameter, NDArrayViewPtr> gradients;
     for (let& p : parameters)
@@ -412,9 +418,10 @@ void Train()
             break;
         let numLabels = minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples;
         partTimer.Log("GetNextMinibatch", numLabels);
-        fprintf(stderr, "#seq: %d, #words: %d, lr=%.8f\n",
+        fprintf(stderr, "#seq: %d, #words: %d -> %d, lr=%.8f\n",
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences,
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples,
+                (int)numLabels,
                 learner->LearningRate());
         partTimer.Restart();
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);

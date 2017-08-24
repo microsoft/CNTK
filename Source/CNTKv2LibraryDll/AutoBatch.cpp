@@ -1231,7 +1231,7 @@ class Variable::AutoBatch
         LARGE_INTEGER freq, start;
         double total;
     public:
-        PCTimer() { if (!QueryPerformanceFrequency(&freq)) // count ticks per second RuntimeError("auto_timer: QueryPerformanceFrequency failure"); }
+        PCTimer() { if (!QueryPerformanceFrequency(&freq)) RuntimeError("auto_timer: QueryPerformanceFrequency failure"); } // count ticks per second
         void Start() { QueryPerformanceCounter(&start); }
         double Stop() // each read gives time elapsed since start, in seconds
         {
@@ -1246,9 +1246,12 @@ class Variable::AutoBatch
     struct CudaStats
     {
         PrimitiveOpType op = PrimitiveOpType::UnknownOP;
+        bool hasSparse = false;
         size_t numInvocations = 0;
         size_t totalElements = 0;  // sum of all output elements, for a rough indication of utilization
-        PCTimer timer;
+        PCTimer timerLaunch;
+        PCTimer timerRun;
+        PCTimer timerSync; // measure a dummy sync
     };
     vector<CudaStats> cudaStats;
 #endif
@@ -1270,23 +1273,32 @@ class Variable::AutoBatch
 #ifdef LOG_DETAILS
         LogFunction(f, "[bf]  ");
 #endif
+        //if (f.m_op == PrimitiveOpType::ElementTimes)
+        //    LogFunction(f, "[bf]  ");
         auto outValue = isFree
             ? nullptr
             : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
 #ifdef LOG_MEMOIZE_STATS
-        cudaStats.resize((size_t)PrimitiveOpType::UnknownOP);
-        auto& s = cudaStats[(size_t)f.m_op];
+        cudaStats.resize(2 * (size_t)PrimitiveOpType::UnknownOP);
+        let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
+        auto& s = cudaStats[(size_t)f.m_op + (hasSparse ? 1 : 0)];
         s.op = f.m_op; // (really only needed the first time)
+        s.hasSparse = hasSparse;
         s.numInvocations++;
         s.totalElements += outputShape.TotalSize();
         NDArrayView::Sync(inputValues[0]->Device());
-        s.timer.Start();
+        s.timerLaunch.Start();
 #endif
         // execute it
         output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
 #ifdef LOG_MEMOIZE_STATS
+        s.timerLaunch.Stop();
+        s.timerRun.Start();
         NDArrayView::Sync(inputValues[0]->Device());
-        s.timer.Stop();
+        s.timerRun.Stop();
+        s.timerSync.Start();
+        NDArrayView::Sync(inputValues[0]->Device());
+        s.timerSync.Stop();
 #endif
 #if 0   // run multiple times to get a feel for the runtime cost
         for (size_t i = 1; i < 5; i++)
@@ -1761,15 +1773,22 @@ public:
             }
             fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
 #ifdef LOG_MEMOIZE_STATS
-            double total = 0;
-            for (let& s : cudaStats)
-                if (s.numInvocations)
-                {
-                    fprintf(stderr, "-> %30S: %7.4f s = %9.6f s/launch * %5d launches, ~%9.2f elements/launch\n", PrimitiveOpTypeName(s.op).c_str(),
-                            s.timer.Total(), s.timer.Total() / (double)s.numInvocations, (int)s.numInvocations, s.totalElements / (double)s.numInvocations);
-                    total += s.timer.Total();
-                }
-            fprintf(stderr, "-> total launch time: %.4f s\n", total);
+            double totalLaunch = 0;
+            double totalExec = 0;
+            for (let& s : cudaStats) if (s.numInvocations)
+            {
+                let prefix = s.hasSparse ? L"sparse " : L"";
+                let name = PrimitiveOpTypeName(s.op);
+                let execTime = s.timerRun.Total() - s.timerSync.Total();
+                fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + name).c_str(),
+                        s.timerLaunch.Total(), execTime,
+                        1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * execTime / (double)s.numInvocations,
+                        (int)s.numInvocations,
+                        s.totalElements / (double)s.numInvocations);
+                totalLaunch += s.timerLaunch.Total();
+                totalExec   += execTime;
+            }
+            fprintf(stderr, "-> total launch + exec time: %.4f s + %.4f s\n", totalLaunch, totalExec);
 #endif
         }
         LazilyIndexedValue(v);

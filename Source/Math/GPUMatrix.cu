@@ -320,7 +320,7 @@ template <class ElemType>
 {
     assert(deviceId >= 0);
     Microsoft::MSR::CNTK::PrepareDevice(deviceId);
-    SyncGuard syncGuard(/*forceSync=*/true);
+    CUDA_CALL(cudaDeviceSynchronize());
 }
 
 // PrepareDevice - Set up the correct cuda context for an operation
