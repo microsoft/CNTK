@@ -324,8 +324,8 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 void RunDynamiteTests()
 {
     size_t numFailed = 0;
-    numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(3, DataType::Float,  DeviceDescriptor::GPUDevice(0));
 #if 1 // do this not every time
     numFailed += DynamiteTest(1, DataType::Float,  DeviceDescriptor::GPUDevice(0));

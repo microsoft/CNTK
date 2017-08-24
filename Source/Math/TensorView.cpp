@@ -267,37 +267,78 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
     if (reducingOpDims.size() > 0)
         CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this);
 
-    // special support for sparse data: ReduceSum(ElementWiseProduct(x,y)) (same as batched Times(x,y))
+    // special support for sparse data: ReduceSum(ElementWiseProduct(x,y)) (same as batched Times(x,y)) and gradient.
     // This is used for batched cross-entropy computation.
-    // Note: Because CNTK API does not allow ElementTimes with ReduceSum in one op, user writes Times() instead, and Dynamite will map it to this instead.
-    let IsDotProduct = [&]() -> bool // helper to decide
+    if (op == ElementWiseOperator::opElementwiseProduct && reductionOp == ElementWiseOperator::opSum)
     {
-        if (op != ElementWiseOperator::opElementwiseProduct || reductionOp != ElementWiseOperator::opSum) // basic operation must be reduce(a.*b)
-            return false;
-        // must be reducing consecutive input values into one result value
-        // regularXX represents the map dimension; e.g. [13 x 3  x  42 x 5] * [13 x 3  x  42 x 5] --> [1 x 1  x  42 x 5]
-        // gets a reduction over 13*3 consecutive values, with result being consecutive in memory arranged in a 42 x 5 grid
-        if (reducingOpDims.size() != 1 || reducingStrides[0][0] != 1 || reducingStrides[1][0] != 1 || reducingStrides[2][0] != 0)
-            return false;
-        // inputs must be consecutive in memory also for the non-reduced axes (which gets flattened into one if condition is true)
-        if (regularOpDims.size() != 0) // (only if there are non-reduced axes)
+        // Note: Because CNTK API does not allow ElementTimes with ReduceSum in one op, user writes Times() instead, and Dynamite will map it to this instead.
+        let IsDotProduct = [&]() -> bool // helper to decide
         {
-            let reducedElements = (int)reducingOpDims[0];
-            if (regularOpDims.size() != 1 || regularStrides[0][0] != reducedElements || regularStrides[1][0] != reducedElements || regularStrides[2][0] != 1)
+            // must be reducing consecutive input values into one result value
+            // regularXX represents the map dimension; e.g. [13 x 3  x  42 x 5] * [13 x 3  x  42 x 5] --> [1 x 1  x  42 x 5]
+            // gets a reduction over 13*3 consecutive values, with result being consecutive in memory arranged in a 42 x 5 grid
+            if (reducingOpDims.size() != 1 || reducingStrides[0][0] != 1 || reducingStrides[1][0] != 1 || reducingStrides[2][0] != 0)
                 return false;
+            // inputs must be consecutive in memory also for the non-reduced axes (which gets flattened into one if condition is true)
+            if (regularOpDims.size() != 0) // (only if there are non-reduced axes)
+            {
+                let reducedElements = (int)reducingOpDims[0];
+                if (regularOpDims.size() != 1 || regularStrides[0][0] != reducedElements || regularStrides[1][0] != reducedElements || regularStrides[2][0] != 1)
+                    return false;
+            }
+            return true; // that's it
+        };
+        // dot product
+        if (IsDotProduct())
+        {
+            let remainingElements =   GetShape().GetNumElements();                     // keeping this many elements
+            let reducedElements   = a.GetShape().GetNumElements() / remainingElements; // summing up this many elements per result
+            let inShape  = TensorShape(reducedElements, remainingElements);
+            let outShape = TensorShape(1,               remainingElements);
+            let  A = a.Reshaped(inShape).AsMatrix();
+            let  B = b.Reshaped(inShape).AsMatrix();
+            auto C =   Reshaped(outShape).AsMatrix();
+            return Matrix<ElemType>::InnerProduct(*A, *B, *C, true/*isColWise*/);
         }
-        return true; // that's it
-    };
-    if (IsDotProduct())
-    {
-        let remainingElements =   GetShape().GetNumElements();                   // keeping this many elements
-        let reducedElements = a.GetShape().GetNumElements() / remainingElements; // summing up this many elements per result
-        let inShape  = TensorShape(reducedElements, remainingElements);
-        let outShape = TensorShape(1,               remainingElements);
-        let  A = a.Reshaped(inShape).AsMatrix();
-        let  B = b.Reshaped(inShape).AsMatrix();
-        auto C =   Reshaped(outShape).AsMatrix();
-        return Matrix<ElemType>::InnerProduct(*A, *B, *C, true/*isColWise*/);
+        let IsDotProductGradient = [&]() -> bool // helper to decide
+        {
+            // there must be no reduction
+            if (reducingOpDims.size() != 0)
+                return false;
+            // at least one input must be broadcasting in the first flattened dimension, and must have at most one additional flattened dimension without broadcasting
+            if (regularOpDims.size() > 2) // input has too many non-flattened axes, not representable as a matrix
+                return false;
+            if (regularOpDims.size() > 0) // check the broadcasting dimension (may be missing to cater for degenerate case of all inputs being scalars)
+            {
+                if (regularStrides[0][0] != 0 && regularStrides[1][0] != 0) // one of them must broadcast
+                    return false;
+                if (regularStrides[0][0] > 1 || regularStrides[1][0] > 1) // broadcasting dimension must be consecutive
+                    return false;
+            }
+            if (regularOpDims.size() > 1) // check the "batch" dimension
+            {
+                let aHeight = regularStrides[0][0] == 0 ? 1 : (int)regularOpDims[0];
+                let bHeight = regularStrides[1][0] == 0 ? 1 : (int)regularOpDims[0];
+                if (regularStrides[0][1] != aHeight || regularStrides[1][1] != bHeight) // batch dimension must be consecutive in memory
+                    return false;
+            }
+            return true; // that's it
+        };
+        // gradient of dot product: scalar * vector -> vector
+        if (IsDotProductGradient())
+        {
+            let aIsWeight = regularOpDims.size() == 0 || regularStrides[0][0] == 0; // which of the two inputs is the weight? We allow both ways.
+            let&   data = !aIsWeight ? a : b;
+            let& weight =  aIsWeight ? a : b;
+            let width  = weight.GetShape().GetNumElements();         // number of scalar weights =  "batch dim"
+            let height =   data.GetShape().GetNumElements() / width; // broadcasting into this many elements per result
+            let   dataShape = TensorShape(height, width);
+            let weightShape = TensorShape(1,      width);
+            let  A =   data.Reshaped(  dataShape).AsMatrix();
+            let  B = weight.Reshaped(weightShape).AsMatrix(); // the weight is the second argument to ColumnwiseScaleAndWeightedAdd()
+            auto C =        Reshaped(  dataShape).AsMatrix();
+            return Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd((ElemType)1.0, *A, *B, beta, *C);
+        }
     }
 
     // regular case

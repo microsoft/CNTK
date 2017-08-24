@@ -644,6 +644,7 @@ public:
             bool hasSparse;
             if (IsReduceableDotProduct(fr, hasSparse))
             {
+#if 0           // We should no longer need to special-case for sparse, since DoElementwiseProductOf() will discover this special case.
                 // for sparse transposed, use InnerProduct
                 if (hasSparse)
                 {
@@ -657,6 +658,7 @@ public:
                     // TODO: better move this special-casing into TensorView::AssignElementwiseProductOf()
                 }
                 else
+#endif
                 {
                     ElementTimesNode<ElemType>::ForwardPropImpl(*this, fr, true/*allowBroadcast*/);
                 }
@@ -707,6 +709,8 @@ public:
             bool hasSparse;
             if (IsReduceableDotProduct(fr, hasSparse))
             {
+                // Note: We do not need to mask gaps here, since this code branch operates sample by sample (no reduction over samples).
+#if 0           // We should no longer need to special-case for sparse, since DoElementwiseProductOf() will discover this special case.
                 if (hasSparse)
                 {
                     Matrix<ElemType> gradient = GradientFor(fr);
@@ -717,9 +721,9 @@ public:
                         Input(inputIndex)->IsGradientInitializedBy(this) ? (ElemType)0.0 : (ElemType)1.0,
                         inputGradient);
                     // TODO: better move this special-casing into TensorView::AssignElementwiseProductOf()
-                    // Note: We do not need to mask gaps here, since this code branch operates sample by sample (no reduction over samples).
                 }
                 else
+#endif
                 {
                     ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, false/*allowBroadcast*/);
                 }
