@@ -495,6 +495,10 @@ static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
 // create a Barrier function
 static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const wstring& name = wstring())
 {
+#if 0 // use this when running unbatched comparisons (which won't work with BatchNorm)
+    device; name;
+    return Identity;
+#else
     static size_t id = 0; // unique id
     auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
     auto scale = Parameter({ NDShape::InferredDimension }, DTYPE, 1.0, device, L"scale");
@@ -506,6 +510,7 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
     {
         return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
     });
+#endif
 }
 
 // ResNet layer

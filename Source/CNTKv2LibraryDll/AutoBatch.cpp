@@ -2146,7 +2146,8 @@ public:
             return true;
 #endif
         };
-#ifndef NO_BATCHED_FORWARD  // TODO: should this be backward?
+#ifndef NO_BATCHED_FORWARD  // (the backward batching disable flag does not work somehow)
+        // Note: This needs to be enabled for column-sparse gradients to work!
         // BUGBUG: (perf) We should also have a special path for Reshape(), as to avoid the memory copy.
         let opClass = g_oscTable[f->m_op]; // operation-specific auto-batching class
         // splice operation must use scatter
