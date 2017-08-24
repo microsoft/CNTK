@@ -229,27 +229,19 @@ namespace CNTK
                 let& stdDevOverScaleTmp = args[7];
                 let& normedTmp = args[8]; // zero-mean/unit-variance intermediate goes here  --TODO: this can be optimized away by a joint kernel
                 // mean
-                //arg->LogToFile(L"bn:arg", stderr);
                 NDArrayView::NumericOperation({ arg }, (double)meanTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, meanTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                //meanTmp->LogToFile(L"bn:meanTmp", stderr);
                 // variance  --TODO: do we need a reduction opSqrSum, or an opDivBySqrt?
                 NDArrayView::NumericOperation({ arg, meanTmp }, (double)stdDevOverScaleTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, stdDevOverScaleTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                //stdDevOverScaleTmp->LogToFile(L"bn:var", stderr);
                 NDArrayView::NumericOperation({ stdDevOverScaleTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, stdDevOverScaleTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // note: in-place
-                //stdDevOverScaleTmp->LogToFile(L"bn:stddev", stderr);
                 //double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                 //if (epsilon > 0) // TODO: are nullary ops actually implemented??
                 //    NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, stdDevOverScaleTmp, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
                 NDArrayView::NumericOperation({ stdDevOverScaleTmp, scale }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, stdDevOverScaleTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // note: in-place
                 // scale must not be larger than stddev; so better have them at the same shape
-                //stdDevOverScaleTmp->LogToFile(L"bn:scale/stddev", stderr);
                 // normalize into normedTmp --TODO: use a single kernel for this
                 NDArrayView::NumericOperation({ arg, meanTmp },         1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opDifference, normedTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                //normedTmp->LogToFile(L"bn:arg-mean", stderr);
                 NDArrayView::NumericOperation({ normedTmp, stdDevOverScaleTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, normedTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // in-place
-                //normedTmp->LogToFile(L"bn:(arg-mean)/stddev*scale", stderr);
                 NDArrayView::NumericOperation({ normedTmp, bias },                 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum,                out, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                //out->LogToFile(L"bn:(arg-mean)/stddev*scale+bias", stderr);
             }
             break;
         case PrimitiveOpType::OneHot:

@@ -661,16 +661,16 @@ static Variable Softplus(const Variable& z, const std::wstring& name)
 //static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label, const Axis& axis = Axis::AllStaticAxes())
 static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label, const Axis& axis = Axis(0))
 {
-    // TODO: reduce ops must be able to drop the axis
-    // TODO: Dynamite should rewrite Times() that is really a dot product
     Variable ceLogNumer;
+#if 1
+    ceLogNumer = InnerProduct(label, z, axis, Named("ceLogNumer"));
+#else
     if (label.IsSparse() && label.Shape().Rank() == 1)
         ceLogNumer = Times(label, z, /*outputRank=*/0, Named("ceLogNumer"));
     else
         ceLogNumer = ReduceSum(ElementTimes(label, z, Named("ceLabel")), axis, Named("ceLogNumer"));
-    let loss = Minus(ReduceLogSum(z, axis, Named("ceLogDenom")), ceLogNumer, Named("ce"));
-    //return Reshape(loss, NDShape(), L"ce");
-    return loss; // Reshape(loss, NDShape());
+#endif
+    return Minus(ReduceLogSum(z, axis, Named("ceLogDenom")), ceLogNumer, Named("ce"));
 }
 
 static inline void as_vector(vector<Variable>& res, const Variable& x)

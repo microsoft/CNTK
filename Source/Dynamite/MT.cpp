@@ -102,9 +102,15 @@ TernaryModel AttentionModelBahdanau(size_t attentionDim1)
         // compute attention weights
         let projectedQuery = normQ(Times(Q, query, Named("Q"))); // [A x 1]
         let tanh = Tanh((projectedQuery + projectedKeys), Named("attTanh")); // [A x T]
+#if 0
+        let u = InnerProduct(tanh, v, Axis(0), Named("vProj")); // [1 x T] col vector
+        let w = Dynamite::Softmax(u, Axis(1));
+        let res = Reshape(InnerProduct(data, w, Axis(1), Named("att")), NDShape{ attentionDim1 }); // [A]
+#else
         let u = TransposeTimes(tanh, v, Named("vProj")); // [T] col vector
         let w = Dynamite::Softmax(u);
         let res = Times(data, w, Named("att")); // [A]
+#endif
         return res;
      });
 }
@@ -413,7 +419,7 @@ void Train()
         partTimer.Restart();
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
         partTimer.Log("FromCNTKMB", numLabels);
-#if 0   // for debugging: reduce #sequences to 3, and reduce their lengths
+#if 1   // for debugging: reduce #sequences to 3, and reduce their lengths
         args[0].resize(3);
         args[1].resize(3);
         let TrimLength = [](Variable& seq, size_t len) // chop off all frames after 'len', assuming the last axis is the length
@@ -470,7 +476,7 @@ void Train()
         if (std::isnan(lossPerLabel))
             throw runtime_error("Loss is NaN.");
         //if (mbCount == 2)
-        //    exit(0);
+            exit(0);
     }
 }
 
