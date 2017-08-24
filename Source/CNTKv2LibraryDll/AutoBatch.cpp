@@ -24,6 +24,7 @@
 #define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
+//#define LOG_MEMOIZE_STATS // if defined then log per-opcode statistics. Windows only presently (debugging tool).
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
@@ -1224,6 +1225,34 @@ class Variable::AutoBatch
         fprintf(stderr, ")\n");
     }
 
+#ifdef LOG_MEMOIZE_STATS
+    class PCTimer // roll our own; high_resolution_timer is reportedly not high-resolution (0.1 us)
+    {
+        LARGE_INTEGER freq, start;
+        double total;
+    public:
+        PCTimer() { if (!QueryPerformanceFrequency(&freq)) // count ticks per second RuntimeError("auto_timer: QueryPerformanceFrequency failure"); }
+        void Start() { QueryPerformanceCounter(&start); }
+        double Stop() // each read gives time elapsed since start, in seconds
+        {
+            LARGE_INTEGER end;
+            QueryPerformanceCounter(&end);
+            let elapsed = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+            total += elapsed;
+            return elapsed;
+        }
+        double Total() const { return total; }
+    };
+    struct CudaStats
+    {
+        PrimitiveOpType op = PrimitiveOpType::UnknownOP;
+        size_t numInvocations = 0;
+        size_t totalElements = 0;  // sum of all output elements, for a rough indication of utilization
+        PCTimer timer;
+    };
+    vector<CudaStats> cudaStats;
+#endif
+
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false)
     {
@@ -1244,8 +1273,21 @@ class Variable::AutoBatch
         auto outValue = isFree
             ? nullptr
             : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
+#ifdef LOG_MEMOIZE_STATS
+        cudaStats.resize((size_t)PrimitiveOpType::UnknownOP);
+        auto& s = cudaStats[(size_t)f.m_op];
+        s.op = f.m_op; // (really only needed the first time)
+        s.numInvocations++;
+        s.totalElements += outputShape.TotalSize();
+        NDArrayView::Sync(inputValues[0]->Device());
+        s.timer.Start();
+#endif
         // execute it
         output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
+#ifdef LOG_MEMOIZE_STATS
+        NDArrayView::Sync(inputValues[0]->Device());
+        s.timer.Stop();
+#endif
 #if 0   // run multiple times to get a feel for the runtime cost
         for (size_t i = 1; i < 5; i++)
         {
@@ -1718,6 +1760,17 @@ public:
                 ExecuteBatchedOpAndUpdateSchedule(opBatch);
             }
             fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
+#ifdef LOG_MEMOIZE_STATS
+            double total = 0;
+            for (let& s : cudaStats)
+                if (s.numInvocations)
+                {
+                    fprintf(stderr, "-> %30S: %7.4f s = %9.6f s/launch * %5d launches, ~%9.2f elements/launch\n", PrimitiveOpTypeName(s.op).c_str(),
+                            s.timer.Total(), s.timer.Total() / (double)s.numInvocations, (int)s.numInvocations, s.totalElements / (double)s.numInvocations);
+                    total += s.timer.Total();
+                }
+            fprintf(stderr, "-> total launch time: %.4f s\n", total);
+#endif
         }
         LazilyIndexedValue(v);
 #ifdef LOG_STATS
