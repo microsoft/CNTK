@@ -242,7 +242,7 @@ namespace CNTK
         auto tensorShape = tensorView.GetShape();
         ToMatrixShape(tensorShape, rowColSplitPoint, AutoSelectRowColSplitPoint);
 
-        return tensorView.Reshaped(tensorShape).AsMatrix();
+        return tensorView.Reviewed(tensorShape).AsMatrix();
     }
 
 #if 1
@@ -260,7 +260,7 @@ namespace CNTK
         if (shape.size() < 2) // we must pad to at least 2D
         {
             auto paddedShape = AsTensorShapeMin2D(shape); // adds 1-dimensions if rank < 2
-            tensorView = make_shared<TensorView<ElementType>>(tensorView->Reshaped(paddedShape));
+            tensorView = make_shared<TensorView<ElementType>>(tensorView->Reviewed(paddedShape));
         }
 #endif
         return tensorView;
@@ -404,7 +404,7 @@ namespace CNTK
             LogicError("NativeTensorView: Called with wrong data type %s; is %s.", DataTypeName(GetType(ElementType(0))), DataTypeName(m_dataType));
 #ifndef LAZY_2D_PADDING
         if (m_viewShape.Rank() < 2) // m_tensorViewPtr has the wrong shape if rank < 2
-            return make_shared<TensorView<ElementType>>(GetTensorViewPtr<ElementType>()->Reshaped(AsTensorShape(m_viewShape)));
+            return make_shared<TensorView<ElementType>>(GetTensorViewPtr<ElementType>()->Reviewed(AsTensorShape(m_viewShape)));
 #endif
         return static_pointer_cast<const TensorView<ElementType>>(m_tensorViewPtr);
     }
@@ -416,7 +416,7 @@ namespace CNTK
             LogicError("WritableNativeTensorView: Called with wrong data type %s; is %s.", DataTypeName(GetType(ElementType(0))), DataTypeName(m_dataType));
 #ifndef LAZY_2D_PADDING
         if (m_viewShape.Rank() < 2) // m_tensorViewPtr has the wrong shape if rank < 2
-            return make_shared<TensorView<ElementType>>(GetWritableTensorViewPtr<ElementType>()->Reshaped(AsTensorShape(m_viewShape)));
+            return make_shared<TensorView<ElementType>>(GetWritableTensorViewPtr<ElementType>()->Reviewed(AsTensorShape(m_viewShape)));
 #endif
         return static_pointer_cast<TensorView<ElementType>>(m_tensorViewPtr);
     }

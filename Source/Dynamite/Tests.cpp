@@ -11,7 +11,7 @@
 #include "Layers.h"
 #include "TimerUtility.h"
 //#include "../Math/CommonMatrix.h"
-// TODO: pull this from a header
+// TODO: implement the name lookup, then pass by name to NumericOperation
 enum ElementWiseOperator
 {
     // nullary
@@ -127,7 +127,9 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 #define OpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, op##opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, opSum); }, #opCode "-ReduceSum"))
     vector<TensorViewTest> tests =
     {
-        // dot product
+        // dot product (both explicitly as InnerProduct() as well as composition, to verify the InnerProduct() optimization)
+        { OpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), [](const vector<Variable>& args) { return CNTK::InnerProduct(args[0], args[1], Axis(0)); }, { { 13,    42    }, { 13,    42    } } },
+        { OpWithRed(ElementwiseProduct, NDShape({ 1           })), [](const vector<Variable>& args) { return CNTK::InnerProduct(args[0], args[1], Axis(0)); }, { { 13           }, { 13           } } },
         { OpWithRed(ElementwiseProduct, NDShape({ 1, 1, 42, 5 })), [](const vector<Variable>& args) { return CNTK::ReduceSum(CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0)), Axis(1)); }, { { 13, 2, 42, 5 }, { 13, 2, 42, 5 } } },
         { OpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), [](const vector<Variable>& args) { return                 CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0));           }, { { 13,    42    }, { 13,    42    } } },
         { OpWithRed(ElementwiseProduct, NDShape({ 1           })), [](const vector<Variable>& args) { return                 CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0));           }, { { 13           }, { 13           } } },

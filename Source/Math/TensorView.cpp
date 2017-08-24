@@ -494,9 +494,9 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
     }
     // create Matrix objects out of this
     // BUGBUG: AsMatrix() may need to take a transposed flag, as to know where to pad?
-    let  A = a.Reshaped(shapeA).AsMatrix();
-    let  B = b.Reshaped(shapeB).AsMatrix();
-    auto C =   Reshaped(shapeC).AsMatrix();
+    let  A = a.Reviewed(shapeA).AsMatrix();
+    let  B = b.Reviewed(shapeB).AsMatrix();
+    auto C =   Reviewed(shapeC).AsMatrix();
     // and go
     if (!transC)
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *A, transA, *B, transB, beta, *C, pQuantizedMultiplier);

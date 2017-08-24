@@ -318,12 +318,31 @@ namespace CNTK
                     }
 
                     outputShape = BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], /*inferInputDimensions =*/ true);
+
+                    // InnerProduct is realized as PrimitiveOpType::ElementTimes with reduction parameters
+                    // BUGBUG: This currently only works for Dynamite, not for static CNTK.
+                    if (m_op == PrimitiveOpType::ElementTimes && m_attributes.Contains(PrimitiveFunction::AttributeNameAxis))
+                    {
+                        bool keepDimensions = m_attributes[PrimitiveFunction::AttributeNameReductionKeepDimensions].Value<bool>();
+                        auto reductionAxis = NormalizeAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0]); // BUGBUG: should pass outputShape, not m_inputs[0]
+                        if (reductionAxis.IsDynamicAxis())
+                            LogicError("InnerProduct: operand %S; Inner product along dynamic axes is currently unsupported.", m_inputs[0].AsString().c_str());
+                        if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
+                            outputShape = keepDimensions ? NDShape(outputShape.Rank(), 1) : NDShape({});
+                        else
+                        {
+                            std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };
+                            outputShape = ReductionOpOutputShape(m_op, outputShape, reductionAxes, /*preserveReductionAxes =*/ keepDimensions);
+                        }
+                    }
                     break;
                 }
                 case PrimitiveOpType::Clip:
+#if 0               // same as PrimitiveOpType::Select
                     assert(m_inputs.size() == 3);
                     outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, /*inferInputDimensions =*/ true);
                     break;
+#endif
                 case PrimitiveOpType::Select:
                     assert(m_inputs.size() == 3);
                     outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, /*inferInputDimensions =*/ true);

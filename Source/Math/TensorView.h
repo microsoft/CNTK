@@ -54,12 +54,20 @@ public:
     {
     }
 
-    // reshaped view
-    // Contrary to what the name implies, 'shape' can also be a slice.
-    // TODO: better rename this
-    TensorView<ElemType> Reshaped(const TensorShape& shape) const
+    // change the view onto the storage object (returns a new view)
+    // This updates the TensorShape including slice information and offset.
+    TensorView<ElemType> Reviewed(const TensorShape& shape) const
     {
         return TensorView(*this, shape);
+    }
+
+    // change the shape (returns a new view)
+    // This updates the dimensions while retaining the offset. (And in the future possibly the slice information if the new shape allows that.)
+    TensorView<ElemType> Reshaped(const TensorShape& dims) const
+    {
+        TensorShape tensorShape = m_shape;
+        tensorShape.ReshapeInPlace(dims.GetDims()); // this retains the offset
+        return TensorView(*this, tensorShape);
     }
 
     // -------------------------------------------------------------------

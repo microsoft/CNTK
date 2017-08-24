@@ -1420,6 +1420,14 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::ElementTimes, leftOperand, rightOperand, Dictionary(), name);
     }
 
+    FunctionPtr InnerProduct(const Variable& leftOperand, const Variable& rightOperand, const Axis& axis, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
+        additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = !(axis == Axis::AllStaticAxes() || axis == Axis::AllAxes());
+        return BinaryOp(PrimitiveOpType::ElementTimes, leftOperand, rightOperand, std::move(additionalProperties), name);
+    }
+
     FunctionPtr ElementDivide(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return ElementTimes(leftOperand, Reciprocal(rightOperand), name);

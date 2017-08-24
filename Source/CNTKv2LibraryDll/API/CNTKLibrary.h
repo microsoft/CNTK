@@ -4016,6 +4016,11 @@ namespace CNTK
     CNTK_API FunctionPtr ElementTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
+    /// Create an instance of the CNTK built-in inner-product operation on specified tensor input operands.
+    ///
+    CNTK_API FunctionPtr InnerProduct(const Variable& leftOperand, const Variable& rightOperand, const Axis& axis, const std::wstring& name = std::wstring());
+
+    ///
     /// Create an instance of the CNTK built-in elementwise division operation on specified tensor input operands.
     ///
     CNTK_API FunctionPtr ElementDivide(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
