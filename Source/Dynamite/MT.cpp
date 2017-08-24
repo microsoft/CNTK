@@ -419,7 +419,7 @@ void Train()
         partTimer.Restart();
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
         partTimer.Log("FromCNTKMB", numLabels);
-#if 1   // for debugging: reduce #sequences to 3, and reduce their lengths
+#if 0   // for debugging: reduce #sequences to 3, and reduce their lengths
         args[0].resize(3);
         args[1].resize(3);
         let TrimLength = [](Variable& seq, size_t len) // chop off all frames after 'len', assuming the last axis is the length
@@ -476,7 +476,7 @@ void Train()
         if (std::isnan(lossPerLabel))
             throw runtime_error("Loss is NaN.");
         //if (mbCount == 2)
-            exit(0);
+        //    exit(0);
     }
 }
 

@@ -20,7 +20,7 @@
 #include <vector>
 #include <string>
 
-#define LOG_DETAILS   // if defined, log all forward and backward operations
+//#define LOG_DETAILS   // if defined, log all forward and backward operations
 #define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
@@ -1723,6 +1723,8 @@ public:
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedForward: %d forward ops executed besides %d splices and %d views, in nominally %d PrimitiveFunctions on %d known values\n",
                 (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneSpliceOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);
+#endif
+#ifdef LOG_DETAILS
         size_t numOpNodes1 = 0;
         Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr&) { numOpNodes1++; });
         if (numOpNodes1 != m_stats.numOpNodes)

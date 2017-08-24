@@ -16,11 +16,11 @@
 #include <set>
 #include <vector>
 
-//#define DISABLE_NORMALIZATIONS // #define this to disable LengthNormalization and Droppo scaling
+#define DISABLE_NORMALIZATIONS // #define this to disable LengthNormalization and Droppo scaling
 
 #define let const auto
-#define Named(n) (L##n)
-//#define Named(n) (std::wstring())
+//#define Named(n) (L##n)
+#define Named(n) (std::wstring())
 
 using namespace CNTK;
 using namespace std;
@@ -439,24 +439,24 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     if (bias)
     {
         auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
-        return UnaryModel({ W,  b }, [=](const Variable& x) { return Times(W, x) + b; });
+        return UnaryModel({ W,  b }, { { L"activation", activation } }, [=](const Variable& x) { return activation(Times(W, x) + b); });
     }
     else
-        return UnaryModel({ W, }, [=](const Variable& x) { return Times(W, x); });
+        return UnaryModel({ W,    }, { { L"activation", activation } }, [=](const Variable& x) { return activation(Times(W, x)); });
 #else
     auto scale = Parameter({ }, DTYPE, 1.0, device, L"Wscale");
     if (bias)
     {
         auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
-        return UnaryModel({ W, scale, b }, { { L"activation", activation}  }, [=](const Variable& x)
+        return UnaryModel({ W, scale, b }, { { L"activation", activation } }, [=](const Variable& x)
         {
-            return Times(W, x * scale) + b;
+            return activation(Times(W, x * scale) + b);
         });
     }
     else
         return UnaryModel({ W, scale    }, { { L"activation", activation } }, [=](const Variable& x)
         {
-            return Times(W, x * scale);
+            return activation(Times(W, x * scale));
         });
 #endif
 }
