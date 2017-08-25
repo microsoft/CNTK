@@ -151,6 +151,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     let embedTarget = Barrier(Named("embedTargetBarrier")) >> Embedding(embeddingDim, device) >> BatchNormalization(device, Named("bnEmbedTarget"));     // target embeddding
     let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("initialStateProjection")); }), device);
+    let stepBarrier = Barrier(Named("stepBarrier"));
     let stepFunction = GRU(decoderRecurrentDim, device);
     //let attentionModel = AttentionModelBahdanau(attentionDim);
     let attentionModel = AttentionModelReference(attentionDim);
@@ -171,6 +172,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
         { L"encoderDataProjection",  encoderDataProjection },
         { L"embedTarget",            embedTarget },
         { L"initialStateProjection", initialStateProjection },
+        { L"stepBarrier",            stepBarrier },
         { L"stepFunction",           stepFunction },
         { L"attentionModel",         attentionModel },
         { L"firstHiddenProjection",  firstHiddenProjection },
@@ -202,7 +204,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
             let historyProjectedKey = embedTarget(history[t]);
             let prevProfiler = Function::SetDynamicProfiler(profiler, false); // set to true to display this section of batched graph
             let input = Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput"));
-            state = stepFunction(state, input);
+            state = stepFunction(state, stepBarrier(input));
             // compute attention vector
             //attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
             attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeysTensor, encodingProjectedDataTensor);
