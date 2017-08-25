@@ -51,6 +51,7 @@
     <Compile Include="..\ImageExtension\CNTKImageProcessing.cs">
       <Link>CNTKImageProcessing.cs</Link>
     </Compile>
+    <Compile Include="CNTKExtensions.cs" />
     <Compile Include="CNTKLibraryCSEvalExamples.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

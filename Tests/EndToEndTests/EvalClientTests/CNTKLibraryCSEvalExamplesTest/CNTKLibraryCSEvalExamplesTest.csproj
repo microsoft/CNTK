@@ -62,6 +62,9 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCSEvalCPUOnlyExamples\CNTKExtensions.cs">
+      <Link>CNTKExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\..\Examples\Evaluation\ImageExtension\CNTKImageProcessing.cs">
       <Link>CNTKImageProcessing.cs</Link>
     </Compile>

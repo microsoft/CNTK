@@ -6,6 +6,7 @@
 //
 
 using System;
+using System.Threading.Tasks;
 using CNTK;
 
 namespace CNTKLibraryCSEvalExamples
@@ -21,6 +22,10 @@ namespace CNTKLibraryCSEvalExamples
 
             // Evaluate a batch of images
             CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
+
+            // Evaluate an image asynchronously
+            Task evalTask = CNTKLibraryManagedExamples.EvaluationSingleImageAsync(DeviceDescriptor.CPUDevice);
+            evalTask.Wait();
 
             // Evaluate multiple sample requests in parallel
             CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.CPUDevice);

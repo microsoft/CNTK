@@ -6,6 +6,7 @@
 //
 
 using System;
+using System.Threading.Tasks;
 using CNTK;
 
 namespace CNTKLibraryCSEvalExamples
@@ -27,6 +28,10 @@ namespace CNTKLibraryCSEvalExamples
             // Evaluate multiple sample requests in parallel
             CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.CPUDevice);
 
+            // Evaluate an image asynchronously
+            Task evalTask = CNTKLibraryManagedExamples.EvaluationSingleImageAsync(DeviceDescriptor.CPUDevice);
+            evalTask.Wait();
+
             // Evaluate a single sequence with one-hot vector
             CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
 
@@ -37,6 +42,11 @@ namespace CNTKLibraryCSEvalExamples
             Console.WriteLine(" ====== Run evaluation on GPU =====");
             CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.GPUDevice(0));
             CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.GPUDevice(0));
+
+            // Evaluate an image asynchronously
+            evalTask = CNTKLibraryManagedExamples.EvaluationSingleImageAsync(DeviceDescriptor.GPUDevice(0));
+            evalTask.Wait();
+
             CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.GPUDevice(0));
             CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.GPUDevice(0));
             CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.GPUDevice(0));

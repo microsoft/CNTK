@@ -6,6 +6,7 @@
 //
 
 using System;
+using System.Threading.Tasks;
 using CNTK;
 
 namespace CNTKLibraryCSEvalExamples
@@ -65,6 +66,9 @@ namespace CNTKLibraryCSEvalExamples
                 // Run memory tests again.
                 MemoryTests.ValidateObjectReferences(device);
 
+                Task evalTask = CNTKLibraryManagedExamples.EvaluationSingleImageAsync(device);
+                evalTask.Wait();
+
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
                 CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingSparse(device);
@@ -88,6 +92,9 @@ namespace CNTKLibraryCSEvalExamples
                 CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(device);
                 // Run memory tests.
                 MemoryTests.ValidateObjectReferences(device);
+
+                Task evalTask = CNTKLibraryManagedExamples.EvaluationSingleImageAsync(device);
+                evalTask.Wait();
 
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
                 CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);
