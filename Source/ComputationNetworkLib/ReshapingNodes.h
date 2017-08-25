@@ -542,6 +542,10 @@ public:
         auto& gradient = Gradient();
         auto& inputGradient = Input(0)->Gradient();
 
+        auto origin_rows = gradient.GetNumRows();
+        auto origin_cols = gradient.GetNumCols();
+        gradient.Resize(inputGradient.GetNumRows(), inputGradient.GetNumCols());
+
         if (Input(0)->IsGradientOptimized(this))
         {
             if (Input(0)->ParentGradientReused())
@@ -556,6 +560,8 @@ public:
         }
         else
             inputGradient += gradient;
+
+        gradient.Resize(origin_rows, origin_cols);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -642,6 +648,10 @@ public:
     {
         auto& gradient = Gradient();
         auto& inputGradient = Input(0)->Gradient();
+
+        auto origin_rows = gradient.GetNumRows();
+        auto origin_cols = gradient.GetNumCols();
+        gradient.Resize(inputGradient.GetNumRows(), inputGradient.GetNumCols());
         
         if (Input(0)->IsGradientOptimized(this))
         {
@@ -657,6 +667,8 @@ public:
         }
         else
             inputGradient += gradient;
+
+        gradient.Resize(origin_rows, origin_cols);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override 

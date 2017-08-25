@@ -526,7 +526,7 @@ def test_gather_op(device_id, precision):
 def test_convert_dynamic_axis():
     #test fix batch size
     batch_size = 4
-    a = C.constant(shape=(batch_size, 2, 3), value=1)
+    a = C.parameter(shape=(batch_size, 2, 3), init=1)
     dynamic_a = C.to_batch(a)
     assert len(dynamic_a.dynamic_axes) == 1
     assert dynamic_a.shape == (2, 3)
@@ -534,13 +534,17 @@ def test_convert_dynamic_axis():
     x = C.input_variable((2, 3))
     y = x + dynamic_a
 
+    #test grad
+    data = np.arange(24).reshape(4, 2, 3).astype('f')
+    expect_grad = np.ones((4, 2, 3))
+    assert np.array_equal(y.grad({x:data}, [a]), expect_grad)
+
     const_a = C.unpack_batch(y)
     assert len(const_a.dynamic_axes) == 0
     assert const_a.shape == (C.FreeDimension, 2, 3)
 
     f = C.assign(a, const_a)
     z = x + 1
-    data = np.arange(24).reshape(4, 2, 3).astype('f')
     f.eval({x:data})
     expected = z.eval({x:data})
     assert np.array_equal(a.value, expected)
