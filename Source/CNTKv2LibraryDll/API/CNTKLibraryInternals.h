@@ -396,7 +396,7 @@ namespace CNTK
             void Init();
             void WriteModel();
             void WriteRecord(const std::string& data);
-            void WriteVersion(time_t time);            
+            void WriteVersion(time_t time);
 
             // Disable copy-construction and assignment.
             TensorBoardFileWriter(const TensorBoardFileWriter& other) = delete;

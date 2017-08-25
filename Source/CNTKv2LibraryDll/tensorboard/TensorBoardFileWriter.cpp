@@ -181,19 +181,19 @@ namespace CNTK
 
 #ifndef CNTK_UWP
 
-        void TensorBoardFileWriter::WriteImage(const std::wstring& name, NDArrayViewPtr NDPtr, uint64_t step)
+        void TensorBoardFileWriter::WriteImage(const std::wstring& name, NDArrayViewPtr imageData, uint64_t step)
         {
-            assert(NDPtr != nullptr);
+            assert(imageData != nullptr);
             tensorflow::Event event;
             event.set_wall_time(static_cast<double>(std::time(0)));
             tensorflow::Summary* summary = event.mutable_summary();
 
-            std::vector<size_t> dimensions = NDPtr->Shape().Dimensions();
+            std::vector<size_t> dimensions = imageData->Shape().Dimensions();
             const size_t batch_size = dimensions.at(3);
             const size_t depth = dimensions.at(2);
             const size_t width = dimensions.at(1);
             const size_t height = dimensions.at(0);
-            const DataType dtype = NDPtr->GetDataType();
+            const DataType dtype = imageData->GetDataType();
 
             std::vector<size_t> start(4, 0);
             std::vector<size_t> extent;
@@ -215,17 +215,17 @@ namespace CNTK
                 summaryImage->set_width(width);
                 summaryImage->set_colorspace(depth);
                 start.back() = static_cast<size_t>(i);
-                auto image = NDPtr->SliceView(start, extent)->AsShape(imageDim);
+                auto image = imageData->SliceView(start, extent)->AsShape(imageDim);
                 vector<uchar> buffer;
 
                 switch (dtype)
                 {
                 case DataType::Float:
-                    writeImageToBuffer(image->WritableDataBuffer<float>(), height, width, CV_32FC(depth), buffer);
+                    WriteImageToBuffer(image->WritableDataBuffer<float>(), height, width, CV_32FC(depth), buffer);
                     break;
                 
                 case DataType::Double:
-                    writeImageToBuffer(image->WritableDataBuffer<double>(), height, width, CV_64FC(depth), buffer);
+                    WriteImageToBuffer(image->WritableDataBuffer<double>(), height, width, CV_64FC(depth), buffer);
                     break;
 
                 default:
