@@ -365,6 +365,8 @@ private:
             m_nccl.AllReduce(ncclReduceGradients);
         }
 
+		std::cout << "Before header agg rank " << m_mpi->CurrentNodeRank() << " criterion " << headerCPU->criterion << std::endl;
+
         // On the main node wait for the headers to arrive and aggregate
         if (m_mpi->IsMainNode())
         {
@@ -388,6 +390,11 @@ private:
 
         // Broadcast the aggregated header to all nodes
         m_mpi->Bcast(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank());
+
+
+		std::cout.setf(std::ios::fixed, std::ios::floatfield);
+		std::cout.precision(17);
+		std::cout << "After header agg rank " << m_mpi->CurrentNodeRank() << " criterion " << headerCPU->criterion << std::endl;
 
         if (m_nccl.IsSupported())
         {

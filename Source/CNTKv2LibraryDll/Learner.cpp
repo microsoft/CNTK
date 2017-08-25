@@ -8,6 +8,7 @@
 #include "TensorView.h"
 #include "Utils.h"
 #include "Serialization.h"
+#include <iostream>
 
 #define DISPATCH_TO_TYPED_UPDATE_FUNCTION                                                                     \
     switch (smoothedGradientValue->GetDataType())                                                             \
@@ -515,6 +516,9 @@ namespace CNTK
 
         const auto learningRate = ElementType(LearningRate(trainingSampleCount));
         const auto momentum = ElementType(MomentumValueForMB(trainingSampleCount));
+
+		//std::cout << "Momentum - " << momentum << std::endl;
+		//std::cout << "LR - " << learningRate << std::endl;
 
         parameterMatrix->MomentumSGDUpdate(*gradientMatrix, *smoothedGradientMatrix,
                                            learningRate, momentum, UseUnitGainMomentum());

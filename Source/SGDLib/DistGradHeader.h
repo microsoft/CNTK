@@ -38,7 +38,7 @@ public:
         {
             numSamples += other->numSamples;
             numSamplesWithLabel += other->numSamplesWithLabel;
-            criterion += other->criterion;
+            criterion = (float)criterion + (float)other->criterion;
             for (int i = 0; i < numEvalNode; i++)
             {
                 evalErrors[i].first  += other->evalErrors[i].first;  // numer

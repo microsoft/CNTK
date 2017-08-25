@@ -3950,6 +3950,12 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = L"");
 
+	///
+	/// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.
+	///
+	CNTK_API FunctionPtr LegacyCrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = L"");
+
+
     ///
     /// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.
     ///
