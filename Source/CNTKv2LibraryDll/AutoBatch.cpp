@@ -24,7 +24,9 @@
 #define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
-//#define LOG_MEMOIZE_STATS // if defined then log per-opcode statistics. Windows only presently (debugging tool).
+
+static size_t logMemoizeStatsPeriod = 10;
+static size_t logMemoizeStatsCounter = 0; // counts up to logMemoizeStatsPeriod and wraps. We log if it is 0.
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
@@ -1264,7 +1266,7 @@ class Variable::AutoBatch
         LogFunction(f, profiler ? profiler->Name() : L"-", markIndex);
     }
 
-#ifdef LOG_MEMOIZE_STATS
+    // for memoization statistics
     class PCTimer // roll our own; high_resolution_timer is reportedly not high-resolution (0.1 us)
     {
         LARGE_INTEGER freq, start;
@@ -1293,7 +1295,6 @@ class Variable::AutoBatch
         PCTimer timerSync; // measure a dummy sync
     };
     vector<CudaStats> cudaStats;
-#endif
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false)
@@ -1316,28 +1317,31 @@ class Variable::AutoBatch
         auto outValue = isFree
             ? nullptr
             : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
-#ifdef LOG_MEMOIZE_STATS
-        cudaStats.resize(2 * (size_t)PrimitiveOpType::UnknownOP);
-        let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
-        auto& s = cudaStats[(size_t)f.m_op + (hasSparse ? 1 : 0)];
-        s.op = f.m_op; // (really only needed the first time)
-        s.hasSparse = hasSparse;
-        s.numInvocations++;
-        s.totalElements += outputShape.TotalSize();
-        NDArrayView::Sync(inputValues[0]->Device());
-        s.timerLaunch.Start();
-#endif
+        CudaStats* cudaStatsPtr = nullptr;
+        if (logMemoizeStatsCounter == 0)
+        {
+            cudaStats.resize(2 * (size_t)PrimitiveOpType::UnknownOP);
+            let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
+            cudaStatsPtr = &cudaStats[(size_t)f.m_op + (hasSparse ? 1 : 0)];
+            cudaStatsPtr->op = f.m_op; // (really only needed the first time)
+            cudaStatsPtr->hasSparse = hasSparse;
+            cudaStatsPtr->numInvocations++;
+            cudaStatsPtr->totalElements += outputShape.TotalSize();
+            NDArrayView::Sync(inputValues[0]->Device());
+            cudaStatsPtr->timerLaunch.Start();
+        }
         // execute it
         output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
-#ifdef LOG_MEMOIZE_STATS
-        s.timerLaunch.Stop();
-        s.timerRun.Start();
-        NDArrayView::Sync(inputValues[0]->Device());
-        s.timerRun.Stop();
-        s.timerSync.Start();
-        NDArrayView::Sync(inputValues[0]->Device());
-        s.timerSync.Stop();
-#endif
+        if (logMemoizeStatsCounter == 0)
+        {
+            cudaStatsPtr->timerLaunch.Stop();
+            cudaStatsPtr->timerRun.Start();
+            NDArrayView::Sync(inputValues[0]->Device());
+            cudaStatsPtr->timerRun.Stop();
+            cudaStatsPtr->timerSync.Start(); // measure the overhead of just syncing the GPU
+            NDArrayView::Sync(inputValues[0]->Device());
+            cudaStatsPtr->timerSync.Stop();
+        }
 #if 0   // run multiple times to get a feel for the runtime cost
         for (size_t i = 1; i < 5; i++)
         {
@@ -1803,8 +1807,8 @@ public:
         Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), L"[r] "); });
 #endif
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
-        if (!fields.m_value)
-        {
+        //if (!fields.m_value)
+        //{
             // prepare and schedule first set
             m_visitorTag.Begin();
             RInitForScheduling(v);
@@ -1841,26 +1845,31 @@ public:
                 ExecuteBatchedOpAndUpdateSchedule(opBatch);
             }
             fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
-#ifdef LOG_MEMOIZE_STATS
-            double totalLaunch = 0;
-            double totalExec = 0;
-            for (let& s : cudaStats) if (s.numInvocations)
+            // log stats
+            if (logMemoizeStatsCounter == 0)
             {
-                let prefix = s.hasSparse ? L"sparse " : L"";
-                let name = PrimitiveOpTypeName(s.op);
-                let execTime = s.timerRun.Total() - s.timerSync.Total();
-                fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + name).c_str(),
-                        s.timerLaunch.Total(), execTime,
-                        1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * execTime / (double)s.numInvocations,
-                        (int)s.numInvocations,
-                        s.totalElements / (double)s.numInvocations);
-                totalLaunch += s.timerLaunch.Total();
-                totalExec   += execTime;
+                double totalLaunch = 0;
+                double totalExec = 0;
+                for (let& s : cudaStats) if (s.numInvocations)
+                {
+                    let prefix = s.hasSparse ? L"sparse " : L"";
+                    let name = PrimitiveOpTypeName(s.op);
+                    let execTime = s.timerRun.Total() - s.timerSync.Total();
+                    fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + name).c_str(),
+                            s.timerLaunch.Total(), execTime,
+                            1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * execTime / (double)s.numInvocations,
+                            (int)s.numInvocations,
+                            s.totalElements / (double)s.numInvocations);
+                    totalLaunch += s.timerLaunch.Total();
+                    totalExec   += execTime;
+                }
+                fprintf(stderr, "-> total launch + exec time: %.4f s + %.4f s\n", totalLaunch, totalExec);
             }
-            fprintf(stderr, "-> total launch + exec time: %.4f s + %.4f s\n", totalLaunch, totalExec);
-#endif
-        }
-        LazilyIndexedValue(v);
+            logMemoizeStatsCounter++;
+            if (logMemoizeStatsCounter == logMemoizeStatsPeriod)
+                logMemoizeStatsCounter = 0;
+        //}
+        LazilyIndexedValue(v); // force-flush a potential final lazily-indexed value
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedForward: %d forward ops executed besides %d splices and %d views, in nominally %d PrimitiveFunctions on %d known values\n",
                 (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneSpliceOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);
