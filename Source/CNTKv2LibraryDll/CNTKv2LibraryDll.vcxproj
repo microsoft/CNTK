@@ -74,7 +74,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(NvmlLibPath);$(ProtobufLibPath);</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="!$(IsUWP)">$(OpenCvLibPath);%(AdditionalIncludeDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="!$(IsUWP)">$(OpenCvLibPath);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(ReaderLibs);Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.ComputationNetwork$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.SequenceTrainingLib$(OutputSuffix)-$(CntkComponentVersion).lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="!$(IsUWP)">$(OpenCvLib);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
@@ -122,7 +122,7 @@
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <DelayLoadDLLs>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll; msmpi.dll;</DelayLoadDLLs>
+      <DelayLoadDLLs>Cntk.Math$(OutputSuffix)-$(CntkCompo>>>nentVersion).dll; msmpi.dll;</DelayLoadDLLs>
       <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll</DelayLoadDLLs>
       <OptimizeReferences Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">false</OptimizeReferences>
     </Link>
