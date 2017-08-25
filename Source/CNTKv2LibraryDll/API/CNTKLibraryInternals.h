@@ -374,6 +374,13 @@ namespace CNTK
             ///
             CNTK_API void WriteValue(const std::wstring& name, float value, uint64_t step);
 
+#ifndef CNTK_UWP // doesn't support UWP due to compatibablity of opencv libs
+            ///
+            /// Record an image for a CNTK NDArrayViewPtr at a particular step.
+            ///
+            CNTK_API void WriteImage(const std::wstring& name, NDArrayViewPtr NDPtr, uint64_t step);
+#endif
+
             ///
             /// Flushes any outstanding records to disk. Returns true on success, false otherwise.
             ///
