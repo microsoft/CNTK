@@ -19,16 +19,18 @@ namespace tensorflow
     class GraphDef;
 }
 
-namespace CNTK {
-namespace Internal {
-///
-/// Populates the given TensorBoard GraphDef with the graph of the given CNTK function.
-///
-void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst);
+namespace CNTK 
+{
+    namespace Internal 
+    {
+    ///
+    /// Populates the given TensorBoard GraphDef with the graph of the given CNTK function.
+    ///
+    void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst);
 
-#ifndef CNTK_UWP
-void writeImageToBuffer(void* matrix, int h, int w, int type, std::vector<uchar>& buf);
-#endif // !CNTK_UWP
+    #ifndef CNTK_UWP
+    void WriteImageToBuffer(void* matrix, int height, int weight, int dataType, std::vector<uchar>& buffer);
+    #endif // !CNTK_UWP
 
-}
+    }
 }

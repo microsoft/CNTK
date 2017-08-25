@@ -130,7 +130,7 @@
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaInclude);$(OpenCvInclude)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath);$(OpenCvLibPath);</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath);$(OpenCvLibPath)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>if exist "$(NvmlDll)" xcopy /I /D /Y "$(NvmlDll)" "$(TargetDir)"</Command>
