@@ -23,13 +23,13 @@ namespace CNTK
 {
     namespace Internal 
     {
-    ///
-    /// Populates the given TensorBoard GraphDef with the graph of the given CNTK function.
-    ///
-    void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst);
+        ///
+        /// Populates the given TensorBoard GraphDef with the graph of the given CNTK function.
+        ///
+        void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst);
 
     #ifndef CNTK_UWP
-    void WriteImageToBuffer(void* matrix, int height, int weight, int dataType, std::vector<uchar>& buffer);
+        void WriteImageToBuffer(void* matrix, int height, int weight, int dataType, std::vector<uchar>& buffer);
     #endif // !CNTK_UWP
 
     }

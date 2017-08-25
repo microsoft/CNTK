@@ -16,7 +16,6 @@ namespace CNTK
 {
     namespace Internal 
     {
-
     typedef google::protobuf::Map<std::string, tensorflow::AttrValue> AttrMap;
     typedef std::pair<Variable, std::wstring> VariableWithScope;
 
@@ -103,32 +102,33 @@ namespace CNTK
         PopulateNodeDef(GetScopedName(scope, src), src->OpName(), src->Outputs()[0].GetDataType(), src->Outputs(), dst);
     }
 
-    static void PopulateNodeDef(const std::wstring& scope, const Variable& src, tensorflow::NodeDef& dst)
-    {
-        // Constant nodes in TensorBoard have special meaning, so need to set the expected name.
-        std::wstring opName = (src.Kind() == VariableKind::Constant) ? L"Const" : VariableKindName(src.Kind());
-        PopulateNodeDef(GetScopedName(scope, &src), opName, src.GetDataType(), {src}, dst);
-        // TODO: set attrs["value"] for Constant - how to get the value?
-    }
 
-    // Forward-declaration.
-    static tensorflow::NodeDef* CreateFunctionNode(
-        const FunctionPtr& src,
-        tensorflow::GraphDef& dst,
-        std::unordered_map<FunctionPtr, tensorflow::NodeDef*>& functionNodes,
-        std::unordered_map<Variable, tensorflow::NodeDef*>& variableNodes,
-        std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope>& placeholders,
-        std::unordered_map<Variable, VariableWithScope>& placeholderInputs,
-        const std::wstring& scope);
+        static void PopulateNodeDef(const std::wstring& scope, const Variable& src, tensorflow::NodeDef& dst)
+        {
+            // Constant nodes in TensorBoard have special meaning, so need to set the expected name.
+            std::wstring opName = (src.Kind() == VariableKind::Constant) ? L"Const" : VariableKindName(src.Kind());
+            PopulateNodeDef(GetScopedName(scope, &src), opName, src.GetDataType(), {src}, dst);
+            // TODO: set attrs["value"] for Constant - how to get the value?
+        }
 
-    static tensorflow::NodeDef* CreateVariableNode(
-        const Variable& src,
-        tensorflow::GraphDef& dst,
-        std::unordered_map<FunctionPtr, tensorflow::NodeDef*>& functionNodes,
-        std::unordered_map<Variable, tensorflow::NodeDef*>& variableNodes,
-        std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope>& placeholders,
-        std::unordered_map<Variable, VariableWithScope>& placeholderInputs,
-        const std::wstring& scope)
+        // Forward-declaration.
+        static tensorflow::NodeDef* CreateFunctionNode(
+            const FunctionPtr& src,
+            tensorflow::GraphDef& dst,
+            std::unordered_map<FunctionPtr, tensorflow::NodeDef*>& functionNodes,
+            std::unordered_map<Variable, tensorflow::NodeDef*>& variableNodes,
+            std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope>& placeholders,
+            std::unordered_map<Variable, VariableWithScope>& placeholderInputs,
+            const std::wstring& scope);
+
+        static tensorflow::NodeDef* CreateVariableNode(
+            const Variable& src,
+            tensorflow::GraphDef& dst,
+            std::unordered_map<FunctionPtr, tensorflow::NodeDef*>& functionNodes,
+            std::unordered_map<Variable, tensorflow::NodeDef*>& variableNodes,
+            std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope>& placeholders,
+            std::unordered_map<Variable, VariableWithScope>& placeholderInputs,
+            const std::wstring& scope)
         {
             auto iter = variableNodes.find(src);
             if (iter != variableNodes.end())
@@ -140,7 +140,7 @@ namespace CNTK
             if (src.IsOutput())
             {
                 result = CreateFunctionNode(src.Owner(), dst, functionNodes, variableNodes, placeholders,
-                                            placeholderInputs, scope);
+                                                placeholderInputs, scope);
             }
             else
             {
@@ -152,14 +152,14 @@ namespace CNTK
             return result;
         }
 
-    static tensorflow::NodeDef* CreateFunctionNode(
-        const FunctionPtr& src,
-        tensorflow::GraphDef& dst,
-        std::unordered_map<FunctionPtr, tensorflow::NodeDef*>& functionNodes,
-        std::unordered_map<Variable, tensorflow::NodeDef*>& variableNodes,
-        std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope>& placeholders,
-        std::unordered_map<Variable, VariableWithScope>& placeholderInputs,
-        const std::wstring& scope)
+        static tensorflow::NodeDef* CreateFunctionNode(
+            const FunctionPtr& src,
+            tensorflow::GraphDef& dst,
+            std::unordered_map<FunctionPtr, tensorflow::NodeDef*>& functionNodes,
+            std::unordered_map<Variable, tensorflow::NodeDef*>& variableNodes,
+            std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope>& placeholders,
+            std::unordered_map<Variable, VariableWithScope>& placeholderInputs,
+            const std::wstring& scope)
         {
             auto iter = functionNodes.find(src);
             if (iter != functionNodes.end())
@@ -173,7 +173,7 @@ namespace CNTK
             {
                 std::wstring newScope = GetScopedName(scope, src);
                 functionNode = CreateFunctionNode(src->BlockRoot(), dst, functionNodes,
-                                                  variableNodes, placeholders, placeholderInputs, newScope);
+                                                      variableNodes, placeholders, placeholderInputs, newScope);
             }
             else
             {
@@ -194,7 +194,7 @@ namespace CNTK
                     // We don't create placeholders immediately, just register them so we can later trace the actual
                     // input.
                     inputNode = CreateVariableNode(input, dst, functionNodes, variableNodes, placeholders,
-                                                   placeholderInputs, scope);
+                                                       placeholderInputs, scope);
                 }
 
                 if (!src->IsBlock())
@@ -223,62 +223,61 @@ namespace CNTK
             return functionNode;
         }
 
-    void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst)
-    {
-        // For each function/variable visited, contains a matching tensorflow node.
-        std::unordered_map<FunctionPtr, tensorflow::NodeDef*> functionNodes;
-        std::unordered_map<Variable, tensorflow::NodeDef*> variableNodes;
-
-        // For each (function, placeholder input) found, contains (tensorflow_node, (placeholder, scope)).
-        std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope> placeholders;
-        // For each placeholder found, contains a (placeholder, (replacement variable, scope)).
-        std::unordered_map<Variable, VariableWithScope> placeholderInputs;
-
-        // Create all nodes in the graph, except placeholders.
-        CreateFunctionNode(src, dst, functionNodes, variableNodes, placeholders, placeholderInputs, L"");
-
-        // For each function that had a placeholder as its input, add a link to the actual input if it was
-        // found.
-        for (auto placeholder : placeholders)
+        void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst)
         {
-            // Follow the placeholder chain until the end.
-            VariableWithScope* finalValue = &placeholder.second;
+            // For each function/variable visited, contains a matching tensorflow node.
+            std::unordered_map<FunctionPtr, tensorflow::NodeDef*> functionNodes;
+            std::unordered_map<Variable, tensorflow::NodeDef*> variableNodes;
 
-            do
+            // For each (function, placeholder input) found, contains (tensorflow_node, (placeholder, scope)).
+            std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope> placeholders;
+            // For each placeholder found, contains a (placeholder, (replacement variable, scope)).
+            std::unordered_map<Variable, VariableWithScope> placeholderInputs;
+
+            // Create all nodes in the graph, except placeholders.
+            CreateFunctionNode(src, dst, functionNodes, variableNodes, placeholders, placeholderInputs, L"");
+
+            // For each function that had a placeholder as its input, add a link to the actual input if it was
+            // found.
+            for (auto placeholder : placeholders)
             {
-                auto nextInput = placeholderInputs.find(finalValue->first);
-                if (nextInput == placeholderInputs.end())
+                // Follow the placeholder chain until the end.
+                VariableWithScope* finalValue = &placeholder.second;
+
+                do
                 {
-                    break;
+                    auto nextInput = placeholderInputs.find(finalValue->first);
+                    if (nextInput == placeholderInputs.end())
+                    {
+                        break;
+                    }
+                    finalValue = &nextInput->second;
                 }
+                while (true);
 
-                finalValue = &nextInput->second;
+                // Create a node for the finalValue and add it as an input of the function.
+                tensorflow::NodeDef* inputNode = CreateVariableNode(
+                    finalValue->first, dst, functionNodes, variableNodes, placeholders, placeholderInputs,
+                    finalValue->second);
+                placeholder.first->add_input(inputNode->name());
             }
-            while (true);
-
-            // Create a node for the finalValue and add it as an input of the function.
-            tensorflow::NodeDef* inputNode = CreateVariableNode(
-                finalValue->first, dst, functionNodes, variableNodes, placeholders, placeholderInputs,
-                finalValue->second);
-            placeholder.first->add_input(inputNode->name());
         }
-    }
-
     #ifndef CNTK_UWP
-    void WriteImageToBuffer(void* matrix, int height, int weight, int dataType, std::vector<uchar>& buffer)
-    {
-        assert(matrix != nullptr);
-        assert(&buffer != nullptr);
-        vector<int> parameters = vector<int>(2);
-        parameters[0] = CV_IMWRITE_PNG_COMPRESSION;
-        parameters[1] = 3;//default(3)  0-9
-        cv::Mat source = cv::Mat(height, weight, dataType, matrix);
+        void WriteImageToBuffer(void* matrix, int height, int weight, int dataType, std::vector<uchar>& buffer)
+        {
+            assert(matrix != nullptr);
+            assert(&buffer != nullptr);
+            vector<int> parameters = vector<int>(2);
+            parameters[0] = CV_IMWRITE_PNG_COMPRESSION;
+            parameters[1] = 3;//default(3)  0-9
+            cv::Mat source = cv::Mat(height, weight, dataType, matrix);
 
-        if (!imencode(".png", source, buffer, parameters)) {
-            fprintf(stderr, "TensorBoardFileWriter: PNG encoding failed. ");
-            return;
+            if (!imencode(".png", source, buffer, parameters)) {
+                fprintf(stderr, "TensorBoardFileWriter: PNG encoding failed. ");
+                return;
+            }
         }
-    }
     #endif // !CNTK_UWP
     }
 }
+
