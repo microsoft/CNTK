@@ -177,6 +177,47 @@ def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
     axis = sanitize_axis(axis)
     return cross_entropy_with_softmax(output_vector, target_vector, axis, name)
 
+@typemap
+def legacy_cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
+    r'''
+    This operation computes the cross entropy between the ``target_vector`` and
+    the softmax of the ``output_vector``. The elements of ``target_vector``
+    have to be non-negative and should sum to 1. The ``output_vector`` can
+    contain any values. The function will internally compute the softmax of
+    the ``output_vector``. Concretely,
+
+    :math:`\mathrm{softmax}(x)=\left[\frac{\exp(x_1)}{\sum_i\exp(x_i)}\quad\frac{\exp(x_1)}{\sum_i\exp(x_i)}\quad\ldots\quad\frac{\exp(x_1)}{\sum_i\exp(x_i)}\right]`
+
+    :math:`\mathrm{cross\_entropy\_with\_softmax}(o, t) = -\sum_{i} t_i \log(\mathrm{softmax}(o)_i)`
+
+    with the understanding that the implementation can use equivalent formulas
+    for efficiency and numerical stability.
+
+    Example:
+        >>> C.cross_entropy_with_softmax([[1., 1., 1., 50.]], [[0., 0., 0., 1.]]).eval()
+        array([[ 0.]], dtype=float32)
+
+        >>> C.cross_entropy_with_softmax([[1., 2., 3., 4.]], [[0.35, 0.15, 0.05, 0.45]]).eval()
+        array([[ 1.84019]], dtype=float32)
+
+    Args:
+        output_vector: the unscaled computed output values from the network
+        target_vector: usually it is one-hot vector where the hot bit
+         corresponds to the label index. But it can be any probability
+         distribution over the labels.
+        axis (int or :class:`~cntk.axis.Axis`, optional): if given, cross entropy will be computed
+                along this axis
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import legacy_cross_entropy_with_softmax
+    dtype = get_data_type(output_vector, target_vector)
+    output_vector = sanitize_input(output_vector, dtype)
+    target_vector = sanitize_input(target_vector, dtype)
+    axis = sanitize_axis(axis)
+    return legacy_cross_entropy_with_softmax(output_vector, target_vector, axis, name)
+
 
 @typemap
 def squared_error(output, target, name=''):

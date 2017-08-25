@@ -193,7 +193,8 @@ namespace CNTK
                 epochConfig.m_workerRank = workerRank;
                 epochConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
                 epochConfig.m_truncationSize = m_truncationLength;
-                epochConfig.m_allowMinibatchesToCrossSweepBoundaries = true;
+
+                epochConfig.m_allowMinibatchesToCrossSweepBoundaries = false;
 
                 if (m_maxNumSamplesToRead == MinibatchSource::FullDataSweep)
                 {
@@ -251,7 +252,8 @@ namespace CNTK
                 newConfig.m_workerRank = workerRank;
                 newConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
                 newConfig.m_truncationSize = m_truncationLength;
-                newConfig.m_allowMinibatchesToCrossSweepBoundaries = true;
+
+                newConfig.m_allowMinibatchesToCrossSweepBoundaries = false;
 
                 if (m_state.IsInitialized())
                 {

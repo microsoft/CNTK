@@ -374,18 +374,15 @@ class ProgressPrinter(cntk_py.ProgressWriter):
             format_args.extend([name, updates[0] + 1, updates[1]])
 
             if aggregate_loss is not None:
-                format_str += 'loss = {:0.6f} * {:d}'
+                format_str += 'loss = {:0.15f} * {:d}'
                 format_args.extend([_avg(aggregate_loss, samples), samples[1] - samples[0]])
 
             if aggregate_metric is not None:
                 if aggregate_loss is not None:
                     format_str += ', '
-                if self.metric_is_pct:
-                    format_str += 'metric = {:0.2f}% * {:d}'
-                else:
-                    format_str += 'metric = {:0.6f} * {:d}'
+                    format_str += 'metric = {:0.15f} * {:d}'
 
-                format_args.extend([_avg(aggregate_metric, samples) * self.metric_multiplier, samples[1] - samples[0]])
+                format_args.extend([_avg(aggregate_metric, samples), samples[1] - samples[0]])
 
             format_str += ';'
 
@@ -406,9 +403,9 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         if aggregate_metric is not None:
             avg_metric = _avg(aggregate_metric, samples)
             if self.metric_is_pct:
-                fmt_str = "Finished Epoch[{}{}]: {}loss = {:0.6f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples/s);"
+                fmt_str = "Finished Epoch[{}{}]: {}loss = {:0.15f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples/s);"
             else:
-                fmt_str = "Finished Epoch[{}{}]: {}loss = {:0.6f} * {}, metric = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);"
+                fmt_str = "Finished Epoch[{}{}]: {}loss = {:0.15f} * {}, metric = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);"
             msg = fmt_str.format(summaries, of_epochs, self.tag, avg_loss, samples, avg_metric * self.metric_multiplier,
                     samples, elapsed_seconds, speed)
         else:

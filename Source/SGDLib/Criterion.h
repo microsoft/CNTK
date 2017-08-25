@@ -49,7 +49,7 @@ struct EpochCriterion : public std::pair<double, size_t>
     // a few more handy operations that occurred multiple times
     bool IsNan() const { return std::isnan(first); }
     EpochCriterion operator-(const EpochCriterion& other) const { return EpochCriterion(first - other.first, second - other.second); }
-    void operator+=(const EpochCriterion& other) { first += other.first; second += other.second; }
+    void operator+=(const EpochCriterion& other) { first = (float)first + (float)other.first; second += other.second; }
 
     static EpochCriterion Infinity() { return EpochCriterion(std::numeric_limits<double>::infinity()); }
     bool IsInfinity() const { return first == std::numeric_limits<double>::infinity(); }
@@ -65,7 +65,7 @@ struct EpochCriterion : public std::pair<double, size_t>
         if (asPercentage)
             fprintf(stderr, (GeneratePaddedFloatOrExpFormat(2, 3, 100*evalErrorSinceLastLogged) + "%%").c_str(), 100*evalErrorSinceLastLogged);
         else
-            fprintf(stderr, GeneratePaddedFloatOrExpFormat(0, 8, evalErrorSinceLastLogged).c_str(), evalErrorSinceLastLogged);
+            fprintf(stderr, GeneratePaddedFloatOrExpFormat(0, 15, evalErrorSinceLastLogged).c_str(), evalErrorSinceLastLogged);
         fprintf(stderr, " * %d", evalSamplesSinceLastLogged);
         if (addSemicolon) // if no more numbers follow, then use addSemicolon = false
             fprintf(stderr, "; ");
@@ -141,7 +141,9 @@ private:
         // accumulate
         if (numSamples > 0) // (if MB is empty, we must not look at the matrix)
         {
-            auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
+			auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
+			double loss1 = node->Get00Element();
+			loss1 += 0;
             // Note: If criterion is > [1 x 1] then inverse broadcasting will kick in and aggregate.
             // If count is zero, we lazily consider the numerator as zero as well.
             criterionAccumulator.DoCopyOf(m_aggregateSampleCounts[i] ? (float)beta : 0, criterionValue, 1);

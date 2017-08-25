@@ -1171,6 +1171,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
                                                                                 useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
 
+		//std::cout << "rank " << m_mpi->CurrentNodeRank() << " mbsize " << actualMBSize << std::endl;
+
         if (maxNumSamplesExceeded) // Dropping data.
             wasDataRead = false;
 

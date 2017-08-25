@@ -9,6 +9,7 @@
 #include "CNTKLibrary.h"
 #include "fileutil.h"
 #include "PerformanceProfiler.h"
+#include <iostream>
 
 namespace CNTK
 {
@@ -375,7 +376,9 @@ namespace CNTK
         if (minibatchData.empty())
             return;
 
-        for (auto v : inputVarToStream)
+		std::cout << "rank " << workerRank << " mbsize " << minibatchData.begin()->second.numberOfSamples << std::endl;
+        
+		for (auto v : inputVarToStream)
         {
             auto value = minibatchData.find(v.second);
             if (value == minibatchData.end())
