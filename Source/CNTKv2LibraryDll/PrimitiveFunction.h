@@ -276,7 +276,8 @@ namespace CNTK
         // base constructor, called by all others except the move one
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
             : Function(inputs, std::move(functionConfig), nullptr, functionName, uid),
-              m_op(op)
+              m_op(op),
+              m_profiler(CurrentDynamicProfiler())
         {
             // set inputs' acyclic strong references if possible
             UpdateAcyclicReferences();
@@ -284,14 +285,15 @@ namespace CNTK
 
     private:
         // fast alternative constructor private to RawPrimitiveFunction()--not meant for any other use
-        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig)
-            : Function(std::move(inputs), std::move(outputs), std::move(functionConfig), nullptr, std::wstring(), std::wstring()),
-              m_op(op)
+        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, std::wstring&& name)
+            : Function(std::move(inputs), std::move(outputs), std::move(functionConfig), nullptr, std::move(name), std::wstring()),
+              m_op(op),
+              m_profiler(CurrentDynamicProfiler())
         {
             UpdateAcyclicReferences();
         }
 
-        static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes)
+        static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, std::wstring name = std::wstring())
         {
             std::vector<Variable> output({
                 OutputVariable(shape, inputs[0].GetDataType(), {},
@@ -299,7 +301,7 @@ namespace CNTK
                                std::all_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.IsSparse(); }),
                                std::wstring())
             });
-            auto res = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(output), std::move(attributes));
+            auto res = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(output), std::move(attributes), std::move(name));
             //std::call_once(m_outputsInitFlag, [this]() {});
             res->m_outputsInitFlag++;
             res->m_outputs.front().SetOwner(res);
@@ -862,8 +864,10 @@ namespace CNTK
         mutable size_t m_visitedTag = 0; // used for tree traversal
         friend class NonOwningFunctionList;
         friend class NonOwningFunctionListBuilder;
-        PrimitiveFunction* m_link;  // auto-batch uses temporary linked lists
-        int m_priority;             // used by scheduler
+        PrimitiveFunction* m_link;       // auto-batch uses temporary linked lists
+        int m_priority;                  // used by scheduler
+        mutable DynamicProfilerPtr m_profiler;   // profile using this profiler if set
+        static const DynamicProfilerPtr& CurrentDynamicProfiler();
     }; // end class PrimitiveFunction
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

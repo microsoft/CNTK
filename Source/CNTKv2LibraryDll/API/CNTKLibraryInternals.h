@@ -150,6 +150,8 @@ namespace CNTK
     class NDShape; 
     class PrimitiveFunction;
     class CompositeFunction;
+    class DynamicProfiler;
+    typedef std::shared_ptr<DynamicProfiler> DynamicProfilerPtr;
     class BlockFunction;
     class Function;
     class Variable;

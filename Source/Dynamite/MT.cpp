@@ -55,8 +55,8 @@ BinarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim,
     dropoutInputKeepProb;
     vector<BinarySequenceModel> layers;
     for (size_t i = 0; i < numLayers; i++)
-        layers.push_back(Dynamite::Sequence::BiRecurrence(GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"fwdInitialValue"),
-                                                          GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, L"bwdInitialValue")));
+        layers.push_back(Dynamite::Sequence::BiRecurrence(GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, Named("fwdInitialValue")),
+                                                          GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, Named("bwdInitialValue"))));
     vector<UnaryBroadcastingModel> bns;
     for (size_t i = 0; i < numLayers-1; i++)
         bns.push_back(Dynamite::BatchNormalization(device, Named("bnBidi")));
@@ -120,21 +120,24 @@ QuaternaryModel AttentionModelReference(size_t attentionDim1)
 {
     auto H = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
     let normH = LengthNormalization(device);
+    let profiler = Function::CreateDynamicProfiler(1, L"attention");
     return QuaternaryModel({ H }, { { L"normH", normH } },
-        [=](const Variable& h, const Variable& historyProjectedKey, const Variable& encodingProjectedNormedKey, const Variable& encodingProjectedData) -> Variable
+        [=](const Variable& h, const Variable& historyProjectedKey, const Variable& tanhEncodingProjectedNormedKey, const Variable& encodingProjectedData) -> Variable
     {
+        let prevProfiler = Function::SetDynamicProfiler(profiler);
         // compute attention weights
         let hProjected = Times(H, h, Named("H")); // [A x 1]. Batchable.
         let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A x T]. Batchable by stacking.
 #if 1
-        let u = InnerProduct(tanh, Tanh(encodingProjectedNormedKey), Axis(0)); // [1 x T] row vector. Batchable by stacking.
-        let w = Dynamite::Softmax(u, Axis(1)); // [1 x T] ReduceLogSum() not parallelizable. Pad? E.g. bucket-pad?
+        let u = InnerProduct(tanh, tanhEncodingProjectedNormedKey, Axis(0), Named("u")); // [1 x T] row vector. Batchable by stacking.
+        let w = Dynamite::Softmax(u, Axis(1), Named("w")); // [1 x T] ReduceLogSum() not parallelizable. Pad? E.g. bucket-pad?
         let res = Reshape(InnerProduct(encodingProjectedData, w, Axis(1), Named("attContext")), NDShape{ attentionDim1 }); // [A x T] x [1 x T] -> [A x 1] Batchable with bucket-padding.
 #else
-        let u = ReduceSum(ElementTimes(tanh, Tanh(encodingProjectedNormedKey), Named("attDot")), Axis(0))->Output(); // [1 x T] col vector
+        let u = ReduceSum(ElementTimes(tanh, tanhEncodingProjectedNormedKey, Named("attDot")), Axis(0))->Output(); // [1 x T] col vector
         let w = Reshape(Dynamite::Softmax(u), { u.Shape().TotalSize() }); // [T] this is a transposition (Transpose does not work yet)
         let res = Times(encodingProjectedData, w, Named("attContext")); // [A x T] x [T] -> [A]
 #endif
+        Function::SetDynamicProfiler(prevProfiler);
         return res;
     });
 }
@@ -142,20 +145,20 @@ QuaternaryModel AttentionModelReference(size_t attentionDim1)
 BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
-    let encBarrier = Barrier(L"encBarrier");
-    let encoderKeysProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")); // keys projection for attention
-    let encoderDataProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")); // data projection for attention
-    let embedTarget = Barrier(L"embedTargetBarrier") >> Embedding(embeddingDim, device) >> BatchNormalization(device, L"bnEmbedTarget");     // target embeddding
+    let encBarrier = Barrier(Named("encBarrier"));
+    let encoderKeysProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderKeysProjection")); }); // keys projection for attention
+    let encoderDataProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderDataProjection")); }); // data projection for attention
+    let embedTarget = Barrier(Named("embedTargetBarrier")) >> Embedding(embeddingDim, device) >> BatchNormalization(device, Named("bnEmbedTarget"));     // target embeddding
     let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
-    let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x); }), device);
+    let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("initialStateProjection")); }), device);
     let stepFunction = GRU(decoderRecurrentDim, device);
     //let attentionModel = AttentionModelBahdanau(attentionDim);
     let attentionModel = AttentionModelReference(attentionDim);
-    let firstHiddenProjection = Barrier(Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x); }), device);
+    let firstHiddenProjection = Barrier(Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x, Named("firstHiddenProjection")); }), device);
     vector<UnaryBroadcastingModel> resnets;
     for (size_t n = 0; n < numDecoderResNetProjections; n++)
         resnets.push_back(ResidualNet(decoderProjectionDim, device));
-    let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { return Tanh(x); }), device);
+    let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("topHiddenProjection")); }), device);
     let outputProjection = Linear(tgtVocabSize, device);  // output layer without non-linearity (no sampling yet)
 
     // buffers
@@ -176,6 +179,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     };
     for (let& resnet : resnets)
         nestedLayers[L"resnet[" + std::to_wstring(nestedLayers.size()) + L"]"] = resnet;
+    let profiler = Function::CreateDynamicProfiler(1, L"decode");
     return BinarySequenceModel({ }, nestedLayers,
     [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
     {
@@ -196,11 +200,13 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
         {
             // do recurrent step (in inference, history[t] would become res[t-1])
             let historyProjectedKey = embedTarget(history[t]);
+            let prevProfiler = Function::SetDynamicProfiler(profiler, false); // set to true to display this section of batched graph
             let input = Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput"));
             state = stepFunction(state, input);
             // compute attention vector
             //attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
             attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeysTensor, encodingProjectedDataTensor);
+            Function::SetDynamicProfiler(prevProfiler);
             // stack of non-recurrent projections
             auto state1 = firstHiddenProjection(state); // first one brings it into the right dimension
             for (auto& resnet : resnets)                // then a bunch of ResNet layers

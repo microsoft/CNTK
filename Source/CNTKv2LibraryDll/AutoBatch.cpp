@@ -691,6 +691,43 @@ public:
 };
 /*static*/ size_t VisitorTag::s_nextVisitTag = 1;
 
+
+// ===========================================================================
+// DynamicProfiler -- helper for profiling dynamic batching of functions
+// ===========================================================================
+
+class DynamicProfiler : public enable_shared_from_this<DynamicProfiler>
+{
+public:
+    DynamicProfiler(int verbosity, const wstring& name) :
+        m_verbosity(verbosity), m_name(name)
+    {
+    }
+
+    int Verbosity() const { return m_verbosity; }
+    const wchar_t* Name() const { return m_name.c_str(); }
+
+private:
+    // config
+    const int m_verbosity;
+    const wstring m_name;
+    // state
+};
+
+// TODO: make this thread local??  vvv
+static shared_ptr<DynamicProfiler> m_currentProfiler; // current innermost active profiler, or empty
+
+/*static*/ DynamicProfilerPtr Function::CreateDynamicProfiler(int verbosity, const wstring& name) { return MakeSharedObject<DynamicProfiler>(verbosity, name); }
+/*static*/ DynamicProfilerPtr Function::SetDynamicProfiler(const DynamicProfilerPtr& p, bool outer)
+{
+    auto prev = m_currentProfiler;
+    if (outer || prev) // only set if verbosity>0 or there is already a profiler set (this is for inner lib functions)
+        m_currentProfiler = p;
+    return prev;
+}
+/*static*/ const DynamicProfilerPtr& PrimitiveFunction::CurrentDynamicProfiler() { return m_currentProfiler; }
+
+
 // ===========================================================================
 // AutoBatch -- autobatching happening inside here
 // The auto-batching related functions are grouped inside a class, since they
@@ -800,6 +837,21 @@ class Variable::AutoBatch
         return SeeThroughNoOps(inputs, index, barrierId);
     }
 
+    // helper to check whether we should profile this function execution
+    set<DynamicProfilerPtr> m_profilersUsed; // all used profilers will be registered for a given batched execution
+    bool ShouldProfile(const PrimitiveFunction* f)
+    {
+#ifdef LOG_DETAILS
+        f;
+        let should = true;
+#else
+        let should = f->m_profiler && f->m_profiler->Verbosity() > 0;
+#endif
+        if (should)
+            m_profilersUsed.insert(f->m_profiler);
+        return should;
+    }
+
     // class to manage the set of ready operations (the schedule)
     class ReadyOps
     {
@@ -889,6 +941,7 @@ class Variable::AutoBatch
                 m_barrierPendingCounts.resize(barrierId * 10, 0);
             m_barrierPendingCounts[barrierId]++;
         }
+        int BarrierPendingCounts(size_t barrierId) const { return barrierId != SIZE_MAX ? (int)m_barrierPendingCounts[barrierId]: -1; } // this is used for logging
         // count an occurrence of a BatchNormalization with a given id
         void CountBatchNorm(size_t bnId)
         {
@@ -1024,29 +1077,6 @@ class Variable::AutoBatch
                 if (GetBatchNormPending(best)) // the only ready op is BN with some instances still pending -> error (I am not sure under which circumstances this may ever happen)
                     InvalidArgument("Primitive op '%S' with id %d must not be used in a recurrent loop (must not depend on its own output).",
                         PrimitiveOpTypeName(best->front()->m_op).c_str(), (int)best->front()->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
-#ifdef LOG_DETAILS
-                // log
-                let f = best->front();
-                let& inputs = f->m_inputs;
-                for (size_t i = 0; i < inputs.size(); i++)
-                {
-                    size_t barrierId = SIZE_MAX;
-                    SeeThroughNoOps(inputs, i, barrierId);
-                    if (barrierId != SIZE_MAX)
-                    {
-                        let& input = inputs[i]; // we are lazy and only print the name if the barrier is the immediate input, so that we don't have to duplicate the traversal in SeeThroughNoOps()
-                        const wchar_t* name = nullptr;
-                        size_t id = SIZE_MAX;
-                        if (input.IsOutput())
-                        {
-                            let& f = input.OutputOwner();
-                            name = f->Name().c_str();
-                            id = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
-                        }
-                        fprintf(stderr, "\n--- %d (%S): %d pending\n\n", (int)id, (name && name[0]) ? name : L"?", id != SIZE_MAX ? (int)m_barrierPendingCounts[id] : -1);
-                    }
-                }
-#endif
                 // and remove this one from the list
                 NonOwningFunctionList out = *best; // since NonOwningFunctionListBuilder uses unmanaged pointers, we can just copy it
                 m_regularOps.erase(best); // TODO: suboptimal complexity; but a list has the same problem. Priority queue?
@@ -1157,7 +1187,7 @@ class Variable::AutoBatch
         return fields.m_value;
     }
 
-    static void LogFunction(const PrimitiveFunction& f, const char* prefix = "", size_t markIndex = SIZE_MAX)
+    static void LogFunction(const PrimitiveFunction& f, const wchar_t* prefix = L"", size_t markIndex = SIZE_MAX)
     {
         let& inputs = f.m_inputs;
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
@@ -1166,7 +1196,9 @@ class Variable::AutoBatch
         let& name = f.Name();
         if (!name.empty())
             uid = name + L":" + uid;
-        fprintf(stderr, "%s%S%S = %S (", prefix, uid.c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
+        if (prefix && *prefix)
+            fprintf(stderr, "[%S]  ", prefix);
+        fprintf(stderr, "%S%S = %S (", uid.c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size(); i++)
         {
             let& input = SeeThroughNoOps(inputs, i);
@@ -1222,7 +1254,14 @@ class Variable::AutoBatch
                     fprintf(stderr, "(empty)");
             }
         }
+        if (!f.m_name.empty())
+            fprintf(stderr, ", Name=\"%S\"", f.m_name.c_str());
         fprintf(stderr, ")\n");
+    }
+    // same but takes the prefix from the profiler if given
+    static void LogFunction(const PrimitiveFunction& f, const DynamicProfilerPtr& profiler, size_t markIndex = SIZE_MAX)
+    {
+        LogFunction(f, profiler ? profiler->Name() : L"-", markIndex);
     }
 
 #ifdef LOG_MEMOIZE_STATS
@@ -1270,11 +1309,10 @@ class Variable::AutoBatch
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
         // logging
-#ifdef LOG_DETAILS
-        LogFunction(f, "[bf]  ");
-#endif
+        if (ShouldProfile(&f))
+            LogFunction(f, f.m_profiler);
         //if (f.m_op == PrimitiveOpType::ElementTimes)
-        //    LogFunction(f, "[bf]  ");
+        //    LogFunction(f, L"[bf]  ");
         auto outValue = isFree
             ? nullptr
             : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
@@ -1531,8 +1569,8 @@ class Variable::AutoBatch
                         additionalProperties[PrimitiveFunction::AttributeNameAxis      ] = Axis((int)axis);
                         additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = (int)begin;
                         additionalProperties[PrimitiveFunction::AttributeNameEndIndex  ] = (int)(begin + j);
-                        // TODO: ^^ reinsert all those PrimitiveFunction:: symbols, since we have access to those now
-                        let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties));
+                        let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties), f0.m_name);
+                        spliceOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
                         spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
 #endif
@@ -1556,7 +1594,8 @@ class Variable::AutoBatch
                         //additionalProperties[PrimitiveFunction::AttributeNameNewShape]  = NDShape(outputShape);
                         //additionalProperties[PrimitiveFunction::AttributeNameBeginAxis] = Axis((int)0);
                         //additionalProperties[PrimitiveFunction::AttributeNameEndAxis]   = Axis((int)axis);
-                        let reshapeOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape, move(additionalProperties));
+                        let reshapeOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape, move(additionalProperties), f0.m_name);
+                        reshapeOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
                         reshapeOp->m_uid = L"#," + spliceInputs[0].Uid();
 #endif
@@ -1577,9 +1616,12 @@ class Variable::AutoBatch
                     outputShape = LazilyIndexedValue(spliceInputs[0])->Shape().Dimensions();
                     outputShape.resize(batchAxis, 1);           // pad to batchAxis
                     outputShape.push_back(spliceInputs.size()); // and add the batch axis
+                    if (outputShape == NDShape{ 512, 36, 108 })
+                        BreakPoint;
                     auto additionalProperties = Dictionary();   // create additional arguments
                     additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis((int)batchAxis);
-                    let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties));
+                    let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties), f0.m_name);
+                    spliceOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
                     spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
 #endif
@@ -1633,7 +1675,8 @@ class Variable::AutoBatch
 #endif
 
                 let expectedOutputShape = unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize);
-                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(m_batchedInputs), expectedOutputShape, move(attributes));
+                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(m_batchedInputs), expectedOutputShape, move(attributes), f0.m_name);
+                batchedOp->m_profiler = f0.m_profiler;
                 // Note: We could move(m_batchedInputs), but don't, since then we would have to reallocate m_batchedInputs for the next operation, so makes no difference.
                 fail_if(batchedOp->m_outputs[0].Shape().Rank() != outputBatchAxis + 1, "outputBatchAxis was not predicted right");
 #ifdef LOG_DETAILS
@@ -1643,7 +1686,8 @@ class Variable::AutoBatch
             else
             {
                 // all inputs identical: compute it only once
-                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), move(attributes));
+                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), move(attributes), f0.m_name);
+                batchedOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
                 batchedOp->m_uid = L"." + f0.Uid();
 #endif
@@ -1675,7 +1719,8 @@ class Variable::AutoBatch
                     //additionalProperties[PrimitiveFunction::AttributeNameNewShape]  = NDShape(outputShape);
                     //additionalProperties[PrimitiveFunction::AttributeNameBeginAxis] = Axis((int)0);
                     //additionalProperties[PrimitiveFunction::AttributeNameEndAxis]   = Axis((int)axis);
-                    let reshapeOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, move(additionalProperties));
+                    let reshapeOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, move(additionalProperties), f0.m_name);
+                    reshapeOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
                     reshapeOp->m_uid = L"*," + arg.Uid();
 #endif
@@ -1755,7 +1800,7 @@ public:
         if (fields.m_value)
             return fields.m_value;
 #ifdef LOG_DETAILS
-        Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), "[r] "); });
+        Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), L"[r] "); });
 #endif
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
         if (!fields.m_value)
@@ -1768,6 +1813,30 @@ public:
             {
                 // select the best amongst the scheduled ops
                 auto opBatch = m_schedule.pop_best();
+                // log (if barrier crossed)
+                let f = opBatch.front();
+                if (ShouldProfile(f))
+                {
+                    let& inputs = f->m_inputs;
+                    for (size_t i = 0; i < inputs.size(); i++)
+                    {
+                        size_t barrierId = SIZE_MAX;
+                        SeeThroughNoOps(inputs, i, barrierId);
+                        if (barrierId != SIZE_MAX)
+                        {
+                            let& input = inputs[i]; // we are lazy and only print the name if the barrier is the immediate input, so that we don't have to duplicate the traversal in SeeThroughNoOps()
+                            const wchar_t* name = nullptr;
+                            size_t id = SIZE_MAX;
+                            if (input.IsOutput())
+                            {
+                                let& f = input.OutputOwner();
+                                name = f->Name().c_str();
+                                id = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+                            }
+                            fprintf(stderr, "\n[%S] --- %d (%S): %d pending\n\n", f->m_profiler->Name(), (int)id, (name && name[0]) ? name : L"?", (int)m_schedule.BarrierPendingCounts(id));
+                        }
+                    }
+                }
                 // execute it, and also update all outputs' values and consumers, and the schedule
                 ExecuteBatchedOpAndUpdateSchedule(opBatch);
             }
@@ -1992,7 +2061,7 @@ public:
     void BackpropToUnbatched(PrimitiveFunction* f, size_t index)
     {
 #ifdef LOG_DETAILS
-        LogFunction(*f, "[bb] ", index);
+        LogFunction(*f, L"[bb] ", index);
 #endif
         let& inputs =  f->m_inputs;
         auto& input = SeeThroughNoOps(inputs, index);
@@ -2063,7 +2132,7 @@ public:
         }
 #else
 #ifdef LOG_DETAILS
-        LogFunction(*f, "[bb#] ", SIZE_MAX);
+        LogFunction(*f, L"[bb#] ", SIZE_MAX);
 #endif
         // The gradient of Splice is just copying all columns to the respective inputs.
         let& inputs =  f->m_inputs;
@@ -2130,7 +2199,7 @@ public:
         auto& timesDataRightInputs = BorrowBuffer(m_outputGradientsBuffer, numBatchItems);
         let& f0 = *consumers.front().first;
 #ifdef LOG_DETAILS
-        LogFunction(f0, "[bb*] ", 0);
+        LogFunction(f0, L"[bb*] ", 0);
 #endif
         let& input0 = SeeThroughNoOps(f0.m_inputs, 0);
         size_t batchDim = 0;

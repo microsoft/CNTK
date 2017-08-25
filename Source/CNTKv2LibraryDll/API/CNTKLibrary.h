@@ -3735,6 +3735,10 @@ namespace CNTK
     public:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = std::wstring());
 
+    public:
+        CNTK_API static DynamicProfilerPtr CreateDynamicProfiler(int verbosity, const std::wstring& name);
+        CNTK_API static DynamicProfilerPtr SetDynamicProfiler(const DynamicProfilerPtr&, bool outer = false);
+
     private:
         static UserFunctionFactoryPtr s_userFunctionFactory;
 

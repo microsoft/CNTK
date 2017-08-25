@@ -292,13 +292,15 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     auto scale = Parameter({ }, DTYPE, 1.0, device, L"scale");
     let eps = Constant::Scalar(DTYPE, 1e-16, device);
     let minusHalf = Constant::Scalar(DTYPE, -0.5, device);
+    let profiler = Function::CreateDynamicProfiler(1, L"lnorm");
     return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x)
     {
+        let prevProfiler = Function::SetDynamicProfiler(profiler);
         let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
         let x0 = x - mean;
         //LOG(x0);
         // BUGBUG: Sqrt() seems hosed!!
-        let invLen = Pow(ReduceMean(x0 * x0, axis) + eps, minusHalf);
+        let invLen = Pow(ReduceMean(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct (but we don't have the dims upfront)
         //LOG(len);
         // Note: ^^ this parallelizes, while this vv does not
         //let len = Sqrt(TransposeTimes(x, x));
@@ -306,6 +308,7 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
         //LOG(scale);
         //LOG(res);
         let res = x0 * invLen * scale;
+        Function::SetDynamicProfiler(prevProfiler);
         return res;
     });
 #endif
@@ -383,6 +386,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     let normR1 = LengthNormalization(device);
     let stackAxis = Axis(0);
     let stackedDim = (int)outputDim;
+    let profiler = Function::CreateDynamicProfiler(1, L"GRU");
     // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
     return BinaryModel({ W, R, b },
     {
@@ -391,19 +395,20 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     },
     [=](const Variable& dh, const Variable& x)
     {
+        let prevProfiler = Function::SetDynamicProfiler(profiler);
         // projected contribution from input(s), hidden, and bias
         let projx3  = b + normW(Times(W, x));
         let projdh3 =     normR(Times(R, dh));
-        let i_proj  = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim) + Slice(projdh3, stackAxis, 0 * stackedDim, 1 * stackedDim);
-        let r_proj  = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim) + Slice(projdh3, stackAxis, 1 * stackedDim, 2 * stackedDim);
-        let cx_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim);
+        let i_proj  = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ix_proj")) + Slice(projdh3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ih_proj"));
+        let r_proj  = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rx_proj")) + Slice(projdh3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rh_proj"));
+        let cx_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("cx_proj"));
         let ch_proj =                                                            Slice(projdh3, stackAxis, 2 * stackedDim, 3 * stackedDim);
 
-        let i = Sigmoid(i_proj);                  // update gate z(t)  --if 1 then take new input; if 0 then retain state
-        let r = Sigmoid(r_proj);                  // reset gate r(t)   --new input + projected old state mixed in
+        let i = Sigmoid(i_proj, Named("i"));                  // update gate z(t)  --if 1 then take new input; if 0 then retain state
+        let r = Sigmoid(r_proj, Named("r"));                  // reset gate r(t)   --new input + projected old state mixed in
 
         let c_proj = cx_proj + r * ch_proj;
-        let c = Tanh(c_proj);                     // "cell"
+        let c = Tanh(c_proj, Named("c"));                     // "cell"
 
         let h = dh + i * (c - dh);                // state
         //    = i * c  +  (1 - i) * dh;
@@ -414,6 +419,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         //# h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
         //# h(t) = (1 - i(t).*h'(t)) + i(t) .* h(t-1)                     --TODO: need to confirm bracketing with NVIDIA
 
+        Function::SetDynamicProfiler(prevProfiler);
         return h;
     });
 }
@@ -527,8 +533,8 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
     auto bn2 = BatchNormalization(device, L"bn2");
     return UnaryModel({ W1, W2, scale1, scale2 /*,b1, b2*/ }, { { L"bn1", bn1 },{ L"bn2", bn2 } }, [=](const Variable& x)
     {
-        let h = ReLU(bn1(Times(W1, x * scale1)));
-        let r = ReLU(bn2(Times(W2, h * scale2)) + x);
+        let h = ReLU(bn1(Times(W1, x * scale1))    , Named("hRes"));
+        let r = ReLU(bn2(Times(W2, h * scale2)) + x, Named("rRes"));
         return r;
     });
 }
@@ -640,18 +646,18 @@ struct Sequence
 };
 
 // built-in Softmax requires temp memory, so we use an explicit expression instead
-static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes())
+static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring())
 {
     //LOG(z);
     //LOG(ReduceLogSum(z, axis, L"smLogDenom"));
-    return z - ReduceLogSum(z, axis, Named("smLogDenom"));
+    return z - ReduceLogSum(z, axis, name);
 }
 
 // built-in Softmax requires temp memory, so we use an explicit expression instead
-static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes())
+static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring())
 {
     //LOG(LogSoftmax(z, axis));
-    return Exp(LogSoftmax(z, axis), Named("sm"));
+    return Exp(LogSoftmax(z, axis, name), name);
 }
 
 // built-in Softplus is a BlockFunction, so need to replace it here
