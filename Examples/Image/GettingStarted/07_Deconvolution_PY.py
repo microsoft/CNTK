@@ -57,7 +57,7 @@ def deconv_mnist(max_epochs=3):
     minibatch_size = 64
 
     # Set learning parameters
-    lr_schedule = C.learning_rate_schedule([0.00015], C.learners.UnitType.sample, epoch_size)
+    lr_schedule = C.learning_rate_schedule([0.00015], ref_mbsize =1, epoch_size)
     mm_schedule = C.learners.momentum_as_time_constant_schedule([600], epoch_size)
 
     # Instantiate the trainer object to drive the model training

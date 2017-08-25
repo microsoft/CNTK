@@ -36,6 +36,9 @@ class UnitType(Enum):
     '''
     Indicates whether the values in the schedule are specified on the per-sample or
     per-minibatch basis.
+    
+    deprecated:: 2.2
+    UnitType is deprecated.
     '''
 
     sample = 'sample'
@@ -156,6 +159,10 @@ class Learner(cntk_py.Learner):
              learning rate to reset to
         '''
         _verify_learning_rate_type(learning_rate)
+        if self.compatible_mode != learning_rate.compatible_mode:
+            Warning("Learner's compatible_mode (%r) is different from the compatible_mode (%r) infer from the legacy learning rate schedule; the compatible model inferred from legacy learning rate schedule is used" % (self.compatible_mode, learning_rate.compatible_mode))
+            self.compatible_mode = learning_rate.compatible_mode
+
         return super(Learner, self).reset_learning_rate(learning_rate)
 
     def learning_rate(self):
@@ -233,11 +240,10 @@ def _prepare_training_parameter_list(schedule):
 #for back compatibility
 def _infer_and_verify_ref_mbsize_and_unit(ref_mbsize, unit):
     #for back compatibility when unit is in the position of ref_mbsize of the training_parameter_schedule call
-    if ref_mbsize is not None and (isinstance(ref_mbsize, UnitType) or UnitType(ref_mbsize) in [UnitType.sample, UnitType.minibatch]):
+    if ref_mbsize is not None and (isinstance(ref_mbsize, UnitType) or (isinstance(ref_mbsize, str) and UnitType(ref_mbsize) in [UnitType.sample, UnitType.minibatch])):
         unit = ref_mbsize
-    unit = UnitType(unit) if unit is not None else unit
-    if ref_mbsize is not None or isinstance(ref_mbsize, UnitType):
         ref_mbsize = None
+    unit = UnitType(unit) if unit is not None else unit
 
     if unit is not None:
         if unit == UnitType.minibatch:
@@ -295,9 +301,14 @@ def training_parameter_schedule(schedule, ref_mbsize = None, epoch_size=None, un
          for all samples. In case of list, the elements are used as the
          values for ``epoch_size`` samples. If list contains pair, the second element is
          used as a value for (``epoch_size`` x first element) samples
+        ref_mbsize (int): an integer to specify the reference minibatch size that schedule are designed for; 
+          CNTK will scale the schedule internally so as to simulate the behavior of the schedule as much as possible
+          to match the designed effect. 
         unit (:class:`UnitType`): one of two
           * ``sample``: the returned schedule contains per-sample values
           * ``minibatch``: the returned schedule contains per-minibatch values.
+          deprecated:: 2.2
+          Use ref_mbsize parameter to specify the reference minbiatch size.
         epoch_size (optional, int): number of samples as a scheduling unit.
          Parameters in the schedule change their values every ``epoch_size``
          samples. If no ``epoch_size`` is provided, this parameter is substituted
@@ -314,24 +325,24 @@ def training_parameter_schedule(schedule, ref_mbsize = None, epoch_size=None, un
     '''
     ref_mbsize, unit = _infer_and_verify_ref_mbsize_and_unit(ref_mbsize,unit)
     compatible_mode = _infer_and_verify_compatible_mode(unit)
-    epoch_size = epoch_size if epoch_size is not None else cntk_py.training_double_parameter_schedule.full_data_sweep
 
     if isinstance(schedule, cntk_py.training_double_parameter_schedule):
+        schedule.compatible_mode = compatible_mode
         return schedule
 
     if isinstance(schedule, (int, float)):
         if epoch_size is not None:
             warnings.warn('When providing the schedule as a number, epoch_size is ignored', RuntimeWarning)
         schedule = cntk_py.training_double_parameter_schedule(*[schedule, ref_mbsize])
-        schedule.compatible_model = compatible_mode
+        schedule.compatible_mode = compatible_mode
         return schedule
 
-
+    epoch_size = epoch_size if epoch_size is not None else cntk_py.training_double_parameter_schedule.full_data_sweep
     if isinstance(schedule, list):
         schedule = _prepare_training_parameter_list(schedule)
         args = [schedule, epoch_size, ref_mbsize]
         res = cntk_py.training_double_parameter_schedule(*args)
-        res.compatible_model = compatible_mode
+        res.compatible_mode = compatible_mode
         return res
 
     raise ValueError(
@@ -347,6 +358,9 @@ def learning_rate_schedule(lr, ref_mbsize = None, epoch_size=None, unit=None):
     Args:
         lr (float or list): see parameter ``schedule`` in
          :func:`training_parameter_schedule`.
+        ref_mbsize (int): an integer to specify the reference minibatch size that schedule are designed for; 
+          CNTK will scale the schedule internally so as to simulate the behavior of the schedule as much as possible
+          to match the designed effect. 
         unit (:class:`UnitType`): see parameter
          ``unit`` in :func:`training_parameter_schedule`.
         epoch_size (int): see parameter ``epoch_size`` in
@@ -372,6 +386,9 @@ def momentum_schedule(momentum, epoch_size=None, ref_mbsize = None):
          :func:`training_parameter_schedule`.
         epoch_size (int): see parameter ``epoch_size`` in
          :func:`training_parameter_schedule`.
+        ref_mbsize (int): an integer to specify the reference minibatch size that schedule are designed for; 
+          CNTK will scale the schedule internally so as to simulate the behavior of the schedule as much as possible
+          to match the designed effect. 
 
     If you want to provide momentum values in a minibatch-size
     agnostic way, use :func:`momentum_as_time_constant_schedule`.
@@ -400,17 +417,26 @@ def momentum_schedule(momentum, epoch_size=None, ref_mbsize = None):
 
 
 @typemap
-def momentum_as_time_constant_schedule(momentum, epoch_size=None, ref_mbsize = None):
+def momentum_as_time_constant_schedule(momentum, epoch_size=None):
     '''
     Create a momentum schedule in a minibatch-size agnostic way
     (using the same semantics as :func:`training_parameter_schedule`
     with `unit=UnitType.sample`).
-
+    Deprecated:: 2.2
+      Now, 
+      momentum_time_constant = -minibatch_size/np.log(momentum_rate)
+      momentum_as_time_constant_schedule(momentum_time_constant)
+      Can be specified by:
+      momentum_schedule(momentum_rate, ref_mbsize = minibatch_size)
+      
     Args:
         momentum (float or list): see parameter ``schedule`` in
          :func:`training_parameter_schedule`.
         epoch_size (int): see parameter ``epoch_size`` in
          :func:`training_parameter_schedule`.
+        ref_mbsize (int): an integer to specify the reference minibatch size that schedule are designed for; 
+          CNTK will scale the schedule internally so as to simulate the behavior of the schedule as much as possible
+          to match the designed effect. 
 
     CNTK specifies momentum in a minibatch-size agnostic way as the time
     constant (in samples) of a unit-gain 1st-order IIR filter. The value
@@ -431,9 +457,6 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=None, ref_mbsize = N
     Returns:
         momentum as time constant schedule
     '''
-    ref_mbsize = 0 if ref_mbsize is None or isinstance(ref_mbsize, UnitType) else ref_mbsize
-    epoch_size = epoch_size if epoch_size is not None else cntk_py.training_double_parameter_schedule.full_data_sweep
-
     if isinstance(momentum, (cntk_py.training_double_parameter_schedule)):
         return momentum
 
@@ -442,6 +465,7 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=None, ref_mbsize = N
             warnings.warn('When providing the schedule as a number, epoch_size is ignored', RuntimeWarning)
         return cntk_py.momentum_as_time_constant_schedule(momentum)
 
+    epoch_size = epoch_size if epoch_size is not None else cntk_py.training_double_parameter_schedule.full_data_sweep
     if isinstance(momentum, list):
         momentum = _prepare_training_parameter_list(momentum)
         args = [momentum, epoch_size, 1] #momentum constant schedule's reference minibatch size is always per sample
@@ -454,6 +478,20 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=None, ref_mbsize = N
 
 # TODO figure out how to pass infty to C++ in a portable way
 
+
+def _infer_compatible_mode(compatible_mode, use_mean_gradient, lr_infer_compatible_mode):
+    if compatible_mode is not None:
+        if compatible_mode == False:
+            if use_mean_gradient == True:
+                Warning('compatible model is specified to False while use_mean_gradient (depreated option) is specified to True')
+            if lr_infer_compatible_mode == True:
+                Warning('compatible model is specified to False while learning rate schedule set unit type to be minibatch')
+        #explicit specified compatible mode takes precedence over the one inferred from the deprecated paramters
+        return compatible_mode
+    else:
+        #if no explicit compatible mode is specified, infer it from the deprecated parameters for backward compatibility
+        return use_mean_gradient or lr_infer_compatible_mode
+    return compatible_mode if compatible_mode is not None else False
 
 @typemap
 def sgd(parameters, lr,
@@ -503,8 +541,9 @@ def sgd(parameters, lr,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    infer_compatible_mode = use_mean_gradient or lr.compatible_model
-    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = infer_compatible_mode
+    compatible_mode = _infer_compatible_mode(compatible_mode, use_mean_gradient, lr.compatible_mode)
+    if compatible_mode is not None:
+        additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = compatible_mode
 
     return cntk_py.sgd_learner(parameters, lr, additional_options)
 
@@ -513,7 +552,8 @@ def sgd(parameters, lr,
 def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
                  l1_regularization_weight=0.0, l2_regularization_weight=0.0,
                  gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-                 gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
+                 gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(),
+                 compatible_mode=None):
     '''momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0.0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates a Momentum SGD learner instance to learn the parameters.
 
@@ -554,7 +594,9 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
+    compatible_mode = _infer_compatible_mode(compatible_mode, use_mean_gradient, lr.compatible_mode)
+    if compatible_mode is not None:
+        additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = compatible_mode
 
     return cntk_py.momentum_sgd_learner(parameters, lr, momentum, unit_gain,
                                         additional_options)
@@ -564,7 +606,8 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
 def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
              l1_regularization_weight=0.0, l2_regularization_weight=0.0,
              gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-             gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
+             gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(),
+             compatible_mode=None):
     '''nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates a Nesterov SGD learner instance to learn the parameters. This was
     originally proposed by Nesterov [1] in 1983 and then shown to work well in
@@ -616,7 +659,9 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
+    compatible_mode = _infer_compatible_mode(compatible_mode, use_mean_gradient, lr.compatible_mode)
+    if compatible_mode is not None:
+        additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = compatible_mode
 
     return cntk_py.nesterov_learner(parameters, lr, momentum, unit_gain,
                                     additional_options)
@@ -625,7 +670,8 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
 def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95, epsilon=1e-8,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-            gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
+            gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(),
+            compatible_mode=None):
     '''adadelta(parameters, lr, rho, epsilon, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an AdaDelta learner instance to learn the parameters. See [1] for
     more information.
@@ -667,7 +713,9 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
+    compatible_mode = _infer_compatible_mode(compatible_mode, use_mean_gradient, lr.compatible_mode)
+    if compatible_mode is not None:
+        additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = compatible_mode
 
     return cntk_py.ada_delta_learner(parameters, lr, rho, epsilon,
                                     additional_options)
@@ -677,7 +725,8 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
 def adagrad(parameters, lr, need_ave_multiplier=True,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-            gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
+            gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(),
+            compatible_mode=None):
     '''adagrad(parameters, lr, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an AdaGrad learner instance to learn the parameters. See [1] for
     more information.
@@ -721,7 +770,9 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
+    compatible_mode = _infer_compatible_mode(compatible_mode, use_mean_gradient, lr.compatible_mode)
+    if compatible_mode is not None:
+        additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = compatible_mode
 
     return cntk_py.ada_grad_learner(parameters, lr, need_ave_multiplier,
                                     additional_options)
@@ -732,7 +783,8 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
               variance_momentum=momentum_as_time_constant_schedule(720000),
               l1_regularization_weight=0.0, l2_regularization_weight=0.0,
               gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-              gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
+              gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(),
+              compatible_mode=None):
     '''fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an FSAdaGrad learner instance to learn the parameters.
 
@@ -777,7 +829,9 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
+    compatible_mode = _infer_compatible_mode(compatible_mode, use_mean_gradient, lr.compatible_mode)
+    if compatible_mode is not None:
+        additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = compatible_mode
 
     return cntk_py.fsada_grad_learner(parameters, lr, momentum, unit_gain,
                                       variance_momentum, additional_options)
@@ -788,7 +842,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          variance_momentum=momentum_as_time_constant_schedule(720000),
          l1_regularization_weight=0.0, l2_regularization_weight=0.0,
          gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-         gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(), epsilon=1e-8, adamax=False):
+         gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(), epsilon=1e-8, adamax=False,
+         compatible_mode=None):
     '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, epsilon=1e-8, adamax=False)
     Creates an Adam learner instance to learn the parameters. See [1] for more
     information.
@@ -842,7 +897,9 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
+    compatible_mode = _infer_compatible_mode(compatible_mode, use_mean_gradient, lr.compatible_mode)
+    if compatible_mode is not None:
+        additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = compatible_mode
 
     return cntk_py.adam_learner(parameters, lr, momentum, unit_gain,
                                 variance_momentum, epsilon, adamax, additional_options)
@@ -854,7 +911,8 @@ def rmsprop(parameters, lr,
             need_ave_multiplier=True,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-            gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
+            gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(),
+            compatible_mode=None):
     '''rmsprop(parameters, lr, gamma, inc, dec, max, min, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an RMSProp learner instance to learn the parameters.
 
@@ -896,7 +954,9 @@ def rmsprop(parameters, lr,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-    additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = use_mean_gradient or lr.compatible_model
+    compatible_mode = _infer_compatible_mode(compatible_mode, use_mean_gradient, lr.compatible_mode)
+    if compatible_mode is not None:
+        additional_options.dict_options[cntk_py.Learner.COMPATIBLE_MODE] = compatible_mode
 
     return cntk_py.rmsprop_learner(parameters, lr, gamma, inc, dec, max, min,
                                    need_ave_multiplier, additional_options)
@@ -949,7 +1009,8 @@ def universal(update_func, parameters):
         if any(dim<0 for dim in p.shape):
             raise ValueError('parameter %s has inferred dimensions. Please create the learner after all parameter shapes have been determined'%str(p))
         gradients.append(constant(0, shape=p.shape, dtype=p.dtype, name='grad'))
-
+    #TODO: add additional options and learning context to the parameters of the updat_func so that the update function
+    #      can make use of the context and additional options
     result = update_func(parameters, gradients)
 
     return cntk_py.universal_learner(parameters, gradients, result)

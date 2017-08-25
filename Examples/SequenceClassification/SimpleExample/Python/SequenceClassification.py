@@ -53,7 +53,7 @@ def train_sequence_classifier():
         label    : reader.streams.labels
     }
 
-    lr_per_sample = C.learning_rate_schedule(0.1, C.UnitType.sample)
+    lr_per_sample = C.learning_rate_schedule(0.1, ref_mbsize=1)
 
     # Instantiate the trainer object to drive the model training
     progress_printer = C.logging.ProgressPrinter(0)

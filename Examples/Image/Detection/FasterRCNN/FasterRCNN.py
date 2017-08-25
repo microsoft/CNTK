@@ -12,7 +12,7 @@ import yaml     # pip install pyyaml
 import easydict # pip install easydict
 import cntk
 import easydict
-from cntk import Trainer, UnitType, load_model, Axis, input_variable, parameter, times, combine, \
+from cntk import Trainer, load_model, Axis, input_variable, parameter, times, combine, \
     softmax, roipooling, plus, element_times, CloneMethod, alias, Communicator, reduce_sum
 from cntk.core import Value
 from cntk.io import MinibatchData
@@ -340,14 +340,14 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
         print("bias_lr_mult: {}".format(bias_lr_mult))
 
     # Instantiate the learners and the trainer object
-    lr_schedule = learning_rate_schedule(lr_per_sample, unit=UnitType.sample)
+    lr_schedule = learning_rate_schedule(lr_per_sample, ref_mbsize=1)
     learner = momentum_sgd(others, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
-                           unit_gain=False, use_mean_gradient=cfg["CNTK"].USE_MEAN_GRADIENT)
+                           unit_gain=False, compatible_mode=cfg["CNTK"].USE_MEAN_GRADIENT)
 
     bias_lr_per_sample = [v * bias_lr_mult for v in lr_per_sample]
-    bias_lr_schedule = learning_rate_schedule(bias_lr_per_sample, unit=UnitType.sample)
+    bias_lr_schedule = learning_rate_schedule(bias_lr_per_sample, ref_mbsize=1)
     bias_learner = momentum_sgd(biases, bias_lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
-                           unit_gain=False, use_mean_gradient=cfg["CNTK"].USE_MEAN_GRADIENT)
+                           unit_gain=False, compatible_mode=cfg["CNTK"].USE_MEAN_GRADIENT)
     trainer = Trainer(None, (loss, pred_error), [learner, bias_learner])
 
     # Get minibatches of images and perform model training

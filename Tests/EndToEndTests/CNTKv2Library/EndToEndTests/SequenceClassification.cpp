@@ -46,8 +46,8 @@ void TrainLSTMSequenceClassifier(const DeviceDescriptor& device, bool useSparseL
     auto featureStreamInfo = minibatchSource->StreamInfo(featuresName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsName);
 
-    LearningRatePerSampleSchedule learningRatePerSample = 0.0005;
-    MomentumAsTimeConstantSchedule momentumTimeConstant = 256;
+    LearningRateSchedule learningRatePerSample(0.0005, 1);
+    MomentumSchedule momentumTimeConstant = MomentumAsTimeConstantSchedule(256);
     auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction,
     { MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample,
         momentumTimeConstant, /*unitGainMomentum = */true) });
@@ -89,7 +89,7 @@ void TestLearningRateControl(const DeviceDescriptor& device)
     auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
     auto actualMBSize = minibatchData[labelStreamInfo].numberOfSamples;
 
-    LearningRatePerSampleSchedule learningRateSchedule({ { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
+    LearningRateSchedule learningRateSchedule({ { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize, 1);
     auto learner = SGDLearner(classifierOutput->Parameters(), learningRateSchedule);
     auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { learner });
     FloatingPointCompare(learner->LearningRate(), 0.0005, "Learner::LearningRate does not match expectation");
@@ -124,7 +124,7 @@ void TestLearningRateControl(const DeviceDescriptor& device)
     trainer->RestoreFromCheckpoint(modelFile);
     FloatingPointCompare(learner->LearningRate(), 0.0005, "Learner::LearningRate does not match expectation");
 
-    learner->ResetLearningRate(LearningRatePerSampleSchedule(0.0004));
+    learner->ResetLearningRate(LearningRateSchedule(0.0004, 1));
     FloatingPointCompare(learner->LearningRate(), 0.0004, "Learner::LearningRate does not match expectation");
 
     trainer->SaveCheckpoint(modelFile);

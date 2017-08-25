@@ -121,6 +121,7 @@
 %rename(MOMENTUM_SCHEDULE) CNTK::Learner::MomentumScheduleK;
 %rename(MOMENTUM_VARIANCE_SCEDULE) CNTK::Learner::MomentumVarianceScheduleK;
 %rename(COMPATIBLE_MODE)  CNTK::Learner::CompatModeK;
+%rename(options) CNTK::Learner::GetOptions;
 %attribute(CNTK::Learner, bool, compatible_mode, IsCompatibleModel, SetCompatibleModel);
 
 %rename(ndcg_at_1) CNTK::NDCGAt1;

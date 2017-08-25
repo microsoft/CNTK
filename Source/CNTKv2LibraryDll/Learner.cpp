@@ -125,7 +125,7 @@ namespace CNTK
     {
         if (m_additionalOptions.gradientClippingThresholdPerSample != numeric_limits<double>::infinity())
         {
-            // when using meanGradient, no need to scale up the maxGradientPerMB
+            // when using compatible mode, no need to scale up the maxGradientPerMB as it is the mean gradient already
             actualMBSize = (GetOptions().GetOrElse(CompatModeK, false) ? 1 : actualMBSize);
 
             double maxGradientPerMB = m_additionalOptions.gradientClippingThresholdPerSample * actualMBSize;
@@ -498,8 +498,8 @@ namespace CNTK
             //in the literature compatible model, use the momentum as it is
             return currentMomentum;
         }
-
-        return std::pow(currentMomentum, minibatchSize);
+        //TODO: The unit gain term (1-beta) should stay as it is (currentMomentum) instead of using the following scaled term.
+        return std::pow(currentMomentum, (double) minibatchSize / (double) schedule.GetRefMBSize());
     }
 
     /*virtual*/ void LearnerMomentumSGD::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
@@ -515,12 +515,29 @@ namespace CNTK
                                     const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
     {
         GET_WRITABLE_MATRICES;
-
+        /*
+        Let
+            u_t = \beta_1 u_{t-1} + \bar{\beta_1}  g_t 
+        With our scaling, the correct momentum update rule should be: 
+        \begin{itemize}
+        \item For classic momentum SGD, $\bar{\beta_1} = 1$
+        \item For unit gain momentum SGD, $\bar{\beta_1} = 1 - \beta_1$
+        \end{itemize}
+        The model update at time step $t$  is
+        \begin{align}
+        w_{t+1} &= w_{t} - \eta u_{t} \\
+        &= w_{t} - \bar{\beta_1} \sum_{j=1}^t \beta_1^{t - j} \sum_{x_i \in B_j} \frac{\eta}{M}\nabla_{w_{t}} l(w_{t}, x_i)\\
+        &= w_0 -  \sum_{k=0}^{T}[j(T) - j(k) + 1]\frac{\eta  \bar{\beta_1} \beta_1^{j(T) - j(k)} }{M}  \nabla_{w} l(w_{j(k)}, x_k)   \\
+        &= w_0 -  \sum_{k=0}^{T}(\lfloor \frac{T - k}{M} \rfloor + 1)\frac{\eta  \bar{\beta_1} \beta_1^{j(T) - j(k)} }{M}  \nabla_{w} l(w_{j(k)}, x_k)       \\
+        &= w_0 -  \sum_{k=0}^{T}(\lfloor \frac{T - k}{M} \rfloor + 1)\beta_1^{\lfloor \frac{T - k}{M} \rfloor}  \left[\frac{\eta  \bar{\beta_1} }{M}  \nabla_{w} l(w_{j(k)}, x_k) \right]
+        \end{align}
+        *Note that the \beta_1 should not be scaled according to the minibatch size for the unit gain factor*.
+        */
         const auto learningRate = ElementType(LearningRate(trainingSampleCount));
         const auto momentum = ElementType(MomentumValueForMB(trainingSampleCount));
-
+        auto unitGainFactor = UnitGainFactor<ElementType>();
         parameterMatrix->MomentumSGDUpdate(*gradientMatrix, *smoothedGradientMatrix,
-                                           learningRate, momentum, UseUnitGainMomentum());
+                                           learningRate, momentum, unitGainFactor);
     }
 
     /*virtual*/ void LearnerNesterov::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
@@ -537,9 +554,10 @@ namespace CNTK
 
         const auto learningRate = ElementType(LearningRate(trainingSampleCount));
         const auto momentum = ElementType(MomentumValueForMB(trainingSampleCount));
+        const auto unitGainFactor = UnitGainFactor<ElementType>();
 
         parameterMatrix->NesterovAcceleratedMomentumSGDUpdate(*gradientMatrix, *smoothedGradientMatrix,
-                                                              learningRate, momentum, UseUnitGainMomentum());
+                                                              learningRate, momentum, unitGainFactor);
     }
 
     LearnerAdaGrad::LearnerAdaGrad(const std::vector<Parameter>& parameters,
@@ -685,9 +703,10 @@ namespace CNTK
         const auto learningRate = LearningRate(trainingSampleCount);
         const auto momentum = MomentumValueForMB(trainingSampleCount);
         const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
+        const auto unitGainFactor = UnitGainFactor<ElementType>();
 
         smoothedGradientMatrix->FSAdagradUpdate(*gradientMatrix, *parameterMatrix, m_targetAdagradAvDenom_x_sqrtAdagradSqrFrames, learningRate,
-                                                momentum, varMomentum, UseUnitGainMomentum());
+                                                momentum, varMomentum, unitGainFactor);
     }
 
     LearnerAdam::LearnerAdam(const vector<Parameter>& parameters,

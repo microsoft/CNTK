@@ -15,7 +15,7 @@ import cntk as C
 from cntk.logging import *
 from cntk import input, cross_entropy_with_softmax, classification_error
 from cntk import Trainer, cntk_py 
-from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_schedule
 from cntk.debugging import set_computation_network_trace_level
 from cntk.device import try_set_default_device, gpu
 from cntk import data_parallel_distributed_learner, block_momentum_distributed_learner, Communicator
@@ -77,13 +77,12 @@ def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, b
     else: 
         return RuntimeError("Unknown model name!")
 
-    momentum_time_constant = -minibatch_size/np.log(0.9)
     l2_reg_weight = 0.0001
 
     # Set learning parameters
     lr_per_sample = [lr/minibatch_size for lr in lr_per_mb]
-    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
-    mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
+    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, ref_mbsize=1)
+    mm_schedule = momentum_schedule(0.9, ref_mbsize = minibatch_size)
     
     # learner object
     if block_size != None and num_quantization_bits != 32:

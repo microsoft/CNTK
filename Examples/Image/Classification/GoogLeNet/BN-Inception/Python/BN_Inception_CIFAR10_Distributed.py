@@ -16,7 +16,7 @@ import _cntk_py
 
 import cntk.io.transforms as xforms
 from cntk.debugging import start_profiler, stop_profiler
-from cntk.learners import learning_rate_schedule, momentum_schedule, momentum_sgd, UnitType
+from cntk.learners import learning_rate_schedule, momentum_schedule, momentum_sgd
 from cntk.logging import ProgressPrinter, log_number_of_parameters
 from cntk.ops import input
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
@@ -51,13 +51,13 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantiza
         lr_per_mb.extend([learning_rate] * learn_rate_adjust_interval)
         learning_rate *= learn_rate_decrease_factor
 
-    lr_schedule       = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch, epoch_size=epoch_size)
+    lr_schedule       = learning_rate_schedule(lr_per_mb, epoch_size=epoch_size)
     mm_schedule       = momentum_schedule(0.9)
     l2_reg_weight     = 0.0001 # CNTK L2 regularization is per sample, thus same as Caffe
     
     # Create learner
     local_learner = momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule,
-                                 l2_regularization_weight=l2_reg_weight)
+                                 l2_regularization_weight=l2_reg_weight, compatible_mode=True)
     parameter_learner = data_parallel_distributed_learner(
         local_learner, 
         num_quantization_bits=num_quantization_bits,

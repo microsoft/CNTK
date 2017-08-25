@@ -27,7 +27,6 @@ namespace CNTK
         virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
 
         virtual void ResetSmoothedGradients() override;
-    
     protected:
         // allocateSmoothGradients flag specifies whether NDArrayViews for smoothed gradients can be allocated 
         // in the base class constructor (in which case they are allocated with the shapes identical to the shapes of
@@ -45,21 +44,27 @@ namespace CNTK
 
         std::string LearnerType() const;
 
-        // Returns current (per-sample) learning rate.
+        // Returns current learning rate.
         double LearningRate(size_t minibatchSize) const
         {
             auto learningRate = Learner::LearningRate();
+            std::ignore = minibatchSize; //ignore the minibatch size for now
             if (GetOptions().GetOrElse(CompatModeK, false))
             {
-                //if (GetOptions().Contains(RefMBSizeK)) 
-                //{
-                //    //for compatible model, the reference minibatch size should be equal to the encounter minibatch size:
-                //    size_t ref_mbsize = m_additionalOptions.dictOptions[RefMBSizeK].Value<size_t>();
-                //    if (ref_mbsize != minibatchSize) //TODO: However, end of sweep might not have the same size yet
-                //        LogicError("Minibatch size should be equal to the designed reference minibatch size");
-                //}
-                // learning rate needs to be converted to the per-sample value.
-                return (minibatchSize == 0) ? 0.0 : learningRate / minibatchSize;
+                //compatible mode, the gradient are already mean gradient so the learning rate are directly applied
+                /*
+                TODO: When the encountered minibatich size (for variable size batch) is different from the one specified in the Trainer, we will need to 
+                      scale the learning rate by: DesignedLearningRate / DesignedReferenceMinibatchSize * EncounteredMinibatichSize. 
+                      Note that we need the EncounteredMinibatichSize to cancle out the mean gradient. Therefore the Trainer will need to update the learning
+                      rate schedule's ref_mbsize to achieve this.
+                */
+                return learningRate;
+            }
+            else 
+            {
+                std::size_t ref_mbsize = m_learningRateSchedule.GetRefMBSize();
+                assert(ref_mbsize > 0);
+                return learningRate / ref_mbsize;
             }
 
             return learningRate;
@@ -178,6 +183,14 @@ namespace CNTK
         bool UseUnitGainMomentum() const
         {
             return m_unitGain;
+        }
+
+        ///Return the unit gain factor. Note that the unit gain factor should not be scaled according to the minibatch size. See explanation in the Update(...) function.
+        template <typename ElementType>
+        ElementType UnitGainFactor() const
+        {
+            ElementType momentum = (ElementType)GetCurrentTrainingParameterValue(m_momentumSchedule);
+            return UseUnitGainMomentum() ? ElementType(1.0) - momentum : ElementType(1.0);
         }
 
     private:
@@ -312,6 +325,7 @@ namespace CNTK
         // returns current per-minibatch variance momentum value.
         double VarianceMomentumValueForMB(size_t minibatchSize) const
         {
+            //TODO: According to my preliminary analysis, the second momentum variance scaling is different from momentum scaling; need to double check -- yuqing tang
             return MomentumValueForMB(m_varianceMomentumSchedule, minibatchSize);
         }
 

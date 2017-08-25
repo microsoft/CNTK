@@ -10,7 +10,7 @@ import cntk as C
 import timeit
 from cntk import Axis
 from cntk.train import Trainer
-from cntk.learners import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.learners import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule
 from cntk.ops import sequence
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
@@ -196,7 +196,7 @@ def train_lm(testing=False):
     num_trained_samples_since_last_report = 0
 
     # Instantiate the trainer object to drive the model training
-    lr_schedule = learning_rate_schedule(learning_rate, UnitType.sample)
+    lr_schedule = learning_rate_schedule(learning_rate, ref_mbsize = 1)
     momentum_schedule = momentum_as_time_constant_schedule(momentum_as_time_constant)
     gradient_clipping_with_truncation = True
     learner = momentum_sgd(z.parameters, lr_schedule, momentum_schedule,
