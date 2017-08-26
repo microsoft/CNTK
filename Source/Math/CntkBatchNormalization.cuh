@@ -1,5 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
@@ -40,7 +41,7 @@ cudaError_t GetLastCudaError()
 #endif
     return cudaSuccess;
 }
-
+/*
 template <int U, typename T>
 __device__ __forceinline__ void LoadValues(const T* src, T dst[U])
 {
@@ -48,9 +49,17 @@ __device__ __forceinline__ void LoadValues(const T* src, T dst[U])
     for (int i = 0; i < U; i++)
         dst[i] = src[i];
 }
+*/
+template <int U, typename T1, typename T2>
+__device__ __forceinline__ void LoadValues(const T1* src, T2 dst[U])
+{
+#pragma unroll
+    for (int i = 0; i < U; i++)
+        dst[i] = (T2)src[i];
+}
 
 template <>
-__device__ __forceinline__ void LoadValues<2, float>(const float* src, float dst[2])
+__device__ __forceinline__ void LoadValues<2, float, float>(const float* src, float dst[2])
 {
     // src must be aligned at 8 bytes boundary.
     assert(reinterpret_cast<uintptr_t>(src) % (sizeof(dst)) == 0);
@@ -60,7 +69,7 @@ __device__ __forceinline__ void LoadValues<2, float>(const float* src, float dst
 }
 
 template <>
-__device__ __forceinline__ void LoadValues<4, float>(const float* src, float dst[4])
+__device__ __forceinline__ void LoadValues<4, float, float>(const float* src, float dst[4])
 {
     // src must be aligned at 16 bytes boundary.
     assert(reinterpret_cast<uintptr_t>(src) % (sizeof(dst)) == 0);
@@ -73,7 +82,7 @@ __device__ __forceinline__ void LoadValues<4, float>(const float* src, float dst
     dst[2] = v.z;
     dst[3] = v.w;
 }
-
+/*
 template <int U, typename T>
 __device__ __forceinline__ void StoreValues(const T src[U], T* dst)
 {
@@ -81,9 +90,17 @@ __device__ __forceinline__ void StoreValues(const T src[U], T* dst)
     for (int i = 0; i < U; i++)
         dst[i] = src[i];
 }
+*/
+template <int U, typename T1, typename T2>
+__device__ __forceinline__ void StoreValues(const T1 src[U], T2* dst)
+{
+#pragma unroll
+    for (int i = 0; i < U; i++)
+        dst[i] = (T2)src[i];
+}
 
 template <>
-__device__ __forceinline__ void StoreValues<2, float>(const float src[2], float* dst)
+__device__ __forceinline__ void StoreValues<2, float, float>(const float src[2], float* dst)
 {
     // dst must be aligned at 8 bytes boundary.
     assert(reinterpret_cast<uintptr_t>(dst) % (sizeof(src)) == 0);
@@ -94,7 +111,7 @@ __device__ __forceinline__ void StoreValues<2, float>(const float src[2], float*
 }
 
 template <>
-__device__ __forceinline__ void StoreValues<4, float>(const float src[4], float* dst)
+__device__ __forceinline__ void StoreValues<4, float, float>(const float src[4], float* dst)
 {
     // dst must be aligned at 16 bytes boundary.
     assert(reinterpret_cast<uintptr_t>(dst) % (sizeof(src)) == 0);
@@ -204,6 +221,7 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
                                               double epsilon,
                                               ElemType* xMean, ElemType* xInvStdDev)     // (out) this minibatch's mean and inverse stddev
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
     static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
     assert((vectorSize % U) == 0);
@@ -228,9 +246,9 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
 
         // first estimate mean over all data for this thread
         int n = 0;
-        ElemType mean[U]; // this thread's part of the mean vector (stored as a normalized mean also during accumulation)
-        ElemType m2[U];   // likewise for variance
-        ElemType im2[U];  // and inverse stddev
+        comp_t mean[U]; // this thread's part of the mean vector (stored as a normalized mean also during accumulation)
+        comp_t m2[U];   // likewise for variance
+        comp_t im2[U];  // and inverse stddev
 #pragma unroll
         for (int k = 0; k < U; k++)
         {
@@ -244,13 +262,13 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
         for (; icolSrc < batchSize; icolSrc += BlockDimY)
         {
             n++;
-            ElemType curVal[U];
+            comp_t curVal[U];
             LoadValues<U>(psrc, curVal);
             // No need for separate unrolling, SASS looks good.
 #pragma unroll
             for (int k = 0; k < U; k++)
             {
-                ElemType d = curVal[k] - mean[k];
+                comp_t d = curVal[k] - mean[k];
                 // REVIEW alexeyk: we enabled fast CUDA math in CNTK so division below will be approximate, is this a problem?
                 // Using precise math slows down the code by about 40%.
                 mean[k] += d / n; // mean_n = [mean_{n-1} * (n-1) + curVal] / n = mean_{n-1} *n/n - mean_{n-1} / n + curVal / n
@@ -271,12 +289,12 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
                 int srcLane = laneId + BlockDimX * i;
                 int n2 = Shuffle(n, srcLane);
                 int nsum = n + n2;
-                ElemType d[U];
+                comp_t d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
                     d[k] = Shuffle(mean[k], srcLane) - mean[k];
-                    ElemType dScaled = d[k] * n2 / nsum;
+                    comp_t dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
                     m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
                 }
@@ -287,8 +305,8 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
         // Storage for each warp in a thread block. First warp ("accumulator") holds
         // final results so it does not need shared memory.
         const int cwarp = BlockDimX * BlockDimY / CUB_PTX_WARP_THREADS;
-        __shared__ ElemType meanRes[BlockDimX * U][cwarp - 1];
-        __shared__ ElemType m2Res[BlockDimX * U][cwarp - 1];
+        __shared__ comp_t meanRes[BlockDimX * U][cwarp - 1];
+        __shared__ comp_t m2Res[BlockDimX * U][cwarp - 1];
         __shared__ int nRes[cwarp - 1];
 
         // Each warp (except warp0) will write accumulated results to shared memory.
@@ -318,12 +336,12 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
             {
                 int n2 = nRes[i];
                 int nsum = n + n2;
-                ElemType d[U];
+                comp_t d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
                     d[k] = meanRes[threadIdx.x * U + k][i] - mean[k];
-                    ElemType dScaled = d[k] * n2 / nsum;
+                    comp_t dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
                     m2[k] += m2Res[threadIdx.x * U + k][i] + d[k] * n * dScaled;
                 }
@@ -331,8 +349,8 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
             }
 
             size_t idxDstBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
-            ElemType run[U];
-            ElemType x[U];
+            comp_t run[U];
+            comp_t x[U];
 
             // Compute running mean and batch mean.
             LoadValues<U>(runMean + idxDstBase, run);
@@ -353,14 +371,14 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
             for (int k = 0; k < U; k++)
             {
                 // Compute batch inverse standard deviation and variance
-                ElemType runVariance = batchSize == 1 ? 0 : m2[k] / (batchSize - 1);
+                comp_t runVariance = batchSize == 1 ? 0 : m2[k] / (batchSize - 1);
                 // Average
                 run[k] = expAvgFactor * runVariance + (1.0 - expAvgFactor) * run[k];
                 // Blend
-                im2[k] = Operations::RSqrt(static_cast<ElemType>(m2[k] / batchSize + epsilon));
+                im2[k] = Operations::RSqrt(static_cast<comp_t>(m2[k] / batchSize + epsilon));
                 if (blendFactor != 0)
                 {
-                    ElemType runInvStdDev = Operations::RSqrt(static_cast<ElemType>(run[k] + epsilon));
+                    comp_t runInvStdDev = Operations::RSqrt(static_cast<comp_t>(run[k] + epsilon));
                     im2[k] = blendFactor * runInvStdDev + (1.0 - blendFactor) * im2[k];
                 }
             }
@@ -372,7 +390,7 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
     else if (threadIdx.y == 0)
     {
         size_t idxDstBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
-        ElemType run[U];
+        comp_t run[U];
 
         // Copy mean
         LoadValues<U>(runMean + idxDstBase, run);
@@ -382,7 +400,7 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
         LoadValues<U>(runVariance + idxDstBase, run);
 #pragma unroll
         for (int k = 0; k < U; k++)
-            run[k] = Operations::RSqrt(static_cast<ElemType>(run[k] + epsilon));
+            run[k] = Operations::RSqrt(static_cast<comp_t>(run[k] + epsilon));
         StoreValues<U>(run, xInvStdDev + idxDstBase);
     }
 }
@@ -396,6 +414,7 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
                                                      ElemType* runMean, ElemType* runVariance,
                                                      double epsilon, ElemType* xMean, ElemType* xInvStdDev)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
     static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
     assert(blockDim.x == BlockDimX);
@@ -419,8 +438,8 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
         int irowSrcLim = (blockIdx.x + 1) * spatialSize;
 
         int n = 0;
-        ElemType mean[U];
-        ElemType m2[U];
+        comp_t mean[U];
+        comp_t m2[U];
 #pragma unroll
         for (int k = 0; k < U; k++)
         {
@@ -438,13 +457,13 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
             for (int irowSrc = irowSrcBase; irowSrc < irowSrcLim; irowSrc += BlockDimX * U, psrc += BlockDimX * U)
             {
                 n++;
-                ElemType curVal[U];
+                comp_t curVal[U];
                 LoadValues<U>(psrc, curVal);
                 // No need for separate unrolling, SASS looks good.
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
-                    ElemType d = curVal[k] - mean[k];
+                    comp_t d = curVal[k] - mean[k];
                     // REVIEW alexeyk: we enabled fast CUDA math in CNTK so division below will be approximate, is this a problem?
                     // Using precise math slows down the code by about 40%.
                     mean[k] += d / n;
@@ -465,12 +484,12 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
                 int srcLane = laneId + i;
                 int n2 = Shuffle(n, srcLane);
                 int nsum = n + n2;
-                ElemType d[U];
+                comp_t d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
                     d[k] = Shuffle(mean[k], srcLane) - mean[k];
-                    ElemType dScaled = d[k] * n2 / nsum;
+                    comp_t dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
                     m2[k] += Shuffle(m2[k], srcLane) + d[k] * n * dScaled;
                 }
@@ -481,8 +500,8 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
         // Storage for each warp in a thread block. First warp ("accumulator") holds
         // final results so it does not need shared memory.
         const int cwarp = BlockDimX * BlockDimY / CUB_PTX_WARP_THREADS;
-        __shared__ ElemType meanRes[U][cwarp - 1];
-        __shared__ ElemType m2Res[U][cwarp - 1];
+        __shared__ comp_t meanRes[U][cwarp - 1];
+        __shared__ comp_t m2Res[U][cwarp - 1];
         __shared__ int nRes[cwarp - 1];
 
         // Each warp (except warp0) will write accumulated results to shared memory.
@@ -508,12 +527,12 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
             {
                 int n2 = nRes[i];
                 int nsum = n + n2;
-                ElemType d[U];
+                comp_t d[U];
 #pragma unroll
                 for (int k = 0; k < U; k++)
                 {
                     d[k] = meanRes[k][i] - mean[k];
-                    ElemType dScaled = d[k] * n2 / nsum;
+                    comp_t dScaled = d[k] * n2 / nsum;
                     mean[k] += dScaled;
                     m2[k] += m2Res[k][i] + d[k] * n * dScaled;
                 }
@@ -524,8 +543,8 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
 #pragma unroll
             for (int k = 1; k < U; k++)
             {
-                ElemType d = mean[k] - mean[0];
-                ElemType dScaled = d * n / (n + k * n);
+                comp_t d = mean[k] - mean[0];
+                comp_t dScaled = d * n / (n + k * n);
                 mean[0] += dScaled;
                 m2[0] += m2[k] + d * k * n * dScaled;
             }
@@ -534,12 +553,12 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
             runMean[blockIdx.x] = expAvgFactor * mean[0] + (1.0 - expAvgFactor) * runMean[blockIdx.x];
             xMean[blockIdx.x] = blendFactor * runMean[blockIdx.x] + (1.0 - blendFactor) * mean[0];
 
-            ElemType runV = batchSize * spatialSize == 1 ? 0 : m2[0] / (batchSize * spatialSize - 1);
+            comp_t runV = batchSize * spatialSize == 1 ? 0 : m2[0] / (batchSize * spatialSize - 1);
             runVariance[blockIdx.x] = expAvgFactor * runV + (1.0 - expAvgFactor) * runVariance[blockIdx.x];
-            xInvStdDev[blockIdx.x] = Operations::RSqrt(static_cast<ElemType>(m2[0] / (batchSize * spatialSize) + epsilon));
+            xInvStdDev[blockIdx.x] = Operations::RSqrt(static_cast<comp_t>(m2[0] / (batchSize * spatialSize) + (comp_t)epsilon));
             if (blendFactor != 0)
             {
-                ElemType runInvStdDev = Operations::RSqrt(static_cast<ElemType>(runVariance[blockIdx.x] + epsilon));
+                comp_t runInvStdDev = Operations::RSqrt(static_cast<comp_t>((comp_t)runVariance[blockIdx.x] + (comp_t)epsilon));
                 xInvStdDev[blockIdx.x] = blendFactor * runInvStdDev + (1.0 - blendFactor) * xInvStdDev[blockIdx.x];
             }
         }
@@ -547,7 +566,7 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
     else if (threadIdx.y == 0 && threadIdx.x == 0)
     {
         xMean[blockIdx.x] = runMean[blockIdx.x];
-        xInvStdDev[blockIdx.x] = Operations::RSqrt(static_cast<ElemType>(runVariance[blockIdx.x] + epsilon));
+        xInvStdDev[blockIdx.x] = Operations::RSqrt(static_cast<comp_t>((comp_t)runVariance[blockIdx.x] + (comp_t)epsilon));
     }
 }
 
@@ -620,6 +639,7 @@ __global__ void kNormalizeBatchTraining(int vectorSize, int spatialSize, int bat
     const ElemType* runningMean, const ElemType* runningVariance,
     const ElemType* batchMean, ElemType* batchInvStdDev)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
     static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
     assert(blockDim.x == BlockDimX);
@@ -636,10 +656,10 @@ __global__ void kNormalizeBatchTraining(int vectorSize, int spatialSize, int bat
         return;
     assert(irowBase + U <= vectorSize);
 
-    __shared__ ElemType meanS[BlockDimX * U];
-    __shared__ ElemType invStdDevS[BlockDimX * U];
-    __shared__ ElemType scaleS[BlockDimX * U];
-    __shared__ ElemType biasS[BlockDimX * U];
+    __shared__ comp_t meanS[BlockDimX * U];
+    __shared__ comp_t invStdDevS[BlockDimX * U];
+    __shared__ comp_t scaleS[BlockDimX * U];
+    __shared__ comp_t biasS[BlockDimX * U];
     int offs = threadIdx.x * U;
 
     // REVIEW alexeyk: optimize smem usage, reduce transaction count (is it worth it?).
@@ -653,8 +673,8 @@ __global__ void kNormalizeBatchTraining(int vectorSize, int spatialSize, int bat
                 int imap = (irowBase + k) / spatialSize;
                 meanS[offs + k] = NormalizeRunningStats ? runningMean[imap] : batchMean[imap];
                 invStdDevS[offs + k] = NormalizeRunningStats
-                    ? Operations::RSqrt(static_cast<ElemType>(runningVariance[imap] + epsilon))
-                    : batchInvStdDev[imap];
+                    ? Operations::RSqrt(static_cast<comp_t>((comp_t)runningVariance[imap] + (comp_t)epsilon))
+                    : (comp_t)batchInvStdDev[imap];
                 scaleS[offs + k] = bnScale[imap];
                 biasS[offs + k] = bnBias[imap];
             }
@@ -666,18 +686,18 @@ __global__ void kNormalizeBatchTraining(int vectorSize, int spatialSize, int bat
             for (int k = 0; k < U; k++)
             {
                 invStdDevS[offs + k] = NormalizeRunningStats
-                    ? Operations::RSqrt(static_cast<ElemType>(runningVariance[irowBase + k] + epsilon))
-                    : batchInvStdDev[irowBase + k];
+                    ? Operations::RSqrt(static_cast<comp_t>((comp_t)runningVariance[irowBase + k] + (comp_t)epsilon))
+                    : (comp_t)batchInvStdDev[irowBase + k];
             }
             LoadValues<U>(bnScale + irowBase, scaleS + offs);
             LoadValues<U>(bnBias + irowBase, biasS + offs);
         }
     }
     __syncthreads();
-    ElemType mean[U];
-    ElemType invStdDev[U];
-    ElemType scale[U];
-    ElemType bias[U];
+    comp_t mean[U];
+    comp_t invStdDev[U];
+    comp_t scale[U];
+    comp_t bias[U];
     LoadValues<U>(meanS + offs, mean);
     LoadValues<U>(invStdDevS + offs, invStdDev);
     LoadValues<U>(scaleS + offs, scale);
@@ -690,7 +710,7 @@ __global__ void kNormalizeBatchTraining(int vectorSize, int spatialSize, int bat
     size_t stride = static_cast<size_t>(gridDim.y * BlockDimY) * vectorSize;
     for (; icol < batchSize; icol += gridDim.y * BlockDimY, psrc += stride, pdst += stride)
     {
-        ElemType val[U];
+        comp_t val[U];
         LoadValues<U>(psrc, val);
 #pragma unroll
         for (int k = 0; k < U; k++)
@@ -770,6 +790,7 @@ template <int BlockDimX, int BlockDimY, int U, typename ElemType>
 __global__ void kComputeScaleAndBiasGradients(int vectorSize, int batchSize, const ElemType* x, const ElemType* dy, ElemType* dScale, ElemType* dBias,
                                               const ElemType* savedMean, const ElemType* savedInvStdDev)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
     static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
     static_assert(((BlockDimY - 1) & BlockDimY) == 0, "BlockDimY must be a power of 2.");
@@ -786,10 +807,10 @@ __global__ void kComputeScaleAndBiasGradients(int vectorSize, int batchSize, con
         return;
     assert(irowSrcBase + U <= vectorSize);
 
-    ElemType mean[U];
-    ElemType invStdDev[U];
-    __shared__ ElemType meanS[BlockDimX * U];
-    __shared__ ElemType invStdDevS[BlockDimX * U];
+    comp_t mean[U];
+    comp_t invStdDev[U];
+    __shared__ comp_t meanS[BlockDimX * U];
+    __shared__ comp_t invStdDevS[BlockDimX * U];
     // Read mean and inv std dev.
     if (threadIdx.y == 0)
     {
@@ -805,8 +826,8 @@ __global__ void kComputeScaleAndBiasGradients(int vectorSize, int batchSize, con
         LoadValues<U>(&invStdDevS[threadIdx.x * U], invStdDev);
     }
 
-    ElemType ds[U];
-    ElemType db[U];
+    comp_t ds[U];
+    comp_t db[U];
 #pragma unroll
     for (int k = 0; k < U; k++)
     {
@@ -822,21 +843,21 @@ __global__ void kComputeScaleAndBiasGradients(int vectorSize, int batchSize, con
     // Stride over all vectors in the batch.
     for (; icolSrc < batchSize; icolSrc += BlockDimY, px += stride, pdy += stride)
     {
-        ElemType curX[U];
-        ElemType curdY[U];
+        comp_t curX[U];
+        comp_t curdY[U];
         LoadValues<U>(px, curX);
         LoadValues<U>(pdy, curdY);
 #pragma unroll
         for (int k = 0; k < U; k++)
         {
-            ds[k] += pdy[k] * (curX[k] - mean[k]) * invStdDev[k];
-            db[k] += pdy[k];
+            ds[k] += (comp_t)pdy[k] * (curX[k] - mean[k]) * invStdDev[k];
+            db[k] += (comp_t)pdy[k];
         }
     }
 
     // Final reduction.
-    __shared__ ElemType dsS[BlockDimY][BlockDimX * U];
-    __shared__ ElemType dbS[BlockDimY][BlockDimX * U];
+    __shared__ comp_t dsS[BlockDimY][BlockDimX * U];
+    __shared__ comp_t dbS[BlockDimY][BlockDimX * U];
     StoreValues<U>(ds, &dsS[threadIdx.y][threadIdx.x * U]);
     StoreValues<U>(db, &dbS[threadIdx.y][threadIdx.x * U]);
     __syncthreads();
@@ -874,6 +895,7 @@ template <int BlockDimX, int BlockDimY, int U, typename ElemType>
 __global__ void kComputeSpatialScaleAndBiasGradients(int vectorSize, int spatialSize, int batchSize, const ElemType* x, const ElemType* dy,
                                                         ElemType* dScale, ElemType* dBias, const ElemType* savedMean, const ElemType* savedInvStdDev)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
     static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
     assert(blockDim.x == BlockDimX);
@@ -890,10 +912,10 @@ __global__ void kComputeSpatialScaleAndBiasGradients(int vectorSize, int spatial
     assert(irowBase + U <= vectorSize);
     int irowLim = (blockIdx.x + 1) * spatialSize;
 
-    ElemType mean;
-    ElemType invStdDev;
-    __shared__ ElemType meanS;
-    __shared__ ElemType invStdDevS;
+    comp_t mean;
+    comp_t invStdDev;
+    __shared__ comp_t meanS;
+    __shared__ comp_t invStdDevS;
     const int tid = threadIdx.y * BlockDimX + threadIdx.x;
     // Read mean and inv std dev.
     if (tid == 0)
@@ -908,8 +930,8 @@ __global__ void kComputeSpatialScaleAndBiasGradients(int vectorSize, int spatial
         invStdDev = invStdDevS;
     }
 
-    ElemType ds[U];
-    ElemType db[U];
+    comp_t ds[U];
+    comp_t db[U];
 #pragma unroll
     for (int k = 0; k < U; k++)
     {
@@ -930,25 +952,25 @@ __global__ void kComputeSpatialScaleAndBiasGradients(int vectorSize, int spatial
         // Stride over all values in feature map (W and H dimensions).
         for (int irow = irowBase; irow < irowLim; irow += BlockDimX * U, px += BlockDimX * U, pdy += BlockDimX * U)
         {
-            ElemType curX[U];
-            ElemType curdY[U];
+            comp_t curX[U];
+            comp_t curdY[U];
             LoadValues<U>(px, curX);
             LoadValues<U>(pdy, curdY);
 #pragma unroll
             for (int k = 0; k < U; k++)
             {
-                ds[k] += pdy[k] * (curX[k] - mean) * invStdDev;
-                db[k] += pdy[k];
+                ds[k] += (comp_t)pdy[k] * (curX[k] - mean) * invStdDev;
+                db[k] += (comp_t)pdy[k];
             }
         }
     }
     __syncthreads();
-    using BlockReduce = cub::BlockReduce<ElemType, BlockDimX, cub::BLOCK_REDUCE_WARP_REDUCTIONS, BlockDimY>;
+    using BlockReduce = cub::BlockReduce<comp_t, BlockDimX, cub::BLOCK_REDUCE_WARP_REDUCTIONS, BlockDimY>;
     // Note: must use separate temp storages for each reduction.
     __shared__ typename BlockReduce::TempStorage tmp1;
-    ElemType dsRes = BlockReduce(tmp1).Sum(ds);
+    comp_t dsRes = BlockReduce(tmp1).Sum(ds);
     __shared__ typename BlockReduce::TempStorage tmp2;
-    ElemType dbRes = BlockReduce(tmp2).Sum(db);
+    comp_t dbRes = BlockReduce(tmp2).Sum(db);
     if (tid == 0)
     {
         dScale[blockIdx.x] = dsRes;
@@ -1002,6 +1024,7 @@ __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize
                                                     const ElemType* bnScale, ElemType mbStatsWeight, const ElemType* dScale, const ElemType* dBias,
                                                     const ElemType* savedMean, const ElemType* savedInvStdDev)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
     static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
     assert(blockDim.x == BlockDimX);
@@ -1017,11 +1040,11 @@ __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize
     if (irowBase >= vectorSize)
         return;
     assert(irowBase + U <= vectorSize);
-    ElemType scale[U];
-    ElemType ds[U];
-    ElemType db[U];
-    ElemType mean[U];
-    ElemType invStdDev[U];
+    comp_t scale[U];
+    comp_t ds[U];
+    comp_t db[U];
+    comp_t mean[U];
+    comp_t invStdDev[U];
     // REVIEW alexeyk: here we're wasting some bandwidth but this might be ok as it's a one-timer.
     if (Spatial)
     {
@@ -1053,9 +1076,9 @@ __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize
     size_t stride = static_cast<size_t>(gridDim.y * BlockDimY) * vectorSize;
     for (; icol < batchSize; icol += gridDim.y * BlockDimY, px += stride, pdy += stride, pdx += stride)
     {
-        ElemType xCur[U];
-        ElemType dyCur[U];
-        ElemType dxCur[U];
+        comp_t xCur[U];
+        comp_t dyCur[U];
+        comp_t dxCur[U];
         LoadValues<U>(px, xCur);
         LoadValues<U>(pdy, dyCur);
         LoadValues<U>(pdx, dxCur);
@@ -1069,12 +1092,12 @@ __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize
         //   dBias = Reduce(dy)
         //   dScale = Reduce(dy * xHat)
         // Simplifying this a bit more, we get the formula below.
-        ElemType val[U];
+        comp_t val[U];
         int m = Spatial ? batchSize * spatialSize : batchSize;
 #pragma unroll
         for (int k = 0; k < U; k++)
         {
-            ElemType xNorm = (xCur[k] - mean[k]) * invStdDev[k]; // xHat
+            comp_t xNorm = (xCur[k] - mean[k]) * invStdDev[k]; // xHat
             // scale * invStdDev * (
             //   dL/dyi
             //   - mbStatsWeight * (xHat * dL/dScale + dL/dBias) / m
@@ -1082,7 +1105,7 @@ __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize
             val[k] = dxCur[k]   // (adding to gradient)
                      + (scale[k] * invStdDev[k]) * (
                         dyCur[k]
-                        - mbStatsWeight * (xNorm * ds[k] + db[k]) / m);
+                        - (comp_t)mbStatsWeight * (xNorm * ds[k] + db[k]) / m);
         }
         StoreValues<U>(val, pdx);
     }

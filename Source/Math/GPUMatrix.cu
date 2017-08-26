@@ -939,6 +939,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTransposeOf(const GPUMatrix<Elem
 template <class ElemType>
 __global__ void _doGatherColumnsOf(ElemType* us, size_t usStride, const ElemType beta, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, size_t aCols, const ElemType alpha, CUDA_LONG numElements)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id >= numElements) // note: there are no __syncthread() calls inside
         return;
@@ -948,19 +949,19 @@ __global__ void _doGatherColumnsOf(ElemType* us, size_t usStride, const ElemType
     CUDA_LONG i    = id % usStride; // row index into 'us' and 'a'
     CUDA_LONG jOut = id / usStride; // col index into 'us' and 'idx'
 
-    auto jInF = idx[jOut * idxStride]; // this is the column we need to get
+    comp_t jInF = idx[jOut * idxStride]; // this is the column we need to get
     if (isnan_(jInF) || jInF < 0)     // negative index means gap
         return;
-    size_t jIn = (size_t)(unsigned long long int)jInF; // no unsigned long(size_t) conversion defined, here we assume 64 bits
+    size_t jIn = (size_t)jInF; // TODO:bad idea to store idx in ElemType matrix
     //if (jIn >= aCols)
     //    return; // actually a failure
 
     const ElemType&  ra = a[    i + jIn  *  aStride  ];
     ElemType&       rus = us[id/*i + jOut * usStride*/];
 
-    ElemType res = ra * alpha;
+    comp_t res = (comp_t)ra * (comp_t)alpha;
     if (beta != 0)
-        res += rus * beta;
+        res += (comp_t)rus * (comp_t)beta;
     rus = res;
 }
 
@@ -1010,6 +1011,8 @@ static void Peek(const GPUMatrix<ElemType>& m, const char* which)
 template <class ElemType>
 __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, CUDA_LONG numElements)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id >= numElements) // note: there are no __syncthread() calls inside
         return;
@@ -1019,17 +1022,17 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
     CUDA_LONG i   = id % aStride; // row index into 'a' and 'us'
     CUDA_LONG jIn = id / aStride; // col index into 'a' and 'idx'
 
-    auto jOutF = idx[jIn * idxStride];  // this is the column we copy/add into
+    comp_t jOutF = idx[jIn * idxStride];  // this is the column we copy/add into
     if (isnan_(jOutF) || jOutF < 0)    // negative index means gap
         return;
-    size_t jOut = (size_t)(unsigned long long int)jOutF; // no unsigned long(size_t) conversion defined, here we assume 64 bits
+    size_t jOut = (size_t)jOutF; // TODO:bad idea to store idx in ElemType matrix
     //if (jOut >= usCols)
     //    return; // actually a failure  --TODO: This should not be necessary. Why is it?
 
     const ElemType&  ra =  a[id/*i + jIn  *  aStride*/];
     ElemType&       rus = us[    i + jOut * usStride  ];
 
-    ElemType res = ra * alpha;
+    ElemType res = (comp_t)ra * (comp_t)alpha; // TODO_NV: investigate this fp16
     if (res != 0)             // avoid memory conflict if e.g. an entire column has no gradient
 #ifdef ALLOW_ATOMIC_SCATTER
         atomicAdd(&rus, res); // rus += res;
@@ -4625,6 +4628,7 @@ void GPUMatrix<ElemType>::RCRFBackwardCompute(
     const GPUMatrix<ElemType>& /*lbls*/,
     const GPUMatrix<ElemType>& pos_scores, const GPUMatrix<ElemType>& pair_scores, const int shift)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     if (alpha.IsEmpty() || pos_scores.IsEmpty() || pair_scores.IsEmpty())
         LogicError("RCRFBackwardCompute: one of the input matrices is empty.");
 
@@ -4645,12 +4649,12 @@ void GPUMatrix<ElemType>::RCRFBackwardCompute(
     size_t szMemSize;
     for (int t = iNumPos - 1; t >= 0; t--)
     {
-        szMemSize = sizeof(ElemType) * iNumLab;
+        szMemSize = sizeof(comp_t) * iNumLab;
         // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
         assert(iNumLab <= 1024);
         _rcrfBackwardComputeZetaMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, shift);
         szMemSize = iNumLab * 3;
-        szMemSize *= sizeof(ElemType);
+        szMemSize *= sizeof(comp_t);
         // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == 3 * iNumLab.
         assert(iNumLab <= 1024);
         _rcrfBackwardComputeMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t, iNumPos, alpha.Data(), beta.Data(),
@@ -4679,6 +4683,7 @@ void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
                                               const int startLbl,
                                               const int shift)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     assert(shift == 1);
     int iNumPos = alpha.GetNumCols();
     int iNumLab = alpha.GetNumRows();
@@ -4691,13 +4696,13 @@ void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
     size_t szMemSize;
     for (int t = 0; t < iNumPos; t++)
     {
-        szMemSize = sizeof(ElemType) * iNumLab;
+        szMemSize = sizeof(comp_t) * iNumLab;
         // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
         assert(iNumLab <= 1024);
         // BUGBUG: This is launched with 512 threads per block, but allocates shared mem as if there is only one block. Likewise for all 4 of these functions.
         _rcrfTransGrdComputeZetaMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t - 1, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, startLbl, shift);
         szMemSize = iNumLab * 3;
-        szMemSize *= sizeof(ElemType);
+        szMemSize *= sizeof(comp_t);
         // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
         assert(iNumLab <= 1024);
         _rcrfTransGrdComputeMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t, startLbl, alpha.Data(), beta.Data(),

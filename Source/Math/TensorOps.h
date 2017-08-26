@@ -6,6 +6,8 @@
 // This implements the elementwise tensor operations, including helper macros and some actual functions.
 //
 
+// TODO_NV: investigate function efficiency, fast_math, fpgeneric selector
+
 #pragma once
 
 #include "Basics.h"

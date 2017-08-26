@@ -1,6 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
-// Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved
+// Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
@@ -209,21 +209,22 @@ struct FixedMatrix<T, N, 0>
 template <class ElemType>
 struct TensorOps
 {
-    static __device__ ElemType Compute(const FixedArray<ElemType*, 1>& pointers, ElementWiseOperator op)
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    static __device__ comp_t Compute(const FixedArray<ElemType*, 1>& pointers, ElementWiseOperator op)
     {
 #define CaseNullaryTensorOp(oper)       \
     case ElementWiseOperator::op##oper: \
-        return Op##oper<ElemType>()
+        return Op##oper<comp_t>()
         switch (op)
         {
             ForAllNullaryOps(CaseNullaryTensorOp);
         default:
-            return OpConstOne<ElemType>(); // (failure--we only have one nullary op, so use the same, maybe it will eliminate the switch altogether)
+            return OpConstOne<comp_t>(); // (failure--we only have one nullary op, so use the same, maybe it will eliminate the switch altogether)
         }
     }
-    static __device__ ElemType Compute(const FixedArray<ElemType*, 2>& pointers, ElementWiseOperator op)
+    static __device__ comp_t Compute(const FixedArray<ElemType*, 2>& pointers, ElementWiseOperator op)
     {
-        ElemType a = *(pointers[0]);
+        comp_t a = *(pointers[0]);
 #define CaseUnaryTensorOp(oper)         \
     case ElementWiseOperator::op##oper: \
         return Op##oper(a)
@@ -234,11 +235,11 @@ struct TensorOps
             return 0; // (failure)
         }
     }
-    static __device__ ElemType Compute(const FixedArray<ElemType*, 3>& pointers, ElementWiseOperator op)
+    static __device__ comp_t Compute(const FixedArray<ElemType*, 3>& pointers, ElementWiseOperator op)
     {
         // const ElemType & a = *(pointers[0]);    // const & for opIndex--costs quite some code bloat
-        ElemType a = *(pointers[0]);
-        ElemType b = *(pointers[1]);
+        comp_t a = *(pointers[0]);
+        comp_t b = *(pointers[1]);
 #define CaseBinaryTensorOp(oper)        \
     case ElementWiseOperator::op##oper: \
         return Op##oper(a, b)
@@ -249,11 +250,11 @@ struct TensorOps
             return 0; // (failure)
         }
     }
-    static __device__ ElemType Compute(const FixedArray<ElemType*, 4>& pointers, ElementWiseOperator op)
+    static __device__ comp_t Compute(const FixedArray<ElemType*, 4>& pointers, ElementWiseOperator op)
     {
 #define CaseTernaryTensorOp(oper)       \
-    case ElementWiseOperator::op##oper: \
-        return Op##oper(*(pointers[0]), *(pointers[1]), *(pointers[2])) // reading each time, which saves mem accesses for OpCond
+    case ElementWiseOperator::op##oper:                             \
+        return Op##oper((comp_t)*(pointers[0]), (comp_t)*(pointers[1]), (comp_t)*(pointers[2])) // reading each time, which saves mem accesses for OpCond
         switch (op)
         {
             ForAllTernaryOps(CaseTernaryTensorOp);
@@ -308,21 +309,21 @@ template<typename ReductionType, class ElemType> __device__ void Aggregate(Reduc
     switch (reductionOp)
     {
     case ElementWiseOperator::opSum:
-        aggregate += val;
+        aggregate += (ReductionType)val;
         break;
     case ElementWiseOperator::opLogSum:
-        aggregate = OpLogSum(aggregate, val);
+        aggregate = OpLogSum(aggregate, (ReductionType)val);
         break;
     case ElementWiseOperator::opMin:
-        if (val < aggregate)
-            aggregate = val;
+        if ((ReductionType)val < aggregate)
+            aggregate = (ReductionType)val;
         break;
     case ElementWiseOperator::opMax:
-        if (val > aggregate)
-            aggregate = val;
+        if ((ReductionType)val > aggregate)
+            aggregate = (ReductionType)val;
         break;
     case ElementWiseOperator::opElementwiseProduct:
-        aggregate *= val;
+        aggregate *= (ReductionType)val;
         break;
     }
 };
@@ -331,13 +332,15 @@ template<typename ReductionType, class ElemType> __device__ void Aggregate(Reduc
 // function to compute the value for a given output location (including reduction)
 // -----------------------------------------------------------------------
 
-#define ReduceElemType ElemType // (note: we could use 'double' here, but that would cause problems with CUDA cards that don't support double)
+// change to typeselector, use double for double, float for float, float for half
+// #define ReduceElemType ElemType // (note: we could use 'double' here, but that would cause problems with CUDA cards that don't support double)
 
 template <class ElemType, C_size_t N, C_int M, C_int m>
 struct TensorOpReduce
 {
+    typedef typename TypeSelector<ElemType>::comp_t ReduceElemType;
     // this version for m >= 0
-    static __device__ ElemType Compute(FixedArray<ElemType*, N> pointers, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    static __device__ ReduceElemType Compute(FixedArray<ElemType*, N> pointers, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                        const FixedArray<C_unsigned_int, M>& reducingOpDims, const FixedMatrix<C_int, N, M>& reducingStrides)
     {
         // start with index 0
@@ -353,10 +356,10 @@ struct TensorOpReduce
             {
                 pointers[i] += reducingStrides(i, (C_size_t) m);
             }
-            ElemType val = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
+            ReduceElemType val = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
             Aggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
         }
-        return (ElemType) aggregate;
+        return aggregate;
     }
 };
 
@@ -365,9 +368,10 @@ struct TensorOpReduce
 template <class ElemType, C_size_t N, C_int M>
 struct TensorOpReduce<ElemType, N, M, /*m=*/-1>
 {
+    typedef typename TypeSelector<ElemType>::comp_t ReduceElemType;
     // this version for m = -1
     // the pointers are pointing to the right location(s) to take the operation over
-    static __device__ ElemType Compute(FixedArray<ElemType*, N> pointers, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    static __device__ ReduceElemType Compute(FixedArray<ElemType*, N> pointers, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                        const FixedArray<C_unsigned_int, M>& /*reducingOpDims*/, const FixedMatrix<C_int, N, M>& /*reducingStrides*/)
     {
         return TensorOps<ElemType>::Compute(pointers, op); // finally computing something!
@@ -380,8 +384,9 @@ struct TensorOpReduce<ElemType, N, M, /*m=*/-1>
 template <class ElemType, C_size_t N, C_int M, C_int m>
 struct TensorArgOpReduce
 {
+    typedef typename TypeSelector<ElemType>::comp_t ReduceElemType;
     // this version for m >= 0
-    static __device__ ElemType Compute(FixedArray<ElemType*, N> pointers, ElementWiseOperator reductionOp,
+    static __device__ ReduceElemType Compute(FixedArray<ElemType*, N> pointers, ElementWiseOperator reductionOp,
                                        const FixedArray<C_unsigned_int, M>& reducingOpDims, const FixedMatrix<C_int, N, M>& reducingStrides,
                                        C_unsigned_int& count, C_unsigned_int& index)
     {
@@ -398,7 +403,7 @@ struct TensorArgOpReduce
                 pointers[i] += reducingStrides(i, (C_size_t)m);
             }
 
-            ElemType val = TensorArgOpReduce<ElemType, N, M, m - 1>::Compute(pointers, reductionOp, reducingOpDims, reducingStrides, count, index);
+            ReduceElemType val = TensorArgOpReduce<ElemType, N, M, m - 1>::Compute(pointers, reductionOp, reducingOpDims, reducingStrides, count, index);
             bool update = false;
             switch (reductionOp)
             {
@@ -416,7 +421,7 @@ struct TensorArgOpReduce
                 index = count - 1;
             }
         }
-        return (ElemType)aggregate;
+        return aggregate;
     }
 };
 
@@ -425,14 +430,15 @@ struct TensorArgOpReduce
 template <class ElemType, C_size_t N, C_int M>
 struct TensorArgOpReduce<ElemType, N, M, /*m=*/-1>
 {
+    typedef typename TypeSelector<ElemType>::comp_t ReduceElemType;
     // this version for m = -1
     // the pointers are pointing to the right location(s) to take the operation over
-    static __device__ ElemType Compute(FixedArray<ElemType*, N> pointers, ElementWiseOperator reductionOp,
+    static __device__ ReduceElemType Compute(FixedArray<ElemType*, N> pointers, ElementWiseOperator reductionOp,
                                        const FixedArray<C_unsigned_int, M>& /*reducingOpDims*/, const FixedMatrix<C_int, N, M>& /*reducingStrides*/,
                                        C_unsigned_int& count, C_unsigned_int& index)
     {
         count++;
-        return *(pointers[0]);
+        return (ReduceElemType)*(pointers[0]);
     }
 };
 
@@ -444,8 +450,9 @@ struct TensorArgOpReduce<ElemType, N, M, /*m=*/-1>
 template <class ElemType, C_size_t N, C_int M, C_int m>
 struct TensorOpParallelReduce
 {
+    typedef typename TypeSelector<ElemType>::comp_t ReduceElemType;
     // this version for m >= 0
-    static __device__ ElemType Compute(CUDA_LONG id, FixedArray<ElemType*, N> pointers, ElementWiseOperator op,
+    static __device__ ReduceElemType Compute(CUDA_LONG id, FixedArray<ElemType*, N> pointers, ElementWiseOperator op,
                                        const FixedArray<C_unsigned_int, M>& reducingOpDims, const FixedMatrix<C_int, N, M>& reducingStrides,
                                        FixedArray<fast_divmod, M> reducingOpDimDivmod)
     {
@@ -488,9 +495,10 @@ struct TensorOpParallelReduce
 template <class ElemType, C_size_t N, C_int M>
 struct TensorOpParallelReduce<ElemType, N, M, /*m=*/-1>
 {
+    typedef typename TypeSelector<ElemType>::comp_t ReduceElemType;
     // this version for m = -1
     // the pointers are pointing to the right location(s) to take the operation over
-    static __device__ ElemType Compute(CUDA_LONG /*id*/, FixedArray<ElemType*, N> pointers, ElementWiseOperator op,
+    static __device__ ReduceElemType Compute(CUDA_LONG /*id*/, FixedArray<ElemType*, N> pointers, ElementWiseOperator op,
                                        const FixedArray<C_unsigned_int, M>& /*reducingOpDims*/, const FixedMatrix<C_int, N, M>& /*reducingStrides*/,
                                        FixedArray<fast_divmod, M> reducingOpDimDivmod)
     {
@@ -563,6 +571,7 @@ struct TensorOpElement<ElemType, N, M, K, parallelReduce, /*k=*/0>
 template <class ElemType, C_size_t N, C_int M, C_int K>
 struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/false, /*k=*/-1>
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     // template-recursion-teminating version computes the actual value for this output location
     // now the output pointers point to the right element (input pointers may still iterate for reduction)
     static __device__ void Compute(CUDA_LONG /*id*/, ElemType beta, FixedArray<ElemType*, N>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
@@ -572,15 +581,15 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/false, /*k=*/-1>
     {
         // compute the operation for this output coordinate
         // This may still involve a reduction over inverse-broadcasting dimensions.
-        ElemType val = TensorOpReduce<ElemType, N, M, M - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
+        comp_t val = TensorOpReduce<ElemType, N, M, M - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
         // scale
-        val *= alpha;
+        val *= (comp_t)alpha;
         // combine with previous value in target matrix, then write it out
         if (N < 4 || val != 0 || beta != 1) // (skip memory access if not needed) (N<4: skip this test)
         {
             auto* pout = pointers[pointers.size() - 1];
             if (beta != 0) // (skip memory access if not needed, and allow for ignoring NaNs)
-                val += beta * *pout;
+                val += (comp_t)beta * (comp_t)*pout;
             // save
             *pout = val;
         }
@@ -600,6 +609,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
                                    const FixedArray<C_unsigned_int, M>& reducingOpDims, const FixedMatrix<C_int, N, M>& reducingStrides, CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
                                    FixedArray<fast_divmod, K> regularOpStrideDivmod, FixedArray<fast_divmod, M> reducingOpDimDivmod)
     {
+        typedef typename TypeSelector<ElemType>::comp_t ReduceElemType;
         CUDA_LONG reductionBlock = blockIdx.z; // reduction-block index  --larger reductions are split into blocks
         CUDA_LONG tid = threadIdx.x;           // thread index
         CUDA_LONG tids = blockDim.x;           // out of how many threads  --note: last block is partial
@@ -641,9 +651,9 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         // now set final value to output coordinate
         if (tid == 0)
         {
-            ElemType val = (ElemType) accumulators[0];
+            ReduceElemType val = accumulators[0];
             // scale
-            val *= alpha;
+            val *= (ReduceElemType)alpha;
             // combine with previous value in target matrix, then write it out
             if (N < 4 || val != 0 || beta != 1) // (skip memory access if not needed) (N<4: skip this test)
             {
@@ -653,13 +663,13 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
                 if (reductionBlocks > 1) // multiple blocks: need to use atomicAdd()
                 {
                     // in this case, outer calling code must pass beta = 1
-                    atomicAdd(pout, val);
+                    atomicAdd(pout, (ElemType)val);
                 }
                 else
 #endif
                 {
                     if (beta != 0)
-                        val += beta * *pout;
+                        val += (ReduceElemType)beta * (ReduceElemType)*pout;
                     // save
                     *pout = val;
                 }
@@ -871,6 +881,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
                                         const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrideVectors,
                                         const SmallVector<size_t>& reducingOpDimVector, const array<SmallVector<ptrdiff_t>, N>& reducingStrideVectors)
 {
+    typedef typename TypeSelector<ElemType>::comp_t ReduceElemType;
     // copy all parameters to CUDA-compatible data structures
     FixedArray<ElemType*, N> pointers(pointerVector);
     SmallVector<C_size_t> regularOpStrideVector; // kernel needs the strides for converting thread index back to multi-dimensional tensor index
@@ -1122,25 +1133,27 @@ ForAllUnaryOps(DefineUnaryTensorFunctor);
 template <class ElemType, class FN>
 __global__ void _launchUnaryTensorOp(ElemType beta, const ElemType* pa, ElemType* pb, ElemType alpha, CUDA_LONG numElements)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id >= numElements)
         return;
-    ElemType a = pa[id];
-    ElemType val = FN::f(a);
-    val *= alpha;
+    comp_t a = pa[id];
+    comp_t val = FN::f(a);
+    val *= (comp_t)alpha;
     if (beta != 0)
-        val += beta * pb[id];
+        val += (comp_t)beta * (comp_t)pb[id];
     pb[id] = val;
 }
 // version without beta and alpha
 template <class ElemType, class FN>
 __global__ void _launchUnaryTensorOp(const ElemType* pa, ElemType* pb, CUDA_LONG numElements)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id >= numElements)
         return;
-    ElemType a = pa[id];
-    ElemType val = FN::f(a);
+    comp_t a = pa[id];
+    comp_t val = FN::f(a);
     pb[id] = val;
 }
 

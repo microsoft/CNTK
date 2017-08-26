@@ -8,6 +8,7 @@
    - host/device operator for half type. TODO: use native fp16 math on sm_60/sm_70
    - overload of operator between half and build-in type as default. TODO: clean up code doing such thing and remove these defaults
    - overload libaray calls to remove 'sizeof(float)' usage. TODO: put them at same place. gemm/axpy are already in GPUMatrix, and overload of math functions are in TensorOp
+   - type selector to select right compute type for kernel
 */
 
 
@@ -20,6 +21,21 @@
 #include <cusparse_v2.h>
 #include <cub/cub.cuh>
 #include <half.hpp>
+
+/* A selector used in kernels to get compute type base on ElemType(storage) */
+/* default case, compute type == ElemType */
+template <typename ElemType>
+struct TypeSelector
+{
+    typedef ElemType comp_t;
+};
+
+/* Specialization for half. Kernels uses this wants io in half while compute in float */
+template <>
+struct TypeSelector<half>
+{
+    typedef float comp_t;
+};
 
 /* Global-space operator functions are only available to nvcc compilation */
 #if defined(__CUDACC__)
