@@ -50,6 +50,7 @@ def create_reader(map_file, is_training, is_distributed = False):
     transforms = []
     if is_training:
         transforms += [
+            xforms.color(0.5,0.0,0.5),
             xforms.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio')  # train uses jitter
         ]
     transforms += [
@@ -99,7 +100,7 @@ def train_model(reader, model, epoch_size=50000, max_epochs=par_max_epochs, save
 
     # learning parameters
     learner = momentum_sgd(model.parameters,
-                           lr=learning_rate_schedule(
+                           lr=learning_rate_schedule([0.001 * 10**exponentShift] * 15 + [0.0001 * 10**exponentShift] * 15 + [0.00001 * 10**exponentShift] * 15+
                                [0.0015625 * 10**exponentShift] * 20 + [0.00046875 * 10**exponentShift] * 20
                                 + [0.00015625 * 10**exponentShift] * 20 + [0.000046875 * 10**exponentShift] * 10
                                 + [0.000015625 * 10**exponentShift], unit=UnitType.sample, epoch_size=epoch_size),

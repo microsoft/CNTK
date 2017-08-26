@@ -7,6 +7,7 @@
 
 import sys, os
 import numpy as np
+<<<<<<< HEAD
 <<<<<<< 8d7fcdcab7829b01beaf21e807cbf523bd31c9cd
 <<<<<<< 016d4bb5f283fc06b0239265dfc1b00395189939
 import future
@@ -14,12 +15,15 @@ import future
 >>>>>>> added mapping file
 =======
 >>>>>>> added mapping script
+=======
+>>>>>>> af7fe47dc9125065a809b34bf4764a60b0d52c35
 import xml.etree.ElementTree
 from xml.etree import ElementTree
 from enum import Enum
 from PIL import Image
 
 # (ctrx, ctry, w, h) in relative coords (e.g. for Yolo)
+<<<<<<< HEAD
 <<<<<<< 8d7fcdcab7829b01beaf21e807cbf523bd31c9cd
 <<<<<<< 016d4bb5f283fc06b0239265dfc1b00395189939
 use_relative_coords_ctr_wh = False
@@ -35,6 +39,8 @@ pascal_voc2007_annotations_rel_path = ".../VOCdevkit/VOC2007/Annotations/"
 =======
 =======
 >>>>>>> added mapping script
+=======
+>>>>>>> af7fe47dc9125065a809b34bf4764a60b0d52c35
 use_relative_coords_ctr_wh = True
 # else: top left and bottom right corner are used (i.e. xmin, ymin, xmax, ymax) in absolute coords
 
@@ -46,10 +52,13 @@ pad_height = 1000
 pascal_voc2007_jpgimg_rel_path = "../VOCdevkit/VOC2007/JPEGImages/"
 pascal_voc2007_imgsets_rel_path = "../VOCdevkit/VOC2007/ImageSets/Main/"
 pascal_voc2007_annotations_rel_path = "../VOCdevkit/VOC2007/Annotations/"
+<<<<<<< HEAD
 <<<<<<< 8d7fcdcab7829b01beaf21e807cbf523bd31c9cd
 >>>>>>> added mapping file
 =======
 >>>>>>> added mapping script
+=======
+>>>>>>> af7fe47dc9125065a809b34bf4764a60b0d52c35
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 cls_file_path = os.path.join(abs_path, "class_map.txt")
@@ -126,6 +135,7 @@ def create_mappings(train, skip_difficult):
     out_map_file_path = os.path.join(abs_path, img_map_output)
     roi_file_path = os.path.join(abs_path, roi_map_output)
     size_file_path = os.path.join(abs_path, size_map_output)
+<<<<<<< HEAD
 <<<<<<< 8d7fcdcab7829b01beaf21e807cbf523bd31c9cd
 <<<<<<< 016d4bb5f283fc06b0239265dfc1b00395189939
     class_map_file_path = os.path.join(abs_path, "class_map.txt")
@@ -145,6 +155,9 @@ def create_mappings(train, skip_difficult):
 =======
 
 >>>>>>> added mapping script
+=======
+
+>>>>>>> af7fe47dc9125065a809b34bf4764a60b0d52c35
     with open(in_map_file_path) as input_file:
         input_lines = input_file.readlines()
 
@@ -154,6 +167,7 @@ def create_mappings(train, skip_difficult):
             with open(size_file_path, 'w') as size_file:
                 for in_line in input_lines:
                     img_number = in_line.strip()
+<<<<<<< HEAD
 <<<<<<< 8d7fcdcab7829b01beaf21e807cbf523bd31c9cd
 <<<<<<< 016d4bb5f283fc06b0239265dfc1b00395189939
                     img_file_path = "{}{}.jpg".format(pascal_voc2007_jpgimg_rel_path, img_number)
@@ -163,6 +177,9 @@ def create_mappings(train, skip_difficult):
 =======
                     img_file_path = os.path.abspath("{}{}.jpg".format(pascal_voc2007_jpgimg_rel_path, img_number))
 >>>>>>> added mapping script
+=======
+                    img_file_path = os.path.abspath("{}{}.jpg".format(pascal_voc2007_jpgimg_rel_path, img_number))
+>>>>>>> af7fe47dc9125065a809b34bf4764a60b0d52c35
                     img_line = "{}\t{}\t0\n".format(counter, img_file_path)
                     img_file.write(img_line)
 
@@ -202,6 +219,7 @@ def create_mappings(train, skip_difficult):
                     if counter % 500 == 0:
                         print("Processed {} images".format(counter))
 
+<<<<<<< HEAD
 <<<<<<< 8d7fcdcab7829b01beaf21e807cbf523bd31c9cd
 <<<<<<< 016d4bb5f283fc06b0239265dfc1b00395189939
 =======
@@ -214,11 +232,17 @@ def create_mappings(train, skip_difficult):
 
 
 >>>>>>> added mapping script
+=======
+
+
+
+>>>>>>> af7fe47dc9125065a809b34bf4764a60b0d52c35
     with open(cls_file_path, 'w') as cls_file:
         for cls in classes:
             cls_file.write("{}\t{}\n".format(cls, class_dict[cls]))
 
 if __name__ == '__main__':
+<<<<<<< HEAD
 <<<<<<< 8d7fcdcab7829b01beaf21e807cbf523bd31c9cd
 <<<<<<< 016d4bb5f283fc06b0239265dfc1b00395189939
     create_mappings(True, skip_difficult=True)
@@ -233,3 +257,7 @@ if __name__ == '__main__':
     create_mappings(True, skip_difficult=skip_difficult_annotations)
     create_mappings(False, skip_difficult=skip_difficult_annotations)
 >>>>>>> added mapping script
+=======
+    create_mappings(True, skip_difficult=skip_difficult_annotations)
+    create_mappings(False, skip_difficult=skip_difficult_annotations)
+>>>>>>> af7fe47dc9125065a809b34bf4764a60b0d52c35

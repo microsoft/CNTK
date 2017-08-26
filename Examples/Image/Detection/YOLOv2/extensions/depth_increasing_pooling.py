@@ -3,7 +3,7 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-from cntk import reshape, swapaxes, alias
+from cntk import reshape, swapaxes, alias, transpose
 from extensions.Transpose import transpose_a_lot
 
 
@@ -34,7 +34,7 @@ def depth_increasing_pooling(tensor, pooling_window_shape, input_shape=None):
 
     temp1 = reshape(tensor, shape_tmp)
 
-    temp2 = transpose_a_lot(temp1, (0, 2, 4, 1, 3))
+    temp2 = transpose(temp1, (0, 2, 4, 1, 3))
 
     temp3 = reshape(temp2, final_shape)
 

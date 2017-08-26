@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     if True:
         #pretrain on cifar-10
-        pre_data_dir = os.path.join(data_path, "..", "cifar-10")
+        pre_data_dir = data_path # os.path.join(data_path, "..", "cifar-10")
         pre_trainset_label_file = "train_map.txt"
         pre_testset_label_file = "test_map.txt"
         pre_train_data = os.path.join(pre_data_dir, pre_trainset_label_file)

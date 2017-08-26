@@ -18,6 +18,9 @@ par_max_epochs = 75 #575
 _par_lr_dataset_adoption = 1
 par_downsample = 32
 
+#par_feature_extractor_to_use = "pre_Darknet_Cifar"
+par_feature_extractor_to_use = "pre_ResNet101_ImageNet"
+#par_feature_extractor_to_use = "pre_ResNet18_ImageNet"
 par_use_reorg_bypass = False
 par_dense_size = 1024
 

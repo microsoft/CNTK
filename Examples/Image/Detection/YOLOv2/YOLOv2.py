@@ -11,7 +11,7 @@ from cntk import *
 from cntk import reshape, relu, user_function
 from cntk.io import ImageDeserializer, CTFDeserializer, MinibatchSource, TraceLevel
 from cntk.io import StreamDefs, StreamDef
-from cntk.layers import Convolution2D, BatchNormalization, Sequential
+from cntk.layers import Convolution2D, BatchNormalization, Sequential, Activation, identity
 from cntk.logging.graph import find_by_name, plot
 from cntk_debug_single import DebugLayerSingle
 
@@ -302,39 +302,31 @@ def create_output_activation_layer(network, par):
 
 
 def create_detector(par, regular_input, bypass_input=None):
-    #first_conv_name = "z.x.x.x.x.x.x.x.x.x.x._.x.c"
-    #first_conv_node = regular_input.find_by_name(first_conv_name)
-    #dummy = user_function(DebugLayerSingle(first_conv_node, debug_name='conv1'))
-    #zero = reduce_mean(dummy * 0)
-
-    #first_bnrelu_name = "z.x.x.x.x.x.x.x.x.x.x"
-    #first_bnrelu_node = regular_input.find_by_name(first_bnrelu_name)
-    #dummy2 = user_function(DebugLayerSingle(first_bnrelu_node, debug_name='bnrelu1'))
-    #zero = reduce_mean(dummy2 * 0)
-
-    #regular_input = user_function(DebugLayerSingle(regular_input, debug_name='regular_input_d'))
-    from cntk.layers import LayerNormalization
 
 
     output_depth = (5+par.par_num_classes)*par.par_num_anchorboxes
     first_net = Sequential([
-        Convolution2D((3, 3), num_filters=par.par_dense_size, init=he_normal(), activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
+        Convolution2D((3, 3), num_filters=par.par_dense_size, init=he_normal(), activation=identity, pad=True),
         BatchNormalization(),
-        #LayerNormalization(),
-        Convolution2D((3, 3), num_filters=par.par_dense_size, init=he_normal(), activation=lambda x: 0.1*x + 0.9*relu(x), pad=True)
+        Activation(activation=lambda x: 0.1*x + 0.9*relu(x)),
+
+        Convolution2D((3, 3), num_filters=par.par_dense_size, init=he_normal(), activation=identity, pad=True),
+        BatchNormalization(),
+        Activation(activation=lambda x: 0.1 * x + 0.9 * relu(x))
     ])(regular_input)
 
     if bypass_input is not None:
         bypass_output = splice(first_net, bypass_input, axis=0)
+        print("+++ Using Passthrough +++")
     else:
         bypass_output = first_net
 
 
     net2=Sequential([
-        BatchNormalization(),
         #LayerNormalization(),
-        Convolution2D((3, 3), num_filters=par.par_dense_size, init=he_normal(), activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
-        #BatchNormalization(), #C-impl says no!
+        Convolution2D((3, 3), num_filters=par.par_dense_size, init=he_normal(), activation=identity, pad=True),
+        BatchNormalization(), #C-impl says no!
+        Activation(activation=lambda x: 0.1 * x + 0.9 * relu(x)),
 
         Convolution2D((1, 1), num_filters=output_depth),
     ], "YOLOv2_Detector")(bypass_output)
@@ -414,13 +406,13 @@ def create_untrained_darknet19_fe():
     return dn19.create_feature_extractor(32)
 
 
-def create_feature_extractor(par, use_model = "pre_ResNet18_ImageNet"):
+def create_feature_extractor(par, use_model = "pre_ResNet101_ImageNet"):
     if(use_model == "pre_Darknet_Cifar"):
         fe = load_pretrained_darknet_feature_extractor()
         rl = find_by_name(fe, "YOLOv2PasstroughSource")
     elif(use_model == "pre_ResNet101_ImageNet"):
         fe = load_pretrained_resnet101_feature_extractor(par)
-        rl = None
+        rl = find_by_name(fe, "res4b22_relu")
     elif(use_model == "pre_ResNet18_ImageNet"):
         fe = load_pretrained_resnet18_feature_extractor(par)
         rl = find_by_name(fe, "z.x.x.x.x.r")
@@ -432,8 +424,8 @@ def create_feature_extractor(par, use_model = "pre_ResNet18_ImageNet"):
 
 
 def create_yolov2_net(par):
-    output, reorg_input = create_feature_extractor(par)
-    reorg_output = depth_increasing_pooling(reorg_input, (2,2)) if reorg_input is not None else None
+    output, reorg_input = create_feature_extractor(par, par.par_feature_extractor_to_use)
+    reorg_output = depth_increasing_pooling(reorg_input(placeholder(shape=(3,416,416))), (2,2)) if reorg_input is not None else None
     return create_detector(par, output, reorg_output)
 
 

@@ -69,7 +69,7 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
         parameter_learner = cntk.train.distributed.data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
 
     # Create trainer
-    return cntk.Trainer(network['output'], (network['bce'], network['pe']), parameter_learner, progress_writers)
+    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_writers)
 
 
 def add_model_input_and_output(model, input_shape, output_shape):

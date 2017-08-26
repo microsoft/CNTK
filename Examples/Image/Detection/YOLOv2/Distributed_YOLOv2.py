@@ -31,7 +31,7 @@ def create_image_mb_source(image_file, gtb_file, is_training, total_number_of_sa
     return yolo2.create_mb_source(par_image_height, par_image_width, par_num_channels, (5 * par_max_gtbs), image_file,
                                         gtb_file,
                                         multithreaded_deserializer=True,
-                                        is_training=is_training, 
+                                        is_training=is_training,
                                         max_samples=total_number_of_samples)
 
 

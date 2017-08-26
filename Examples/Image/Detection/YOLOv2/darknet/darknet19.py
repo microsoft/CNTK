@@ -17,62 +17,77 @@ import os
 def create_feature_extractor(filter_multiplier=32):
     with default_options(activation=leaky_relu):
         net = Sequential([
-            Convolution2D(filter_shape=(3,3), num_filters=filter_multiplier, pad=True, name="feature_layer"),
+            Convolution2D(filter_shape=(3,3), num_filters=filter_multiplier, pad=True, name="feature_layer", activation=identity),
             BatchNormalization(),
+            Activation(),
             MaxPooling(filter_shape=(2,2), strides=(2,2)),
             # Output: in_x/2 x in_y/2 x nfilters
 
 
-            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**1), pad=True, name="stage_1"),
+            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**1), pad=True, name="stage_1", activation=identity),
             BatchNormalization(),
+            Activation(),
             MaxPooling(filter_shape=(2, 2), strides=(2, 2)),
             # Output: in_x/4 x in_y/4 x 2*nfilters
 
 
-            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**2), pad=True, name="stage_2"),
+            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**2), pad=True, name="stage_2", activation=identity),
             BatchNormalization(),
+            Activation(),
             Convolution2D(filter_shape=(1, 1), num_filters=(filter_multiplier * 2**1), pad=True),
             BatchNormalization(),
+            Activation(),
             Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**2), pad=True),
             BatchNormalization(),
+            Activation(),
             MaxPooling(filter_shape=(2, 2), strides=(2, 2)),
             # Output in_x/8 x in_y/8 x 4*nfilters
 
 
-            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**3), pad=True, name="stage_3"),
+            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**3), pad=True, name="stage_3", activation=identity),
             BatchNormalization(),
-            Convolution2D(filter_shape=(1, 1), num_filters=(filter_multiplier * 2**2), pad=True),
-            BatchNormalization(),
+            Activation(),
             Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**3), pad=True),
             BatchNormalization(),
+            Activation(),
             MaxPooling(filter_shape=(2, 2), strides=(2, 2)),
             # Output in_x/16 x in_y/16 x 8*nfilters
 
 
-            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**4), pad=True, name="stage_4"),
+            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**4), pad=True, name="stage_4", activation=identity),
             BatchNormalization(),
-            Convolution2D(filter_shape=(1, 1), num_filters=(filter_multiplier * 2**3), pad=True),
+            Activation(),
+            Convolution2D(filter_shape=(1, 1), num_filters=(filter_multiplier * 2**3), pad=True, activation=identity),
             BatchNormalization(),
-            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**4), pad=True),
+            Activation(),
+            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**4), pad=True, activation=identity),
             BatchNormalization(),
-            Convolution2D(filter_shape=(1, 1), num_filters=(filter_multiplier * 2**3), pad=True),
+            Activation(),
+            Convolution2D(filter_shape=(1, 1), num_filters=(filter_multiplier * 2**3), pad=True, activation=identity),
             BatchNormalization(),
-            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**4), pad=True, name="YOLOv2PasstroughSource"),
+            Activation(),
+            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**4), pad=True, name="YOLOv2PasstroughSource", activation=identity),
             BatchNormalization(),
+            Activation(),
             MaxPooling(filter_shape=(2, 2), strides=(2, 2)),
             # Output in_x/32 x in_y/32 x 16*nfilters
 
 
-            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**5), pad=True, name="stage_5"),
+            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**5), pad=True, name="stage_5", activation=identity),
             BatchNormalization(),
-            Convolution2D(filter_shape=(1, 1), num_filters=(filter_multiplier * 2**4), pad=True),
+            Activation(),
+            Convolution2D(filter_shape=(1, 1), num_filters=(filter_multiplier * 2**4), pad=True, activation=identity),
             BatchNormalization(),
-            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**5), pad=True),
+            Activation(),
+            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**5), pad=True, activation=identity),
             BatchNormalization(),
-            Convolution2D(filter_shape=(1, 1), num_filters=(filter_multiplier * 2**4), pad=True),
+            Activation(),
+            Convolution2D(filter_shape=(1, 1), num_filters=(filter_multiplier * 2**4), pad=True, activation=identity),
             BatchNormalization(),
-            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**5), pad=True),
-            BatchNormalization(name="featureExtractor_output")
+            Activation(),
+            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**5), pad=True, activation=identity),
+            BatchNormalization(),
+            Activation(name="featureExtractor_output")
             # Output in_x/32 x in_y/32 x 32*nfilters
         ],'featureExtractor_darknet19')
 
@@ -89,7 +104,8 @@ def put_classifier_on_feature_extractor(featureExtractor,nrOfClasses):
                           name="classifier_input"),
             GlobalAveragePooling()
         ]), shape=(nrOfClasses)),
-        Activation(activation=softmax, name="classifier_output")
+        #Activation(activation=softmax, name="classifier_output")
+        Activation(activation=identity, name="classifier_output")
     ], name="darknet19-classifier")
 
 
@@ -138,8 +154,8 @@ if __name__ == '__main__':
     # save
     save_model(model, "darknet19_" + par_dataset_name)
 
-    from cntk.logging.graph import plot
-    plot(model, filename=os.path.join(par_abs_path, "darknet19_" + par_dataset_name + "_DataAug.pdf"))
+    #from cntk.logging.graph import plot
+    #plot(model, filename=os.path.join(par_abs_path, "darknet19_" + par_dataset_name + "_DataAug.pdf"))
 
     # test
     reader = create_reader(os.path.join(data_path, par_testset_label_file), is_training=False)
