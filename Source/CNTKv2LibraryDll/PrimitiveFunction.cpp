@@ -703,7 +703,8 @@ namespace CNTK
                                 m_attributes[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowsShape;
                             }
 
-                            outputShape = ConvolutionOpOutputShape(m_op, inputShape, poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, true, NDShape({1}), ceilOutDim);
+                            NDShape dilation = NDShape({ 1 });
+                            outputShape = ConvolutionOpOutputShape(m_op, inputShape, poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, true, dilation, ceilOutDim);
                             break;
                         }
                         case PrimitiveOpType::Unpooling:
@@ -731,8 +732,9 @@ namespace CNTK
                             auto autoPadding = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                             NDShape inputMapCount = { 1 };
                             std::vector<bool> sharing = { true };
+                            NDShape dilation = { 1 };
 
-                            NDShape inferredInputShape = ConvolutionOpOutputShape(PrimitiveOpType::Pooling, outputShape, unpoolingWindowShape, inputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, true);
+                            NDShape inferredInputShape = ConvolutionOpOutputShape(PrimitiveOpType::Pooling, outputShape, unpoolingWindowShape, inputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, true, dilation);
                             if (inferredInputShape != inputShape)
                                 RuntimeError("Unpooling: The shape '%S' of the unpooling operand '%S' is different than the shape '%S from pooling the input argument '%S' using the provided options.",
                                              inputShape.AsString().c_str(), m_inputs[0].AsString().c_str(), inferredInputShape.AsString().c_str(), m_inputs[1].AsString().c_str());
@@ -1377,7 +1379,7 @@ namespace CNTK
 
     /*static*/ NDShape PrimitiveFunction::ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
                                                                    std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
-                                                                   bool transpose, bool inferDimensions, NDShape dilation/* = NDShape({1})*/, bool ceilOutputDim/* = false*/)
+                                                                   bool transpose, bool inferDimensions, NDShape& dilation, bool ceilOutputDim/* = false*/)
     {
         if (inferDimensions)
         {
@@ -1409,7 +1411,7 @@ namespace CNTK
             size_t fillRank = (!transpose) ? filterRank : filterRank - 1;
             FixNDShape(fillRank, inputRank, kernelShape, 1, fromShape); // convolve over red dim; pool over 1
             FixNDShape(fillRank, inputRank, strides, 1, fromShape); // stride for reduction dims is red dim or 1
-            FixNDShape(fillRank, inputRank, dilation, 1, fromShape);
+            FixNDShape(fillRank, inputRank, dilation, 1);
             FixNDShape(fillRank, inputRank, lowerPad, 0);
             FixNDShape(fillRank, inputRank, upperPad, 0);
             Microsoft::MSR::CNTK::ConvolutionNodeBase<float>::FixVectorShape(fillRank, inputRank, sharing, true);
