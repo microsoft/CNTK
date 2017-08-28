@@ -1735,6 +1735,12 @@ namespace CNTK
         CNTK_API Dictionary();
         CNTK_API ~Dictionary();
 
+        template<typename... Args>
+        Dictionary(const std::wstring& key, const DictionaryValue& value, Args... args) : Dictionary()
+        {
+            Add(key, value, args...);
+        }
+
         CNTK_API Dictionary(const Dictionary&);
         CNTK_API Dictionary& operator=(const Dictionary&);
 
