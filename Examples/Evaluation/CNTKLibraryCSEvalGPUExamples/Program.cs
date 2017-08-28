@@ -19,7 +19,7 @@ namespace CNTKLibraryCSEvalExamples
 
             Console.WriteLine(" ====== Run evaluation on CPU =====");
 
-            // Evalaute a single image.
+            // Evaluate a single image.
             CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.CPUDevice);
 
             // Evaluate a batch of images.
@@ -35,7 +35,7 @@ namespace CNTKLibraryCSEvalExamples
             // Evaluate a single sequence using one-hot vector input.
             CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
 
-            // Evalaute a batch of variable length sequences with one-hot vector input.
+            // Evaluate a batch of variable length sequences with one-hot vector input.
             CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.CPUDevice);
 
             // Evaluate a sequence using sparse input.
@@ -58,6 +58,12 @@ namespace CNTKLibraryCSEvalExamples
             CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.GPUDevice(0));
             CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingSparse(DeviceDescriptor.GPUDevice(0));
             CNTKLibraryManagedExamples.LoadModelFromMemory(DeviceDescriptor.GPUDevice(0));
+
+            // Evaluate intermediate layer.
+            CNTKLibraryManagedExamples.EvaluateIntermediateLayer(DeviceDescriptor.GPUDevice(0));
+
+            // Evaluate combined outputs.
+            CNTKLibraryManagedExamples.EvaluateCombinedOutputs(DeviceDescriptor.GPUDevice(0));
 
             Console.WriteLine("======== Evaluation completes. ========");
         }
