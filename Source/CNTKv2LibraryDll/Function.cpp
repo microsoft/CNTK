@@ -1606,10 +1606,7 @@ namespace CNTK
 
     FunctionPtr SumAll(const Variable& operand, const std::wstring& name)
     {
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameReductionOpName] = PrimitiveFunction::InternalSumElementsOpName;
-        additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = false;
-        return UnaryOp(PrimitiveOpType::SumAll, operand, std::move(additionalProperties), name);
+        return UnaryOp(PrimitiveOpType::SumAll, operand, Dictionary(), name);
     }
 
     FunctionPtr ReduceLogSum(const Variable& operand, const Axis& axis, const std::wstring& name)
