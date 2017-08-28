@@ -412,7 +412,70 @@ void Train()
         {
             let path = modelPath + L"." + to_wstring(mbCount);
             fprintf(stderr, "saving: %S\n", path.c_str());
-            model_fn.SaveParameters(path);
+            //model_fn.SaveParameters(path);
+
+            // reader state
+            Dictionary externalState(/*s_trainingMinibatchSource=*/L"TrainingMinibatchSource", minibatchSource->GetCheckpointState());
+
+            // learner state
+            std::vector<DictionaryValue> learnersState{ learner->CreateCheckpoint() };
+
+            auto compositeFunction = model_fn.ParametersCombined();
+
+            Dictionary aggregatedState;
+            DistributedCommunicatorPtr checkpointCommunicator;
+            if (communicator->Workers().size() > 1    ||true)
+                checkpointCommunicator = MPICommunicator();
+            if (checkpointCommunicator)
+            {
+                const std::wstring internalWorkerStateKey = L"internal_worker_state"; // these are from Serialization.h
+                const std::wstring externalWorkerStateKey = L"external_worker_state";
+                Dictionary localState(internalWorkerStateKey, Dictionary(), externalWorkerStateKey, externalState);
+
+                // Collect distrbuted external localState.
+                checkpointCommunicator = MPICommunicator();
+                checkpointCommunicator->Barrier();
+
+                std::vector<DictionaryPtr> remoteState;
+                checkpointCommunicator->Gather(localState, remoteState, checkpointCommunicator->Workers());
+
+                for (const auto& w : checkpointCommunicator->Workers())
+                    aggregatedState[std::to_wstring(w.m_globalRank)] = *remoteState[w.m_globalRank];
+            }
+
+            if (!checkpointCommunicator || checkpointCommunicator->CurrentWorker().IsMain())
+            {
+                // TODO: rese from Trainer.cpp:
+                const std::wstring versionPropertyName = L"Version";
+                const std::wstring learnersPropertyName = L"Learners";
+                const std::wstring externalStatePropertyName = L"ExternalState";
+                const std::wstring distributedStatePropertyName = L"DistributedState";
+                static const size_t trainerCheckpointVersion = 1;
+
+                Dictionary state(
+                    versionPropertyName         , trainerCheckpointVersion,
+                    learnersPropertyName        , learnersState,
+                    externalStatePropertyName   , externalState,
+                    distributedStatePropertyName, aggregatedState);
+
+                // TODO: rename must check return code. To fix this, just move this down to the API and use the functions in Trainer.cpp.
+                std::wstring tempModelFile = path + L".tmp";
+                std::wstring trainerStateCheckpointFilePath = path + L".ckp";
+                std::wstring tempCheckpointFile = trainerStateCheckpointFilePath + L".tmp";
+                compositeFunction->Save(tempModelFile);
+                state.Save(tempCheckpointFile);
+                _wunlink(path.c_str());
+                _wunlink(trainerStateCheckpointFilePath.c_str());
+                _wrename(tempModelFile.c_str(), path.c_str());
+                _wrename(tempCheckpointFile.c_str(), trainerStateCheckpointFilePath.c_str());
+            }
+
+            if (checkpointCommunicator)
+                // all workers need to sync up after saving model to avoid read-after-write hazard
+                // i.e. one worker is in the middle of write while another tries to read
+                checkpointCommunicator->Barrier();
+                // Note: checkpointCommunicator is destructed at end of this block
+
             // test model saving
             //for (auto& param : parameters) // destroy parameters as to prove that we reloaded them correctly.
             //    param.Value()->SetValue(0.0);
