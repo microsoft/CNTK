@@ -3636,6 +3636,8 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name = L"");
 
+    CNTK_API FunctionPtr LegacySigmoid(const Variable& operand, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in elementwise tanh operation with the specified input operand.
     ///
@@ -4131,6 +4133,8 @@ namespace CNTK
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    CNTK_API FunctionPtr SumAll(const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in LogSum reduction operation on specified tensor input operand along the specified axis

@@ -1050,6 +1050,11 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::StableSigmoid, operand, Dictionary(), name);
     }
 
+    FunctionPtr LegacySigmoid(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Sigmoid, operand, Dictionary(), name);
+    }
+
     FunctionPtr Tanh(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Tanh, operand, Dictionary(), name);
@@ -1724,6 +1729,14 @@ namespace CNTK
     FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, axis, name);
+    }
+
+    FunctionPtr SumAll(const Variable& operand, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameReductionOpName] = PrimitiveFunction::InternalSumElementsOpName;
+        additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = false;
+        return UnaryOp(PrimitiveOpType::SumAll, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr ReduceLogSum(const Variable& operand, const Axis& axis, const std::wstring& name)
