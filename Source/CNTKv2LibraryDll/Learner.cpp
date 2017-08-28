@@ -713,12 +713,14 @@ namespace CNTK
             m_smoothedGradientValues.emplace(parameter, view);
         }
         m_smoothedCount = 0.0;
+        m_franksAsIfSmoothedCount = 0.0;
     }
 
     /*virtual*/ Dictionary LearnerAdam::CreateCheckpoint() /*override*/
     {
         auto dict = LearnerBase::CreateCheckpoint();
         dict[smoothedCountKey] = m_smoothedCount;
+        dict[L"m_franksAsIfSmoothedCount"] = m_franksAsIfSmoothedCount;
         return dict;
     }
 
@@ -726,12 +728,14 @@ namespace CNTK
     {
         LearnerBase::RestoreFromCheckpoint(checkpoint);
         m_smoothedCount = checkpoint[smoothedCountKey].Value<double>();
+        m_franksAsIfSmoothedCount = checkpoint[L"m_franksAsIfSmoothedCount"].Value<double>();
     }
 
     /*virtual*/ void LearnerAdam::ResetSmoothedGradients() /*override*/
     {
         LearnerBase::ResetSmoothedGradients();
         m_smoothedCount = 0.0;
+        m_franksAsIfSmoothedCount = 0.0;
     }
 
     /*virtual*/ void LearnerAdam::UpdateOnMinibatch(size_t trainingSampleCount)

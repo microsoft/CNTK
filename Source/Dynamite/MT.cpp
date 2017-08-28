@@ -401,7 +401,53 @@ void Train()
         // restarting after crash. Note: not checkpointing the reader yet.
         let path = modelPath + L"." + to_wstring(startMbCount);
         fprintf(stderr, "restarting from: %S\n", path.c_str());
-        model_fn.RestoreParameters(path);
+        // TODO: The code below is copy-paste from Trainer.cpp, since it is not public. Move this down through the API.
+        // TODO: Can we just wrap everything in an actual Trainer instance, and use that?
+        //model_fn.RestoreParameters(path);
+        std::wstring trainerStateCheckpointFilePath = path + L".ckp";
+
+        // Restore the model's parameters
+        auto compositeFunction = model_fn.ParametersCombined();
+        compositeFunction->Restore(path);
+
+        // restore remaining state
+        Dictionary checkpoint = Dictionary::Load(trainerStateCheckpointFilePath);
+
+        const std::wstring internalWorkerStateKey = L"internal_worker_state"; // these are from Serialization.h
+        const std::wstring externalWorkerStateKey = L"external_worker_state";
+
+        // TODO: reuse from Trainer.cpp:
+        const std::wstring versionPropertyName = L"Version";
+        const std::wstring learnersPropertyName = L"Learners";
+        const std::wstring externalStatePropertyName = L"ExternalState";
+        const std::wstring distributedStatePropertyName = L"DistributedState";
+
+        auto learnerState = checkpoint[learnersPropertyName].Value<std::vector<DictionaryValue>>().front().Value<Dictionary>();
+        auto externalState = checkpoint[externalStatePropertyName].Value<Dictionary>();
+
+        learner->RestoreFromCheckpoint(learnerState);
+
+        if (communicator->Workers().size() > 1 || true)
+        {
+            // this ensures that nobody will start writing to the model/checkpoint files, until
+            // everybody is done reading them.
+            DistributedCommunicatorPtr checkpointCommunicator = MPICommunicator();
+            checkpointCommunicator->Barrier();
+
+            auto mainWorkerId = std::to_wstring(0);
+            auto localWorkerId = std::to_wstring(checkpointCommunicator->CurrentWorker().m_globalRank);
+
+            Dictionary distributedState = checkpoint[distributedStatePropertyName].Value<Dictionary>();
+
+            if (!checkpointCommunicator->CurrentWorker().IsMain() && distributedState.Contains(localWorkerId))
+            {
+                // the checkpoint contains internal state for this worker.
+                Dictionary localState = distributedState[localWorkerId].Value<Dictionary>();
+                externalState = localState[externalWorkerStateKey].Value<Dictionary>();
+            }
+        }
+
+        minibatchSource->RestoreFromCheckpoint(externalState[/*s_trainingMinibatchSource=*/L"TrainingMinibatchSource"].Value<Dictionary>());
     }
     for (mbCount = startMbCount; true; mbCount++)
     {
@@ -445,7 +491,7 @@ void Train()
 
             if (!checkpointCommunicator || checkpointCommunicator->CurrentWorker().IsMain())
             {
-                // TODO: rese from Trainer.cpp:
+                // TODO: reuse from Trainer.cpp:
                 const std::wstring versionPropertyName = L"Version";
                 const std::wstring learnersPropertyName = L"Learners";
                 const std::wstring externalStatePropertyName = L"ExternalState";
@@ -488,9 +534,10 @@ void Train()
         if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
             break;
         let numLabels = minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples;
+        let numSeq = minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences;
         partTimer.Log("GetNextMinibatch", numLabels);
         fprintf(stderr, "#seq: %d, #words: %d -> %d, lr=%.8f\n",
-                (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences,
+                (int)numSeq,
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples,
                 (int)numLabels,
                 learner->LearningRate());
@@ -525,7 +572,9 @@ void Train()
         mbLoss.Backward(gradients);
         partTimer.Log("BackProp", numLabels);
         mbLoss.Value()->AsScalar<float>();
-        MinibatchInfo info{ /*atEndOfData=*/false, /*sweepEnd=*/false, /*numberOfSamples=*/numLabels, mbLoss.Value(), mbLoss.Value() };
+        // note: we must use numScoredLabels here
+        let numScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
+        MinibatchInfo info{ /*atEndOfData=*/false, /*sweepEnd=*/false, /*numberOfSamples=*/numScoredLabels, mbLoss.Value(), mbLoss.Value() };
         info.trainingLossValue->AsScalar<float>();
         partTimer.Restart();
         learner->Update(gradients, info);
@@ -553,7 +602,7 @@ void Train()
         //    break;
         if (std::isnan(lossPerLabel))
             throw runtime_error("Loss is NaN.");
-        //if (mbCount == 2)
+        //if (mbCount == 10)
         //    exit(0);
     }
 }
