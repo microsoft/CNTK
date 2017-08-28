@@ -556,6 +556,9 @@ void EvaluationSingleSequenceUsingSparse(const wchar_t* modelFile, const wchar_t
 /// <summary>
 /// The example shows
 /// - how to load a pretrained model and evaluate an intermediate layer of its network.
+/// Note: The example uses the model trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
+/// Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
+/// The parameter 'modelFilePath' specifies the path to the model.
 /// </summary>
 void EvaluateIntermediateLayer(const wchar_t* modelFilePath, const DeviceDescriptor& device)
 {
@@ -565,11 +568,13 @@ void EvaluateIntermediateLayer(const wchar_t* modelFilePath, const DeviceDescrip
     FunctionPtr rootFunc = Function::Load(modelFilePath, device);
 
     std::wstring intermediateLayerName = L"final_avg_pooling";
-    FunctionPtr interLayerFunc = rootFunc->FindByName(intermediateLayerName);
+    FunctionPtr interLayerPrimitiveFunc = rootFunc->FindByName(intermediateLayerName);
 
-    FunctionPtr modelFunc = AsComposite(interLayerFunc);
+    // The Function returned by FindByName is a primitive function.
+    // For evaluation, it is required to create a composite function from the primitive function.
+    FunctionPtr modelFunc = AsComposite(interLayerPrimitiveFunc);
 
-    Variable outputVar = interLayerFunc->Output();
+    Variable outputVar = modelFunc->Output();
     Variable inputVar = modelFunc->Arguments()[0];
 
     // Prepare input data.
@@ -606,6 +611,9 @@ void EvaluateIntermediateLayer(const wchar_t* modelFilePath, const DeviceDescrip
 /// <summary>
 /// The example shows
 /// - how to load a pretrained model and evaluate several nodes by combining their outputs
+/// Note: The example uses the model trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
+/// Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
+/// The parameter 'modelFilePath' specifies the path to the model.
 /// </summary>
 void EvaluateCombinedOutputs(const wchar_t* modelFilePath, const DeviceDescriptor& device)
 {
@@ -616,10 +624,11 @@ void EvaluateCombinedOutputs(const wchar_t* modelFilePath, const DeviceDescripto
 
     // Get node of interest
     std::wstring intermediateLayerName = L"final_avg_pooling";
-    FunctionPtr interLayerFunc = modelFunc->FindByName(intermediateLayerName);
+    FunctionPtr interLayerPrimitiveFunc = modelFunc->FindByName(intermediateLayerName);
 
-    Variable poolingOutput = interLayerFunc->Output();
+    Variable poolingOutput = interLayerPrimitiveFunc->Output();
 
+    // Create a function which combine outputs from the node "final_avg_polling" and the final layer of the model.
     FunctionPtr evalFunc = Combine( { modelFunc->Output(), poolingOutput });
     Variable inputVar = evalFunc->Arguments()[0];
 

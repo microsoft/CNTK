@@ -831,10 +831,13 @@ namespace CNTKLibraryCSEvalExamples
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
                 Function rootFunc = Function.Load(modelFilePath, device);
 
-                Function interLayerFunc = rootFunc.FindByName("final_avg_pooling");
-                Function modelFunc = Function.AsComposite(interLayerFunc);
+                Function interLayerPrimitiveFunc = rootFunc.FindByName("final_avg_pooling");
 
-                Variable outputVar = interLayerFunc.Output;
+                // The Function returned by FindByName is a primitive function.
+                // For evaluation, it is required to create a composite function from the primitive function.
+                Function modelFunc = Function.AsComposite(interLayerPrimitiveFunc);
+
+                Variable outputVar = modelFunc.Output;
                 Variable inputVar = modelFunc.Arguments.Single();
 
                 // Get shape data for the input variable
@@ -871,7 +874,9 @@ namespace CNTKLibraryCSEvalExamples
                 var outputVal = outputDataMap[outputVar];
                 var outputData = outputVal.GetDenseData<float>(outputVar);
 
+                Console.WriteLine("Evaluation result of intermediate layer final_avg_pooling");
                 PrintOutput(outputVar.Shape.TotalSize, outputData);
+
             }
             catch (Exception ex)
             {
@@ -899,9 +904,10 @@ namespace CNTKLibraryCSEvalExamples
                 Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Get node of interest
-                Function interLayerFunc = modelFunc.FindByName("final_avg_pooling");
-                Variable poolingOutput = interLayerFunc.Output;
+                Function interLayerPrimitiveFunc = modelFunc.FindByName("final_avg_pooling");
+                Variable poolingOutput = interLayerPrimitiveFunc.Output;
 
+                // Create a function which combine outputs from the node "final_avg_polling" and the final layer of the model.
                 Function evalFunc = Function.Combine(new[] { modelFunc.Output, poolingOutput });
                 Variable inputVar = evalFunc.Arguments.Single();
 
@@ -945,6 +951,13 @@ namespace CNTKLibraryCSEvalExamples
                     var variable = outputVariableValuePair.Key;
                     var value = outputVariableValuePair.Value;
                     var outputData = value.GetDenseData<float>(variable);
+
+                    string variableName = "last layer of the model";
+                    if (variable.Name == interLayerPrimitiveFunc.Name) {
+                        variableName = "intermediate layer " + variable.Name;
+                    }
+                    
+                    Console.WriteLine("Evaluation result of {0}", variableName);
                     PrintOutput(variable.Shape.TotalSize, outputData);
                 }
             }
