@@ -715,7 +715,7 @@ namespace CNTK
 
         static NDShape ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
                                                 std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
-                                                bool transpose, bool inferDimensions, NDShape dilation = NDShape({1}), bool ceilOutputDim = false);
+                                                bool transpose, bool inferDimensions, NDShape& dilation, bool ceilOutputDim = false);
 
         static NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions)
         {
