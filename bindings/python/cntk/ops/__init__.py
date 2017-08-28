@@ -1409,6 +1409,28 @@ def sigmoid(x, name=''):
     x = sanitize_input(x)
     return sigmoid(x, name)
 
+@typemap
+def legacy_sigmoid(x, name=''):
+    '''
+    Computes the element-wise sigmoid of ``x``:
+
+    :math:`sigmoid(x) = {1 \over {1+\exp(-x)}}`
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.sigmoid([-2, -1., 0., 1., 2.]).eval()
+        array([ 0.119203,  0.268941,  0.5     ,  0.731059,  0.880797], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import legacy_sigmoid
+    x = sanitize_input(x)
+    return legacy_sigmoid(x, name)
 
 @typemap
 def tanh(x, name=''):
@@ -2297,6 +2319,11 @@ def reduce_sum(x, axis=None, name=''):
     axis = sanitize_multi_axis_reduction_list(axis)
     return reduce_sum(x, axis, name)
 
+@typemap
+def sum_all(x, name=''):
+    from cntk.cntk_py import sum_all
+    x = sanitize_input(x)
+    return sum_all(x, name)
 
 @typemap
 def reduce_log_sum_exp(x, axis=None, name=''):
