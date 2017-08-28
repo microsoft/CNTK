@@ -59,7 +59,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
-    input_var = C.input_variable((num_channels, image_height, image_width))
+    input_var = C.input_variable((num_channels, image_height, image_width), name='features')
     label_var = C.input_variable((num_classes))
 
     # create model, and configure learning parameters
