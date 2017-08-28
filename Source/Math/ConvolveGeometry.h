@@ -455,10 +455,10 @@ public:
             {
                 dim += lo + hi;
             }
-            float preciseDimOut = (float)(dim - (kernelShape[i]-1) * dil - 1) / delta + 1;
-            float preciseDimOutNoDilation = (float)(dim - kernelShape[i]) / delta + 1;
+
+            size_t effectiveKernelShape = (kernelShape[i] - 1) * dil + 1;
+            float preciseDimOut = (float)(dim - effectiveKernelShape) / delta + 1;
             size_t dimOut = static_cast<size_t>(ceilOutDim ? ceil(preciseDimOut) : floor(preciseDimOut));
-            size_t dimOutNoDilation = static_cast<size_t>(ceilOutDim ? ceil(preciseDimOutNoDilation) : floor(preciseDimOutNoDilation));
             // When LowerPad and/or UpperPad are specified (i.e. > 0), we insist that the kernel applications
             // fill the entire space.
             if (!autoPadCur && (lo > 0 || hi > 0))
@@ -467,10 +467,12 @@ public:
                 if (size != dim)
                     InvalidArgument("Convolution requires that kernel fills the entire space if auto-padding is disabled.");
             }
+
             if (mapCount.size() > 1)
                 dimOut *= mapCount[i];
             else if (i == inputShape.GetRank() - 1)
-                dimOut = dimOutNoDilation*mapCount[0];
+                dimOut *= mapCount[0];
+
             dimsOutput[i] = dimOut;
         }
 
