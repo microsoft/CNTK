@@ -133,11 +133,6 @@ private:
             res[L"[" + std::to_wstring(res.size()) + L"]"] = p;
         return res;
     }
-    FunctionPtr ParametersCombined() const
-    {
-        auto parameters = Parameters();
-        return Combine(vector<Variable>(parameters.begin(), parameters.end())); // need to cast from Parameter to Variable
-    }
 public:
     TModel(const vector<ModelParametersPtr>& nested, const Base& f)
         : Base(f), ModelParametersPtr(make_shared<ModelParameters>(vector<Parameter>(), NameNumberedParameters(nested)))
@@ -157,6 +152,12 @@ public:
     // saving and loading--we go through a proxy Combine() function so that we can use the standard CNTK functions
     void SaveParameters   (const std::wstring& filepath) { ParametersCombined()->Save   (filepath); }
     void RestoreParameters(const std::wstring& filepath) { ParametersCombined()->Restore(filepath); }
+    // we use this for checkpointing  --TODO: encapsulate this better
+    FunctionPtr ParametersCombined() const
+    {
+        auto parameters = Parameters();
+        return Combine(vector<Variable>(parameters.begin(), parameters.end())); // need to cast from Parameter to Variable
+    }
 };
 typedef TModel<function<Variable(const Variable&)>> UnaryModel;
 typedef TModel<function<Variable(const Variable&, const Variable&)>> BinaryModel;
@@ -300,7 +301,8 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
         let x0 = x - mean;
         //LOG(x0);
         // BUGBUG: Sqrt() seems hosed!!
-        let invLen = Pow(ReduceMean(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct (but we don't have the dims upfront)
+        let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct (but we don't have the dims upfront)
+        //let invLen = Pow(ReduceMean(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct (but we don't have the dims upfront)
         //LOG(len);
         // Note: ^^ this parallelizes, while this vv does not
         //let len = Sqrt(TransposeTimes(x, x));
