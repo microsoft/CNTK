@@ -118,15 +118,17 @@ TernaryModel AttentionModelBahdanau(size_t attentionDim1)
 // reference attention model
 QuaternaryModel AttentionModelReference(size_t attentionDim1)
 {
-    auto H = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
+    //auto H = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
+    auto projectQuery = Linear(attentionDim1, ProjectionOptions::none, device);
     let normH = LengthNormalization(device);
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
-    return QuaternaryModel({ H }, { { L"normH", normH } },
+    return QuaternaryModel({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
         [=](const Variable& h, const Variable& historyProjectedKey, const Variable& tanhEncodingProjectedNormedKey, const Variable& encodingProjectedData) -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler);
         // compute attention weights
-        let hProjected = Times(H, h, Named("H")); // [A x 1]. Batchable.
+        //let hProjected = Times(H, h, Named("H")); // [A x 1]. Batchable.
+        let hProjected = projectQuery(h); // [A x 1]. Batchable.
         let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A x T]. Batchable by stacking.
 #if 1
         let u = InnerProduct(tanh, tanhEncodingProjectedNormedKey, Axis(0), Named("u")); // [1 x T] row vector. Batchable by stacking.
@@ -146,8 +148,8 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(Named("encBarrier"));
-    let encoderKeysProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderKeysProjection")); }); // keys projection for attention
-    let encoderDataProjection = encBarrier >> Linear(attentionDim, false, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderDataProjection")); }); // data projection for attention
+    let encoderKeysProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::none, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderKeysProjection")); }); // keys projection for attention
+    let encoderDataProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::none, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderDataProjection")); }); // data projection for attention
     let embedTarget = Barrier(Named("embedTargetBarrier")) >> Embedding(embeddingDim, device) >> BatchNormalization(device, Named("bnEmbedTarget"));     // target embeddding
     let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("initialStateProjection")); }), device);
