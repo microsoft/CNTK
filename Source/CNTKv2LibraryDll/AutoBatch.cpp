@@ -25,8 +25,13 @@
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
-static size_t logMemoizeStatsPeriod = SIZE_MAX;// 10;
+#ifdef LOG_STATS
+static size_t logMemoizeStatsPeriod = 50;
 static size_t logMemoizeStatsCounter = 0; // counts up to logMemoizeStatsPeriod and wraps. We log if it is 0.
+#else
+static size_t logMemoizeStatsPeriod = SIZE_MAX;
+static size_t logMemoizeStatsCounter = 1;
+#endif
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
@@ -2032,7 +2037,7 @@ public:
             // record ourselves as a consumer of the input
             // Remember that any input that is a lazyIndex has been redirected to its lazy source,
             // i.e. it is the lazy source that will pull this gradient.
-            if (!fields.m_consumers.first.first)
+            if (!m_visitorTag.Visited(fields.m_visitedTag))
             {
                 fields.m_consumers.first = make_pair(&f, i);
                 // now process recursively the inputs
@@ -2453,13 +2458,7 @@ public:
         // implant the results into the map the user passed in
         for (auto& kv : gradients)
             kv.second = kv.first.m_dataFields->m_gradient;
-        for (auto& kv : gradients)
-        {
-            let& param = kv.first;
-            auto& fields = *param.m_dataFields;
-            fields.m_consumers.first.first = nullptr;
-            fields.m_consumers.second.clear();
-        }
+        // note: we will leave the m_consumers fields dangling, and reset them upon next use
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedBackward: %d backprop computations besides %d gathers and %d scatters executed in nominal %d post-batching ops\n",
                 (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBackpropGathers, (int)m_stats.numBackpropScatters, (int)m_stats.numBackpropsToInputs);
