@@ -17,6 +17,8 @@ mkl_solvers_ee.h
 mkl_sparse_handle.h
 mkl_spblas.h
 mkl_trans.h
+mkl_dnn.h
+mkl_dnn_types.h
 mkl_trig_transforms.h
 mkl_types.h
 mkl_version.h

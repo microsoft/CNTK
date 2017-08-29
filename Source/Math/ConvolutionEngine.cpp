@@ -6,9 +6,28 @@
 #include "stdafx.h"
 #include "ConvolutionEngine.h"
 #include "CuDnnFactories.h"
+#include "mkl_dnn.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "windows.h"
+//#include "mkldnn.hpp"
+#define CHECK_ERR(f, err) do { \
+    (err) = (f); \
+    if ((err) != E_SUCCESS) { \
+        printf("[%s:%d] err (%d)\n", __FILE__, __LINE__, err); \
+        goto bail_out; \
+    } \
+} while(0)
+//#define dimension (4)
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+//Nithin's change
+static int gemm_forward_count = 0;
+static int gemm_backward_prop_count = 0;
+static LARGE_INTEGER ElapsedMicroseconds_tmp = { 0 };
+//using namespace mkldnn;
+//auto cpu_engine = engine(engine::cpu, 0);
 template <class ElemType>
 void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace)
 {
@@ -86,7 +105,7 @@ void ConvolutionEngine<ElemType>::ForwardPooling(const Mat& in, Mat& out)
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient)
+void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == grad.GetNumRows());
@@ -104,7 +123,7 @@ void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& src
 
     EnsureCompatible();
     EnsurePoolingInitialized();
-    BackwardPoolingCore(out, srcGrad, in, grad, accumulateGradient);
+    BackwardPoolingCore(out, srcGrad, in, grad);
 }
 
 template <class ElemType>
@@ -141,8 +160,8 @@ public:
     using typename Base::Mat;
 
 public:
-    ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad), 
+    ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind), 
         m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
     {
     }
@@ -153,7 +172,6 @@ protected:
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
     using Base::m_poolKind;
-    using Base::m_poolIncludePad;
 
     void EnsureCompatible() override
     {
@@ -210,22 +228,22 @@ protected:
         }
         else if (m_poolKind == PoolKind::Average)
         {
-            in.AveragePoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out, m_poolIncludePad);
+            in.AveragePoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out);
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
 
     }
 
-    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) override
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
     {
         if (m_poolKind == PoolKind::Max)
         {
-            srcGrad.MaxPoolingBackward(out, in, m_mpRowCol, *m_mpRowIndices, *m_indices, grad, accumulateGradient);
+            srcGrad.MaxPoolingBackward(out, in, m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
         }
         else if (m_poolKind == PoolKind::Average)
         {
-            srcGrad.AveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad, m_poolIncludePad, accumulateGradient);
+            srcGrad.AveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
@@ -266,8 +284,8 @@ public:
     using typename Base::Mat;
 
 public:
-    LegacyConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad), 
+    LegacyConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind), 
         m_inT(m_geometry->InputShape(), ImageLayoutKind::CHW), m_outT(m_geometry->OutputShape(), ImageLayoutKind::CHW),
         m_kernelT(m_geometry->KernelShape(), ImageLayoutKind::CHW), m_strideT(m_geometry->Stride(), ImageLayoutKind::CHW)
     {
@@ -280,7 +298,6 @@ protected:
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
     using Base::m_poolKind;
-    using Base::m_poolIncludePad;
 
     void EnsureCompatible() override
     {
@@ -508,11 +525,8 @@ protected:
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
     }
 
-    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) override
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
     {
-        if (!accumulateGradient)
-            grad.SetValue(0);
-
         if (m_poolKind == PoolKind::Max)
         {
             grad.AddMaxPoolingGradient(srcGrad, in, out,
@@ -557,16 +571,21 @@ private:
 // (High performance convolutional neural networks for document processing; Chellapilla, Puri, Simard)
 // Uses reference engine for pooling operations.
 //------------------------------------------------------------------
+//Making changes to implement mkl-dnn, use a different script if you need the default implementation.
+//
 template <class ElemType>
 class GemmConvolutionEngine : public ReferenceConvolutionEngine<ElemType>
 {
+
 public:
     using Base = ReferenceConvolutionEngine<ElemType>;
     using typename Base::Mat;
+	
 
 public:
-    GemmConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad)
+	//gemmconv constructor
+    GemmConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind)
     {
     }
 
@@ -579,14 +598,12 @@ protected:
     using Base::m_deviceId;
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
-    using Base::m_poolIncludePad;
 
     using Base::m_mpRowCol;
     using Base::m_mpRowIwht;
     using Base::m_mpRowRun;
     using Base::m_runs;
-
-    void EnsureCompatible() override
+	void EnsureCompatible() override
     {
         if (m_imageLayout != ImageLayoutKind::CHW)
             LogicError("GEMM convolution engine supports only CHW/cudnn layout.");
@@ -613,66 +630,219 @@ protected:
     //    [XYC x NW'H']^T * [XYC x K] -> [NW'H' x K]
     // 3. Reshape and transpose result: [NW'H' x K] -> [N x W'H'K]^T -> [W'H'K x N]
     //    In case minibatch size == 1 this step is not required and step 2 writes results directly to output (out).
-    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) override
+//Function to do the data shuffle and allocate memory to input data.
+static dnnError_t init_conversion(dnnPrimitive_t *cv, void **ptr_out, dnnLayout_t lt_pr, dnnLayout_t lt_us, void *ptr_us)
+{
+	dnnError_t err;
+	*ptr_out = NULL;
+	if (!dnnLayoutCompare_F32(lt_pr, lt_us)) {
+		CHECK_ERR(dnnConversionCreate_F32(cv, lt_us, lt_pr), err);
+		CHECK_ERR(dnnAllocateBuffer_F32((void**)ptr_out, lt_pr), err);
+	}
+	else {
+		*ptr_out = ptr_us;
+	}
+	return E_SUCCESS;
+
+bail_out:
+	if (*ptr_out) dnnReleaseBuffer_F32(*ptr_out);
+	return err;
+}
+
+void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) override
     {
-        size_t batchSize = in.GetNumCols();
-        size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
+	 TensorShape m_inputShape;
+	 m_inputShape = m_geometry->InputShape();
+	 size_t rank = m_inputShape.GetRank();
+	 //MKL-DNN calls does not support 4th dimention now, we will update the code once MKL release the update.
+	 if (rank < 4){
+		UNREFERENCED_PARAMETER(workspace);
+		//Getting input,output and kernel shapes
+		const int dimension = 4;
+		dnnError_t err;
+		TensorShape m_kernelShape;
+		m_kernelShape = m_geometry->KernelShape();
+		size_t kernel_rank = m_kernelShape.GetRank();
+		size_t kW = m_kernelShape[0];
+		size_t kH = m_kernelShape[1];
+		TensorShape m_stride;
+		m_stride = m_geometry->Stride();
+		size_t stride_rank = m_stride.GetRank();
+		TensorShape m_outputShape;
+		m_outputShape = m_geometry->OutputShape();
+		size_t output_rank = m_outputShape.GetRank();
+		size_t batch_size = in.GetNumCols();
+		size_t mapCount = m_geometry->GetMapCount(m_geometry->KernelShape().GetRank() - 1);
+		size_t outputSize[4] = { 0 };
+		for (int i = 0; i < output_rank; i++) {
+			outputSize[i] = { m_outputShape[i] };
+		}
+		outputSize[output_rank] = batch_size;
+		size_t outputStrides[4] = { 0 };
+		outputStrides[0] = { 1 };
+		for (int i = 1; i <= output_rank; i++) {
+			outputStrides[i] = { outputSize[i - 1] * outputStrides[i - 1] };
+		}
+		size_t filterSize[4];
+		for (int i = 0; i < kernel_rank; i++) {
+			filterSize[i] = { m_kernelShape[i] };
+		}
+		filterSize[kernel_rank] = mapCount;
+		size_t filterStrides[4];
+		filterStrides[0] = { 1 };
+		for (int i = 1; i <= kernel_rank; i++) {
+			filterStrides[i] = { filterSize[i - 1] * filterStrides[i - 1] };
+		}
+		size_t inputSize[4];
+		for (int i = 0; i < rank; i++) {
+			inputSize[i] = {m_inputShape[i]};
+		}
+		inputSize[rank] = batch_size;
+		size_t inputStrides[4];
+		inputStrides[0] = { 1 };
+		for (int i = 1; i <= rank; i++) {
+			inputStrides[i] = {inputSize[i-1] * inputStrides[i - 1] };
+		}
+		TensorShape m_lowerpad;
+		m_lowerpad = m_geometry->LowerPad();
+		TensorShape m_upperpad;
+		m_upperpad = m_geometry->UpperPad();
+		std::vector<bool> m_autopad;
+		m_autopad = m_geometry->AutoPad();
+		int track_vec[] = {0,0,0};
+		for (int i = 0; i < m_autopad.size(); i++) {
+			if (m_autopad[i] == 1) {
+				track_vec[i] = 1;
+			}
+		}
+		int KH_off = 0;
+		int KW_off = 0;
+		if (track_vec[0] == 1) {
+			KW_off = int((kW - 1) / 2);
+		}
+		if (track_vec[1] == 1) {
+			KH_off = int((kH - 1) / 2);
+		}
+		int inputOffset[(dimension - 2)] = { -KW_off , -KH_off};
+		size_t convolutionStride[dimension - 1];
+		for (int i = 0; i < stride_rank; i++) {
+			convolutionStride[i] = { m_stride[i] };
+		}
+		dnnLayout_t lt_user_input = NULL,
+					lt_user_filt = NULL,
+					lt_user_output = NULL;
+		void* resConv1[dnnResourceNumber] = { 0 };
+		void* outConv[dnnResourceNumber] = { 0 };
+		float* resPool1[dnnResourceNumber] = { 0 };
+		dnnPrimitive_t conv1 = NULL;
+		dnnLayout_t lt_conv1_input = NULL,
+					lt_conv1_filt = NULL,
+					lt_conv1_output = NULL;
+		dnnPrimitive_t cv_user_to_conv1_input = NULL,
+					   cv_user_to_conv1_filt = NULL;
+		dnnPrimitiveAttributes_t attributes = NULL;
+		void  *user_i = NULL,
+			  *user_c1_f = NULL;
+			  user_i = in.Data();
+			  user_c1_f = kernel.Data();
+		if (user_i == NULL || user_c1_f == NULL ) {
+			err = E_MEMORY_ERROR;
+			goto bail_out;
+		}
+		//Creating user layouts,primitive layouts and coversions
+		CHECK_ERR(dnnLayoutCreate_F32(&lt_user_input, dimension, inputSize, inputStrides), err);
+		CHECK_ERR(dnnLayoutCreate_F32(&lt_user_filt, dimension, filterSize, filterStrides), err);
+		CHECK_ERR(dnnLayoutCreate_F32(&lt_user_output, dimension, outputSize, outputStrides), err);
+		CHECK_ERR(dnnPrimitiveAttributesCreate_F32(&attributes), err);
+		CHECK_ERR(dnnConvolutionCreateForward_F32(&conv1, attributes, dnnAlgorithmConvolutionDirect, dimension, inputSize, outputSize, filterSize, convolutionStride, inputOffset, dnnBorderZeros), err);
+		CHECK_ERR(dnnLayoutCreateFromPrimitive_F32(&lt_conv1_input, conv1, dnnResourceSrc), err);
+		CHECK_ERR(dnnLayoutCreateFromPrimitive_F32(&lt_conv1_filt, conv1, dnnResourceFilter), err);
+		CHECK_ERR(dnnLayoutCreateFromPrimitive_F32(&lt_conv1_output, conv1, dnnResourceDst), err);
+		CHECK_ERR(init_conversion(&cv_user_to_conv1_input, &resConv1[dnnResourceSrc], lt_conv1_input, lt_user_input, user_i), err);
+		CHECK_ERR(init_conversion(&cv_user_to_conv1_filt, &resConv1[dnnResourceFilter], lt_conv1_filt, lt_user_filt, user_c1_f), err);
+		CHECK_ERR(dnnAllocateBuffer_F32((void**)&resConv1[dnnResourceDst], lt_conv1_output), err); 
+		if (cv_user_to_conv1_filt) CHECK_ERR(dnnConversionExecute_F32(cv_user_to_conv1_filt, user_c1_f, resConv1[dnnResourceFilter]), err);
+		if (cv_user_to_conv1_input) CHECK_ERR(dnnConversionExecute_F32(cv_user_to_conv1_input, user_i, resConv1[dnnResourceSrc]), err);
+		CHECK_ERR(dnnExecute_F32(conv1, (void**)resConv1), err); 
+		dnnPrimitive_t cv = NULL;
+		CHECK_ERR(dnnConversionCreate_F32(&cv, lt_conv1_output, lt_user_output), err);
+		CHECK_ERR(dnnConversionExecute_F32(cv, resConv1[dnnResourceDst], out.Data()), err);
+		//Releasing the allcoated memory.
+		if (cv_user_to_conv1_input) dnnReleaseBuffer_F32(resConv1[dnnResourceSrc]);
+		if (cv_user_to_conv1_filt) dnnReleaseBuffer_F32(resConv1[dnnResourceFilter]);
+		dnnReleaseBuffer_F32(resConv1[dnnResourceDst]);
+	bail_out:
+		dnnDelete_F32(conv1);
+		dnnDelete_F32(cv_user_to_conv1_input);
+		dnnDelete_F32(cv_user_to_conv1_filt);
+		dnnLayoutDelete_F32(lt_user_input);
+		dnnLayoutDelete_F32(lt_user_filt);
+		dnnLayoutDelete_F32(lt_user_output);
+		dnnLayoutDelete_F32(lt_conv1_input);
+		dnnLayoutDelete_F32(lt_conv1_filt);
+		dnnLayoutDelete_F32(lt_conv1_output);
+		dnnPrimitiveAttributesDestroy_F32(attributes);
+	}
+	else {
+		 size_t batchSize = in.GetNumCols();
+		 size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
+		 size_t mapCount = m_geometry->GetMapCount(m_geometry->InputShape().GetRank() - 1);
+		 size_t mapOutSize = m_geometry->OutputShape().GetNumElements() / mapCount;
+		 size_t unrollRows = mapOutSize * subBatchSize;
+		 size_t unrollCols = m_geometry->KernelShape().GetNumElements();
+		 // Reserve space for unrolled inputs and, if needed, intermediate outputs. 
+		 // Intermediate outputs will be transposed to final outputs after GEMM operation.
+		 // Transpose is not required if subBatchSize == 1.
+		 workspace.Resize(unrollRows, unrollCols + (subBatchSize > 1 ? mapCount : 0));
 
-        size_t mapCount = m_geometry->GetMapCount(m_geometry->InputShape().GetRank() - 1);
-        size_t mapOutSize = m_geometry->OutputShape().GetNumElements() / mapCount;
-        size_t unrollRows = mapOutSize * subBatchSize;
-        size_t unrollCols = m_geometry->KernelShape().GetNumElements();
-        // Reserve space for unrolled inputs and, if needed, intermediate outputs. 
-        // Intermediate outputs will be transposed to final outputs after GEMM operation.
-        // Transpose is not required if subBatchSize == 1.
-        workspace.Resize(unrollRows, unrollCols + (subBatchSize > 1 ? mapCount : 0));
+		 for (size_t start = 0; start < batchSize; start += subBatchSize)
+		 {
+			 size_t curBatchSize = min(subBatchSize, batchSize - start);
+			 auto inputSlice = in.ColumnSlice(start, curBatchSize);
+			 auto unrolledInput = workspace.ColumnSlice(0, unrollCols);
+			 if (curBatchSize != subBatchSize)
+			 {
+				 unrolledInput.Reshape(mapOutSize, subBatchSize * unrollCols);
+				 unrolledInput = unrolledInput.ColumnSlice(0, curBatchSize * unrollCols);
+			 }
+			 // Need to reshape (soft transpose) as matrices are column-major.
+			 unrolledInput.Reshape(unrollCols, mapOutSize * curBatchSize);
 
-        for (size_t start = 0; start < batchSize; start += subBatchSize)
-        {
-            size_t curBatchSize = min(subBatchSize, batchSize - start);
-            auto inputSlice = in.ColumnSlice(start, curBatchSize);
-            auto unrolledInput = workspace.ColumnSlice(0, unrollCols);
-            if (curBatchSize != subBatchSize)
-            {
-                unrolledInput.Reshape(mapOutSize, subBatchSize * unrollCols);
-                unrolledInput = unrolledInput.ColumnSlice(0, curBatchSize * unrollCols);
-            }
-            // Need to reshape (soft transpose) as matrices are column-major.
-            unrolledInput.Reshape(unrollCols, mapOutSize * curBatchSize);
+			 // Unroll inputs.
+			 unrolledInput.SetValue(0);
+			 inputSlice.UnrollConvolutionInput(unrollCols, mapOutSize, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledInput);
 
-            // Unroll inputs.
-            unrolledInput.SetValue(0);
-            inputSlice.UnrollConvolutionInput(unrollCols, mapOutSize, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledInput);
+			 // cudnn layout uses row-major kernel weight matrix.
+			 auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
+			 kern.Reshape(unrollCols, kernel.GetNumElements() / unrollCols);
 
-            // cudnn layout uses row-major kernel weight matrix.
-            auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
-            kern.Reshape(unrollCols, kernel.GetNumElements()/unrollCols);
+			 // Perform matrix multiplication of unrolled inputs with weights.
+			 // If there is just one sample in the sub-batch then compute result directly to the output matrix.
+			 if (curBatchSize == 1)
+			 {
+				 auto outSlice = out.ColumnSlice(start, 1);
+				 outSlice.Reshape(mapOutSize, mapCount);
+				 Mat::Multiply(unrolledInput, true, kern, false, outSlice);
+			 }
+			 else
+			 {
+				 auto outTempSlice = workspace.ColumnSlice(unrollCols, mapCount);
+				 if (curBatchSize != subBatchSize)
+				 {
+					 outTempSlice.Reshape(mapOutSize, subBatchSize * mapCount);
+					 outTempSlice = outTempSlice.ColumnSlice(0, curBatchSize * mapCount);
+					 outTempSlice.Reshape(mapOutSize * curBatchSize, mapCount);
+				 }
+				 Mat::Multiply(unrolledInput, true, kern, false, outTempSlice);
+				 outTempSlice.Reshape(curBatchSize, mapOutSize * mapCount);
+				 auto outSlice = out.ColumnSlice(start, curBatchSize);
+				 outSlice.AssignTransposeOf(outTempSlice);
+			 }
+		 }
+	 }
+}
+	
 
-            // Perform matrix multiplication of unrolled inputs with weights.
-            // If there is just one sample in the sub-batch then compute result directly to the output matrix.
-            if (curBatchSize == 1)
-            {
-                auto outSlice = out.ColumnSlice(start, 1);
-                outSlice.Reshape(mapOutSize, mapCount);
-                Mat::Multiply(unrolledInput, true, kern, false, outSlice);
-            }
-            else
-            {
-                auto outTempSlice = workspace.ColumnSlice(unrollCols, mapCount);
-                if (curBatchSize != subBatchSize)
-                {
-                    outTempSlice.Reshape(mapOutSize, subBatchSize * mapCount);
-                    outTempSlice = outTempSlice.ColumnSlice(0, curBatchSize * mapCount);
-                    outTempSlice.Reshape(mapOutSize * curBatchSize, mapCount);
-                }
-                Mat::Multiply(unrolledInput, true, kern, false, outTempSlice);
-                outTempSlice.Reshape(curBatchSize, mapOutSize * mapCount);
-                auto outSlice = out.ColumnSlice(start, curBatchSize);
-                outSlice.AssignTransposeOf(outTempSlice);
-            }
-        }
-    }
-    
     // The backward data method works by representing this operation as a "reverse" convolution
     // in case kernel's last dimension is equal to input dimension. Gradients matrix (grad) becomes
     // an output of such reverse convolution.
@@ -684,91 +854,236 @@ protected:
     //    [KXY x NWH]^T * [KXY x C] -> [NWH x C]
     // 4. Reshape and transpose outputs (grad): [NWH x C] -> [N x WHC]^T -> [WHC x N]
     //    In case minibatch size == 1 this step is not required and step 3 writes results directly to output (grad).
-    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool /*accumulateGradient*/, Mat& workspace) override
+void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool /*accumulateGradient*/, Mat& workspace) override
     {
-        size_t batchSize = srcGrad.GetNumCols();
-        size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
+	 /* grad = srcGard*kernel */
+	 TensorShape m_outputShape;
+	 m_outputShape = m_geometry->OutputShape();
+	 size_t output_rank = m_outputShape.GetRank();
+	 size_t mapCount = m_geometry->GetMapCount(m_geometry->KernelShape().GetRank() - 1);
+	 if (output_rank < 4) {
+		 // getting normal input,output and kernel dimensions.
+		 const int dimension = 4;
+		 dnnError_t err;
+		 void	*user_i = NULL;
+		 size_t batch_size = srcGrad.GetNumCols();
+		 TensorShape m_srcGrad;
+		 m_srcGrad = m_geometry->InputShape();
+		 size_t rank = m_srcGrad.GetRank();
+		 TensorShape m_kernelShape;
+		 m_kernelShape = m_geometry->KernelShape();
+		 size_t kW = m_kernelShape[0];
+		 size_t kH = m_kernelShape[1];
+		 size_t kernel_rank = m_kernelShape.GetRank();
+		 TensorShape m_stride;
+		 m_stride = m_geometry->Stride();
+		 size_t stride_rank = m_stride.GetRank();
+		 size_t outputSize[4];
+		 for (int i = 0; i < output_rank; i++) {
+			 outputSize[i] = { m_outputShape[i] };
+		 }
+		 outputSize[output_rank] = batch_size;
 
-        const auto& inT = m_geometry->InputShape();
-        const auto& kernT = m_geometry->KernelShape();
+		 size_t outputStrides[4];
+		 outputStrides[0] = { 1 };
+		 for (int i = 1; i <= output_rank; i++) {
+			 outputStrides[i] = { outputSize[i - 1] * outputStrides[i - 1] };
+		 }
+		 size_t filterSize[4];
+		 for (int i = 0; i < kernel_rank; i++) {
+			 filterSize[i] = { m_kernelShape[i] };
+		 }
+		 filterSize[kernel_rank] = mapCount;
+		 size_t filterStrides[4];
+		 filterStrides[0] = { 1 };
+		 for (int i = 1; i <= kernel_rank; i++) {
+			 filterStrides[i] = { filterSize[i - 1] * filterStrides[i - 1] };
+		 }
+		 size_t inputSize[4];
+		 for (int i = 0; i < rank; i++) {
+			 inputSize[i] = { m_srcGrad[i] };
+		 }
+		 inputSize[rank] = batch_size;
+		 size_t inputStrides[4];
+		 inputStrides[0] = { 1 };
+		 for (int i = 1; i <= rank; i++) {
+			 inputStrides[i] = { inputSize[i - 1] * inputStrides[i - 1] };
+		 }
+		 TensorShape m_lowerpad;
+		 m_lowerpad = m_geometry->LowerPad();
+		 TensorShape m_upperpad;
+		 m_upperpad = m_geometry->UpperPad();
+		 std::vector<bool> m_autopad;
+		 m_autopad = m_geometry->AutoPad();
+		 int track_vec[] = { 0,0,0 };
+		 for (int i = 0; i < m_autopad.size(); i++) {
+			 if (m_autopad[i] == 1) {
+				 track_vec[i] = 1;
+			 }
+		 }
+		 int KH_off = 0;
+		 int KW_off = 0;
+		 if (track_vec[0] == 1) {
+			 KW_off = int((kW - 1) / 2);
+		 }
+		 if (track_vec[1] == 1) {
+			 KH_off = int((kH - 1) / 2);
+		 }
+		 int inputOffset[(dimension - 2)] = { -KW_off , -KH_off };
+		 size_t convolutionStride[dimension - 1];
+		 for (int i = 0; i < stride_rank; i++) {
+			 convolutionStride[i] = { m_stride[i] };
+		 }
+		 dnnLayout_t lt_user_input = NULL,
+			 lt_user_filt = NULL,
+			 lt_user_output = NULL;
+		 void* resConv1[dnnResourceNumber] = { 0 };
+		 void* outConv[dnnResourceNumber] = { 0 };
+		 float* resPool1[dnnResourceNumber] = { 0 };
+		 dnnPrimitive_t conv_bwd_data = NULL;
+		 dnnLayout_t lt_conv_diff_src = NULL;
+		 dnnLayout_t lt_conv1_input = NULL,
+			 lt_conv1_filt = NULL,
+			 lt_conv1_output = NULL;
+		 dnnPrimitive_t cv_user_to_conv1_input = NULL,
+			 cv_user_to_conv1_filt = NULL;
+		 dnnPrimitiveAttributes_t attributes = NULL;
+		 void	*user_c1_f = NULL;
+		 void	*user_o = NULL;
+		 user_i = srcGrad.Data();
+		 user_c1_f = kernel.Data();
+		 user_o = grad.Data();
+		 workspace.AssignValuesOf(grad);
+		 if (user_i == NULL || user_c1_f == NULL) {
+			 err = E_MEMORY_ERROR;
+			 goto bail_out;
+		 }
+		 //Creating layouts and shuffle operations.
+		 //Data shuffle also happens when you have Map size in multiples of 8 as MKL follows a different optimization paths. 
+		 CHECK_ERR(dnnLayoutCreate_F32(&lt_user_input, dimension, outputSize, outputStrides), err);
+		 CHECK_ERR(dnnLayoutCreate_F32(&lt_user_filt, dimension, filterSize, filterStrides), err);
+		 CHECK_ERR(dnnLayoutCreate_F32(&lt_user_output, dimension, inputSize, inputStrides), err);
+		 CHECK_ERR(dnnPrimitiveAttributesCreate_F32(&attributes), err); 
+		 CHECK_ERR(dnnConvolutionCreateBackwardData_F32(&conv_bwd_data, attributes, dnnAlgorithmConvolutionDirect, dimension, inputSize, outputSize, filterSize, convolutionStride, inputOffset, dnnBorderZeros), err);
+		 CHECK_ERR(dnnLayoutCreateFromPrimitive_F32(&lt_conv1_input, conv_bwd_data, dnnResourceDiffDst), err);
+		 CHECK_ERR(dnnLayoutCreateFromPrimitive_F32(&lt_conv1_filt, conv_bwd_data, dnnResourceFilter), err);
+		 CHECK_ERR(dnnLayoutCreateFromPrimitive_F32(&lt_conv_diff_src, conv_bwd_data, dnnResourceDiffSrc), err);
+		 CHECK_ERR(init_conversion(&cv_user_to_conv1_filt, &resConv1[dnnResourceFilter], lt_conv1_filt, lt_user_filt, user_c1_f), err);
+		 CHECK_ERR(init_conversion(&cv_user_to_conv1_input, &resConv1[dnnResourceDiffDst], lt_conv1_input, lt_user_input, user_i), err);
+		 CHECK_ERR(dnnAllocateBuffer_F32((void**)&resConv1[dnnResourceDiffSrc], lt_conv_diff_src), err);
+		 if (cv_user_to_conv1_filt) CHECK_ERR(dnnConversionExecute_F32(cv_user_to_conv1_filt, user_c1_f, resConv1[dnnResourceFilter]), err);
+		 if (cv_user_to_conv1_input) CHECK_ERR(dnnConversionExecute_F32(cv_user_to_conv1_input, user_i, resConv1[dnnResourceDiffDst]), err);
+		 // Execution call to dnn function.
+		 CHECK_ERR(dnnExecute_F32(conv_bwd_data, (void**)resConv1), err);
+		 dnnPrimitive_t cv = NULL;
+		 CHECK_ERR(dnnConversionCreate_F32(&cv, lt_conv_diff_src, lt_user_output), err);
+		 CHECK_ERR(dnnConversionExecute_F32(cv, resConv1[dnnResourceDiffSrc], grad.Data()), err);
+		 grad.AssignSumOf(grad, workspace);
+		 // Release the allocated memory.
+		 if (cv_user_to_conv1_input) dnnReleaseBuffer_F32(resConv1[dnnResourceDiffDst]);
+		 if (cv_user_to_conv1_filt) dnnReleaseBuffer_F32(resConv1[dnnResourceFilter]);
+		 dnnReleaseBuffer_F32(resConv1[dnnResourceDiffSrc]);
 
-        size_t dimCount = inT.GetRank();
-        assert(kernT[dimCount - 1] == inT[dimCount - 1]);
-        if (kernT[dimCount - 1] != inT[dimCount - 1])
-        {
-            RuntimeError("GEMM convolution engine does not support this convolution configuration. "
-                         "It is possible to make GEMM engine work with this configuration by defining "
-                         "input/output/kernel using tensors of higher(+1) dimension. Geometry: %s", ((string)*m_geometry).c_str());
-        }
+		 bail_out:
+		 dnnDelete_F32(conv_bwd_data);
+		 dnnDelete_F32(cv_user_to_conv1_input);
+		 dnnDelete_F32(cv_user_to_conv1_filt);
+		 dnnLayoutDelete_F32(lt_user_input);
+		 dnnLayoutDelete_F32(lt_user_filt);
+		 dnnLayoutDelete_F32(lt_user_output);
+		 dnnLayoutDelete_F32(lt_conv1_input);
+		 dnnLayoutDelete_F32(lt_conv1_filt);
+		 dnnLayoutDelete_F32(lt_conv1_output);
+		 dnnPrimitiveAttributesDestroy_F32(attributes);
+	 }
+	 else {
+		 size_t batchSize = srcGrad.GetNumCols();
+		 size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
 
-        size_t mapInCount  = kernT[dimCount - 1];
-        size_t mapOutCount = m_geometry->GetMapCount(dimCount - 1);
-        size_t mapInSize   = inT.GetNumElements() / mapInCount;
+		 const auto& inT = m_geometry->InputShape();
+		 const auto& kernT = m_geometry->KernelShape();
 
-        size_t unrollRows = mapInSize * subBatchSize;
-        size_t unrollCols = kernel.GetNumElements() / mapInCount;
+		 size_t dimCount = inT.GetRank();
+		 assert(kernT[dimCount - 1] == inT[dimCount - 1]);
+		 if (kernT[dimCount - 1] != inT[dimCount - 1])
+		 {
+			 RuntimeError("GEMM convolution engine does not support this convolution configuration. "
+				 "It is possible to make GEMM engine work with this configuration by defining "
+				 "input/output/kernel using tensors of higher(+1) dimension. Geometry: %s", ((string)*m_geometry).c_str());
+		 }
 
-        // Reserve space for:
-        // 1. Transposed kernel weights.
-        // 2. Unrolled source gradients.
-        // 3. Intermediate gradients (optional).
-        // Intermediate outputs will be transposed to final outputs after GEMM operation.
-        // Transpose is not required if subBatchSize == 1.
-        size_t kernCols = kernel.GetNumElements();
-        workspace.Resize(1, kernCols + unrollRows * (unrollCols + (subBatchSize > 1 ? mapInCount : 0)));
+		 size_t mapInCount = kernT[dimCount - 1];
+		 size_t mapOutCount = m_geometry->GetMapCount(dimCount - 1);
+		 size_t mapInSize = inT.GetNumElements() / mapInCount;
 
-        auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
-        size_t kernTCols = kernT.GetNumElements(); 
-        // cudnn layout uses row-major kernel weight matrix.
-        kern.Reshape(kernTCols, kernCols/kernTCols);
-        // Now transpose and reshape to [KXY x C].
-        auto kernTran = workspace.ColumnSlice(0, kernCols);
-        // Reshape to transpose shape, AssignTransposeOf requires that.
-        kernTran.Reshape(kern.GetNumCols(), kern.GetNumRows());
-        kernTran.AssignTransposeOf(kern);
-        kern = kernTran.ColumnSlice(0, kernTran.GetNumCols());
-        // Reshape to final shape.
-        kern.Reshape(unrollCols, mapInCount);
+		 size_t unrollRows = mapInSize * subBatchSize;
+		 size_t unrollCols = kernel.GetNumElements() / mapInCount;
 
-        for (size_t start = 0; start < batchSize; start += subBatchSize)
-        {
-            size_t curBatchSize = min(subBatchSize, batchSize - start);
-            auto srcGradSlice = srcGrad.ColumnSlice(start, curBatchSize);
-            auto unrolledSrcGrad = workspace.ColumnSlice(kernCols, unrollRows * unrollCols);
-            if (curBatchSize != subBatchSize)
-                unrolledSrcGrad = unrolledSrcGrad.ColumnSlice(0, mapInSize * curBatchSize * unrollCols);
-            // Need to reshape (soft transpose) as matrices are column-major.
-            unrolledSrcGrad.Reshape(unrollCols, mapInSize * curBatchSize);
+		 // Reserve space for:
+		 // 1. Transposed kernel weights.
+		 // 2. Unrolled source gradients.
+		 // 3. Intermediate gradients (optional).
+		 // Intermediate outputs will be transposed to final outputs after GEMM operation.
+		 // Transpose is not required if subBatchSize == 1.
+		 size_t kernCols = kernel.GetNumElements();
+		 workspace.Resize(1, kernCols + unrollRows * (unrollCols + (subBatchSize > 1 ? mapInCount : 0)));
+		 //std::cout << " calling backward prop" << endl;
+		 auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
+		 size_t kernTCols = kernT.GetNumElements();
+		 // cudnn layout uses row-major kernel weight matrix.
+		 kern.Reshape(kernTCols, kernCols / kernTCols);
+		 // Now transpose and reshape to [KXY x C].
+		 auto kernTran = workspace.ColumnSlice(0, kernCols);
+		 // Reshape to transpose shape, AssignTransposeOf requires that.
+		 kernTran.Reshape(kern.GetNumCols(), kern.GetNumRows());
+		 kernTran.AssignTransposeOf(kern);
+		 kern = kernTran.ColumnSlice(0, kernTran.GetNumCols());
+		 // Reshape to final shape.
+		 kern.Reshape(unrollCols, mapInCount);
 
-            // Unroll outputs (source gradients).
-            unrolledSrcGrad.SetValue(0);
-            srcGradSlice.UnrollConvolutionOutput(unrollCols, mapInCount, mapOutCount, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledSrcGrad);
+		 for (size_t start = 0; start < batchSize; start += subBatchSize)
+		 {
+			 size_t curBatchSize = min(subBatchSize, batchSize - start);
+			 auto srcGradSlice = srcGrad.ColumnSlice(start, curBatchSize);
+			 auto unrolledSrcGrad = workspace.ColumnSlice(kernCols, unrollRows * unrollCols);
+			 if (curBatchSize != subBatchSize)
+				 unrolledSrcGrad = unrolledSrcGrad.ColumnSlice(0, mapInSize * curBatchSize * unrollCols);
+			 // Need to reshape (soft transpose) as matrices are column-major.
+			 unrolledSrcGrad.Reshape(unrollCols, mapInSize * curBatchSize);
 
-            // Perform matrix multiplication of unrolled outputs with weights.
-            // If there is just one sample in the sub-batch then compute result directly to the output matrix.
-            if (curBatchSize == 1)
-            {
-                auto gradSlice = grad.ColumnSlice(start, 1);
-                gradSlice.Reshape(mapInSize, mapInCount);
-                Mat::MultiplyAndAdd(unrolledSrcGrad, true, kern, false, gradSlice);
-            }
-            else
-            {
-                // Need to transpose existing destination gradients first so we can add new values to them.
-                auto gradTempSlice = workspace.ColumnSlice(kernCols + unrollRows * unrollCols, unrollRows * mapInCount);
-                if (curBatchSize != subBatchSize)
-                    gradTempSlice = gradTempSlice.ColumnSlice(0, mapInSize * curBatchSize * mapInCount);
-                gradTempSlice.Reshape(curBatchSize, mapInSize * mapInCount);
-                auto gradSlice = grad.ColumnSlice(start, curBatchSize);
-                gradTempSlice.AssignTransposeOf(gradSlice);
-                gradTempSlice.Reshape(mapInSize * curBatchSize, mapInCount);
-                // Multiply unrolled srcGrad with weights and add to grad.
-                Mat::MultiplyAndAdd(unrolledSrcGrad, true, kern, false, gradTempSlice);
-                // Reshape and transpose grads back to original form.
-                gradTempSlice.Reshape(curBatchSize, mapInSize * mapInCount);
-                gradSlice.AssignTransposeOf(gradTempSlice);
-            }
-        }
+			 // Unroll outputs (source gradients).
+			 unrolledSrcGrad.SetValue(0);
+			 srcGradSlice.UnrollConvolutionOutput(unrollCols, mapInCount, mapOutCount, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledSrcGrad);
+
+			 // Perform matrix multiplication of unrolled outputs with weights.
+			 // If there is just one sample in the sub-batch then compute result directly to the output matrix.
+			 if (curBatchSize == 1)
+			 {
+				 auto gradSlice = grad.ColumnSlice(start, 1);
+				 gradSlice.Reshape(mapInSize, mapInCount);
+
+				 Mat::MultiplyAndAdd(unrolledSrcGrad, true, kern, false, gradSlice);
+
+			 }
+
+			 else
+			 {
+				 // Need to transpose existing destination gradients first so we can add new values to them.
+				 auto gradTempSlice = workspace.ColumnSlice(kernCols + unrollRows * unrollCols, unrollRows * mapInCount);
+				 if (curBatchSize != subBatchSize)
+					 gradTempSlice = gradTempSlice.ColumnSlice(0, mapInSize * curBatchSize * mapInCount);
+				 gradTempSlice.Reshape(curBatchSize, mapInSize * mapInCount);
+				 auto gradSlice = grad.ColumnSlice(start, curBatchSize);
+				 gradTempSlice.AssignTransposeOf(gradSlice);
+				 gradTempSlice.Reshape(mapInSize * curBatchSize, mapInCount);
+				 // Multiply unrolled srcGrad with weights and add to grad.
+				 Mat::MultiplyAndAdd(unrolledSrcGrad, true, kern, false, gradTempSlice);
+				 // Reshape and transpose grads back to original form.
+				 gradTempSlice.Reshape(curBatchSize, mapInSize * mapInCount);
+				 gradSlice.AssignTransposeOf(gradTempSlice);
+			 }
+		 }
+	  }
     }
 
     // The backward kernel method consists of 3 parts:
@@ -777,73 +1092,213 @@ protected:
     // 2. Unrolling convolution input (in) into a matrix of [NW'H' x WHC] layout.
     // 3. Performing matrix multiplication of unrolled input with transposed output:
     //    [NW'H' x WHC]^T * [NW'H' x K] -> [WHC x K] - kernel gradients.
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool /*allowReuse*/, Mat& workspace) override
+	void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool /*allowReuse*/, Mat& workspace) override
     {
-        size_t batchSize = srcGrad.GetNumCols();
-        size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
+		/* kernelGrad = srcGrad*in*/
+		TensorShape m_outputShape;
+		m_outputShape = m_geometry->OutputShape();
+		size_t output_rank = m_outputShape.GetRank();
+		size_t mapCount = m_geometry->GetMapCount(m_geometry->KernelShape().GetRank() - 1);
+		if (output_rank < 4) {
+			const int dimension = 4;
+			dnnError_t err;
+			void	*user_i = NULL;
+			user_i = srcGrad.Data();
+			size_t batch_size = srcGrad.GetNumCols();
+			TensorShape m_srcGrad;
+			m_srcGrad = m_geometry->InputShape();
+			size_t rank = m_srcGrad.GetRank();
+			TensorShape m_kernelShape;
+			m_kernelShape = m_geometry->KernelShape();
+			size_t kW = m_kernelShape[0];
+			size_t kH = m_kernelShape[1];
+			size_t kernel_rank = m_kernelShape.GetRank();
+			TensorShape m_stride;
+			m_stride = m_geometry->Stride();
+			size_t stride_rank = m_stride.GetRank();
+			size_t outputSize[4];
+			for (int i = 0; i < output_rank; i++) {
+				outputSize[i] = { m_outputShape[i] };
+			}
+			outputSize[output_rank] = batch_size;
 
-        const auto& inT = m_geometry->InputShape();
-        const auto& kernT = m_geometry->KernelShape();
-        const auto& outT = m_geometry->OutputShape();
+			size_t outputStrides[4];
+			outputStrides[0] = { 1 };
+			for (int i = 1; i <= output_rank; i++) {
+				outputStrides[i] = { outputSize[i - 1] * outputStrides[i - 1] };
+			}
+			size_t filterSize[4];
+			for (int i = 0; i < kernel_rank; i++) {
+				filterSize[i] = { m_kernelShape[i] };
+			}
+			filterSize[kernel_rank] = mapCount;
 
-        size_t dimCount = inT.GetRank();
-        size_t mapOutCount = m_geometry->GetMapCount(dimCount - 1);
-        size_t mapOutSize = outT.GetNumElements() / mapOutCount;
+			size_t filterStrides[4];
+			filterStrides[0] = { 1 };
+			for (int i = 1; i <= kernel_rank; i++) {
+				filterStrides[i] = { filterSize[i - 1] * filterStrides[i - 1] };
+			}
 
-        assert(kernT[dimCount - 1] == inT[dimCount - 1]);
-        if (kernT[dimCount - 1] != inT[dimCount - 1])
-        {
-            RuntimeError("GEMM convolution engine does not support this convolution configuration. "
-                         "It is possible to make GEMM engine work with this configuration by defining "
-                         "input/output/kernel using tensors of higher(+1) dimension. Geometry: %s", ((string)*m_geometry).c_str());
-        }
+			size_t inputSize[4];
+			for (int i = 0; i < rank; i++) {
+				inputSize[i] = { m_srcGrad[i] };
+			}
+			inputSize[rank] = batch_size;
 
-        size_t unrollRows = kernT.GetNumElements();
-        size_t unrollCols = mapOutSize * subBatchSize;
+			size_t inputStrides[4];
+			inputStrides[0] = { 1 };
+			for (int i = 1; i <= rank; i++) {
+				inputStrides[i] = { inputSize[i - 1] * inputStrides[i - 1] };
+			}
+			TensorShape m_lowerpad;
+			m_lowerpad = m_geometry->LowerPad();
+			TensorShape m_upperpad;
+			m_upperpad = m_geometry->UpperPad();
+			std::vector<bool> m_autopad;
+			m_autopad = m_geometry->AutoPad();
+			int track_vec[] = { 0,0,0 };
+			for (int i = 0; i < m_autopad.size(); i++) {
+				if (m_autopad[i] == 1) {
+					track_vec[i] = 1;
+				}
+			}
+			int KH_off = 0;
+			int KW_off = 0;
+			if (track_vec[0] == 1) {
+				KW_off = int((kW - 1) / 2);
+			}
+			if (track_vec[1] == 1) {
+				KH_off = int((kH - 1) / 2);
+			}
+			int inputOffset[(dimension - 2)] = { -KW_off , -KH_off };
+			size_t convolutionStride[dimension - 1];
+			for (int i = 0; i < stride_rank; i++) {
+				convolutionStride[i] = { m_stride[i] };
+			}
+			dnnLayout_t lt_user_input = NULL,
+				lt_user_filt = NULL,
+				lt_user_output = NULL;
+			void* resConv1[dnnResourceNumber] = { 0 };
+			void* outConv[dnnResourceNumber] = { 0 };
+			float* resPool1[dnnResourceNumber] = { 0 };
+			dnnPrimitive_t conv_bwd_filter = NULL;
+			dnnLayout_t lt_conv1_input = NULL,
+				lt_conv1_filt = NULL,
+				lt_conv_diff_filter = NULL,
+				lt_conv1_output = NULL;
+			dnnPrimitive_t cv_user_to_conv1_input = NULL,
+				cv_user_to_conv1_filt = NULL;
+			dnnPrimitiveAttributes_t attributes = NULL;
+			void	*user_c1_f = NULL;
+			user_c1_f = in.Data();
+			workspace.AssignValuesOf(kernelGrad);
+			if (user_i == NULL || user_c1_f == NULL) {
+				err = E_MEMORY_ERROR;
+				goto bail_out;
+			}
+			// input,filter and output user layouts creation, data shuffle and execute.
+			CHECK_ERR(dnnLayoutCreate_F32(&lt_user_input, dimension, outputSize, outputStrides), err);
+			CHECK_ERR(dnnLayoutCreate_F32(&lt_user_filt, dimension, inputSize, inputStrides), err);
+			CHECK_ERR(dnnLayoutCreate_F32(&lt_user_output, dimension, filterSize, filterStrides), err);
+			CHECK_ERR(dnnPrimitiveAttributesCreate_F32(&attributes), err);
+			CHECK_ERR(dnnConvolutionCreateBackwardFilter_F32(&conv_bwd_filter, attributes, dnnAlgorithmConvolutionDirect, dimension, inputSize, outputSize, filterSize, convolutionStride, inputOffset, dnnBorderZeros), err);
+			CHECK_ERR(dnnLayoutCreateFromPrimitive_F32(&lt_conv_diff_filter, conv_bwd_filter, dnnResourceDiffFilter), err);
+			CHECK_ERR(dnnLayoutCreateFromPrimitive_F32(&lt_conv1_input, conv_bwd_filter, dnnResourceDiffDst), err);
+			CHECK_ERR(dnnLayoutCreateFromPrimitive_F32(&lt_conv1_filt, conv_bwd_filter, dnnResourceSrc), err);
+			CHECK_ERR(dnnAllocateBuffer_F32((void**)&resConv1[dnnResourceDiffFilter], lt_conv_diff_filter), err);
+			CHECK_ERR(init_conversion(&cv_user_to_conv1_filt, &resConv1[dnnResourceSrc], lt_conv1_filt, lt_user_filt, user_c1_f), err);
+			CHECK_ERR(init_conversion(&cv_user_to_conv1_input, &resConv1[dnnResourceDiffDst], lt_conv1_input, lt_user_input, user_i), err);
+			if (cv_user_to_conv1_filt) CHECK_ERR(dnnConversionExecute_F32(cv_user_to_conv1_filt, user_c1_f, resConv1[dnnResourceSrc]), err);
+			if (cv_user_to_conv1_input) CHECK_ERR(dnnConversionExecute_F32(cv_user_to_conv1_input, user_i, resConv1[dnnResourceDiffDst]), err);
+			CHECK_ERR(dnnExecute_F32(conv_bwd_filter, (void**)resConv1), err);
+			dnnPrimitive_t cv = NULL;
+			CHECK_ERR(dnnConversionCreate_F32(&cv, lt_conv_diff_filter, lt_user_output), err);
+			CHECK_ERR(dnnConversionExecute_F32(cv, resConv1[dnnResourceDiffFilter], kernelGrad.Data()), err);
+			kernelGrad.AssignSumOf(kernelGrad, workspace);
+			// Release the allocated memory.
+			if (cv_user_to_conv1_filt) dnnReleaseBuffer_F32(resConv1[dnnResourceSrc]);
+			if (cv_user_to_conv1_input) dnnReleaseBuffer_F32(resConv1[dnnResourceDiffDst]);
+			dnnReleaseBuffer_F32(resConv1[dnnResourceDiffFilter]);
+		bail_out:
+			dnnDelete_F32(conv_bwd_filter);
+			dnnDelete_F32(cv_user_to_conv1_input);
+			dnnDelete_F32(cv_user_to_conv1_filt);
+			dnnLayoutDelete_F32(lt_user_input);
+			dnnLayoutDelete_F32(lt_user_filt);
+			dnnLayoutDelete_F32(lt_user_output);
+			dnnLayoutDelete_F32(lt_conv1_input);
+			dnnLayoutDelete_F32(lt_conv1_filt);
+			dnnLayoutDelete_F32(lt_conv1_output);
+			dnnPrimitiveAttributesDestroy_F32(attributes);
+			
+	}
+	else {
+				size_t batchSize = srcGrad.GetNumCols();
+				size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
 
-        // Reserve space for:
-        // 1. Unrolled inputs.
-        // 2. Transposed source gradients (optional).
-        workspace.Resize(unrollCols, unrollRows + (subBatchSize > 1 ? mapOutCount : 0));
+				const auto& inT = m_geometry->InputShape();
+				const auto& kernT = m_geometry->KernelShape();
+				const auto& outT = m_geometry->OutputShape();
 
-        for (size_t start = 0; start < batchSize; start += subBatchSize)
-        {
-            size_t curBatchSize = min(subBatchSize, batchSize - start);
-            // 1. Transpose and reshape srcGrad.
-            auto srcGradSlice = srcGrad.ColumnSlice(start, curBatchSize);
-            if (curBatchSize > 1)
-            {
-                auto srcGradTranSlice = workspace.ColumnSlice(unrollRows, mapOutCount);
-                if (curBatchSize != subBatchSize)
-                {
-                    srcGradTranSlice.Reshape(mapOutCount * mapOutSize, subBatchSize);
-                    srcGradTranSlice = srcGradTranSlice.ColumnSlice(0, curBatchSize);
-                }
-                // Reshape to transposed shape - required by AssignTransposeOf.
-                srcGradTranSlice.Reshape(srcGradSlice.GetNumCols(), srcGradSlice.GetNumRows());
-                srcGradTranSlice.AssignTransposeOf(srcGradSlice);
-                srcGradSlice = srcGradTranSlice.ColumnSlice(0, srcGradTranSlice.GetNumCols());
-            }
-            srcGradSlice.Reshape(mapOutSize * curBatchSize, mapOutCount);
+				size_t dimCount = inT.GetRank();
+				size_t mapOutCount = m_geometry->GetMapCount(dimCount - 1);
+				size_t mapOutSize = outT.GetNumElements() / mapOutCount;
 
-            // 2. Unroll inputs.
-            auto inputSlice = in.ColumnSlice(start, curBatchSize);
-            auto unrolledInputSlice = workspace.ColumnSlice(0, unrollRows);
-            if (curBatchSize != subBatchSize)
-            {
-                unrolledInputSlice.Reshape(mapOutSize * unrollRows, subBatchSize);
-                unrolledInputSlice = unrolledInputSlice.ColumnSlice(0, curBatchSize);
-            }
-            unrolledInputSlice.Reshape(mapOutSize * curBatchSize, unrollRows);
-            unrolledInputSlice.SetValue(0);
-            inputSlice.UnrollConvolutionInputForKernelBackprop(mapOutSize, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledInputSlice);
+				assert(kernT[dimCount - 1] == inT[dimCount - 1]);
+				if (kernT[dimCount - 1] != inT[dimCount - 1])
+				{
+					RuntimeError("GEMM convolution engine does not support this convolution configuration. "
+						"It is possible to make GEMM engine work with this configuration by defining "
+						"input/output/kernel using tensors of higher(+1) dimension. Geometry: %s", ((string)*m_geometry).c_str());
+				}
 
-            // cudnn layout uses row-major kernel weight matrix.
-            auto kernGrad = kernelGrad.ColumnSlice(0, kernelGrad.GetNumCols());
-            kernGrad.Reshape(unrollRows, kernGrad.GetNumElements() / unrollRows); 
-            // 3. Multiply.
-            Mat::MultiplyAndAdd(unrolledInputSlice, true, srcGradSlice, false, kernGrad);
-        }
+				size_t unrollRows = kernT.GetNumElements();
+				size_t unrollCols = mapOutSize * subBatchSize;
+
+				// Reserve space for:
+				// 1. Unrolled inputs.
+				// 2. Transposed source gradients (optional).
+				workspace.Resize(unrollCols, unrollRows + (subBatchSize > 1 ? mapOutCount : 0));
+
+				for (size_t start = 0; start < batchSize; start += subBatchSize)
+				{
+					size_t curBatchSize = min(subBatchSize, batchSize - start);
+					// 1. Transpose and reshape srcGrad.
+					auto srcGradSlice = srcGrad.ColumnSlice(start, curBatchSize);
+					if (curBatchSize > 1)
+					{
+						auto srcGradTranSlice = workspace.ColumnSlice(unrollRows, mapOutCount);
+						if (curBatchSize != subBatchSize)
+						{
+							srcGradTranSlice.Reshape(mapOutCount * mapOutSize, subBatchSize);
+							srcGradTranSlice = srcGradTranSlice.ColumnSlice(0, curBatchSize);
+						}
+						// Reshape to transposed shape - required by AssignTransposeOf.
+						srcGradTranSlice.Reshape(srcGradSlice.GetNumCols(), srcGradSlice.GetNumRows());
+						srcGradTranSlice.AssignTransposeOf(srcGradSlice);
+						srcGradSlice = srcGradTranSlice.ColumnSlice(0, srcGradTranSlice.GetNumCols());
+					}
+					srcGradSlice.Reshape(mapOutSize * curBatchSize, mapOutCount);
+
+					// 2. Unroll inputs.
+					auto inputSlice = in.ColumnSlice(start, curBatchSize);
+					auto unrolledInputSlice = workspace.ColumnSlice(0, unrollRows);
+					if (curBatchSize != subBatchSize)
+					{
+						unrolledInputSlice.Reshape(mapOutSize * unrollRows, subBatchSize);
+						unrolledInputSlice = unrolledInputSlice.ColumnSlice(0, curBatchSize);
+					}
+					unrolledInputSlice.Reshape(mapOutSize * curBatchSize, unrollRows);
+					unrolledInputSlice.SetValue(0);
+					inputSlice.UnrollConvolutionInputForKernelBackprop(mapOutSize, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledInputSlice);
+
+					// cudnn layout uses row-major kernel weight matrix.
+					auto kernGrad = kernelGrad.ColumnSlice(0, kernelGrad.GetNumCols());
+					kernGrad.Reshape(unrollRows, kernGrad.GetNumElements() / unrollRows);
+					// 3. Multiply.
+					Mat::MultiplyAndAdd(unrolledInputSlice, true, srcGradSlice, false, kernGrad);
+				}
+		}
 }
 
 public:
@@ -857,9 +1312,7 @@ public:
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
                                                                                  ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
-                                                                                 ConvolutionEngineKind enabledEngines, std::wstring logPrefix, 
-                                                                                 bool forceDeterministicAlgorithms, bool poolIncludePad,
-                                                                                 bool inputHasFreeDimension)
+                                                                                 ConvolutionEngineKind enabledEngines, std::wstring logPrefix, bool forceDeterministicAlgorithms)
 {
     if (!logPrefix.empty())
         logPrefix += L": ";
@@ -878,7 +1331,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "%lsusing legacy convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-        return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
+        return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
     // Check if we can use cuDNN engine. Do not need to validate tensors as ConvolveGeometry has already done that.
@@ -888,8 +1341,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "%lsusing cuDNN convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, 
-                                                               forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
+        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, forceDeterministicAlgorithms);
     }
 
     if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
@@ -897,16 +1349,16 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "%lsusing GEMM convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-        return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
+        return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
     }
 
     if (!isEnabled(ConvolutionEngineKind::Reference))
-        RuntimeError("Reference convolution is disabled and no other engine supports such configuration (or disabled).");
+        RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
 
     if (GetMathLibTraceLevel() > 0)
-        fprintf(stderr, "%lsusing reference convolution engine for geometry, could be VERY SLOW: %s.\n", logPrefix.c_str(), engStr.c_str());
+        fprintf(stderr, "%lsusing reference convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-    return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
+    return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
 }
 
 template class ConvolutionEngine<float>;
