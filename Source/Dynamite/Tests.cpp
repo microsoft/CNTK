@@ -85,7 +85,6 @@ static double SumAll(const NDArrayViewPtr& x, DataType dataType, const DeviceDes
 
 size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 {
-    size_t numFailed = 0;
     // for testing batch normalization, we need shared several parameters
 #define BN_SHAPE { 13, 42 }
     NDArrayViewPtr batchMean, batchInvStd;
@@ -96,6 +95,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     {
         return ((argValues[0] - batchMean) * batchInvStd) * argValues[1] + argValues[2];
     };
+    // definition of all tests
 #define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode); }, #opCode))
 #define RedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0/denom, L"Copy", make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L#redOpCode); }, "Reduce" #redOpCode))
 #define OpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum"); }, #opCode "-ReduceSum"))
@@ -164,13 +164,11 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     };
 
     fprintf(stderr, "\n--- Running tests for batch of %d. %s on %S\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str());
+    size_t numFailed = 0;
     for (let& test : tests) // loop over all tests
     {
         let aryness = test.shapes.size(); // number of arguments of this test
         let isBatchNorm = strstr(test.op.second, "BatchNormalization"); // BatchNormalization requires some special-casing
-        vector<bool> isSharedArg(aryness, false); // TODO: remove again
-        if (isBatchNorm)
-            isSharedArg[1] = isSharedArg[2] = true;
         // prepare example test tensors for all batch items
         vector<vector<NDArrayViewPtr>> allArgValues(N, vector<NDArrayViewPtr>(aryness)); // [batchIndex][argIndex]
         for (size_t n = 0; n < N; n++) // loop over samples
@@ -187,8 +185,6 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                         allArgValues[0][j] // some ops require args to be shared across the batch items
                     else_x
                         TestTensor(test.shapes[j], 0.3, test.op.second, j, dataType, device);
-                if (isShared)
-                    fprintf(stderr, "###\n");
             }
         }
         // special case: for BatchNormalization reference, we manually compute mean and inv stddev here
@@ -224,7 +220,6 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 #endif
         }
         // Dynamite arguments: prepare Dynamite Variables for all test of for all the samples in the MB
-        bool testUsesAllArgs = true; // some tests ignore the arg; don't do gradient check on those
         vector<vector<Variable>> allArgs(N, vector<Variable>(aryness)); // [batchIndex][argIndex]
         for (size_t n = 0; n < N; n++)
         {
@@ -250,19 +245,11 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             for (size_t n = 0; n < N; n++) // aggregate over all samples in the MB
             {
                 let itemRes = test.f(testArgs[n]);
-                {
-                    // aside: as a courtesy for the gradient check, determine whether the test function actually uses all the testArgs[n] given to it
-                    // TODO: get rid of this soon
-                    for (size_t i = 0; i < aryness; i++)
-                        testUsesAllArgs &= (itemRes.Owner()->Inputs()[i] == testArgs[n][i]); // test lambda ignores this input
-                }
                 res = n == 0 ? itemRes : res + itemRes;
             }
             return res;
         };
         let resVar = functionUnderRest(allArgs);
-        if (!testUsesAllArgs)
-            fprintf(stderr, "UNUSED ARG\n");
         let resVal = resVar.Value(); // this triggers the batched evaluation
         fprintf(stderr, ") -> %S\n", resVal->AsString().c_str());
         // compare reference result with Dynamite result
@@ -277,78 +264,77 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         // We already have evaluated the test function. We compare two things:
         //  - numeric:  perturb the all inputs by an epsilon; compute the test function on that
         //  - symbolic: get all gradients from the test function and multiply with the same epsilon and add to the unperturbed result
+        // We test each argument index separately, to make this test more informative.
         if (dataType == DataType::Double)
         {
             let epsScale = 1e-6;
-            // determine all gradients
-            unordered_map<Parameter, NDArrayViewPtr> gradients; // [argVariable] -> symbolic gradient for arg[n][i] goes here
-            for (size_t n = 0; n < N; n++)
+            for (size_t argIndexUnderTest = 0; argIndexUnderTest < aryness; argIndexUnderTest++)
             {
-                for (size_t j = 0; j < aryness; j++)
+                // some args are not differentiable: skip those
+                if (strstr(test.op.second, "Clip") && argIndexUnderTest > 0)
+                    continue;
+                // determine all gradients. That is args[*][argIndexUnderTest].
+                // Note: args that are shared across the batch will only get a single entry in the gradients[] map
+                unordered_map<Parameter, NDArrayViewPtr> gradients; // [argVariable] -> symbolic gradient for arg[n][i] goes here
+                for (size_t n = 0; n < N; n++)
+                    gradients[Parameter(allArgs[n][argIndexUnderTest])] = nullptr; // (Parameter() is just a type cast; it maintains object identity of its input Variable)
+                // create epsilon tensors for every numeric gradient
+                // Args that are shared will only get one epsilon.
+                unordered_map<Variable, NDArrayViewPtr> epsilons; // [argVariable] -> numeric epsilon for a gradient
+                for (let& kv : gradients)
                 {
-                    // some args are not differentiable (this leaves an empty pointer)
-                    if (strstr(test.op.second, "Clip") && j > 0)
-                        continue;
-                    gradients[Parameter(allArgs[n][j])] = nullptr; // (Parameter() is just a type cast; it maintains object identity of its input Variable)
-                    // args that are shared across the batch will only get a sdingle entry in the gradients[] map
+                    let& arg = kv.first;
+                    epsilons[arg] = TestTensor(arg.Shape(), epsScale, "eps", 0, dataType, device);
                 }
-            }
-            // create epsilon tensors for every numeric gradient
-            // Args that are shared will only get one epsilon.
-            unordered_map<Variable, NDArrayViewPtr> epsilons; // [argVariable] -> numeric epsilon for a gradient
-            for (let& kv : gradients)
-            {
-                let& arg = kv.first;
-                epsilons[arg] = TestTensor(arg.Shape(), epsScale, "eps", 0, dataType, device);
-            }
-            // determine perturbed arguments for all inputs
-            unordered_map<Variable, Variable> perturbedArgSet; // [argVariable] -> perturbed version of argument Variable
-            for (let& kv : gradients)
-            {
-                let& arg = kv.first;
-                perturbedArgSet[arg] = Constant(arg.Value() + epsilons[arg]);
-            }
-            vector<vector<Variable>> allPerturbedArgs(N, vector<Variable>(aryness)); // [batchIndex][argIndex]
-            for (size_t n = 0; n < N; n++)
-            {
-                for (size_t j = 0; j < aryness; j++)
+                // determine perturbed arguments for all inputs
+                unordered_map<Variable, Variable> perturbedArgSet; // [argVariable] -> perturbed version of argument Variable
+                for (let& kv : gradients)
                 {
-                    auto arg = allArgs[n][j];
-                    let iter = perturbedArgSet.find(arg);
-                    if (iter != perturbedArgSet.end()) // (for args that have no gradient, we pass the original arg without epsilon)
-                        arg = iter->second;
-                    allPerturbedArgs[n][j] = arg;
+                    let& arg = kv.first;
+                    perturbedArgSet[arg] = Constant(arg.Value() + epsilons[arg]);
                 }
-            }
-            // evaluate original (once again since we now also reduce to a scalar) as well as at the perturbed point
-            let  originalBatchSumVar = ReduceSum(functionUnderRest(allArgs         ), Axis::AllStaticAxes())->Output();
-            let perturbedBatchSumVar = ReduceSum(functionUnderRest(allPerturbedArgs), Axis::AllStaticAxes())->Output();
-            // compute output perturbation due to those added epsilons
-            let  originalBatchSum =  originalBatchSumVar.Value()->AsScalar<double>();
-            let perturbedBatchSum = perturbedBatchSumVar.Value()->AsScalar<double>();
-            //originalBatchSumVar .Value()->LogToFile(L"originalBatchSum", stderr);
-            //perturbedBatchSumVar.Value()->LogToFile(L"perturbedBatchSum", stderr);
-            let perturbationBasedDelta = perturbedBatchSum - originalBatchSum;
+                vector<vector<Variable>> allPerturbedArgs(N, vector<Variable>(aryness)); // [batchIndex][argIndex]
+                for (size_t n = 0; n < N; n++)
+                {
+                    for (size_t j = 0; j < aryness; j++)
+                    {
+                        auto arg = allArgs[n][j];
+                        let iter = perturbedArgSet.find(arg);
+                        if (iter != perturbedArgSet.end()) // (for args that have no gradient, we pass the original arg without epsilon)
+                            arg = iter->second;
+                        allPerturbedArgs[n][j] = arg;
+                    }
+                }
+                // evaluate original (once again since we now also reduce to a scalar) as well as at the perturbed point
+                let  originalBatchSumVar = ReduceSum(functionUnderRest(allArgs         ), Axis::AllStaticAxes())->Output();
+                let perturbedBatchSumVar = ReduceSum(functionUnderRest(allPerturbedArgs), Axis::AllStaticAxes())->Output();
+                // compute output perturbation due to those added epsilons
+                let  originalBatchSum =  originalBatchSumVar.Value()->AsScalar<double>();
+                let perturbedBatchSum = perturbedBatchSumVar.Value()->AsScalar<double>();
+                //originalBatchSumVar .Value()->LogToFile(L"originalBatchSum", stderr);
+                //perturbedBatchSumVar.Value()->LogToFile(L"perturbedBatchSum", stderr);
+                let perturbationBasedDelta = perturbedBatchSum - originalBatchSum;
 
-            // symbolic gradient: compute gradient of sum over all elements of test.f(args) (=backprop a 1.0 into every element)
-            originalBatchSumVar.Backward(gradients); // this triggers batched backward computation
-            // compute expected output perturbation based on gradients
-            double gradientBasedDelta = 0;
-            for (let& kv : gradients)
-            {
-                let& arg = kv.first;
-                let gradientWrtInput = kv.second;
-                let eps = epsilons[arg]; // epsilon used to perturb
-                //gradientWrtInput->LogToFile(L"gradientWrtInput", stderr);
-                // compute expected perturbed output based on gradient
-                // gradientWrtInput[j,k] = slope of sum of all outputs w.r.t. changes of arg[j,k]
-                gradientBasedDelta += SumAll(gradientWrtInput * eps, dataType, device);
-            }
+                // symbolic gradient: compute gradient of sum over all elements of test.f(args) (=backprop a 1.0 into every element)
+                originalBatchSumVar.Backward(gradients); // this triggers batched backward computation
+                // compute expected output perturbation based on gradients
+                double gradientBasedDelta = 0;
+                for (let& kv : gradients)
+                {
+                    let& arg = kv.first;
+                    let gradientWrtInput = kv.second;
+                    //gradientWrtInput->LogToFile(L"gradientWrtInput_" + to_wstring(argIndexUnderTest), stderr);
+                    let eps = epsilons[arg]; // epsilon used to perturb
+                    // compute expected perturbed output based on gradient
+                    // gradientWrtInput[j,k] = slope of sum of all outputs w.r.t. changes of arg[j,k]
+                    gradientBasedDelta += SumAll(gradientWrtInput * eps, dataType, device);
+                }
 
-            // check result
-            let relErr = (perturbationBasedDelta == gradientBasedDelta) ? 0 : fabs(((perturbationBasedDelta - gradientBasedDelta) / perturbationBasedDelta));
-            if (relErr > 1e-5)
-                fprintf(stderr, "\t\t\t\tgradient err=%.10f%% (%.20f, %.20f)\n", 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
+                // check result
+                let relErr = (perturbationBasedDelta == gradientBasedDelta) ? 0 : fabs(((perturbationBasedDelta - gradientBasedDelta) / perturbationBasedDelta));
+                if (relErr > 1e-5)
+                    fprintf(stderr, "\t\t\t\tgradient[%d] err=%.10f%% (%.20f, %.20f)\n", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
+            }
         }
     } // loop over tests
     return numFailed;
