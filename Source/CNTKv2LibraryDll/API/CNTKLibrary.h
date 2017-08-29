@@ -4462,7 +4462,7 @@ namespace CNTK
         /// the first 100 samples, then '0.1' is used for the second 200 samples, 
         /// after which the values is switched to '0.005'.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = FullDataSweep, size_t ref_mbsize = Learner::UnspecifiedRefMBSize);
+        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = FullDataSweep, size_t ref_mbsize = UnspecifiedRefMBSize);
 
 
         ///
@@ -4504,7 +4504,7 @@ namespace CNTK
 
         CNTK_API size_t GetRefMinibatchSize() const { return m_ref_mbsize; }
         CNTK_API void SetRefMinibatchSize(size_t ref_mbsize) { m_ref_mbsize = ref_mbsize; }
-        CNTK_API bool IsRefMinibatchSizeUnspecified() const { return m_ref_mbsize == Learner::UnspecifiedRefMBSize; }
+        CNTK_API bool IsRefMinibatchSizeUnspecified() const { return m_ref_mbsize == UnspecifiedRefMBSize; }
     private:
 
         friend class Learner;
