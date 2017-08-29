@@ -264,18 +264,18 @@ def training_parameter_schedule(schedule, ref_minibatch_size = None, epoch_size=
 
     Examples:
         >>> # Use a fixed value 0.01 for all samples
-        >>> s = training_parameter_schedule(0.01, UnitType.sample)
+        >>> s = training_parameter_schedule(0.01, ref_minibatch_size=1)
         >>> s[0], s[1]
         (0.01, 0.01)
 
         >>> # Use 0.01 for the first 1000 samples, then 0.001 for the remaining ones
-        >>> s = training_parameter_schedule([0.01, 0.001], UnitType.sample, 1000)
+        >>> s = training_parameter_schedule([0.01, 0.001], ref_minibatch_size=1, epoch_size=1000)
         >>> s[0], s[1], s[1000], s[1001]
         (0.01, 0.01, 0.001, 0.001)
 
         >>> # Use 0.1 for the first 12 epochs, then 0.01 for the next 15,
         >>> # followed by 0.001 for the remaining ones, with a 100 samples in an epoch
-        >>> s = training_parameter_schedule([(12, 0.1), (15, 0.01), (1, 0.001)], UnitType.sample, 100)
+        >>> s = training_parameter_schedule([(12, 0.1), (15, 0.01), (1, 0.001)],  ref_minibatch_size=1, epoch_size=100)
         >>> s[0], s[1199], s[1200], s[2699], s[2700], s[5000]
         (0.1, 0.1, 0.01, 0.01, 0.001, 0.001)
 
@@ -406,11 +406,11 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=None):
     with `unit=UnitType.sample`).
     Deprecated:: 2.2
       This is for legacy API.
-      Now, 
+      In the old API: 
       momentum_time_constant = -minibatch_size/np.log(momentum_rate)
-      momentum_as_time_constant_schedule(momentum_time_constant)
-      Can be specified by:
-      momentum_schedule(momentum_rate, ref_minibatch_size = minibatch_size)
+      momentum = momentum_as_time_constant_schedule(momentum_time_constant)
+      The equivalent code in the latest API:
+      momentum = momentum_schedule(momentum_rate, ref_minibatch_size = minibatch_size)
       
     Args:
         momentum (float or list): see parameter ``schedule`` in
@@ -552,7 +552,7 @@ def sgd(parameters, lr,
     lr, ref_minibatch_size = _infer_learning_rate_schedule_and_ref_minibatch_size(use_mean_gradient, ref_minibatch_size, lr)
     gaussian_noise_injection_std_dev = \
         training_parameter_schedule(
-            gaussian_noise_injection_std_dev, UnitType.minibatch)
+            gaussian_noise_injection_std_dev)
 
     additional_options = cntk_py.AdditionalLearningOptions()
     additional_options.l1_regularization_weight = l1_regularization_weight

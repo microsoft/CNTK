@@ -149,13 +149,13 @@ void TestTrainingParametersSchedule()
     assert(schedule1[1] == 0.5);
     assert(schedule1[100] == 0.5);
 
-    LearningRateSchedule schedule2({ 0.5 }, LearningRateSchedule::FullDataSweep, 1);
+    LearningRateSchedule schedule2(std::vector<double>({ 0.5 }), LearningRateSchedule::FullDataSweep, 1);
     assert(schedule2.GetRefMinibatchSize() == 1);
     assert(schedule2[0] == 0.5);
     assert(schedule2[10] == 0.5);
     assert(schedule2[100] == 0.5);
 
-    LearningRateSchedule schedule3({ 0.5, 0.3, 0.3 }, LearningRateSchedule::FullDataSweep, 1);
+    LearningRateSchedule schedule3(std::vector<double>{ 0.5, 0.3, 0.3 }, LearningRateSchedule::FullDataSweep, 1);
     assert(schedule3.GetRefMinibatchSize() == 1);
     assert(schedule3[0] == 0.5);
     assert(schedule3[1] == 0.3);
@@ -167,7 +167,7 @@ void TestTrainingParametersSchedule()
     assert(schedule4[10] == 0.5);
     assert(schedule4[100] == 0.5);
 
-    LearningRateSchedule schedule5{ { 0.5, 0.3, 0.2 }, 10 };
+    LearningRateSchedule schedule5{ std::vector<double>{ 0.5, 0.3, 0.2 }, 10 };
     assert(schedule5.GetRefMinibatchSize() == 1);
     assert(schedule5[0] == 0.5);
     assert(schedule5[9] == 0.5);
@@ -182,14 +182,14 @@ void TestTrainingParametersSchedule()
     assert(schedule6[10] == 0.5);
     assert(schedule6[100] == 0.5);
 
-    LearningRateSchedule schedule7{ { { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } } };
+    LearningRateSchedule schedule7{ std::vector<std::pair<size_t, double>>{ { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } } };
     assert(schedule7.GetRefMinibatchSize() == LearningRateSchedule::UnspecifiedRefMBSize);
     assert(schedule7[0] == 0.5);
     assert(schedule7[1] == 0.3);
     assert(schedule7[2] == 0.2);
     assert(schedule7[100] == 0.2);
 
-    MomentumSchedule schedule8{ { { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } }, 10 };
+    MomentumSchedule schedule8{ std::vector<std::pair<size_t, double>>{ { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } }, 10 };
     assert(schedule8.GetRefMinibatchSize() == MomentumSchedule::UnspecifiedRefMBSize);
     assert(schedule8[0] == 0.5);
     assert(schedule8[9] == 0.5);
@@ -198,7 +198,7 @@ void TestTrainingParametersSchedule()
     assert(schedule8[20] == 0.2);
     assert(schedule8[100] == 0.2);
 
-    LearningRateSchedule schedule9 = { { { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } }, LearningRateSchedule::FullDataSweep, 1 };
+    LearningRateSchedule schedule9 = { std::vector<std::pair<size_t, double>>{ { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } }, LearningRateSchedule::FullDataSweep, 1 };
     assert(schedule9.GetRefMinibatchSize() == 1);
     assert(schedule9[0] == 0.5);
     assert(schedule9[2] == 0.5);
@@ -207,7 +207,7 @@ void TestTrainingParametersSchedule()
     assert(schedule9[5] == 0.2);
     assert(schedule9[100] == 0.2);
 
-    MomentumSchedule schedule10 = { { { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } }, 10 };
+    MomentumSchedule schedule10 = { std::vector<std::pair<size_t, double>>{ { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } }, 10 };
     assert(schedule10.GetRefMinibatchSize() == MomentumSchedule::UnspecifiedRefMBSize);
     assert(schedule10[0] == 0.5);
     assert(schedule10[29] == 0.5);
@@ -216,7 +216,7 @@ void TestTrainingParametersSchedule()
     assert(schedule10[50] == 0.2);
     assert(schedule10[100] == 0.2);
 
-    MomentumSchedule schedule11 = MomentumAsTimeConstantSchedule( { 0.0, 1.0, 2.0 }, 10 );
+    MomentumSchedule schedule11 = MomentumAsTimeConstantSchedule(std::vector<double>{ 0.0, 1.0, 2.0 }, 10 );
     assert(schedule11.GetRefMinibatchSize() == 1);
     assert(schedule11[0] == 0.0);
     assert(schedule11[9] == 0.0);
@@ -240,14 +240,14 @@ void TestTrainingParametersSchedule()
     assert(schedule13[1] == exp(-1.0 / 1.0));
     assert(schedule13[100] == exp(-1.0 / 1.0));
 
-    MomentumSchedule schedule14 = MomentumAsTimeConstantSchedule({ 1.0, 2.0, 3.0 } );
+    MomentumSchedule schedule14 = MomentumAsTimeConstantSchedule(std::vector<double>{ 1.0, 2.0, 3.0 } );
     assert(schedule14.GetRefMinibatchSize() == 1);
     assert(schedule14[0] == exp(-1.0 / 1.0));
     assert(schedule14[1] == exp(-1.0 / 2.0));
     assert(schedule14[2] == exp(-1.0 / 3.0));
     assert(schedule14[100] == exp(-1.0 / 3.0));
     
-    MomentumSchedule schedule15 = MomentumAsTimeConstantSchedule( { { 100, 7.0 }, { 10, 5.0 }, { 1, 3.0 } }, 100 );
+    MomentumSchedule schedule15 = MomentumAsTimeConstantSchedule(std::vector<std::pair<size_t, double>>{ { 100, 7.0 }, { 10, 5.0 }, { 1, 3.0 } }, 100 );
 
     auto dict = schedule15.Serialize();
 
@@ -470,7 +470,7 @@ BOOST_AUTO_TEST_CASE(TestResettingLearningRate)
     auto numSamples = 1; numParameters = 1, numMinibatches = 1;
     DeviceDescriptor device = DeviceDescriptor::CPUDevice();
     auto parameters = CreateParameters<float>(shape, numParameters, device);
-    auto learner = SGDLearner(parameters, LearningRateSchedule({ 0.1, 1, 2, 3, 4, 5 }, numSamples, 1));
+    auto learner = SGDLearner(parameters, LearningRateSchedule(std::vector<double>{ 0.1, 1, 2, 3, 4, 5 }, numSamples, 1));
     BOOST_TEST(learner->LearningRate() == 0.1);
     for (int i = 1; i < 4; i++)
     {
@@ -478,7 +478,7 @@ BOOST_AUTO_TEST_CASE(TestResettingLearningRate)
         BOOST_TEST(learner->LearningRate() == float(i));
     }
 
-    learner->ResetLearningRate(LearningRateSchedule({ 9, 10, 20, 30, 40, 50 }, numSamples, 1));
+    learner->ResetLearningRate(LearningRateSchedule(std::vector<double>{ 9, 10, 20, 30, 40, 50 }, numSamples, 1));
     BOOST_TEST(learner->LearningRate() == 9.0);
     for (int i = 1; i < 4; i++)
     {
