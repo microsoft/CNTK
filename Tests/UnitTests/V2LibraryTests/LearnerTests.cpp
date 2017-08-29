@@ -168,7 +168,7 @@ void TestTrainingParametersSchedule()
     assert(schedule4[100] == 0.5);
 
     LearningRateSchedule schedule5{ std::vector<double>{ 0.5, 0.3, 0.2 }, 10 };
-    assert(schedule5.GetRefMinibatchSize() == 1);
+    assert(schedule5.GetRefMinibatchSize() == LearningRateSchedule::UnspecifiedRefMBSize); //unspecified reference minibatch size is 0
     assert(schedule5[0] == 0.5);
     assert(schedule5[9] == 0.5);
     assert(schedule5[10] == 0.3);

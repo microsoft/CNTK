@@ -121,7 +121,7 @@
 %rename(MOMENTUM_SCHEDULE) CNTK::Learner::MomentumScheduleK;
 %rename(MOMENTUM_VARIANCE_SCEDULE) CNTK::Learner::MomentumVarianceScheduleK;
 %rename(unspecified_ref_minibatch_size)  CNTK::Learner::UnspecifiedRefMBSize;
-%rename(options) CNTK::Learner::GetOptions;
+%rename(_options) CNTK::Learner::GetOptions;
 
 %rename(ndcg_at_1) CNTK::NDCGAt1;
 
