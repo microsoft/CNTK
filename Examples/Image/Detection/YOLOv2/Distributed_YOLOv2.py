@@ -198,7 +198,7 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
 
     output_dir = os.path.join(".","outputdir")#None
-    model_path = None
+        model_path = None
     if args['outputdir'] is not None:
         output_dir = args['outputdir']
         model_path = args['outputdir'] + "/models"
@@ -209,7 +209,7 @@ if __name__ == '__main__':
     if args['devices'] is not None:
         # Setting one worker on GPU and one worker on CPU. Otherwise memory consumption is too high for a single GPU.
         dev = [int(d) for d in args['devices'].split(',')][Communicator.rank()]
-        if dev>=0:
+        if dev >= 0:
             dev = cntk.device.gpu(dev)
         else:
             dev = cntk.device.cpu()

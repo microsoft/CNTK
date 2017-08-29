@@ -131,7 +131,7 @@ def create_detector(par, regular_input, bypass_input=None):
     net2=Sequential([
         #LayerNormalization(),
         Convolution2D((3, 3), num_filters=par.par_dense_size, init=he_normal(), activation=identity, pad=True),
-        BatchNormalization(), #C-impl says no!
+        BatchNormalization(),
         Activation(activation=lambda x: 0.1 * x + 0.9 * relu(x)),
 
         Convolution2D((1, 1), num_filters=output_depth),

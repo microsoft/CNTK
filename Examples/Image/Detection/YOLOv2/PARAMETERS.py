@@ -101,6 +101,7 @@ par_lambda_obj = 5
 par_lambda_no_obj = 1#0.5
 par_lambda_cls = 1
 par_objectness_threshold=0.6
+#Option: Training the first N Minibatches with the anchorboxes for EVERY prediction; YOLOv2 uses 100 Minibatches of a size of 128
 par_box_default_mbs = 0 # int(100 * 128/par_minibatch_size) # 100 Minibatches in original implementation
 par_scale_default_boxes = 0.01
 
