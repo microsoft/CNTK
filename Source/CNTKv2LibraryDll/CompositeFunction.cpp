@@ -926,7 +926,9 @@ namespace CNTK
                 case PrimitiveOpType::Convolution:
                 {
                     auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
-                    auto dilation = functionConfig[PrimitiveFunction::AttributeNameDilation].Value<NDShape>();
+                    NDShape dilation = { 1 };
+                    if (m_attributes.Contains(PrimitiveFunction::AttributeNameDilation))
+                        dilation = m_attributes[PrimitiveFunction::AttributeNameDilation].Value<NDShape>();
                     auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
                     auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
                     auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());

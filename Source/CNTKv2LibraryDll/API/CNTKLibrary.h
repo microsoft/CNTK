@@ -4169,13 +4169,13 @@ namespace CNTK
                                               const NDShape& strides = { 1 },
                                               const std::vector<bool>& sharing = { true },
                                               const std::vector<bool>& autoPadding = { true },
-                                              const NDShape& dilation = { 1 },
                                               const NDShape& outputShape = { 0 },
+                                              const NDShape& dilation = { 1 },
                                               size_t maxTempMemSizeInSamples = 0,
                                               const std::wstring& name = L"");
 
     ///
-    /// TODO:
+    /// Pooling type.
     ///
     enum class PoolingType
     {

@@ -1800,8 +1800,8 @@ namespace CNTK
         const NDShape& strides,
         const std::vector<bool>& sharing,
         const std::vector<bool>& autoPadding,
-        const NDShape& dilation,
         const NDShape& outputShape,
+        const NDShape& dilation,
         size_t maxTempMemSizeInSamples,
         const std::wstring& name)
     {
