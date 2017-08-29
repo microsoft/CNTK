@@ -187,9 +187,12 @@ namespace CNTK
 
         ///Return the unit gain factor. Note that the unit gain factor should not be scaled according to the minibatch size. See explanation in the Update(...) function.
         template <typename ElementType>
-        ElementType UnitGainFactor() const
+        ElementType UnitGainFactor(size_t minibatchSize) const
         {
-            ElementType momentum = (ElementType)GetCurrentTrainingParameterValue(m_momentumSchedule);
+            //TODO: Still working on the right scaling of unit gain factor adapting to minibatch size
+            //      Preliminary study shows that the unitgain factor will have different scaling than momentum
+            //ElementType momentum = (ElementType)GetCurrentTrainingParameterValue(m_momentumSchedule)
+            ElementType momentum = ElementType(MomentumValueForMB(minibatchSize));
             return UseUnitGainMomentum() ? ElementType(1.0) - momentum : ElementType(1.0);
         }
 

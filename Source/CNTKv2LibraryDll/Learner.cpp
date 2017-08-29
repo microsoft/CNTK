@@ -534,7 +534,7 @@ namespace CNTK
         */
         const auto learningRate = ElementType(LearningRate(trainingSampleCount));
         const auto momentum = ElementType(MomentumValueForMB(trainingSampleCount));
-        auto unitGainFactor = UnitGainFactor<ElementType>();
+        auto unitGainFactor = UnitGainFactor<ElementType>(trainingSampleCount);
         parameterMatrix->MomentumSGDUpdate(*gradientMatrix, *smoothedGradientMatrix,
                                            learningRate, momentum, unitGainFactor);
     }
@@ -553,7 +553,7 @@ namespace CNTK
 
         const auto learningRate = ElementType(LearningRate(trainingSampleCount));
         const auto momentum = ElementType(MomentumValueForMB(trainingSampleCount));
-        const auto unitGainFactor = UnitGainFactor<ElementType>();
+        const auto unitGainFactor = UnitGainFactor<ElementType>(trainingSampleCount);
 
         parameterMatrix->NesterovAcceleratedMomentumSGDUpdate(*gradientMatrix, *smoothedGradientMatrix,
                                                               learningRate, momentum, unitGainFactor);
@@ -702,7 +702,7 @@ namespace CNTK
         const auto learningRate = LearningRate(trainingSampleCount);
         const auto momentum = MomentumValueForMB(trainingSampleCount);
         const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
-        const auto unitGainFactor = UnitGainFactor<ElementType>();
+        const auto unitGainFactor = UnitGainFactor<ElementType>(trainingSampleCount);
 
         smoothedGradientMatrix->FSAdagradUpdate(*gradientMatrix, *parameterMatrix, m_targetAdagradAvDenom_x_sqrtAdagradSqrFrames, learningRate,
                                                 momentum, varMomentum, unitGainFactor);
@@ -774,11 +774,12 @@ namespace CNTK
 
         const auto learningRate = LearningRate(trainingSampleCount);
         const auto momentum = MomentumValueForMB(trainingSampleCount);
+        const auto unitGainFactor = UnitGainFactor<ElementType>(trainingSampleCount);
 
         const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
 
         smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, m_smoothedCount, learningRate,
-                                           momentum, varMomentum, (ElementType)m_epsilon, UseUnitGainMomentum(), m_adamax);
+                                           momentum, varMomentum, (ElementType)m_epsilon, unitGainFactor, m_adamax);
     }
 
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,

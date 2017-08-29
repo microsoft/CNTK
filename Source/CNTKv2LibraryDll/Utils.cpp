@@ -993,6 +993,7 @@ namespace CNTK
     template void DictionaryValue::FreePtrAsType<CNTK::TrainingParameterSchedule<double >>();
     template void DictionaryValue::FreePtrAsType<FunctionPtr>();
 
+
     template class TrainingParameterSchedule<double>;
     template class TrainingParameterSchedule<size_t>;
 

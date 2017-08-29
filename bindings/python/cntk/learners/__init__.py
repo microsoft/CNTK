@@ -539,6 +539,7 @@ def sgd(parameters, lr,
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+        ref_minibatch_size (int, default ``None``): 
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
