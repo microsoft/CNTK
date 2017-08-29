@@ -24,6 +24,7 @@
 ### Gradient as an operator (stretch goal) 
 ### Reduced rank for convolution in C++ to enable convolution on 1D data 
 ### Dilated convolution 
+Add support to dilation convolution on the GPU, exposed by BrainScript, C++ and Python API. Dilation convolution effectively increase the kernel size, without actually requiring a big kernel. To use dilation convoluton you need at least cuDNN 6.0. 
 
 ## Performance 
 ### Asynchronous evaluation API (Python and C#) 
