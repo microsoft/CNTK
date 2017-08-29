@@ -39,6 +39,7 @@ namespace CNTK
     CNTK_API const std::wstring Learner::LearningRateScheduleK = L"LearningRateScheduleK";
     CNTK_API const std::wstring Learner::MomentumScheduleK = L"MomentumScheduleK";
     CNTK_API const std::wstring Learner::MomentumVarianceScheduleK = L"MomentumVarianceScheduleK";
+    CNTK_API const size_t Learner::UnspecifiedRefMBSize = TrainingParameterSchedule<double>::UnspecifiedRefMBSize;
 
   
     // This method completely replaces the current schedule with the new schedule. However, since

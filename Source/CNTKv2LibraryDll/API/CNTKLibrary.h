@@ -4632,7 +4632,7 @@ namespace CNTK
         CNTK_API static const std::wstring LearningRateScheduleK;
         CNTK_API static const std::wstring MomentumScheduleK;
         CNTK_API static const std::wstring MomentumVarianceScheduleK;
-        static const size_t UnspecifiedRefMBSize = TrainingParameterSchedule<double>::UnspecifiedRefMBSize;
+        CNTK_API static const size_t UnspecifiedRefMBSize;
 
     public:
         //

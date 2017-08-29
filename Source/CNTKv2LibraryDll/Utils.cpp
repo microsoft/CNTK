@@ -981,6 +981,8 @@ namespace CNTK
     template void DictionaryValue::AllocateDataPtr<wstring>(const wstring& value);
     template void DictionaryValue::AllocateDataPtr<Dictionary>(const Dictionary& value);
     template void DictionaryValue::AllocateDataPtr<NDArrayView>(const NDArrayView& value);
+    template void DictionaryValue::AllocateDataPtr<CNTK::TrainingParameterSchedule<double >>(const CNTK::TrainingParameterSchedule<double>& value);
+    template void DictionaryValue::AllocateDataPtr<FunctionPtr>(const FunctionPtr& value);
 
     template void DictionaryValue::FreePtrAsType<NDShape>();
     template void DictionaryValue::FreePtrAsType<Axis>();
@@ -988,6 +990,8 @@ namespace CNTK
     template void DictionaryValue::FreePtrAsType<wstring>();
     template void DictionaryValue::FreePtrAsType<Dictionary>();
     template void DictionaryValue::FreePtrAsType<NDArrayView>();
+    template void DictionaryValue::FreePtrAsType<CNTK::TrainingParameterSchedule<double >>();
+    template void DictionaryValue::FreePtrAsType<FunctionPtr>();
 
     template class TrainingParameterSchedule<double>;
     template class TrainingParameterSchedule<size_t>;
