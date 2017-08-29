@@ -1949,7 +1949,8 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 %template(DictionaryValueFromNDArrayView) CNTK::DictionaryValue::DictionaryValue<CNTK::NDArrayView>;
-
+%template(DictionaryValueFromTrainingDoubleParameterSchedule) CNTK::DictionaryValue::DictionaryValue<CNTK::TrainingParameterSchedule<double>>;
+%template(DictionaryValueFromCNTKFunction) CNTK::DictionaryValue::DictionaryValue<CNTK::FunctionPtr>;
 
 typedef CNTK::TrainingParameterSchedule<size_t> MinibatchSizeSchedule;
 %template(minibatch_size_schedule)  CNTK::TrainingParameterSchedule<size_t>;
