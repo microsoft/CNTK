@@ -5474,7 +5474,7 @@ void Matrix<ElemType>::Scale(ElemType alpha, Matrix<ElemType>& a)
                                 &a,
                                 CPUMatrix<ElemType>::Scale(alpha, *a.m_CPUMatrix),
                                 GPUMatrix<ElemType>::Scale(alpha, *a.m_GPUMatrix),
-                                NOT_IMPLEMENTED,
+                                CPUSparseMatrix<ElemType>::Scale(alpha, *a.m_CPUSparseMatrix),
                                 GPUSparseMatrix<ElemType>::Scale(alpha, *a.m_GPUSparseMatrix));
 }
 
