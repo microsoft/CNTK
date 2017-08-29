@@ -878,6 +878,7 @@ namespace CNTK
 
                             m_attributes[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
                             m_attributes[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+                            m_attributes[PrimitiveFunction::AttributeNameDilation] = dilation;
                             break;
                         }
                         case PrimitiveOpType::CrossEntropyWithSoftmax:
