@@ -710,6 +710,7 @@ namespace CNTK
         ///
         /// Construct a NDArrayView over newly allocated dense storage on the specified device and assign the specified value to each element of the view.
         /// The specified value is cast to the specified DataType.
+        /// BUGBUG: Shape should be { } (a scalar), not a 1-dimensional vector.
         ///
         explicit NDArrayView(double value, DataType dataType = DataType::Float, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), bool readOnly = false)
             : NDArrayView(dataType, viewShape, device)

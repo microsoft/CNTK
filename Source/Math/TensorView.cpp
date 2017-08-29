@@ -59,9 +59,7 @@ TensorView<ElemType>::TensorView(const MatrixBasePtr& sob, const TensorShape& sh
 
 // look up an op code by name
 #define AssignNameToOpTable(oper) insert(make_pair(L#oper, ElementWiseOperator::op##oper));
-static struct NameToOpTable : public map<wstring, ElementWiseOperator> { NameToOpTable() {
-    ForAllOps(AssignNameToOpTable);
-} } s_nameToOp;
+static struct NameToOpTable : public map<wstring, ElementWiseOperator> { NameToOpTable() { ForAllElementWiseOps(AssignNameToOpTable); } } s_nameToOp;
 template <class ElemType>
 /*static*/ ElementWiseOperator TensorView<ElemType>::OpFromName(const wstring& opName)
 {

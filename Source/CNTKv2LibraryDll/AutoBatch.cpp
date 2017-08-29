@@ -2040,6 +2040,7 @@ public:
             if (!m_visitorTag.Visited(fields.m_visitedTag))
             {
                 fields.m_consumers.first = make_pair(&f, i);
+                fields.m_consumers.second.clear();
                 // now process recursively the inputs
                 RDetermineConsumersForBackward(input);
             }

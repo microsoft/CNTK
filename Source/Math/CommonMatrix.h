@@ -180,7 +180,7 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithPowExponentDerivative); \
     Macro(ElementwiseProductWithPowBaseDerivative);
 
-#define ForAllOps(Macro) ForAllNullaryOps(Macro) ForAllUnaryOps(Macro) ForAllBinaryOps(Macro) ForAllTernaryOps(Macro)
+#define ForAllElementWiseOps(Macro) ForAllNullaryOps(Macro) ForAllUnaryOps(Macro) ForAllBinaryOps(Macro) ForAllTernaryOps(Macro)
 
 // -----------------------------------------------------------------------
 // various enums to describe
