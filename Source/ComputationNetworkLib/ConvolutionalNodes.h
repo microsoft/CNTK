@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 // ConvolutionNodeBase is a base class for ND-convolution(ConvolutionNode) and ND-pooling(PoolingNode).
-// 
+//
 // 2D convolutions (incl. pooling) support two different storage formats:
 //
 // * legacy ("HWC") mode: Channels are tuples of scalars
