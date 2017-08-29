@@ -100,39 +100,14 @@ def train_model(reader, model, epoch_size=50000, max_epochs=par_max_epochs, save
 
     # learning parameters
     learner = momentum_sgd(model.parameters,
-                           lr=learning_rate_schedule([0.001 * 10**exponentShift] * 15 + [0.0001 * 10**exponentShift] * 15 + [0.00001 * 10**exponentShift] * 15+
-                               [0.0015625 * 10**exponentShift] * 20 + [0.00046875 * 10**exponentShift] * 20
-                                + [0.00015625 * 10**exponentShift] * 20 + [0.000046875 * 10**exponentShift] * 10
-                                + [0.000015625 * 10**exponentShift], unit=UnitType.sample, epoch_size=epoch_size),
+                           lr=learning_rate_schedule([0.001 * 10**exponentShift] * 15 + [0.0001 * 10**exponentShift] * 15 + [0.00001 * 10**exponentShift] * 15),
+                               #[0.0015625 * 10**exponentShift] * 20 + [0.00046875 * 10**exponentShift] * 20
+                               # + [0.00015625 * 10**exponentShift] * 20 + [0.000046875 * 10**exponentShift] * 10
+                               # + [0.000015625 * 10**exponentShift], unit=UnitType.sample, epoch_size=epoch_size),
                            momentum=momentum_as_time_constant_schedule([0] * 20 + [600] * 20 + [1200],
                                                                        epoch_size=epoch_size),
                            l2_regularization_weight=0.002)
 
-    #from cntk.learners import adam
-    #learner = adam(model.parameters,
-     #              lr = learning_rate_schedule( [0.1 * 0.5 ** 1]*2+
-      #                                          [0.1 * 0.5 ** 2]*2+
-       #                                         [0.1 * 0.5 ** 3]*2+
-        #                                        [0.1 * 0.5 ** 4]*2+
-         #                                       [0.1 * 0.5 ** 5]*2+
-          #                                      [0.1 * 0.5 ** 6]*2+
-           #                                     [0.1 * 0.5 ** 7]*2+
-            #                                    [0.1 * 0.5 ** 8]*2+
-             #                                   [0.1 * 0.5 ** 9]*2,
-         #                                       [0.1 * 0.5 ** 10]*1+
-          #                                      [0.1 * 0.5 ** 11]*1+
-           #                                     [0.1 * 0.5 ** 12]*1+
-            #                                    [0.1 * 0.5 ** 13]*1+
-             #                                   [0.1 * 0.5 ** 14]*1+
-              #                                  [0.1 * 0.5 ** 15]*1+
-               ##                                 [0.1 * 0.5 ** 16]*1+
-                 #                               [0.1 * 0.5 ** 17]*1+
-                  #                              [0.1 * 0.5 ** 18]*1+
-                   #                             [0.1 * 0.5 ** 19]*1+
-                    #                            [0.1 * 0.5 ** 20],
-       #                                         unit=UnitType.minibatch, epoch_size=epoch_size),
-        #            momentum = momentum_as_time_constant_schedule([0], epoch_size=epoch_size)
-         #          )
 
     # trainer object
     trainer = Trainer(None, criterion, learner)

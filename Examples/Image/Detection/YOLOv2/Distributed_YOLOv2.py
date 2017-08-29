@@ -44,10 +44,7 @@ def create_trainer(to_train, epoch_size, minibatch_size, num_quantization_bits, 
                                               epoch_size)
 
 
-    #mm_schedule = cntk.learners.momentum_schedule([par_momentum])
-    #mm_schedule = cntk.learners.momentum_schedule([-minibatch_size / np.log(par_momentum)],epoch_size=epoch_size)
     mm_schedule = cntk.learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(par_momentum)])
-    #mm_schedule = cntk.learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(par_momentum)], epoch_size)
 
     # Instantiate the trainer object to drive the model training
     local_learner = cntk.learners.momentum_sgd(to_train['output'].parameters, lr_schedule, mm_schedule, unit_gain=False,
@@ -96,22 +93,6 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size,
     #                                       restore=restore) if model_path else None
     cv_config = cntk.CrossValidationConfig(None, mb_size=par_minibatch_size, frequency=1,
                                            callback=safe_model_callback)
-
-    if False:
-        mb = train_source.next_minibatch(2)
-        test_features = mb[train_source.streams.features]
-
-        data_node = network['mse'].find_by_name('data')
-        feat = cntk.combine([data_node]).eval(test_features)
-        print("raw features:\n{}".format(feat[:, :, 22:23, :10]))
-
-        WH_out = network['mse'].find_by_name('WH-Out')
-        feat = cntk.combine([WH_out]).eval(test_features)
-        print("raw wh-out map: {}".format(feat[0, 527, :]))
-
-        udf_wh_out = network['mse'].find_by_name('WH_Out_d_alias')
-        feat = cntk.combine([udf_wh_out]).eval(test_features)
-        print("udf wh-out map: {}".format(feat[0, 527, :]))
 
     use_training_session = True
     if not use_training_session:
@@ -252,9 +233,6 @@ if __name__ == '__main__':
     model = yolo2.create_yolov2_net(par)
 
     image_input = input_variable((par_num_channels, par_image_height, par_image_width), name="data")
-    #dummy = user_function(DebugLayerSingle(image_input, debug_name='image_input_d'))
-    #zeros = dummy * 0
-    #zero = reduce_mean(zeros)
 
     output = model(image_input)  # append model to image input
 
@@ -316,7 +294,3 @@ if __name__ == '__main__':
         save_path = os.path.join(output_dir, "YOLOv2.model")
         output.save(save_path)
         print("Saved model to " + save_path)
-
-    #from cntk.logging.graph import plot
-    #plot(output, "./yopar.png")
-    #plot(network['mse'], "./yolo_mse.png")

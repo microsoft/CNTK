@@ -15,6 +15,7 @@ def depth_increasing_pooling(tensor, pooling_window_shape, input_shape=None):
     :param input_shape: If the dimensions of the input tensor are not inferred yet, its final shape is required here
     :return: content of tensor rearanged in shape(nr_of_filters_in * w_reduce * h_reduce, width_in / w_reduce, height_in / h_reduce)
     """
+    # WATCH OUT! Requires network to have a shape!
 
     if input_shape is None: input_shape = tensor.shape
     # this is necessary in case that the previous model has not yet inferred its shape.

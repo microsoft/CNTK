@@ -20,187 +20,8 @@ from extensions.depth_increasing_pooling import depth_increasing_pooling
 import pdb
 Debug = False
 
-# def new_create_output_activation_layer(network, par):
-#
-#
-#     anchor_box_scales = par.par_anchorbox_scales
-#     n_gridcells_horizontal = int(par.par_image_width / par.par_downsample)
-#     n_gridcells_vertical = int(par.par_image_height / par.par_downsample)
-#     n_anchorboxes = len(anchor_box_scales)
-#     output_width = n_gridcells_horizontal * n_gridcells_vertical * n_anchorboxes
-#     output_height = par.par_num_classes + 5
-#
-#     if False:
-#         from TrainUDFyolov2 import LambdaFunc
-#         lf = LambdaFunc(network, lambda arg: arg.shape != (par.par_minibatch_size,output_height*n_anchorboxes,n_gridcells_vertical,n_gridcells_horizontal))
-#         network = user_function(lf)
-#
-#     #net arrives as c_h_w (vector*ab,y,x)
-#     tp = transpose(network, (2,1,0))
-#     #tp is w_h_c (x,y,ab*vector)
-#     reshaped = reshape(tp,(n_gridcells_horizontal, n_gridcells_vertical, n_anchorboxes, output_height))
-#     # a vector is now reshaped[x][y][ab]
-#
-#     xy_cords = alias(reshaped[:,:,:,0:2],name="XY")
-#     wh_mults = alias(reshaped[:,:,:,2:4],name="WH")
-#     objectnesses = alias(reshaped[:,:,:,4:5], name="OBJ")
-#     cls_outs = alias(reshaped[:,:,:,5:],name="CLS")
-#
-#     # classes: 245*20; softmax should be applied to each row of 20 preds
-#     cls_preds = ops.softmax(cls_outs, axis=3)
-#
-#     # objectness: 245*1; sigmoid to each
-#     obj_preds = ops.sigmoid(objectnesses)
-#
-#     # xy_cords: 245*2; the offset for each coordinate
-#     xy_rel_in_grid = ops.sigmoid(xy_cords)
-#
-#     xys = np.zeros((n_gridcells_horizontal, n_gridcells_vertical, n_anchorboxes,2))
-#     for i in range(n_gridcells_horizontal):
-#         xys[i,:,:,0]=i
-#     for i in range(n_gridcells_vertical):
-#         xys[:,i,:,1]=i
-#     grid_numbers = ops.constant(np.ascontiguousarray(xys, np.float32), name="Grid_Pos")
-#     xy_in_gridcells = xy_rel_in_grid + grid_numbers
-#     xy_preds = xy_in_gridcells / ops.constant(np.ascontiguousarray([1/n_gridcells_horizontal, 1/n_gridcells_vertical], np.float32), name="grid_dims")
-#
-#     # wh_mults: 245*2 for the anchorboxes
-#     wh_rels = ops.exp(wh_mults)
-#     ab_scales = ops.constant(np.asarray(anchor_box_scales, dtype=np.float32),name="ab_scales")
-#
-#     wh_preds = wh_rels * ab_scales
-#
-#     # Splice the parts back together!
-#     full_output = ops.splice(xy_preds, wh_preds, obj_preds, cls_preds, axis=3, name="yolo_results")
-#
-#     # full output format: x,y,ab,vector
-#     # transform to output format h*w*ab,vector
-#     tp_out = transpose(full_output, (1,0,2,3)) # thereafter: y,x,ab,vector
-#     rs_out = reshape(tp_out, (output_width, output_height))
-#     return rs_out
-#
-# def apply_xy_output_func(xy_in, par, w_h_ab_unflattened=False):
-#     """
-#     Applies sigmoid to input, adds the number of the gc, divides by gc_size to keep values in [0..1]
-#     :param xy_in:
-#     :param par:
-#     :param w_h_ab_unflattened:
-#     :return:
-#     """
-#     n_gridcells_horizontal = int(par.par_image_width / par.par_downsample)
-#     n_gridcells_vertical = int(par.par_image_height / par.par_downsample)
-#     output_width = n_gridcells_horizontal * n_gridcells_vertical * par.par_num_anchorboxes
-#
-#
-#     if w_h_ab_unflattened:
-#         ""
-#     else:
-#         # xy_cords: 245*2; the offset for each coordinate
-#         xy_rel_in_grid = ops.sigmoid(xy_in)
-#         ## create constants for offset
-#         ### offsets
-#         xs = []
-#         ys = []
-#         cur_x = -1
-#         cur_y = -1
-#         x_div = par.par_num_anchorboxes
-#         y_div = par.par_num_anchorboxes * n_gridcells_horizontal
-#         for i in range(output_width):
-#             if (i % x_div == 0): cur_x += 1
-#             if (i % y_div == 0): cur_y += 1
-#             if (cur_x == n_gridcells_horizontal): cur_x = 0
-#             xs.append([cur_x])
-#             ys.append([cur_y])
-#         xs = np.asarray(xs, np.float32)
-#         ys = np.asarray(ys, np.float32)
-#         xys = np.concatenate((xs, ys), axis=1)
-#         grid_numbers = ops.constant(np.ascontiguousarray(xys, np.float32), name="Grid_Pos")
-#         ### scales
-#         scales = [[1.0 / n_gridcells_horizontal] * output_width, [1.0 / n_gridcells_vertical] * output_width]
-#         scales = np.asarray(scales, np.float32).transpose(1, 0)
-#         # scale_imagedim_per_gridcell = ops.constant(scales, name="Scale_gridcells_to_relative")
-#         scale_imagedim_per_gridcell = ops.constant(np.ascontiguousarray(scales, np.float32),
-#                                                    name="Scale_gridcells_to_relative")
-#         ## constants done!
-#
-#         xy_in_gridcells = ops.plus(xy_rel_in_grid, grid_numbers)
-#         xy_preds = xy_in_gridcells * scale_imagedim_per_gridcell
-#     return xy_preds
-#
-# def apply_wh_output_func(wh_in, par):
-#     wh_rels = ops.exp(wh_in)
-#     ## create constants for anchorbox scales
-#     ab_scales = []
-#     for i in range(par.par_num_anchorboxes):
-#         ab_scales.append([par.par_anchorbox_scales[i][0], par.par_anchorbox_scales[i][1]])
-#
-#     n_gridcells_horizontal = int(par.par_image_width / par.par_downsample)
-#     n_gridcells_vertical = int(par.par_image_height / par.par_downsample)
-#     ab_scales = ab_scales * n_gridcells_horizontal * n_gridcells_vertical
-#     ab_scales = np.asarray(ab_scales, np.float32)
-#     anchorbox_scale_mults = ops.constant(np.ascontiguousarray(ab_scales, np.float32), name="Anchorbox-scales")
-#     ## constants done
-#     wh_preds = wh_rels * anchorbox_scale_mults
-#     return wh_preds
-#
-# def apply_obj_output_func(obj_in):
-#     obj_preds = ops.sigmoid(obj_in)
-#     return obj_preds
-#
-# def apply_cls_output_func(cls_in, axis):
-#     cls_preds = ops.softmax(cls_in, axis=axis)
-#     return cls_preds
-#
-# def create_output_activation_layer_subfuncs(network, par):
-#     anchor_box_scales=par.par_anchorbox_scales
-#     n_gridcells_horizontal = int(par.par_image_width / par.par_downsample)
-#     n_gridcells_vertical =  int(par.par_image_height / par.par_downsample)
-#     n_anchorboxes=len(anchor_box_scales)
-#     output_width = n_gridcells_horizontal * n_gridcells_vertical * n_anchorboxes
-#     output_height =  par.par_num_classes + 5
-#
-#     if False:
-#         from TrainUDFyolov2 import LambdaFunc
-#         lf = LambdaFunc(network, lambda arg: arg.shape != (par.par_minibatch_size,output_height*n_anchorboxes,n_gridcells_vertical,n_gridcells_horizontal))
-#         network = user_function(lf)
-#
-#     # reorder array! now 125*7*7
-#     # tp1 = ops.transpose(network, 0,2) # 7*7*125
-#     # tp2 = ops.transpose(tp1, 0, 1) # 7*7*125
-#     # network is coded: c_h_w
-#     tp = ops.transpose(network, (1,2,0))
-#     # tp is coded h_w_c(1,2,0:w_h_c) #changed
-#     reshaped = ops.reshape(tp, (output_width, output_height))
-#     #shape is now 245 * 25
-#
-#     # slicing the array into subarrays
-#     xy_cords = ops.slice(reshaped, axis=1, begin_index=0, end_index=2, name="XY-Out")
-#     wh_mults = ops.slice(reshaped, axis=1, begin_index=2, end_index=4, name="WH-Out")
-#     objectnesses =  ops.slice(reshaped, axis=1, begin_index=4, end_index=5, name="Obj_Out")
-#     cls_outs = ops.slice(reshaped, axis=1, begin_index=5, end_index=output_height, name="Cls_Out")
-#
-#     if False: # Test-case to see if bounding-box placement is ok!
-#         xy_cords = xy_cords * [0]
-#         wh_mults = wh_mults * [0]
-#
-#     #applying output functions to the parts
-#
-#     # classes: 245*20; softmax should be applied to each row of 20 preds
-#     cls_preds = apply_cls_output_func(cls_outs, axis=1)
-#
-#     # objectness: 245*1; sigmoid to each
-#     obj_preds = apply_obj_output_func(objectnesses)
-#
-#     # xy_cords: 245*2; the offset for each coordinate
-#     xy_preds = apply_xy_output_func(xy_cords, False)
-#     wh_preds = apply_wh_output_func(wh_mults, par)
-#
-#     # Splice the parts back together!
-#     full_output = ops.splice(xy_preds, wh_preds, obj_preds, cls_preds, axis=1, name="yolo_results")
-#     return full_output
 
 def create_output_activation_layer(network, par):
-    #pdb.set_trace()
     anchor_box_scales=par.par_anchorbox_scales
     n_gridcells_horizontal = int(par.par_image_width / par.par_downsample)
     n_gridcells_vertical =  int(par.par_image_height / par.par_downsample)
@@ -208,15 +29,12 @@ def create_output_activation_layer(network, par):
     output_width = n_gridcells_horizontal * n_gridcells_vertical * n_anchorboxes
     output_height =  par.par_num_classes + 5
 
-    # reorder array! now 125*7*7
-    # tp1 = ops.transpose(network, 0,2) # 7*7*125
-    # tp2 = ops.transpose(tp1, 0, 1) # 7*7*125
     # network is coded: c_h_w
 
     tp = ops.transpose(network, (1,2,0))
     # tp is coded h_w_c(1,2,0:w_h_c) #changed
     reshaped = ops.reshape(tp, (output_width, output_height))
-    #shape is now 245 * 25
+    #shape is now 245 * 25 <-- for a 7x7 output!
 
 
     # slicing the array into subarrays
@@ -224,12 +42,6 @@ def create_output_activation_layer(network, par):
     wh_mults = ops.slice(reshaped, axis=1, begin_index=2, end_index=4, name="WH-Out")
     objectnesses =  ops.slice(reshaped, axis=1, begin_index=4, end_index=5, name="Obj_Out")
     cls_outs = ops.slice(reshaped, axis=1, begin_index=5, end_index=output_height, name="Cls_Out")
-
-    #xy_cords = user_function(DebugLayerSingle(xy_cords, debug_name='XY_Out_d'))
-    #wh_mults = user_function(DebugLayerSingle(wh_mults, debug_name='WH_Out_d'))
-    #wh_mults = alias(wh_mults, name="WH_Out_d_alias")
-    #objectnesses = user_function(DebugLayerSingle(objectnesses, debug_name='Obj_Out_d'))
-    #cls_outs = user_function(DebugLayerSingle(cls_outs, debug_name='Cls_Out_d', split_line=True))
 
     if False: # Test-case to see if bounding-box placement is ok!
         xy_cords = xy_cords * [0]
@@ -263,10 +75,10 @@ def create_output_activation_layer(network, par):
     ys = np.asarray(ys, np.float32)
     xys = np.concatenate((xs,ys), axis=1)
     grid_numbers = ops.constant(np.ascontiguousarray(xys, np.float32), name="Grid_Pos")
+
     ### scales
     scales = [[1.0 / n_gridcells_horizontal] * output_width, [1.0 / n_gridcells_vertical] * output_width]
     scales = np.asarray(scales, np.float32).transpose(1, 0)
-    #scale_imagedim_per_gridcell = ops.constant(scales, name="Scale_gridcells_to_relative")
     scale_imagedim_per_gridcell = ops.constant(np.ascontiguousarray(scales, np.float32), name="Scale_gridcells_to_relative")
     ## constants done!
 
@@ -279,22 +91,16 @@ def create_output_activation_layer(network, par):
     ab_scales = []
     for i in range(n_anchorboxes):
         ab_scales.append([anchor_box_scales[i][0]
-                          # * 1.0/n_gridcells_horizontal
                              , anchor_box_scales[i][1]
-                          # *1.0/n_gridcells_vertical
                          ])
     ab_scales = ab_scales*n_gridcells_horizontal*n_gridcells_vertical
     ab_scales = np.asarray(ab_scales, np.float32)
-    #anchorbox_scale_mults = ops.constant(ab_scales, name="Anchorbox-scales")
     anchorbox_scale_mults = ops.constant(np.ascontiguousarray(ab_scales, np.float32), name="Anchorbox-scales")
     ## constants done
+
     # wh_preds = cntk.ops.times(wh_rels, anchorbox_scale_mults) # this is mat-mul not element-wise!
     wh_preds = wh_rels * anchorbox_scale_mults
 
-    #wh_preds = user_function(DebugLayerSingle(wh_preds, debug_name='wh_preds_d'))
-    #xy_preds = user_function(DebugLayerSingle(xy_preds, debug_name='xy_preds_d'))
-    #obj_preds = user_function(DebugLayerSingle(obj_preds, debug_name='obj_preds_d'))
-    #cls_preds = user_function(DebugLayerSingle(cls_preds, debug_name='cls_preds_d', split_line=True))
 
     # Splice the parts back together!
     full_output = ops.splice(xy_preds, wh_preds, obj_preds, cls_preds, axis=1, name="yolo_results")
@@ -378,8 +184,6 @@ def load_pretrained_resnet18_feature_extractor(par):
     #net = combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: ph})
     ph = placeholder(shape=(100, 100, 100), name="input_ph")
     net = combine([fe_output_layer.owner]).clone(CloneMethod.freeze, {feature_layer: ph})
-
-    #plot(net, "ResNet18_s.pdf")
 
     return Sequential([
         [lambda x: x - par.par_input_bias]
@@ -495,12 +299,12 @@ def create_mb_source(img_height, img_width, img_channels, output_size, image_fil
             xforms.color(0.5,0.0,0.5) # random color-shifts
         ]
 
-    if False and is_training:
+    if False and is_training: # DO NOT USE CROPPING! The gr ound truth will no longer match the image!
         transforms += [
             xforms.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio') # train uses jitter
         ]
 
-    if True:
+    if True: # Switch between fill and scale
         transforms += [
             xforms.scale(width=img_width, height=img_height, channels=img_channels, interpolations='linear',
                          scale_mode='fill'),

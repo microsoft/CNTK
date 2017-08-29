@@ -10,7 +10,6 @@ from cntk.ops import *
 import numpy as np
 import math
 from PARAMETERS import *
-import pdb
 
 class LambdaFunc(UserFunction): # usefoll for debugging...
     def __init__(self,
@@ -201,7 +200,7 @@ class TrainFunction(UserFunction):
             scale[:,:,0:4] = self.default_box_scale
             self.mb_count+=1
 
-        ### set classes and no_obj ###
+        ### find no_obj ###
         for sample in range(len(eval_results)):
             gtb_array = gtb_inputs[sample].reshape((int(len(gtb_inputs[sample]) / 5), 5))
             pred_bb = eval_results[sample][:, 0:4]
@@ -221,36 +220,20 @@ class TrainFunction(UserFunction):
                 """
                 ious = self.numpy_iou(pred_bb_transposed, gtb_array[gtb_index, 0:4])
                 ious.shape += (1,)
-                target[sample][:,4:5] = np.maximum(target[sample][:,4:5], ious) #objectness is not learned here! but we need to find the highest iou amogst the gtb to determine whether it is no_obj!
-                #gtb_cls_nr = int(gtb_array[gtb_index, 4] - 1)+5
-                #target[sample, :, gtb_cls_nr:gtb_cls_nr + 1] += np.select([ious>0],[1],0)
+                target[sample][:,4:5] = np.maximum(target[sample][:,4:5], ious) #objectness is not learned here! but we need to find the highest iou amongst the gtbs to determine whether it is no_obj!
 
         #set no_obj
-        #pdb.set_trace()
-        #scale[:,:,4:5]=np.select(target[:,:,4:5] > self.objectness_threshold, [self.lambda_obj], self.lambda_no_obj)
         greater_than = np.where(target[:,:,4:5] > self.objectness_threshold)
         scale[:,:,4:5] = self.lambda_no_obj
         scale[greater_than] = self.lambda_obj
 
-        # divisor_wzero = np.add.reduce(target[:,:,5:], axis=2)
-        # divisor = np.zeros(divisor_wzero.shape) + divisor_wzero
-        # divisor[np.where(divisor == 0)] = 1
-        #
-        # divisor.shape += (1,)
-        # divisor_wzero.shape += (1,)
-        #
-        # target[:, :, 5:] /= divisor
-        # active = np.zeros(divisor.shape)
-        # active[np.where(divisor_wzero > 0)] = 1
-        #
-        # scale[:,:,5:] += active
-
-
         ### set x,y,w,h,o for the resposible box ###
         # get dimensions
+        # for each image in the mini-bath
         mb_size = eval_results.shape[0]
         for sample in range(mb_size):
 
+            #for each ground truth box on the image
             gtb_array = gtb_inputs[sample].reshape((int(len(gtb_inputs[sample]) / 5), 5))  # shape (50,5)
             for i in range(len(gtb_array)):
                 if gtb_array[i][4] == 0: break  # gtb list is in the padding area! (cls cannot be 0!)
@@ -263,6 +246,7 @@ class TrainFunction(UserFunction):
                 highest_iou_index = None
                 highest_iou = 0
 
+                # for each prior
                 for z in range(self.num_anchorboxes):
                     iou = self.iou((0,0,gtb_array[i][2],gtb_array[i][3]),
                                    (0,0,self.anchorbox_scales[z][0],self.anchorbox_scales[z][1]))
@@ -282,7 +266,6 @@ class TrainFunction(UserFunction):
                         target[sample][vector_index][1] = gtb_array[i][1]
                         target[sample][vector_index][2] = gtb_array[i][2]
                         target[sample][vector_index][3] = gtb_array[i][3]
-                        #target[sample][vector_index][4] = highest_iou
                         target[sample][vector_index][4] = self.iou(gtb_array[i][0:4],
                                                                    eval_results[sample][vector_index][0:4])
                         scale[sample][vector_index][0:4] = self.lambda_coord
@@ -292,16 +275,18 @@ class TrainFunction(UserFunction):
                         target[sample][vector_index][5 + int(gtb_array[i][4]) - 1] = 1
                         scale[sample][vector_index][5:] = self.lambda_cls
 
-        #ost = target[:,:,4:5]
-        #osc = scale[:,:,4:5]
-        #print("obj_targets: {}".format(ost.flatten()))
-        #print("obj_scales: {}".format(osc.flatten()))
 
         return target, scale
 
 
     @staticmethod
     def iou(box1, box2):
+        """
+        Computes the IOU of two boxes. Boxes in relative center coordinates [X,Y,W,H]
+        :param box1: arraylike with at least 4 dimensions
+        :param box2: arraylike with at least 4 dimensions
+        :return: IOU of the boxes described by the boxes of first four fields in the box1 and box2 arrays
+        """
         leftbound =  max(box1[0]-.5*box1[2], box2[0]-.5*box2[2])
         rightbound = min(box1[0] + .5 * box1[2], box2[0] + .5 * box2[2])
 
@@ -320,7 +305,14 @@ class TrainFunction(UserFunction):
 
     @staticmethod
     def numpy_iou(boxes1, boxes2):
-        """boxes1 and boxes2 in shape of (4,n)"""
+        """
+        Computes the IOUs of all boxes in
+        :param boxes1:
+        :param boxes2:
+        :return:
+        """
+        """boxes1 and boxes2 in shape of (4,n)
+        """
         leftbound =  np.maximum(boxes1[0]-.5*boxes1[2], boxes2[0]-.5*boxes2[2])
         rightbound = np.minimum(boxes1[0] + .5 * boxes1[2], boxes2[0] + .5 * boxes2[2])
 

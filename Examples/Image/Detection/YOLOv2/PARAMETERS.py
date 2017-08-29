@@ -25,28 +25,7 @@ par_use_reorg_bypass = False
 par_dense_size = 1024
 
 
-if(par_dataset_name == "CIFAR10"):
-    par_image_height = 416 # 32*3  # Darknet19 scales input image down over all by a factor of 32. \\
-    par_image_width = 416 # 32*3   # It needs at least a 3x3 shape for the last conv layer. So 32*3 is required at least.
-    par_num_channels = 3  # RGB
-    par_input_bias = 114
-    par_num_classes = 10
-    par_data_path = os.path.join(par_abs_path, "..", "..", "DataSets", "CIFAR-10")
-
-    par_minibatch_size = 24
-
-
-elif(par_dataset_name == "ImageNet50k"):
-    par_image_height = 416  # Darknet19 scales input image down over all by a factor of 32. \\
-    par_image_width = 416   # It needs at least a 3x3 shape for the last conv layer. So 32*3 is required at least.
-    par_num_channels = 3 # RGB
-    par_input_bias = 114
-    par_num_classes = 1000
-    par_data_path = "C:\\Data\\private\\Image\\ResNet\\Data\\v0" #local path for test
-
-    par_minibatch_size = 24
-
-elif(par_dataset_name == "Pascal_VOC_2007"):
+if(par_dataset_name == "Pascal_VOC_2007"):
     par_minibatch_size = 64#32# 16    # minibatch size
     par_image_width = 416       # width the image is scaled to
     par_image_height = 416      # height the image is scaled to
@@ -87,20 +66,6 @@ elif(par_dataset_name == "Pascal_VOC_Both"):
     par_train_data_file = 'trainvalBoth.txt'
     par_train_roi_file = 'trainvalBoth_rois_center_rel.txt'
 
-
-elif(par_dataset_name == "Logos158"):
-    par_minibatch_size = 32    # minibatch size
-    par_image_width = 416       # width the image is scaled to
-    par_image_height = 416      # height the image is scaled to
-    par_input_bias = 114        # average input value
-    par_num_channels = 3        # nr of color-channels of the input
-    par_num_classes = 158        # nr of classes displayed
-    par_epoch_size = 4278       # nr of input images
-    par_max_gtbs = 52
-    par_boxes_centered = True
-    par_train_data_file = 'logo_v5_img.txt'
-    par_train_roi_file = 'logo_v5_gts.txt'
-
 elif(par_dataset_name == "Grocery"):
     par_minibatch_size = 20  # minibatch size
     par_image_width = 288  # width the image is scaled to
@@ -115,21 +80,6 @@ elif(par_dataset_name == "Grocery"):
     par_train_roi_file = 'train.GTRois.txt'
     par_max_epochs=20#0#640
     _par_lr_dataset_adoption = .01
-
-elif(par_dataset_name == "Overfit"):
-    par_minibatch_size = 2  # minibatch size
-    par_image_width = 448  # width the image is scaled to
-    par_image_height = 416  # height the image is scaled to
-    par_input_bias = 114  # average input value
-    par_num_channels = 3  # nr of color-channels of the input
-    par_num_classes = 20  # nr of classes displayed
-    par_epoch_size = 2  # nr of input images
-    par_max_gtbs = 3
-    par_boxes_centered = True
-    par_train_data_file = 'trainval.txt'
-    par_train_roi_file = 'trainval_rois_center_rel.txt'
-    par_max_epochs = 260
-    _par_lr_dataset_adoption = 0.01
 
 # Priors from k-means
 par_anchorbox_scales = [[ 0.09635106,  0.14264049],
@@ -151,7 +101,7 @@ par_lambda_obj = 5
 par_lambda_no_obj = 1#0.5
 par_lambda_cls = 1
 par_objectness_threshold=0.6
-par_box_default_mbs = 0#0# int(100 * 128/par_minibatch_size)
+par_box_default_mbs = 0 # int(100 * 128/par_minibatch_size) # 100 Minibatches in original implementation
 par_scale_default_boxes = 0.01
 
 # apply custom learning rate here
