@@ -57,6 +57,21 @@ TensorView<ElemType>::TensorView(const MatrixBasePtr& sob, const TensorShape& sh
 // elementwise operations
 // -------------------------------------------------------------------
 
+// look up an op code by name
+#define AssignNameToOpTable(oper) insert(make_pair(L#oper, ElementWiseOperator::op##oper));
+static struct NameToOpTable : public map<wstring, ElementWiseOperator> { NameToOpTable() {
+    ForAllOps(AssignNameToOpTable);
+} } s_nameToOp;
+template <class ElemType>
+/*static*/ ElementWiseOperator TensorView<ElemType>::OpFromName(const wstring& opName)
+{
+    let iter = s_nameToOp.find(opName);
+    if (iter != s_nameToOp.end())
+        return iter->second;
+    else
+        InvalidArgument("TensorView::OpFromName: '%S' is not a valid TensorView operation code.", opName.c_str());
+}
+
 static bool Matches(size_t d1, size_t d2) // do two dimensions match?
 {
     return d1 == d2 || d1 == 1 || d2 == 1; // same or broadcasting

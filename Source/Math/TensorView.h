@@ -86,6 +86,8 @@ public:
     // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
     // -------------------------------------------------------------------
 
+    static ElementWiseOperator OpFromName(const wstring& opName);
+
 #pragma push_macro("DeclareUnaryTensorOp")
 #define DeclareUnaryTensorOp(oper)                                                              \
     void Do##oper##Of(ElemType beta, const TensorView& a, ElemType alpha)                       \

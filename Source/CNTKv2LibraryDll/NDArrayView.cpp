@@ -485,6 +485,10 @@ namespace CNTK
         }
         return out;
     }
+    /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, const std::wstring& opStr, NDArrayViewPtr out, double beta, const std::wstring& reductionOpStr)
+    {
+        return NumericOperation(inputs, alpha, TensorView<float>::OpFromName(opStr), out, beta, TensorView<float>::OpFromName(reductionOpStr));
+    }
 
     NDArrayViewPtr operator+(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand)
     {

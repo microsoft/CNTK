@@ -10,43 +10,6 @@
 #include "PlainTextDeseralizer.h"
 #include "Layers.h"
 #include "TimerUtility.h"
-//#include "../Math/CommonMatrix.h"
-// TODO: implement the name lookup, then pass by name to NumericOperation
-enum ElementWiseOperator
-{
-    // nullary
-    opConstOne, opNone,
-    // unary (or binary with constant parameter)
-    opCopy,
-    opNegate, opNot, opAbs, opFloor, opReciprocal,
-    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opExponentialLinearUnit, opStableSigmoid,
-    // unary ops for use by Matrix class only (there is no TensorView implementation)
-    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative, opStableSigmoidDerivative,
-    // binary
-    opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum, opPow,
-    opMax, opMin, opArgmax, opArgmin,
-    opLess, opEqual, opGreater, opGreaterEqual, opNotEqual, opLessEqual, // Note: must obey this order: (sgn(a-b) == -1, 0, +1), (sgn(a-b) != -1, 0, +1)
-    opAnd, opOr, opXor, opMaskNegative,
-    opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,
-    opElementwiseProductWithLinearRectifierDerivativeFromOutput, opElementwiseProductWithLogDerivativeFromOutput,
-    opElementwiseProductWithCosDerivative, opElementwiseProductWithSinDerivative,
-    opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative,
-    opElementwiseProductWithReciprocalDerivative, opSqrOfDifference,
-    opElementwiseProductWithExponentialLinearUnitDerivativeFromOutput,
-    // binary ops for indexing
-    // opIndex,
-    // ternary
-    opCond /*a ? b : c*/,
-    opClip, /*clip a within interval b..c*/
-    opElementwiseProductWithLogSumDerivative,
-    opCopyIfEqual,
-    opElementwiseProductWithExpOfDiff, /* a * exp(b - c) */
-    opElementwiseProductWithQuotient, /* a * (b / c) */
-    opElementwiseProductWithPowExponentDerivative, /* a * b * log(c) */
-    opElementwiseProductWithPowBaseDerivative,  /* a * c * pow(b, c-1) */
-    // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
-};
-
 
 #include <cstdio>
 #include <map>
@@ -85,17 +48,17 @@ static NDArrayViewPtr RandomTestTensor(const NDShape& shape, double scale, const
     // some special cases
     if (strstr(opName, "Log")) // Log requires positive numbers
     {
-        res = NDArrayView::NumericOperation({ res }, 1.0, ElementWiseOperator::opAbs);
-        res = NDArrayView::NumericOperation({ /*min=*/constT(1e-4), /*max=*/res, res }, 1.0, ElementWiseOperator::opClip);
+        res = NDArrayView::NumericOperation({ res }, 1.0, L"Abs");
+        res = NDArrayView::NumericOperation({ /*min=*/constT(1e-4), /*max=*/res, res }, 1.0, L"Clip");
     }
     else if (strcmp(opName, "Pow") == 0 && argIndex == 0) // Pow requires non-negative base
     {
-        res = NDArrayView::NumericOperation({ res }, 1.0, ElementWiseOperator::opAbs);
+        res = NDArrayView::NumericOperation({ res }, 1.0, L"Abs");
     }
     else if (strcmp(opName, "Reciprocal") == 0) // Reciprocal should not use too small a number
     {
-        res = NDArrayView::NumericOperation({ res }, 1.0, ElementWiseOperator::opAbs);
-        res = NDArrayView::NumericOperation({ /*min=*/constT(1e-2), /*max=*/res, res }, 1.0, ElementWiseOperator::opClip);
+        res = NDArrayView::NumericOperation({ res }, 1.0, L"Abs");
+        res = NDArrayView::NumericOperation({ /*min=*/constT(1e-2), /*max=*/res, res }, 1.0, L"Clip");
     }
     return res;
 }
@@ -105,13 +68,13 @@ static double AvSqrErr(const NDArrayViewPtr& resVal, const NDArrayViewPtr& refVa
 {
     if (resVal->Shape() != refVal->Shape())
         LogicError("AvSqrErr: Result shape %S is different from expected shape %S", resVal->Shape().AsString().c_str(), refVal->Shape().AsString().c_str());
-    let sqrErr = NDArrayView::NumericOperation({ resVal, refVal }, 1.0 / refVal->Shape().TotalSize(), ElementWiseOperator::opSqrOfDifference, make_shared<NDArrayView>(dataType, NDShape{}, device), 0, ElementWiseOperator::opSum);
+    let sqrErr = NDArrayView::NumericOperation({ resVal, refVal }, 1.0 / refVal->Shape().TotalSize(), L"SqrOfDifference", make_shared<NDArrayView>(dataType, NDShape{}, device), 0, L"Sum");
     return sqrErr->AsScalar<double>();
 }
 
 static double SumAll(const NDArrayViewPtr& x, DataType dataType, const DeviceDescriptor& device)
 {
-    let sum = NDArrayView::NumericOperation({ x }, 1.0, ElementWiseOperator::opCopy, make_shared<NDArrayView>(dataType, NDShape{}, device), 0, ElementWiseOperator::opSum);
+    let sum = NDArrayView::NumericOperation({ x }, 1.0, L"Copy", make_shared<NDArrayView>(dataType, NDShape{}, device), 0, L"Sum");
     return sum->AsScalar<double>();
 }
 
@@ -122,9 +85,10 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     // for testing batching of the matrix product, we need a shared matrix
     let sharedMatrix = RandomTestTensor(NDShape{ 13, 42 }, 0.3, "Times", 0, seed, dataType, device);
     let sharedMatrixVar = Parameter(sharedMatrix);
-#define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, op##opCode); }, #opCode))
-#define RedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0/denom, opCopy, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, op##redOpCode); }, "Reduce" #redOpCode))
-#define OpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, op##opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, opSum); }, #opCode "-ReduceSum"))
+    Variable batchMean, batchStdDev; // for testing batch normalization
+#define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode); }, #opCode))
+#define RedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0/denom, L"Copy", make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L#redOpCode); }, "Reduce" #redOpCode))
+#define OpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum"); }, #opCode "-ReduceSum"))
     vector<TensorViewTest> tests =
     {
         // dot product (both explicitly as InnerProduct() as well as composition, to verify the InnerProduct() optimization)
@@ -188,25 +152,25 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     };
 
     fprintf(stderr, "\n--- Running tests for batch of %d. %s on %S\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str());
-    for (let& test : tests)
+    for (let& test : tests) // loop over all tests
     {
-        NDArrayViewPtr refVal;
-        Variable resVar, resVar1;
+        // prepare example values
         vector<vector<NDArrayViewPtr>> allArgValues(N);
-        vector<Variable> args;
-        for (size_t n = 0; n < N; n++)
+        for (size_t n = 0; n < N; n++) // loop over samples
         {
             auto& argValues = allArgValues[n];
             for (let& shape : test.shapes)
                 argValues.push_back(RandomTestTensor(shape, 0.3, test.op.second, argValues.size(), seed, dataType, device));
         }
-        for (size_t n = 0; n < N; n++)
+        // compute the reference value (NDArrayView direct computation)
+        NDArrayViewPtr refVal;
+        for (size_t n = 0; n < N; n++) // aggregate over all samples in the MB
         {
             let& argValues = allArgValues[n];
             // reference: TensorView op directly
             let refVal1 = test.op.first(argValues);
             if (n > 0)
-                refVal = refVal + refVal1;// NDArrayView::NumericOperation({ refVal, refVal1 }, 1.0, ElementWiseOperator::opSum);
+                refVal = refVal + refVal1;// NDArrayView::NumericOperation({ refVal, refVal1 }, 1.0, L"Sum");
             else
                 refVal = refVal1;
 #if 0
@@ -216,8 +180,11 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             refVal->LogToFile(L"sumVal", stderr);
 #endif
         }
+        // compute the Dynamite value (Variable/Function)
         bool testUsesAllArgs = true; // some tests ignore the arg; don't do gradient check on those
-        for (size_t n = 0; n < N; n++)
+        vector<Variable> args;
+        Variable resVar, resVar1;
+        for (size_t n = 0; n < N; n++) // aggregate over all samples in the MB
         {
             let& argValues = allArgValues[n];
             // Dynamite:
@@ -243,6 +210,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         }
         let resVal = resVar.Value(); // this triggers the batched evaluation
         fprintf(stderr, ") -> %S\n", resVal->AsString().c_str());
+        // compare them
         let avSqrErr = AvSqrErr(resVal, refVal, dataType, device);
         if (avSqrErr > 1e-5)
         {
@@ -250,11 +218,11 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             numFailed++;
         }
         // gradient check
-        // we test BatchSum(f(x,y))
+        // we test the gradient for BatchSum(f(args)); that is d BatchSum(f(args))/d args
         if (dataType == DataType::Double && testUsesAllArgs)
         {
             let epsScale = 1e-6;
-            // gradient check for every input
+            // gradient check for every argument
             for (size_t i = 0; i < allArgValues[0].size(); i++)
             {
                 // in case of batching, compute the sum symbolically so we can test the batched gradient
