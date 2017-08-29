@@ -345,6 +345,8 @@ def learning_rate_schedule(lr, ref_minibatch_size = None, epoch_size=None, unit=
           to match the designed effect. 
         unit (:class:`UnitType`): see parameter
          ``unit`` in :func:`training_parameter_schedule`.
+          deprecated:: 2.2
+          Use ref_minibatch_size parameter to specify the reference minbiatch size.
         epoch_size (int): see parameter ``epoch_size`` in
          :func:`training_parameter_schedule`.
 
@@ -539,7 +541,14 @@ def sgd(parameters, lr,
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
-        ref_minibatch_size (int, default ``None``): 
+          deprecated:: 2.2
+          Use ref_minibatch_size parameter to specify the reference minbiatch size.
+        ref_minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
+         size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
+         to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
+         In case that ref_minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
+         if the learning rate schedule does not specify the ref_minibatch_size, CNTK will set it to 1. Setting ref_minibatch_size to 0
+         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -596,6 +605,14 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+          deprecated:: 2.2
+          Use ref_minibatch_size parameter to specify the reference minbiatch size.
+        ref_minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
+         size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
+         to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
+         In case that ref_minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
+         if the learning rate schedule does not specify the ref_minibatch_size, CNTK will set it to 1. Setting ref_minibatch_size to 0
+         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -652,6 +669,14 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+          deprecated:: 2.2
+          Use ref_minibatch_size parameter to specify the reference minbiatch size.
+        ref_minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
+         size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
+         to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
+         In case that ref_minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
+         if the learning rate schedule does not specify the ref_minibatch_size, CNTK will set it to 1. Setting ref_minibatch_size to 0
+         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -713,6 +738,14 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+          deprecated:: 2.2
+          Use ref_minibatch_size parameter to specify the reference minbiatch size.
+        ref_minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
+         size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
+         to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
+         In case that ref_minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
+         if the learning rate schedule does not specify the ref_minibatch_size, CNTK will set it to 1. Setting ref_minibatch_size to 0
+         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -768,6 +801,14 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+          deprecated:: 2.2
+          Use ref_minibatch_size parameter to specify the reference minbiatch size.
+        ref_minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
+         size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
+         to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
+         In case that ref_minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
+         if the learning rate schedule does not specify the ref_minibatch_size, CNTK will set it to 1. Setting ref_minibatch_size to 0
+         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -830,6 +871,14 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+          deprecated:: 2.2
+          Use ref_minibatch_size parameter to specify the reference minbiatch size.
+        ref_minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
+         size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
+         to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
+         In case that ref_minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
+         if the learning rate schedule does not specify the ref_minibatch_size, CNTK will set it to 1. Setting ref_minibatch_size to 0
+         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -893,10 +942,18 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+          deprecated:: 2.2
+          Use ref_minibatch_size parameter to specify the reference minbiatch size.
         epsilon (float, optional): numerical stability constant,
          defaults to 1e-8
         adamax: when ``True``, use infinity-norm variance momentum update instead of L2. Defaults
          to False
+        ref_minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
+         size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
+         to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
+         In case that ref_minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
+         if the learning rate schedule does not specify the ref_minibatch_size, CNTK will set it to 1. Setting ref_minibatch_size to 0
+         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -963,6 +1020,14 @@ def rmsprop(parameters, lr,
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+          deprecated:: 2.2
+          Use ref_minibatch_size parameter to specify the reference minbiatch size.
+        ref_minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
+         size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
+         to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
+         In case that ref_minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
+         if the learning rate schedule does not specify the ref_minibatch_size, CNTK will set it to 1. Setting ref_minibatch_size to 0
+         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
