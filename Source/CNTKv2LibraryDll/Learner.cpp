@@ -359,7 +359,7 @@ namespace CNTK
         }
 
         checkpoint[smoothedGradientsKey] = serializedSmoothedGradients;
-
+        //TODO: additional options are not serialized. This was not done when AdditionalOption was introduced.
         return checkpoint;
     }
 
@@ -429,6 +429,8 @@ namespace CNTK
 
             smoothedGradientValue->CopyFrom(checkpointedValue);
         }
+        //TODO: additional options are not deserialized. This was not done when AdditionalOption was introduced.
+
     }
 
     void LearnerBase::ReportTrainingParameterValue(const TrainingParameterSchedule<double>& schedule, const wstring& name) const

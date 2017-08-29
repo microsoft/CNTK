@@ -392,10 +392,29 @@ namespace CNTK
      template <typename T>
     /*static*/ TrainingParameterSchedule<T>  TrainingParameterSchedule<T>::Deserialize(const Dictionary& dict)
     {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, epochSizeKey, scheduleKey, refMBSizeKey };
-
-        ValidateDictionary<TrainingParameterSchedule<T>>(dict, s_requiredDictionaryKeys, s_trainingParameterScheduleTypeValue, s_serializationVersion);
-
+        auto version = ValidateDictionary<TrainingParameterSchedule<T>>(dict, { typeKey, epochSizeKey, scheduleKey}, s_trainingParameterScheduleTypeValue, s_serializationVersion);
+        //Validate additional keys and make necessary change to the dictionary:
+        if (version == 1)
+        {
+            ValidateDictionary<TrainingParameterSchedule<T>>(dict, { unitKey }, s_trainingParameterScheduleTypeValue, s_serializationVersion);
+            /*
+            //legacy definition:
+            enum class UnitType : unsigned int
+            {
+            Sample = 0,
+            Minibatch = 1,
+            };
+            */
+            size_t unit = dict[unitKey].Value<std::size_t>();
+            Dictionary dict_v2 = dict;
+            dict_v2[refMBSizeKey] = (size_t) (unit == 0? 1: 0);
+            return TrainingParameterSchedule<T>(dict_v2);
+        }
+        else //if (version >=2)
+        {
+            ValidateDictionary<TrainingParameterSchedule<T>>(dict, { refMBSizeKey }, s_trainingParameterScheduleTypeValue, s_serializationVersion);
+            return TrainingParameterSchedule<T>(dict);
+        }
         return TrainingParameterSchedule<T>(dict);
     }
 

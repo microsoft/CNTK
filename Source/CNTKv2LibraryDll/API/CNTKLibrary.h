@@ -4513,7 +4513,10 @@ namespace CNTK
 
         CNTK_API TrainingParameterSchedule(const Dictionary& dictionary);
 
-        static const size_t s_serializationVersion = 1;
+        ///Version history:
+        ///1 --- initial version.
+        ///2 --- removed UnitType and intrudoce reference minibath size
+        static const size_t s_serializationVersion = 2;
 
     protected:           
         std::map<size_t, T> m_schedule;
