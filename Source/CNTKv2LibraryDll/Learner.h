@@ -49,7 +49,7 @@ namespace CNTK
         {
             auto learningRate = Learner::LearningRate();
             std::ignore = minibatchSize; //ignore the minibatch size for now
-            if (GetOptions().GetOrElse(CompatModeK, false))
+            if (IsCompatibleMode())
             {
                 //compatible mode, the gradient are already mean gradient so the learning rate are directly applied
                 /*
@@ -62,7 +62,7 @@ namespace CNTK
             }
             else 
             {
-                std::size_t ref_mbsize = m_learningRateSchedule.GetRefMBSize();
+                std::size_t ref_mbsize = m_learningRateSchedule.GetRefMinibatchSize();
                 assert(ref_mbsize > 0);
                 return learningRate / ref_mbsize;
             }

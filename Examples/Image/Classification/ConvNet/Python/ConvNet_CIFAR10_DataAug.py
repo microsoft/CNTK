@@ -109,7 +109,7 @@ def train_model(reader, model, criterion, epoch_size=50000, max_epochs=80):
 
     # learning parameters
     learner = momentum_sgd(model.parameters, 
-                           lr       = learning_rate_schedule([0.0015625]*20+[0.00046875]*20+[0.00015625]*20+[0.000046875]*10+[0.000015625], ref_mbsize=1, epoch_size=epoch_size),
+                           lr       = learning_rate_schedule([0.0015625]*20+[0.00046875]*20+[0.00015625]*20+[0.000046875]*10+[0.000015625], ref_minibatch_size=1, epoch_size=epoch_size),
                            momentum = momentum_as_time_constant_schedule([0]*20+[600]*20+[1200], epoch_size=epoch_size),
                            l2_regularization_weight = 0.002)
     
@@ -149,7 +149,7 @@ def Evaluator(criterion):
     dummy_learner = momentum_sgd(tuple(parameters), 
                                  lr = learning_rate_schedule(1),
                                  momentum = momentum_as_time_constant_schedule(0),
-                                 compatible_mode = True)
+                                 ref_minibatch_size = 0)
     return Trainer(None, (loss, metric), dummy_learner)
 
 def evaluate(reader, criterion, device=None, minibatch_size=16, max_samples=None):

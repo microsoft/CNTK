@@ -202,7 +202,7 @@ def test_ext_train(tmpdir):
     lr_per_sample = C.learning_rate_schedule(0.007)
     trainer = C.Trainer(z, (z + 0, z + 0),
                         [C.momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
-                                        True, compatible_mode = True)])
+                                        True, ref_minibatch_size = 0)])
 
     i = 0
     while i < 100:
@@ -342,7 +342,7 @@ def test_ext_lambdafunc(tmpdir):
     z = Function.load(filepath)
 
     momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
-    lr_per_sample = C.learning_rate_schedule(0.007, ref_mbsize = 1)
+    lr_per_sample = C.learning_rate_schedule(0.007, ref_minibatch_size = 1)
     trainer = C.Trainer(z, (z + 0, z + 0), [C.momentum_sgd(z.parameters,
                                                            lr_per_sample,
                                                            momentum_time_constant,
@@ -597,7 +597,7 @@ def test_udf_checkpointing(tmpdir):
     eval_error = C.classification_error(op, label)
 
     lr_schedule = C.learning_rate_schedule(0.5)
-    learner = C.sgd(op.parameters, lr_schedule, compatible_mode = True)
+    learner = C.sgd(op.parameters, lr_schedule, ref_minibatch_size = 0)
     trainer = C.Trainer(op, (loss, eval_error), [learner])
 
     trainer.train_minibatch({op.arguments[0]: np.random.random((2, 2)).astype(np.float32)}, device=dev)

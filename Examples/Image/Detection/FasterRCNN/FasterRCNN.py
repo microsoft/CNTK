@@ -340,14 +340,14 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
         print("bias_lr_mult: {}".format(bias_lr_mult))
 
     # Instantiate the learners and the trainer object
-    lr_schedule = learning_rate_schedule(lr_per_sample, ref_mbsize=1)
+    lr_schedule = learning_rate_schedule(lr_per_sample, ref_minibatch_size=1)
     learner = momentum_sgd(others, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
-                           unit_gain=False, compatible_mode=cfg["CNTK"].USE_MEAN_GRADIENT)
+                           unit_gain=False, ref_minibatch_size=0 if cfg["CNTK"].USE_MEAN_GRADIENT else None)
 
     bias_lr_per_sample = [v * bias_lr_mult for v in lr_per_sample]
-    bias_lr_schedule = learning_rate_schedule(bias_lr_per_sample, ref_mbsize=1)
+    bias_lr_schedule = learning_rate_schedule(bias_lr_per_sample, ref_minibatch_size=1)
     bias_learner = momentum_sgd(biases, bias_lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
-                           unit_gain=False, compatible_mode=cfg["CNTK"].USE_MEAN_GRADIENT)
+                           unit_gain=False, ref_minibatch_size=0 if cfg["CNTK"].USE_MEAN_GRADIENT else None)
     trainer = Trainer(None, (loss, pred_error), [learner, bias_learner])
 
     # Get minibatches of images and perform model training

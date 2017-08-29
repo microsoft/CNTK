@@ -196,7 +196,7 @@ def train_lm(testing=False):
     num_trained_samples_since_last_report = 0
 
     # Instantiate the trainer object to drive the model training
-    lr_schedule = learning_rate_schedule(learning_rate, ref_mbsize = 1)
+    lr_schedule = learning_rate_schedule(learning_rate, ref_minibatch_size = 1)
     momentum_schedule = momentum_as_time_constant_schedule(momentum_as_time_constant)
     gradient_clipping_with_truncation = True
     learner = momentum_sgd(z.parameters, lr_schedule, momentum_schedule,

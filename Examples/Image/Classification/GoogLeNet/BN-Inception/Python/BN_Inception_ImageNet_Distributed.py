@@ -58,7 +58,7 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantiza
     # Create learner
     local_learner = momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule,
                                                 l2_regularization_weight=l2_reg_weight,
-                                                compatible_mode=True)
+                                                ref_minibatch_size = 0)
     parameter_learner = data_parallel_distributed_learner(
         local_learner, 
         num_quantization_bits=num_quantization_bits,

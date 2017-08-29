@@ -63,7 +63,7 @@ def convnet_cifar10(debug_output=False, data_path=data_path, epoch_size=50000, m
 
     # Set learning parameters
     lr_per_sample          = [0.0015625]*10 + [0.00046875]*10 + [0.00015625]
-    lr_schedule            = C.learning_rate_schedule(lr_per_sample, ref_mbsize=1, epoch_size)
+    lr_schedule            = C.learning_rate_schedule(lr_per_sample, ref_minibatch_size=1, epoch_size=epoch_size)
     mm_time_constant       = [0]*20 + [-minibatch_size/np.log(0.9)]
     mm_schedule            = C.learners.momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
     l2_reg_weight          = 0.002

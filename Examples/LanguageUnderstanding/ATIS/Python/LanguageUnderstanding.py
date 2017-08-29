@@ -138,8 +138,8 @@ def train(reader, model, max_epochs):
 
     # SGD parameters
     learner = cntk.learners.fsadagrad(criterion.parameters,
-                        lr = cntk.learners.learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], ref_mbsize = 1, epoch_size),
-                        momentum = cntk.learners.momentum_schedule(0.9, ref_mbsize = minibatch_size),
+                        lr = cntk.learners.learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], ref_minibatch_size = 1, epoch_size=epoch_size),
+                        momentum = cntk.learners.momentum_schedule(0.9, ref_minibatch_size = minibatch_size),
                         gradient_clipping_threshold_per_sample = 15,
                         gradient_clipping_with_truncation = True)
 

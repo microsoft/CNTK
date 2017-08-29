@@ -81,8 +81,8 @@ def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, b
 
     # Set learning parameters
     lr_per_sample = [lr/minibatch_size for lr in lr_per_mb]
-    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, ref_mbsize=1)
-    mm_schedule = momentum_schedule(0.9, ref_mbsize = minibatch_size)
+    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, ref_minibatch_size=1)
+    mm_schedule = momentum_schedule(0.9, ref_minibatch_size = minibatch_size)
     
     # learner object
     if block_size != None and num_quantization_bits != 32:

@@ -193,11 +193,11 @@ def create_learner(model):
     lr_per_sample = C.learning_rate_schedule(opt.lr)
     momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
     if opt.optim == 'sgd':
-        return C.sgd(model.parameters, lr=lr_per_sample, compatible_mode = True)
+        return C.sgd(model.parameters, lr=lr_per_sample, ref_minibatch_size = 0)
     elif opt.optim == 'adam':
-        return C.adam(model.parameters, lr=lr_per_sample, momentum=momentum_time_constant, compatible_mode=True)
+        return C.adam(model.parameters, lr=lr_per_sample, momentum=momentum_time_constant, ref_minibatch_size = 0)
     elif opt.optim == 'adagrad':
-        return C.adagrad(model.parameters, lr=lr_per_sample, compatible_mode=True)
+        return C.adagrad(model.parameters, lr=lr_per_sample, ref_minibatch_size = 0)
     else:
         raise RuntimeError("Invalid optim method: " + opt.optim)
 

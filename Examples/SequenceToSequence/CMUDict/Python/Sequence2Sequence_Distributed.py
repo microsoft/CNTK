@@ -50,7 +50,7 @@ def train_and_test(s2smodel, train_reader, test_reader, block_size, num_quantiza
 
     lr = 0.001 if use_attention else 0.005   # TODO: can we use the same value for both?
     local_learner = fsadagrad(model_train.parameters,
-                        lr       = learning_rate_schedule([lr]*2+[lr/2]*3+[lr/4], ref_mbsize = 1, epoch_size),
+                        lr       = learning_rate_schedule([lr]*2+[lr/2]*3+[lr/4], ref_minibatch_size = 1, epoch_size),
                         momentum = momentum_as_time_constant_schedule(1100),
                         gradient_clipping_threshold_per_sample=2.3,
                         gradient_clipping_with_truncation=True)

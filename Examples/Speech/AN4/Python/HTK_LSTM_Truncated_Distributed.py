@@ -72,7 +72,7 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
     lr = [0.001]
 
     local_learner = fsadagrad(network['output'].parameters,
-                              lr=learning_rate_schedule(lr, ref_mbsize = 1, epoch_size),
+                              lr=learning_rate_schedule(lr, ref_minibatch_size = 1, epoch_size),
                               momentum=momentum_as_time_constant_schedule(1000),
                               gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 

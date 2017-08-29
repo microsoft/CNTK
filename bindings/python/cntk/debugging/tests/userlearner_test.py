@@ -79,8 +79,8 @@ class MySgdFast(UserLearner):
 
 ADDITIONAL_ARGUMENTS = [
     #(additional learning rate arguments (args), additional learner arguments (kwargs))
-    ([UnitType.minibatch], {'compatible_mode': True}), #for backward compatible test
-    ([], {'compatible_mode': True}), #for backward compatible test
+    ([UnitType.minibatch], {'ref_minibatch_size': 0}), #for backward compatible test
+    ([], {'ref_minibatch_size': 0}), #for backward compatible test
     ([25], {}),  # test reference minibatch size in learning rate schedule to simulate the compatible mode while having the per sample training benefit
 ]
 

@@ -55,9 +55,9 @@ def convnet_mnist(debug_output=False, epoch_size=60000, minibatch_size=64, max_e
 
     # Set learning parameters
     lr_per_sample    = [0.001]*10 + [0.0005]*10 + [0.0001]
-    lr_schedule      = C.learning_rate_schedule(lr_per_sample, ref_mbsize=1, epoch_size)
+    lr_schedule      = C.learning_rate_schedule(lr_per_sample, ref_minibatch_size=1, epoch_size=epoch_size)
     mm_time_constant = [0]*5 + [1024]
-    mm_schedule      = C.learners.momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
+    mm_schedule      = C.learners.momentum_as_time_constant_schedule(mm_time_constant, epoch_size=epoch_size)
 
     # Instantiate the trainer object to drive the model training
     learner = C.learners.momentum_sgd(z.parameters, lr_schedule, mm_schedule)

@@ -91,7 +91,7 @@ def train(nonlinearity, num_hidden_layers, device_id,
     loss = C.cross_entropy_with_softmax(z, label)
     eval_error = C.classification_error(z, label)
 
-    learner = C.sgd(z.parameters, lr_schedule, compatible_mode=True)
+    learner = C.sgd(z.parameters, lr_schedule, ref_minibatch_size = 0)
     trainer = C.Trainer(z, (loss, eval_error), [learner])
 
     num_minibatches_to_train = int(num_samples / minibatch_size)
@@ -142,7 +142,7 @@ def mem_leak_check(nonlinearity, num_hidden_layers, device_id,
     loss = C.cross_entropy_with_softmax(z, label)
     eval_error = C.classification_error(z, label)
 
-    learner = C.sgd(z.parameters, lr_schedule, compatible_mode=True)
+    learner = C.sgd(z.parameters, lr_schedule, ref_minibatch_size = 0)
     trainer = C.Trainer(z, (loss, eval_error), [learner])
 
     num_minibatches_to_train = int(num_samples / minibatch_size)

@@ -192,7 +192,7 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
 
     # Set learning parameters
     lr_per_sample          = [0.01]*10+[0.001]*10+[0.0001]
-    lr_schedule            = C.learning_rate_schedule(lr_per_sample, epoch_size=train_epoch_size, ref_mbsize = 1)
+    lr_schedule            = C.learning_rate_schedule(lr_per_sample, epoch_size=train_epoch_size, ref_minibatch_size = 1)
     momentum_time_constant = 4096
     mm_schedule            = C.momentum_as_time_constant_schedule([momentum_time_constant])
 

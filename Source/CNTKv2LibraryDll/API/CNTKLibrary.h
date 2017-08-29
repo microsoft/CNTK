@@ -4438,12 +4438,11 @@ namespace CNTK
         /// A special value that can be used for the epochSize to indicate that the schedule is sweep-based.
         ///
         static const size_t FullDataSweep = 0;
-        static const size_t UnkownRefMBSize = 0;
-
+        static const size_t UnspecifiedRefMBSize = 0;
         ///
         /// Create a schedule with a constant parameter value.
         ///
-        CNTK_API TrainingParameterSchedule(T value, size_t ref_mbsize = 0);
+        CNTK_API TrainingParameterSchedule(T value, size_t ref_mbsize = UnspecifiedRefMBSize);
 
 #ifndef SWIG
         ///
@@ -4451,7 +4450,7 @@ namespace CNTK
         /// schedule[0] is used for the first 'epochSize' samples, schedule[1] -- for the second,
         /// and so on. The last value is then used repeatedly until the end of training.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, size_t epochSize = FullDataSweep, size_t ref_mbsize = UnkownRefMBSize);
+        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, size_t epochSize = FullDataSweep, size_t ref_mbsize = UnspecifiedRefMBSize);
 #endif
 
         ///
@@ -4463,7 +4462,7 @@ namespace CNTK
         /// the first 100 samples, then '0.1' is used for the second 200 samples, 
         /// after which the values is switched to '0.005'.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = FullDataSweep, size_t ref_mbsize = UnkownRefMBSize);
+        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = FullDataSweep, size_t ref_mbsize = Learner::UnspecifiedRefMBSize);
 
 
         ///
@@ -4501,11 +4500,11 @@ namespace CNTK
                 && this->m_ref_mbsize == right.m_ref_mbsize;
         }
 
-        CNTK_API TrainingParameterSchedule<T>& transform(std::function<T(const T&)> func);
+        CNTK_API TrainingParameterSchedule<T>& Transform(std::function<T(const T&)> func);
 
-        CNTK_API size_t GetRefMBSize() const { return m_ref_mbsize; }
-        CNTK_API void SetRefMBSize(size_t ref_mbsize) { m_ref_mbsize = ref_mbsize; }
-        CNTK_API bool IsRefMBSizeUnknown() const { return m_ref_mbsize == UnkownRefMBSize; }
+        CNTK_API size_t GetRefMinibatchSize() const { return m_ref_mbsize; }
+        CNTK_API void SetRefMinibatchSize(size_t ref_mbsize) { m_ref_mbsize = ref_mbsize; }
+        CNTK_API bool IsRefMinibatchSizeUnspecified() const { return m_ref_mbsize == Learner::UnspecifiedRefMBSize; }
     private:
 
         friend class Learner;
@@ -4526,6 +4525,45 @@ namespace CNTK
     typedef TrainingParameterSchedule<double> LearningRateSchedule;
     typedef TrainingParameterSchedule<double> MomentumSchedule;
     typedef TrainingParameterSchedule<size_t> MinibatchSizeSchedule;
+    
+    
+    //The following are for convenient usages:
+    template<typename T>
+    TrainingParameterSchedule<T> TrainingParameterPerSampleSchedule(const std::vector<T>& schedule, size_t epochSize = TrainingParameterSchedule<T>::FullDataSweep)
+    {
+        return TrainingParameterSchedule<T>(schedule, epochSize, 1);
+
+    }
+
+    template<typename T>
+    TrainingParameterSchedule<T> TrainingParameterPerSampleSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = TrainingParameterSchedule<T>::FullDataSweep)
+    {
+        return TrainingParameterSchedule<T>(schedule, epochSize, 1);
+    }
+
+    template<typename T>
+    TrainingParameterSchedule<T> TrainingParameterPerSampleSchedule(T value)
+    {
+        return TrainingParameterSchedule<T>(value, 1);
+    }
+
+    template<typename T>
+    TrainingParameterSchedule<T> TrainingParameterMinibatchSchedule(const std::vector<T>& schedule, size_t epochSize = TrainingParameterSchedule<T>::FullDataSweep)
+    {
+        return TrainingParameterSchedule<T>(schedule, epochSize);
+
+    }
+    template<typename T>
+    TrainingParameterSchedule<T> TrainingParameterMinibatchSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = TrainingParameterSchedule<T>::FullDataSweep)
+    {
+        return TrainingParameterSchedule<T>(schedule, epochSize);
+    }
+
+    template<typename T>
+    TrainingParameterSchedule<T> TrainingParameterPerMinibatchSchedule(T value)
+    {
+        return TrainingParameterSchedule<T>(value);
+    }
 
     ///Compute the momentum from time constant.
     ///For backward compatability only. *Should be deprecated*.
@@ -4537,7 +4575,11 @@ namespace CNTK
     ///Construct MomentumAsTimeCosntantSchedule. *Will be deprecated*.
     CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(double time_constant);
     ///Construct MomentumAsTimeCosntantSchedule. *Will be deprecated*.
-    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const MomentumSchedule& schedule);
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const MomentumSchedule& schedule); 
+    ///Construct MomentumAsTimeCosntantSchedule. *Will be deprecated*.
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const std::vector<double>& schedule, size_t epoch_size = MomentumSchedule::FullDataSweep);
+    ///Construct MomentumAsTimeCosntantSchedule. *Will be deprecated*.
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const std::vector<std::pair<size_t, double>>& schedule,  size_t epoch_size = MomentumSchedule::FullDataSweep);
 
 
     ///
@@ -4590,7 +4632,7 @@ namespace CNTK
         CNTK_API static const std::wstring LearningRateScheduleK;
         CNTK_API static const std::wstring MomentumScheduleK;
         CNTK_API static const std::wstring MomentumVarianceScheduleK;
-        CNTK_API static const std::wstring CompatModeK;
+        static const size_t UnspecifiedRefMBSize = TrainingParameterSchedule<double>::UnspecifiedRefMBSize;
 
     public:
         //
@@ -4663,14 +4705,20 @@ namespace CNTK
         CNTK_API Dictionary& GetContext() { return m_learningContext; }
         CNTK_API const Dictionary& GetContext() const { return m_learningContext; }
 
-        ///Set the learner to use the learning rates and momentum in a mode that is compatiable to the literature.
-        ///There might be efficiency lost with the compatible mode. It is recommended not to set to this mode but 
-        ///keep the default setting which is false. Under the CNTK mode, users can provide the learning rates and 
-        ///momentum along with the minibatch size that these rates are targeting for.
-        ///CNTK will try its best to convert these rates internally to fully utilize the CNTK optimization power.
-        CNTK_API void SetCompatibleModel(bool is_compatible = false) { GetOptions().Add(CompatModeK, is_compatible); }
-        CNTK_API bool IsCompatibleModel() const { return GetOptions().GetOrElse(CompatModeK, false); }
+        ///In the litature, usually the learner parameters, such as the learning rates, moumentum and momentum variance, 
+        ///are chosen for the specified minibatch size. However, for efficient impelmentation and for distributed training,
+        ///CNTK can vary the actual minibatch sizes for better computational efficiency. Therefore CNTK allows users to set
+        ///the reference minibatch size, CNTK will try its best to adjust the learning parameters internally to match the 
+        ///behavior of the learning parameters with the specified specified minibatch size while the actualy minibatch size
+        ///can vary for better computational performance. 
+        CNTK_API void SetRefMinibatchSize(std::size_t ref_mbsize) { GetOptions().Add(RefMBSizeK, ref_mbsize); }
+        CNTK_API std::size_t GetRefMinibatchSize() const { return GetOptions().GetOrElse(RefMBSizeK, UnspecifiedRefMBSize); }
 
+        ///Return whether the learner is in literature compatible mode to use mean gradient and potentially other adjustment of the parameters if necessary.
+        CNTK_API bool IsCompatibleMode() const
+        {
+            return GetRefMinibatchSize() == UnspecifiedRefMBSize;
+        }
     protected:
         ///
         /// Retrieves and returns current value from the training parameter schedule.

@@ -93,7 +93,7 @@ namespace CNTK.CNTKLibraryCSTrainingTest
             }
 
             CNTK.TrainingParameterScheduleDouble learningRatePerSample = new CNTK.TrainingParameterScheduleDouble(
-                0.02, TrainingParameterScheduleDouble.UnitType.Sample);
+                0.02, 1);
 
             using (var minibatchSource = MinibatchSource.TextFormatMinibatchSource("SimpleDataTrain_cntk_text.txt", streamConfigurations))
             {

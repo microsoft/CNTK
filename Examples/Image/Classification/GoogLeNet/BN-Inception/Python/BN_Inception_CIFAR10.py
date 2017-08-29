@@ -119,7 +119,7 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size, progress_wri
     
     # Create learner
     learner = momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule,
-                           l2_regularization_weight=l2_reg_weight, compatible_mode = True)
+                           l2_regularization_weight=l2_reg_weight, ref_minibatch_size = 0)
 
     # Create trainer
     return Trainer(network['output'], (network['ce'], network['pe']), learner, progress_writers)

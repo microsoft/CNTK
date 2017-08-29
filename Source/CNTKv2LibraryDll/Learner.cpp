@@ -39,7 +39,6 @@ namespace CNTK
     CNTK_API const std::wstring Learner::LearningRateScheduleK = L"LearningRateScheduleK";
     CNTK_API const std::wstring Learner::MomentumScheduleK = L"MomentumScheduleK";
     CNTK_API const std::wstring Learner::MomentumVarianceScheduleK = L"MomentumVarianceScheduleK";
-    CNTK_API const std::wstring Learner::CompatModeK = L"CompatModeK";
 
   
     // This method completely replaces the current schedule with the new schedule. However, since
@@ -126,7 +125,7 @@ namespace CNTK
         if (m_additionalOptions.gradientClippingThresholdPerSample != numeric_limits<double>::infinity())
         {
             // when using compatible mode, no need to scale up the maxGradientPerMB as it is the mean gradient already
-            actualMBSize = (GetOptions().GetOrElse(CompatModeK, false) ? 1 : actualMBSize);
+            actualMBSize = (IsCompatibleMode() ? 1 : actualMBSize);
 
             double maxGradientPerMB = m_additionalOptions.gradientClippingThresholdPerSample * actualMBSize;
             if (m_additionalOptions.gradientClippingWithTruncation)
@@ -152,7 +151,7 @@ namespace CNTK
         const auto& gradientMatrix = gradientValue->GetWritableMatrix<ElementType>();
 
         // get mean gradient if needed
-        if (GetOptions().GetOrElse(CompatModeK, false))
+        if (IsCompatibleMode())
         {
             Matrix<ElementType>::Scale((ElementType)1.0 / actualMBSize, *gradientMatrix);
         }
@@ -164,7 +163,7 @@ namespace CNTK
         if (m_additionalOptions.l2RegularizationWeight > 0)
         {
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
-            const auto weight = m_additionalOptions.l2RegularizationWeight * (GetOptions().GetOrElse(CompatModeK, false) ? 1 : actualMBSize);
+            const auto weight = m_additionalOptions.l2RegularizationWeight * (IsCompatibleMode() ? 1 : actualMBSize);
             const auto& parameterMatrix = parameterValue->GetWritableMatrix<ElementType>();
             Matrix<ElementType>::ScaleAndAdd(ElementType(weight), *parameterMatrix, *gradientMatrix);
         }
@@ -194,7 +193,7 @@ namespace CNTK
             const auto learningRate = LearningRate(actualMBSize);
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             // don't need to scale to actualMBSize if we are already taking averaged gradient
-            const auto weight = learningRate * m_additionalOptions.l1RegularizationWeight * (GetOptions().GetOrElse(CompatModeK, false) ? 1 : actualMBSize);
+            const auto weight = learningRate * m_additionalOptions.l1RegularizationWeight * (IsCompatibleMode() ? 1 : actualMBSize);
             parameterValue->GetWritableMatrix<ElementType>()->InplaceSoftThreshold(ElementType(weight));
         }
     }
@@ -442,12 +441,11 @@ namespace CNTK
 
             wstringstream stream;
             stream << name;
-            bool compact_mode = GetOptions().GetOrElse(Learner::CompatModeK, false);
 
-            if (compact_mode)
+            if (IsCompatibleMode())
                 stream << L" compactible model (minibatch average gradient)";
             else
-                stream << L" per sample";
+                stream << L" reference minibatch size: " << this->GetRefMinibatchSize();
             wstring prefix = stream.str();
 
             for (auto& writer : m_progressWriters)
@@ -493,13 +491,13 @@ namespace CNTK
     double LearnerMomentumSGD::MomentumValueForMB(const MomentumSchedule& schedule, size_t minibatchSize) const
     {
         double currentMomentum = GetCurrentTrainingParameterValue(schedule);
-        if (GetOptions().GetOrElse(CompatModeK, false))
+        if (IsCompatibleMode())
         {
             //in the literature compatible model, use the momentum as it is
             return currentMomentum;
         }
         //TODO: The unit gain term (1-beta) should stay as it is (currentMomentum) instead of using the following scaled term.
-        return std::pow(currentMomentum, (double) minibatchSize / (double) schedule.GetRefMBSize());
+        return std::pow(currentMomentum, (double) minibatchSize / (double) schedule.GetRefMinibatchSize());
     }
 
     /*virtual*/ void LearnerMomentumSGD::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 

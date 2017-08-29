@@ -85,7 +85,7 @@ def simple_mnist(tensorboard_logdir=None):
         progress_writers.append(TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z))
 
     # Instantiate the trainer object to drive the model training
-    lr = learning_rate_schedule(1, ref_mbsize=1)
+    lr = learning_rate_schedule(1, ref_minibatch_size=1)
     trainer = Trainer(z, (ce, pe), adadelta(z.parameters, lr), progress_writers)
 
     training_session(

@@ -378,16 +378,13 @@ IGNORE_CLASS CNTK::TrainingParameterSchedule;
 #else
 %ignore CNTK::TrainingParameterSchedule::TrainingParameterSchedule(TrainingParameterSchedule<T>&&); 
 %ignore CNTK::TrainingParameterSchedule::operator=;
+%ignore CNTK::TrainingParameterSchedule::Transform;
 #endif
 
 IGNORE_CLASS CNTK::TrainingParameterPerMinibatchSchedule;
-IGNORE_CLASS CNTK::LearningRatePerSampleSchedule;
-IGNORE_CLASS CNTK::LearningRatePerMinibatchSchedule;
 IGNORE_CLASS CNTK::MinibatchSizeSchedule;
 IGNORE_CLASS CNTK::LearningRateSchedule;
 IGNORE_CLASS CNTK::MomentumSchedule;
-IGNORE_CLASS CNTK::MomentumPerSampleSchedule;
-IGNORE_CLASS CNTK::MomentumPerMinibatchSchedule;
 IGNORE_CLASS CNTK::MomentumAsTimeConstantSchedule;
 
 #ifndef SWIGCSHARP
@@ -408,6 +405,11 @@ IGNORE_FUNCTION CNTK::MomentumSGDLearner;
 IGNORE_FUNCTION CNTK::NesterovLearner;
 
 IGNORE_VARIABLE CNTK::DefaultVarianceMomentum;
+
+IGNORE_FUNCTION CNTK::Learner::GetOptions;
+IGNORE_FUNCTION CNTK::Learner::GetContext;
+IGNORE_FUNCTION CNTK::Trainer::GetTrainingContext;
+
 
 IGNORE_FUNCTION CNTK::FSAdaGradLearner;
 IGNORE_FUNCTION CNTK::AdamLearner;

@@ -318,7 +318,7 @@ namespace CNTK
         }
     }
     template <typename T>
-    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::transform(std::function<T(const T&)> func)
+    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::Transform(std::function<T(const T&)> func)
     {
         for (auto& entry : m_schedule)
         {
@@ -415,13 +415,28 @@ namespace CNTK
     CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(double time_constant)
     {
         //momentum constant schedule's reference minibatch size is always per sample: 1
+        //TODO: Need to record the original rate and the reference mbsize so that the unit gain factor can be computed correctly.
         return MomentumSchedule(MomentumFromTimeConstant(time_constant), 1);
     }
 
     CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const MomentumSchedule& schedule)
     {
         MomentumSchedule res(schedule);
-        res.transform(MomentumFromTimeConstant);
+        res.Transform(MomentumFromTimeConstant);
+        return res;
+    }
+
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const std::vector<double>& schedule, size_t epoch_size)
+    {
+        MomentumSchedule res(schedule, epoch_size, 1);
+        res.Transform(MomentumFromTimeConstant);
+        return res;
+    }
+
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epoch_size)
+    {
+        MomentumSchedule res(schedule, epoch_size, 1);
+        res.Transform(MomentumFromTimeConstant);
         return res;
     }
 

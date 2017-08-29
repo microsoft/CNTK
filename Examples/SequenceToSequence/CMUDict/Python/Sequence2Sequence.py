@@ -218,7 +218,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     minibatch_size = 72
     lr = 0.001 if use_attention else 0.005   # TODO: can we use the same value for both?
     learner = fsadagrad(model_train.parameters,
-                        lr       = learning_rate_schedule([lr]*2+[lr/2]*3+[lr/4], ref_mbsize = 1, epoch_size),
+                        lr       = learning_rate_schedule([lr]*2+[lr/2]*3+[lr/4], ref_minibatch_size = 1, epoch_size=epoch_size),
                         momentum = momentum_as_time_constant_schedule(1100),
                         gradient_clipping_threshold_per_sample=2.3,
                         gradient_clipping_with_truncation=True)
@@ -324,7 +324,7 @@ def Evaluator(model, criterion):
     dummy_learner = momentum_sgd(tuple(parameters),
                                  lr = learning_rate_schedule(1),
                                  momentum = momentum_as_time_constant_schedule(0),
-                                 compatible_model = True)
+                                 ref_minibatch_size = 0)
     return Trainer(model, (loss, metric), dummy_learner)
 
 # This computes the metric on the test set.

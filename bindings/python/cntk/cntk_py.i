@@ -92,9 +92,9 @@
 %ignore CNTK::TrainingParameterSchedule(const std::vector<T>&, std::size_t);
 %ignore CNTK::TrainingParameterSchedule::operator=;
 %ignore CNTK::TrainingParameterSchedule::operator[];
-%attribute(CNTK::TrainingParameterSchedule<double>, std::size_t, ref_mbsize, GetRefMBSize, SetRefMBSize);
-%attribute(CNTK::TrainingParameterSchedule<std::size_t>, std::size_t, ref_mbsize, GetRefMBSize, SetRefMBSize);
-
+%attribute(CNTK::TrainingParameterSchedule<double>, std::size_t, ref_minibatch_size, GetRefMinibatchSize, SetRefMinibatchSize);
+%attribute(CNTK::TrainingParameterSchedule<std::size_t>, std::size_t, ref_minibatch_size, GetRefMinibatchSize, SetRefMinibatchSize);
+%attribute(CNTK::Learner, std::size_t, ref_minibatch_size, GetRefMinibatchSize, SetRefMinibatchSize);
 
 %ignore CNTK::GetCheckedMode;
 
@@ -112,17 +112,16 @@
 
 %rename(l1_regularization_weight) CNTK::AdditionalLearningOptions::l1RegularizationWeight;
 %rename(l2_regularization_weight) CNTK::AdditionalLearningOptions::l2RegularizationWeight;
-%rename(unknown_ref_mbsize) CNTK::TrainingParameterSchedule<double>::UnkownRefMBSize;
-%rename(unknown_ref_mbsize) CNTK::TrainingParameterSchedule<std::size_t>::UnkownRefMBSize;
+%rename(unspecified_ref_minibatch_size) CNTK::TrainingParameterSchedule<double>::UnspecifiedRefMBSize;
+%rename(unspecified_ref_minibatch_size) CNTK::TrainingParameterSchedule<std::size_t>::UnspecifiedRefMBSize;
 %rename(REF_MB_SIZE) CNTK::Learner::RefMBSizeK;
 %rename(FUNCTION) CNTK::Learner::FunctionK;
 %rename(RATE) CNTK::Learner::RateK;
 %rename(LEARNING_RATE_SCHEDULE)  CNTK::Learner::LearningRateScheduleK;
 %rename(MOMENTUM_SCHEDULE) CNTK::Learner::MomentumScheduleK;
 %rename(MOMENTUM_VARIANCE_SCEDULE) CNTK::Learner::MomentumVarianceScheduleK;
-%rename(COMPATIBLE_MODE)  CNTK::Learner::CompatModeK;
+%rename(unspecified_ref_minibatch_size)  CNTK::Learner::UnspecifiedRefMBSize;
 %rename(options) CNTK::Learner::GetOptions;
-%attribute(CNTK::Learner, bool, compatible_mode, IsCompatibleModel, SetCompatibleModel);
 
 %rename(ndcg_at_1) CNTK::NDCGAt1;
 

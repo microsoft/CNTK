@@ -32,6 +32,11 @@ LR_SCHEDULE_PARAMS = [
         ((0.2, 4), [0.2, 0.2, 0.2, 0.2], 4),
         (([0.2,0.4], 7, 5), [0.2]*5+[0.4]*20, 7),
         (([(3,0.2),(2,0.4),(1,0.8)], 13, 5), [0.2]*15+[0.4]*10+[0.8]*20, 13),
+        #not specifying reference mb sizes
+        ((0.2, None), [0.2], 0),
+        ((0.2, None), [0.2, 0.2, 0.2, 0.2], 0),
+        (([0.2,0.4], None, 5), [0.2]*5+[0.4]*20, 0),
+        (([(3,0.2),(2,0.4),(1,0.8)], None, 5), [0.2]*15+[0.4]*10+[0.8]*20, 0),
         ]
 
 MOMENTUM_SCHEDULE_PARAMS = [
@@ -51,10 +56,10 @@ LEARNER_LAMBDAS = [
     lambda params: C.sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch)),
     lambda params: C.momentum_sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9))]
 
-@pytest.mark.parametrize("params, expectation, ref_mbsize", LR_SCHEDULE_PARAMS)
-def test_learning_rate_schedule(params, expectation, ref_mbsize):
+@pytest.mark.parametrize("params, expectation, ref_minibatch_size", LR_SCHEDULE_PARAMS)
+def test_learning_rate_schedule(params, expectation, ref_minibatch_size):
     l = learning_rate_schedule(*params)
-    assert l.ref_mbsize == ref_mbsize
+    assert l.ref_minibatch_size == ref_minibatch_size
     assert [l[i] for i in range(len(expectation))] == expectation
 
 def sweep_based_schedule_fails():
@@ -65,16 +70,16 @@ def test_momentum_schedule():
     m = 2500
     ms = C.momentum_as_time_constant_schedule([m])
     #all the timeconstant schedule is for per sample
-    assert ms.ref_mbsize == 1
+    assert ms.ref_minibatch_size == 1
     assert ms[0] ==  np.exp(-1.0 / np.asarray(m))
 
     ms = C.momentum_as_time_constant_schedule(m)
-    assert ms.ref_mbsize == 1
+    assert ms.ref_minibatch_size == 1
     assert ms[0] ==  np.exp(-1.0 / np.asarray(m))
 
     mlist = [980, 520]
     msl = C.momentum_as_time_constant_schedule(mlist)
-    assert ms.ref_mbsize == 1
+    assert ms.ref_minibatch_size == 1
     expected = np.exp(-1.0 / np.asarray(mlist))
     assert all(mi == ei for mi,ei in zip(msl,expected))
 
@@ -91,39 +96,71 @@ def test_learner_init():
 
     learner = sgd(res.parameters, lr=learning_rate_schedule(0.1, 25))
     #if reference size is set, it must not in compatible mode
-    assert learner.compatible_mode == False #the deprecated per sample schedule should not use compatible mode
+    assert learner.ref_minibatch_size == 25 #the deprecated per sample schedule should not use compatible mode
     assert learner.learning_rate() == 0.1
 
+    #if reference size is not specified, it will depend on the learner to specify the ref_minibatch_size  which by default is 1 for per sample learning
     learner = sgd(res.parameters, lr=learning_rate_schedule(0.1))
-    #if reference size is not specified, it will depend on the learner to specify the compatible mode which by default is false
-    assert learner.compatible_mode == False #the deprecated per sample schedule should not use compatible mode
+    assert learner.is_compatible_mode() == False #the deprecated per sample schedule should not use compatible mode
+    assert learner.ref_minibatch_size == 1 #the default is per sample learning
     assert learner.learning_rate() == 0.1
 
-    learner = sgd(res.parameters, lr=learning_rate_schedule(0.1), compatible_mode=True)
-    #if reference size is not specified, it will depend on the learner to specify the compatible mode which by default is false
-    assert learner.compatible_mode == True #the deprecated per sample schedule should not use compatible mode
+    #if reference size is not specified, it will depend on the learner to specify the ref_minibatch_size; here we specify it to be per minibatch batch
+    learner = sgd(res.parameters, lr=learning_rate_schedule(0.1), ref_minibatch_size=0) #0 for per minibatch learning
+    assert learner.is_compatible_mode() == True #the deprecated per sample schedule should not use compatible mode
+    assert learner.ref_minibatch_size == 0 #per minibatch learning
     assert learner.learning_rate() == 0.1
 
-    learner = sgd(res.parameters, lr=learning_rate_schedule(0.1), compatible_mode=False)
+    #now we allow to specify the learning rate directly with numbers in simple case; and the default is per sample learning
+    learner = sgd(res.parameters, lr=0.1)
     #if reference size is not specified, it will depend on the learner to specify the compatible mode which by default is false
-    assert learner.compatible_mode == False #the deprecated per sample schedule should not use compatible mode
+    assert learner.is_compatible_mode()== False #the deprecated per sample schedule should not use compatible mode
+    assert learner.ref_minibatch_size == 1  # the default is per sample learning
     assert learner.learning_rate() == 0.1
+
+    #now we allow to specify the learning rate directly with numbers in simple case; and per minibatch learning is enabled by setting the ref_minibatch_size =0
+    #however, this usage is discourage, we will like the users to explicitly specify which minibatch size their learning parameters are design for
+    #so that CNTK can adjust the underlying mechanism accordingly
+    learner = sgd(res.parameters, lr=0.1, ref_minibatch_size=0)
+    #if reference size is not specified, it will depend on the learner to specify the compatible mode which by default is false
+    assert learner.is_compatible_mode()== True #the deprecated per sample schedule should not use compatible mode
+    assert learner.ref_minibatch_size == 0
+    assert learner.learning_rate() == 0.1
+
 
     #for backcompatibility test
-    learner = sgd(res.parameters, lr=learning_rate_schedule(0.1), use_mean_gradient=True)
-    assert learner.compatible_mode == True #the deprecated use_mean_gradient_value should  use compatible mode
+    learner = sgd(res.parameters, lr=learning_rate_schedule(0.1), ref_minibatch_size=0)
+    assert learner.is_compatible_mode() == True #the deprecated use_mean_gradient_value should  use compatible mode
     assert learner.learning_rate() == 0.1
+    assert learner.ref_minibatch_size == 0
 
     #for backcompatibility test
+    # this will be deprecated in future version
     learner = sgd(res.parameters, lr=learning_rate_schedule(0.1, UnitType.sample))
-    assert learner.compatible_mode == False #the deprecated per sample schedule should not use compatible mode
+    assert learner.is_compatible_mode() == False #the deprecated per sample schedule should not use compatible mode
     assert learner.learning_rate() == 0.1
+    assert learner.ref_minibatch_size == 1
 
-    # for backcompatibility test
+    #for backcompatibility test
+    # this will be deprecated in future version
+    #The UnitType will provide per minibatch instruction for the learner
+    #this will be deprecated in future version
+    learner = sgd(res.parameters, lr=learning_rate_schedule(0.1, UnitType.minibatch))
+    assert learner.is_compatible_mode() == True #the deprecated per sample schedule should not use compatible mode
+    assert learner.learning_rate() == 0.1
+    assert learner.ref_minibatch_size == 0
+
+    #for backcompatibility test, in reset learning rate, the learner won't receive the reference minibatch size from the schedule
+    #user will need to specify the reference minibatch size explicitly
+    #this will be deprecated in future version
+    learner = sgd(res.parameters, lr=0.1)
     learner.reset_learning_rate(learning_rate_schedule([1,2,3], UnitType.minibatch))
-    assert learner.compatible_mode == True #the deprecated minibatch schedule should use compactible mode
+    assert learner.is_compatible_mode() == False #the deprecated minibatch schedule should use compactible mode
     assert learner.learning_rate() == 1.0
-
+    assert learner.ref_minibatch_size == 1 #default is person
+    learner.ref_minibatch_size = 0 #reset to be per minibatch
+    assert learner.ref_minibatch_size == 0
+    assert learner.is_compatible_mode() == True
 
     learner_parameter = learner.parameters
     from cntk.variables import Parameter

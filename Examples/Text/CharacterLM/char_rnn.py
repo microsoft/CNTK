@@ -157,7 +157,7 @@ def train_lm(training_file, epochs, max_num_minibatches):
     errs = classification_error(z, label_sequence)
 
     # Instantiate the trainer object to drive the model training
-    lr_per_sample = learning_rate_schedule(0.001, ref_mbsize = 1)
+    lr_per_sample = learning_rate_schedule(0.001, ref_minibatch_size = 1)
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     clipping_threshold_per_sample = 5.0
     gradient_clipping_with_truncation = True

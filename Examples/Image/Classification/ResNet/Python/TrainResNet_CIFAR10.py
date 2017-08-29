@@ -82,7 +82,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
 
     # Set learning parameters
     lr_per_sample = [lr/minibatch_size for lr in lr_per_mb]
-    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, ref_mbsize=1)
+    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, ref_minibatch_size=1)
     mm_schedule = momentum_schedule(0.9, minibatch_size)
 
     # progress writers

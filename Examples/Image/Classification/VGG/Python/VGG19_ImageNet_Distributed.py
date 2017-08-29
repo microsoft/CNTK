@@ -141,7 +141,7 @@ def create_trainer(network, epoch_size, num_quantization_bits, progress_printer)
     l2_reg_weight     = 0.0005 # CNTK L2 regularization is per sample, thus same as Caffe
 
     # Create learner
-    local_learner = C.learners.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight, compatible_mode=True)
+    local_learner = C.learners.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight, ref_minibatch_size = 0)
     # Since we reuse parameter settings (learning rate, momentum) from Caffe, we set unit_gain to False to ensure consistency
     parameter_learner = data_parallel_distributed_learner(
         local_learner,
