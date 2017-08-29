@@ -7,18 +7,17 @@
 from __future__ import print_function
 import os
 import argparse
-
-import numpy as np
 import cntk as C
+import numpy as np
+
 from cntk import cross_entropy_with_softmax, classification_error, reduce_mean
-from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-import cntk.io.transforms as xforms
 from cntk import Trainer, cntk_py
+from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk.debugging import set_computation_network_trace_level
-from cntk.logging import *
 from cntk.debugging import *
+from cntk.logging import *
 from resnet_models import *
+import cntk.io.transforms as xforms
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -27,11 +26,11 @@ data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 # model dimensions
 image_height = 32
 image_width  = 32
-num_channels = 3  # RGB
+num_channels = 3 # RGB
 num_classes  = 10
 
 # Define the reader for both training and evaluation action.
-def create_reader(map_file, mean_file, train):
+def create_image_mb_source(map_file, mean_file, train, total_number_of_samples):
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         raise RuntimeError("File '%s' or '%s' does not exist. Please run install_cifar10.py from DataSets/CIFAR-10 to fetch them" %
                            (map_file, mean_file))
@@ -40,7 +39,7 @@ def create_reader(map_file, mean_file, train):
     transforms = []
     if train:
         transforms += [
-            xforms.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio') # train uses jitter
+            xforms.crop(crop_type='randomside', side_ratio=(0.8, 1.0), jitter_type='uniratio') # train uses jitter
         ]
     transforms += [
         xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
@@ -49,7 +48,10 @@ def create_reader(map_file, mean_file, train):
     # deserializer
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
         features=StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-        labels=StreamDef(field='label', shape=num_classes))))   # and second as 'label'
+        labels=StreamDef(field='label', shape=num_classes))),     # and second as 'label'
+        randomize=train,
+        max_samples=total_number_of_samples,
+        multithreaded_deserializer=True)
 
 
 # Train and evaluate the network.
@@ -65,10 +67,10 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     # create model, and configure learning parameters
     if network_name == 'resnet20':
         z = create_cifar10_model(input_var, 3, num_classes)
-        lr_per_mb = [1.0]*80+[0.1]*40+[0.01]
+        lr_per_mb = [1.0]*80 + [0.1]*40 + [0.01]
     elif network_name == 'resnet110':
         z = create_cifar10_model(input_var, 18, num_classes)
-        lr_per_mb = [0.1]*1+[1.0]*80+[0.1]*40+[0.01]
+        lr_per_mb = [1.0]*80 + [0.1]*40 + [0.01]
     else:
         raise RuntimeError("Unknown model name!")
 
@@ -95,7 +97,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
 
     # trainer object
     learner = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
-                           l2_regularization_weight = l2_reg_weight)
+                           l2_regularization_weight=l2_reg_weight)
     trainer = Trainer(z, (ce, pe), learner, progress_writers)
 
     # define mapping from reader streams to network inputs
@@ -132,13 +134,13 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
         stop_profiler()
 
     # Evaluation parameters
-    test_epoch_size     = 10000
+    test_epoch_size = 10000
     minibatch_size = 16
 
     # process minibatches and evaluate the model
-    metric_numer    = 0
-    metric_denom    = 0
-    sample_count    = 0
+    metric_numer = 0
+    metric_denom = 0
+    sample_count = 0
 
     while sample_count < test_epoch_size:
         current_minibatch = min(minibatch_size, test_epoch_size - sample_count)
@@ -159,7 +161,8 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
-    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='160')
+    parser.add_argument('-e', '--epochs', help='total epochs', type=int, required=False, default='160')
+    parser.add_argument('-es', '--epoch_size', help='Size of epoch in samples', type=int, required=False, default='50000')
     parser.add_argument('-p', '--profiler_dir', help='directory for saving profiler output', required=False, default=None)
     parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir', help='Directory where TensorBoard logs should be created', required=False, default=None)
     parser.add_argument('-datadir', '--datadir', help='Data directory where the CIFAR dataset is located', required=False, default=data_path)
@@ -168,7 +171,8 @@ if __name__=='__main__':
     parser.add_argument('-genheartbeat', '--genheartbeat', help="Turn on heart-beat for philly", action='store_true', default=False)
 
     args = vars(parser.parse_args())
-    epochs = int(args['epochs'])
+    epochs = args['epochs']
+    epoch_size = args['epoch_size']
     network_name = args['network']
 
     model_dir = args['outputdir']
@@ -177,9 +181,8 @@ if __name__=='__main__':
 
     data_path = args['datadir']
 
-    reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
-    reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
+    reader_train = create_image_mb_source(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True, total_number_of_samples=epochs * epoch_size)
+    reader_test = create_image_mb_source(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False, total_number_of_samples=C.io.FULL_DATA_SWEEP)
 
-    epoch_size = 50000
     train_and_evaluate(reader_train, reader_test, network_name, epoch_size, epochs, args['profiler_dir'], model_dir,
-                       args['logdir'], args['tensorboard_logdir'], gen_heartbeat = args['genheartbeat'])
+                       args['logdir'], args['tensorboard_logdir'], gen_heartbeat=args['genheartbeat'])
