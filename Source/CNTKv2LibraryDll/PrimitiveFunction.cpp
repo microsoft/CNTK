@@ -833,7 +833,9 @@ namespace CNTK
                         {
                             assert(m_inputs.size() == 2);
                             auto& strides = m_attributes[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
-                            auto& dilation = m_attributes[PrimitiveFunction::AttributeNameDilation].Value<NDShape>();
+                            NDShape dilation = { 1 };
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameDilation))
+                                dilation = m_attributes[PrimitiveFunction::AttributeNameDilation].Value<NDShape>();
                             auto& lowerPad = m_attributes[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
                             auto& upperPad = m_attributes[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
                             NDShape tmpShape = NDShape::Unknown();
