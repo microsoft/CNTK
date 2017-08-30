@@ -224,15 +224,17 @@ namespace CNTK
                 let& arg = args[0];
                 let& scale = args[1];
                 let& bias = args[2];
-                // BUGBUG: TODO: implement aggregation
+                // BUGBUG: TODO: implement aggregation of stats
                 let& meanTmp = args[6];
                 let& stdDevOverScaleTmp = args[7];
-                let& normedTmp = args[8]; // zero-mean/unit-variance intermediate goes here  --TODO: this can be optimized away by a joint kernel
+                let& normedTmp = args[8]; // result before adding the bias goes here
                 // mean
                 NDArrayView::NumericOperation({ arg }, (double)meanTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, meanTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                // variance  --TODO: do we need a reduction opSqrSum, or an opDivBySqrt?
+                // standard deviation  --TODO: do we need a reduction opSqrSum, or an opDivBySqrt?
                 NDArrayView::NumericOperation({ arg, meanTmp }, (double)stdDevOverScaleTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, stdDevOverScaleTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
                 NDArrayView::NumericOperation({ stdDevOverScaleTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, stdDevOverScaleTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // note: in-place
+                //meanTmp->LogToFile(L"meanTmp");
+                //stdDevOverScaleTmp->LogToFile(L"stdDevOverScaleTmp");
                 //double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                 //if (epsilon > 0) // TODO: are nullary ops actually implemented??
                 //    NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, stdDevOverScaleTmp, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
@@ -241,6 +243,8 @@ namespace CNTK
                 // normalize into normedTmp --TODO: use a single kernel for this
                 NDArrayView::NumericOperation({ arg, meanTmp },         1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opDifference, normedTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
                 NDArrayView::NumericOperation({ normedTmp, stdDevOverScaleTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, normedTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // in-place
+                //normedTmp->LogToFile(L"normedTmp", stderr);
+                // add bias
                 NDArrayView::NumericOperation({ normedTmp, bias },                 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum,                out, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
             }
             break;
@@ -507,12 +511,17 @@ namespace CNTK
                 {
                     let& scale = inputValues[1];
                     let& normedTmp = inputValues[8]; // (x - mean) / sigma * scale
+                    // gradient = arg1 * normedTmp / scale
+                    //arg1->LogToFile(L"bn gradientFromTop", stderr);
+                    //normedTmp->LogToFile(L"bn normedTmp", stderr);
+                    //scale->LogToFile(L"bn scale", stderr);
                     NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),
                                                     const_cast<NDArrayView*>(normedTmp)->shared_from_this(),
                                                     const_cast<NDArrayView*>(scale)->shared_from_this() },
                                                   /*alpha=*/1.0,
                                                   Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithQuotient, gradient, beta,
                                                   Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                    //gradient->LogToFile(L"-> bn scale gradient", stderr);
                     handled = true;
                 }
                 else if (i == 2) // bias

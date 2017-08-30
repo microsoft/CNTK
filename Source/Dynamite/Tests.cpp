@@ -47,19 +47,20 @@ static NDArrayViewPtr TestTensor(const NDShape& shape, double scale, const char*
     };
     auto res = scale > 0 ? randT(/*mean=*/0., /*stdDev=*/scale) : constT(scale); // (RandomNormal will fail for scale=0)
     // some special cases
-    if (strstr(opName, "Log")) // Log requires positive numbers
+    if (strstr(opName, "Log") && !strstr(opName, "LogSum")) // Log requires positive numbers -> use abs(x) + 0.1
     {
         res = NDArrayView::NumericOperation({ res }, 1.0, L"Abs");
-        res = NDArrayView::NumericOperation({ /*min=*/constT(1e-4), /*max=*/res, res }, 1.0, L"Clip");
+        res = NDArrayView::NumericOperation({ constT(0.1) }, 1.0, L"Copy", nullptr, /*beta=*/1.0);
     }
-    else if (strcmp(opName, "Pow") == 0 && argIndex == 0) // Pow requires non-negative base
+    else if (strcmp(opName, "Pow") == 0 && argIndex == 0) // Pow requires non-negative base -> use abs(x) + 1
     {
         res = NDArrayView::NumericOperation({ res }, 1.0, L"Abs");
+        res = NDArrayView::NumericOperation({ constT(1.0) }, 1.0, L"Copy", nullptr, /*beta=*/1.0);
     }
-    else if (strcmp(opName, "Reciprocal") == 0) // Reciprocal should not use too small a number
+    else if (strcmp(opName, "Reciprocal") == 0) // Reciprocal should not use too small a number -> use abs(x) + 0.1
     {
         res = NDArrayView::NumericOperation({ res }, 1.0, L"Abs");
-        res = NDArrayView::NumericOperation({ /*min=*/constT(1e-2), /*max=*/res, res }, 1.0, L"Clip");
+        res = NDArrayView::NumericOperation({ constT(0.1) }, 1.0, L"Copy", nullptr, /*beta=*/1.0);
     }
     return res;
 }
@@ -93,12 +94,14 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     let bnRunningCount  = TestParameter(NDShape{}        , 0, "bnRunningCount",  0, dataType, device);
     let batchNormFwd = [&](const vector<NDArrayViewPtr>& argValues)
     {
+        //batchMean->LogToFile(L"batchMean", stderr);
+        //batchInvStd->LogToFile(L"batchInvStd", stderr);
         return ((argValues[0] - batchMean) * batchInvStd) * argValues[1] + argValues[2];
     };
     // definition of all tests
 #define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode); }, #opCode))
 #define RedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0/denom, L"Copy", make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L#redOpCode); }, "Reduce" #redOpCode))
-#define OpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum"); }, #opCode "-ReduceSum"))
+#define OpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum"); }, #opCode "|Reduce"))
     vector<TensorViewTest> tests =
     {
         // BatchNorm. This is tricky, since it only makes sense when batching.
@@ -202,16 +205,27 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             auto batchSqrMean = make_shared<NDArrayView>(batchItems[0]->GetDataType(), batchItems[0]->GetStorageFormat(), batchItems[0]->Shape(), device);
             let alpha = (double)batchMean->Shape().TotalSize() / (double)batch->Shape().TotalSize();
             NDArrayView::NumericOperation({ batch }, alpha, L"Copy", batchMean);
-            NDArrayView::NumericOperation({ batch }, alpha, L"Sqr",  batchSqrMean);
+            NDArrayView::NumericOperation({ batch - batchMean }, alpha, L"Sqr",  batchSqrMean);
             let minusHalf = make_shared<NDArrayView>(-0.5, batchItems[0]->GetDataType(), NDShape{ }, device, true);
             batchInvStd = NDArrayView::NumericOperation({ batchSqrMean, minusHalf }, 1.0, L"Pow"); // x^{-0.5}
+            //batchMean->LogToFile(L"batchMean", stderr);
+            //batchInvStd->LogToFile(L"batchInvStd", stderr);
+            //auto batchInvStdMin = make_shared<NDArrayView>(batchItems[0]->GetDataType(), batchItems[0]->GetStorageFormat(), NDShape{}, device);
+            //NDArrayView::NumericOperation({ batchInvStd }, 1, L"Copy", batchInvStdMin, 0, L"Min");
+            //batchInvStdMin->LogToFile(L"batchInvStdMin", stderr);
         }
         // reference computation (NDArrayView)
         NDArrayViewPtr refVal;
-        for (size_t n = 0; n < N; n++) // aggregate over all samples in the MB
+        for (size_t n = 0; n < N; n++) // aggregate over all samples in the MB with alternating sign
         {
             let refVal1 = test.op.first(allArgValues[n]);
-            refVal = n == 0 ? refVal1 : refVal + refVal1;
+            refVal =
+                if_x (n == 0)
+                    refVal1
+                else_x if_x (n&1)
+                    refVal - refVal1
+                else_x
+                    refVal + refVal1;
 #if 0
             for (let& arg : argValues)
                 arg->LogToFile(L"argVal", stderr);
@@ -238,14 +252,20 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                     fprintf(stderr, " %S ", arg.Shape().AsString().c_str());
             }
         }
-        // Dynamite computation. Result is sum over all batch items in this test.
+        // Dynamite computation. Result is sum with alternating sign over all batch items in this test.
         let functionUnderRest = [&](const vector<vector<Variable>>& testArgs) -> Variable
         {
             Variable res;
             for (size_t n = 0; n < N; n++) // aggregate over all samples in the MB
             {
                 let itemRes = test.f(testArgs[n]);
-                res = n == 0 ? itemRes : res + itemRes;
+                res =
+                    if_x (n == 0)
+                        itemRes
+                    else_x if_x (n&1)
+                        res - itemRes
+                    else_x
+                        res + itemRes;
             }
             return res;
         };
@@ -256,7 +276,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         let avSqrErr = AvSqrErr(resVal, refVal, dataType, device);
         if (avSqrErr > 1e-5)
         {
-            fprintf(stderr, "################# FAILED: avSqrErr = %.2f\n", avSqrErr);
+            fprintf(stderr, ">>>>>>>>>> FWD FAILED: avSqrErr = %.10f\n", avSqrErr);
             numFailed++;
         }
         // gradient check
@@ -333,7 +353,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                 // check result
                 let relErr = (perturbationBasedDelta == gradientBasedDelta) ? 0 : fabs(((perturbationBasedDelta - gradientBasedDelta) / perturbationBasedDelta));
                 if (relErr > 1e-5)
-                    fprintf(stderr, "\t\t\t\tgradient[%d] err=%.10f%% (%.20f, %.20f)\n", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
+                    fprintf(stderr, ">>>>>>>>>> BWD[%d] FAILED: err=%.10f%% (numeric=%.20f, symbolic=%.20f)\n", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
             }
         }
     } // loop over tests
