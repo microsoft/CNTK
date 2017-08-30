@@ -85,7 +85,7 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
-    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opExponentialLinearUnit, opStableSigmoid,
+    opSigmoid, opTanh, opSqr, opSqrt, opRSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opExponentialLinearUnit, opStableSigmoid,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative, opStableSigmoidDerivative,
     // binary
@@ -111,6 +111,7 @@ enum ElementWiseOperator
     opElementwiseProductWithPowExponentDerivative, /* a * b * log(c) */
     opElementwiseProductWithPowBaseDerivative,  /* a * c * pow(b, c-1) */
     opAxBplusC, /* a * b + c */
+    opAminusCoverB, /* (a-c) / b + c */
     // quaternary
     opAxBplusCxD, /* a * b + c * d */
     // Note: not all that's implemented in CNTK ComputationNodes has a TensorView opcode yet
@@ -131,6 +132,7 @@ enum ElementWiseOperator
     Macro(Tanh);                  \
     Macro(Sqr);                   \
     Macro(Sqrt);                  \
+    Macro(RSqrt);                 \
     Macro(Exp);                   \
     Macro(Log);                   \
     Macro(LinearRectifier);       \
@@ -182,7 +184,8 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithQuotient);              \
     Macro(ElementwiseProductWithPowExponentDerivative); \
     Macro(ElementwiseProductWithPowBaseDerivative);     \
-    Macro(AxBplusC);
+    Macro(AxBplusC);                                    \
+    Macro(AminusCoverB);
 
 #define ForAllQuaternaryOps(Macro)                      \
     Macro(AxBplusCxD);

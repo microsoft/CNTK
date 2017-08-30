@@ -263,6 +263,7 @@ DefUnaryOp(Sigmoid, Sigmoid(a));
 DefUnaryOp(Tanh, tanh_(a));
 DefUnaryOp(Sqr, Sqr(a));
 DefUnaryOp(Sqrt, Sqrt(a));
+DefUnaryOp(RSqrt, 1/Sqrt(a));
 DefUnaryOp(Exp, exp_(a));
 DefUnaryOp(Log, ClippedLog(a));
 DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
@@ -333,6 +334,7 @@ DefTernaryOp(ElementwiseProductWithQuotient, a * b * OpReciprocal(c));
 DefTernaryOp(ElementwiseProductWithPowExponentDerivative, c <= 0 ? 0 : a * b * log_(c)); // same behavior as other toolkits
 DefTernaryOp(ElementwiseProductWithPowBaseDerivative, a * c * OpPow(b, c - 1)); // Using the output of pow would be faster but it requires a quaternary op and users will likely only use pow in forward mode
 DefTernaryOp(AxBplusC, a * b + c);
+DefTernaryOp(AminusCoverB, (a - c) / b);
 
 #pragma pop_macro("DefTernaryOp")
 
