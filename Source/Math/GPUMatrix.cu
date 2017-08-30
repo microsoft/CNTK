@@ -5110,6 +5110,26 @@ static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE dev
     return p;
 }
 
+
+// perform nullary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
+// This binds the N-ariness to a template parameter N, and gets the data pointers out from the matrix objects.
+template <class ElemType>
+void GPUMatrix<ElemType>::TensorOp(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                   const array<size_t, 1>& offsets,
+                                   const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 1>& regularStrides,
+                                   const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 1>& reducingStrides)
+{
+    if (reductionOp != ElementWiseOperator::opSum    &&
+        reductionOp != ElementWiseOperator::opLogSum &&
+        reductionOp != ElementWiseOperator::opMin    &&
+        reductionOp != ElementWiseOperator::opMax    &&
+        reductionOp != ElementWiseOperator::opElementwiseProduct)
+        InvalidArgument("TensorOp: Nullary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
+
+    // regular case
+    return TensorOpN<ElemType, 1>(beta, array<ElemType*, 1>{Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+}
+
 // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This binds the N-ariness to a template parameter N, and gets the data pointers out from the matrix objects.
 template <class ElemType>
@@ -5205,6 +5225,22 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
     if (a.GetComputeDeviceId() != GetComputeDeviceId() || b.GetComputeDeviceId() != GetComputeDeviceId() || c.GetComputeDeviceId() != GetComputeDeviceId())
         InvalidArgument("All matrices must be on the same GPU");
     return TensorOpN<ElemType, 4>(beta, array<ElemType*, 4>{a.Data(), b.Data(), c.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+}
+
+// perform quaternary operation 'op' on a, and c giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
+template <class ElemType>
+void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& c, const GPUMatrix<ElemType>& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                   const array<size_t, 5>& offsets,
+                                   const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 5>& regularStrides,
+                                   const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 5>& reducingStrides)
+{
+    if (reductionOp != ElementWiseOperator::opSum)
+        InvalidArgument("TensorOp: The only permitted ternary reduction operation is opSum.");
+
+    a.PrepareDevice();
+    if (a.GetComputeDeviceId() != GetComputeDeviceId() || b.GetComputeDeviceId() != GetComputeDeviceId() || c.GetComputeDeviceId() != GetComputeDeviceId() || d.GetComputeDeviceId() != GetComputeDeviceId())
+        InvalidArgument("All matrices must be on the same GPU");
+    return TensorOpN<ElemType, 5>(beta, array<ElemType*, 5>{a.Data(), b.Data(), c.Data(), d.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 template <class ElemType>

@@ -332,8 +332,21 @@ DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
 DefTernaryOp(ElementwiseProductWithQuotient, a * b * OpReciprocal(c));
 DefTernaryOp(ElementwiseProductWithPowExponentDerivative, c <= 0 ? 0 : a * b * log_(c)); // same behavior as other toolkits
 DefTernaryOp(ElementwiseProductWithPowBaseDerivative, a * c * OpPow(b, c - 1)); // Using the output of pow would be faster but it requires a quaternary op and users will likely only use pow in forward mode
+DefTernaryOp(AxBplusC, a * b + c);
 
 #pragma pop_macro("DefTernaryOp")
+
+#pragma push_macro("DefQuaternaryOp")
+#define DefQuaternaryOp(op, expr)                                        \
+    template <class ElemType>                                            \
+    DECL ElemType Op##op(ElemType a, ElemType b, ElemType c, ElemType d) \
+    {                                                                    \
+        return expr;                                                     \
+    }
+
+DefQuaternaryOp(AxBplusCxD, a * b + c * d);
+
+#pragma pop_macro("DefQuaternaryOp")
 
 }}}
 #pragma pop_macro("DECL")

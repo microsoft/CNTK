@@ -244,6 +244,20 @@ static bool CheckDifferentObject(const TensorView<ElemType>& a, const TensorView
 }
 
 template <class ElemType>
+void TensorView<ElemType>::DoNullaryOpOf(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
+{
+    // A nullary op cannot reduce, but we keep it regular anyways.
+    // prepare all tensor descriptor information as needed for execution
+    array<size_t, 1> offsets;
+    array<SmallVector<ptrdiff_t>, 1> regularStrides, reducingStrides;
+    SmallVector<size_t> regularOpDims, reducingOpDims;
+    PrepareTensorOperands<ElemType, 1>(array<TensorShape, 1>{GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+    // now perform the operation
+    GetSOB().TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+}
+
+template <class ElemType>
 void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
 {
     // static int cc = 0; if (cc++ == 0)
@@ -374,6 +388,21 @@ void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, con
         CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this) && CheckDifferentObject(c, *this);
 
     GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+}
+
+template <class ElemType>
+void TensorView<ElemType>::DoQuaternaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
+{
+    array<size_t, 5> offsets;
+    array<SmallVector<ptrdiff_t>, 5> regularStrides, reducingStrides;
+    SmallVector<size_t> regularOpDims, reducingOpDims;
+    PrepareTensorOperands<ElemType, 5>(array<TensorShape, 5>{a.GetShape(), b.GetShape(), c.GetShape(), d.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+    // output cannot be input when reducing
+    if (reducingOpDims.size() > 0)
+        CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this) && CheckDifferentObject(c, *this) && CheckDifferentObject(d, *this);
+
+    GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), d.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 template <class ElemType>

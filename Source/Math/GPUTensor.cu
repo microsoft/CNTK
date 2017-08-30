@@ -261,6 +261,18 @@ struct TensorOps
             return 0; // (failure)
         }
     }
+    static __device__ ElemType Compute(const FixedArray<ElemType*, 5>& pointers, ElementWiseOperator op)
+    {
+#define CaseQuaternaryTensorOp(oper)       \
+    case ElementWiseOperator::op##oper: \
+        return Op##oper(*(pointers[0]), *(pointers[1]), *(pointers[2]), *(pointers[3])) // reading each time, which saves mem accesses for OpCond
+        switch (op)
+        {
+            ForAllQuaternaryOps(CaseQuaternaryTensorOp);
+        default:
+            return 0; // (failure)
+        }
+    }
 };
 
 // ----------------------------------------------------------------------------
@@ -1224,6 +1236,10 @@ void TensorOpN(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, Elem
 // explicit instantiations--these are being called from GPUMatrix.cu
 //------------------------------------------------------------------------
 
+template void TensorOpN<float, 1>(float beta, array<float*, 1> pointers, float alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                  const array<size_t, 1>& offsets,
+                                  const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 1>& regularStrides,
+                                  const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 1>& reducingStrides);
 template void TensorOpN<float, 2>(float beta, array<float*, 2> pointers, float alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                   const array<size_t, 2>& offsets,
                                   const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
@@ -1236,6 +1252,14 @@ template void TensorOpN<float, 4>(float beta, array<float*, 4> pointers, float a
                                   const array<size_t, 4>& offsets,
                                   const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                                   const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+template void TensorOpN<float, 5>(float beta, array<float*, 5> pointers, float alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                  const array<size_t, 5>& offsets,
+                                  const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 5>& regularStrides,
+                                  const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 5>& reducingStrides);
+template void TensorOpN<double, 1>(double beta, array<double*, 1> pointers, double alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                   const array<size_t, 1>& offsets,
+                                   const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 1>& regularStrides,
+                                   const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 1>& reducingStrides);
 template void TensorOpN<double, 2>(double beta, array<double*, 2> pointers, double alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                    const array<size_t, 2>& offsets,
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
@@ -1248,6 +1272,10 @@ template void TensorOpN<double, 4>(double beta, array<double*, 4> pointers, doub
                                    const array<size_t, 4>& offsets,
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+template void TensorOpN<double, 5>(double beta, array<double*, 5> pointers, double alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                   const array<size_t, 5>& offsets,
+                                   const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 5>& regularStrides,
+                                   const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 5>& reducingStrides);
 
 template void LaunchUnaryTensorOp(float beta, const float* pa, float* pb, float alpha, ElementWiseOperator op, size_t regularOpDim);
 template void LaunchUnaryTensorOp(double beta, const double* pa, double* pb, double alpha, ElementWiseOperator op, size_t regularOpDim);

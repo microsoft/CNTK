@@ -450,6 +450,9 @@ namespace CNTK
         case DataType::Float:
             switch (inputs.size())
             {
+            case 0:
+                out->WritableNativeTensorView<float>()->DoNullaryOpOf((float)beta, (float)alpha, op, reductionOp);
+                break;
             case 1:
                 out->WritableNativeTensorView<float>()->DoUnaryOpOf((float)beta, *inputs[0]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
@@ -459,6 +462,9 @@ namespace CNTK
             case 3:
                 out->WritableNativeTensorView<float>()->DoTernaryOpOf((float)beta, *inputs[0]->NativeTensorView<float>(), *inputs[1]->NativeTensorView<float>(), *inputs[2]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
+            case 4:
+                out->WritableNativeTensorView<float>()->DoQuaternaryOpOf((float)beta, *inputs[0]->NativeTensorView<float>(), *inputs[1]->NativeTensorView<float>(), *inputs[2]->NativeTensorView<float>(), *inputs[3]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
+                break;
             default:
                 LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());
             }
@@ -466,6 +472,9 @@ namespace CNTK
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
             switch (inputs.size())
             {
+            case 0:
+                out->WritableNativeTensorView<double>()->DoNullaryOpOf((double)beta, (double)alpha, op, reductionOp);
+                break;
             case 1:
                 out->WritableNativeTensorView<double>()->DoUnaryOpOf((double)beta, *inputs[0]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
@@ -474,6 +483,9 @@ namespace CNTK
                 break;
             case 3:
                 out->WritableNativeTensorView<double>()->DoTernaryOpOf((double)beta, *inputs[0]->NativeTensorView<double>(), *inputs[1]->NativeTensorView<double>(), *inputs[2]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
+                break;
+            case 4:
+                out->WritableNativeTensorView<double>()->DoQuaternaryOpOf((double)beta, *inputs[0]->NativeTensorView<double>(), *inputs[1]->NativeTensorView<double>(), *inputs[2]->NativeTensorView<double>(), *inputs[3]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
             default:
                 LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());

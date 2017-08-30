@@ -88,6 +88,24 @@ public:
 
     static ElementWiseOperator OpFromName(const wstring& opName);
 
+#pragma push_macro("DeclareNullaryTensorOp")
+#define DeclareNullaryTensorOp(oper)                                                           \
+    void Do##oper##Of(ElemType beta, ElemType alpha)                                           \
+    {                                                                                          \
+        DoNullaryOpOf(beta, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); \
+    }                                                                                          \
+    void Assign##oper##Of(ElemType alpha = 1.0f)                                               \
+    {                                                                                          \
+        DoNullaryOpOf(0, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum);    \
+    }                                                                                          \
+    void Add##oper##Of(ElemType alpha = 1.0f)                                                  \
+    {                                                                                          \
+        DoNullaryOpOf(1.0f, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); \
+    }
+
+    ForAllNullaryOps(DeclareNullaryTensorOp);
+#pragma pop_macro("DeclareNullaryTensorOp")
+
 #pragma push_macro("DeclareUnaryTensorOp")
 #define DeclareUnaryTensorOp(oper)                                                              \
     void Do##oper##Of(ElemType beta, const TensorView& a, ElemType alpha)                       \
@@ -142,9 +160,29 @@ public:
     ForAllTernaryOps(DeclareTernaryTensorOp);
 #pragma pop_macro("DeclareTernaryTensorOp")
 
-    void DoUnaryOpOf  (ElemType beta, const TensorView& a,                                           ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
-    void DoBinaryOpOf (ElemType beta, const TensorView& a, const TensorView& b,                      ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
-    void DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
+#pragma push_macro("DeclareQuaternaryTensorOp")
+#define DeclareQuaternaryTensorOp(oper)                                                                                                  \
+    void Do##oper##Of(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha) \
+    {                                                                                                                                    \
+        DoQuaternaryOpOf(beta, a, b, c, d, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum);                            \
+    }                                                                                                                                    \
+    void Assign##oper##Of(const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha = 1.0f)     \
+    {                                                                                                                                    \
+        DoQuaternaryOpOf(0, a, b, c, d, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum);                               \
+    }                                                                                                                                    \
+    void Add##oper##Of(const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha = 1.0f)        \
+    {                                                                                                                                    \
+        DoQuaternaryOpOf(1.0f, a, b, c, d, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum);                            \
+    }
+
+    ForAllQuaternaryOps(DeclareQuaternaryTensorOp);
+#pragma pop_macro("DeclareQuaternaryTensorOp")
+
+    void DoNullaryOpOf   (ElemType beta,                                                                                     ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
+    void DoUnaryOpOf     (ElemType beta, const TensorView& a,                                                                ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
+    void DoBinaryOpOf    (ElemType beta, const TensorView& a, const TensorView& b,                                           ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
+    void DoTernaryOpOf   (ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c,                      ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
+    void DoQuaternaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
 
     // -------------------------------------------------------------------
     // arg based operations

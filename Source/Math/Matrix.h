@@ -97,6 +97,7 @@ private:
     static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType2>& b);
     static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c);
     static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& d);
+    static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& d, const Matrix<ElemType>& e);
     static void CopyElementsFromDenseToSparse(CPUMatrix<ElemType>& from, CPUSparseMatrix<ElemType>& dest);
 
 public:
@@ -604,6 +605,10 @@ public:
 
     static void TensorShuffleScaleAndAdd(ElemType keepWeight, const Matrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const Matrix<ElemType>& b, Matrix<ElemType>& c);
 
+    void TensorOp(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                  const std::array<size_t, 1>& offsets,
+                  const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& regularStrides,
+                  const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& reducingStrides);
     void TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 2>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
@@ -616,6 +621,10 @@ public:
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+    void TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                  const std::array<size_t, 5>& offsets,
+                  const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& regularStrides,
+                  const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& reducingStrides);
 
     void TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
                      const std::array<size_t, 2>& offsets,

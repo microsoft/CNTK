@@ -4095,6 +4095,16 @@ void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType>& a, con
     d._transferToDevice(a.GetDeviceId()); // BUGBUG: Is this correct in case a,b,c share the same preferredDevice?
 }
 
+// same but for 5 matrices
+template <class ElemType>
+void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& d, const Matrix<ElemType>& e)
+{
+    // this function is only called for one operator, so for now we keep it simple
+    DecideAndMoveToRightDevice(a, b, c);
+    d._transferToDevice(a.GetDeviceId()); // BUGBUG: Is this correct in case a,b,c,d share the same preferredDevice?
+    e._transferToDevice(a.GetDeviceId());
+}
+
 template <class ElemType>
 void Matrix<ElemType>::_transferToDevice(int to_id, bool isBeingMoved /*= true*/, bool emptyTransfer /* = false*/) const
 {
@@ -6083,6 +6093,21 @@ static bool VerifyIsDense(const Matrix<ElemType>& a)
 }
 
 template <class ElemType>
+void Matrix<ElemType>::TensorOp(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                const array<size_t, 1>& offsets,
+                                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 1>& regularStrides,
+                                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 1>& reducingStrides)
+{
+    VerifyIsDense(*this);
+
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+                            m_CPUMatrix->TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            m_GPUMatrix->TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                 const array<size_t, 2>& offsets,
                                 const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
@@ -6092,8 +6117,7 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemTy
 
     DecideAndMoveToRightDevice(*this, a);
 
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            this,
+    DISPATCH_MATRIX_ON_FLAG(this, this,
                             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             NOT_IMPLEMENTED,
@@ -6110,8 +6134,7 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
 
     DecideAndMoveToRightDevice(*this, a, b);
 
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            this,
+    DISPATCH_MATRIX_ON_FLAG(this, this,
                             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             NOT_IMPLEMENTED,
@@ -6128,13 +6151,31 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
 
     DecideAndMoveToRightDevice(*this, a, b, c);
 
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            this,
+    DISPATCH_MATRIX_ON_FLAG(this, this,
                             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
+
+
+template <class ElemType>
+void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                const array<size_t, 5>& offsets,
+                                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 5>& regularStrides,
+                                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 5>& reducingStrides)
+{
+    VerifyIsDense(*this) && VerifyIsDense(a) && VerifyIsDense(b) && VerifyIsDense(c) && VerifyIsDense(d);
+
+    DecideAndMoveToRightDevice(*this, a, b, c, d);
+
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+                            m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, *d.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, *d.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
 template <class ElemType>
 void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
                                    const array<size_t, 2>& offsets,
@@ -6145,12 +6186,11 @@ void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperato
 
     DecideAndMoveToRightDevice(*this, a);
 
-    DISPATCH_MATRIX_ON_FLAG(this,
-        this,
-        m_CPUMatrix->TensorArgOp(*a.m_CPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-        m_GPUMatrix->TensorArgOp(*a.m_GPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-        NOT_IMPLEMENTED,
-        NOT_IMPLEMENTED);
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+                            m_CPUMatrix->TensorArgOp(*a.m_CPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            m_GPUMatrix->TensorArgOp(*a.m_GPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
 }
 
 //template class Matrix<short>;

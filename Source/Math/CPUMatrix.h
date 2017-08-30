@@ -442,6 +442,10 @@ public:
 
     static void TensorShuffleScaleAndAdd(ElemType keepWeight, const CPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
 
+    void TensorOp(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                  const std::array<size_t, 1>& offsets,
+                  const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& regularStrides,
+                  const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& reducingStrides);
     void TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 2>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
@@ -454,6 +458,10 @@ public:
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+    void TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, const CPUMatrix<ElemType>& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                  const std::array<size_t, 5>& offsets,
+                  const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& regularStrides,
+                  const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& reducingStrides);
 
     int Argmin() const;
     int Argmax() const;
