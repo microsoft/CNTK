@@ -1,7 +1,7 @@
 CPU info:
-    CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
     Hardware threads: 24
-    Total Memory: 33474756 kB
+    Total Memory: 268381192 kB
 -------------------------------------------------------------------
 ++ python -c 'import sys; sys.stdout.write(str(sys.version_info[0])); sys.stdout.flush()'
 + PythonVer=2
@@ -48,9 +48,10 @@ Parameter
 ======== Evaluate model on CPU using CPUOnly build ========
 
 ===== Evaluate single image =====
+Evaluation result for image 00000.png
 The number of sequences in the batch: 1
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31293,8.391853,-3.66395,-4.814896,-6.400897,1.237085.
+    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31294,8.391854,-3.66395,-4.814901,-6.400898,1.237086.
 
 ===== Setup memory tests using Resnet Model =====
 
@@ -67,9 +68,9 @@ ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Sh
 OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
 The number of sequences in the batch: 2
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+    sample 0: 3.671571,10.78319,1.988011,5.738439,-14.31294,8.391855,-3.663951,-4.814902,-6.400897,1.237085.
 Sequence 1 contains 1 samples.
-    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+    sample 0: 4.303904,13.21089,-0.8425701,4.726829,-15.50982,8.401516,-6.299431,-5.432626,-6.179281,3.591689.
 
 All saved object references are printed.
 Test creating NDArrayView on devices.
@@ -93,9 +94,9 @@ ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Sh
 OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
 The number of sequences in the batch: 2
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+    sample 0: 3.671571,10.78319,1.988011,5.738439,-14.31294,8.391855,-3.663951,-4.814902,-6.400897,1.237085.
 Sequence 1 contains 1 samples.
-    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+    sample 0: 4.303904,13.21089,-0.8425701,4.726829,-15.50982,8.401516,-6.299431,-5.432626,-6.179281,3.591689.
 
 All saved object references are printed.
 
@@ -112,20 +113,21 @@ ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Sh
 OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
 The number of sequences in the batch: 2
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+    sample 0: 3.671571,10.78319,1.988011,5.738439,-14.31294,8.391855,-3.663951,-4.814902,-6.400897,1.237085.
 Sequence 1 contains 1 samples.
-    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+    sample 0: 4.303904,13.21089,-0.8425701,4.726829,-15.50982,8.401516,-6.299431,-5.432626,-6.179281,3.591689.
 
 All saved object references are printed.
 
 ===== Evaluate batch of images =====
+Evaluation result for batch of images: 00000.png, 00001.png, 00002.png
 The number of sequences in the batch: 3
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988011,5.738438,-14.31294,8.391853,-3.663949,-4.814899,-6.400896,1.237086.
+    sample 0: 3.671571,10.78319,1.988011,5.738439,-14.31294,8.391855,-3.663951,-4.814902,-6.400897,1.237085.
 Sequence 1 contains 1 samples.
-    sample 0: 4.303904,13.21089,-0.8425705,4.726829,-15.50982,8.401515,-6.29943,-5.432628,-6.179279,3.591688.
+    sample 0: 4.303904,13.21089,-0.8425701,4.726829,-15.50982,8.401516,-6.299431,-5.432626,-6.179281,3.591689.
 Sequence 2 contains 1 samples.
-    sample 0: 3.015125,13.67296,-0.9818174,4.86445,-17.13536,9.49863,-7.311455,-5.238921,-5.33601,3.496729.
+    sample 0: 3.015126,13.67295,-0.9818162,4.864452,-17.13536,9.498628,-7.311455,-5.238921,-5.336009,3.496726.
 
 Print out saved object references.
 Device0: CPU, Type: CPU
@@ -137,34 +139,39 @@ ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Sh
 OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
 The number of sequences in the batch: 2
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+    sample 0: 3.671571,10.78319,1.988011,5.738439,-14.31294,8.391855,-3.663951,-4.814902,-6.400897,1.237085.
 Sequence 1 contains 1 samples.
-    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+    sample 0: 4.303904,13.21089,-0.8425701,4.726829,-15.50982,8.401516,-6.299431,-5.432626,-6.179281,3.591689.
 
 All saved object references are printed.
 
 ===== Evaluate multiple images in parallel =====
 Evaluate 5 images in parallel using 3 model instances.
-Evaluation result for 00000.png:
+Evaluating image 00000.png using thread 26.
+Evaluating image 00001.png using thread 5.
+Evaluating image 00002.png using thread 15.
+Evaluating image 00003.png using thread 5.
+Evaluating image 00004.png using thread 26.
+Evaluation result for image 00000.png
 The number of sequences in the batch: 1
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31293,8.391853,-3.66395,-4.814896,-6.400897,1.237085.
-Evaluation result for 00001.png:
+    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31294,8.391854,-3.66395,-4.814901,-6.400898,1.237086.
+Evaluation result for image 00001.png
 The number of sequences in the batch: 1
 Sequence 0 contains 1 samples.
-    sample 0: 4.303905,13.21089,-0.8425702,4.72683,-15.50982,8.401517,-6.29943,-5.432628,-6.179279,3.591688.
-Evaluation result for 00004.png:
+    sample 0: 4.303905,13.21089,-0.8425708,4.726829,-15.50982,8.401519,-6.299431,-5.432627,-6.17928,3.591688.
+Evaluation result for image 00002.png
 The number of sequences in the batch: 1
 Sequence 0 contains 1 samples.
-    sample 0: 4.438151,11.45382,-1.536682,3.79481,-12.95914,6.748141,-6.049223,-3.740803,-3.317488,2.693587.
-Evaluation result for 00002.png:
+    sample 0: 3.015127,13.67296,-0.9818164,4.864451,-17.13536,9.498629,-7.311454,-5.238922,-5.336009,3.496727.
+Evaluation result for image 00003.png
 The number of sequences in the batch: 1
 Sequence 0 contains 1 samples.
-    sample 0: 3.015125,13.67295,-0.9818163,4.86445,-17.13536,9.498627,-7.311455,-5.238923,-5.336008,3.496728.
-Evaluation result for 00003.png:
+    sample 0: 3.043734,7.514874,1.213816,4.059601,-8.890238,5.667706,-2.830905,-2.716698,-3.927397,0.8754864.
+Evaluation result for image 00004.png
 The number of sequences in the batch: 1
 Sequence 0 contains 1 samples.
-    sample 0: 3.043734,7.514874,1.213817,4.0596,-8.89024,5.667706,-2.830906,-2.716698,-3.927397,0.875487.
+    sample 0: 4.438151,11.45382,-1.536683,3.79481,-12.95914,6.748143,-6.049224,-3.740804,-3.317489,2.693588.
 
 ===== Setup memory tests using Resnet Model =====
 
@@ -181,9 +188,9 @@ ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Sh
 OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
 The number of sequences in the batch: 2
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+    sample 0: 3.671571,10.78319,1.988011,5.738439,-14.31294,8.391855,-3.663951,-4.814902,-6.400897,1.237085.
 Sequence 1 contains 1 samples.
-    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+    sample 0: 4.303904,13.21089,-0.8425701,4.726829,-15.50982,8.401516,-6.299431,-5.432626,-6.179281,3.591689.
 
 All saved object references are printed.
 Test creating NDArrayView on devices.
@@ -207,9 +214,9 @@ ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Sh
 OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
 The number of sequences in the batch: 2
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+    sample 0: 3.671571,10.78319,1.988011,5.738439,-14.31294,8.391855,-3.663951,-4.814902,-6.400897,1.237085.
 Sequence 1 contains 1 samples.
-    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+    sample 0: 4.303904,13.21089,-0.8425701,4.726829,-15.50982,8.401516,-6.299431,-5.432626,-6.179281,3.591689.
 
 All saved object references are printed.
 
@@ -226,11 +233,16 @@ ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Sh
 OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
 The number of sequences in the batch: 2
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+    sample 0: 3.671571,10.78319,1.988011,5.738439,-14.31294,8.391855,-3.663951,-4.814902,-6.400897,1.237085.
 Sequence 1 contains 1 samples.
-    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+    sample 0: 4.303904,13.21089,-0.8425701,4.726829,-15.50982,8.401516,-6.299431,-5.432626,-6.179281,3.591689.
 
 All saved object references are printed.
+
+===== Evaluate image asynchronously =====
+The number of sequences in the batch: 1
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31294,8.391854,-3.66395,-4.814901,-6.400898,1.237086.
 
 ===== Evaluate single sequence using one-hot vector =====
             BOS ---- O
@@ -319,7 +331,7 @@ Sequence 1:
 ===== Load model from memory buffer =====
 The number of sequences in the batch: 1
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31293,8.391853,-3.66395,-4.814896,-6.400897,1.237085.
+    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31294,8.391854,-3.66395,-4.814901,-6.400898,1.237086.
 
 Print out saved object references.
 Device0: CPU, Type: CPU
@@ -331,9 +343,9 @@ ArgumentVar0: Input('Input497', [32 x 32 x 3], [*, #]), Name: , Kind: Output, Sh
 OutputVal: , Device: CPU, Storage: Dense, Shape: [10 x 1 x 2]Data:
 The number of sequences in the batch: 2
 Sequence 0 contains 1 samples.
-    sample 0: 3.671572,10.78319,1.988012,5.738439,-14.31294,8.391853,-3.663949,-4.8149,-6.400896,1.237085.
+    sample 0: 3.671571,10.78319,1.988011,5.738439,-14.31294,8.391855,-3.663951,-4.814902,-6.400897,1.237085.
 Sequence 1 contains 1 samples.
-    sample 0: 4.303904,13.21089,-0.8425695,4.726828,-15.50982,8.401514,-6.299431,-5.432629,-6.179279,3.59169.
+    sample 0: 4.303904,13.21089,-0.8425701,4.726829,-15.50982,8.401516,-6.299431,-5.432626,-6.179281,3.591689.
 
 All saved object references are printed.
 ======== Evaluation completes. ========
