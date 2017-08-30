@@ -573,6 +573,7 @@ def test_conv_cudnn_batch_size_change(device_id):
         seq_lens = [[int(x*msl+1) for x in np.random.random((batch_size))] for msl in max_seq_len]
         output.grad({input1:[np.random.random((sl,) + input_shape).astype(np.float32) for sl in seq_lens[0]],
                      input2:[np.random.random((sl,) + input_shape).astype(np.float32) for sl in seq_lens[1]]})
+
 FREE_STATIC_AXES_CONVOLUTION_DATA = [
     # 2D convolution with single free static axis.
     ([5, 101, 151], # warmup_input_size: Defines the input size used for first run with free static axes. 3- and 4-element vector for 2D and 3D convolution, respectively. 
