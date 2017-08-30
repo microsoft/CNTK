@@ -967,7 +967,7 @@ namespace CNTK
         CNTK_API const MaskKind* DataBuffer() const;
 
         ///
-        /// Creates a new NDArrayView with newly allocated storage on the specified device and copies 'this' view's contents into the newly allocated view.
+        /// Creates a new NDMask with newly allocated storage on the specified device and copies 'this' mask's contents into the newly allocated view.
         ///
         CNTK_API NDMaskPtr DeepClone(const DeviceDescriptor& device) const;
 

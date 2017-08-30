@@ -36,7 +36,7 @@ namespace CNTKLibraryCSEvalExamples
                 Console.WriteLine("\n===== Evaluate single image =====");
 
                 // Load the model.
-                // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
+                // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
                 string modelFilePath = "resnet20.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
@@ -117,7 +117,7 @@ namespace CNTKLibraryCSEvalExamples
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
 
                 // Load the model.
-                // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
+                // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
                 Function modelFunc = Function.Load(modelFilePath, device);
 
@@ -199,7 +199,7 @@ namespace CNTKLibraryCSEvalExamples
             BlockingCollection<Function> Models = new BlockingCollection<Function>();
 
             // Load and clone the model.
-            // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
+            // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
             // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
             var rootFunc = Function.Load(modelFilePath, device);
             Models.Add(rootFunc);
@@ -280,7 +280,7 @@ namespace CNTKLibraryCSEvalExamples
                 Console.WriteLine("\n===== Load model from memory buffer =====");
 
                 // For demo purpose, we first read the the model into memory
-                // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
+                // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
                 string modelFilePath = "resnet20.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
@@ -474,7 +474,7 @@ namespace CNTKLibraryCSEvalExamples
 
                 var inputSentence = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
                 var seqData = new List<int>();
-                // SeqStartFlagBatch is used to indicate whether this sequence is a new sequence (true) or concatenating the previous sequence (false).
+                // SeqStartFlag is used to indicate whether this sequence is a new sequence (true) or concatenating the previous sequence (false).
                 var seqStartFlag = true;
                 // Get the index of each word in the sentence.
                 string[] inputWords = inputSentence.Split(' ');
@@ -576,11 +576,11 @@ namespace CNTKLibraryCSEvalExamples
                 var vocabToIndex = buildVocabIndex(vocabFile);
                 var indexToSlots = buildSlotIndex(labelFile);
 
-                // Get input variable
+                // Get input variable.
                 var inputVar = modelFunc.Arguments.Single();
                 int vocabSize = inputVar.Shape.TotalSize;
 
-                // Prepare the input data.
+                // Prepare input data.
                 // Each sample is represented by an index to the onehot vector, so the index of the non-zero value of each sample is saved in the inner list.
                 // The outer list represents sequences contained in the batch.
                 var inputBatch = new List<List<int>>();
@@ -611,7 +611,7 @@ namespace CNTKLibraryCSEvalExamples
                 }
 
                 // Create the Value representing the batch data.
-                var inputValue = Value.CreateBatchOfSequences<float>(vocabSize, inputBatch, seqStartFlagBatch, DeviceDescriptor.CPUDevice);
+                var inputValue = Value.CreateBatchOfSequences<float>(vocabSize, inputBatch, seqStartFlagBatch, device);
 
                 // Build input data map.
                 var inputDataMap = new Dictionary<Variable, Value>();

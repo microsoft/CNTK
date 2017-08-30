@@ -23,9 +23,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalCPUOnlyExamples\EvalMultithreads.cpp" />
+    <ClCompile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalCPUOnlyExamples\CNTKLibraryCPPEvalExamples.cpp" />
     <ClCompile Include="..\..\CNTKv2Library\Common\Common.cpp" />
     <ClCompile Include="CNTKLibraryCPPEvalExamplesTest.cpp" />
+    <ClCompile Include="EvalMultithreads.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{D771A06D-CC25-4582-B5CD-D2A4782BB005}</ProjectGuid>
@@ -78,8 +79,8 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
-       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-     </ClCompile>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
     <Link />
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>

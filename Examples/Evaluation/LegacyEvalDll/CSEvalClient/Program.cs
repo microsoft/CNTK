@@ -251,7 +251,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     // We can preallocate the output structure and pass it in (multiple output layers)
                     outputs = new Dictionary<string, List<float>>()
                     {
-                        { hiddenLayerName, GetFloatArray(outDims[hiddenLayerName], 1) },    
+                        { hiddenLayerName, GetFloatArray(outDims[hiddenLayerName], 1) },
                         { outputLayerName, GetFloatArray(outDims[outputLayerName], 1) }
                     };
                     model.Evaluate(inputs, outputs);
