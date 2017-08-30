@@ -19,39 +19,38 @@ force_deterministic_algorithms()
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Detection"))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Detection", "FastRCNN"))
-
-from prepare_test_data import prepare_Grocery_data, prepare_alexnet_v0_model
-grocery_path = prepare_Grocery_data()
-prepare_alexnet_v0_model()
-
-from install_data_and_model import create_grocery_mappings
-create_grocery_mappings(grocery_path)
 
 win35_linux34 = pytest.mark.skipif(not ((sys.platform == 'win32' and sys.version_info[:2] == (3,5)) or
                                         (sys.platform != 'win32' and sys.version_info[:2] == (3,4))),
                                    reason="it runs currently only in windows-py35 and linux-py34 due to precompiled cython modules")
 
 @win35_linux34
-def test_fastrcnnpy_grocery_training(device_id):
+def test_detection_demo(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU')  # it runs very slow in CPU
     try_set_default_device(cntk_device(device_id))
 
-    from utils.config_helpers import merge_configs
-    from FastRCNN_config import cfg as detector_cfg
-    from utils.configs.AlexNet_config import cfg as network_cfg
-    from utils.configs.Grocery_config import cfg as dataset_cfg
+    from prepare_test_data import prepare_Grocery_data, prepare_alexnet_v0_model
+    grocery_path = prepare_Grocery_data()
+    prepare_alexnet_v0_model()
 
-    cfg = merge_configs([detector_cfg, network_cfg, dataset_cfg])
+    from FastRCNN.install_data_and_model import create_grocery_mappings
+    create_grocery_mappings(grocery_path)
+
+    from DetectionDemo import get_configuration
+    import utils.od_utils as od
+
+    cfg = get_configuration('FasterRCNN')
     cfg["CNTK"].FORCE_DETERMINISTIC = True
     cfg["CNTK"].DEBUG_OUTPUT = False
     cfg["CNTK"].MAKE_MODE = False
     cfg["CNTK"].FAST_MODE = False
-    cfg["CNTK"].MAX_EPOCHS = 4
-    cfg.IMAGE_WIDTH = 600
-    cfg.IMAGE_HEIGHT = 600
-    cfg.NUM_ROI_PROPOSALS = 200
+    cfg.CNTK.E2E_MAX_EPOCHS = 3
+    cfg.CNTK.RPN_EPOCHS = 2
+    cfg.CNTK.FRCN_EPOCHS = 2
+    cfg.IMAGE_WIDTH = 400
+    cfg.IMAGE_HEIGHT = 400
+    cfg["CNTK"].TRAIN_E2E = True
     cfg.USE_GPU_NMS = False
     cfg.VISUALIZE_RESULTS = False
     cfg["DATA"].MAP_FILE_PATH = grocery_path
@@ -63,13 +62,16 @@ def test_fastrcnnpy_grocery_training(device_id):
     else:
         cfg['BASE_MODEL_PATH'] = os.path.join(abs_path, *"../../../../PretrainedModels/AlexNet_ImageNet_Caffe.model".split("/"))
 
-    from FastRCNN_train import prepare, train_fast_rcnn
-    from FastRCNN_eval import compute_test_set_aps
-    prepare(cfg, False)
+    # train and test
+    eval_model = od.train_object_detector(cfg)
+    eval_results = od.evaluate_test_set(eval_model, cfg)
 
-    np.random.seed(seed=3)
-    trained_model = train_fast_rcnn(cfg)
-    eval_results = compute_test_set_aps(trained_model, cfg)
     meanAP = np.nanmean(list(eval_results.values()))
     print('meanAP={}'.format(meanAP))
     assert meanAP > 0.01
+
+    # detect objects in single image
+    img_path = os.path.join(grocery_path, "testImages", "WIN_20160803_11_28_42_Pro.jpg")
+    regressed_rois, cls_probs = od.evaluate_single_image(eval_model, img_path, cfg)
+    bboxes, labels, scores = od.filter_results(regressed_rois, cls_probs, cfg)
+    assert bboxes.shape[0] == labels.shape[0]

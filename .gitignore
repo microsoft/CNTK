@@ -258,9 +258,22 @@ Tests/EndToEndTests/EvalClientTests/JavaEvalTest/out
 Tests/EndToEndTests/EvalClientTests/JavaEvalTest/**/*.class
 
 # Examples and Tutorials
+Examples/Image/Classification/AlexNet/Python/Models/
+Examples/Image/Classification/ConvNet/Python/Models/
+Examples/Image/Classification/GoogLeNet/BN-Inception/Python/Models/
+Examples/Image/Classification/ResNet/Python/Models/
+Examples/Image/DataSets/Animals/Test/
+Examples/Image/DataSets/Animals/Train/
+Examples/Image/DataSets/CIFAR-10/model.cmf
+Examples/Image/DataSets/Flowers/jpg/
+Examples/Image/DataSets/Flowers/*.txt
+Examples/Image/DataSets/ImageNet/test_data/
+Examples/Image/DataSets/ImageNet/*.txt
+Examples/Image/DataSets/ImageNet/*.zip
+Examples/Image/DataSets/Pascal/mappings/*.txt
+Examples/Image/DataSets/Pascal/*.txt
 Examples/Image/DataSets/Pascal/VOC*
 Examples/Image/DataSets/Pascal/selective_search_data*
-Examples/Image/Detection/FastRCNN/proc/
 Examples/Image/DataSets/CIFAR-10/CIFAR-10_mean.xml
 Examples/Image/DataSets/CIFAR-10/Test_cntk_text.txt
 Examples/Image/DataSets/CIFAR-10/Train_cntk_text.txt
@@ -278,8 +291,17 @@ Examples/Image/DataSets/grocery/positive/
 Examples/Image/DataSets/grocery/testImages/
 Examples/Image/DataSets/grocery/*.txt
 PretrainedModels/*.model
+Examples/Image/Detection/FastRCNN/BrainScript/Output/
+Examples/Image/Detection/FastRCNN/BrainScript/proc/
+Examples/Image/Detection/FastRCNN/Output/
+Examples/Image/Detection/FasterRCNN/Output/
 Examples/Image/FeatureExtraction/*.txt
 Examples/Image/GettingStarted/Output/
+Examples/Image/PretrainedModels/*.model
+Examples/Image/PretrainedModels/*.cntkmodel
+Examples/SequenceToSequence/CMUDict/Python/Models/
+Examples/Speech/AN4/Python/Models/
+Examples/Text/CharacterLM/data/tinyshakespeare.txt.vocab
 Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
 Tests/EndToEndTests/CNTKv2Python/Keras/keras-*
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p

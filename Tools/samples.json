@@ -109,6 +109,15 @@
     },
     {
         "category": ["Image"],
+        "name":  "Faster R-CNN",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Faster-R-CNN",
+        "description":  "Train object detection from images using a region proposal netwrok in Faster R-CNN.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "8/30/2017"
+    },
+    {
+        "category": ["Image"],
         "name":  "Fast R-CNN",
         "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN",
         "description":  "Train object detection from images by adapting pre-trained classification models on arbitrarily sized regions of interest using ROI pooling.",

@@ -8,10 +8,10 @@
 #import caffe
 import numpy as np
 import yaml
-from utils.default_config import cfg
+from utils.caffe_layers.default_config import cfg
 from utils.rpn.generate_anchors import generate_anchors
 from utils.caffe_layers.bbox_transform import bbox_transform_inv, clip_boxes
-from utils.nms.nms_wrapper import nms
+from utils.nms_wrapper import nms
 
 DEBUG = False
 
@@ -136,7 +136,7 @@ class ProposalLayer: #(caffe.Layer):
 
         # 4. sort all (proposal, score) pairs by score from highest to lowest
         # 5. take top pre_nms_topN (e.g. 6000)
-        order = scores.ravel().argsort()[::-1]
+        order = scores.ravel().argsort(kind='mergesort')[::-1]
         if pre_nms_topN > 0:
             order = order[:pre_nms_topN]
         proposals = proposals[order, :]

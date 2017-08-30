@@ -19,10 +19,6 @@ python setup.py build_ext --inplace
 ```
 Copy the compiled `.pyd` (Windows) or `.so` (Linux) files into the `cython_modules` subfolder of this utils folder.
 
-##### `default_config`
-
-Contains all required parameters for using a region proposal network in training or evaluation. You can overwrite these parameters by specifying a `config.py` file of the same format inside your working directory.
-
 ### `rpn` module overview
 
 The rpn module contains helper methods and required layers to generate region proposal networks for object detection.
@@ -48,7 +44,3 @@ Bbox regression targets are specified when the classification label is > 0.
 
 Generates training targets/labels for each object proposal: classification labels 0 - K (bg or object class 1, ... , K)
 and bbox regression targets in that case that the label is > 0.
-
-##### `generate.py`
-
-Generate object detection proposals from an imdb using an RPN.

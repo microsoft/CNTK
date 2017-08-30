@@ -7,6 +7,7 @@
 
 import sys, os
 import numpy as np
+import scipy.io as sio
 import future
 import xml.etree.ElementTree
 from xml.etree import ElementTree
@@ -21,9 +22,10 @@ use_pad_scale = False
 pad_width = 850
 pad_height = 850
 
-pascal_voc2007_jpgimg_rel_path = ".../VOCdevkit/VOC2007/JPEGImages/"
-pascal_voc2007_imgsets_rel_path = ".../VOCdevkit/VOC2007/ImageSets/Main/"
-pascal_voc2007_annotations_rel_path = ".../VOCdevkit/VOC2007/Annotations/"
+pascal_voc2007_jpgimg_rel_path = "../VOCdevkit/VOC2007/JPEGImages/"
+pascal_voc2007_imgsets_rel_path = "../VOCdevkit/VOC2007/ImageSets/Main/"
+pascal_voc2007_annotations_rel_path = "../VOCdevkit/VOC2007/Annotations/"
+pascal_voc2007_proposals_rel_path = "../selective_search_data/"
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 cls_file_path = os.path.join(abs_path, "class_map.txt")
@@ -47,9 +49,6 @@ def format_roi(cls_index, xmin, ymin, xmax, ymax, img_file_path):
             scale_y = (1.0 * pad_height) / img_height
 
             min_scale = min(scale_x, scale_y)
-            if round(img_width * min_scale) != pad_width and round(img_height * min_scale) != pad_height:
-                import pdb; pdb.set_trace()
-
             new_width = round(img_width * min_scale)
             new_height = round(img_height * min_scale)
             assert(new_width == pad_width or new_height == pad_height)
@@ -87,7 +86,7 @@ def format_roi(cls_index, xmin, ymin, xmax, ymax, img_file_path):
 
 def create_mappings(train, skip_difficult):
     file_prefix = "trainval" if train else "test"
-    img_map_input = "../VOCdevkit/VOC2007/ImageSets/Main/{}.txt".format(file_prefix)
+    img_map_input = "{}.txt".format(file_prefix)
     img_map_output = "{}2007.txt".format(file_prefix)
     roi_map_output = "{}2007_rois_{}_{}{}.txt".format(
         file_prefix,
@@ -95,11 +94,13 @@ def create_mappings(train, skip_difficult):
         "pad" if use_pad_scale else "noPad",
         "_skipDif" if skip_difficult else "")
     size_map_output = "{}_size_file2007.txt".format(file_prefix)
+    proposals_output = "{}2007_proposals.txt".format(file_prefix)
 
-    in_map_file_path = os.path.join(abs_path, img_map_input)
+    in_map_file_path = os.path.join(abs_path, pascal_voc2007_imgsets_rel_path, img_map_input)
     out_map_file_path = os.path.join(abs_path, img_map_output)
     roi_file_path = os.path.join(abs_path, roi_map_output)
     size_file_path = os.path.join(abs_path, size_map_output)
+    proposals_file_path = os.path.join(abs_path, proposals_output)
     class_map_file_path = os.path.join(abs_path, "class_map.txt")
 
     # write class map file
@@ -115,11 +116,13 @@ def create_mappings(train, skip_difficult):
         input_lines = input_file.readlines()
 
     counter = 0
+    img_numbers = []
     with open(out_map_file_path, 'w') as img_file:
         with open(roi_file_path, 'w') as roi_file:
             with open(size_file_path, 'w') as size_file:
                 for in_line in input_lines:
                     img_number = in_line.strip()
+                    img_numbers.append(img_number)
                     img_file_path = "{}{}.jpg".format(pascal_voc2007_jpgimg_rel_path, img_number)
                     img_line = "{}\t{}\t0\n".format(counter, img_file_path)
                     img_file.write(img_line)
@@ -163,6 +166,31 @@ def create_mappings(train, skip_difficult):
     with open(cls_file_path, 'w') as cls_file:
         for cls in classes:
             cls_file.write("{}\t{}\n".format(cls, class_dict[cls]))
+
+    if not skip_difficult: # proposals are the same and need to be processed only once
+        try:
+            # convert selective search proposals from matlab to CNTK text format
+            print("Converting matlab proposal file to CNTK format ({})".format(proposals_file_path))
+            proposal_input = 'voc_2007_{}.mat'.format(file_prefix)
+            in_ss_file_path = os.path.join(abs_path, pascal_voc2007_proposals_rel_path, proposal_input)
+            raw = sio.loadmat(in_ss_file_path)
+            boxes = raw['boxes'][0]
+            images = raw['images']
+
+            with open(proposals_file_path, 'w') as prop_file:
+                for i in range(len(img_numbers)):
+                    img_number = img_numbers[i]
+                    img_name = images[i,0][0]
+                    assert img_number == img_name
+
+                    box_coords = boxes[i]
+                    prop_line = "{} |proposals ".format(i)
+                    for c in range(box_coords.shape[0]):
+                        prop_line += ' ' + ' '.join(str(x) for x in box_coords[c])
+
+                    prop_file.write(prop_line + '\n')
+        except:
+            print("Warning: error converting selective search proposals from matlab to CNTK text format")
 
 if __name__ == '__main__':
     create_mappings(True, skip_difficult=True)

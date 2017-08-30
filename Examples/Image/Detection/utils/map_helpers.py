@@ -5,9 +5,12 @@
 # ==============================================================================
 
 import numpy as np
-from utils.nms.nms_wrapper import apply_nms_to_test_set_results
+from utils.nms_wrapper import apply_nms_to_test_set_results
 
-def evaluate_detections(all_boxes, all_gt_infos, classes, use_07_metric=False, apply_mms=True, nms_threshold=0.5, conf_threshold=0.0):
+def evaluate_detections(all_boxes, all_gt_infos, classes,
+                        use_gpu_nms, device_id,
+                        apply_mms=True, nms_threshold=0.5, conf_threshold=0.0,
+                        use_07_metric=False):
     '''
     Computes per-class average precision.
 
@@ -28,7 +31,7 @@ def evaluate_detections(all_boxes, all_gt_infos, classes, use_07_metric=False, a
 
     if apply_mms:
         print ("Number of rois before non-maximum suppression: %d" % sum([len(all_boxes[i][j]) for i in range(len(all_boxes)) for j in range(len(all_boxes[0]))]))
-        nms_dets,_ = apply_nms_to_test_set_results(all_boxes, nms_threshold, conf_threshold)
+        nms_dets,_ = apply_nms_to_test_set_results(all_boxes, nms_threshold, conf_threshold, use_gpu_nms, device_id)
         print ("Number of rois  after non-maximum suppression: %d" % sum([len(nms_dets[i][j]) for i in range(len(all_boxes)) for j in range(len(all_boxes[0]))]))
     else:
         print ("Skipping non-maximum suppression")

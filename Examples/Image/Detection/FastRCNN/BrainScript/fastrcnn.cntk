@@ -50,7 +50,7 @@ Train = {
     action = "train"
     
     BrainScriptNetworkBuilder = {
-        network     = BS.Network.Load ("../../../../../../../PretrainedModels/AlexNet.model")
+        network     = BS.Network.Load ("../../../../../../../../PretrainedModels/AlexNet.model")
         convLayers  = BS.Network.CloneFunction(network.features, network.conv5_y, parameters = "constant")
         fcLayers    = BS.Network.CloneFunction(network.pool3, network.h2_d)
 

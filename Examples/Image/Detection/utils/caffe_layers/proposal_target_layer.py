@@ -9,7 +9,7 @@
 import yaml
 import numpy as np
 import numpy.random as npr
-from utils.default_config import cfg
+from utils.caffe_layers.default_config import cfg
 from utils.rpn.bbox_transform import bbox_transform
 from utils.cython_modules.cython_bbox import bbox_overlaps
 
