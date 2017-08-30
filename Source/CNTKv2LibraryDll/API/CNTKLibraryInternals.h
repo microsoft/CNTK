@@ -179,6 +179,9 @@ namespace CNTK
     class Value;
     typedef std::shared_ptr<Value> ValuePtr;
 
+    class Variable;
+    typedef std::shared_ptr<Variable> VariablePtr;
+
     class Function;
     typedef std::shared_ptr<Function> FunctionPtr;
 

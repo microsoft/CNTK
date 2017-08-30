@@ -332,6 +332,36 @@ def training_parameter_schedule(schedule, ref_minibatch_size = None, epoch_size=
 
 
 @typemap
+def functional_learning_rate_schedule(lr_function, arg_to_context_map):
+    '''
+    Create a CNTK function based learning rate schedule 
+
+    Args:
+        lr_function (:class:`Function`): a CNTK function which computes the learning rate based on the learning context.
+        arg_to_context_map (dict): a mapping from arguments of lr_function to variable names in the learning context.
+         Example variable names are 
+
+    Returns:
+        a dictionary in the form {cntk_py.Learner.FUNCTION: lr_function, cntk_py.Learner.ARG_TO_CONTEXT_MAP: arg_to_context_map}
+        
+    Example: 
+        input_v = C.input_variable(4)
+        label = C.input_variable(2)
+        model = C.layers.Dense(2, activation = None)(input_v)
+        mbsize_v = C.input_variable(shape=1, name="mb_size", dtype=np.float64)
+        lr_function = 1 / mbsize_v + 0.01
+        lr_schedule = C.functional_learning_rate_schedule(lr_function, {"mb_size": "actualMinibatchSize"})
+        learner = C.sgd(model.parameters, lr_schedule)
+        loss = C.squared_error(model, label)
+        trainer = C.train.Trainer(model, (loss, loss), learner, C.logging.ProgressPrinter(freq=2))
+        for i in range(10):
+            data = {input_v: np.random.rand(4), label: np.random.rand(2)}
+            trainer.train_minibatch(data)
+    '''
+    return {cntk_py.Learner.FUNCTION: lr_function,
+            cntk_py.Learner.ARG_TO_CONTEXT_MAP: arg_to_context_map}
+
+@typemap
 def learning_rate_schedule(lr, ref_minibatch_size = None, epoch_size=None, unit=None):
     '''
     Create a learning rate schedule (using the same semantics as
@@ -504,6 +534,10 @@ def _infer_ref_minibatch_size_from_schedule(schedule, ref_minibatch_size):
         return ref_minibatch_size if ref_minibatch_size is not None else 1
 
 def _infer_learning_rate_schedule_and_ref_minibatch_size(use_mean_gradient, ref_minibatch_size, lr):
+    if isinstance(lr, dict):
+        #this is a functional learning rate, so return as it is
+        return lr, lr[cntk_py.Learner.ref_minibatch_size] if cntk_py.Learner.ref_minibatch_size in lr else 0
+
     #if non-None reference_minibatch_size will take precedence otherwise according use_mean_gradient if it is True
     ref_minibatch_size = _infer_ref_minibatch_size_from_legacy_use_mean_gradient(ref_minibatch_size, use_mean_gradient)
     #if ref_minibatch_size is not None, any schedules with unspecified reference minibatch size will be overrided.
@@ -572,7 +606,11 @@ def sgd(parameters, lr,
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
     if ref_minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner.REF_MB_SIZE] = cntk_py.SizeTWrapper(ref_minibatch_size) #need this to make proper typed DictionaryValue
-
+    if isinstance(lr, dict):
+        additional_options.dict_options[cntk_py.Learner.LEARNING_RATE_SCHEDULE] = lr
+        #create a dummy learning schedule to fulfil the API need
+        #TODO: modify the C++ learner API to hold all parameters in a Dictionary
+        lr = training_parameter_schedule(0.1, 0)
     return cntk_py.sgd_learner(parameters, lr, additional_options)
 
 
@@ -633,6 +671,11 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
     if ref_minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner.REF_MB_SIZE] = cntk_py.SizeTWrapper(ref_minibatch_size) #need this to make proper typed DictionaryValue
+    if isinstance(lr, dict):
+        additional_options.dict_options[cntk_py.Learner.LEARNING_RATE_SCHEDULE] = lr
+        #create a dummy learning schedule to fulfil the API need
+        #TODO: modify the C++ learner API to hold all parameters in a Dictionary
+        lr = training_parameter_schedule(0.1, 0)
 
     return cntk_py.momentum_sgd_learner(parameters, lr, momentum, unit_gain,
                                         additional_options)
@@ -706,6 +749,11 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
     if ref_minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner.REF_MB_SIZE] = cntk_py.SizeTWrapper(ref_minibatch_size) #need this to make proper typed DictionaryValue
+    if isinstance(lr, dict):
+        additional_options.dict_options[cntk_py.Learner.LEARNING_RATE_SCHEDULE] = lr
+        #create a dummy learning schedule to fulfil the API need
+        #TODO: modify the C++ learner API to hold all parameters in a Dictionary
+        lr = training_parameter_schedule(0.1, 0)
 
     return cntk_py.nesterov_learner(parameters, lr, momentum, unit_gain,
                                     additional_options)
@@ -769,6 +817,11 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
     ref_minibatch_size = _infer_ref_minibatch_size_from_legacy_use_mean_gradient(ref_minibatch_size, use_mean_gradient)
     if ref_minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner.REF_MB_SIZE] = cntk_py.SizeTWrapper(ref_minibatch_size) #need this to make proper typed DictionaryValue
+    if isinstance(lr, dict):
+        additional_options.dict_options[cntk_py.Learner.LEARNING_RATE_SCHEDULE] = lr
+        #create a dummy learning schedule to fulfil the API need
+        #TODO: modify the C++ learner API to hold all parameters in a Dictionary
+        lr = training_parameter_schedule(0.1, 0)
 
     return cntk_py.ada_delta_learner(parameters, lr, rho, epsilon,
                                     additional_options)
@@ -834,6 +887,11 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
     ref_minibatch_size = _infer_ref_minibatch_size_from_legacy_use_mean_gradient(ref_minibatch_size, use_mean_gradient)
     if ref_minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner.REF_MB_SIZE] = cntk_py.SizeTWrapper(ref_minibatch_size) #need this to make proper typed DictionaryValue
+    if isinstance(lr, dict):
+        additional_options.dict_options[cntk_py.Learner.LEARNING_RATE_SCHEDULE] = lr
+        #create a dummy learning schedule to fulfil the API need
+        #TODO: modify the C++ learner API to hold all parameters in a Dictionary
+        lr = training_parameter_schedule(0.1, 0)
 
     return cntk_py.ada_grad_learner(parameters, lr, need_ave_multiplier,
                                     additional_options)
@@ -904,6 +962,11 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     ref_minibatch_size = _infer_ref_minibatch_size_from_legacy_use_mean_gradient(ref_minibatch_size, use_mean_gradient)
     if ref_minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner.REF_MB_SIZE] = cntk_py.SizeTWrapper(ref_minibatch_size) #need this to make proper typed DictionaryValue
+    if isinstance(lr, dict):
+        additional_options.dict_options[cntk_py.Learner.LEARNING_RATE_SCHEDULE] = lr
+        #create a dummy learning schedule to fulfil the API need
+        #TODO: modify the C++ learner API to hold all parameters in a Dictionary
+        lr = training_parameter_schedule(0.1, 0)
 
     return cntk_py.fsada_grad_learner(parameters, lr, momentum, unit_gain,
                                       variance_momentum, additional_options)
@@ -982,6 +1045,11 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
     if ref_minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner.REF_MB_SIZE] = cntk_py.SizeTWrapper(ref_minibatch_size) #need this to make proper typed DictionaryValue
+    if isinstance(lr, dict):
+        additional_options.dict_options[cntk_py.Learner.LEARNING_RATE_SCHEDULE] = lr
+        #create a dummy learning schedule to fulfil the API need
+        #TODO: modify the C++ learner API to hold all parameters in a Dictionary
+        lr = training_parameter_schedule(0.1, 0)
 
     return cntk_py.adam_learner(parameters, lr, momentum, unit_gain,
                                 variance_momentum, epsilon, adamax, additional_options)
@@ -1048,6 +1116,11 @@ def rmsprop(parameters, lr,
     ref_minibatch_size = _infer_ref_minibatch_size_from_legacy_use_mean_gradient(ref_minibatch_size, use_mean_gradient)
     if ref_minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner.REF_MB_SIZE] = cntk_py.SizeTWrapper(ref_minibatch_size) #need this to make proper typed DictionaryValue
+    if isinstance(lr, dict):
+        additional_options.dict_options[cntk_py.Learner.LEARNING_RATE_SCHEDULE] = lr
+        #create a dummy learning schedule to fulfil the API need
+        #TODO: modify the C++ learner API to hold all parameters in a Dictionary
+        lr = training_parameter_schedule(0.1, 0)
 
     return cntk_py.rmsprop_learner(parameters, lr, gamma, inc, dec, max, min,
                                    need_ave_multiplier, additional_options)

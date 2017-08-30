@@ -116,6 +116,7 @@
 %rename(unspecified_ref_minibatch_size) CNTK::TrainingParameterSchedule<std::size_t>::UnspecifiedRefMBSize;
 %rename(REF_MB_SIZE) CNTK::Learner::RefMBSizeK;
 %rename(FUNCTION) CNTK::Learner::FunctionK;
+%rename(ARG_TO_CONTEXT_MAP) CNTK::Learner::ArgToContextMapK;
 %rename(RATE) CNTK::Learner::RateK;
 %rename(LEARNING_RATE_SCHEDULE)  CNTK::Learner::LearningRateScheduleK;
 %rename(MOMENTUM_SCHEDULE) CNTK::Learner::MomentumScheduleK;

@@ -1353,9 +1353,10 @@ namespace CNTK
                 std::is_same<T, std::wstring>::value ||
                 std::is_same<T, std::vector<DictionaryValue>>::value ||
                 std::is_same<T, Dictionary>::value ||
+                std::is_same<T, NDArrayView>::value||
                 std::is_same<T, FunctionPtr>::value ||
                 std::is_same<T, TrainingParameterSchedule<double>>::value ||
-                std::is_same<T, NDArrayView>::value),
+                std::is_same<T, VariablePtr>::value),
                 "Unsupported ValueType");
 
             AllocateDataPtr(value);
@@ -1508,6 +1509,7 @@ namespace CNTK
             std::is_same<T, std::vector<DictionaryValue>>::value ||
             std::is_same<T, Dictionary>::value ||
             std::is_same<T, FunctionPtr>::value ||
+            std::is_same<T, VariablePtr>::value ||
             std::is_same<T, TrainingParameterSchedule<double>>::value ||
             std::is_same<T, NDArrayView>::value>::type* = nullptr>
             const T& Value() const
@@ -1522,6 +1524,7 @@ namespace CNTK
             std::is_same<T, std::vector<DictionaryValue>>::value ||
             std::is_same<T, Dictionary>::value ||
             std::is_same<T, FunctionPtr>::value ||
+            std::is_same<T, VariablePtr>::value ||
             std::is_same<T, TrainingParameterSchedule<double>>::value ||
             std::is_same<T, NDArrayView>::value>::type* = nullptr>
             T& Value()
@@ -1564,6 +1567,7 @@ namespace CNTK
                            std::is_same<T, std::vector<DictionaryValue>>::value ||
                            std::is_same<T, Dictionary>::value ||
                            std::is_same<T, FunctionPtr>::value ||
+                           std::is_same<T, VariablePtr>::value ||
                            std::is_same<T, TrainingParameterSchedule<double>>::value ||
                            std::is_same<T, NDArrayView>::value),
                            "Unsupported ValueType");
@@ -1579,8 +1583,8 @@ namespace CNTK
             if (std::is_same<T, std::vector<DictionaryValue>>::value)              return Type::Vector;
             if (std::is_same<T, Dictionary>::value)                                return Type::Dictionary;
             if (std::is_same<T, NDArrayView>::value)                               return Type::NDArrayView;
-            if (std::is_same<T, FunctionPtr>::value)                                  return Type::CNTKFunction;
-            if (std::is_same<T, TrainingParameterSchedule<double>>::value)          return Type::TrainingParameterSchedule;
+            if (std::is_same<T, FunctionPtr>::value)                               return Type::CNTKFunction;
+            if (std::is_same<T, TrainingParameterSchedule<double>>::value)         return Type::TrainingParameterSchedule;
         }
 
         template <typename T>
@@ -4631,6 +4635,7 @@ namespace CNTK
     public:
         CNTK_API static const std::wstring RefMBSizeK;
         CNTK_API static const std::wstring FunctionK;
+        CNTK_API static const std::wstring ArgToContextMapK;
         CNTK_API static const std::wstring RateK;
         CNTK_API static const std::wstring LearningRateScheduleK;
         CNTK_API static const std::wstring MomentumScheduleK;
@@ -4705,8 +4710,6 @@ namespace CNTK
 
         CNTK_API Dictionary& GetOptions() { return m_additionalOptions.dictOptions; }
         CNTK_API const Dictionary& GetOptions() const { return m_additionalOptions.dictOptions; }
-        CNTK_API Dictionary& GetContext() { return m_learningContext; }
-        CNTK_API const Dictionary& GetContext() const { return m_learningContext; }
 
         ///In the litature, usually the learner parameters, such as the learning rates, moumentum and momentum variance, 
         ///are chosen for the specified minibatch size. However, for efficient impelmentation and for distributed training,
@@ -4718,10 +4721,7 @@ namespace CNTK
         CNTK_API std::size_t GetRefMinibatchSize() const { return GetOptions().GetOrElse(RefMBSizeK, UnspecifiedRefMBSize); }
 
         ///Return whether the learner is in literature compatible mode to use mean gradient and potentially other adjustment of the parameters if necessary.
-        CNTK_API bool IsCompatibleMode() const
-        {
-            return GetRefMinibatchSize() == UnspecifiedRefMBSize;
-        }
+        CNTK_API bool IsCompatibleMode() const { return GetRefMinibatchSize() == UnspecifiedRefMBSize;  }
     protected:
         ///
         /// Retrieves and returns current value from the training parameter schedule.
@@ -4748,8 +4748,6 @@ namespace CNTK
         size_t m_minibatchCount;
         size_t m_sweepCount;
         AdditionalLearningOptions m_additionalOptions;
-        ///A dictionary to hold and update learning context.
-        Dictionary m_learningContext;
         mutable std::unordered_set<ProgressWriterPtr> m_progressWriters;
     };
 

@@ -60,6 +60,7 @@ namespace CNTK
                       is_same<T, vector<DictionaryValue>>::value ||
                       is_same<T, Dictionary>::value ||
                       is_same<T, FunctionPtr>::value ||
+                      is_same<T, VariablePtr>::value ||
                       is_same<T, TrainingParameterSchedule<double>>::value ||
                       is_same<T, NDArrayView>::value,
                       "AllocateDataPtr called with invalid type");

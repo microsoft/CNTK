@@ -42,11 +42,42 @@ namespace CNTK
         // Allows derived class may override this to perform per-minibatch update actions
         virtual void UpdateOnMinibatch(size_t /*trainingSampleCount*/) {}
 
+        //TODO: The creatation of appropriate LearningContext should be done before the updates that need the context; or
+        //      we have a Context interface which dynamically pull necessary information from learner, distributed 
+        //      learner, trainer, training session on the fly instead having a Dictionary.
+        virtual Dictionary GetLearningContext(size_t minibatchSize) const;
+
+        ValuePtr CallFunctionInContext(const Dictionary& context,
+            FunctionPtr func,
+            const std::unordered_map<std::wstring, std::wstring>& funcArgNames2ContextNameMapping,
+            const DeviceDescriptor& device = DeviceDescriptor::CPUDevice()) const;
+
         std::string LearnerType() const;
+
+        double LearningRateFromFunction(size_t minibatchSize) const
+        {
+            const Dictionary& dict = GetOptions()[LearningRateScheduleK].Value<Dictionary>();
+            FunctionPtr learning_rate_func = dict[FunctionK].Value<FunctionPtr>();
+            const Dictionary& raw_arg_map = dict[ArgToContextMapK].Value<Dictionary>();
+            std::unordered_map<std::wstring, std::wstring> arg_map;
+            for (auto& item : raw_arg_map) 
+            {
+                arg_map[item.first] = item.second.Value<std::wstring>();
+            }
+
+            ValuePtr output_value = CallFunctionInContext(GetLearningContext(minibatchSize), learning_rate_func, arg_map);
+            return output_value->Data()->AsScalar<double>();
+        }
 
         // Returns current learning rate.
         double LearningRate(size_t minibatchSize) const
         {
+            if (GetOptions().Contains(LearningRateScheduleK))
+            {   //TODO: This is an experimental implementation for funtional learning rate adaption
+                //the learning is overrided by a CNTK function
+                return LearningRateFromFunction(minibatchSize);
+            }
+
             auto learningRate = Learner::LearningRate();
             std::ignore = minibatchSize; //ignore the minibatch size for now
             if (IsCompatibleMode())
@@ -190,7 +221,8 @@ namespace CNTK
         ElementType UnitGainFactor(size_t minibatchSize) const
         {
             //TODO: Still working on the right scaling of unit gain factor adapting to minibatch size
-            //      Preliminary study shows that the unitgain factor will have different scaling than momentum
+            //      Preliminary study shows that the unitgain factor will have different scaling than momentum.
+            //      It should be based on the original momentum without scaling: See comment on LearnerMomentumSGD::Update.
             UNUSED(minibatchSize);
             ElementType momentum = (ElementType)GetCurrentTrainingParameterValue(m_momentumSchedule);
             //ElementType momentum = ElementType(MomentumValueForMB(minibatchSize));

@@ -34,6 +34,7 @@ namespace CNTK
 {
     CNTK_API const std::wstring Learner::RefMBSizeK = L"RefMBSizeK";
     CNTK_API const std::wstring Learner::FunctionK = L"FunctionK";
+    CNTK_API const std::wstring Learner::ArgToContextMapK = L"ArgToContextMapK";
 
     CNTK_API const std::wstring Learner::RateK = L"RateK";
     CNTK_API const std::wstring Learner::LearningRateScheduleK = L"LearningRateScheduleK";
@@ -336,6 +337,79 @@ namespace CNTK
     }
 
     static const std::wstring s_learnerTypeValue = L"Learner";
+
+    /*virtual*/ Dictionary LearnerBase::GetLearningContext(size_t actualMinibatchSize)  const
+    {
+        Dictionary context;
+
+        context[sampleCountKey] = m_sampleCount;
+        context[minibatchCountKey] = m_minibatchCount;
+        context[actualMinibatchSizeKey] = actualMinibatchSize;
+        return context;
+    }
+
+ 
+    ValuePtr LearnerBase::CallFunctionInContext(const Dictionary& context,
+        FunctionPtr func,
+        const std::unordered_map<std::wstring, std::wstring>& funcArgNames2ContextNameMapping,
+        const DeviceDescriptor& device) const
+    {
+        ValuePtr outputValue;
+        std::unordered_map<Variable, ValuePtr> outputs = { { func->Output(), outputValue } };
+
+        std::unordered_map<Variable, ValuePtr> arg_map;
+        auto args = func->Arguments();
+        for (auto v : args)
+        {
+            if (funcArgNames2ContextNameMapping.find(v.Name()) != funcArgNames2ContextNameMapping.end())
+            {
+                if (context.Contains(funcArgNames2ContextNameMapping.at(v.Name())))
+                {
+                    const std::wstring& name = funcArgNames2ContextNameMapping.at(v.Name());
+                    const DictionaryValue& value = context[name];
+                    auto inputShape = v.Shape();
+                    //using double for now
+                    double raw_value = 0.0;
+                    ValuePtr inputValue;
+                    if (value.ValueType() == DictionaryValue::Type::NDArrayView)
+                    {
+                        inputValue = MakeSharedObject<Value>(value.Value<NDArrayView>().Alias());
+                    }
+                    else if (value.ValueType() == DictionaryValue::Type::Double)
+                    {
+                        raw_value = value.Value<double>();
+                        inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, std::vector<double>({ raw_value }).data(), 1, device, true));
+                    }
+                    else if (value.ValueType() == DictionaryValue::Type::Float)
+                    {
+                        raw_value = value.Value<float>();
+                        inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, std::vector<double>({ raw_value }).data(), 1, device, true));
+
+                    }
+                    else if (value.ValueType() == DictionaryValue::Type::SizeT)
+                    {
+                        raw_value = (double) value.Value<std::size_t>();
+                        inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, std::vector<double>({ raw_value }).data(), 1, device, true));
+                    }
+                    arg_map[v] = inputValue;
+                }
+                else
+                {
+                    LogicError("LearnerBase::CallFunctionInContext: Variable with name %s is not available in context.", 
+                        funcArgNames2ContextNameMapping.at(v.Name()));
+                }
+            }
+            else
+            {
+                LogicError("LearnerBase::CallFunctionInContext: Function argument %s value is not provided.", v.Name());
+            }
+        }
+
+        auto backpropState = func->Forward(arg_map, outputs, device);
+        outputValue = outputs[func->Output()];
+        return outputValue;
+    }
+
 
     /*virtual*/ Dictionary LearnerBase::CreateCheckpoint() /*override*/
     {
@@ -779,7 +853,7 @@ namespace CNTK
         const auto unitGainFactor = UnitGainFactor<ElementType>(trainingSampleCount);
 
         const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
-
+        //TODO: double-check the relationship between the smoothedCount,  momentum and varMomentum scaling
         smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, m_smoothedCount, learningRate,
                                            momentum, varMomentum, (ElementType)m_epsilon, unitGainFactor, m_adamax);
     }
