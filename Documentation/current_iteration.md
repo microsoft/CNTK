@@ -25,6 +25,8 @@
 ### Reduced rank for convolution in C++ to enable convolution on 1D data 
 ### Dilated convolution 
 Add support to dilation convolution on the GPU, exposed by BrainScript, C++ and Python API. Dilation convolution effectively increase the kernel size, without actually requiring a big kernel. To use dilation convoluton you need at least cuDNN 6.0. 
+### Deterministic Pooling
+Now call `cntk.debug.force_deterministic()` will make max and average pooling determistic, this behavior depend on cuDNN version 6 or later.
 
 ## Performance 
 ### Asynchronous evaluation API (Python and C#) 
