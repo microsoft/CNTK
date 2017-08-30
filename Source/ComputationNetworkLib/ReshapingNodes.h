@@ -534,7 +534,7 @@ public:
         auto origin_rows = outputValue.GetNumRows();
         auto origin_cols = outputValue.GetNumCols();
         outputValue.AssignValuesOf(inputValue);
-        outputValue.Resize(origin_rows, origin_cols);
+        outputValue.Reshape(origin_rows, origin_cols);
     }
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
@@ -544,7 +544,7 @@ public:
 
         auto origin_rows = gradient.GetNumRows();
         auto origin_cols = gradient.GetNumCols();
-        gradient.Resize(inputGradient.GetNumRows(), inputGradient.GetNumCols());
+        gradient.Reshape(inputGradient.GetNumRows(), inputGradient.GetNumCols());
 
         if (Input(0)->IsGradientOptimized(this))
         {
@@ -561,7 +561,7 @@ public:
         else
             inputGradient += gradient;
 
-        gradient.Resize(origin_rows, origin_cols);
+        gradient.Reshape(origin_rows, origin_cols);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -641,7 +641,7 @@ public:
         auto origin_cols = outputValue.GetNumCols();
 
         outputValue.AssignValuesOf(inputValue);
-        outputValue.Resize(origin_rows, origin_cols);
+        outputValue.Reshape(origin_rows, origin_cols);
     }
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
@@ -651,7 +651,7 @@ public:
 
         auto origin_rows = gradient.GetNumRows();
         auto origin_cols = gradient.GetNumCols();
-        gradient.Resize(inputGradient.GetNumRows(), inputGradient.GetNumCols());
+        gradient.Reshape(inputGradient.GetNumRows(), inputGradient.GetNumCols());
         
         if (Input(0)->IsGradientOptimized(this))
         {
@@ -668,7 +668,7 @@ public:
         else
             inputGradient += gradient;
 
-        gradient.Resize(origin_rows, origin_cols);
+        gradient.Reshape(origin_rows, origin_cols);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override 
