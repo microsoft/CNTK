@@ -19,11 +19,20 @@ pip install opencv-python
 pip install easydict
 pip install pyyaml
 pip install future
+pip install pydot-ng
 ```
 
 The code uses prebuild Cython modules for parts of the region proposal network (see `Examples/Image/Detection/utils/cython_modules`). 
 These binaries are contained in the repository for Python 3.5 under Windows and Python 3.4 under Linux.
 If you require other versions please follow the instructions at [https://github.com/rbgirshick/py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#installation-sufficient-for-the-demo).
+
+The code also uses Graphviz. To install Graphviz in Ubuntu:
+
+```
+sudo apt-get install graphviz
+```
+
+To install Graphviz in Windows: [Download the binary](http://www.graphviz.org/Download_windows.php) and install. You may need to add the bin folder of Graphviz to your PATH environment variable. Its bin folder is usually located in `C:\Program Files (x86)\Graphviz2.XX\bin`.
 
 ### Getting the data and AlexNet model
 

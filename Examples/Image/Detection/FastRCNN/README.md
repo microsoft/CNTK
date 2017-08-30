@@ -23,7 +23,7 @@ In this example, we use [AlexNet](../../Classification/AlexNet) as a pre-trained
 
 ### Getting the data and AlexNet model
 
-we use a toy dataset of images captured from a refrigerator to demonstrate Fast-R-CNN. Both the dataset and the pre-trained AlexNet model can be downloaded by running the following Python command:
+We use a toy dataset of images captured from a refrigerator to demonstrate Fast-R-CNN. Both the dataset and the pre-trained AlexNet model can be downloaded by running the following Python command:
 
 `python install_fastrcnn.py`
 
@@ -106,7 +106,7 @@ If you carefully examine the [fastrcnn.cntk](./fastrcnn.cntk) file, you would no
 
 ### Evaluate trained model
 
-One the model has been trained for detection, you may run:
+Once the model has been trained for detection, you may run:
 
 `python A3_ParseAndEvaluateOutput.py`
 
