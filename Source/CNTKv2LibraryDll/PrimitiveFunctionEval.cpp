@@ -221,25 +221,25 @@ namespace CNTK
             {
                 if (args.size() != 9)
                     LogicError("Variable '%S' Value(): Operation %S requires 3 additional arguments.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
-                let& arg = args[0];
+                let& x     = args[0];
                 let& scale = args[1];
-                let& bias = args[2];
+                let& bias  = args[2];
                 // BUGBUG: TODO: implement aggregation of stats
                 // the following three are temps that carry over to backprop
-                let& meanTmp    = args[6]; // mu
-                let& sigmaTmp   = args[7]; // sigma
-                let& normedTmp  = args[8]; // (x-mu)/sigma
+                let& mu    = args[6];
+                let& sigma = args[7];
+                let& xHat  = args[8]; // (x-mu)/sigma
                 // mu and sigma
-                NDArrayView::NumericOperation({ arg }, (double)meanTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, meanTmp);
-                NDArrayView::NumericOperation({ arg, meanTmp }, (double)sigmaTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigmaTmp); // sigma^2
-                NDArrayView::NumericOperation({ sigmaTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigmaTmp); // sigma (in-place)
+                NDArrayView::NumericOperation({ x     }, (double)   mu->Shape().TotalSize() / (double)x->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,            mu);
+                NDArrayView::NumericOperation({ x, mu }, (double)sigma->Shape().TotalSize() / (double)x->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma); // sigma^2
+                NDArrayView::NumericOperation({ sigma }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma); // sigma (in-place)
                 double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                 if (epsilon > 0) // we add eps to sigma to avoid dividing by 0 or very small estimates
-                    NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, sigmaTmp, /*beta=*/1.0); // sigma + eps (in-place)
-                // normedTmp = (x-mu)/sigma
-                NDArrayView::NumericOperation({ arg, sigmaTmp, meanTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusCoverB, normedTmp);  // (x-mu)/sigma
+                    NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, sigma, /*beta=*/1.0); // sigma + eps (in-place)
+                // xHat = (x-mu)/sigma
+                NDArrayView::NumericOperation({ x, sigma, mu }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusCoverB, xHat);  // (x-mu)/sigma
                 // apply scale and bias
-                NDArrayView::NumericOperation({ normedTmp, scale, bias }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, out);
+                NDArrayView::NumericOperation({ xHat, scale, bias }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, out);
             }
             break;
         case PrimitiveOpType::OneHot:
@@ -309,7 +309,7 @@ namespace CNTK
     // Important: Beta is meant to apply to the *entire* gradient tensor. Specifically, also for the case of Slice(),
     // beta == 0 will set the *entire* gradient tensor to 0, not just the slice.
     // Hence, when back-propagating into multiple slices of the same matrix, only pass beta=0 for the first one.
-    // TODO: decide whether we pass raw pointers or shared pointers...
+    // TODO: decide whether we pass raw pointers or shared pointers... Why are we passing naked pointers again?
     /*static*/ void PrimitiveFunction::BackpropTo(const NDArrayView* outputGradient,                         // incoming gradient from top...
                               size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes,           // ...goes through this backprop function...
                               const NDArrayView* outputValue, const vector<const NDArrayView*>& inputValues, // ...using these values from forward pass...
@@ -383,9 +383,9 @@ namespace CNTK
         case PrimitiveOpType::NoOp:          op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
         case PrimitiveOpType::Reshape:
             // shapes won't match, so reshape one to match the other (we can't just opCopy with mismatching shapes, which may cause weird broadcasting weirdness that won't crash but produce garbage values)
-            if (arg1->Shape() != gradient->Shape())
+            if (outputGradient->Shape() != gradient->Shape())
             {
-                NDArrayView::NumericOperation({ arg1->AsShape(gradient->Shape()) }, alpha, // differs from shared code below in passing the reshaped arg1
+                NDArrayView::NumericOperation({ outputGradient->AsShape(gradient->Shape()) }, alpha, // differs from shared code below in passing the reshaped outputGradient
                                               Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
                 handled = true;
             }
@@ -423,9 +423,9 @@ namespace CNTK
             {
                 // TODO: allow to pass index as SIZE_MAX to denote all; but only allow that for splice.
                 auto axis = attributes[L"axis"/*PrimitiveFunction::AttributeNameAxis*/].Value<Axis>();
-                if (axis.StaticAxisIndex() != arg1->Shape().Rank() -1)
+                if (axis.StaticAxisIndex() != outputGradient->Shape().Rank() -1)
                     LogicError("NDArrayView::GatherBatch: Currently only splicing in a new slowest-changing axis is supported.");
-                NDArrayView::NumericOperation({ arg1->IndexLastAxis(i) }, alpha,
+                NDArrayView::NumericOperation({ outputGradient->IndexLastAxis(i) }, alpha,
                                               Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
                 handled = true;
             }
@@ -434,7 +434,7 @@ namespace CNTK
             // Backprop into the input slice of the input gradient: We can use forward-prop to determine the slice.
             if (beta == 0) // if beta = 0 then we must explicitly initialize the entire gradient matrix, not just the slice
                 gradient->SetValue(0.0f);
-            NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
+            NDArrayView::NumericOperation({ const_cast<NDArrayView*>(outputGradient)->shared_from_this() }, alpha,
                                           Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
                                           GetSliceView(gradient, attributes, outputValue->Shape(), /*readOnly=*/false, funcForErrMsg),
                                           beta); // keep beta; although we just cleared it, beta=0 avoids the memory access
@@ -478,41 +478,47 @@ namespace CNTK
         case PrimitiveOpType::BatchNormalization:
             if (i == 0) // input argument
             {
-                let& scale     = inputValues[1];
-                let& sigmaTmp  = inputValues[7]; // sigma
-                let& normedTmp = inputValues[8]; // t = (x-mu)/sigma
-                let N = (double)inputValues[0]->Shape().TotalSize() / (double)sigmaTmp->Shape().TotalSize();
-                // cf. CNTK engine:
-                //gradient += (1 / N) * (outputGradient * scale / sigmaTmp) * (N - 1 - normedTmp2);
-                // t^2 = (x-mu)^2/sigma^2
-                let normedTmp2 = NDArrayView::NumericOperation({ const_cast<NDArrayView*>(normedTmp)->shared_from_this() }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqr);
-                //sigmaTmp->LogToFile(L"sigma");
-                //normedTmp->LogToFile(L"normedTmp");
-                //normedTmp2->LogToFile(L"normedTmp^2");
-                // (N - 1 - t^2)
-                NDArrayView::NumericOperation({}, /*alpha=*/N - 1, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, normedTmp2, /*beta=*/-1.0);
-                //normedTmp2->LogToFile(L"N - 1 -normedTmp^2");
-                // gradient from top * scale / sigma
-                let gScOverSigma = NDArrayView::NumericOperation({ const_cast<NDArrayView*>(outputGradient)->shared_from_this(),       // multiplied
-                                                                   const_cast<NDArrayView*>(scale)->shared_from_this(),      // multiplied
-                                                                   const_cast<NDArrayView*>(sigmaTmp)->shared_from_this() }, // divided by
-                                                                 1.0,
-                                                                 Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithQuotient);
-                // add to gradient
-                NDArrayView::NumericOperation({ gScOverSigma, normedTmp2 }, /*alpha=*/1 / N, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct, gradient, beta);
+                let& outGrad = const_cast<NDArrayView*>(outputGradient)->shared_from_this(); // dL/dyi
+                let& scale   = const_cast<NDArrayView*>(inputValues[1])->shared_from_this();
+                let& sigma   = const_cast<NDArrayView*>(inputValues[7])->shared_from_this(); // sigma
+                let& xHat    = const_cast<NDArrayView*>(inputValues[8])->shared_from_this(); // (xi-mu)/sigma
+                let N = (double)inputValues[0]->Shape().TotalSize() / (double)sigma->Shape().TotalSize();
+                // [cf. CNTK engine:]
+                // From the BN paper, dL/dxi is a sum of three terms: dL/dxi = t1 + t2 + t3
+                // The formulas for dL/dBias and dL/dScale happen to occur as subexpressions in this gradient as well.
+                // Leveraging this, this gradient can be simplified to:
+                //   t1 = scale * dL/dyi * invStdDev
+                //   t2 = mbStatsWeight * (-scale / m) * invStdDev * xiHat * dL/dScale
+                //   t3 = mbStatsWeight * (-scale / m) * invStdDev * dL/dBias (for this one note that Reduce(xHat) == 0)
+                // with
+                //   xiHat = (xi - mean) * invStdDev
+                //   dL/dBias = Reduce(dL/dyi)
+                //   dL/dScale = Reduce(dL/dyi * xiHat)
+                // gradient +=
+                //     (scale / sigma) * outputGradient +
+                //     (scale / sigma) * -1/N * (xHat * scaleGradient + biasGradient);
+                // TODO: redundant with gradients[1] and [2]--how to cache this?
+                let biasGradient  = NDArrayView::NumericOperation({ outGrad       }, /*alpha=*/1.0, opCopy);
+                let scaleGradient = NDArrayView::NumericOperation({ outGrad, xHat }, /*alpha=*/1.0, opElementwiseProduct);
+                // -1/N * (xHat * scaleGradient + biasGradient)
+                auto tdspdb = NDArrayView::NumericOperation({ xHat, scaleGradient, biasGradient }, -1/N, opAxBplusC);
+                // += outputGradient
+                tdspdb += outGrad;
+                // *= (scale / sigma), then add to gradient
+                NDArrayView::NumericOperation({ tdspdb, scale, sigma }, 1.0, opElementwiseProductWithQuotient, gradient, beta);
                 handled = true;
             }
-            else if (i == 1) // scale
+            else if (i == 1) // scale is a reduction over outputGradient * (x-mu)/sigma
             {
-                let& normedTmp = inputValues[8]; // (x-mu)/sigma
-                NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),
-                                                const_cast<NDArrayView*>(normedTmp)->shared_from_this() },
+                let& xHat = inputValues[8]; // (x-mu)/sigma
+                NDArrayView::NumericOperation({ const_cast<NDArrayView*>(outputGradient)->shared_from_this(),
+                                                const_cast<NDArrayView*>(xHat)->shared_from_this() },
                                               /*alpha=*/1.0,
                                               Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct, gradient, beta);
                 //gradient->LogToFile(L"-> bn scale gradient", stderr);
                 handled = true;
             }
-            else if (i == 2) // bias
+            else if (i == 2) // bias is just a reduction over elements
             {
                 op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
             }

@@ -1013,11 +1013,17 @@ namespace CNTK
     };
 
     ///
-    /// Binary addition operators for NDArrayView
+    /// Some operator overloads for NDArrayView.
+    /// Note that the non-in-place ones allocate memory, while the in-place ones don't, but *= and /= cannot reduce.
     ///
     CNTK_API NDArrayViewPtr operator+(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
     CNTK_API NDArrayViewPtr operator-(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
     CNTK_API NDArrayViewPtr operator*(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
+    CNTK_API NDArrayViewPtr operator/(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
+    CNTK_API NDArrayViewPtr& operator+=(NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
+    CNTK_API NDArrayViewPtr& operator-=(NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
+    CNTK_API NDArrayViewPtr& operator*=(NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
+    CNTK_API NDArrayViewPtr& operator/=(NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand);
 
     enum class MaskKind : char
     {

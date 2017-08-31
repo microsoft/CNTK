@@ -514,6 +514,34 @@ namespace CNTK
     {
         return NDArrayView::NumericOperation({ leftOperand, rightOperand }, 1.0, ElementWiseOperator::opElementwiseProduct);
     }
+    NDArrayViewPtr operator/(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand)
+    {
+        return NDArrayView::NumericOperation({ leftOperand, rightOperand }, 1.0, ElementWiseOperator::opElementwiseQuotient);
+    }
+    NDArrayViewPtr& operator+=(NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand)
+    {
+        // using opCopy allows to reduce as we go, e.g. rightOperand can inverse-broadcast into leftOperand
+        NDArrayView::NumericOperation({ rightOperand }, /*alpha=*/1.0, ElementWiseOperator::opCopy, leftOperand, /*beta=*/1.0);
+        return leftOperand;
+    }
+    NDArrayViewPtr& operator-=(NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand)
+    {
+        // note: to allow reduction, this is implemented the same as operator+= except with a negative alpha
+        NDArrayView::NumericOperation({ rightOperand }, /*alpha=*/-1.0, ElementWiseOperator::opCopy, leftOperand, /*beta=*/1.0);
+        return leftOperand;
+    }
+    NDArrayViewPtr& operator*=(NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand)
+    {
+        // note: rightOperand must not inverse-broadcast into leftOperand
+        NDArrayView::NumericOperation({ leftOperand, rightOperand }, 1.0, ElementWiseOperator::opElementwiseProduct, leftOperand);
+        return leftOperand;
+    }
+    NDArrayViewPtr& operator/=(NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand)
+    {
+        // note: rightOperand must not inverse-broadcast into leftOperand
+        NDArrayView::NumericOperation({ leftOperand, rightOperand }, 1.0, ElementWiseOperator::opElementwiseQuotient, leftOperand);
+        return leftOperand;
+    }
 
     /*static*/ NDArrayViewPtr NDArrayView::MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank, NDArrayViewPtr out, double beta)
     {

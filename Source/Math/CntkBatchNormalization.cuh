@@ -1051,21 +1051,22 @@ __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize
         LoadValues<U>(pdy, dyCur);
         LoadValues<U>(pdx, dxCur);
         // From the BN paper, dL/dxi is a sum of three terms: dL/dxi = t1 + t2 + t3
-        // The formulas for dBias and dScale happen to occur as subexpressions in this gradient as well.
+        // The formulas for dL/dBias and dL/dScale happen to occur as subexpressions in this gradient as well.
         // Leveraging this, this gradient can be simplified to:
         //   t1 = scale * dL/dyi * invStdDev
-        //   t2 = mbStatsWeight * (-scale / m) * invStdDev * xHat * dL/dScale
-        //   t3 = mbStatsWeight * (-scale / m) * invStdDev * dL/dBias (for this one note that Sum(xHat) == 0)
+        //   t2 = mbStatsWeight * (-scale / m) * invStdDev * xiHat * dL/dScale
+        //   t3 = mbStatsWeight * (-scale / m) * invStdDev * dL/dBias (for this one note that Reduce(xHat) == 0)
         // with
-        //   dBias = Reduce(dy)
-        //   dScale = Reduce(dy * xHat)
+        //   xiHat = (xi - mean) * invStdDev
+        //   dL/dBias = Reduce(dL/dyi)
+        //   dL/dScale = Reduce(dL/dyi * xiHat)
         // Simplifying this a bit more, we get the formula below.
         ElemType val[U];
         int m = Spatial ? batchSize * spatialSize : batchSize;
 #pragma unroll
         for (int k = 0; k < U; k++)
         {
-            ElemType xNorm = (xCur[k] - mean[k]) * invStdDev[k]; // xHat
+            ElemType xHat = (xCur[k] - mean[k]) * invStdDev[k];
             // scale * invStdDev * (
             //   dL/dyi
             //   - mbStatsWeight * (xHat * dL/dScale + dL/dBias) / m
@@ -1073,7 +1074,7 @@ __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize
             val[k] = dxCur[k]   // (adding to gradient)
                      + (scale[k] * invStdDev[k]) * (
                         dyCur[k]
-                        - mbStatsWeight * (xNorm * ds[k] + db[k]) / m);
+                        - mbStatsWeight * (xHat * ds[k] + db[k]) / m);
         }
         StoreValues<U>(val, pdx);
     }
