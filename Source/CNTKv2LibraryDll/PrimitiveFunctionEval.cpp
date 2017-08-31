@@ -507,16 +507,6 @@ namespace CNTK
                 let oneOverN = (double)redBuf->Shape().TotalSize() / (double)inputValues[0]->Shape().TotalSize();
                 // note: scaleGradientAv and biasGradientAv both share a buffer with mu, since they are not needed at the same time
                 let scaleGradient = NDArrayView::NumericOperation({ outGrad, xHat }, /*alpha=*/1, opElementwiseProduct, redBuf);
-                //xHat->LogToFile(L"xHat");
-                //scaleGradient->LogToFile(L"scaleGradient");
-                //scale->LogToFile(L"scale");
-                //sigma->LogToFile(L"sigma");
-                //auto tdspdb = xHat * scaleGradient;
-                //let t1 = NDArrayView::NumericOperation({ tdspdb, scale, sigma }, -oneOverN, opElementwiseProductWithQuotient);
-                //let t2 = NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-oneOverN, opAxBxCoverD);
-                //t1->LogToFile(L"t1");
-                //t2->LogToFile(L"t2");
-                //NDArrayView::NumericOperation({ tdspdb, scale, sigma }, -oneOverN, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
                 NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-oneOverN, opAxBxCoverD, gradient, /*beta=*/1.0);
                 // add third term, which is
                 // (scale / sigma) * -1/N * biasGradient

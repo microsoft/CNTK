@@ -62,6 +62,10 @@ static NDArrayViewPtr TestTensor(const NDShape& shape, double scale, const char*
         res = NDArrayView::NumericOperation({ res }, 1.0, L"Abs");
         res = NDArrayView::NumericOperation({ constT(0.1) }, 1.0, L"Copy", nullptr, /*beta=*/1.0);
     }
+    else if (strcmp(opName, "Cond") == 0 && argIndex == 0) // Cond requires a flag as the condition
+    {
+        res = NDArrayView::NumericOperation({ res, constT(0.1) }, 1.0, L"Less"); // compare against some threshold
+    }
     return res;
 }
 static Parameter TestParameter(const NDShape& shape, double scale, const char* opName, size_t argIndex, DataType dataType, const DeviceDescriptor& device)
@@ -199,7 +203,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             vector<NDArrayViewPtr> batchItems;
             for (size_t n = 0; n < N; n++) // loop over samples
                 batchItems.push_back(allArgValues[n][0]);
-            let batch = NDArrayView::GatherBatch(batchItems, /*axi=*/batchItems[0]->Shape().Rank());
+            let batch = NDArrayView::GatherBatch(batchItems, /*axis=*/(int)batchItems[0]->Shape().Rank());
             // create them in the right shape. This will inform the reduction.
             batchMean = make_shared<NDArrayView>(batchItems[0]->GetDataType(), batchItems[0]->GetStorageFormat(), batchItems[0]->Shape(), device);
             auto batchSqrMean = make_shared<NDArrayView>(batchItems[0]->GetDataType(), batchItems[0]->GetStorageFormat(), batchItems[0]->Shape(), device);
@@ -287,11 +291,13 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         // We test each argument index separately, to make this test more informative.
         if (dataType == DataType::Double)
         {
-            let epsScale = 1e-6;
+            let epsScale = 1e-7;
             for (size_t argIndexUnderTest = 0; argIndexUnderTest < aryness; argIndexUnderTest++)
             {
                 // some args are not differentiable: skip those
                 if (strstr(test.op.second, "Clip") && argIndexUnderTest > 0)
+                    continue;
+                if (strstr(test.op.second, "Cond") && argIndexUnderTest == 0)
                     continue;
                 // determine all gradients. That is args[*][argIndexUnderTest].
                 // Note: args that are shared across the batch will only get a single entry in the gradients[] map
@@ -354,6 +360,9 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                 let relErr = (perturbationBasedDelta == gradientBasedDelta) ? 0 : fabs(((perturbationBasedDelta - gradientBasedDelta) / perturbationBasedDelta));
                 if (relErr > 1e-5)
                     fprintf(stderr, ">>>>>>>>>> BWD[%d] FAILED: err=%.10f%% (numeric=%.20f, symbolic=%.20f)\n", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
+                // Once in a while enable the following, to see whether there are some broken tests. We do have zeroes e.g. for Equal().
+                //else if (gradientBasedDelta == 0)
+                //    fprintf(stderr, ">>>>>>>>>> BWD[%d] IS 0??\n", (int)argIndexUnderTest);
             }
         }
     } // loop over tests
@@ -363,6 +372,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 void RunDynamiteTests()
 {
     size_t numFailed = 0;
+    numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(3, DataType::Float,  DeviceDescriptor::GPUDevice(0));
