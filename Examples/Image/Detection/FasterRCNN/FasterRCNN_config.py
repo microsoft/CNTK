@@ -42,7 +42,7 @@ __C.CNTK.BIAS_LR_MULT = 2.0
 # E2E learning parameters
 __C.CNTK.E2E_MAX_EPOCHS = 20
 #__C.CNTK.E2E_LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 10 + [0.00001]
-__C.CNTK.E2E_LR_PER_SAMPLE = [0.00001] * 10 + [0.0001] * 10 + [0.00001]
+__C.CNTK.E2E_LR_PER_SAMPLE = [0.000005] * 10 + [0.0001] * 10 + [0.00001]
 
 # 4-stage learning parameters (alternating training scheme)
 __C.CNTK.RPN_EPOCHS = 16

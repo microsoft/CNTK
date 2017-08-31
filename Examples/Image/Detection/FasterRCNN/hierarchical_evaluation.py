@@ -93,7 +93,9 @@ def prepare_predictions(outputs, roiss, num_classes):
 
     for img_i in range(num_test_images):
         output = outputs[img_i]
-        output.shape = output.shape[1:]
+        #import pdb; pdb.set_trace()
+        #num_rois = outpus.shape[0] /
+        #output.shape = output.shape[1:]
         rois = roiss[img_i]
 
         preds_for_img = []
@@ -201,7 +203,7 @@ def eval_fast_rcnn_mAP(frcn_eval, cfg, minibatch_source, input_map):
     all_gt_infos = prepare_ground_truth_boxes(gtbs=all_raw_gt_boxes)
     all_boxes = prepare_predictions(all_raw_outputs, all_raw_rois, num_classes)
 
-    aps = evaluate_detections(all_boxes, all_gt_infos, classes, apply_mms=True, use_07_metric=True)
+    aps = evaluate_detections(all_boxes, all_gt_infos, classes, use_gpu_nms=True, device_id=0, apply_mms=True, use_07_metric=True)
     ap_list = []
     for class_name in classes:
         if class_name == "__background__": continue
