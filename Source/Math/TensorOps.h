@@ -53,6 +53,7 @@ OverloadUnaryMathFns(asin);
 OverloadUnaryMathFns(acos);
 OverloadUnaryMathFns(sinh);
 OverloadUnaryMathFns(cosh);
+OverloadUnaryMathFns(acosh);
 
 #pragma pop_macro("OverloadUnaryMathFns")
 
@@ -279,6 +280,7 @@ DefUnaryOp(Asin, asin_(a));
 DefUnaryOp(Acos, acos_(a));
 DefUnaryOp(Sinh, sinh_(a));
 DefUnaryOp(Cosh, cosh_(a));
+DefUnaryOp(Acosh, acosh_(a));
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
@@ -324,6 +326,7 @@ DefBinaryOp(SqrOfDifference, Sqr(a - b));
 DefBinaryOp(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, b >= 0 ? a : a*(1+b)); // b = output;
 DefBinaryOp(ElementwiseProductWithSinhDerivative, a * cosh_(b)); // note: b = input for sinh()
 DefBinaryOp(ElementwiseProductWithCoshDerivative, a * sinh_(b)); // note: b = input for cosh()
+DefBinaryOp(ElementwiseProductWithAcoshDerivative, a / sqrt_(b * b - 1)); // note: b = input for acosh()
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")
