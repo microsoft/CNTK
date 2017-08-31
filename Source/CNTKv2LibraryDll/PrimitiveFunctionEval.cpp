@@ -225,31 +225,22 @@ namespace CNTK
                 let& scale = args[1];
                 let& bias = args[2];
                 // BUGBUG: TODO: implement aggregation of stats
-                let& meanTmp = args[6];
-                let& stdTemp = args[7];
-                //let& normedTmp = args[8]; // result before adding the bias goes here
+                // the following three are temps that carry over to backprop
+                let& meanTmp = args[6]; // mu   --TODO: we can save this by applying it immediately, and then working in normTmp
+                let& varTmp = args[7];  // sigma^2
+                let& normTmp = args[8]; // (x-mu)/sigma
                 // mean
-                NDArrayView::NumericOperation({ arg }, (double)meanTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, meanTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                // standard deviation  --TODO: do we need a reduction opSqrSum, or an opDivBySqrt?
-                NDArrayView::NumericOperation({ arg, meanTmp }, (double)stdTemp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, stdTemp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                NDArrayView::NumericOperation({ arg }, (double)meanTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, meanTmp);
+                // variance  --TODO: do we need a reduction opSqrSum, or an opDivBySqrt?
+                NDArrayView::NumericOperation({ arg, meanTmp }, (double)varTmp->Shape().TotalSize() / (double)arg->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, varTmp); // variance
                 double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                 if (epsilon > 0) // we add eps^2 to the variance
-                    NDArrayView::NumericOperation({ }, epsilon*epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, stdTemp, /*beta=*/1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                NDArrayView::NumericOperation({ stdTemp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, stdTemp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // note: in-place
-                // apply
-                NDArrayView::NumericOperation({ arg, stdTemp, meanTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusCoverB, out);
-                NDArrayView::NumericOperation({ out, scale, bias }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC,     out); // note: in-place
-
-                //meanTmp->LogToFile(L"meanTmp");
-                //stdTemp->LogToFile(L"stdTemp");
-                //NDArrayView::NumericOperation({ stdTemp, scale }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, stdTemp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // note: in-place
-                //// scale must not be larger than stddev; so better have them at the same shape
-                //// normalize into normedTmp --TODO: use a single kernel for this
-                //NDArrayView::NumericOperation({ arg, meanTmp },         1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opDifference, normedTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                //NDArrayView::NumericOperation({ normedTmp, stdTemp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, normedTmp, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum); // in-place
-                //normedTmp->LogToFile(L"normedTmp", stderr);
-                // add bias
-                //NDArrayView::NumericOperation({ normedTmp, bias },                 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum,                out, 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                    NDArrayView::NumericOperation({ }, epsilon*epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, varTmp, /*beta=*/1.0); // variance + eps^2 (in-place)
+                // normTmp = (x-mu)/sigma
+                NDArrayView::NumericOperation({ arg,     meanTmp }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opDifference, normTmp);  // x-mu
+                NDArrayView::NumericOperation({ normTmp, varTmp },  1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opDivBySqr,   normTmp); // (x-mu)/sigma  (in-place)
+                // apply scale and bias
+                NDArrayView::NumericOperation({ normTmp, scale, bias }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, out);
             }
             break;
         case PrimitiveOpType::OneHot:
@@ -396,8 +387,7 @@ namespace CNTK
             if (arg1->Shape() != gradient->Shape())
             {
                 NDArrayView::NumericOperation({ arg1->AsShape(gradient->Shape()) }, alpha, // differs from shared code below in passing the reshaped arg1
-                                              Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta,
-                                              Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
                 handled = true;
             }
             else
@@ -437,8 +427,7 @@ namespace CNTK
                 if (axis.StaticAxisIndex() != arg1->Shape().Rank() -1)
                     LogicError("NDArrayView::GatherBatch: Currently only splicing in a new slowest-changing axis is supported.");
                 NDArrayView::NumericOperation({ arg1->IndexLastAxis(i) }, alpha,
-                                              Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta,
-                                              Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
                 handled = true;
             }
             break;
@@ -449,8 +438,7 @@ namespace CNTK
             NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
                                           Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
                                           GetSliceView(gradient, attributes, outputValue->Shape(), /*readOnly=*/false, funcForErrMsg),
-                                          beta, // keep beta; although we just cleared it, beta=0 avoids the memory access
-                                          Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                                          beta); // keep beta; although we just cleared it, beta=0 avoids the memory access
             // This ^^ op is the same as the shared one, except for the output slice.
             handled = true;
             break;
@@ -489,63 +477,52 @@ namespace CNTK
             op0 = true; // will be set to zero below
             break;
         case PrimitiveOpType::BatchNormalization:
+            if (i == 0) // input argument
             {
-                if (i == 0) // input argument
-                {
-                    // TODO: It may be more efficient to recompute normedTmp from the output; this way we don't need to carry over double the memory from fwd
-                    let& stdDevOverScaleTmp = inputValues[7]; // sigma / scale
-                    let& normedTmp          = inputValues[8]; // y = (x - mean) / sigma * scale  (result without bias)
-                    // dF/dx = dF/dy dy/dx
-                    // dF/dy = arg1
-                    // dy/dx = (1-1/N) scale/sigma - 1/N scale/sigma * (y/scale)^2
-                    // arg1 = dF/dy
-                    // gradient = dF/dx = arg1 (1-1/N) / stdDevOverScaleTmp - arg1 1/N / stdDevOverScaleTmp * (normedTmp/scale)^2
-                    // TODO: separate N for mean and variance
-                    let oneOverN = (double)stdDevOverScaleTmp->Shape().TotalSize() / (double)inputValues[0]->Shape().TotalSize();
-                    // first summand
-                    // gradient = arg1 / stdDevOverScaleTmp * (1-1/N) + ...
-                    NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),                 // multiplied
-                                                    const_cast<NDArrayView*>(stdDevOverScaleTmp)->shared_from_this() }, // divided by
-                                                  /*alpha=*/(1.0 - oneOverN),                                           // multiplied
-                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, gradient, beta,
-                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                    // second summand
-                    // gradient = ... + arg1 / stdDevOverScaleTmp * (-1/N) * (normedTmp/scale)^2
-                    // CODE IS WRONG.
-                    NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),                 // multiplied
-                                                    const_cast<NDArrayView*>(normedTmp)->shared_from_this(),            // multiplied --WRONG
-                                                    const_cast<NDArrayView*>(stdDevOverScaleTmp)->shared_from_this() }, // divided by
-                                                  /*alpha=*/-oneOverN,                                                  // multiplied
-                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithQuotient, gradient, /*beta=*/1.0,
-                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                    handled = true;
-                }
-                else if (i == 1) // scale
-                {
-                    let& scale = inputValues[1];
-                    let& normedTmp = inputValues[8]; // y = (x - mean) / sigma * scale
-                    // dF/dscale = dF/dy dy/dscale
-                    // dF/dy = arg1
-                    // dy/dscale = y/scale
-                    //arg1->LogToFile(L"bn gradientFromTop", stderr);
-                    //normedTmp->LogToFile(L"bn normedTmp", stderr);
-                    //scale->LogToFile(L"bn scale", stderr);
-                    NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),      // multiplied
-                                                    const_cast<NDArrayView*>(normedTmp)->shared_from_this(), // multiplied
-                                                    const_cast<NDArrayView*>(scale)->shared_from_this() },   // divided by
-                                                  /*alpha=*/1.0,
-                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithQuotient, gradient, beta,
-                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                    //gradient->LogToFile(L"-> bn scale gradient", stderr);
-                    handled = true;
-                }
-                else if (i == 2) // bias
-                {
-                    op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
-                }
-                else
-                    op0 = true; // no gradients except for
+                let& scale   = inputValues[1];
+                let& varTmp  = inputValues[7]; // sigma^2
+                let& normTmp = inputValues[8]; // t = (x-mu)/sigma
+                // TODO: rename DivBySqr to DivBySqrt
+                let N = inputValues[0]->Shape().TotalSize() / varTmp->Shape().TotalSize();
+                let oneOverN = 1.0 / (double)N;
+                // sigma
+                let sigmaTmp = NDArrayView::NumericOperation({ const_cast<NDArrayView*>(varTmp)->shared_from_this() }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt);
+                // gradient from top * scale / sigma
+                let gScOverSigma = NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),  // multiplied
+                                                                   const_cast<NDArrayView*>(scale)->shared_from_this(), // multiplied
+                                                                   sigmaTmp },                                          // divided by
+                                                                 1.0,
+                                                                 Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithQuotient);
+                // t^2 = (x-mu)^2/sigma^2
+                let normTmp2 = NDArrayView::NumericOperation({ const_cast<NDArrayView*>(normTmp)->shared_from_this() }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqr);
+#if 0           // derivation from graph
+                // add to gradient, with weight (1-1/N)
+                NDArrayView::NumericOperation({ gScOverSigma }, /*alpha=*/1.0 - oneOverN, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
+                // add to gradient, scaled with gScOverSigma and weight (1-1/N)*1/N
+                NDArrayView::NumericOperation({ gScOverSigma, normTmp2 }, /*alpha=*/(1.0 - oneOverN) * oneOverN, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct, gradient, /*beta=*/1.0);
+#else           // derivation from formula
+                // -(N - 1 - t^2)
+                NDArrayView::NumericOperation({}, /*alpha=*/-(int)N + 1, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, normTmp2);
+                NDArrayView::NumericOperation({ gScOverSigma, normTmp2 }, /*alpha=*/-oneOverN, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct, gradient, beta);
+#endif
+                handled = true;
             }
+            else if (i == 1) // scale
+            {
+                let& normedTmp = inputValues[8]; // (x-mu)/sigma
+                NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),
+                                                const_cast<NDArrayView*>(normedTmp)->shared_from_this() },
+                                              /*alpha=*/1.0,
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct, gradient, beta);
+                //gradient->LogToFile(L"-> bn scale gradient", stderr);
+                handled = true;
+            }
+            else if (i == 2) // bias
+            {
+                op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
+            }
+            else
+                op0 = true; // no gradients except for
             break;
         default:
             //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());

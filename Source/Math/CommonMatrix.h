@@ -85,11 +85,11 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
-    opSigmoid, opTanh, opSqr, opSqrt, opRSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opExponentialLinearUnit, opStableSigmoid,
+    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opExponentialLinearUnit, opStableSigmoid,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative, opStableSigmoidDerivative,
     // binary
-    opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum, opPow,
+    opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum, opPow, opDivBySqr,
     opMax, opMin, opArgmax, opArgmin,
     opLess, opEqual, opGreater, opGreaterEqual, opNotEqual, opLessEqual, // Note: must obey this order: (sgn(a-b) == -1, 0, +1), (sgn(a-b) != -1, 0, +1)
     opAnd, opOr, opXor, opMaskNegative,
@@ -112,6 +112,7 @@ enum ElementWiseOperator
     opElementwiseProductWithPowBaseDerivative,  /* a * c * pow(b, c-1) */
     opAxBplusC, /* a * b + c */
     opAminusCoverB, /* (a-c) / b + c */
+    opAminusBtimesCplusD, /* (a-b)*c+d */
     // quaternary
     opAxBplusCxD, /* a * b + c * d */
     // Note: not all that's implemented in CNTK ComputationNodes has a TensorView opcode yet
@@ -132,7 +133,6 @@ enum ElementWiseOperator
     Macro(Tanh);                  \
     Macro(Sqr);                   \
     Macro(Sqrt);                  \
-    Macro(RSqrt);                 \
     Macro(Exp);                   \
     Macro(Log);                   \
     Macro(LinearRectifier);       \
@@ -150,6 +150,7 @@ enum ElementWiseOperator
     Macro(ElementwiseQuotient);                                              \
     Macro(LogSum);                                                           \
     Macro(Pow);                                                              \
+    Macro(DivBySqr);                                                         \
     Macro(Max);                                                              \
     Macro(Min);                                                              \
     Macro(Equal);                                                            \
@@ -188,7 +189,8 @@ enum ElementWiseOperator
     Macro(AminusCoverB);
 
 #define ForAllQuaternaryOps(Macro)                      \
-    Macro(AxBplusCxD);
+    Macro(AxBplusCxD);                                  \
+    Macro(AminusBtimesCplusD);
 
 #define ForAllElementWiseOps(Macro) ForAllNullaryOps(Macro) ForAllUnaryOps(Macro) ForAllBinaryOps(Macro) ForAllTernaryOps(Macro) ForAllQuaternaryOps(Macro)
 

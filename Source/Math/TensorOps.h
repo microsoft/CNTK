@@ -263,7 +263,6 @@ DefUnaryOp(Sigmoid, Sigmoid(a));
 DefUnaryOp(Tanh, tanh_(a));
 DefUnaryOp(Sqr, Sqr(a));
 DefUnaryOp(Sqrt, Sqrt(a));
-DefUnaryOp(RSqrt, 1/Sqrt(a));
 DefUnaryOp(Exp, exp_(a));
 DefUnaryOp(Log, ClippedLog(a));
 DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
@@ -290,6 +289,7 @@ DefBinaryOp(ElementwiseProduct, a* b);
 DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
 DefBinaryOp(LogSum, LogAdd(a, b));
 DefBinaryOp(Pow, safepow_(a, b));
+DefBinaryOp(DivBySqr, a / sqrt(b)); // TODO: CUDA has an rqsrt function; use it
 DefBinaryOp(Max, a > b ? a : b);
 DefBinaryOp(Min, a < b ? a : b);
 DefBinaryOp(Equal, a == b);
@@ -347,6 +347,7 @@ DefTernaryOp(AminusCoverB, (a - c) / b);
     }
 
 DefQuaternaryOp(AxBplusCxD, a * b + c * d);
+DefQuaternaryOp(AminusBtimesCplusD, (a - b) * c + d);
 
 #pragma pop_macro("DefQuaternaryOp")
 
