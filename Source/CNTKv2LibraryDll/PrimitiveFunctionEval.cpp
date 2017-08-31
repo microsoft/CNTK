@@ -482,29 +482,24 @@ namespace CNTK
                 let& sigmaTmp  = inputValues[7]; // sigma
                 let& normedTmp = inputValues[8]; // t = (x-mu)/sigma
                 let N = (double)inputValues[0]->Shape().TotalSize() / (double)sigmaTmp->Shape().TotalSize();
+                // cf. CNTK engine:
+                //gradient += (1 / N) * (outputGradient * scale / sigmaTmp) * (N - 1 - normedTmp2);
+                // t^2 = (x-mu)^2/sigma^2
+                let normedTmp2 = NDArrayView::NumericOperation({ const_cast<NDArrayView*>(normedTmp)->shared_from_this() }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqr);
+                //sigmaTmp->LogToFile(L"sigma");
+                //normedTmp->LogToFile(L"normedTmp");
+                //normedTmp2->LogToFile(L"normedTmp^2");
+                // (N - 1 - t^2)
+                NDArrayView::NumericOperation({}, /*alpha=*/N - 1, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, normedTmp2, /*beta=*/-1.0);
+                //normedTmp2->LogToFile(L"N - 1 -normedTmp^2");
                 // gradient from top * scale / sigma
-                let gScOverSigma = NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),       // multiplied
+                let gScOverSigma = NDArrayView::NumericOperation({ const_cast<NDArrayView*>(outputGradient)->shared_from_this(),       // multiplied
                                                                    const_cast<NDArrayView*>(scale)->shared_from_this(),      // multiplied
                                                                    const_cast<NDArrayView*>(sigmaTmp)->shared_from_this() }, // divided by
                                                                  1.0,
                                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithQuotient);
-                // t^2 = (x-mu)^2/sigma^2
-                let normedTmp2 = NDArrayView::NumericOperation({ const_cast<NDArrayView*>(normedTmp)->shared_from_this() }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqr);
-#if 0           // derivation from graph
-                // add to gradient, with weight (1-1/N)
-                NDArrayView::NumericOperation({ gScOverSigma }, /*alpha=*/1.0 - 1/N, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
-                // add to gradient, scaled with gScOverSigma and weight (1-1/N)*1/N
-                NDArrayView::NumericOperation({ gScOverSigma, normedTmp2 }, /*alpha=*/(1.0 - 1/N) * 1/N, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct, gradient, /*beta=*/1.0);
-#else           // derivation from formula
-                // -(N - 1 - t^2)
-                sigmaTmp->LogToFile(L"sigma");
-                normedTmp->LogToFile(L"normedTmp");
-                normedTmp2->LogToFile(L"normedTmp^2");
-                NDArrayView::NumericOperation({}, /*alpha=*/-N + 1, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, normedTmp2, /*beta=1*/1.0);
-                normedTmp2->LogToFile(L"normedTmp^2 - N + 1");
                 // add to gradient
-                NDArrayView::NumericOperation({ gScOverSigma, normedTmp2 }, /*alpha=*/-1/N * (1 - 1/N), Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct, gradient, beta);
-#endif
+                NDArrayView::NumericOperation({ gScOverSigma, normedTmp2 }, /*alpha=*/1 / N, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct, gradient, beta);
                 handled = true;
             }
             else if (i == 1) // scale
