@@ -154,12 +154,17 @@ public:
         if (poolIncludePad)
             poolMode = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
 
-        if (forceDeterministicAlgorithms && (cudnnGetVersion() >= 6000))
-            poolMode = CUDNN_POOLING_MAX_DETERMINISTIC;
+        if (kind == PoolKind::Max)
+        {
+            if (forceDeterministicAlgorithms && (cudnnGetVersion() >= 6000))
+                poolMode = CUDNN_POOLING_MAX_DETERMINISTIC;
+            else
+                poolMode = CUDNN_POOLING_MAX;
+        }
 
         // Must use CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING to get the same results as in reference engine.
         CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
-                                               kind == PoolKind::Max ? CUDNN_POOLING_MAX : poolMode,
+                                               poolMode,
                                                CUDNN_PROPAGATE_NAN,
                                                (int)dim_size, dims.data(), pad.data(), stride.data()));
     }
