@@ -1969,6 +1969,41 @@ def transpose(x, perm, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+
+    nr_of_axes = len(perm)
+
+    # assertions on the input
+    ## assert permutation is valid
+    np_perm=np.asarray(perm)
+    nr_unflattened = 1
+    prev_axis = perm[0]
+    for i in range(nr_of_axes):
+        assert np.any(np_perm == i), "Axis " + str(i) + " is not set in the permutation!"
+        if i > 0 and perm[i - 1] + 1 != perm[i]:
+            nr_unflattened += 1;
+        prev_axis = perm[i]
+
+    if nr_unflattened > 5:
+        # in the beginning the axes are sorted
+        current_permutation = np.arange(nr_of_axes)
+        tensor = alias(x, "Begin_Transpose"+str(perm))
+
+        for i in range(nr_of_axes - 1): # n-1 is sufficient since if 0..n-1 are correctly ordered than n  must be in the correct place, too
+            # does the axis at the current position need to be swapped?
+            if perm[i] != current_permutation[i]:
+                # search for current position of the axis to be placed at i!
+                for j in range(i, nr_of_axes):
+                    if current_permutation[j] == permutation[i]:
+                        break
+
+                # swap these two axes
+                tensor = swapaxes(tensor, i, j)
+                current_permutation[[i, j]] = current_permutation[[j, i]]
+                # print(current_permutation)
+
+        return alias(tensor, "End_TranposeAlot_"+str(perm))
+    
+    #else: if possible do the default transpose operation!
     from cntk.cntk_py import transpose
     x = sanitize_input(x)
     if type(perm) in [int, Axis]:
