@@ -347,6 +347,7 @@ DefTernaryOp(AminusCoverB, (a - c) / b);
     }
 
 DefQuaternaryOp(AxBplusCxD, a * b + c * d);
+DefQuaternaryOp(AxBxCoverD, a * b * c * OpReciprocal(d));
 DefQuaternaryOp(AminusBtimesCplusD, (a - b) * c + d);
 
 #pragma pop_macro("DefQuaternaryOp")
