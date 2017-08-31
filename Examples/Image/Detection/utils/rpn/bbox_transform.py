@@ -103,6 +103,8 @@ def regress_rois(roi_proposals, roi_regression_factors, labels, dims_input):
             deltas = roi_regression_factors[i:i+1,label*4:(label+1)*4]
             roi_coords = roi_proposals[i:i+1,:]
             regressed_rois = bbox_transform_inv(roi_coords, deltas)
+            import pdb;
+            pdb.set_trace()
             roi_proposals[i,:] = regressed_rois
 
     if dims_input is not None:

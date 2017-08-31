@@ -75,6 +75,11 @@ def compute_test_set_aps(eval_model, cfg):
         minibatch_source.dims_si: dims_input
     }
 
+    if True:
+        from hierarchical_evaluation import eval_fast_rcnn_mAP
+        eval_results = eval_fast_rcnn_mAP(frcn_eval, cfg, minibatch_source, input_map)
+        return eval_results
+
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in (x1, y1, x2, y2, score)
     all_boxes = [[[] for _ in range(num_test_images)] for _ in range(cfg["DATA"].NUM_CLASSES)]

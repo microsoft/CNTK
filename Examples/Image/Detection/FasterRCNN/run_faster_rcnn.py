@@ -21,6 +21,7 @@ def get_configuration():
     # for Pascal VOC 2007 data set use: from utils.configs.Pascal_config import cfg as dataset_cfg
     # for the Grocery data set use:     from utils.configs.Grocery_config import cfg as dataset_cfg
     from utils.configs.Grocery_config import cfg as dataset_cfg
+    #from utils.configs.Pascal_config import cfg as dataset_cfg
 
     return merge_configs([detector_cfg, network_cfg, dataset_cfg])
 
@@ -31,7 +32,11 @@ if __name__ == '__main__':
 
     # train and test
     trained_model = train_faster_rcnn(cfg)
-    eval_results = compute_test_set_aps(trained_model, cfg)
+    if True:
+        eval_results = compute_test_set_aps(trained_model, cfg)
+    else:
+        from hierarchical_evaluation import eval_fast_rcnn_mAP
+        eval_results = eval_fast_rcnn_mAP(trained_model, cfg)
 
     # write AP results to output
     for class_name in eval_results: print('AP for {:>15} = {:.4f}'.format(class_name, eval_results[class_name]))

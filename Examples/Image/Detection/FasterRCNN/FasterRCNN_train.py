@@ -11,7 +11,7 @@ import argparse
 import easydict # pip install easydict
 import cntk
 from cntk import Trainer, UnitType, load_model, Axis, input_variable, parameter, times, combine, \
-    softmax, roipooling, plus, element_times, CloneMethod, alias, Communicator, reduce_sum
+    softmax, roipooling, plus, element_times, CloneMethod, alias, Communicator, reduce_sum, user_function
 from cntk.core import Value
 from cntk.io import MinibatchData
 from cntk.initializer import normal
@@ -31,6 +31,12 @@ from utils.od_mb_source import ObjectDetectionMinibatchSource
 from utils.proposal_helpers import ProposalProvider
 from FastRCNN.FastRCNN_train import clone_model, clone_conv_layers, create_fast_rcnn_predictor, \
     create_detection_losses
+
+from utils.hierarchical_classification.hierarchical_classification_helper import HierarchyHelper, Target_Creator
+from utils.hierarchical_classification.htree_helper import get_tree_str
+
+USE_HIERARCHICAL_CLASSIFICATION = True
+HCH = HierarchyHelper(get_tree_str("Grocery", USE_HIERARCHICAL_CLASSIFICATION))
 
 def prepare(cfg, use_arg_parser=True):
     cfg.MB_SIZE = 1
@@ -188,10 +194,16 @@ def create_faster_rcnn_model(features, scaled_gt_boxes, dims_input, cfg):
         create_proposal_target_layer(rpn_rois, scaled_gt_boxes, cfg)
 
     # Fast RCNN and losses
-    cls_score, bbox_pred = create_fast_rcnn_predictor(conv_out, rois, fc_layers, cfg)
+    if USE_HIERARCHICAL_CLASSIFICATION:
+        cls_score, bbox_pred = create_fast_rcnn_predictor(conv_out, rois, fc_layers, cfg, arg_hch=HCH)
+        label_targets = user_function(Target_Creator(label_targets, cfg.NUM_ROI_PROPOSALS, HCH))
+        pred_error = None
+    else:
+        cls_score, bbox_pred = create_fast_rcnn_predictor(conv_out, rois, fc_layers, cfg)
+        pred_error = classification_error(cls_score, label_targets, axis=1)
+
     detection_losses = create_detection_losses(cls_score, label_targets, bbox_pred, rois, bbox_targets, bbox_inside_weights, cfg)
     loss = rpn_losses + detection_losses
-    pred_error = classification_error(cls_score, label_targets, axis=1)
 
     return loss, pred_error
 
@@ -218,7 +230,10 @@ def create_faster_rcnn_eval_model(model, image_input, dims_input, cfg, rpn_model
         bbox_normalize_stds = np.array(cfg.BBOX_NORMALIZE_STDS * num_boxes)
         bbox_regr = plus(element_times(bbox_regr, bbox_normalize_stds), bbox_normalize_means, name='bbox_regr')
 
-    cls_pred = softmax(cls_score, axis=1, name='cls_pred')
+    if USE_HIERARCHICAL_CLASSIFICATION:
+        cls_pred = HCH.apply_softmax(cls_score, axis=1, offset=0)
+    else:
+        cls_pred = softmax(cls_score, axis=1, name='cls_pred')
     eval_model = combine([cls_pred, rpn_rois, bbox_regr])
 
     return eval_model
@@ -432,7 +447,7 @@ def train_faster_rcnn_alternating(cfg):
         # Fast RCNN and losses
         fc_layers = clone_model(base_model, [cfg["MODEL"].POOL_NODE_NAME], [cfg["MODEL"].LAST_HIDDEN_NODE_NAME], CloneMethod.clone)
         cls_score, bbox_pred = create_fast_rcnn_predictor(conv_out, rois, fc_layers, cfg)
-        detection_losses = create_detection_losses(cls_score, label_targets, bbox_pred, rois, bbox_targets, bbox_inside_weights, cfg)
+        detection_losses = create_detection_losses(cls_score, label_targets, bbox_pred, rois, bbox_targets, bbox_inside_weights, cfg, arg_hch=HCH)
         pred_error = classification_error(cls_score, label_targets, axis=1, name="pred_error")
         stage1_frcn_network = combine([rois, cls_score, bbox_pred, detection_losses, pred_error])
 
@@ -570,8 +585,8 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
             data = od_minibatch_source.next_minibatch(min(cfg.MB_SIZE, cfg["DATA"].NUM_TRAIN_IMAGES-sample_count), input_map=input_map)
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
+            progress_printer.update_with_trainer(trainer, with_metric=not USE_HIERARCHICAL_CLASSIFICATION)  # log progress
             if sample_count % 100 == 0:
                 print("Processed {} samples".format(sample_count))
 
-        progress_printer.epoch_summary(with_metric=True)
+        progress_printer.epoch_summary(with_metric=not USE_HIERARCHICAL_CLASSIFICATION)

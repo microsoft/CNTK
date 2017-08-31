@@ -26,7 +26,7 @@ __C.CNTK.TRAIN_E2E = True
 # set to 'True' to use deterministic algorithms
 __C.CNTK.FORCE_DETERMINISTIC = False
 # set to 'True' to run only a single epoch
-__C.CNTK.FAST_MODE = False
+__C.CNTK.FAST_MODE = True
 # Debug parameters
 __C.CNTK.DEBUG_OUTPUT = False
 __C.CNTK.GRAPH_TYPE = "png" # "png" or "pdf"
@@ -41,7 +41,8 @@ __C.CNTK.BIAS_LR_MULT = 2.0
 
 # E2E learning parameters
 __C.CNTK.E2E_MAX_EPOCHS = 20
-__C.CNTK.E2E_LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 10 + [0.00001]
+#__C.CNTK.E2E_LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 10 + [0.00001]
+__C.CNTK.E2E_LR_PER_SAMPLE = [0.00001] * 10 + [0.0001] * 10 + [0.00001]
 
 # 4-stage learning parameters (alternating training scheme)
 __C.CNTK.RPN_EPOCHS = 16

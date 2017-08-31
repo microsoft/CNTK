@@ -11,7 +11,7 @@ import argparse
 import easydict # pip install easydict
 import cntk
 from cntk import Trainer, UnitType, load_model, Axis, input_variable, parameter, times, combine, \
-    softmax, roipooling, plus, element_times, CloneMethod, alias, Communicator, reduce_sum
+    softmax, roipooling, plus, element_times, CloneMethod, alias, Communicator, reduce_sum, user_function
 from cntk.core import Value
 from cntk.initializer import normal
 from cntk.layers import placeholder, Constant, Sequential
@@ -28,6 +28,13 @@ from utils.rpn.cntk_smoothL1_loss import SmoothL1Loss
 from utils.annotations.annotations_helper import parse_class_map_file
 from utils.od_mb_source import ObjectDetectionMinibatchSource
 from utils.proposal_helpers import ProposalProvider
+
+#from utils.hierarchical_classification.hierarchical_classification_helper import HierarchyHelper, Target_Creator
+#from utils.hierarchical_classification.htree_helper import get_tree_str
+
+#USE_HIERARCHICAL_CLASSIFICATION = True
+#HCH = HierarchyHelper(get_tree_str("Grocery", USE_HIERARCHICAL_CLASSIFICATION))
+
 
 def prepare(cfg, use_arg_parser=True):
     cfg.MB_SIZE = 1
@@ -168,14 +175,15 @@ def clone_conv_layers(base_model, cfg):
     return conv_layers
 
 # Please keep in sync with Readme.md
-def create_fast_rcnn_predictor(conv_out, rois, fc_layers, cfg):
+def create_fast_rcnn_predictor(conv_out, rois, fc_layers, cfg, arg_hch=None):
     # RCNN
     roi_out = roipooling(conv_out, rois, cntk.MAX_POOLING, (cfg["MODEL"].ROI_DIM, cfg["MODEL"].ROI_DIM), spatial_scale=1/16.0)
     fc_out = fc_layers(roi_out)
 
     # prediction head
-    W_pred = parameter(shape=(4096, cfg["DATA"].NUM_CLASSES), init=normal(scale=0.01), name="cls_score.W")
-    b_pred = parameter(shape=cfg["DATA"].NUM_CLASSES, init=0, name="cls_score.b")
+    num_neurons = cfg["DATA"].NUM_CLASSES if arg_hch is None else arg_hch.tree_map.get_nr_of_required_neurons()
+    W_pred = parameter(shape=(4096, num_neurons), init=normal(scale=0.01), name="cls_score.W")
+    b_pred = parameter(shape=num_neurons, init=0, name="cls_score.b")
     cls_score = plus(times(fc_out, W_pred), b_pred, name='cls_score')
 
     # regression head
@@ -203,18 +211,28 @@ def create_fast_rcnn_model(features, roi_proposals, label_targets, bbox_targets,
 
     return detection_losses, pred_error
 
-def create_detection_losses(cls_score, label_targets, bbox_pred, rois, bbox_targets, bbox_inside_weights, cfg):
+def create_detection_losses(cls_score, label_targets, bbox_pred, rois, bbox_targets, bbox_inside_weights, cfg, arg_hch=None):
     # The losses are normalized by the batch size
     # classification loss
-    p_cls_score = placeholder()
-    p_label_targets = placeholder()
-    cls_loss = cross_entropy_with_softmax(p_cls_score, p_label_targets, axis=1)
-    cls_normalization_factor = 1.0 / cfg.NUM_ROI_PROPOSALS
-    normalized_cls_loss = reduce_sum(cls_loss) * cls_normalization_factor
+    if arg_hch is None:
+        p_cls_score = placeholder()
+        p_label_targets = placeholder()
+        cls_loss = cross_entropy_with_softmax(p_cls_score, p_label_targets, axis=1)
+        cls_normalization_factor = 1.0 / cfg.NUM_ROI_PROPOSALS
+        normalized_cls_loss = reduce_sum(cls_loss) * cls_normalization_factor
 
-    reduced_cls_loss = cntk.as_block(normalized_cls_loss,
-                                     [(p_cls_score, cls_score), (p_label_targets, label_targets)],
-                                     'CrossEntropyWithSoftmax', 'norm_cls_loss')
+        reduced_cls_loss = cntk.as_block(normalized_cls_loss,
+                                         [(p_cls_score, cls_score), (p_label_targets, label_targets)],
+                                         'CrossEntropyWithSoftmax', 'norm_cls_loss')
+    else:
+        # Instantiate the Fast R-CNN prediction model and loss function
+        def cross_entropy(output, target):
+            return -reduce_sum(target * cntk.ops.log(output))
+
+        # transform flat label targets to hierarchical label target
+        softmaxed = arg_hch.apply_softmax(cls_score, axis=1, offset=0)
+        cls_loss = cross_entropy(softmaxed, label_targets)
+        reduced_cls_loss = cls_loss
 
     # regression loss
     p_bbox_pred = placeholder()
