@@ -483,7 +483,7 @@ namespace CNTK
                 let& bias    = const_cast<NDArrayView*>(inputValues[2])->shared_from_this();
                 let& sigma   = const_cast<NDArrayView*>(inputValues[7])->shared_from_this(); // sigma
                 let& xHat    = const_cast<NDArrayView*>(inputValues[8])->shared_from_this(); // (xi-mu)/sigma
-                // [cf. CNTK engine:]
+                // [adapted from CNTK engine source:]
                 // From the BN paper, dL/dxi is a sum of three terms: dL/dxi = t1 + t2 + t3
                 // The formulas for dL/dBias and dL/dScale happen to occur as subexpressions in this gradient as well.
                 // Leveraging this, this gradient can be simplified to:
@@ -496,17 +496,22 @@ namespace CNTK
                 //   dL/dScale = Reduce(dL/dyi * xiHat)
                 // gradient +=
                 //     (scale / sigma) * outputGradient +
-                //     (scale / sigma) * -1/N * (xHat * scaleGradient + biasGradient);
+                //     (scale / sigma) * -1/N * (xHat * scaleGradient)
+                //     (scale / sigma) * -1/N * biasGradient;
                 // TODO: redundant with gradients[1] and [2]--how to cache this?
                 // TODO: check the math (1/N) in case bias and scale have different reduction axes. This may be wrong.
                 let biasGradientAv  = NDArrayView::NumericOperation({ outGrad       }, /*alpha=*/(double) bias->Shape().TotalSize() / (double)inputValues[0]->Shape().TotalSize(), opCopy              ,  bias->Shape());
                 let scaleGradientAv = NDArrayView::NumericOperation({ outGrad, xHat }, /*alpha=*/(double)scale->Shape().TotalSize() / (double)inputValues[0]->Shape().TotalSize(), opElementwiseProduct, scale->Shape());
+                // add first term to gradient
+                NDArrayView::NumericOperation({ outGrad, scale, sigma }, 1.0, opElementwiseProductWithQuotient, gradient, beta);
+                // add second term, which is
                 // -(xHat * scaleGradient/N + biasGradient/N)
-                auto tdspdb = NDArrayView::NumericOperation({ xHat, scaleGradientAv, biasGradientAv }, -1, opAxBplusC);
-                // += outputGradient
-                tdspdb += outGrad;
-                // *= (scale / sigma), then add to gradient
-                NDArrayView::NumericOperation({ tdspdb, scale, sigma }, 1.0, opElementwiseProductWithQuotient, gradient, beta);
+                // * (scale / sigma)
+                auto tdspdb = NDArrayView::NumericOperation({ xHat, scaleGradientAv }, -1, opElementwiseProduct);
+                NDArrayView::NumericOperation({ tdspdb,  scale, sigma }, 1.0, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
+                // add third term, which is
+                // (scale / sigma) * -1/N * biasGradient
+                NDArrayView::NumericOperation({ biasGradientAv, scale, sigma }, -1.0, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
                 handled = true;
             }
             else if (i == 1) // scale is a reduction over outputGradient * (x-mu)/sigma
