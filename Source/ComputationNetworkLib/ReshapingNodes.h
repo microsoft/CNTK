@@ -154,7 +154,14 @@ public:
     {
         auto result     =             ValueFor(fr);
         auto inputValue = InputRef(0).ValueFor(fr);
-        result.AssignValuesOf(inputValue.Reshaped(result.GetNumRows(), result.GetNumCols()));
+        ForwardPropImpl(&result, &inputValue);
+    }
+
+    static void ForwardPropImpl(Matrix<ElemType> *result, Matrix<ElemType> *input)
+    {
+        if (!result || !input)
+            InvalidArgument("ReshapeNode::ForwardPropImpl: Input pointer can't be null.");
+        result->AssignValuesOf(input->Reshaped(result->GetNumRows(), result->GetNumCols()));
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -162,20 +169,28 @@ public:
         auto gradient      =                      GradientFor(fr);
         auto inputGradient = InputRef(inputIndex).GradientFor(fr);
 
-        if (Input(inputIndex)->IsGradientOptimized(this))
+        BackpropImpl(&gradient, &inputGradient, Input(inputIndex)->IsGradientOptimized(this), Input(inputIndex)->ParentGradientReused());
+    }
+
+    static void BackpropImpl(Matrix<ElemType> *gradient, Matrix<ElemType> *inputGradient, bool isGradientOptimized, bool isParentGradientReused)
+    {
+        if (!gradient || !inputGradient)
+            InvalidArgument("ReshapeNode::BackpropImpl: Input pointer can't be null.");
+
+        if (isGradientOptimized)
         {
-            if (Input(inputIndex)->ParentGradientReused())
+            if (isParentGradientReused)
             {
-                if (gradient.Data() != inputGradient.Data() ||
-                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
-                    gradient.GetNumCols() != inputGradient.GetNumCols())
+                if (gradient->Data() != inputGradient->Data() ||
+                    gradient->GetNumRows() != inputGradient->GetNumRows() ||
+                    gradient->GetNumCols() != inputGradient->GetNumCols())
                     LogicError("Gradient should be reused");
             }
             else
-                inputGradient.AssignValuesOf(gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols()));
+                inputGradient->AssignValuesOf(gradient->Reshaped(inputGradient->GetNumRows(), inputGradient->GetNumCols()));
         }
         else
-            inputGradient += gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols());
+            *inputGradient += gradient->Reshaped(inputGradient->GetNumRows(), inputGradient->GetNumCols());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -531,10 +546,7 @@ public:
         auto& inputValue = InputRef(0).Value();
         auto& outputValue = Value();
 
-        auto origin_rows = outputValue.GetNumRows();
-        auto origin_cols = outputValue.GetNumCols();
-        outputValue.AssignValuesOf(inputValue);
-        outputValue.Reshape(origin_rows, origin_cols);
+        ReshapeNode<ElemType>::ForwardPropImpl(&outputValue, &inputValue);
     }
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
@@ -542,26 +554,7 @@ public:
         auto& gradient = Gradient();
         auto& inputGradient = Input(0)->Gradient();
 
-        auto origin_rows = gradient.GetNumRows();
-        auto origin_cols = gradient.GetNumCols();
-        gradient.Reshape(inputGradient.GetNumRows(), inputGradient.GetNumCols());
-
-        if (Input(0)->IsGradientOptimized(this))
-        {
-            if (Input(0)->ParentGradientReused())
-            {
-                if (gradient.Data() != inputGradient.Data() ||
-                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
-                    gradient.GetNumCols() != inputGradient.GetNumCols())
-                    LogicError("Gradient should be reused");
-            }
-            else
-                inputGradient.AssignValuesOf(gradient);
-        }
-        else
-            inputGradient += gradient;
-
-        gradient.Reshape(origin_rows, origin_cols);
+        ReshapeNode<ElemType>::BackpropImpl(&gradient, &inputGradient, Input(0)->IsGradientOptimized(this), Input(0)->ParentGradientReused());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -620,14 +613,14 @@ template class ToBatchAxisNode<double>;
 
 
 template <class ElemType>
-class UnpackBatchAixsNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+class UnpackBatchAxisNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() {
         return L"UnpackBatchAixs";
     }
 public:
-    UnpackBatchAixsNode(DEVICEID_TYPE deviceId, const wstring& name)
+    UnpackBatchAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
     }
@@ -637,11 +630,7 @@ public:
         auto& inputValue = InputRef(0).Value();
         auto& outputValue = Value();
 
-        auto origin_rows = outputValue.GetNumRows();
-        auto origin_cols = outputValue.GetNumCols();
-
-        outputValue.AssignValuesOf(inputValue);
-        outputValue.Reshape(origin_rows, origin_cols);
+        ReshapeNode<ElemType>::ForwardPropImpl(&outputValue, &inputValue);
     }
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
@@ -649,26 +638,7 @@ public:
         auto& gradient = Gradient();
         auto& inputGradient = Input(0)->Gradient();
 
-        auto origin_rows = gradient.GetNumRows();
-        auto origin_cols = gradient.GetNumCols();
-        gradient.Reshape(inputGradient.GetNumRows(), inputGradient.GetNumCols());
-        
-        if (Input(0)->IsGradientOptimized(this))
-        {
-            if (Input(0)->ParentGradientReused())
-            {
-                if (gradient.Data() != inputGradient.Data() ||
-                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
-                    gradient.GetNumCols() != inputGradient.GetNumCols())
-                    LogicError("Gradient should be reused");
-            }
-            else
-                inputGradient.AssignValuesOf(gradient);
-        }
-        else
-            inputGradient += gradient;
-
-        gradient.Reshape(origin_rows, origin_cols);
+        ReshapeNode<ElemType>::BackpropImpl(&gradient, &inputGradient, Input(0)->IsGradientOptimized(this), Input(0)->ParentGradientReused());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override 
@@ -720,8 +690,8 @@ public:
     }
 };
 
-template class UnpackBatchAixsNode<float>;
-template class UnpackBatchAixsNode<double>;
+template class UnpackBatchAxisNode<float>;
+template class UnpackBatchAxisNode<double>;
 
 // -----------------------------------------------------------------------
 // SliceNode (input)
