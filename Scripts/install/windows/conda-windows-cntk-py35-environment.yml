@@ -23,6 +23,7 @@ dependencies:
 - six=1.10.0=py35_0
 - wheel=0.29.0=py35_0
 - opencv=3.1.0=np111py35_1
+- dlib=19.0=np111py35_200
 - pip:
   - gym==0.5.2
   - keras==2.0.6

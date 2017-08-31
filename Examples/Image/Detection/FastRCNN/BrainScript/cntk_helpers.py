@@ -6,7 +6,7 @@
 
 from __future__ import print_function
 from builtins import str
-import pdb, sys, os, time
+import sys, os, time
 import numpy as np
 import selectivesearch
 from easydict import EasyDict

@@ -23,7 +23,7 @@ class Parameters():
 
         # directories
         self.rootDir = os.path.dirname(os.path.abspath(__file__))
-        self.imgDir = os.path.join(self.rootDir, "..", "..", "DataSets", datasetName)
+        self.imgDir = os.path.join(self.rootDir, "..", "..", "..", "DataSets", datasetName)
 
         # derived directories
         self.procDir = os.path.join(self.rootDir, "proc", datasetName + "_{}".format(self.cntk_nrRois))

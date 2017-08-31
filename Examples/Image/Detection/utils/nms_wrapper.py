@@ -12,25 +12,18 @@ try:
 except ImportError:
     gpu_nms_available = False
 
-try:
-    from config import cfg
-except ImportError:
-    from utils.default_config import cfg
-
-import pdb
-
-def nms(dets, thresh, force_cpu=False):
+def nms(dets, thresh, use_gpu_nms=True, device_id=0):
     '''
     Dispatches the call to either CPU or GPU NMS implementations
     '''
     if dets.shape[0] == 0:
         return []
-    if gpu_nms_available and cfg.USE_GPU_NMS and not force_cpu:
-        return gpu_nms(dets, thresh, device_id=cfg.GPU_ID)
+    if gpu_nms_available and use_gpu_nms:
+        return gpu_nms(dets, thresh, device_id=device_id)
     else:
         return cpu_nms(dets, thresh)
 
-def apply_nms_to_single_image_results(coords, labels, scores, nms_threshold=0.5, conf_threshold=0.0):
+def apply_nms_to_single_image_results(coords, labels, scores, use_gpu_nms, device_id, nms_threshold=0.5, conf_threshold=0.0):
     '''
     Applies nms to the results for a single image.
 
@@ -55,7 +48,7 @@ def apply_nms_to_single_image_results(coords, labels, scores, nms_threshold=0.5,
         allIndices.append(indices)
 
     # call nms
-    _, nmsKeepIndicesList = apply_nms_to_test_set_results(nmsRects, nms_threshold, conf_threshold)
+    _, nmsKeepIndicesList = apply_nms_to_test_set_results(nmsRects, nms_threshold, conf_threshold, use_gpu_nms, device_id)
 
     # map back to original roi indices
     nmsKeepIndices = []
@@ -65,7 +58,7 @@ def apply_nms_to_single_image_results(coords, labels, scores, nms_threshold=0.5,
     assert (len(nmsKeepIndices) == len(set(nmsKeepIndices))) # check if no roi indices was added >1 times
     return nmsKeepIndices
 
-def apply_nms_to_test_set_results(all_boxes, nms_threshold, conf_threshold):
+def apply_nms_to_test_set_results(all_boxes, nms_threshold, conf_threshold, use_gpu_nms, device_id):
     '''
     Applies nms to the results of multiple images.
 
@@ -88,13 +81,15 @@ def apply_nms_to_test_set_results(all_boxes, nms_threshold, conf_threshold):
     for cls_ind in range(num_classes):
         for im_ind in range(num_images):
             dets = all_boxes[cls_ind][im_ind]
-            if dets == []:
+            if len(dets) == 0:
                 continue
-            keep = nms(dets.astype(np.float32), nms_threshold)
+            if len(dets) == 1:
+                keep = [0]
+            else:
+                keep = nms(dets.astype(np.float32), nms_threshold, use_gpu_nms, device_id)
 
             # also filter out low confidences
             if conf_threshold > 0:
-                #pdb.set_trace()
                 keep_conf_idx = np.where(dets[:, -1] > conf_threshold)
                 keep = list(set(keep_conf_idx[0]).intersection(keep))
 

@@ -152,11 +152,18 @@ def prepare_alexnet_v0_model():
                          *"../../../../PretrainedModels".split("/"))
     local_base_path = os.path.normpath(local_base_path)
 
+    # v0 model:
     model_file = os.path.join(local_base_path, "AlexNet.model")
-
     if not os.path.isfile(model_file):
         external_model_path = os.path.join(os.environ[envvar], "PreTrainedModels", "AlexNet", "v0", "AlexNet.model")
         copyfile(external_model_path, model_file)
+
+    # v1 model:
+    model_file = os.path.join(local_base_path, "AlexNet_ImageNet_Caffe.model")
+    if not os.path.isfile(model_file):
+        external_model_path = os.path.join(os.environ[envvar], "PreTrainedModels", "AlexNet", "v1", "AlexNet_ImageNet_Caffe.model")
+        copyfile(external_model_path, model_file)
+
     return local_base_path
 
 def prepare_UCF11_data():

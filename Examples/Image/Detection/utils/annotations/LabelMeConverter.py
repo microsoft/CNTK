@@ -18,7 +18,7 @@ for filename in os.listdir(filepath):
 
         imagename = os.path.splitext(filename)[0]
 
-        ## create output files
+        ## create output files  
         outputFile_label = outputpath + imagename + ".bboxes.labels.tsv"
         outputFile_ROI = outputpath + imagename + ".bboxes.tsv"
 

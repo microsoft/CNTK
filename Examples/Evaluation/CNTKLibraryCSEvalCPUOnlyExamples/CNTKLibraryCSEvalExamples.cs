@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CNTK;
 using CNTKExtension;
@@ -82,6 +83,7 @@ namespace CNTKLibraryCSEvalExamples
                 var outputVal = outputDataMap[outputVar];
                 var outputData = outputVal.GetDenseData<float>(outputVar);
 
+                Console.WriteLine("Evaluation result for image " + sampleImage);
                 PrintOutput(outputVar.Shape.TotalSize, outputData);
             }
             catch (Exception ex)
@@ -166,6 +168,16 @@ namespace CNTKLibraryCSEvalExamples
                 var outputData = outputVal.GetDenseData<float>(outputVar);
 
                 // Output result
+                Console.Write("Evaluation result for batch of images: ");
+                for (int index = 0; index < imageList.Count; index++)
+                {
+                    Console.Write(imageList[index]);
+                    if (index < imageList.Count - 1)
+                        Console.Write(", ");
+                    else
+                        Console.WriteLine();
+                }
+
                 PrintOutput(outputVar.Shape.TotalSize, outputData);
             }
             catch (Exception ex)
@@ -180,92 +192,102 @@ namespace CNTKLibraryCSEvalExamples
         /// - how to evaluate multiple sample requests in parallel.
         /// </summary>
         /// <param name="device">Specify on which device to run the evaluation.</param>
-        public static void EvaluateMultipleImagesInParallel(DeviceDescriptor device)
+        public static async Task EvaluateMultipleImagesInParallelAsync(DeviceDescriptor device)
         {
             Console.WriteLine("\n===== Evaluate multiple images in parallel =====");
 
             string modelFilePath = "resnet20.dnn";
+            ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
 
             // This program uses images from the CIFAR-10 dataset for evaluation.
             // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
-            var imageList = new List<string>() { "00000.png", "00001.png", "00002.png", "00003.png", "00004.png" };
-            foreach (var image in imageList)
+            var imageFiles = new string[] { "00000.png", "00001.png", "00002.png", "00003.png", "00004.png" };
+            var imageList = new BlockingCollection<string>();
+            foreach (var file in imageFiles)
             {
-                ThrowIfFileNotExist(image, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", image));
+                ThrowIfFileNotExist(file, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", file));
+                // For simplicity, we add all images to the BlockingCollection in advance. It is also possible to add new images dynamically.
+                imageList.Add(file);
             }
-            ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
-
-            int maximalNumOfParallelRequests = 3;
-            BlockingCollection<Function> Models = new BlockingCollection<Function>();
 
             // Load and clone the model.
             // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
             // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-            var rootFunc = Function.Load(modelFilePath, device);
-            Models.Add(rootFunc);
+            var modelFunc = Function.Load(modelFilePath, device);
 
             // It is not thread-safe to perform concurrent evaluation requests using the same model function.
             // Use clone() to create copies of model function for parallel evaluation.
             // ParameterCloningMethod.Share specifies that model parameters are shared between cloned model functions, while
             // each model function instance has its own private state for evaluation.
-            for (int i = 1; i < maximalNumOfParallelRequests; i++)
+            int numOfModelInstances = 3;
+            List<Function> modelPool = new List<Function>();
+            modelPool.Add(modelFunc);
+
+            for (int i = 1; i < numOfModelInstances; i++)
             {
-                Models.Add(rootFunc.Clone(ParameterCloningMethod.Share));
+                modelPool.Add(modelFunc.Clone(ParameterCloningMethod.Share));
             }
 
-            // Get shape data for the input variable
-            var input = rootFunc.Arguments.Single();
-            NDShape inputShape = input.Shape;
-            int imageWidth = inputShape[0];
-            int imageHeight = inputShape[1];
-            Object lockObj = new object();
-
             // Start to evaluate samples in parallel.
-            // If there are more evaluation requests than the number of available model function instances, some evaluation
-            // requests will have to wait for a free model function instance.
-            Console.WriteLine(string.Format("Evaluate {0} images in parallel using {1} model instances.", imageList.Count, maximalNumOfParallelRequests));
-            Parallel.ForEach(imageList, new ParallelOptions() { MaxDegreeOfParallelism = imageList.Count }, (image) =>
+            Console.WriteLine(string.Format("Evaluate {0} images in parallel using {1} model instances.", imageList.Count, numOfModelInstances));
+            var taskList = new List<Task>();
+            var results = new ConcurrentDictionary<string, IList<IList<float>>>();
+            foreach (var evalFunc in modelPool)
             {
-                var evaluatorFunc = Models.Take();
-                try
+                taskList.Add(Task.Factory.StartNew(() =>
                 {
+                    // Get input and output variables
+                    Variable inputVar = evalFunc.Arguments.Single();
+                    NDShape inputShape = inputVar.Shape;
+                    int imageWidth = inputShape[0];
+                    int imageHeight = inputShape[1];
+                    Variable outputVar = evalFunc.Output;
 
-                    Variable inputVar = evaluatorFunc.Arguments.Single();
-
-                    Bitmap bmp = new Bitmap(Bitmap.FromFile(image));
-                    var resized = bmp.Resize(imageWidth, imageHeight, true);
-                    List<float> resizedCHW = resized.ParallelExtractCHW();
-
-                    // Create input data map
-                    var inputDataMap = new Dictionary<Variable, Value>();
-                    var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
-                    inputDataMap.Add(inputVar, inputVal);
-
-                    // Create output data map. Using null as Value to indicate using system allocated memory.
-                    // Alternatively, create a Value object and add it to the data map.
-                    Variable outputVar = evaluatorFunc.Output;
-                    var outputDataMap = new Dictionary<Variable, Value>();
-                    outputDataMap.Add(outputVar, null);
-
-                    // Start evaluation on the device
-                    evaluatorFunc.Evaluate(inputDataMap, outputDataMap, device);
-
-                    // Get evaluate result as dense output
-                    var outputVal = outputDataMap[outputVar];
-                    var outputData = outputVal.GetDenseData<float>(outputVar);
-
-                    // Serialize output
-                    lock (lockObj)
+                    string image;
+                    // The task exits when no image is available for evaluation.
+                    while (imageList.TryTake(out image) == true)
                     {
-                        Console.WriteLine(string.Format("Evaluation result for {0}:", image));
-                        PrintOutput(outputVar.Shape.TotalSize, outputData);
-                    }
-                }
-                finally
-                {
-                    Models.Add(evaluatorFunc);
-                }
-            });
+                        Console.WriteLine(string.Format("Evaluating image {0} using thread {1}.", image, Thread.CurrentThread.ManagedThreadId));
+
+                        Bitmap bmp = new Bitmap(Bitmap.FromFile(image));
+                        var resized = bmp.Resize(imageWidth, imageHeight, true);
+                        List<float> resizedCHW = resized.ParallelExtractCHW();
+
+                        // Create input data map.
+                        var inputDataMap = new Dictionary<Variable, Value>();
+                        var inputVal = Value.CreateBatch(inputShape, resizedCHW, device);
+                        inputDataMap.Add(inputVar, inputVal);
+
+                        // Create output data map.
+                        var outputDataMap = new Dictionary<Variable, Value>();
+                        outputDataMap.Add(outputVar, null);
+
+                        // Start evaluation on the device
+                        evalFunc.Evaluate(inputDataMap, outputDataMap, device);
+
+                        // Get evaluate result as dense output
+                        var outputVal = outputDataMap[outputVar];
+                        var outputData = outputVal.GetDenseData<float>(outputVar);
+
+                        // Add result to the buffer for output at a later time.
+                        if (results.TryAdd(image, outputData) == false)
+                           throw new ArgumentException(string.Format("The image {0} has already been evaluated.", image));
+                   }
+               }));
+            }
+
+            // Await until all images have been evaluated.
+            await Task.WhenAll(taskList);
+
+            var sampleSize = modelFunc.Output.Shape.TotalSize;
+            foreach (var file in imageFiles)
+            {
+                if (!results.ContainsKey(file))
+                    throw new KeyNotFoundException(string.Format("Error: the image {0} has not been evaluated.", file));
+                var evalResult = results[file];
+                Console.WriteLine("Evaluation result for image " + file);
+                PrintOutput(sampleSize, evalResult);
+            }
         }
 
         /// <summary>
