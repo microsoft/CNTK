@@ -833,6 +833,8 @@ namespace CNTK
         ///
         CNTK_API static NDArrayViewPtr NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int op, NDArrayViewPtr out = nullptr, double beta = 0, int reductionOp = -1);
         CNTK_API static NDArrayViewPtr NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, const std::wstring& op, NDArrayViewPtr out = nullptr, double beta = 0, const std::wstring& reductionOp = L"Sum");
+        CNTK_API static NDArrayViewPtr NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int op, const NDShape& outShape, int reductionOp = -1);
+        CNTK_API static NDArrayViewPtr NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, const std::wstring& op, const NDShape& outShape, const std::wstring& reductionOp = L"Sum");
 
         ///
         /// Performs the matrix product, returning NDArrayView(beta * *this + alpha * trC(alpha * trA(inputA) * trB(inputB)))

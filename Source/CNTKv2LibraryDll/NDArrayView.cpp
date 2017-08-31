@@ -501,6 +501,16 @@ namespace CNTK
     {
         return NumericOperation(inputs, alpha, TensorView<float>::OpFromName(opStr), out, beta, TensorView<float>::OpFromName(reductionOpStr));
     }
+    /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int opInt, const NDShape& outShape, int reductionOpInt)
+    {
+        // explicit output shape given (useful when doing reductions)
+        let out = MakeSharedObject<NDArrayView>(inputs[0]->GetDataType(), inputs[0]->GetStorageFormat(), outShape, inputs[0]->Device());
+        return NumericOperation(inputs, alpha, opInt, out, /*beta=*/0, reductionOpInt);
+    }
+    /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, const std::wstring& opStr, const NDShape& outShape, const std::wstring& reductionOpStr)
+    {
+        return NumericOperation(inputs, alpha, TensorView<float>::OpFromName(opStr), outShape, TensorView<float>::OpFromName(reductionOpStr));
+    }
 
     NDArrayViewPtr operator+(const NDArrayViewPtr& leftOperand, const NDArrayViewPtr& rightOperand)
     {
