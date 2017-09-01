@@ -1431,7 +1431,9 @@ class Variable::AutoBatch
                 let& jnputs = jter->m_inputs;
                 for (size_t k = 0; k < jnputs.size(); k++)
                 {
-                    if (!LazilyIndexedValue(inputs[k])->IsAliasOf(LazilyIndexedValue(jnputs[k])))
+                    //if (!LazilyIndexedValue(inputs[k])->IsAliasOf(LazilyIndexedValue(jnputs[k])))
+                    // PERF BUGBUG: This vv is horrible.
+                    if (!LazilyIndexedValue(SeeThroughNoOps(inputs, k))->IsAliasOf(LazilyIndexedValue(SeeThroughNoOps(jnputs, k))))
                         goto dontskip;
                 }
                 // all inputs are the same: f is a dup of 'jter'
@@ -1502,8 +1504,9 @@ class Variable::AutoBatch
         // All ops whose inputs are 100% aliases of another op compute the same thing.
         // Those will be removed from the list. The removed ones will have a result value implanted
         // that is a lazy view onto the non-removed one.
-        //if (!isFree)
-        //    ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
+        // Batch norm must be excluded  since we must count samples as often as they appear in the batch statistics.
+        if (!isFree && op != PrimitiveOpType::BatchNormalization)
+            ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
 
         // perform the op
         let batchSize = ops.size();
@@ -1532,18 +1535,13 @@ class Variable::AutoBatch
                 MemoizeKnowableValueInArena(*op, isFree);
                 // reset state
                 ResetPendingToIdle(*op);
+                // and notify consumers (which may schedule them)
+                NotifyOpsConsumersInputsAvailable(op);
                 // TODO: realize splice ops that are index ops as a m_lazyIndex at this point
                 //if (f0.m_op == PrimitiveOpType::Slice)
                 //{
                 //    // inject the lazyIndex
                 //}
-            //}
-            //
-            //// update all ops' consumers and schedule them when possible
-            //// BUGBUG: Consumer chain here should have been migrated to the batched op; and notifed from there.
-            //for (auto op = ops.begin(); op != ops.end(); ++op)
-            //{
-                NotifyOpsConsumersInputsAvailable(op);
             }
         }
 
@@ -1777,6 +1775,7 @@ class Variable::AutoBatch
             }
             else
             {
+                fail_if(true, "CSE missed a batched op with all-identical inputs?");
                 // all inputs identical: compute it only once
                 batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), move(attributes), f0.m_name);
                 batchedOp->m_profiler = f0.m_profiler;
