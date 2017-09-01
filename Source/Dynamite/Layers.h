@@ -400,7 +400,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     // matrices are stacked in order (i, r, h)
     //auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
     auto R  = Parameter({ outputDim * 3, outputDim                  }, DTYPE, GlorotUniformInitializer(), device, L"R");
-    auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize, device);
+    auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize, device);
     //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, device);
     auto b  = Parameter({ outputDim * 3 }, DTYPE, 0.0f, device, L"b");
     //let normW = LengthNormalization(device);
@@ -485,8 +485,8 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     auto scale = Parameter({}, DTYPE, 1.0, device, L"Wscale");
     auto weightNormRescale = Parameter({ outputDim }, DTYPE, 1.0, device, L"Wscale");
     let weightNormMinusHalf = Constant::Scalar(DTYPE, -0.5, device);
-    let bn = hasBatchNorm ? BatchNormalization(device, Named("DenseBN")) : Identity;
-    let ln = hasLengthNorm ? LengthNormalization(device) : Identity;
+    let batchNorm = hasBatchNorm ? BatchNormalization(device, Named("DenseBN")) : Identity;
+    let lengthNorm = hasLengthNorm ? LengthNormalization(device) : Identity;
     vector<Parameter> parameters{ W };
     if (hasBias && !hasBatchNorm) // batchNorm supplies its own bias
         parameters.push_back(b);
@@ -496,9 +496,9 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         parameters.push_back(weightNormRescale);
     map<wstring, ModelParametersPtr> nested{ { L"activation", activation } };
     if (hasBatchNorm)
-        nested[L"bn"] = bn;
+        nested[L"batchNorm"] = batchNorm;
     if (hasLengthNorm)
-        nested[L"ln"] = ln;
+        nested[L"lengthNorm"] = lengthNorm;
     return UnaryModel(parameters, nested, [=](const Variable& x)
     {
         auto y = x;
@@ -514,13 +514,13 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
             // BUGBUG: ^^ this reduction is wrong if W has more than one input axes, e.g. for image
             // TODO: need a ReduceToShape operation? Where instead of an axis, the target shape is specified?
             let invLen = Pow(rowNorm, weightNormMinusHalf);
-            y = invLen * y; // normalizes the weight
-            y = weightNormRescale * y;
+            let scale1 = invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
+            y = scale1 * y;
         }
         if (hasLengthNorm) // note: has no bias
-            y = ln(y);
+            y = lengthNorm(y);
         if (hasBatchNorm)
-            y = bn(y); // note: batchNorm has its own bias
+            y = batchNorm(y); // note: batchNorm has its own bias
         else if (hasBias)
             y = y + b;
         return activation(y);
@@ -541,10 +541,10 @@ static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, c
 }
 
 // by default we have a bias
-static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
-{
-    return Linear(outputDim, ProjectionOptions::stabilize | ProjectionOptions::bias, device);
-}
+//static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
+//{
+//    return Linear(outputDim, ProjectionOptions::stabilize | ProjectionOptions::bias, device);
+//}
 
 // create a Barrier function
 static UnaryBroadcastingModel Barrier(const wstring& name = wstring())

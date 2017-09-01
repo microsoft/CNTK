@@ -33,7 +33,7 @@ UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, siz
     return StaticSequential({
         Embedding(embeddingDim, device),
         StaticSequence::Fold(RNNStep(hiddenDim, device)),
-        Linear(numOutputClasses, device)
+        Linear(numOutputClasses, ProjectionOptions::stabilize | ProjectionOptions::bias, device)
     });
 }
 
@@ -59,7 +59,7 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
     auto step    = RNNStep(hiddenDim, device);
     auto zero = Constant({ hiddenDim }, 0.0f, device);
     auto fold = Dynamite::Sequence::Fold(step, zero);
-    auto linear  = Linear(numOutputClasses, device);
+    auto linear  = Linear(numOutputClasses, ProjectionOptions::stabilize | ProjectionOptions::bias, device);
     vector<Variable> xvec;
     vector<Variable> evec;
     return UnaryModel({},
