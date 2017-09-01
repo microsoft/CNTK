@@ -33,9 +33,7 @@ using namespace Dynamite;
 //  - batch/length normalization
 //  - no weight norm
 
-//const DeviceDescriptor device(DeviceDescriptor::UseDefaultDevice());
-const DeviceDescriptor device(DeviceDescriptor::GPUDevice(0));
-//const DeviceDescriptor device(DeviceDescriptor::CPUDevice());
+DeviceDescriptor device(DeviceDescriptor::CPUDevice()); // dummy; will be overwritten
 const size_t srcVocabSize = 27579 + 3;
 const size_t tgtVocabSize = 21163 + 3;
 const size_t embeddingDim = 512;
@@ -300,6 +298,17 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
 
 void Train()
 {
+    let communicator = MPICommunicator();
+#if 1 // while we are running with MPI, we always start from start
+    let numGpus = DeviceDescriptor::AllDevices().size() -1;
+    let ourRank = communicator->CurrentWorker().m_globalRank;
+    if (numGpus > 0)
+        device = DeviceDescriptor::GPUDevice((unsigned int)(ourRank % numGpus));
+    else
+        device = DeviceDescriptor::CPUDevice();
+#else
+    device = DeviceDescriptor::UseDefaultDevice();
+#endif
     // dynamic model and criterion function
     auto model_fn = CreateModelFunction();
     auto criterion_fn = CreateCriterionFunction(model_fn);
@@ -331,7 +340,6 @@ void Train()
         numParameters += p.Shape().TotalSize();
     fprintf(stderr, "Total number of learnable parameters: %u\n", (unsigned int)numParameters);
     let epochSize = 10000000; // 10M is a bit more than half an epoch of ROM-ENG (~16M words)
-    let communicator = MPICommunicator();
     let minibatchSize = 4096      * communicator->Workers().size() /6; // for debugging: switch to smaller MB when running without MPI
     AdditionalLearningOptions learnerOptions;
     learnerOptions.gradientClippingThresholdPerSample = 0.2;
@@ -397,7 +405,8 @@ void Train()
             }
         }
     } partTimer;
-    wstring modelPath = L"d:/me/tmp_dynamite_model.cmf";
+    //wstring modelPath = L"d:/me/tmp_dynamite_model.cmf";
+    wstring modelPath = L"d:/me/tmp_dynamite_model_wn.cmf";
     size_t saveEvery = 100;
     size_t startMbCount = 0;
     if (startMbCount > 0)

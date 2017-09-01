@@ -406,6 +406,10 @@ namespace CNTK
             return false;
         if (&aView->GetSOB() == &bView->GetSOB() && aTensorShape.GetOffset() == bTensorShape.GetOffset()) // same SOB and same offset: OK
             return true;
+#if 1   // BUGBUG: The test below does not work for sparse. For now, let's pretend shifted sparse matrices are not the same, which will break CSE.
+        if (aView->GetSOB().GetMatrixType() != MatrixType::DENSE)
+            return false;
+#endif
         return aView->GetSOB().Data() + aTensorShape.GetOffset() == bView->GetSOB().Data() + bTensorShape.GetOffset(); // otherwise compute buffer address and compare
     }
 
@@ -415,6 +419,8 @@ namespace CNTK
         if (this == other.get()) // fast path: same object
             return true;
         if (m_dataType != other->m_dataType)
+            return false;
+        if (IsSparse() != other->IsSparse())
             return false;
         switch (m_dataType)
         {
@@ -1060,8 +1066,18 @@ namespace CNTK
         // Note: In Dynamite, most NDArrayViews share one underlying big matrix. Those can never be transferred.
         // TODO: Double-check that. Maybe multiple TensorViews pointing to a single SOB can transfer.
         //       That would be a huge perf hit if the entire arena gets transferred.
-        GetTensorViewPtr<ElementType>()->GetSOBPtr()->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
-        return GetTensorViewPtr<ElementType>()->GetSOBViewPtr()->Data();
+        let& tensorView = *GetTensorViewPtr<ElementType>();
+        let& sob = tensorView.GetSOB();
+        sob.TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
+        let* dataBuffer = sob.Data() + tensorView.GetShape().GetOffset();
+#if 1
+        //GetTensorViewPtr<ElementType>()->GetSOBPtr()->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
+        // the above version is faster; make sure it is correct
+        let* dataBuffer1 = GetTensorViewPtr<ElementType>()->GetSOBViewPtr()->Data();
+        if (dataBuffer1 != dataBuffer)
+            LogicError("NDArrayView::DataBuffer: fast and slow way of getting the data buffer give different answers?");
+#endif
+        return dataBuffer;
     }
 
     template <typename ElementType>

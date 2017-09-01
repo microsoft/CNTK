@@ -590,7 +590,7 @@ struct RuntimeStatistics
     // forward
     size_t numOpNodes = 0;
     size_t numLeafNodes = 0;
-    size_t numDoneSpliceOps = 0;
+    size_t numDoneGatherOps = 0;
     size_t numDoneFreeOps = 0;
     size_t numDoneOtherOps = 0;
     size_t numBatchedLaunches = 0;
@@ -604,7 +604,7 @@ struct RuntimeStatistics
 
 // ---------------------------------------------------------------------------
 // NonOwningFunctionList, NonOwningFunctionListBuilder -- helper classes:
-// linked list over PrimitiveFunction objects, using m_link.
+// linked list over PrimitiveFunction objects, using m_autoBatchState.m_link.
 // This is used in auto-batching instead of, say, a std::vector<> or std::set<>
 // for performance reasons. It also does not hold shared_ptrs, since those
 // have significant runtime overhead. We don't need them, since the lists
@@ -650,27 +650,27 @@ public:
         PrimitiveFunction* operator->() const { return iter; }
         operator PrimitiveFunction*() const { return iter; }
         PrimitiveFunction& operator*() const { return *iter; } // TODO: This is weird, figure this out
-        PrimitiveFunction* operator++() { iter = iter->m_link; return iter; }
+        PrimitiveFunction* operator++() { iter = iter->m_autoBatchState.m_link; return iter; }
         bool operator!=(const FunctionListIterator& other) { return iter != other.iter; }
     };
     FunctionListIterator begin() const { return front(); }
     FunctionListIterator end()   const { return nullptr; }
 };
-class NonOwningFunctionListBuilder : public NonOwningFunctionList // over PrimitiveFunction, using m_link
+class NonOwningFunctionListBuilder : public NonOwningFunctionList // over PrimitiveFunction, using m_autoBatchState.m_link
 {
     PrimitiveFunction* tail; // note: value undefined when list empty
 public:
     NonOwningFunctionListBuilder() : NonOwningFunctionList() { }
-    NonOwningFunctionListBuilder(PrimitiveFunction* f) : NonOwningFunctionList(f), tail(f) { f->m_link = nullptr; }
+    NonOwningFunctionListBuilder(PrimitiveFunction* f) : NonOwningFunctionList(f), tail(f) { f->m_autoBatchState.m_link = nullptr; }
     void push_back(PrimitiveFunction* f)
     {
         if (!head)
             head = f;
         else
-            tail->m_link = f;
+            tail->m_autoBatchState.m_link = f;
         tail = f;
         count++;
-        f->m_link = nullptr;
+        f->m_autoBatchState.m_link = nullptr;
     }
 };
 
@@ -884,7 +884,7 @@ class Variable::AutoBatch
             if (op != b->m_op)
                 return false;
             // priority must match (depending on barrier or not)
-            if (a->m_priority != b->m_priority)
+            if (a->m_autoBatchState.m_priorityRemoveThis != b->m_autoBatchState.m_priorityRemoveThis)
                 return false;
             // some operations have variable number of arguments. Those cannot be batched, e.g. Splice().
             if (a->m_inputs.size() != b->m_inputs.size())
@@ -999,7 +999,7 @@ class Variable::AutoBatch
                         break;
                     }
                 }
-                f->m_priority = pri;
+                f->m_autoBatchState.m_priorityRemoveThis = pri;
                 // this naive implementation just scans linearly
                 // scan through all op sets to see if one is batchable with 'f'
                 // So far this does not show up in profiling.
@@ -1019,11 +1019,11 @@ class Variable::AutoBatch
         // notify a function that an input has become available; schedule it when all inputs are now available
         void NotifyInputAvailable(PrimitiveFunction* f)
         {
-            if (f->m_pendingInputs <= 0)
+            if (f->m_autoBatchState.m_pendingInputs <= 0)
                 LogicError("NotifyInputAvailable: pending inputs already 0 yet we are executing it");
-            f->m_pendingInputs--;
+            f->m_autoBatchState.m_pendingInputs--;
             // if it is now ready then schedule it
-            if (f->m_pendingInputs == 0)
+            if (f->m_autoBatchState.m_pendingInputs == 0)
                 Schedule(f);
         }
         // test if no more ready ops
@@ -1078,7 +1078,7 @@ class Variable::AutoBatch
                     if (diff == 0)
                         diff = -(GetBatchNormPending(iter) - GetBatchNormPending(best)); // BatchNormalization with pending inputs always loses
                     if (diff == 0)
-                        diff = iter->front()->m_priority - best->front()->m_priority;
+                        diff = iter->front()->m_autoBatchState.m_priorityRemoveThis - best->front()->m_autoBatchState.m_priorityRemoveThis;
                     if (diff == 0)
                         diff = (int)iter->size() - (int)best->size();
                     if (diff > 0)
@@ -1107,7 +1107,7 @@ class Variable::AutoBatch
     // This function assumes that
     //  - it only runs once
     //  - m_value must not have been set (don't call this function if it has)
-    //  - m_pendingInputs has been initialized to -1 by the constructor
+    //  - m_autoBatchState.m_pendingInputs has been initialized to -1 by the constructor
     // Caller must call m_visitorTag.Begin() first.
     void RInitForScheduling(const Variable& var)
     {
@@ -1171,7 +1171,7 @@ class Variable::AutoBatch
             else
                 m_stats.numLeafNodes++;
         }
-        f.m_pendingInputs = (int)pendingInputs;
+        f.m_autoBatchState.m_pendingInputs = (int)pendingInputs;
         // if none then operation is ready
         if (pendingInputs == 0)
             m_schedule.Schedule(&f); // add to ready set
@@ -1306,7 +1306,7 @@ class Variable::AutoBatch
     vector<CudaStats> cudaStats;
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
-    const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false)
+    const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool spliceIsGather = false)
     {
         if (f.m_outputs.size() != 1)
             LogicError("MemoizeKnowableValueInArena: only functions with 1 output are supported");
@@ -1365,8 +1365,8 @@ class Variable::AutoBatch
         let primitiveOp = f.m_op;
         if (isFree) // means we did not pass a data buffer for the result; any one we pass a buffer does actual work
             m_stats.numDoneFreeOps++;
-        else if (primitiveOp == PrimitiveOpType::Splice)
-            m_stats.numDoneSpliceOps++;
+        else if (primitiveOp == PrimitiveOpType::Splice && spliceIsGather)
+            m_stats.numDoneGatherOps++;
         else
             m_stats.numDoneOtherOps++;
         return output;
@@ -1374,9 +1374,9 @@ class Variable::AutoBatch
 
     static void ResetPendingToIdle(PrimitiveFunction& f)
     {
-        if (f.m_pendingInputs != 0)
+        if (f.m_autoBatchState.m_pendingInputs != 0)
             LogicError("ResetPendingToIdle: pendingINputs is not 0, so we should not have gotten here");
-        f.m_pendingInputs = -1; // unknown
+        f.m_autoBatchState.m_pendingInputs = -1; // unknown
     }
 
     // notify consumers of 'op' that op's value is now available
@@ -1418,13 +1418,44 @@ class Variable::AutoBatch
     // TODO: We either duplicate m_value or m_lazyIndex, and we know that upon call time; so split this function.
     void UpdateDuplicatesAndUpdateSchedule(PrimitiveFunction* op)
     {
-        for (auto* f = op->m_aliasList; f; f = f->m_aliasList)
+        for (auto* f = op->m_autoBatchState.m_aliasList; f; f = f->m_autoBatchState.m_aliasList)
         {
             f->m_outputs[0].m_dataFields->m_value = op->m_outputs[0].m_dataFields->m_value;
             f->m_outputs[0].m_dataFields->m_lazyIndex = op->m_outputs[0].m_dataFields->m_lazyIndex;
             ResetPendingToIdle(*f);
             NotifyOpsConsumersInputsAvailable(f);
         }
+    }
+
+    // compute a hash value for f
+    // TODO: instead of doing this lazily, should it be done in Schedule()?
+    static void ComputeAliasHash(PrimitiveFunction& f)
+    {
+        if (f.m_autoBatchState.m_aliasHash != SIZE_MAX) // lazy
+            return;
+        size_t hash = 0;
+        // we only hash the argument identities; that is, their base pointer
+        // We already know that opcode and shapes are identical.
+        // If we really allow strides in the future, we may include them in the hash.
+        static const size_t multiplier = 1572869; // an arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
+        let& inputs = f.m_inputs;
+        for (size_t k = 0; k < inputs.size(); k++)
+        {
+            // PERF BUGBUG: This vv is horrible.
+            let& value = *LazilyIndexedValue(SeeThroughNoOps(inputs, k));
+            let dataBuffer =
+                /*if*/ value.IsSparse() ?  // BUGBUG: We can do better for sparse data. (DataBuffer() is only available for dense.)
+                    (intptr_t)&value
+                /*else if*/ : value.GetDataType() == DataType::Float ?
+                    (intptr_t)value.DataBuffer<float>()/sizeof(float)
+                /*else*/:
+                    (intptr_t)value.DataBuffer<double>()/sizeof(double);
+            hash += (size_t)dataBuffer; // add the page number, in case allocation is page-aligned
+            hash *= multiplier;
+            hash += (size_t)(dataBuffer >> 8); // also hash the page number, in case allocation is page-aligned
+            hash *= multiplier;
+        }
+        f.m_autoBatchState.m_aliasHash = hash;
     }
 
     // detect equivalent Functions and uniq them, redirecting dups to the first one
@@ -1438,33 +1469,38 @@ class Variable::AutoBatch
             let f = iter;
             ++iter;
             // PERF BUGBUG: This gives O(N^2) complexity. Fix this once I get correct behavior.
+            //              For now, it seems using the hash with a linear search gets it fast enough, but we should use a proper hash table of course.
+            ComputeAliasHash(*f);
+            let fHash = f->m_autoBatchState.m_aliasHash;
             let& inputs = f->m_inputs;
             let arity = inputs.size();
             for (auto jter = filteredOps.begin(); jter != filteredOps.end(); ++jter)
             {
                 let& jnputs = jter->m_inputs;
+                if (jter->m_autoBatchState.m_aliasHash != fHash)
+                    goto next_jter;
                 for (size_t k = 0; k < jnputs.size(); k++)
                 {
                     //if (!LazilyIndexedValue(inputs[k])->IsAliasOf(LazilyIndexedValue(jnputs[k])))
-                    // PERF BUGBUG: This vv is horrible.
+                    // PERF BUGBUG: This vv is horrible. Alleviated by the hash though.
                     if (!LazilyIndexedValue(SeeThroughNoOps(inputs, k))->IsAliasOf(LazilyIndexedValue(SeeThroughNoOps(jnputs, k))))
-                        goto dontskip;
+                        goto next_jter;
                 }
                 // all inputs are the same: f is a dup of 'jter'
-#if 1           // TODO: one day try if the #if 0 branch works. It should (but failed earlier on). Would allow to remove the brittle m_aliasList.
-                f->m_aliasList = jter->m_aliasList;
-                jter->m_aliasList = f; // jter is the original anchor; it is the root of a linked list into the aliases
+#if 1           // TODO: one day try if the #if 0 branch works. It should (but failed earlier on). Would allow to remove the brittle m_autoBatchState.m_aliasList.
+                f->m_autoBatchState.m_aliasList = jter->m_autoBatchState.m_aliasList;
+                jter->m_autoBatchState.m_aliasList = f; // jter is the original anchor; it is the root of a linked list into the aliases
 #else
                 FinalizeBatchedOpAndUpdateSchedule(f, dynamic_pointer_cast<PrimitiveFunction>(jter->shared_from_this()));
 #endif
                 m_stats.numCommonSubexpressionsEliminated++;
-                goto skip; // gotcha! eliminated!
-            dontskip:; // this one does not match
+                goto break_iter; // gotcha! eliminated!
+            next_jter:; // this one does not match
             }
             // no matching one was found
-            f->m_aliasList = nullptr; // first entry in a potential list of duplicates
+            f->m_autoBatchState.m_aliasList = nullptr; // first entry in a potential list of duplicates
             filteredOps.push_back(f);
-        skip:;
+        break_iter:;
         }
         return filteredOps;
     }
@@ -1482,7 +1518,7 @@ class Variable::AutoBatch
     // The consumers of the original ops will get a back-reference in the m_lazyIndex field.
     // If such a result is ever accessed individually, it will lead to a lazy NDArrayView::SliceView() call
     // (but no Splice Function object is used for this).
-    // All ops passed to this function must get their m_pendingInputs changed from 0 to -1 (newly created batched ones also will have -1).
+    // All ops passed to this function must get their m_autoBatchState.m_pendingInputs changed from 0 to -1 (newly created batched ones also will have -1).
     void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
     {
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
@@ -1530,7 +1566,7 @@ class Variable::AutoBatch
             ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
         else
             for (auto iter = ops.begin(); iter != ops.end(); ++iter) // create the batched tensors
-                iter->m_aliasList = nullptr;
+                iter->m_autoBatchState.m_aliasList = nullptr;
 
         // perform the op
         let batchSize = ops.size();
@@ -1742,7 +1778,7 @@ class Variable::AutoBatch
                     spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
 #endif
                     // and execute it
-                    let& output = MemoizeKnowableValueInArena(*spliceOp);
+                    let& output = MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
                     // and that's our input to the batched operation
                     // To make sure we hold a reference to this PrimitiveFunction, inject a strong ref to the spliceOp into the copy of its Output.
                     // Note that we abuse the composite field for a non-composite, which works because it is just a FunctionPtr, and we own it.
@@ -1875,15 +1911,15 @@ public:
 
     // Value(), computed with automatic batching
     // This routine uses temporary fields that are assumed initialized in a specific way:
-    //  - PrimitiveFunction::m_pendingInputs:
+    //  - PrimitiveFunction::m_autoBatchState.m_pendingInputs:
     //     - #inputs that still need to be computed before a node's value can be computed
     //     - also used as a 'visited' flag during traversal
     //     - upon entry and exit of this function, this must be -1 (idle)
     //  - Variable::m_consumers:
-    //     - set of consumers of this value. Used to count m_pendingInputs.
+    //     - set of consumers of this value. Used to count m_autoBatchState.m_pendingInputs.
     //     - must be empty upon entry and exit
     // plus more temp fields:
-    //  - PrimitiveFunction::m_link: pointer to next PrimitiveFunction in the same batchable op
+    //  - PrimitiveFunction::m_autoBatchState.m_link: pointer to next PrimitiveFunction in the same batchable op
     // And it leaves the following:
     //  - m_value: updated as desired
     //    TODO: values not needed by user or gradient should use scratch space
@@ -1960,8 +1996,8 @@ public:
             logMemoizeStatsCounter = 0;
         LazilyIndexedValue(v); // force-flush a potential final lazily-indexed value
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedForward: %d forward ops executed besides %d splices, %d views, and %d CSEs, in nominally %d PrimitiveFunctions on %d known values\n",
-                (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneSpliceOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numCommonSubexpressionsEliminated, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);
+        fprintf(stderr, "BatchedForward: %d forward ops executed besides %d gathers, %d views, and %d CSEs, in nominally %d PrimitiveFunctions on %d known values\n",
+                (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneGatherOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numCommonSubexpressionsEliminated, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);
 #endif
 #ifdef LOG_DETAILS
         size_t numOpNodes1 = 0;
@@ -2057,7 +2093,7 @@ public:
     // Unlike forward prop, we...
     //  - can skip any branch that does not need a gradient (!m_needsGradient and StopGradient ops).
     //  - short-circuit into batched ops (m_lazyIndex) so that we backprop through them instead
-    // All nodes that were traversed have all input's m_consumers set up and their m_pendingInputs set to 0.
+    // All nodes that were traversed have all input's m_consumers set up and their m_autoBatchState.m_pendingInputs set to 0.
     // Caller must call m_visitorTag.Begin() first.
     void RDetermineConsumersForBackward(const Variable& var)
     {
@@ -2087,7 +2123,7 @@ public:
         auto&f = outFields.m_ownerFunction.lock();
 #endif
         // return if we already visited the function
-        if (m_visitorTag.Visited(f.m_visitedTag))
+        if (m_visitorTag.Visited(f.m_autoBatchState.m_visitedTag))
             return;
 
         fail_if(f.m_op == PrimitiveOpType::StopGradient, "unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards");
@@ -2132,7 +2168,7 @@ public:
                 fields.m_consumers.second.push_back(make_pair(&f, i));
             m_stats.numBackpropsToInputs++;
         }
-        f.m_pendingInputs = 0; // used as a visited flag
+        f.m_autoBatchState.m_pendingInputs = 0; // used as a visited flag
     }
 
     // helper to batch an array of NDArrayViews of the same rank along either the last or into a new axis
@@ -2210,7 +2246,7 @@ public:
     void BackpropToSplice(PrimitiveFunction* f)
     {
         // if we pull this a second time, then don't propagate again
-        if (m_visitorTag.Visited(f->m_visitedTag))
+        if (m_visitorTag.Visited(f->m_autoBatchState.m_visitedTag))
             return;
         // fast path: only one input (and not Splice, which we do in bulk)
         if (f->m_inputs.size() == 1)
@@ -2524,7 +2560,7 @@ public:
                 kv.second->SetValue(0.0f); // BUGBUG: inefficient; better reset to 0 lazily
             kv.first.m_dataFields->m_gradient = kv.second; // (if null then these will be set inside)
         }
-        // BUGBUG: how to reset m_pendingInputs when there is no gradient on that path?
+        // BUGBUG: how to reset m_autoBatchState.m_pendingInputs when there is no gradient on that path?
         // perform backprop
         // This traverses the tree top-down, where each node pulls gradient(s) from its consumer(s).
         // This way we can optimize operations, such as a matrix product or gradient of GatherBatch().

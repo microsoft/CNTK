@@ -19,8 +19,8 @@
 //#define DISABLE_NORMALIZATIONS // #define this to disable LengthNormalization and Droppo scaling
 
 #define let const auto
-#define Named(n) (L##n)
-//#define Named(n) (std::wstring())
+//#define Named(n) (L##n)
+#define Named(n) (std::wstring())
 
 using namespace CNTK;
 using namespace std;
@@ -526,8 +526,8 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
 // by default we have a bias and weight norm
 static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, const DeviceDescriptor& device)
 {
-    //return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::stabilize, device);
-    return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::weightNormalize, device);
+    return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::stabilize, device);
+    //return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::weightNormalize, device);
 }
 
 static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device)

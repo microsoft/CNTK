@@ -860,14 +860,18 @@ namespace CNTK
 
         // Dynamite
         bool m_isKnownToBeAcyclic = true; // true if it is guaranteed that this PrimitiveFunction can never be part of a cycle (==has no Placeholder leaves)
-        // TODO: move all below into a struct m_autoBatchState
-        int m_pendingInputs = -1;   // counter how many inputs have already become available
-        mutable size_t m_visitedTag = 0; // used for tree traversal
         friend class NonOwningFunctionList;
         friend class NonOwningFunctionListBuilder;
-        PrimitiveFunction* m_link;       // auto-batch: temporary linked list, e.g. for batched operations
-        PrimitiveFunction* m_aliasList;  // auto-batch: temporary linked list of aliases (common subexpression) of a function
-        int m_priority;                  // used by scheduler
+        struct
+        {
+            mutable size_t m_visitedTag = 0; // used for tree traversal at various places (currently only in backprop, in two places)
+            // TODO: move all below into a struct m_autoBatchState
+            int m_pendingInputs = -1;        // during batched forward: counter how many inputs have already become available
+            PrimitiveFunction* m_link;       // temporary linked list, e.g. for batched operations
+            PrimitiveFunction* m_aliasList;  // list of aliases (common subexpression), local to ExecuteBatchedOpAndUpdateSchedule()
+            size_t m_aliasHash = SIZE_MAX;   // hash for alias detection (common subexpression elimination)
+            int m_priorityRemoveThis;        // used by scheduler  --TODO: remove this, it should be unused by now
+        } m_autoBatchState;
         mutable DynamicProfilerPtr m_profiler;   // profile using this profiler if set
         static const DynamicProfilerPtr& CurrentDynamicProfiler();
     }; // end class PrimitiveFunction
