@@ -154,14 +154,12 @@ public:
     {
         auto result     =             ValueFor(fr);
         auto inputValue = InputRef(0).ValueFor(fr);
-        ForwardPropImpl(&result, &inputValue);
+        ForwardPropImpl(result, inputValue);
     }
 
-    static void ForwardPropImpl(Matrix<ElemType> *result, Matrix<ElemType> *input)
+    static void ForwardPropImpl(Matrix<ElemType> &result, Matrix<ElemType> &input)
     {
-        if (!result || !input)
-            InvalidArgument("ReshapeNode::ForwardPropImpl: Input pointer can't be null.");
-        result->AssignValuesOf(input->Reshaped(result->GetNumRows(), result->GetNumCols()));
+        result.AssignValuesOf(input.Reshaped(result.GetNumRows(), result.GetNumCols()));
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -169,28 +167,25 @@ public:
         auto gradient      =                      GradientFor(fr);
         auto inputGradient = InputRef(inputIndex).GradientFor(fr);
 
-        BackpropImpl(&gradient, &inputGradient, Input(inputIndex)->IsGradientOptimized(this), Input(inputIndex)->ParentGradientReused());
+        BackpropImpl(gradient, inputGradient, Input(inputIndex)->IsGradientOptimized(this), Input(inputIndex)->ParentGradientReused());
     }
 
-    static void BackpropImpl(Matrix<ElemType> *gradient, Matrix<ElemType> *inputGradient, bool isGradientOptimized, bool isParentGradientReused)
+    static void BackpropImpl(Matrix<ElemType> &gradient, Matrix<ElemType> &inputGradient, bool isGradientOptimized, bool isParentGradientReused)
     {
-        if (!gradient || !inputGradient)
-            InvalidArgument("ReshapeNode::BackpropImpl: Input pointer can't be null.");
-
         if (isGradientOptimized)
         {
             if (isParentGradientReused)
             {
-                if (gradient->Data() != inputGradient->Data() ||
-                    gradient->GetNumRows() != inputGradient->GetNumRows() ||
-                    gradient->GetNumCols() != inputGradient->GetNumCols())
+                if (gradient.Data() != inputGradient.Data() ||
+                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
+                    gradient.GetNumCols() != inputGradient.GetNumCols())
                     LogicError("Gradient should be reused");
             }
             else
-                inputGradient->AssignValuesOf(gradient->Reshaped(inputGradient->GetNumRows(), inputGradient->GetNumCols()));
+                inputGradient.AssignValuesOf(gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols()));
         }
         else
-            *inputGradient += gradient->Reshaped(inputGradient->GetNumRows(), inputGradient->GetNumCols());
+            inputGradient += gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -546,7 +541,7 @@ public:
         auto& inputValue = InputRef(0).Value();
         auto& outputValue = Value();
 
-        ReshapeNode<ElemType>::ForwardPropImpl(&outputValue, &inputValue);
+        ReshapeNode<ElemType>::ForwardPropImpl(outputValue, inputValue);
     }
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
@@ -554,7 +549,7 @@ public:
         auto& gradient = Gradient();
         auto& inputGradient = Input(0)->Gradient();
 
-        ReshapeNode<ElemType>::BackpropImpl(&gradient, &inputGradient, Input(0)->IsGradientOptimized(this), Input(0)->ParentGradientReused());
+        ReshapeNode<ElemType>::BackpropImpl(gradient, inputGradient, Input(0)->IsGradientOptimized(this), Input(0)->ParentGradientReused());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -630,7 +625,7 @@ public:
         auto& inputValue = InputRef(0).Value();
         auto& outputValue = Value();
 
-        ReshapeNode<ElemType>::ForwardPropImpl(&outputValue, &inputValue);
+        ReshapeNode<ElemType>::ForwardPropImpl(outputValue, inputValue);
     }
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
@@ -638,7 +633,7 @@ public:
         auto& gradient = Gradient();
         auto& inputGradient = Input(0)->Gradient();
 
-        ReshapeNode<ElemType>::BackpropImpl(&gradient, &inputGradient, Input(0)->IsGradientOptimized(this), Input(0)->ParentGradientReused());
+        ReshapeNode<ElemType>::BackpropImpl(gradient, inputGradient, Input(0)->IsGradientOptimized(this), Input(0)->ParentGradientReused());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override 
