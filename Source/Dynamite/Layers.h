@@ -474,7 +474,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
 #ifdef DISABLE_NORMALIZATIONS
     let hasScale = false;
 #else
-    let hasScale = (opts & (ProjectionOptions::stabilize)) != 0 && !(hasBatchNorm || hasWeightNorm || hasLengthNorm); // Droppo stabilizer; subsumed by BN, WN, LN
+    let hasScale = (opts & (ProjectionOptions::stabilize)) != 0 || (opts & (ProjectionOptions::bias)) != 0;//FOR NOW, for back compat (opts & (ProjectionOptions::stabilize)) != 0 ; // Droppo stabilizer
 #endif
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
     auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
@@ -524,11 +524,12 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
 }
 
 // by default we have a bias and weight norm
-static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, const DeviceDescriptor& device)
-{
-    return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::stabilize, device);
-    //return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::weightNormalize, device);
-}
+//static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, const DeviceDescriptor& device)
+//{
+//    return Dense(outputDim, activation, ProjectionOptions::bias, device);
+//    //return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::stabilize, device);
+//    //return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::weightNormalize, device);
+//}
 
 static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device)
 {
@@ -579,8 +580,8 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
 {
     //auto W1 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W1");
     //auto W2 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W2");
-    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize/* | ProjectionOptions::stabilize*/, device);
-    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize/* | ProjectionOptions::stabilize*/, device);
+    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::stabilize, device);
+    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::stabilize, device);
     // BUGBUG: stabilize and BN together makes no sense, right?
     //auto scale1 = Parameter({}, DTYPE, 1.0, device, L"Wscale1");
     //auto scale2 = Parameter({}, DTYPE, 1.0, device, L"Wscale2");
