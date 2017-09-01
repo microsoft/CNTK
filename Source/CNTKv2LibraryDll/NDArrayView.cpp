@@ -393,7 +393,35 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(GetDataType(), GetTensorShape(), IsReadOnly() || readOnly, GetStorageObjectPtr());
     }
 
-    static DataType GetType(float)  { return DataType::Float; }
+    template <typename ElementType>
+    static bool AreAliases(const void* av, const void* bv)
+    {
+        let* aView = (const TensorView<ElementType>*)av;
+        let* bView = (const TensorView<ElementType>*)bv;
+        let& aTensorShape = aView->GetShape();
+        let& bTensorShape = bView->GetShape();
+        return
+            aTensorShape.GetDims() == bTensorShape.GetDims() &&
+            aTensorShape.GetStrides() == bTensorShape.GetStrides() &&
+            aView->GetSOB().Data() + aTensorShape.GetOffset() == bView->GetSOB().Data() + bTensorShape.GetOffset();
+    }
+
+    bool NDArrayView::IsAliasOf(const NDArrayViewPtr& other) const
+    {
+        // note: this should not waste cycles, since it is used inside auto-batching
+        if (this == other.get()) // fast path: same object
+            return true;
+        if (m_dataType != other->m_dataType)
+            return false;
+        switch (m_dataType)
+        {
+        case DataType::Float:  return AreAliases<float> (this->m_tensorViewPtr.get(), other->m_tensorViewPtr.get());
+        case DataType::Double: return AreAliases<double>(this->m_tensorViewPtr.get(), other->m_tensorViewPtr.get());
+        default: LogicError("NDArrayView::CopyFrom: Unsupported DataType %s", DataTypeName(m_dataType));
+        }
+    }
+
+    static DataType GetType(float)  { return DataType::Float;  }
     static DataType GetType(double) { return DataType::Double; }
 
     // TODO: merge with GetTensorViewPtr() as GetTensorView() which returns a reference while GetTensorViewPtr returns a shared_ptr. If needed at all.

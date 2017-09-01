@@ -593,6 +593,7 @@ struct RuntimeStatistics
     size_t numDoneSpliceOps = 0;
     size_t numDoneFreeOps = 0;
     size_t numDoneOtherOps = 0;
+    size_t numCommonSubexpressionsEliminated = 0; // equivalent Functions (same op, same inputs) discovered
     // backward
     size_t numBackpropsToInputs = 0;
     size_t numBackpropGathers = 0;
@@ -646,6 +647,7 @@ public:
     public:
         FunctionListIterator(PrimitiveFunction* f) : iter(f) { }
         PrimitiveFunction* operator->() const { return iter; }
+        operator PrimitiveFunction*() const { return iter; }
         PrimitiveFunction& operator*() const { return *iter; } // TODO: This is weird, figure this out
         PrimitiveFunction* operator++() { iter = iter->m_link; return iter; }
         bool operator!=(const FunctionListIterator& other) { return iter != other.iter; }
@@ -956,7 +958,7 @@ class Variable::AutoBatch
                 m_bnPendingCounts.resize(bnId * 10, 0);
             m_bnPendingCounts[bnId]++;
         }
-        // schedule an operation that has been confirmed ready
+        // schedule an operation that has been confirmed to be ready
         void Schedule(PrimitiveFunction* f)
         {
             let op = f->m_op;
@@ -1004,6 +1006,7 @@ class Variable::AutoBatch
                 {
                     if (AreBatchable(f, iter->front()))
                     {
+                        // Found another function that this is batchable with: add to batch.
                         iter->push_back(f);
                         return;
                     }
@@ -1375,6 +1378,21 @@ class Variable::AutoBatch
         f.m_pendingInputs = -1; // unknown
     }
 
+    // detect equivalent Functions and uniq them, redirecting dups to the first one
+    // Returns a filtered list. Call this at start of batched execution.
+    NonOwningFunctionList RedirectDuplicates(NonOwningFunctionList ops)
+    {
+        NonOwningFunctionListBuilder filteredOps;
+        for (NonOwningFunctionList::FunctionListIterator iter = ops.begin(); iter != ops.end(); ) // create the batched tensors
+        {
+            let f = iter;
+            ++iter;
+            // TODO: decide if duplicate, and redirect to first in set
+            filteredOps.push_back(f);
+        }
+        return filteredOps;
+    }
+
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
     vector<Variable> m_batchedInputs;
     vector<Variable> m_spliceArgsBuffer;
@@ -1392,6 +1410,12 @@ class Variable::AutoBatch
     // All ops passed to this function must get their m_pendingInputs changed from 0 to -1 (newly created batched ones also will have -1).
     void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
     {
+        // common sub-expression elimination (CSE)
+        // All common sub-expressions become available at the same time and show up in the same ops list.
+        // All ops whose inputs are 100% aliases of another op compute the same thing.
+        // Those will be removed from the list. The removed ones will have a result value implanted
+        // that is a lazy view onto the non-removed one.
+        ops = RedirectDuplicates(ops);
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
         auto& f0 = *ops.front();
@@ -1465,7 +1489,9 @@ class Variable::AutoBatch
 #endif
             }
         }
-        // execute the batchable operations as a batch
+
+        // === execute the batchable operations as a batch ===
+        // This is where the magic happens.
         // Every resulting batched op consists of the following new operations:
         //  - a Splice() or Slice() for each input (e.g. 2 for a binary op)
         //  - a PrimitiveFunction that is the op itself
@@ -1812,68 +1838,65 @@ public:
         Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), L"[r] "); });
 #endif
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
-        //if (!fields.m_value)
-        //{
-            // prepare and schedule first set
-            m_visitorTag.Begin();
-            RInitForScheduling(v);
-            // compute the entire graph
-            while (!m_schedule.empty())
+        // prepare and schedule first set
+        m_visitorTag.Begin();
+        RInitForScheduling(v);
+        // compute the entire graph
+        while (!m_schedule.empty()) // main computation loop over all operations
+        {
+            // select the "best" amongst the scheduled ops
+            auto opBatch = m_schedule.pop_best();
+            // log (if barrier crossed)
+            let f = opBatch.front();
+            if (ShouldProfile(f)) // profiling diagnostics
             {
-                // select the best amongst the scheduled ops
-                auto opBatch = m_schedule.pop_best();
-                // log (if barrier crossed)
-                let f = opBatch.front();
-                if (ShouldProfile(f))
+                let& inputs = f->m_inputs;
+                for (size_t i = 0; i < inputs.size(); i++)
                 {
-                    let& inputs = f->m_inputs;
-                    for (size_t i = 0; i < inputs.size(); i++)
+                    size_t barrierId = SIZE_MAX;
+                    SeeThroughNoOps(inputs, i, barrierId);
+                    if (barrierId != SIZE_MAX)
                     {
-                        size_t barrierId = SIZE_MAX;
-                        SeeThroughNoOps(inputs, i, barrierId);
-                        if (barrierId != SIZE_MAX)
+                        let& input = inputs[i]; // we are lazy and only print the name if the barrier is the immediate input, so that we don't have to duplicate the traversal in SeeThroughNoOps()
+                        const wchar_t* name = nullptr;
+                        size_t id = SIZE_MAX;
+                        if (input.IsOutput())
                         {
-                            let& input = inputs[i]; // we are lazy and only print the name if the barrier is the immediate input, so that we don't have to duplicate the traversal in SeeThroughNoOps()
-                            const wchar_t* name = nullptr;
-                            size_t id = SIZE_MAX;
-                            if (input.IsOutput())
-                            {
-                                let& f = input.OutputOwner();
-                                name = f->Name().c_str();
-                                id = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
-                            }
-                            fprintf(stderr, "\n[%S] --- %d (%S): %d pending\n\n", f->m_profiler->Name(), (int)id, (name && name[0]) ? name : L"?", (int)m_schedule.BarrierPendingCounts(id));
+                            let& f = input.OutputOwner();
+                            name = f->Name().c_str();
+                            id = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
                         }
+                        fprintf(stderr, "\n[%S] --- %d (%S): %d pending\n\n", f->m_profiler->Name(), (int)id, (name && name[0]) ? name : L"?", (int)m_schedule.BarrierPendingCounts(id));
                     }
                 }
-                // execute it, and also update all outputs' values and consumers, and the schedule
-                ExecuteBatchedOpAndUpdateSchedule(opBatch);
             }
-            fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
-            // log stats
-            if (logMemoizeStatsCounter == 0)
+            // execute it, and also update all outputs' values and consumers, and the schedule
+            ExecuteBatchedOpAndUpdateSchedule(opBatch);
+        }
+        fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
+        // log stats
+        if (logMemoizeStatsCounter == 0)
+        {
+            double totalLaunch = 0;
+            double totalExec = 0;
+            for (let& s : cudaStats) if (s.numInvocations)
             {
-                double totalLaunch = 0;
-                double totalExec = 0;
-                for (let& s : cudaStats) if (s.numInvocations)
-                {
-                    let prefix = s.hasSparse ? L"sparse " : L"";
-                    let name = PrimitiveOpTypeName(s.op);
-                    let execTime = s.timerRun.Total() - s.timerSync.Total();
-                    fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + name).c_str(),
-                            s.timerLaunch.Total(), execTime,
-                            1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * execTime / (double)s.numInvocations,
-                            (int)s.numInvocations,
-                            s.totalElements / (double)s.numInvocations);
-                    totalLaunch += s.timerLaunch.Total();
-                    totalExec   += execTime;
-                }
-                fprintf(stderr, "-> total launch + exec time: %.4f s + %.4f s\n", totalLaunch, totalExec);
+                let prefix = s.hasSparse ? L"sparse " : L"";
+                let name = PrimitiveOpTypeName(s.op);
+                let execTime = s.timerRun.Total() - s.timerSync.Total();
+                fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + name).c_str(),
+                        s.timerLaunch.Total(), execTime,
+                        1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * execTime / (double)s.numInvocations,
+                        (int)s.numInvocations,
+                        s.totalElements / (double)s.numInvocations);
+                totalLaunch += s.timerLaunch.Total();
+                totalExec   += execTime;
             }
-            logMemoizeStatsCounter++;
-            if (logMemoizeStatsCounter == logMemoizeStatsPeriod)
-                logMemoizeStatsCounter = 0;
-        //}
+            fprintf(stderr, "-> total launch + exec time: %.4f s + %.4f s\n", totalLaunch, totalExec);
+        }
+        logMemoizeStatsCounter++;
+        if (logMemoizeStatsCounter == logMemoizeStatsPeriod)
+            logMemoizeStatsCounter = 0;
         LazilyIndexedValue(v); // force-flush a potential final lazily-indexed value
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedForward: %d forward ops executed besides %d splices and %d views, in nominally %d PrimitiveFunctions on %d known values\n",

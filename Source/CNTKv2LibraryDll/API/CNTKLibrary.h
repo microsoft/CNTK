@@ -826,6 +826,11 @@ namespace CNTK
         CNTK_API NDArrayViewPtr Alias(bool readOnly = false) const;
 
         ///
+        /// Tests whether an NDArrayView is a full alias of another.
+        ///
+        CNTK_API bool IsAliasOf(const NDArrayViewPtr& other) const;
+
+        ///
         /// Performs a numeric operation, returning NDArrayView(beta * *this + alpha * op(inputs)).
         /// The result is shaped according to broadcasting rules.
         /// If 'out' is not povided, a new object with correct shape will be created.
