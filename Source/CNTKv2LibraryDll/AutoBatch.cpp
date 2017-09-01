@@ -1562,9 +1562,9 @@ class Variable::AutoBatch
         // Those will be removed from the list. The removed ones will have a result value implanted
         // that is a lazy view onto the non-removed one.
         // Batch norm must be excluded  since we must count samples as often as they appear in the batch statistics.
-        if (!isFree && op != PrimitiveOpType::BatchNormalization)
-            ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
-        else
+        //if (!isFree && op != PrimitiveOpType::BatchNormalization)
+        //    ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
+        //else
             for (auto iter = ops.begin(); iter != ops.end(); ++iter) // create the batched tensors
                 iter->m_autoBatchState.m_aliasList = nullptr;
 
@@ -1838,7 +1838,8 @@ class Variable::AutoBatch
             else
             {
                 // TODO: remove this branch and associated checks once CSE is working fully.
-                fail_if(true, "CSE missed a batched op with all-identical inputs?");
+                // Let's keep this check for now so I can switch CSE on and off easily.
+                //fail_if(true, "CSE missed a batched op with all-identical inputs?");
                 // all inputs identical: compute it only once
                 batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), move(attributes), f0.m_name);
                 batchedOp->m_profiler = f0.m_profiler;
