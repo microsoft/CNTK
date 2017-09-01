@@ -1562,9 +1562,9 @@ class Variable::AutoBatch
         // Those will be removed from the list. The removed ones will have a result value implanted
         // that is a lazy view onto the non-removed one.
         // Batch norm must be excluded  since we must count samples as often as they appear in the batch statistics.
-        //if (!isFree && op != PrimitiveOpType::BatchNormalization)
-        //    ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
-        //else
+        if (!isFree && op != PrimitiveOpType::BatchNormalization)
+            ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
+        else
             for (auto iter = ops.begin(); iter != ops.end(); ++iter) // create the batched tensors
                 iter->m_autoBatchState.m_aliasList = nullptr;
 
