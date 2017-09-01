@@ -19,8 +19,8 @@
 //#define DISABLE_NORMALIZATIONS // #define this to disable LengthNormalization and Droppo scaling
 
 #define let const auto
-//#define Named(n) (L##n)
-#define Named(n) (std::wstring())
+#define Named(n) (L##n)
+//#define Named(n) (std::wstring())
 
 using namespace CNTK;
 using namespace std;
@@ -271,18 +271,26 @@ static inline UnaryBroadcastingModel operator>> (const UnaryBroadcastingModel& b
     });
 }
 
+// identity function object; makes it easy to disable stuff
+static UnaryModel Identity = [](const Variable& x) { return x; };
+
 enum ProjectionOptions
 {
-    none  = 0,
-    bias  = 0x1,
-    scale = 0x2
+    none            = 0x00,
+    bias            = 0x01,
+    stabilize       = 0x02,
+    batchNormalize  = 0x04,
+    lengthNormalize = 0x08,
+    weightNormalize = 0x10
 };
+static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { return (ProjectionOptions)(((size_t)a) | ((size_t)b)); }
 static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device);
 // TODO: sort these functions vv after Linear()
 static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
     //auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"E");
-    auto embed = Linear(embeddingDim, ProjectionOptions::none, device);
+    // BUGBUG: We would not want a bias here, right?
+    auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize, device);
     return UnaryModel({ /*E*/ }, { { L"embed", embed } }, [=](const Variable& x)
     {
         //return Times(E, x);// embed(x);
@@ -392,10 +400,10 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     // matrices are stacked in order (i, r, h)
     //auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
     auto R  = Parameter({ outputDim * 3, outputDim                  }, DTYPE, GlorotUniformInitializer(), device, L"R");
-    auto projectInput = Linear(outputDim * 3, ProjectionOptions::none, device);
+    auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize, device);
     //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, device);
     auto b  = Parameter({ outputDim * 3 }, DTYPE, 0.0f, device, L"b");
-    let normW = LengthNormalization(device);
+    //let normW = LengthNormalization(device);
     let normR = LengthNormalization(device);
     let stackAxis = Axis(0);
     let stackedDim = (int)outputDim;
@@ -405,7 +413,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     {
         { L"projectInput",  projectInput },
         //{ L"projectState",  projectState },
-        { L"normW",  normW  },
+        //{ L"normW",  normW  },
         { L"normR",  normR  },
     },
     [=](const Variable& dh, const Variable& x)
@@ -414,7 +422,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         // projected contribution from input(s), hidden, and bias
         //let projx3  = b + normW(Times(W, x));
         let projdh3 =     normR(Times(R, dh));
-        let projx3  = b + normW(projectInput(x));
+        let projx3  = b + /*normW*/(projectInput(x));
         //let projdh3 =     normR(projectState(dh));
         let i_proj  = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ix_proj")) + Slice(projdh3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ih_proj"));
         let r_proj  = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rx_proj")) + Slice(projdh3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rh_proj"));
@@ -455,44 +463,72 @@ static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 
+static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const wstring& name = wstring());
+
 static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const DeviceDescriptor& device)
 {
-    let bias = (opts & (ProjectionOptions::bias)) != 0;
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
+    let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize)) != 0;
+    let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
+    let hasWeightNorm = (opts & (ProjectionOptions::weightNormalize)) != 0;
+    let hasBias       = (opts & (ProjectionOptions::bias)) != 0  && !hasBatchNorm; // BN implies bias --TODO: this is messy
 #ifdef DISABLE_NORMALIZATIONS
-    if (bias)
-    {
-        auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
-        return UnaryModel({ W,  b }, { { L"activation", activation } }, [=](const Variable& x) { return activation(Times(W, x) + b); });
-    }
-    else
-        return UnaryModel({ W,    }, { { L"activation", activation } }, [=](const Variable& x) { return activation(Times(W, x)); });
+    let hasScale = false;
 #else
-    auto scale = Parameter({ }, DTYPE, 1.0, device, L"Wscale");
-    if (bias)
-    {
-        auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
-        return UnaryModel({ W, scale, b }, { { L"activation", activation } }, [=](const Variable& x)
-        {
-            return activation(Times(W, x * scale) + b);
-        });
-    }
-    else
-        return UnaryModel({ W/*, scale*/    }, { { L"activation", activation } }, [=](const Variable& x)
-        {
-            return activation(Times(W, x /** scale*/));
-        });
+    let hasScale = (opts & (ProjectionOptions::stabilize)) != 0 && !(hasBatchNorm || hasWeightNorm || hasLengthNorm); // Droppo stabilizer; subsumed by BN, WN, LN
 #endif
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
+    auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
+    auto scale = Parameter({}, DTYPE, 1.0, device, L"Wscale");
+    auto weightNormRescale = Parameter({ outputDim }, DTYPE, 1.0, device, L"Wscale");
+    let weightNormMinusHalf = Constant::Scalar(DTYPE, -0.5, device);
+    let bn = hasBatchNorm ? BatchNormalization(device, Named("DenseBN")) : Identity;
+    let ln = hasLengthNorm ? LengthNormalization(device) : Identity;
+    vector<Parameter> parameters{ W };
+    if (hasBias)
+        parameters.push_back(b);
+    if (hasScale)
+        parameters.push_back(scale);
+    if (hasWeightNorm)
+        parameters.push_back(weightNormRescale);
+    map<wstring, ModelParametersPtr> nested{ { L"activation", activation } };
+    if (hasBatchNorm)
+        nested[L"bn"] = bn;
+    if (hasLengthNorm)
+        nested[L"ln"] = ln;
+    return UnaryModel(parameters, nested, [=](const Variable& x)
+    {
+        auto y = x;
+        if (hasScale) // (note: could speed this up by moving this before or after, wherever the dimension is lower)
+            y = y * scale;
+        y = Times(W, y);
+        if (hasWeightNorm)
+        {
+            // pretend W had rows of length 1, by dividing by the row length after the fact
+            // Note that this is generated over again, but will be computed only once since it is ready upfront.
+            // BUGBUG: Does not work with sparse input, as that implies a sparse gradient, for which we cannot compute the elementwise ops.
+            let rowNorm = Reshape(InnerProduct(W, W, Axis(1)), NDShape{ outputDim });
+            // BUGBUG: ^^ this reduction is wrong if W has more than one input axes, e.g. for image
+            // TODO: need a ReduceToShape operation? Where instead of an axis, the target shape is specified?
+            let invLen = Pow(rowNorm, weightNormMinusHalf);
+            y = invLen * y; // normalizes the weight
+            y = weightNormRescale * y;
+        }
+        if (hasLengthNorm) // note: has no bias
+            y = ln(y);
+        if (hasBias)
+            y = y + b;
+        else if (hasBatchNorm)
+            y = bn(y);
+        return activation(y);
+    });
 }
 
-// by default we have a bias
+// by default we have a bias and weight norm
 static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, const DeviceDescriptor& device)
 {
-    return Dense(outputDim, activation, ProjectionOptions::bias, device);
+    //return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::stabilize, device);
+    return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::weightNormalize, device);
 }
-
-// create an identity function; makes it easy to disable stuff
-static UnaryModel Identity = [](const Variable& x) { return x; };
 
 static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device)
 {
@@ -517,7 +553,7 @@ static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
 }
 
 // create a Barrier function
-static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const wstring& name = wstring())
+static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const wstring& name /*= wstring()*/)
 {
 #if 0 // use this when running unbatched comparisons (which won't work with BatchNorm)
     device; name;
@@ -543,25 +579,26 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
 {
     //auto W1 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W1");
     //auto W2 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W2");
-    let project1 = Linear(outputDim, ProjectionOptions::none, device);
-    let project2 = Linear(outputDim, ProjectionOptions::none, device);
-    auto scale1 = Parameter({}, DTYPE, 1.0, device, L"Wscale1");
-    auto scale2 = Parameter({}, DTYPE, 1.0, device, L"Wscale2");
+    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize/* | ProjectionOptions::stabilize*/, device);
+    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize/* | ProjectionOptions::stabilize*/, device);
+    // BUGBUG: stabilize and BN together makes no sense, right?
+    //auto scale1 = Parameter({}, DTYPE, 1.0, device, L"Wscale1");
+    //auto scale2 = Parameter({}, DTYPE, 1.0, device, L"Wscale2");
     //auto b1 = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b1");
     //auto b2 = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b2");
-    auto bn1 = BatchNormalization(device, L"bn1");
-    auto bn2 = BatchNormalization(device, L"bn2");
-    return UnaryModel({ /*W1, W2,*/ scale1, scale2 /*,b1, b2*/ },
+    //auto bn1 = BatchNormalization(device, L"bn1");
+    //auto bn2 = BatchNormalization(device, L"bn2");
+    return UnaryModel({ /*W1, W2, scale1, scale2, b1, b2*/ },
     {
         { L"project1", project1 },
         { L"project2", project2 },
-        { L"bn1", bn1 },
-        { L"bn2", bn2 }
+        //{ L"bn1", bn1 },
+        //{ L"bn2", bn2 }
     },
     [=](const Variable& x)
     {
-        let h = ReLU(bn1(project1(x * scale1))    , Named("hRes"));
-        let r = ReLU(bn2(project2(h * scale2)) + x, Named("rRes"));
+        let h = ReLU(/*bn1*/(project1(x /** scale1*/))    , Named("hRes"));
+        let r = ReLU(/*bn2*/(project2(h /** scale2*/)) + x, Named("rRes"));
         return r;
     });
 }

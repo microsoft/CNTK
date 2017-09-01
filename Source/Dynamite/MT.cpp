@@ -33,8 +33,8 @@ using namespace Dynamite;
 //  - batch/length normalization
 //  - no weight norm
 
-const DeviceDescriptor device(DeviceDescriptor::UseDefaultDevice());
-//const DeviceDescriptor device(DeviceDescriptor::GPUDevice(0));
+//const DeviceDescriptor device(DeviceDescriptor::UseDefaultDevice());
+const DeviceDescriptor device(DeviceDescriptor::GPUDevice(0));
 //const DeviceDescriptor device(DeviceDescriptor::CPUDevice());
 const size_t srcVocabSize = 27579 + 3;
 const size_t tgtVocabSize = 21163 + 3;
@@ -120,7 +120,7 @@ QuaternaryModel AttentionModelReference(size_t attentionDim1)
 {
     //auto H = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
     auto projectQuery = Linear(attentionDim1, ProjectionOptions::none, device);
-    let normH = LengthNormalization(device);
+    let normH = LengthNormalization(device); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
     return QuaternaryModel({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
         [=](const Variable& h, const Variable& historyProjectedKey, const Variable& tanhEncodingProjectedNormedKey, const Variable& encodingProjectedData) -> Variable
@@ -148,9 +148,11 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(Named("encBarrier"));
-    let encoderKeysProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::none, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderKeysProjection")); }); // keys projection for attention
-    let encoderDataProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::none, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderDataProjection")); }); // data projection for attention
-    let embedTarget = Barrier(Named("embedTargetBarrier")) >> Embedding(embeddingDim, device) >> BatchNormalization(device, Named("bnEmbedTarget"));     // target embeddding
+    //let encoderKeysProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::none | ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderKeysProjection")); }); // keys projection for attention
+    //let encoderDataProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::none | ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderDataProjection")); }); // data projection for attention
+    let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("topHiddenProjection")); }), ProjectionOptions::none | ProjectionOptions::batchNormalize, device); // keys projection for attention
+    let encoderDataProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("topHiddenProjection")); }), ProjectionOptions::none | ProjectionOptions::batchNormalize, device); // data projection for attention
+    let embedTarget = Barrier(Named("embedTargetBarrier")) >> Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedTarget"))*/;     // target embeddding
     let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("initialStateProjection")); }), device);
     let stepBarrier = Barrier(Named("stepBarrier"));
@@ -162,7 +164,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     for (size_t n = 0; n < numDecoderResNetProjections; n++)
         resnets.push_back(ResidualNet(decoderProjectionDim, device));
     let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("topHiddenProjection")); }), device);
-    let outputProjection = Linear(tgtVocabSize, device);  // output layer without non-linearity (no sampling yet)
+    let outputProjection = Linear(tgtVocabSize, ProjectionOptions::stabilize, device);  // output layer without non-linearity (no sampling yet)
 
     // buffers
     vector<Variable> encodingProjectedKeys, encodingProjectedData;
@@ -228,8 +230,8 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 
 BinarySequenceModel CreateModelFunction()
 {
-    auto embedFwd = Embedding(embeddingDim, device) >> BatchNormalization(device, Named("bnEmbedFwd"));
-    auto embedBwd = Embedding(embeddingDim, device) >> BatchNormalization(device, Named("bnEmbedBwd"));
+    auto embedFwd = Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedFwd"))*/;
+    auto embedBwd = Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedBwd"))*/;
     auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
     vector<Variable> eFwd,eBwd, h;
@@ -455,11 +457,11 @@ void Train()
     {
         // checkpoint
         if (mbCount % saveEvery == 0 &&
-            (startMbCount == 0 || mbCount > startMbCount) && // don't overwrite the starting model
-            communicator->CurrentWorker().IsMain())
+            (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
         {
             let path = modelPath + L"." + to_wstring(mbCount);
-            fprintf(stderr, "saving: %S\n", path.c_str());
+            if (communicator->CurrentWorker().IsMain())
+                fprintf(stderr, "saving: %S\n", path.c_str());
             //model_fn.SaveParameters(path);
 
             // reader state
@@ -538,11 +540,11 @@ void Train()
         let numLabels = minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples;
         let numSeq = minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences;
         partTimer.Log("GetNextMinibatch", numLabels);
-        fprintf(stderr, "#seq: %d, #words: %d -> %d, lr=%.8f\n",
+        fprintf(stderr, "%d: #seq: %d, #words: %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
                 (int)numSeq,
                 (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples,
                 (int)numLabels,
-                learner->LearningRate());
+                lr0, learner->LearningRate() / lr0);
         partTimer.Restart();
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
         partTimer.Log("FromCNTKMB", numLabels);
@@ -593,9 +595,10 @@ void Train()
         }
         let smoothedLossVal = smoothedLoss.Update(lossPerLabel, info.numberOfSamples);
         let elapsed = timer.ElapsedSeconds(); // [sec]
-        fprintf(stderr, "%d: CrossEntropy loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d, words/sec=%.1f, ms/word=%.1f\n",
-                        (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
-                        info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples);
+        if (communicator->CurrentWorker().IsMain())
+            fprintf(stderr, "%d: CrossEntropy loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d, words/sec=%.1f, ms/word=%.1f\n",
+                            (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
+                            info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples);
         // log
         // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
         if (mbCount < 400 || mbCount % 5 == 0)

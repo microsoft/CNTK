@@ -1414,8 +1414,22 @@ class Variable::AutoBatch
         NotifyOpsConsumersInputsAvailable(op);
     }
 
+    // clone a result into all its aliases (which were determined by ShortCircuitBatchedOpDuplicatesAndUpdateSchedule())
+    // TODO: We either duplicate m_value or m_lazyIndex, and we know that upon call time; so split this function.
+    void UpdateDuplicatesAndUpdateSchedule(PrimitiveFunction* op)
+    {
+        for (auto* f = op->m_aliasList; f; f = f->m_aliasList)
+        {
+            f->m_outputs[0].m_dataFields->m_value = op->m_outputs[0].m_dataFields->m_value;
+            f->m_outputs[0].m_dataFields->m_lazyIndex = op->m_outputs[0].m_dataFields->m_lazyIndex;
+            ResetPendingToIdle(*f);
+            NotifyOpsConsumersInputsAvailable(f);
+        }
+    }
+
     // detect equivalent Functions and uniq them, redirecting dups to the first one
     // Returns a filtered list. Call this at start of batched execution.
+    // TODO: Choose one name: ShortCircuit? Duplicate? Alias? Common subexpression?
     NonOwningFunctionList ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(NonOwningFunctionList ops)
     {
         NonOwningFunctionListBuilder filteredOps;
@@ -1437,11 +1451,18 @@ class Variable::AutoBatch
                         goto dontskip;
                 }
                 // all inputs are the same: f is a dup of 'jter'
+#if 1           // TODO: one day try if the #if 0 branch works. It should (but failed earlier on). Would allow to remove the brittle m_aliasList.
+                f->m_aliasList = jter->m_aliasList;
+                jter->m_aliasList = f; // jter is the original anchor; it is the root of a linked list into the aliases
+#else
                 FinalizeBatchedOpAndUpdateSchedule(f, dynamic_pointer_cast<PrimitiveFunction>(jter->shared_from_this()));
+#endif
                 m_stats.numCommonSubexpressionsEliminated++;
                 goto skip; // gotcha! eliminated!
+            dontskip:; // this one does not match
             }
-        dontskip:
+            // no matching one was found
+            f->m_aliasList = nullptr; // first entry in a potential list of duplicates
             filteredOps.push_back(f);
         skip:;
         }
@@ -1507,6 +1528,9 @@ class Variable::AutoBatch
         // Batch norm must be excluded  since we must count samples as often as they appear in the batch statistics.
         if (!isFree && op != PrimitiveOpType::BatchNormalization)
             ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
+        else
+            for (auto iter = ops.begin(); iter != ops.end(); ++iter) // create the batched tensors
+                iter->m_aliasList = nullptr;
 
         // perform the op
         let batchSize = ops.size();
@@ -1537,6 +1561,8 @@ class Variable::AutoBatch
                 ResetPendingToIdle(*op);
                 // and notify consumers (which may schedule them)
                 NotifyOpsConsumersInputsAvailable(op);
+                // distribute value to all aliases
+                UpdateDuplicatesAndUpdateSchedule(op);
                 // TODO: realize splice ops that are index ops as a m_lazyIndex at this point
                 //if (f0.m_op == PrimitiveOpType::Slice)
                 //{
@@ -1775,6 +1801,7 @@ class Variable::AutoBatch
             }
             else
             {
+                // TODO: remove this branch and associated checks once CSE is working fully.
                 fail_if(true, "CSE missed a batched op with all-identical inputs?");
                 // all inputs identical: compute it only once
                 batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), move(attributes), f0.m_name);
@@ -1829,6 +1856,8 @@ class Variable::AutoBatch
                 // TODO: review this w.r.t. multi-output functions
                 // implant the result
                 FinalizeBatchedOpAndUpdateSchedule(op, batchedOp, j);
+                // and implant it to all aliases as well
+                UpdateDuplicatesAndUpdateSchedule(op);
                 // iterate the slice index
                 if (j != SIZE_MAX) // SIZE_MAX means don't slice
                     j++;
