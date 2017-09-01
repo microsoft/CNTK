@@ -400,10 +400,13 @@ namespace CNTK
         let* bView = (const TensorView<ElementType>*)bv;
         let& aTensorShape = aView->GetShape();
         let& bTensorShape = bView->GetShape();
-        return
-            aTensorShape.GetDims() == bTensorShape.GetDims() &&
-            aTensorShape.GetStrides() == bTensorShape.GetStrides() &&
-            aView->GetSOB().Data() + aTensorShape.GetOffset() == bView->GetSOB().Data() + bTensorShape.GetOffset();
+        if (aTensorShape.GetDims() != bTensorShape.GetDims()) // shape must be the same. This is silly--the only time we call this, we have already compared the shape.
+            return false;
+        if (aTensorShape.GetStrides() != bTensorShape.GetStrides()) // strides must be the same
+            return false;
+        if (&aView->GetSOB() == &bView->GetSOB() && aTensorShape.GetOffset() == bTensorShape.GetOffset()) // same SOB and same offset: OK
+            return true;
+        return aView->GetSOB().Data() + aTensorShape.GetOffset() == bView->GetSOB().Data() + bTensorShape.GetOffset(); // otherwise compute buffer address and compare
     }
 
     bool NDArrayView::IsAliasOf(const NDArrayViewPtr& other) const
