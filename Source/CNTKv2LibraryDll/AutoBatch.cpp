@@ -1378,19 +1378,67 @@ class Variable::AutoBatch
         f.m_pendingInputs = -1; // unknown
     }
 
+    // implant the the result of a function that was executed as a batched op
+    // j = slice index into batched result, or SIZE_MAX (default) if entire tensor
+    void FinalizeBatchedOpAndUpdateSchedule(PrimitiveFunction* op, const PrimitiveFunctionPtr& batchedOp, size_t j = SIZE_MAX)
+    {
+        // we remember where we came from for backprop in this case
+        auto& fields = *op->m_outputs[0].m_dataFields;
+        fields.m_lazyIndex = make_pair(batchedOp, j);
+        // semantically, this will compute as fields.m_value = out->IndexLastAxis(j);
+        // but it gets deferred to save effort
+        // reset state
+        ResetPendingToIdle(*op);
+    }
+
     // detect equivalent Functions and uniq them, redirecting dups to the first one
     // Returns a filtered list. Call this at start of batched execution.
-    NonOwningFunctionList RedirectDuplicates(NonOwningFunctionList ops)
+    NonOwningFunctionList ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(NonOwningFunctionList ops)
     {
         NonOwningFunctionListBuilder filteredOps;
-        for (NonOwningFunctionList::FunctionListIterator iter = ops.begin(); iter != ops.end(); ) // create the batched tensors
+        for (auto iter = ops.begin(); iter != ops.end(); ) // create the batched tensors
         {
             let f = iter;
             ++iter;
-            // TODO: decide if duplicate, and redirect to first in set
+            // PERF BUGBUG: This gives O(N^2) complexity. Fix this once I get correct behavior.
+            let& inputs = f->m_inputs;
+            let arity = inputs.size();
+            for (auto jter = filteredOps.begin(); jter != filteredOps.end(); ++jter)
+            {
+                let& jnputs = jter->m_inputs;
+                for (size_t k = 0; k < jnputs.size(); k++)
+                {
+                    if (!LazilyIndexedValue(inputs[k])->IsAliasOf(LazilyIndexedValue(jnputs[k])))
+                        goto dontskip;
+                }
+                // all inputs are the same: f is a dup of 'jter'
+                FinalizeBatchedOpAndUpdateSchedule(f, dynamic_pointer_cast<PrimitiveFunction>(jter->shared_from_this()));
+                goto skip; // gotcha! eliminated!
+            }
+        dontskip:
             filteredOps.push_back(f);
+        skip:;
         }
         return filteredOps;
+    }
+
+    // notify consumers of 'op' that op's value is now available
+    void NotifyOpsConsumersInputsAvailable(const PrimitiveFunction* op)
+    {
+        for (let& output : op->m_outputs)
+        {
+            // notify consumers
+            auto& fields = *output.m_dataFields;
+            fail_if(!fields.m_value && !fields.m_lazyIndex.first, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
+            auto& c = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
+            if (c.first)
+                m_schedule.NotifyInputAvailable(c.first);
+            for (auto& c : fields.m_consumers.second) // all other consumers
+                m_schedule.NotifyInputAvailable(c.first);
+            // clear consumer list (this operation is done)
+            fields.m_consumers.first.first = nullptr;
+            fields.m_consumers.second.clear();
+        }
     }
 
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
@@ -1410,17 +1458,10 @@ class Variable::AutoBatch
     // All ops passed to this function must get their m_pendingInputs changed from 0 to -1 (newly created batched ones also will have -1).
     void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
     {
-        // common sub-expression elimination (CSE)
-        // All common sub-expressions become available at the same time and show up in the same ops list.
-        // All ops whose inputs are 100% aliases of another op compute the same thing.
-        // Those will be removed from the list. The removed ones will have a result value implanted
-        // that is a lazy view onto the non-removed one.
-        ops = RedirectDuplicates(ops);
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
         auto& f0 = *ops.front();
         let op = f0.m_op;
-        let batchSize = ops.size();
         let opClass = g_oscTable[op]; // operation-specific auto-batching class
         // fail on unsupported classes
         switch (opClass)
@@ -1452,7 +1493,16 @@ class Variable::AutoBatch
         let isTimes       = opClass == OpSpecificConditionKind::MatrixProduct; // is special-cased
         let isElementWise = opClass != OpSpecificConditionKind::MatrixProduct && opClass != OpSpecificConditionKind::Convolution;
 
+        // common sub-expression elimination (CSE)
+        // All common sub-expressions become available at the same time and show up in the same ops list.
+        // All ops whose inputs are 100% aliases of another op compute the same thing.
+        // Those will be removed from the list. The removed ones will have a result value implanted
+        // that is a lazy view onto the non-removed one.
+        //if (!isFree)
+        //    ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
+
         // perform the op
+        let batchSize = ops.size();
         if (!isFree)
             m_numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
@@ -1483,10 +1533,13 @@ class Variable::AutoBatch
                 //{
                 //    // inject the lazyIndex
                 //}
-#if 0           // test effect of the unbatched sparse times
-                if (f0.m_op == PrimitiveOpType::Times)
-                    op->ComputeKnowableValue(op->m_op, m_inputValuesBuffer, op->Attributes(), op->m_outputs[0].Shape(), move(out));
-#endif
+            //}
+            //
+            //// update all ops' consumers and schedule them when possible
+            //// BUGBUG: Consumer chain here should have been migrated to the batched op; and notifed from there.
+            //for (auto op = ops.begin(); op != ops.end(); ++op)
+            //{
+                NotifyOpsConsumersInputsAvailable(op);
             }
         }
 
@@ -1771,39 +1824,22 @@ class Variable::AutoBatch
             for (auto op = ops.begin(); op != ops.end(); ++op)
             {
                 // TODO: review this w.r.t. multi-output functions
-                // we remember where we came from for backprop in this case
-                auto& fields = *op->m_outputs[0].m_dataFields;
-                fields.m_lazyIndex = make_pair(batchedOp, j);
-                // semantically, this will compute as fields.m_value = out->IndexLastAxis(j);
-                // but it gets deferred to save effort
+                // implant the result
+                FinalizeBatchedOpAndUpdateSchedule(op, batchedOp, j);
+                // update all ops' consumers and schedule them when possible
+                // BUGBUG: Consumer chain here should have been migrated to the batched op; and notifed from there.
+                NotifyOpsConsumersInputsAvailable(op);
+                // iterate the slice index
                 if (j != SIZE_MAX) // SIZE_MAX means don't slice
                     j++;
-                // TODO: set up batchedOp.m_consumers
-                // reset state
-                ResetPendingToIdle(*op);
+            //}
+            //
+            //for (auto op = ops.begin(); op != ops.end(); ++op)
+            //{
             }
 
             // release the ref counts on the batched inputs; but keep the vector's memory allocated
             m_batchedInputs.clear();
-        }
-
-        // update all ops' consumers and schedule them when possible
-        // BUGBUG: Consumer chain here should have been migrated to the batched op; and notifed from there.
-        for (auto op = ops.begin(); op != ops.end(); ++op)
-        {
-            for (let& output : op->m_outputs)
-            {
-                // notify consumers
-                auto& fields = *output.m_dataFields;
-                auto& c = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
-                if (c.first)
-                    m_schedule.NotifyInputAvailable(c.first);
-                for (auto& c : fields.m_consumers.second) // all other consumers
-                    m_schedule.NotifyInputAvailable(c.first);
-                // clear consumer list (this operation is done)
-                fields.m_consumers.first.first = nullptr;
-                fields.m_consumers.second.clear();
-            }
         }
     }
 
