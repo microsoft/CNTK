@@ -21,7 +21,7 @@
 #include <string>
 
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
-//#define LOG_STATS     // if defined, log statistics (#operations)
+#define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
@@ -593,6 +593,7 @@ struct RuntimeStatistics
     size_t numDoneSpliceOps = 0;
     size_t numDoneFreeOps = 0;
     size_t numDoneOtherOps = 0;
+    size_t numBatchedLaunches = 0;
     size_t numCommonSubexpressionsEliminated = 0; // equivalent Functions (same op, same inputs) discovered
     // backward
     size_t numBackpropsToInputs = 0;
@@ -1378,6 +1379,25 @@ class Variable::AutoBatch
         f.m_pendingInputs = -1; // unknown
     }
 
+    // notify consumers of 'op' that op's value is now available
+    void NotifyOpsConsumersInputsAvailable(const PrimitiveFunction* op)
+    {
+        for (let& output : op->m_outputs)
+        {
+            // notify consumers
+            auto& fields = *output.m_dataFields;
+            fail_if(!fields.m_value && !fields.m_lazyIndex.first, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
+            auto& c = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
+            if (c.first)
+                m_schedule.NotifyInputAvailable(c.first);
+            for (auto& c : fields.m_consumers.second) // all other consumers
+                m_schedule.NotifyInputAvailable(c.first);
+            // clear consumer list (this operation is done)
+            fields.m_consumers.first.first = nullptr;
+            fields.m_consumers.second.clear();
+        }
+    }
+
     // implant the the result of a function that was executed as a batched op
     // j = slice index into batched result, or SIZE_MAX (default) if entire tensor
     void FinalizeBatchedOpAndUpdateSchedule(PrimitiveFunction* op, const PrimitiveFunctionPtr& batchedOp, size_t j = SIZE_MAX)
@@ -1389,6 +1409,9 @@ class Variable::AutoBatch
         // but it gets deferred to save effort
         // reset state
         ResetPendingToIdle(*op);
+        // update all ops' consumers and schedule them when possible
+        // BUGBUG: Consumer chain here should have been migrated to the batched op; and notifed from there.
+        NotifyOpsConsumersInputsAvailable(op);
     }
 
     // detect equivalent Functions and uniq them, redirecting dups to the first one
@@ -1413,6 +1436,7 @@ class Variable::AutoBatch
                 }
                 // all inputs are the same: f is a dup of 'jter'
                 FinalizeBatchedOpAndUpdateSchedule(f, dynamic_pointer_cast<PrimitiveFunction>(jter->shared_from_this()));
+                m_stats.numCommonSubexpressionsEliminated++;
                 goto skip; // gotcha! eliminated!
             }
         dontskip:
@@ -1422,29 +1446,9 @@ class Variable::AutoBatch
         return filteredOps;
     }
 
-    // notify consumers of 'op' that op's value is now available
-    void NotifyOpsConsumersInputsAvailable(const PrimitiveFunction* op)
-    {
-        for (let& output : op->m_outputs)
-        {
-            // notify consumers
-            auto& fields = *output.m_dataFields;
-            fail_if(!fields.m_value && !fields.m_lazyIndex.first, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
-            auto& c = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
-            if (c.first)
-                m_schedule.NotifyInputAvailable(c.first);
-            for (auto& c : fields.m_consumers.second) // all other consumers
-                m_schedule.NotifyInputAvailable(c.first);
-            // clear consumer list (this operation is done)
-            fields.m_consumers.first.first = nullptr;
-            fields.m_consumers.second.clear();
-        }
-    }
-
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
     vector<Variable> m_batchedInputs;
     vector<Variable> m_spliceArgsBuffer;
-    size_t m_numBatchedLaunches = 0; // (for statistics only)
 
     // batch-execute a set of ops that are known to be batchable
     // For every batched operation, this generates a new PrimitiveFunction object for the op itself, and one
@@ -1504,7 +1508,7 @@ class Variable::AutoBatch
         // perform the op
         let batchSize = ops.size();
         if (!isFree)
-            m_numBatchedLaunches++;
+            m_stats.numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
 #ifdef NO_BATCHED_FORWARD
         auto doNaively = true;
@@ -1515,7 +1519,7 @@ class Variable::AutoBatch
             batchSize == 1;
 #endif
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
-        //        isFree ? -1 : (int)m_numBatchedLaunches,
+        //        isFree ? -1 : (int)m_stats.numBatchedLaunches,
         //        doNaively ? "" : "batch-",
         //        (int)batchSize, f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str(),
         //        (int)m_schedule.numBatchableOpsPending());
@@ -1826,16 +1830,9 @@ class Variable::AutoBatch
                 // TODO: review this w.r.t. multi-output functions
                 // implant the result
                 FinalizeBatchedOpAndUpdateSchedule(op, batchedOp, j);
-                // update all ops' consumers and schedule them when possible
-                // BUGBUG: Consumer chain here should have been migrated to the batched op; and notifed from there.
-                NotifyOpsConsumersInputsAvailable(op);
                 // iterate the slice index
                 if (j != SIZE_MAX) // SIZE_MAX means don't slice
                     j++;
-            //}
-            //
-            //for (auto op = ops.begin(); op != ops.end(); ++op)
-            //{
             }
 
             // release the ref counts on the batched inputs; but keep the vector's memory allocated
@@ -1935,8 +1932,8 @@ public:
             logMemoizeStatsCounter = 0;
         LazilyIndexedValue(v); // force-flush a potential final lazily-indexed value
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedForward: %d forward ops executed besides %d splices and %d views, in nominally %d PrimitiveFunctions on %d known values\n",
-                (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneSpliceOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);
+        fprintf(stderr, "BatchedForward: %d forward ops executed besides %d splices, %d views, and %d CSEs, in nominally %d PrimitiveFunctions on %d known values\n",
+                (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneSpliceOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numCommonSubexpressionsEliminated, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);
 #endif
 #ifdef LOG_DETAILS
         size_t numOpNodes1 = 0;
