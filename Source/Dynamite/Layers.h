@@ -471,13 +471,15 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
     let hasWeightNorm = (opts & (ProjectionOptions::weightNormalize)) != 0;
     let hasBias       = (opts & (ProjectionOptions::bias           )) != 0;
-    if (hasBatchNorm && !hasBias)
-        InvalidArgument("Dense: ProjectionOptions::batchNormalize requires ProjectionOptions::bias to be specified as well");
 #ifdef DISABLE_NORMALIZATIONS
     let hasScale = false;
 #else
-    let hasScale = (opts & (ProjectionOptions::stabilize)) != 0; // Droppo stabilizer
+    let hasScale      = (opts & (ProjectionOptions::stabilize      )) != 0; // Droppo stabilizer
 #endif
+    if (hasBatchNorm && !hasBias)
+        InvalidArgument("Dense: ProjectionOptions::batchNormalize requires ProjectionOptions::bias to be specified as well");
+    if (hasScale && (hasBatchNorm || hasLengthNorm))
+        InvalidArgument("Dense: ProjectionOptions::stabilize is not meaningful (will cancel out) with batch or layer normalization");
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
     auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
     auto scale = Parameter({}, DTYPE, 1.0, device, L"Wscale");
@@ -529,7 +531,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
 //static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, const DeviceDescriptor& device)
 //{
 //    return Dense(outputDim, activation, ProjectionOptions::bias, device);
-//    //return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::stabilize, device);
+//    //return Dense(outputDim, activation, ProjectionOptions::stabilize | ProjectionOptions::bias, device);
 //    //return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::weightNormalize, device);
 //}
 
@@ -582,8 +584,8 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
 {
     //auto W1 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W1");
     //auto W2 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W2");
-    let project1 = Linear(outputDim, ProjectionOptions::stabilize | ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
-    let project2 = Linear(outputDim, ProjectionOptions::stabilize | ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
+    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
+    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
     // BUGBUG: stabilize and BN together makes no sense, right?
     //auto scale1 = Parameter({}, DTYPE, 1.0, device, L"Wscale1");
     //auto scale2 = Parameter({}, DTYPE, 1.0, device, L"Wscale2");
