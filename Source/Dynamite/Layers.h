@@ -290,7 +290,7 @@ static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescrip
 {
     //auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"E");
     // BUGBUG: We would not want a bias here, right?
-    auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize, device);
+    auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
     return UnaryModel({ /*E*/ }, { { L"embed", embed } }, [=](const Variable& x)
     {
         //return Times(E, x);// embed(x);
@@ -467,14 +467,16 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
 
 static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const DeviceDescriptor& device)
 {
-    let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize)) != 0;
+    let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize )) != 0;
     let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
     let hasWeightNorm = (opts & (ProjectionOptions::weightNormalize)) != 0;
-    let hasBias       = (opts & (ProjectionOptions::bias)) != 0  && !hasBatchNorm; // BN implies bias --TODO: this is messy
+    let hasBias       = (opts & (ProjectionOptions::bias           )) != 0;
+    if (hasBatchNorm && !hasBias)
+        InvalidArgument("Dense: ProjectionOptions::batchNormalize requires ProjectionOptions::bias to be specified as well");
 #ifdef DISABLE_NORMALIZATIONS
     let hasScale = false;
 #else
-    let hasScale = (opts & (ProjectionOptions::stabilize)) != 0 || (opts & (ProjectionOptions::bias)) != 0;//FOR NOW, for back compat (opts & (ProjectionOptions::stabilize)) != 0 ; // Droppo stabilizer
+    let hasScale = (opts & (ProjectionOptions::stabilize)) != 0; // Droppo stabilizer
 #endif
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
     auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
@@ -484,7 +486,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     let bn = hasBatchNorm ? BatchNormalization(device, Named("DenseBN")) : Identity;
     let ln = hasLengthNorm ? LengthNormalization(device) : Identity;
     vector<Parameter> parameters{ W };
-    if (hasBias)
+    if (hasBias && !hasBatchNorm) // batchNorm supplies its own bias
         parameters.push_back(b);
     if (hasScale)
         parameters.push_back(scale);
@@ -515,10 +517,10 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         }
         if (hasLengthNorm) // note: has no bias
             y = ln(y);
-        if (hasBias)
+        if (hasBatchNorm)
+            y = bn(y); // note: batchNorm has its own bias
+        else if (hasBias)
             y = y + b;
-        else if (hasBatchNorm)
-            y = bn(y);
         return activation(y);
     });
 }
@@ -539,7 +541,7 @@ static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, c
 // by default we have a bias
 static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
 {
-    return Linear(outputDim, ProjectionOptions::bias, device);
+    return Linear(outputDim, ProjectionOptions::stabilize | ProjectionOptions::bias, device);
 }
 
 // create a Barrier function
@@ -580,8 +582,8 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
 {
     //auto W1 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W1");
     //auto W2 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W2");
-    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::stabilize, device);
-    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::stabilize, device);
+    let project1 = Linear(outputDim, ProjectionOptions::stabilize | ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
+    let project2 = Linear(outputDim, ProjectionOptions::stabilize | ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
     // BUGBUG: stabilize and BN together makes no sense, right?
     //auto scale1 = Parameter({}, DTYPE, 1.0, device, L"Wscale1");
     //auto scale2 = Parameter({}, DTYPE, 1.0, device, L"Wscale2");
