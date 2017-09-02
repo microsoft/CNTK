@@ -3390,7 +3390,7 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
         RuntimeError("Matrices should be in the same shape");
     size_t m = a.GetNumRows();
     size_t n = a.GetNumCols();
-    CUDA_LONG N = (CUDA_LONG)(m*n);
+    CUDA_LONG Num = (CUDA_LONG)(m*n);
 
     //auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
     //float *d_rands;
@@ -3414,10 +3414,14 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
 
     size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
-    _stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), N, annealSlope);
+    _stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), Num, annealSlope);
+    
+    size_t blocksPerGrid_n = (size_t)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
+    auto seed = (unsigned long long)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
+    _stochasticbinaryForward_checkZero<ElemType><<<blocksPerGrid_n, GridDim::maxThreadsPerBlock, 0, t_stream>>>(b.Data(), m, n, seed);
+
     //CUDA_CALL(cudaFree(d_rands));
     //CURAND_CALL(curandDestroyGenerator(gens));
-
 
     //ElemType* input = new ElemType[N];
     //cudaMemcpy(input, a.Data(), N * sizeof(ElemType), cudaMemcpyDeviceToHost);
@@ -3441,16 +3445,16 @@ void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a,
 
     size_t m = a.GetNumRows();
     size_t n = a.GetNumCols();
-    CUDA_LONG N = (CUDA_LONG)(m*n);
+    CUDA_LONG Num = (CUDA_LONG)(m*n);
     size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
     assert((RFAdjusted || !RFAdjusted) && annealSlope > 0);
     if (neuronST) {
         if (passThrough) {
-            _stochasticbinaryBackward_PassThrough<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N);
+            _stochasticbinaryBackward_PassThrough<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), Num);
         }
         else {
-            _stochasticbinaryBackward_Anneal<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
+            _stochasticbinaryBackward_Anneal<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), Num, annealSlope);
         }
     }
 

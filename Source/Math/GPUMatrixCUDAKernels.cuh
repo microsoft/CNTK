@@ -626,8 +626,32 @@ __global__ void _stochasticbinaryForward(const ElemType* a, ElemType* b, CUDA_LO
 	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 	if (id >= N)
 		return;
-	b[id] = a[id] <= 0 ? -1 : 1;
+	b[id] = a[id] <= 0 ? 0 : 1;
 }
+
+template <class ElemType>
+__global__ void _stochasticbinaryForward_checkZero(ElemType* b, size_t m, size_t n, unsigned long long seed) {
+    CUDA_LONG icol = blockDim.x * blockIdx.x + threadIdx.x;
+    if (icol >= n)
+        return;
+    bool zeroflag = true;
+    for (size_t irow = 0; irow < m; irow++) {
+        if (b[IDX2C(irow, icol, m)] > 0.5) {
+            zeroflag = false;
+            break;
+        }
+    }
+
+    curandState_t state;
+
+    curand_init(seed, /* the seed controls the sequence of random values that are produced */
+                icol, /* the sequence number is only important with multiple cores */
+                0, /* the offset is how much extra we advance in the sequence for each call, can be 0 */
+                &state);
+
+    if (zeroflag) { b[IDX2C(curand(&state) % m, icol, m)] = 1; }
+}
+
 
 template <class ElemType>
 __global__ void _stochasticbinaryBackward_PassThrough(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N) {
@@ -642,8 +666,8 @@ __global__ void _stochasticbinaryBackward_Anneal(const ElemType* a, const ElemTy
 	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 	if (id >= N)
 		return;
-    ElemType tanhx = tanh_(a[id] * annealSlope);
-	ingrad[id] = outgrad[id] * (1 - tanhx * tanhx) * annealSlope;
+    ElemType sigx = 1./(1. + expf(-a[id] * annealSlope));
+	ingrad[id] = outgrad[id] * sigx * (1 - sigx) * annealSlope;
 }
 
 
