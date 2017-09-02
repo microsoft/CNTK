@@ -684,6 +684,10 @@ struct Sequence
             fwd(rFwd, inFwd);
             bwd(rBwd, inBwd);
             splice(res, rFwd, rBwd);
+            // ^^ batchable
+            //    Would bring it down from #source words in MB to 2 launches (rFwd, rBwd) (and associated Gather)
+            //    For 3 layers a 600 -> from 1800 launches to 6
+            //    But we have 3300 splices, where is the rest?
             rFwd.clear(); rBwd.clear(); // don't hold references
         });
     }

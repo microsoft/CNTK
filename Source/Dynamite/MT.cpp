@@ -121,22 +121,29 @@ QuaternaryModel AttentionModelReference(size_t attentionDim1)
     let normH = LengthNormalization(device); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
     return QuaternaryModel({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
-        [=](const Variable& h, const Variable& historyProjectedKey, const Variable& tanhEncodingProjectedNormedKey, const Variable& encodingProjectedData) -> Variable
+        [=](const Variable& h,                              // [A] decoder hidden state
+            const Variable& historyProjectedKey,            // [A] previous output, embedded
+            const Variable& tanhEncodingProjectedNormedKey, // [A x T] encoder hidden state seq, projected as key >> tanh
+            const Variable& encodingProjectedData           // [A x T] encoder hidden state seq, projected as data
+           ) -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler);
         // compute attention weights
         //let hProjected = Times(H, h, Named("H")); // [A x 1]. Batchable.
-        let hProjected = projectQuery(h); // [A x 1]. Batchable.
-        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A x T]. Batchable by stacking.
-#if 1
+        let hProjected = projectQuery(h); // [A]. Batchable.
+        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A]. Batchable.
         let u = InnerProduct(tanh, tanhEncodingProjectedNormedKey, Axis(0), Named("u")); // [1 x T] row vector. Batchable by stacking.
+        // alternative: ^^ compute the inner product elementwise.
+        //              Will make a broadcast copy of tanh[t] (#copies=mb size), then operate in one go instead of one per sequence
+        // alternative: softmax denom: splice u, ReduceLogSum, slice up -> sequence
+        //              Batched (#mb size in one go): minus, exp -> w[t]
+        //              Not batched (one launch per sentence: ReduceLogSum)
         let w = Dynamite::Softmax(u, Axis(1), Named("w")); // [1 x T] ReduceLogSum() not parallelizable. Pad? E.g. bucket-pad?
+        // alternative: product with encodingProjectedData
+        //              Batched: elementwise product -> RAM copy of (encodingProjectedData * u)[t], #items=mb size
         let res = Reshape(InnerProduct(encodingProjectedData, w, Axis(1), Named("attContext")), NDShape{ attentionDim1 }); // [A x T] x [1 x T] -> [A x 1] Batchable with bucket-padding.
-#else
-        let u = ReduceSum(ElementTimes(tanh, tanhEncodingProjectedNormedKey, Named("attDot")), Axis(0))->Output(); // [1 x T] col vector
-        let w = Reshape(Dynamite::Softmax(u), { u.Shape().TotalSize() }); // [T] this is a transposition (Transpose does not work yet)
-        let res = Times(encodingProjectedData, w, Named("attContext")); // [A x T] x [T] -> [A]
-#endif
+        // alternative: reduce over encoding length. Gather the products (another copy #items=mb size)
+        //              Not batched (one launch per sentence): ReduceSum
         Function::SetDynamicProfiler(prevProfiler);
         return res;
     });
@@ -199,24 +206,31 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
         let encodingProjectedKeysTensor = Splice(encodingProjectedKeys, Axis(1), Named("encodingProjectedKeysTensor"));  // [A x T]
         encodingProjectedKeys.clear();
         let encodingProjectedDataTensor = Splice(encodingProjectedData, Axis(1), Named("encodingProjectedDataTensor"));  // [A x T]
+        // ^^ these are 2 x #sequences splices per MB, (40 for 20 seq in MB)
         encodingProjectedData.clear();
         for (size_t t = 0; t < history.size(); t++)
         {
             // do recurrent step (in inference, history[t] would become res[t-1])
             let historyProjectedKey = embedTarget(history[t]);
-            let prevProfiler = Function::SetDynamicProfiler(profiler, false); // set to true to display this section of batched graph
+            // ^^ fully batched, 1 launch
+            let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
             let input = Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput"));
+            // ^^ batchable, from one launch per time step (e.g. 600 for 20seqx30wds case) per sequence to #sequences (e.g. 20)
+            //    -> #max time steps launches, vs. currently #target words in MB; could gain 580 in the example
             state = stepFunction(state, stepBarrier(input));
             // compute attention vector
             //attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
             attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeysTensor, encodingProjectedDataTensor);
+            // ^^ two operations that are per-sequence
             Function::SetDynamicProfiler(prevProfiler);
             // stack of non-recurrent projections
+            // vv fully batchable
             auto state1 = firstHiddenProjection(state); // first one brings it into the right dimension
             for (auto& resnet : resnets)                // then a bunch of ResNet layers
                 state1 = resnet(state1);
             // one more transform, bringing back the attention context
             let topHidden = topHiddenProjection(Splice({ state1, attentionContext }, Axis(0)));
+            // ^^ batchable; currently one per target word in MB (e.g. 600); could be one per batch (2 launches)
             // TODO: dropout layer here
             dropoutInputKeepProb;
             // compute output
@@ -290,6 +304,7 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
     {
         batchModel(lossesPerSequence, features, labels);             // batch-compute the criterion
         let collatedLosses = Splice(lossesPerSequence, Axis(0), Named("cesPerSeq"));     // collate all seq lossesPerSequence
+        // ^^ this is one launch per MB
         let mbLoss = ReduceSum(collatedLosses, Axis(0), Named("ceBatch"));  // aggregate over entire minibatch
         lossesPerSequence.clear();
         return mbLoss;
