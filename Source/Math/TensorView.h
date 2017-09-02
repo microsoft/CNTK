@@ -213,7 +213,19 @@ public:
     // Instead of passing TensorView objects, a functor is passed, to avoid an unnecessary malloc().
     // -------------------------------------------------------------------
 
-    void DoGatherBatchOf(size_t numInputs, const std::function<const TensorView&(size_t)>& inputs);
+    template<typename T> // TODO: move this to a more generic place
+    struct IArrayRef
+    {
+        virtual size_t size() const = 0;
+        virtual T* data() const = 0;
+        virtual T operator[](size_t i) const { return data()[i]; }
+        // TODO: ^^ how to make this a T for simple types, and a ref for complex ones?
+        virtual T& operator[](size_t i) { return const_cast<IArrayRef*>(this)->operator[](i); }
+        virtual const T* begin() const { return data(); }; // TODO: get the const-ness thingy right
+        virtual const T* end() const { return data() + size(); }
+    };
+
+    void DoGatherBatchOf(const IArrayRef<const TensorView*>& inputs, size_t axis);
     void DoScatterBatchOf(ElemType beta, size_t numOutputs, const std::function<TensorView&(size_t)>& inputs) const;
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;

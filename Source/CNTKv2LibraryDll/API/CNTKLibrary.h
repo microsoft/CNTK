@@ -855,7 +855,7 @@ namespace CNTK
         /// all axis but the last to match.
         /// If out is not provided, a new object is created.
         ///
-        CNTK_API static NDArrayViewPtr GatherBatch(const std::vector<NDArrayViewPtr>& inputs, int axis, NDArrayViewPtr out = nullptr);
+        CNTK_API static NDArrayViewPtr GatherBatch(const std::vector<NDArrayViewPtr>& inputs, size_t axis, NDArrayViewPtr out = nullptr);
 
         ///
         /// Scatter a single tensor into all inputs along the slowest-changing axis.
@@ -999,6 +999,8 @@ namespace CNTK
         template <typename ElementType>
         std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> GetWritableTensorViewMin2D();
 
+        template<typename ElementType>
+        friend class TensorViewPtrArrayRef; // every TensorViewPtrArrayRef<ElementType> is a friend
         template <typename ElementType>
         std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> NativeTensorView() const;
 

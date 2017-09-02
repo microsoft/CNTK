@@ -611,25 +611,67 @@ static Matrix<ElemType>& GatherScatterGetSOBView(const TensorView<ElemType>& ite
 }
 
 template <class ElemType>
-void TensorView<ElemType>::DoGatherBatchOf(size_t numInputs, const std::function<const TensorView&(size_t)>& inputs)
+void TensorView<ElemType>::DoGatherBatchOf(const IArrayRef<const TensorView*>& inputs, size_t axis)
 {
-    // Batches inputs along the last axis of outputs.
-    // Each input shape must, 1-padded, match the output shape except for the last output
+    // Batches inputs along an axis.
+    // A special optimization is applied when each input shape does, 1-padded, match the output shape except for the last output
     // dimension, which is the sum of the (1-padded) input dimensions.
-    // At present, this will not work with strided TensorViews. If that is needed, please implement it using tensor assignments.
+
+    let arity = inputs.size();
+    // check whether this can be a Gather
     if (m_shape.GetRank() == 0)
         InvalidArgument("DoGatherBatchOf: Output cannot be a scalar.");
-    let numRows = m_shape.GetNumElements() / m_shape.GetDims().back();
-    Matrix<ElemType> sliceBuf(CPUDEVICE/*dummy*/); // buffer to hold the slice so that we can return it by reference
-    GetSOBViewPtr()->GatherBatch(numRows, numInputs, [&](size_t i) -> const Matrix<ElemType>&
+    let outRank = m_shape.GetRank();
+    let& shape0 = inputs[0]->m_shape;
+    bool canGather = (axis == outRank - 1) && shape0.IsDense();
+    // all shapes must be identical to the outputShape with splice axis divided by #arguments
+    // check first shape
+    for (size_t k = 0; canGather && k < outRank; k++)
     {
-        let& input = inputs(i);
-        GatherScatterVerifyDimensions(input.m_shape, m_shape, "DoGatherBatchOf", i);
-        if (GatherScatterCanPassSOB(input))
-            return input.GetSOB();
-        else
-            return GatherScatterGetSOBView(input, sliceBuf);
-    });
+        auto dim = k < shape0.GetRank() ? shape0[k] : 1;
+        if (k == axis)
+            dim *= arity;
+        canGather &= (dim == m_shape[k]);
+    }
+    // first shape is the correct fraction: check all shapes against it (hah--no malloc!)
+    for (size_t j = 1; canGather && j < arity; j++)
+    {
+        let& shapej = inputs[j]->m_shape;
+        canGather &= shapej.GetDims() == shape0.GetDims() && shapej.IsDense();
+    }
+
+    if (canGather)
+    {
+        // optimized case
+        let numRows = m_shape.GetNumElements() / m_shape.GetDims().back();
+        Matrix<ElemType> sliceBuf(CPUDEVICE/*dummy*/); // buffer to hold the slice so that we can return it by reference
+        GetSOBViewPtr()->GatherBatch(numRows, inputs.size(), [&](size_t i) -> const Matrix<ElemType>&
+        {
+            let& input = *inputs[i];
+            GatherScatterVerifyDimensions(input.m_shape, m_shape, "DoGatherBatchOf", i);
+            if (GatherScatterCanPassSOB(input))
+                return input.GetSOB();
+            else
+                return GatherScatterGetSOBView(input, sliceBuf);
+        });
+    }
+    else
+    {
+        // copy all items one by one
+        // This is not efficient for many objects (e.g. a batch gather), but fine for 2 or 3.
+        size_t sliceStart = 0;
+        for (size_t i = 0; i < arity; i++)
+        {
+            let& input = *inputs[i];
+            let& shape = input.m_shape;
+            let sliceHeight = axis < shape.GetRank() ? shape[axis] : 1;
+            // slice in output
+            TensorShape outSlice = m_shape;
+            outSlice.NarrowTo(axis, sliceStart, sliceStart + sliceHeight);
+            Reviewed(outSlice).AssignCopyOf(input);
+            sliceStart += sliceHeight;
+        }
+    }
 }
 
 template <class ElemType>

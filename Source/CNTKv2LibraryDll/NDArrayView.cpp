@@ -643,46 +643,51 @@ namespace CNTK
         return out;
     }
 
-    /*static*/ NDArrayViewPtr NDArrayView::GatherBatch(const vector<NDArrayViewPtr>& inputs, int axis, NDArrayViewPtr out)
+    template<typename ElementType> // TODO: move this to a more generic place
+    class TensorViewPtrArrayRef : public TensorView<ElementType>::IArrayRef<TensorView<ElementType> const*>
     {
-        size_t numInputs = inputs.size();
+        const vector<NDArrayViewPtr>& m_inputs;
+    public:
+        TensorViewPtrArrayRef(const vector<NDArrayViewPtr>& inputs) : m_inputs(inputs) { }
+        virtual size_t size() const { return m_inputs.size(); }
+        virtual TensorView<ElementType> const** data() const { NOT_IMPLEMENTED; }
+        virtual TensorView<ElementType> const* /*const&*/ operator[](size_t i) const { return m_inputs[i]->GetTensorViewPtr<ElementType>(); }
+        virtual TensorView<ElementType> const* & operator[](size_t i) { NOT_IMPLEMENTED; }
+        virtual TensorView<ElementType> const* const* begin() const { NOT_IMPLEMENTED; }; // TODO: get the const-ness thingy right
+        virtual TensorView<ElementType> const* const * end() const { NOT_IMPLEMENTED; }
+    };
+
+    /*static*/ NDArrayViewPtr NDArrayView::GatherBatch(const vector<NDArrayViewPtr>& inputs, size_t axis, NDArrayViewPtr out)
+    {
         if (!out        || true) // keep this for now for testing this
         {
-            // determine output rank
-            size_t maxRank = 0;
-            for (let& input : inputs)
-                if (maxRank < input->Shape().Rank())
-                    maxRank = input->Shape().Rank();
-            if (axis + 1 < maxRank)
-                LogicError("NDArrayView::GatherBatch: Currently only splicing in a new or the slowest-changing axis is supported.");
-            let outRank = max(maxRank, (size_t)axis + 1);
-            // determine output shape from input0
-            vector<size_t> outDims;
-            outDims.reserve(outRank);
-            const auto& input0 = *inputs[0];
-            let& inputDims = input0.Shape().Dimensions();
-            outDims.assign(inputDims.begin(), inputDims.end());
-            outDims.resize(outRank, 1);   // add batch axis (and pad) if needed
-            if (axis >= maxRank) // when batching into a new axis, then new axis = #inputs
-                outDims[axis] = numInputs;
-            else // if along existing axis, then we must explicitly sum up over all inputs
+            vector<size_t> totalShape(axis+1, 1); // total shape
+            // first check all dims and determinethe shared shape
+            size_t splicedDim = 0;
+            for (let& val : inputs)
             {
-                size_t sumDim = 0;
-                for (let& input : inputs)
+                let& shape = val->Shape();
+                if (shape.Rank() > totalShape.size())
+                    totalShape.resize(shape.Rank(), 1);
+                for (size_t k = 0; k < shape.Rank(); k++)
                 {
-                    let& inDims = input->Shape().Dimensions();
-                    if (axis >= inDims.size())
-                        sumDim += 1;
-                    else
-                        sumDim += inDims[axis];
+                    if (totalShape[k] != shape[k] && totalShape[k] != 1 && shape[k] != 1) // shapes must match, considering broadcasting
+                        InvalidArgument("GatherBatch: incompatible shapes");
+                    if (shape[k] != 1)
+                        totalShape[k] = shape[k]; // collect the axis
                 }
-                outDims[axis] = sumDim;
+                splicedDim += axis < shape.Rank() ? shape[axis] : 1; // accumulate the total dimension for the spliced axis
             }
-            NDShape shape(move(outDims));
+            // now implant the spliced dimension into totalShape
+            totalShape[axis] = splicedDim;
+            NDShape shape(move(totalShape));
             if (out && out->Shape() != shape)
                 LogicError("NDArrayView::GatherBatch: bad out dim"); // (this err msg will go away after some testing)
             if (!out)
-            out = MakeSharedObject<NDArrayView>(input0.GetDataType(), input0.GetStorageFormat(), shape, input0.Device());
+            {
+                let& input0 = *inputs[0];
+                out = MakeSharedObject<NDArrayView>(input0.GetDataType(), input0.GetStorageFormat(), shape, input0.Device());
+            }
         }
         // perform the operation
         // The underlying TensorView call expects a functor to access the TensorView items.
@@ -690,16 +695,10 @@ namespace CNTK
         switch (out->m_dataType)
         {
         case DataType::Float:
-            out->WritableNativeTensorView<float>()->DoGatherBatchOf(inputs.size(), [&](size_t i) -> const TensorView<float>&
-            {
-                return *inputs[i]->GetTensorViewPtr<float>();
-            });
+            out->WritableNativeTensorView<float>()->DoGatherBatchOf(TensorViewPtrArrayRef<float>(inputs), (size_t)axis);
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
-            out->WritableNativeTensorView<double>()->DoGatherBatchOf(inputs.size(), [&](size_t i) -> const TensorView<double>&
-            {
-                return *inputs[i]->GetTensorViewPtr<double>();
-            });
+            out->WritableNativeTensorView<double>()->DoGatherBatchOf(TensorViewPtrArrayRef<double>(inputs), (size_t)axis);
             break;
         default:
             LogicError("NDArrayView::GatherBatch: Unsupported DataType %s", DataTypeName(out->m_dataType));

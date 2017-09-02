@@ -184,32 +184,33 @@ namespace CNTK
             out->MatrixProduct(false, args[0], primitiveOp == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
             break;
         case PrimitiveOpType::Splice:
+#if 0           // BUGBUG: there is a non-uniform Splice [512, 768], and it goes unnoticed with the old code
             {
-                let arity = args.size();
-                if (arity < 2) // (we could just make a copy, but that would cost unnecessary memory. Really, the caller should catch this)
-                    LogicError("Variable '%S' Value(): Splice requires at least two arguments.", funcForErrMsg.AsString().c_str());
-                let axis = (size_t)attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex();
-                // check whether this can be a Gather
-                let outRank = outputShape.Rank();
-                bool canGather = axis == outRank - 1;
-                // all shapes must be identical to the outputShape with splice axis divided by #arguments
-                let& shape0 = args[0]->Shape();
-                // check first shape
-                for (size_t k = 0; canGather && k < outRank; k++)
+                let& axis = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                size_t maxInputRank = args[0]->Shape().Rank();
+                for (int i = 1; i < args.size(); i++)
                 {
-                    auto dim = k < shape0.Rank() ? shape0[k] : 1;
-                    if (k == axis)
-                        dim *= arity;
-                    canGather &= (dim == outputShape[k]);
-                }
-                // first shape is the correct fraction: check all shapes against it (hah--no malloc!)
-                for (size_t j = 1; canGather && j < arity; j++)
-                    canGather &= args[j]->Shape() == shape0;
-                if (canGather)
-                    NDArrayView::GatherBatch(args, (int)axis, out);
-                else // only one: do nothing or at best reshape if a new axis is added
+                    auto inputRank = args[i]->Shape().Rank();
+                    if (maxInputRank < inputRank)
+                        maxInputRank = inputRank;
+                 }
+                //NormalizeStaticAxis(axis, NDShape(maxInputRank)); // already done in InferOutputs()
+                // BUGBUG: This can only splice along the last axis for now.
+                if (axis.StaticAxisIndex() != outputShape.Rank() - 1)
                     LogicError("Variable '%S' Value(): Memoziation of splice along axis other than last is not implemented yet.", funcForErrMsg.AsString().c_str());
+                if (args.size() > 1)
+                    NDArrayView::GatherBatch(args, axis.StaticAxisIndex(), out);
+                else // only one: do nothing or at best reshape if a new axis is added
+                {
+                    // BUGBUG: This is a 'free' op, should be caught earlier.
+                    out = args[0];
+                    if (out->Shape() != outputShape)
+                        out = out->AsShape(outputShape);
+                }
             }
+#else
+            NDArrayView::GatherBatch(args, (size_t)attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex(), out);
+#endif
             break;
             // the following N-nary operations should be easy, mostly a matter of writing tests
             // unary operations to be completed
