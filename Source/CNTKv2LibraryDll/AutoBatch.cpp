@@ -2242,7 +2242,7 @@ public:
     // This is done as a single CUDA launch into all inputs.
     // This is a little tricky. We backprop into all inputs.
     // So we must make sure we run this only once.
-    // The first time this gradient gets puled, we do it for all inputs
+    // The first time this gradient gets pulled, we do it for all inputs
     // and remember that this has been done.
     void BackpropToSplice(PrimitiveFunction* f)
     {
@@ -2260,6 +2260,8 @@ public:
         //  - It is possible that the Splice operation consumed the same input twice.
         //    This is currently handled via atomicAdd(), i.e. will have non-determinism.
         //    (A striding trick minimizes the probability of clashes.)
+        //    Note that in this case, beta will be 1, since at least one of those
+        //    gradients is not newly created, which is detected and force beta=1.
 #if 0
         for (size_t index = 0; index < f->m_inputs.size(); index++)
         {
@@ -2307,7 +2309,7 @@ public:
         let beta = allBetasZero ? 0.0 : 1.0; // if at least one is not zero, we must run qwith beta=1
 
         // backprop into all inputs
-        NDArrayView::ScatterBatch(outputGradient, inputGradients, beta);
+        NDArrayView::ScatterBatch(outputGradient, inputGradients, (size_t)f->m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex(), beta);
 #endif
         m_stats.numBackpropScatters++;
     }

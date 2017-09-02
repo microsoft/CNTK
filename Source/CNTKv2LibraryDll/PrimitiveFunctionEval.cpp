@@ -184,33 +184,8 @@ namespace CNTK
             out->MatrixProduct(false, args[0], primitiveOp == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
             break;
         case PrimitiveOpType::Splice:
-#if 0           // BUGBUG: there is a non-uniform Splice [512, 768], and it goes unnoticed with the old code
-            {
-                let& axis = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                size_t maxInputRank = args[0]->Shape().Rank();
-                for (int i = 1; i < args.size(); i++)
-                {
-                    auto inputRank = args[i]->Shape().Rank();
-                    if (maxInputRank < inputRank)
-                        maxInputRank = inputRank;
-                 }
-                //NormalizeStaticAxis(axis, NDShape(maxInputRank)); // already done in InferOutputs()
-                // BUGBUG: This can only splice along the last axis for now.
-                if (axis.StaticAxisIndex() != outputShape.Rank() - 1)
-                    LogicError("Variable '%S' Value(): Memoziation of splice along axis other than last is not implemented yet.", funcForErrMsg.AsString().c_str());
-                if (args.size() > 1)
-                    NDArrayView::GatherBatch(args, axis.StaticAxisIndex(), out);
-                else // only one: do nothing or at best reshape if a new axis is added
-                {
-                    // BUGBUG: This is a 'free' op, should be caught earlier.
-                    out = args[0];
-                    if (out->Shape() != outputShape)
-                        out = out->AsShape(outputShape);
-                }
-            }
-#else
+            // TODO: We may communicate from outside by not providing an Axis attribute that batching is along a new axis, and all shapes are the same.
             NDArrayView::GatherBatch(args, (size_t)attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex(), out);
-#endif
             break;
             // the following N-nary operations should be easy, mostly a matter of writing tests
             // unary operations to be completed

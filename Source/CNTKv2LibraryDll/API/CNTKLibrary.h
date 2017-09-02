@@ -861,7 +861,7 @@ namespace CNTK
         /// Scatter a single tensor into all inputs along the slowest-changing axis.
         /// This is the inverse to GatherBatch().
         ///
-        CNTK_API static void ScatterBatch(const NDArrayViewPtr& input, std::vector<NDArrayViewPtr>& outputs, double beta = 0);
+        CNTK_API static void ScatterBatch(const NDArrayViewPtr& input, std::vector<NDArrayViewPtr>& outputs, size_t axis, double beta = 0);
 
         ///
         /// Creates a new NDArrayView which is an alias of a slice of 'this' view; i.e. a new view over the underlying data
@@ -1000,7 +1000,9 @@ namespace CNTK
         std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> GetWritableTensorViewMin2D();
 
         template<typename ElementType>
-        friend class TensorViewPtrArrayRef; // every TensorViewPtrArrayRef<ElementType> is a friend
+        friend class TensorViewPtrArrayRef;
+        template<typename ElementType>
+        friend class WritableTensorViewPtrArrayRef;
         template <typename ElementType>
         std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> NativeTensorView() const;
 

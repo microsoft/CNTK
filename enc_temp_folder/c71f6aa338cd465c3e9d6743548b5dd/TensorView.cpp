@@ -612,7 +612,6 @@ static Matrix<ElemType>& GatherScatterGetSOBView(const TensorView<ElemType>& ite
     return out;
 }
 
-// TODO: In auto-batch, we know from context that the shapes match. So this check can be bypassed.
 template<typename TArrayRef> // (const) TensorView*
 static bool CanGatherScatterBatch(const TensorShape& m_shape, const TArrayRef& inputs, size_t axis)
 {

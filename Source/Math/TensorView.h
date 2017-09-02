@@ -226,7 +226,7 @@ public:
     };
 
     void DoGatherBatchOf(const IArrayRef<const TensorView*>& inputs, size_t axis);
-    void DoScatterBatchOf(ElemType beta, size_t numOutputs, const std::function<TensorView&(size_t)>& inputs) const;
+    void DoScatterBatchOf(ElemType beta, const IArrayRef<TensorView*>& outputs, size_t axis) const;
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }

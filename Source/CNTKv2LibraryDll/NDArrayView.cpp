@@ -643,7 +643,7 @@ namespace CNTK
         return out;
     }
 
-    template<typename ElementType> // TODO: move this to a more generic place
+    template<typename ElementType>
     class TensorViewPtrArrayRef : public TensorView<ElementType>::IArrayRef<TensorView<ElementType> const*>
     {
         const vector<NDArrayViewPtr>& m_inputs;
@@ -657,12 +657,26 @@ namespace CNTK
         virtual TensorView<ElementType> const* const * end() const { NOT_IMPLEMENTED; }
     };
 
+    template<typename ElementType> // TODO: unify these two
+    class WritableTensorViewPtrArrayRef : public TensorView<ElementType>::IArrayRef<TensorView<ElementType>*>
+    {
+        vector<NDArrayViewPtr>& m_inputs;
+    public:
+        WritableTensorViewPtrArrayRef(vector<NDArrayViewPtr>& inputs) : m_inputs(inputs) { }
+        virtual size_t size() const { return m_inputs.size(); }
+        virtual TensorView<ElementType>** data() const { NOT_IMPLEMENTED; }
+        virtual TensorView<ElementType>* /*const&*/ operator[](size_t i) const { return m_inputs[i]->GetWritableTensorViewPtr<ElementType>(); }
+        virtual TensorView<ElementType>* & operator[](size_t i) { NOT_IMPLEMENTED; }
+        virtual TensorView<ElementType>* const* begin() const { NOT_IMPLEMENTED; }; // TODO: get the const-ness thingy right
+        virtual TensorView<ElementType>* const * end() const { NOT_IMPLEMENTED; }
+    };
+
     /*static*/ NDArrayViewPtr NDArrayView::GatherBatch(const vector<NDArrayViewPtr>& inputs, size_t axis, NDArrayViewPtr out)
     {
         if (!out        || true) // keep this for now for testing this
         {
             vector<size_t> totalShape(axis+1, 1); // total shape
-            // first check all dims and determinethe shared shape
+            // first check all dims and determine the shared shape
             size_t splicedDim = 0;
             for (let& val : inputs)
             {
@@ -671,7 +685,7 @@ namespace CNTK
                     totalShape.resize(shape.Rank(), 1);
                 for (size_t k = 0; k < shape.Rank(); k++)
                 {
-                    if (totalShape[k] != shape[k] && totalShape[k] != 1 && shape[k] != 1) // shapes must match, considering broadcasting
+                    if (k != axis && totalShape[k] != shape[k] && totalShape[k] != 1 && shape[k] != 1) // shapes must match, considering broadcasting
                         InvalidArgument("GatherBatch: incompatible shapes");
                     if (shape[k] != 1)
                         totalShape[k] = shape[k]; // collect the axis
@@ -695,10 +709,10 @@ namespace CNTK
         switch (out->m_dataType)
         {
         case DataType::Float:
-            out->WritableNativeTensorView<float>()->DoGatherBatchOf(TensorViewPtrArrayRef<float>(inputs), (size_t)axis);
+            out->WritableNativeTensorView<float>()->DoGatherBatchOf(TensorViewPtrArrayRef<float>(inputs), axis);
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
-            out->WritableNativeTensorView<double>()->DoGatherBatchOf(TensorViewPtrArrayRef<double>(inputs), (size_t)axis);
+            out->WritableNativeTensorView<double>()->DoGatherBatchOf(TensorViewPtrArrayRef<double>(inputs), axis);
             break;
         default:
             LogicError("NDArrayView::GatherBatch: Unsupported DataType %s", DataTypeName(out->m_dataType));
@@ -707,23 +721,17 @@ namespace CNTK
         return out;
     }
 
-    /*static*/ void NDArrayView::ScatterBatch(const NDArrayViewPtr& input, vector<NDArrayViewPtr>& outputs, double beta)
+    /*static*/ void NDArrayView::ScatterBatch(const NDArrayViewPtr& input, vector<NDArrayViewPtr>& outputs, size_t axis, double beta)
     {
-        // The underlying TensorView call expects a functor to access the TensorView items.
+        // Unlike GatherBatch(), the target must already have been fully shaped and allocated.
         // Any error checking will happen inside the TensorView function, so we don't duplicate it here.
         switch (input->m_dataType)
         {
         case DataType::Float:
-            input->NativeTensorView<float>()->DoScatterBatchOf((float)beta, outputs.size(), [&](size_t i) -> TensorView<float>&
-            {
-                return *outputs[i]->GetWritableTensorViewPtr<float>();
-            });
+            input->NativeTensorView<float>()->DoScatterBatchOf((float)beta, WritableTensorViewPtrArrayRef<float>(outputs), axis);
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
-            input->NativeTensorView<double>()->DoScatterBatchOf((double)beta, outputs.size(), [&](size_t i) -> TensorView<double>&
-            {
-                return *outputs[i]->GetWritableTensorViewPtr<double>();
-            });
+            input->NativeTensorView<double>()->DoScatterBatchOf((double)beta, WritableTensorViewPtrArrayRef<double>(outputs), axis);
             break;
         default:
             LogicError("NDArrayView::GatherBatch: Unsupported DataType %s", DataTypeName(input->m_dataType));

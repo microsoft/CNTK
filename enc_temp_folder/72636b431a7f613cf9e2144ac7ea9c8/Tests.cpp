@@ -341,7 +341,9 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         //  - numeric:  perturb the all inputs by an epsilon; compute the test function on that
         //  - symbolic: get all gradients from the test function and multiply with the same epsilon and add to the unperturbed result
         // We test each argument index separately, to make this test more informative.
-        if (dataType == DataType::Double)
+        if (dataType == DataType::Double
+            //&& !strstr(test.op.second, "Splice") // PUT THIS BACK once scatter works as well
+            )
         {
             let epsScale = 1e-7;
             for (size_t argIndexUnderTest = 0; argIndexUnderTest < aryness; argIndexUnderTest++)
