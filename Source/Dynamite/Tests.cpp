@@ -132,7 +132,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         for (let& val : argValues)
         {
             let& shape = val->Shape();
-            let sliceHeight = axis < shape.Rank() ? shape.Dimensions()[axis] : 1;
+            let sliceHeight = axis < shape.Rank() ? shape[axis] : 1;
             // slice in output
             auto startOffsets = vector<size_t>(totalShape.size(), 0);
             auto extents = totalShape;
