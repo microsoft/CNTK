@@ -96,11 +96,54 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     let bnRunningMean   = TestParameter(NDShape(BN_SHAPE), 0, "bnRunningMean",   0, dataType, device);
     let bnRunningInvStd = TestParameter(NDShape(BN_SHAPE), 0, "bnRunningInvStd", 0, dataType, device);
     let bnRunningCount  = TestParameter(NDShape{}        , 0, "bnRunningCount",  0, dataType, device);
-    let batchNormFwd = [&](const vector<NDArrayViewPtr>& argValues)
+    let batchNormFwd = [&](const vector<NDArrayViewPtr>& argValues) -> NDArrayViewPtr
     {
         //batchMean->LogToFile(L"batchMean", stderr);
         //batchInvStd->LogToFile(L"batchInvStd", stderr);
         return ((argValues[0] - batchMean) * batchInvStd) * argValues[1] + argValues[2];
+    };
+    // for testing splicing
+    let doSplice = [&](const vector<NDArrayViewPtr>& argValues, size_t axis) -> NDArrayViewPtr
+    {
+        vector<size_t> totalShape(axis+1, 1); // total shape
+        // first check all dims and determinethe shared shape
+        size_t splicedDim = 0;
+        for (let& val : argValues)
+        {
+            let& shape = val->Shape();
+            if (shape.Rank() > totalShape.size())
+                totalShape.resize(shape.Rank(), 1);
+            for (size_t k = 0; k < totalShape.size(); k++)
+            {
+                if (totalShape[k] != shape[k] && totalShape[k] != 1 && shape[k] != 1) // shapes must match, considering broadcasting
+                    InvalidArgument("doSplice: incompatible shapes");
+                if (shape[k] != 1)
+                    totalShape[k] = shape[k]; // collect the axis
+            }
+            splicedDim += axis < shape.Rank() ? shape[axis] : 1; // accumulate the total dimension for the spliced axis
+        }
+        // now implant the spliced dimension into totalShape
+        totalShape[axis] = splicedDim;
+        // allocate result
+        let& val0 = argValues[0];
+        let out = make_shared<NDArrayView>(0, val0->GetDataType(), totalShape, val0->Device());
+        // copy all items one by one
+        size_t sliceStart = 0;
+        for (let& val : argValues)
+        {
+            let sliceHeight = val->Shape().Dimensions()[axis];
+            // slice in output
+            auto startOffsets = vector<size_t>(totalShape.size(), 0);
+            auto extents = totalShape;
+            startOffsets[axis] = sliceStart;
+            extents[axis] = sliceHeight;
+            let outSlice = out->Slice(startOffsets, extents);
+            // copy value
+            // CopyFrom() does not presently support strides, so use NumericOperation. TODO: Fix this, and test it here.
+            NDArrayView::NumericOperation({ val }, 1.0, L"Copy", outSlice);
+            sliceStart += sliceHeight;
+        }
+        return out;
     };
     // definition of all tests
 #define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode); }, #opCode))
@@ -108,6 +151,8 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 #define OpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum"); }, #opCode "|Reduce"))
     vector<TensorViewTest> tests =
     {
+        // splicing. Uniform splicing along last dimension will use Gather; otherwise use multiple copy ops. Test both, also batched.
+        { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 1); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(1)); },{ { 13, 42 },{ 13, 42 },{ 13, 42 } } }, // all same size; gather
         // BatchNorm. This is tricky, since it only makes sense when batching.
         { { [&](const vector<NDArrayViewPtr>& argValues) { return batchNormFwd(argValues); }, "BatchNormalization" }, [&](const vector<Variable>& args) { return CNTK::BatchNormalization(args[0], /*id=*/1, args[1], args[2], bnRunningMean, bnRunningInvStd, bnRunningCount, /*spatial=*/false, 0, 0, 0); },{ BN_SHAPE, BN_SHAPE, BN_SHAPE } },
         // dot product (both explicitly as InnerProduct() as well as composition, to verify the InnerProduct() optimization)
@@ -116,7 +161,8 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         { OpWithRed(ElementwiseProduct, NDShape({ 1, 1, 42, 5 })), [](const vector<Variable>& args) { return CNTK::ReduceSum(CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0)), Axis(1)); }, { { 13, 2, 42, 5 }, { 13, 2, 42, 5 } } },
         { OpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), [](const vector<Variable>& args) { return                 CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0));           }, { { 13,    42    }, { 13,    42    } } },
         { OpWithRed(ElementwiseProduct, NDShape({ 1           })), [](const vector<Variable>& args) { return                 CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0));           }, { { 13           }, { 13           } } },
-        // slicing, splicing, reshaping   --TODO: splicing, reshaping
+        // splicing. NDArrayViewSlice() and SliceView() differ in also slicing the matrix or not. Test both.
+        // slicing, reshaping   --TODO: reshaping (should be easy)
         { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->Slice           ({ 0, 3 }, {     13 }); }, "Index" }, [&](const vector<Variable>& args) { return CNTK::Index(args[0], 3); },{ { 13, 42 } } }, // index of rank > 1; also testing SlicedTensorView()
         { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView       ({    1 }, {        }); }, "Index" }, [&](const vector<Variable>& args) { return CNTK::Index(args[0], 1); },{ { 13 } } }, // index of rank 1
         { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView       ({ 0, 1 }, { 13,  4 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0), Axis(1) }, { 0, 1 }, { 13, 1+4 }); },{ { 13, 42 } } }, // multi-axis slice
@@ -372,9 +418,9 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 void RunDynamiteTests()
 {
     size_t numFailed = 0;
+    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::CPUDevice());
-    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(3, DataType::Float,  DeviceDescriptor::GPUDevice(0));
 #if 1 // do this not every time
     numFailed += DynamiteTest(1, DataType::Float,  DeviceDescriptor::GPUDevice(0));

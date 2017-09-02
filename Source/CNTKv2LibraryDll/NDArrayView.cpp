@@ -352,6 +352,7 @@ namespace CNTK
         return newView;
     }
 
+    // BUGBUG: Does not work for sliced tensors. We can use TensorView assignment, except for sparse. Test with doSplice in Tests.cpp.
     void NDArrayView::CopyFrom(const NDArrayView& source)
     {
         if ((source.Shape() != Shape()) && (AsTensorShape(source.Shape()) != AsTensorShape(Shape())))
