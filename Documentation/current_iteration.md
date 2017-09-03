@@ -9,7 +9,13 @@
 
 ### 16bit support for training on Volta GPU (limited functionality)
 ### Update learner interface to simplify parameter setting and adding new learners (**Potential breaking change**) 
-### A preliminary C#/.NET API that enables people to train simple networks such as ConvNet on MNIST. 
+### A C#/.NET API that enables people to build and train networks. 
+##### Basic training support is added to C#/.NET API. New training examples include:
+##### 1. Convolution neural network for image classification of the MNIST dataset. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCShape/Common/MNISTClassifier.cs)
+##### 2. Build, train, and evaluate a ResNet model with C#/.NET API. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCShape/Common/CifarResNetClassifier.cs)
+##### 3. Transfer learning with C#/.NET API. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCShape/Common/TransferLearning.cs)
+##### 4. Build and train a LSTM sequence classifier with C#/.NET API. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCShape/Common/LSTMSequenceClassifier.cs)
+
 ### R-binding for training and evaluation (will be published in a separate repository) 
 ### Improve statistics for distributed evaluation 
 

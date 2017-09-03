@@ -4,6 +4,7 @@
 //
 // FunctionShim.cs -- C# Api for CNTK Function class
 //
+using System;
 using System.Collections.Generic;
 
 namespace CNTK
@@ -37,7 +38,7 @@ namespace CNTK
         /// <summary>
         /// Property Outputs
         /// </summary>
-        public System.Collections.Generic.IList<Variable> Outputs
+        public IList<Variable> Outputs
         {
             get
             {
@@ -45,7 +46,7 @@ namespace CNTK
                 var varArray = new Variable[varVector.Count];
                 // The CopyTo is to ensure that elements in varVector live beyond the lifecycle of varVector.
                 varVector.CopyTo(varArray);
-                var varList = new System.Collections.Generic.List<Variable>(varArray);
+                var varList = new List<Variable>(varArray);
                 return varList;
             }
         }
@@ -101,7 +102,7 @@ namespace CNTK
         /// <summary>
         /// Property Arguments.
         /// </summary>
-        public System.Collections.Generic.IList<Variable> Arguments
+        public IList<Variable> Arguments
         {
             get
             {
@@ -109,7 +110,7 @@ namespace CNTK
                 var varArray = new Variable[varVector.Count];
                 // The CopyTo is to ensure that elements in varVector live beyond the lifecycle of varVector.
                 varVector.CopyTo(varArray);
-                var varList = new System.Collections.Generic.List<Variable>(varArray);
+                var varList = new List<Variable>(varArray);
                 return varList;
             }
         }
@@ -117,7 +118,7 @@ namespace CNTK
         /// <summary>
         /// Property Inputs.
         /// </summary>
-        public System.Collections.Generic.IList<Variable> Inputs
+        public IList<Variable> Inputs
         {
             get
             {
@@ -125,9 +126,19 @@ namespace CNTK
                 var varArray = new Variable[varVector.Count];
                 // The CopyTo is to ensure that elements in varVector live beyond the lifecycle of varVector.
                 varVector.CopyTo(varArray);
-                var varList = new System.Collections.Generic.List<Variable>(varArray);
+                var varList = new List<Variable>(varArray);
                 return varList;
             }
+        }
+
+        /// <summary>
+        /// Parameters if the function
+        /// </summary>
+        /// <returns></returns>
+        public IList<Parameter> Parameters()
+        {
+            ParameterVector parameterVector = _Parameters();
+            return Helper.FromParameterVector(parameterVector);
         }
 
         /// <summary>
@@ -140,13 +151,19 @@ namespace CNTK
             return _Clone(ParameterCloningMethod.Share);
         }
 
+        public Function Clone(ParameterCloningMethod parameterCloneMethod, IDictionary<Variable, Variable> replacements)
+        {
+            UnorderedMapVariableVariable replacementVector = Helper.AsUnorderedMapVariableVariable(replacements);
+            return _Clone(parameterCloneMethod, replacementVector);
+        }
+
         /// <summary>
         /// Evaluates the Function using provided inputs.
         /// </summary>
         /// <param name="inputs"></param>
         /// <param name="outputs"></param>
         /// <param name="computeDevice"></param>
-        public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
+        public void Evaluate(IDictionary<Variable, Value> inputs, IDictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
         {
             Evaluate(inputs, outputs, false, computeDevice);
         }
@@ -158,7 +175,7 @@ namespace CNTK
         /// <param name="outputs"></param>
         /// <param name="createPersistentOutputValues"></param>
         /// <param name="computeDevice"></param>
-        public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, bool createPersistentOutputValues, DeviceDescriptor computeDevice)
+        public void Evaluate(IDictionary<Variable, Value> inputs, IDictionary<Variable, Value> outputs, bool createPersistentOutputValues, DeviceDescriptor computeDevice)
         {
             // Evaluate the rootFunction.
             var inMap = new UnorderedMapVariableValuePtr();
@@ -206,16 +223,28 @@ namespace CNTK
         /// <param name="name"></param>
         /// <param name="nestedSearchInsideBlockFunction"></param>
         /// <returns></returns>
-        public System.Collections.Generic.IList<Function> FindAllWithName(string name, bool nestedSearchInsideBlockFunction = false)
+        public IList<Function> FindAllWithName(string name, bool nestedSearchInsideBlockFunction = false)
         {
             var funcPtrVector = _FindAllWithName(name, nestedSearchInsideBlockFunction);
-            var funcPtrList = new System.Collections.Generic.List<Function>(funcPtrVector.Count);
+            var funcPtrList = new List<Function>(funcPtrVector.Count);
             for (int i = 0; i < funcPtrVector.Count; i++)
             {
                 // for shared_ptr, the funcPtrVector[i] returns a copy, so it is safe to directly use it in return list.
                 funcPtrList.Add(funcPtrVector[i]);
             }
             return funcPtrList;
+        }
+
+        public void Save(char[] buffer)
+        {
+            CharVector vectorBuf = new CharVector(); 
+            this._Save(vectorBuf);
+            vectorBuf.CopyTo(buffer);
+        }
+
+        public void Save(string filepath)
+        {
+            this._Save(filepath);
         }
 
         /// <summary>
@@ -241,21 +270,6 @@ namespace CNTK
         }
 
         /// <summary>
-        /// Creates a new Function from specified operands.
-        /// </summary>
-        /// <param name="operands"></param>
-        /// <returns></returns>
-        public static Function Combine(System.Collections.Generic.IEnumerable<Variable> operands)
-        {
-            var varVect = new VariableVector();
-            foreach (var v in operands)
-            {
-                varVect.Add(v);
-            }
-            return CNTKLib.Combine(varVect);
-        }
-
-        /// <summary>
         /// Creates a composite function from the rootFunction.
         /// </summary>
         /// <param name="rootFunction"></param>
@@ -277,6 +291,12 @@ namespace CNTK
             return CNTKLib.Alias(operand, name);
         }
 
+        public Function ReplacePlaceholders(IDictionary<Variable, Variable> placeholderReplacements)
+        {
+            UnorderedMapVariableVariable unorderedMapVariableVariable = Helper.AsUnorderedMapVariableVariable(placeholderReplacements);
+            return ReplacePlaceholders(unorderedMapVariableVariable);
+        }
+
         /// <summary>
         /// Implicitly convert a function to a Variable.
         /// </summary>
@@ -292,10 +312,10 @@ namespace CNTK
         /// E.g. When creating a classification model, typically the CrossEntropy loss Function and the ClassificationError Function comprise the two roots
         /// of the computation graph which can be "Combine"d to create a single Function with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
         /// </summary>
-        /// <param name="operands"></param>
+        /// <param name="operands">variables whose function are to be combined</param>
         /// <param name="name"></param>
         /// <returns></returns>
-        public static Function Combine(IList<Variable> operands, string name)
+        public static Function Combine(IList<Variable> operands, string name = "")
         {
             VariableVector operandVector = Helper.AsVariableVector(operands);
             return CNTKLib.Combine(operandVector, name);

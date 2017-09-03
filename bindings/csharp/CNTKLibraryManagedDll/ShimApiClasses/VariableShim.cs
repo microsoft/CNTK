@@ -4,42 +4,57 @@
 //
 // VariableShim.cs -- C# Api for CNTK Variable class
 //
+using System;
+using System.Collections.Generic;
+
 namespace CNTK
 {
     public partial class Variable
     {
-        // Property Shape.
+        /// <summary>
+        /// Property Shape.
+        /// </summary>
         public NDShape Shape
         {
             get { return _Shape(); }
         }
 
-        // Property Name.
+        /// <summary>
+        /// Property Name.
+        /// </summary>
         public string Name
         {
             get { return _Name(); }
         }
 
-        // Property Uid.
+        /// <summary>
+        /// Property Uid.
+        /// </summary>
         public string Uid
         {
             get { return _Uid(); }
         }
 
-        // Property Kind.
+        /// <summary>
+        /// Property Kind.
+        /// </summary>
         public VariableKind Kind
         {
             get { return _Kind(); }
         }
 
-        // Property DataType.
+        /// <summary>
+        /// Property DataType.
+        /// </summary>
         public DataType DataType
         {
             get { return _GetDataType(); }
         }
 
-        // Property DynamicAxes.
-        public System.Collections.Generic.IList<Axis> DynamicAxes
+        /// <summary>
+        /// Property DynamicAxes.
+        /// </summary>
+        public IList<Axis> DynamicAxes
         {
             get
             {
@@ -47,67 +62,89 @@ namespace CNTK
                 // The CopyTo is to ensure that elements in axisVector live beyond the lifecycle of axisVector.
                 var axisArray = new Axis[axisVector.Count];
                 axisVector.CopyTo(axisArray);
-                var axisList = new System.Collections.Generic.List<Axis>(axisArray);
+                var axisList = new List<Axis>(axisArray);
                 return axisList;
             }
         }
 
-        // Property IsSparse.
+        /// <summary>
+        /// Property IsSparse.
+        /// </summary>
         public bool IsSparse
         {
             get { return _IsSparse(); }
         }
 
-        // Property IsInput.
+        /// <summary>
+        /// Property IsInput.
+        /// </summary>
         public bool IsInput
         {
             get { return _IsInput(); }
         }
 
-        // Property IsOutput.
+        /// <summary>
+        /// Property IsOutput.
+        /// </summary>
         public bool IsOutput
         {
             get { return _IsOutput(); }
         }
 
-        // Property IsParameter.
+        /// <summary>
+        /// Property IsParameter.
+        /// </summary>
         public bool IsParameter
         {
             get { return _IsParameter(); }
         }
 
-        // Property IsConstant.
+        /// <summary>
+        /// Property IsConstant.
+        /// </summary>
         public bool IsConstant
         {
             get { return _IsConstant(); }
         }
 
-        // Property IsPlaceholder.
+        /// <summary>
+        /// Property IsPlaceholder.
+        /// </summary>
         public bool IsPlaceholder
         {
             get { return _IsPlaceholder(); }
         }
 
-        // Property Owner.
+        /// <summary>
+        /// Property Owner.
+        /// </summary>
         public Function Owner
         {
             get { return _Owner(); }
         }
 
-        // Property NeedsGradient.
+        /// <summary>
+        /// Property NeedsGradient.
+        /// </summary>
         public bool NeedsGradient
         {
             get { return _NeedsGradient(); }
         }
 
-        // Property CurrentValueTimeStamp
+        /// <summary>
+        /// Property CurrentValueTimeStamp
+        /// </summary>
         public int CurrentValueTimeStamp
         {
             get { return (int)_CurrentValueTimeStamp(); }
         }
 
-        // Value equality.
-        public override bool Equals(System.Object obj)
+        /// <summary>
+        /// Value equality.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns>true when equal</returns>
+        public override bool Equals(Object obj)
         {
             // If parameter is null return false.
             if (obj == null)
@@ -117,7 +154,7 @@ namespace CNTK
 
             // If parameter cannot be cast to Point return false.
             Variable p = obj as Variable;
-            if ((System.Object)p == null)
+            if ((Object)p == null)
             {
                 return false;
             }
@@ -126,7 +163,11 @@ namespace CNTK
             return CNTKLib.AreEqual(this, p);
         }
 
-        // Value equality.
+        /// <summary>
+        /// Value equality.
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns>true if equal</returns>
         public bool Equals(Variable p)
         {
             // If parameter is null return false:
@@ -139,31 +180,76 @@ namespace CNTK
             return CNTKLib.AreEqual(this, p);
         }
 
-        // Returns hash code value.
+        /// <summary>
+        /// Returns hash code value.
+        /// </summary>
+        /// <returns></returns>
         public override int GetHashCode()
         {
             // Todo: the hash value in C++ is size_t, but only in C#
             return (int)_GetHashValue();
         }
 
+        /// <summary>
+        /// Implicitly construct a Function from a Variable
+        /// </summary>
+        /// <param name="v"></param>
         public static implicit operator Function(Variable v)
         {
             return v.ToFunction();
         }
 
+        /// <summary>
+        /// plus operator of 2 Variables
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <returns></returns>
         public static Function operator +(Variable v1, Variable v2)
         {
             return CNTKLib.Plus(v1, v2);
         }
 
+        /// <summary>
+        /// times operator of 2 Variables
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <returns></returns>
         public static Function operator *(Variable v1, Variable v2)
         {
             return CNTKLib.Times(v1, v2);
         }
 
-        public static Variable InputVariable(NDShape shape, DataType dataType, string name)
+        /// <summary>
+        /// Create an 'Input' Variable denoting sparse data and specify if gradients are to be computed for this input
+        /// </summary>
+        /// <param name="shape"></param>
+        /// <param name="isSparse"></param>
+        /// <param name="dataType"></param>
+        /// <param name="needsGradient"></param>
+        /// <param name="name"></param>
+        /// <param name="dynamicAxes"></param>
+        /// <returns></returns>
+        public static Variable InputVariable(NDShape shape, DataType dataType, string name = "", IList<Axis> dynamicAxes = null, bool isSparse = false, bool needsGradient = false)
         {
-            return CNTKLib.InputVariable(shape, dataType, name);
+            if (dynamicAxes == null)
+                dynamicAxes = Axis.DefaultInputVariableDynamicAxes();
+            AxisVector dynamicAxesVector = Helper.AsAxisVector(dynamicAxes);
+            return CNTKLib.InputVariable(shape, isSparse, dataType, needsGradient, name, dynamicAxesVector);
+        }
+
+        /// <summary>
+        /// Create a Placeholder variable to be used as a temporary/placeholder input to a Function.
+        /// All placeholder inputs of a Function must be replaced with non-placeholder Variables before Forward evaluation of the Function.
+        /// </summary>
+        /// <param name="shape"></param>
+        /// <param name="dynamicAxes"></param>
+        /// <returns></returns>
+        public static Variable PlaceholderVariable(NDShape shape, IList<Axis> dynamicAxes)
+        {
+            AxisVector dynamicAxesVector = Helper.AsAxisVector(dynamicAxes);
+            return CNTKLib.PlaceholderVariable(shape, dynamicAxesVector);
         }
     }
 }

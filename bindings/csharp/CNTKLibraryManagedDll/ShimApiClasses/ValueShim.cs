@@ -4,72 +4,103 @@
 //
 // ValueShim.cs -- C# Api for CNTK Value class
 //
+using System;
+using System.Collections.Generic;
+
 namespace CNTK
 {
     public partial class Value
     {
-        // Property Device
+        /// <summary>
+        /// Property Device
+        /// </summary>
         public DeviceDescriptor Device
         {
             get { return _Device(); }
         }
 
-        // Property DataType
+        /// <summary>
+        /// Property DataType
+        /// </summary>
         public DataType DataType
         {
             get { return _GetDataType(); }
         }
 
-        // Property StorageFormat
+        /// <summary>
+        /// Property StorageFormat
+        /// </summary>
         public StorageFormat StorgeFormat
         {
             get { return _GetStorageFormat(); }
         }
 
-        // Property Shape
+        /// <summary>
+        /// Property Shape
+        /// </summary>
         public NDShape Shape
         {
             get { return _Shape(); }
         }
 
-        // Property IsValid
+        /// <summary>
+        /// Property IsValid
+        /// </summary>
         public bool IsValid
         {
             get { return _IsValid(); }
         }
 
-        // Property IsSparse
+        /// <summary>
+        /// Property IsSparse
+        /// </summary>
         public bool IsSparse
         {
             get { return _IsSparse(); }
         }
 
-        // Property IsReadOnly
+        /// <summary>
+        /// Property IsReadOnly
+        /// </summary>
         public bool IsReadOnly
         {
             get { return _IsReadOnly(); }
         }
 
-        // Property MaskedCount
+        /// <summary>
+        /// Property MaskedCount
+        /// </summary>
         public int MaskedCount
         {
             get { return (int)_MaskedCount(); }
         }
 
-        // Property Data
+        /// <summary>
+        /// Property Data
+        /// </summary>
         public NDArrayView Data
         {
             get { return _Data(); }
         }
 
-        // Property Mask
+        /// <summary>
+        /// Property Mask
+        /// </summary>
         public NDMask Mask
         {
             get { return _Mask(); }
         }
 
-        // Create Value object from dense input as batch data.
-        public static Value CreateBatch<T>(NDShape sampleShape, System.Collections.Generic.IEnumerable<T> batch, DeviceDescriptor device, bool readOnly = false)
+        /// <summary>
+        /// Create Value object from dense input as batch data.
+        /// </summary>
+        /// <typeparam name="T">float or double</typeparam>
+        /// <param name="sampleShape">shape of the Value</param>
+        /// <param name="batch">batch of data</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">readonly value</param>
+        /// <returns>the value</returns>
+        public static Value CreateBatch<T>(NDShape sampleShape, IEnumerable<T> batch, DeviceDescriptor device, bool readOnly = false)
         {
             if (typeof(T).Equals(typeof(float)))
             {
@@ -83,22 +114,39 @@ namespace CNTK
             }
             else
             {
-                throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+                throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
             }
         }
 
-        // Create Value object from dense input as sequence data.
+        /// <summary>
+        /// Create Value object from dense input as sequence data.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="sampleShape">the shape fo the value</param>
+        /// <param name="sequence">daat sequence</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it is a readonly value</param>
+        /// <returns></returns>
         public static Value CreateSequence<T>(NDShape sampleShape,
-                                              System.Collections.Generic.IEnumerable<T> sequence,
+                                              IEnumerable<T> sequence,
                                               DeviceDescriptor device,
                                               bool readOnly = false)
         {
             return CreateSequence<T>(sampleShape, sequence, true, device, readOnly);
         }
 
-        // Create Value object from dense input as sequence data with sequenceStartFlag.
+        /// <summary>
+        /// Create Value object from dense input as sequence data with sequenceStartFlag.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="sampleShape">data shape</param>
+        /// <param name="sequence">data sequence</param>
+        /// <param name="sequenceStartFlag">true indicates that it is a new sequence. false means a continuation of a previous sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value CreateSequence<T>(NDShape sampleShape,
-                                              System.Collections.Generic.IEnumerable<T> sequence,
+                                              IEnumerable<T> sequence,
                                               bool sequenceStartFlag,
                                               DeviceDescriptor device,
                                               bool readOnly = false)
@@ -115,33 +163,65 @@ namespace CNTK
             }
             else
             {
-                throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+                throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
             }
         }
 
-        // Create Value object from dense input as batch of sequences data.
+        /// <summary>
+        /// Create Value object from dense input as batch of sequences data.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="sampleShape">data shape</param>
+        /// <param name="batchOfSequences">the data to be stored in the Value.
+        /// The outer vector represents a collection of sequences with variable length, 
+        /// and the inner vector represents each individual sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value CreateBatchOfSequences<T>(NDShape sampleShape,
-                                                      System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> batchOfSequences,
+                                                      IEnumerable<IEnumerable<T>> batchOfSequences,
                                                       DeviceDescriptor device,
                                                       bool readOnly = false)
         {
-            return Create(sampleShape, batchOfSequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+            return Create(sampleShape, batchOfSequences, new List<bool>(0), device, readOnly);
         }
 
-        // Create Value object from dense input as batch of sequences data with sequenceStartFlags.
+        /// <summary>
+        /// Create Value object from dense input as batch of sequences data with sequenceStartFlags.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="sampleShape">data shape</param>
+        /// <param name="batchOfSequences">the data to be stored in the Value.
+        /// The outer vector represents a collection of sequences with variable length, 
+        /// and the inner vector represents each individual sequence.</param>
+        /// <param name="sequenceStartFlag">true indicates that it is a new sequence.
+        /// false means a continuation of a previous sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value CreateBatchOfSequences<T>(NDShape sampleShape,
-                                                      System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> batchOfSequences,
-                                                      System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
+                                                      IEnumerable<IEnumerable<T>> batchOfSequences,
+                                                      IEnumerable<bool> sequenceStartFlags,
                                                       DeviceDescriptor device,
                                                       bool readOnly = false)
         {
             return Create(sampleShape, batchOfSequences, sequenceStartFlags, device, readOnly);
         }
 
-        // Create Value object from dense input as batch of sequences data with sequenceStartFlags.
+        /// <summary>
+        /// Create Value object from dense input as batch of sequences data with sequenceStartFlags.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="sampleShape">data shape</param>
+        /// <param name="sequences">data sequence</param>
+        /// <param name="sequenceStartFlag">true indicates that it is a new sequence.
+        /// false means a continuation of a previous sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value Create<T>(NDShape sampleShape,
-                                      System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> sequences,
-                                      System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
+                                      IEnumerable<IEnumerable<T>> sequences,
+                                      IEnumerable<bool> sequenceStartFlags,
                                       DeviceDescriptor device,
                                       bool readOnly = false)
         {
@@ -169,14 +249,24 @@ namespace CNTK
             }
             else
             {
-                throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+                throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
             }
         }
 
-        // Create Value object from OneHotVector input, for N-dimenstional tensor. Only Create() method for now.
+        /// <summary>
+        /// Create Value object from OneHotVector input, for N-dimenstional tensor. Only Create() method for now.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="sampleShape">data shape</param>
+        /// <param name="sequences">data sequence</param>
+        /// <param name="sequenceStartFlag">true indicates that it is a new sequence.
+        /// false means a continuation of a previous sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value Create<T>(NDShape sampleShape,
-                                      System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<int>> sequences,
-                                      System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
+                                      IEnumerable<IEnumerable<int>> sequences,
+                                      IEnumerable<bool> sequenceStartFlags,
                                       DeviceDescriptor device,
                                       bool readOnly = false)
         {
@@ -197,12 +287,20 @@ namespace CNTK
             }
             else
             {
-                throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+                throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
             }
         }
 
-        // Create Value object from OneHotVector input as batch data, for 1D tensor only.
-        public static Value CreateBatch<T>(int dimension, System.Collections.Generic.IEnumerable<int> batch, DeviceDescriptor device, bool readOnly = false)
+        /// <summary>
+        /// Create Value object from OneHotVector input as batch data, for 1D tensor only.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="dimension">data dimension</param>
+        /// <param name="batch">data batches</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
+        public static Value CreateBatch<T>(int dimension, IEnumerable<int> batch, DeviceDescriptor device, bool readOnly = false)
         {
             var inputVector = Helper.AsSizeTVector(batch);
             if (typeof(T).Equals(typeof(float)))
@@ -215,22 +313,40 @@ namespace CNTK
             }
             else
             {
-                throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+                throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
             }
         }
 
-        // Create Value object from OneHotVector input as sequence data, for 1D tensor only.
+        /// <summary>
+        /// Create Value object from OneHotVector input as sequence data, for 1D tensor only.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="dimension">data dimension</param>
+        /// <param name="sequence">data sequence</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value CreateSequence<T>(int dimension,
-                                              System.Collections.Generic.IEnumerable<int> sequence,
+                                              IEnumerable<int> sequence,
                                               DeviceDescriptor device,
                                               bool readOnly = false)
         {
             return CreateSequence<T>(dimension, sequence, true, device, readOnly);
         }
 
-        // Create Value object from OneHotVector input as sequence data with sequenceStartFlag, for 1D tensor only.
+        /// <summary>
+        /// Create Value object from OneHotVector input as sequence data with sequenceStartFlag, for 1D tensor only.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="dimension">data dimension</param>
+        /// <param name="sequence">data sequence</param>
+        /// <param name="sequenceStartFlag">true indicates that it is a new sequence.
+        /// false means a continuation of a previous sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value CreateSequence<T>(int dimension,
-                                              System.Collections.Generic.IEnumerable<int> sequence,
+                                              IEnumerable<int> sequence,
                                               bool sequenceStartFlag,
                                               DeviceDescriptor device,
                                               bool readOnly = false)
@@ -246,33 +362,61 @@ namespace CNTK
             }
             else
             {
-                throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+                throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
             }
         }
 
-        // Create Value object from OneHotVector input as batch of sequences data, for 1D tensor only.
+        /// <summary>
+        /// Create Value object from OneHotVector input as batch of sequences data, for 1D tensor only.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="dimension">data dimension</param>
+        /// <param name="batchOfSequences">data sequence batches</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value CreateBatchOfSequences<T>(int dimension,
-                                                      System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<int>> batchOfSequences,
+                                                      IEnumerable<IEnumerable<int>> batchOfSequences,
                                                       DeviceDescriptor device,
                                                       bool readOnly = false)
         {
-            return Create<T>(dimension, batchOfSequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+            return Create<T>(dimension, batchOfSequences, new List<bool>(0), device, readOnly);
         }
 
-        // Create Value object from OneHotVector input as batch of sequences data with sequenceStratFlags, for 1D tensor only.
+        /// <summary>
+        /// Create Value object from OneHotVector input as batch of sequences data with sequenceStratFlags, for 1D tensor only.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="dimension">data dimension</param>
+        /// <param name="batchOfSequences">data sequence batches</param>
+        /// <param name="sequenceStartFlag">true indicates that it is a new sequence.
+        /// false means a continuation of a previous sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value CreateBatchOfSequences<T>(int dimension,
-                                                      System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<int>> batchOfSequences,
-                                                      System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
+                                                      IEnumerable<IEnumerable<int>> batchOfSequences,
+                                                      IEnumerable<bool> sequenceStartFlags,
                                                       DeviceDescriptor device,
                                                       bool readOnly = false)
         {
             return Create<T>(dimension, batchOfSequences, sequenceStartFlags, device, readOnly);
         }
 
-        // Create Value object from OneHotVector input as batch of sequences data with sequenceStratFlags, for 1D tensor only.
+        /// <summary>
+        /// Create Value object from OneHotVector input as batch of sequences data with sequenceStratFlags, for 1D tensor only.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="dimension">data dimension</param>
+        /// <param name="sequences">data sequences</param>
+        /// <param name="sequenceStartFlag">true indicates that it is a new sequence.
+        /// false means a continuation of a previous sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value Create<T>(int dimension,
-                                      System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<int>> sequences,
-                                      System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
+                                      IEnumerable<IEnumerable<int>> sequences,
+                                      IEnumerable<bool> sequenceStartFlags,
                                       DeviceDescriptor device,
                                       bool readOnly = false)
         {
@@ -293,11 +437,24 @@ namespace CNTK
             }
             else
             {
-                throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+                throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
             }
         }
 
-        // Create Value object from sparse input as sequence data with sequenceStartFlag, for N-dimensional tensor. Only CreateSequence() for now.
+        /// <summary>
+        /// Create Value object from sparse input as sequence data with sequenceStartFlag, for N-dimensional tensor. Only CreateSequence() for now.
+        /// </summary>
+        /// <typeparam name="T">data type of the created Value object.Currently, float and double are supported.</typeparam>
+        /// <param name="sampleShape">the tensor shape. For sparse input, the tensor shape leading dimensionality must be the same as the total size of the tensor shape.</param>
+        /// <param name="sequenceLength">the sequence length.</param>
+        /// <param name="colStarts">column start indices</param>
+        /// <param name="rowIndices">row indices</param>
+        /// <param name="nonZeroValues">sparse values</param>
+        /// <param name="sequenceStartFlag">true indicates that it is a new sequence.
+        /// false means a continuation of a previous sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value CreateSequence<T>(NDShape sampleShape, int sequenceLength,
                                               int[] colStarts, int[] rowIndices, T[] nonZeroValues,
                                               bool sequenceStartFlag,
@@ -306,11 +463,11 @@ namespace CNTK
         {
             if (nonZeroValues.Length != rowIndices.Length)
             {
-                throw new System.ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+                throw new ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
             }
             if (colStarts.Length != sequenceLength + 1)
             {
-                throw new System.ArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+                throw new ArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
             }
             uint numNonZeroValues = (uint)nonZeroValues.Length;
 
@@ -324,11 +481,22 @@ namespace CNTK
             }
             else
             {
-                throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+                throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
             }
         }
 
-        // Create Value object from sparse input as sequence data, for N-dimensional tensor. Only CreateSequence() for now.
+        /// <summary>
+        /// Create Value object from sparse input as sequence data, for N-dimensional tensor. Only CreateSequence() for now.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="sampleShape">the tensor shape. For sparse input, the tensor shape leading dimensionality must be the same as the total size of the tensor shape.</param>
+        /// <param name="sequenceLength">the sequence length.</param>
+        /// <param name="colStarts">column start indices</param>
+        /// <param name="rowIndices">row indices</param>
+        /// <param name="nonZeroValues">sparse values</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value CreateSequence<T>(NDShape sampleShape, int sequenceLength,
                                               int[] colStarts, int[] rowIndices, T[] nonZeroValues,
                                               DeviceDescriptor device,
@@ -337,7 +505,20 @@ namespace CNTK
             return Value.CreateSequence<T>(sampleShape, sequenceLength, colStarts, rowIndices, nonZeroValues, true, device, readOnly);
         }
 
-        // Create Value object from sparse input as sequence data with sequenceStartFlag, for 1D tensor. Only CreateSequence() for now.
+        /// <summary>
+        /// Create Value object from sparse input as sequence data with sequenceStartFlag, for 1D tensor. Only CreateSequence() for now.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="dimension"></param>
+        /// <param name="sequenceLength">the sequence length.</param>
+        /// <param name="colStarts">column start indices</param>
+        /// <param name="rowIndices">row indices</param>
+        /// <param name="nonZeroValues">sparse values</param>
+        /// <param name="sequenceStartFlag">true indicates that it is a new sequence.
+        /// false means a continuation of a previous sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value CreateSequence<T>(int dimension, int sequenceLength,
                                               int[] colStarts, int[] rowIndices, T[] nonZeroValues,
                                               bool sequenceStartFlag,
@@ -346,11 +527,11 @@ namespace CNTK
         {
             if (nonZeroValues.Length != rowIndices.Length)
             {
-                throw new System.ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+                throw new ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
             }
             if (colStarts.Length != sequenceLength + 1)
             {
-                throw new System.ArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+                throw new ArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
             }
             uint numNonZeroValues = (uint)nonZeroValues.Length;
 
@@ -364,11 +545,22 @@ namespace CNTK
             }
             else
             {
-                throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+                throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
             }
         }
 
-        // Create Value object from sparse input as sequence data, for 1D tensor. Only CreateSequence() for now.
+        /// <summary>
+        /// Create Value object from sparse input as sequence data, for 1D tensor. Only CreateSequence() for now.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="dimension">data dimension</param>
+        /// <param name="sequenceLength">the sequence length.</param>
+        /// <param name="colStarts">column start indices</param>
+        /// <param name="rowIndices">row indices</param>
+        /// <param name="nonZeroValues">sparse values</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value CreateSequence<T>(int dimension, int sequenceLength,
                                               int[] colStarts, int[] rowIndices, T[] nonZeroValues,
                                               DeviceDescriptor device,
@@ -377,29 +569,55 @@ namespace CNTK
             return Value.CreateSequence<T>(dimension, sequenceLength, colStarts, rowIndices, nonZeroValues, true, device, readOnly);
         }
 
-        // Create Value object from NDArrayViews.
+        /// <summary>
+        /// Create Value object from NDArrayViews.
+        /// </summary>
+        /// <param name="sampleShape">data shape</param>
+        /// <param name="sequences">data sequence</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value Create(NDShape sampleShape,
-                                   System.Collections.Generic.IEnumerable<NDArrayView> sequences,
+                                   IEnumerable<NDArrayView> sequences,
                                    DeviceDescriptor device,
                                    bool readOnly = false)
         {
-            return Create(sampleShape, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+            return Create(sampleShape, sequences, new List<bool>(0), device, readOnly);
         }
 
-        // Create Value object from NDArrayViews with sequenceStartFlags
+        /// <summary>
+        /// Create Value object from NDArrayViews with sequenceStartFlags
+        /// </summary>
+        /// <param name="sampleShape">data shape</param>
+        /// <param name="sequences">data sequences</param>
+        /// <param name="sequenceStartFlag">true indicates that it is a new sequence.
+        /// false means a continuation of a previous sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <returns></returns>
         public static Value Create(NDShape sampleShape,
-                                   System.Collections.Generic.IEnumerable<NDArrayView> sequences,
-                                   System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
+                                   IEnumerable<NDArrayView> sequences,
+                                   IEnumerable<bool> sequenceStartFlags,
                                    DeviceDescriptor device,
                                    bool readOnly = false)
         {
             return Create(sampleShape, sequences, sequenceStartFlags, device, readOnly, /*createNewCopy = */ false);
         }
 
-        // Create Value object from NDArrayViews with sequenceStartFlags
+        /// <summary>
+        /// Create Value object from NDArrayViews with sequenceStartFlags
+        /// </summary>
+        /// <param name="sampleShape">data shape</param>
+        /// <param name="sequences">data sequence</param>
+        /// <param name="sequenceStartFlag">true indicates that it is a new sequence.
+        /// false means a continuation of a previous sequence.</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether it a readonly value</param>
+        /// <param name="createNewCopy"></param>
+        /// <returns></returns>
         public static Value Create(NDShape sampleShape,
-                                   System.Collections.Generic.IEnumerable<NDArrayView> sequences,
-                                   System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
+                                   IEnumerable<NDArrayView> sequences,
+                                   IEnumerable<bool> sequenceStartFlags,
                                    DeviceDescriptor device,
                                    bool readOnly,
                                    bool createNewCopy)
@@ -413,22 +631,25 @@ namespace CNTK
             return _Create(sampleShape, seqVector, startFlags, device, readOnly, createNewCopy);
         }
 
-        //
-        // Return the data of the Value object as a list of sequences with variable length.
-        // This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.
-        // Each sequence, represented by IList<T>, contains a variable number of samples.
-        // Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.
-        // The number of samples = (the count of elements in IList<T>)/(the count of elements of the sample)
-        // The shape of the variable should match the shape of the Value object.
-        //
-        public System.Collections.Generic.IList<System.Collections.Generic.IList<T>> GetDenseData<T>(Variable outputVariable)
+        /// <summary>
+        /// Return the data of the Value object as a list of sequences with variable length.
+        /// This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.
+        /// Each sequence, represented by IList<T>, contains a variable number of samples.
+        /// Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.
+        /// The number of samples = (the count of elements in IList<T>)/(the count of elements of the sample)
+        /// The shape of the variable should match the shape of the Value object.
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="outputVariable">the source variable</param>
+        /// <returns></returns>
+        public IList<IList<T>> GetDenseData<T>(Variable outputVariable)
         {
-            var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<T>>();
+            var sequences = new List<IList<T>>();
             if (typeof(T).Equals(typeof(float)))
             {
                 if (_GetDataType() != DataType.Float)
                 {
-                    throw new System.ArgumentException("The value type does not match the list type.");
+                    throw new ArgumentException("The value type does not match the list type.");
                 }
 
                 var seqVec = new FloatVectorVector();
@@ -436,53 +657,55 @@ namespace CNTK
 
                 foreach (var seq in seqVec)
                 {
-                    var seqList = seq as System.Collections.Generic.IList<T>;
+                    var seqList = seq as IList<T>;
                     if (seqList == null)
-                        throw new System.TypeAccessException("Cannot convert to the value type.");
+                        throw new TypeAccessException("Cannot convert to the value type.");
                     // It is required to create a new List from seq, since seq is dependent on the life cycle of seqVec.
-                    sequences.Add(new System.Collections.Generic.List<T>(seqList));
+                    sequences.Add(new List<T>(seqList));
                 }
             }
             else if (typeof(T).Equals(typeof(double)))
             {
                 if (_GetDataType() != DataType.Double)
                 {
-                    throw new System.ArgumentException("The value type does not match the list type.");
+                    throw new ArgumentException("The value type does not match the list type.");
                 }
 
                 var seqVec = new DoubleVectorVector();
                 _CopyVariableValueToDouble(outputVariable, seqVec);
                 foreach (var seq in seqVec)
                 {
-                    var seqList = seq as System.Collections.Generic.IList<T>;
+                    var seqList = seq as IList<T>;
                     if (seqList == null)
-                        throw new System.TypeAccessException("Cannot convert to the value type.");
+                        throw new TypeAccessException("Cannot convert to the value type.");
                     // It is required to create a new List from seq, since seq is dependent on the life cycle of seqVec.
-                    sequences.Add(new System.Collections.Generic.List<T>(seqList));
+                    sequences.Add(new List<T>(seqList));
                 }
             }
             else
             {
-                throw new System.ArgumentException("The value type does not match the list type.");
+                throw new ArgumentException("The value type does not match the list type.");
             }
             return sequences;
         }
 
-        //
-        // Return the data of the Value object as a list of sequences with variable length.
-        // This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.
-        // Each sequence, represented by List<int>, contains a variable number of samples.
-        // Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable.
-        // The number of samples = the count of elements in List<int>.
-        //
-        public System.Collections.Generic.IList<System.Collections.Generic.IList<int>> GetOneHotData(Variable outputVariable)
+        /// <summary>
+        /// Return the data of the Value object as a list of sequences with variable length.
+        /// This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.
+        /// Each sequence, represented by List<int>, contains a variable number of samples.
+        /// Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable.
+        /// The number of samples = the count of elements in List<int>.
+        /// </summary>
+        /// <param name="outputVariable">the source variable</param>
+        /// <returns></returns>
+        public IList<IList<int>> GetOneHotData(Variable outputVariable)
         {
-            var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<int>>();
+            var sequences = new List<IList<int>>();
             var seqVec = new SizeTVectorVector();
             _CopyVariableValueTo(outputVariable, seqVec);
             foreach (var seq in seqVec)
             {
-                var seqList = new System.Collections.Generic.List<int>(seq.Count);
+                var seqList = new List<int>(seq.Count);
                 foreach (var element in seq)
                 {
                     seqList.Add((int)element);
@@ -492,25 +715,28 @@ namespace CNTK
             return sequences;
         }
 
-        //
-        // Copy the data of the Value object into the buffer provided by 'sequences'.
-        // The 'sequences' is a list of sequences with variable length. 
-        // The number of items contained in the outer list of 'sequences' is the number of sequences in the Value object.
-        // Each element of the outer list represents a sequence.
-        // Each sequence, represented by List<T>, contains a variable number of samples. 
-        // Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.
-        // The number of samples = the count of elements in List<T> / the count of elements of the sample
-        // The shape of the variable should match the shape of the Value object.
-        //
-        [System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetDenseData() instead.")]
-        public void CopyVariableValueTo<T>(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences)
+        /// <summary>
+        /// Copy the data of the Value object into the buffer provided by 'sequences'.
+        /// The 'sequences' is a list of sequences with variable length. 
+        /// The number of items contained in the outer list of 'sequences' is the number of sequences in the Value object.
+        /// Each element of the outer list represents a sequence.
+        /// Each sequence, represented by List<T>, contains a variable number of samples. 
+        /// Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.
+        /// The number of samples = the count of elements in List<T> / the count of elements of the sample
+        /// The shape of the variable should match the shape of the Value object.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="outputVariable"></param>
+        /// <param name="sequences"></param>
+        [Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetDenseData() instead.")]
+        public void CopyVariableValueTo<T>(Variable outputVariable, List<List<T>> sequences)
         {
             sequences.Clear();
             if (typeof(T).Equals(typeof(float)))
             {
                 if (_GetDataType() != DataType.Float)
                 {
-                    throw new System.ArgumentException("The value type does not match the list type.");
+                    throw new ArgumentException("The value type does not match the list type.");
                 }
 
                 var seqVec = new FloatVectorVector();
@@ -518,32 +744,32 @@ namespace CNTK
 
                 foreach (var seq in seqVec)
                 {
-                    var seqList = seq as System.Collections.Generic.IList<T>;
+                    var seqList = seq as IList<T>;
                     if (seqList == null)
-                        throw new System.TypeAccessException("Cannot convert to the value type.");
-                    sequences.Add(new System.Collections.Generic.List<T>(seqList));
+                        throw new TypeAccessException("Cannot convert to the value type.");
+                    sequences.Add(new List<T>(seqList));
                 }
             }
             else if (typeof(T).Equals(typeof(double)))
             {
                 if (_GetDataType() != DataType.Double)
                 {
-                    throw new System.ArgumentException("The value type does not match the list type.");
+                    throw new ArgumentException("The value type does not match the list type.");
                 }
 
                 var seqVec = new DoubleVectorVector();
                 _CopyVariableValueToDouble(outputVariable, seqVec);
                 foreach (var seq in seqVec)
                 {
-                    var seqList = seq as System.Collections.Generic.IList<T>;
+                    var seqList = seq as IList<T>;
                     if (seqList == null)
-                        throw new System.TypeAccessException("Cannot convert to the value type.");
-                    sequences.Add(new System.Collections.Generic.List<T>(seqList));
+                        throw new TypeAccessException("Cannot convert to the value type.");
+                    sequences.Add(new List<T>(seqList));
                 }
             }
             else
             {
-                throw new System.ArgumentException("The value type does not match the list type.");
+                throw new ArgumentException("The value type does not match the list type.");
             }
         }
 
@@ -556,8 +782,8 @@ namespace CNTK
         // Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable. 
         // The number of samples = the count of elements in List<int>.
         //
-        [System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetOneHotData() instead.")]
-        public void CopyVariableValueTo(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences)
+        [Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetOneHotData() instead.")]
+        public void CopyVariableValueTo(Variable outputVariable, List<List<int>> sequences)
         {
             var seqVec = new SizeTVectorVector();
             _CopyVariableValueTo(outputVariable, seqVec);
@@ -565,7 +791,7 @@ namespace CNTK
             sequences.Clear();
             foreach (var seq in seqVec)
             {
-                var seqList = new System.Collections.Generic.List<int>(seq.Count);
+                var seqList = new List<int>(seq.Count);
                 foreach (var element in seq)
                 {
                     seqList.Add((int)element);
@@ -575,11 +801,26 @@ namespace CNTK
             return;
         }
 
+        /// <summary>
+        /// Copy the data stored in 'this' Value object to the buffers representing a sequence in CSC sparse format.
+        /// The sequence buffer will be resized if necessary.
+        /// The Value should have the same tensor shape as outputVariable.
+        /// On return, the sequenceLength is set to the length of the sequence stored in 'this' Value,
+        /// and the colStarts, rowIndices and nonZeroValues contain the data of column indexes, row indexes and non-zero values,
+        /// and the numNonZeroValues is set to number of non-zero values contained in 'this' Value.
+        /// </summary>
+        /// <typeparam name="T">dat type</typeparam>
+        /// <param name="outputVariable">source variable</param>
+        /// <param name="sequenceLength">legnth of the sequence</param>
+        /// <param name="colStarts">column start indices</param>
+        /// <param name="rowIndices">row indices</param>
+        /// <param name="nonZeroValues">sparse values</param>
+        /// <param name="numNonZeroValues">number of sparse values</param>
         public void GetSparseData<T>(Variable outputVariable,
                                         out int sequenceLength,
-                                        out System.Collections.Generic.IList<int> colStarts,
-                                        out System.Collections.Generic.IList<int> rowIndices,
-                                        out System.Collections.Generic.IList<T> nonZeroValues,
+                                        out IList<int> colStarts,
+                                        out IList<int> rowIndices,
+                                        out IList<T> nonZeroValues,
                                         out int numNonZeroValues)
         {
             var colStartVec = new IntVector();
@@ -592,29 +833,29 @@ namespace CNTK
             {
                 if (_GetDataType() != DataType.Float)
                 {
-                    throw new System.ArgumentException("The value type does not match the list type.");
+                    throw new ArgumentException("The value type does not match the list type.");
                 }
 
                 var nonZeroValuesVec = new FloatVector();
                 _CopyVariableValueToFloat(outputVariable, n1, colStartVec,
                     rowIndicesVec, nonZeroValuesVec, n2);
-                nonZeroValues = nonZeroValuesVec as System.Collections.Generic.IList<T>;
+                nonZeroValues = nonZeroValuesVec as IList<T>;
             }
             else if (typeof(T).Equals(typeof(double)))
             {
                 if (_GetDataType() != DataType.Double)
                 {
-                    throw new System.ArgumentException("The value type does not match the list type.");
+                    throw new ArgumentException("The value type does not match the list type.");
                 }
 
                 var nonZeroValuesVec = new DoubleVector();
                 _CopyVariableValueToDouble(outputVariable, n1, colStartVec,
                     rowIndicesVec, nonZeroValuesVec, n2);
-                nonZeroValues = nonZeroValuesVec as System.Collections.Generic.IList<T>;
+                nonZeroValues = nonZeroValuesVec as IList<T>;
             }
             else
             {
-                throw new System.ArgumentException("The value type does not match the list type.");
+                throw new ArgumentException("The value type does not match the list type.");
             }
 
             sequenceLength = n1[0];
@@ -623,8 +864,11 @@ namespace CNTK
             rowIndices = rowIndicesVec;
         }
 
-
-        // Creates a new Value which is an alias of this Value.
+        /// <summary>
+        /// Creates a new Value which is an alias of this Value.
+        /// </summary>
+        /// <param name="readOnly"></param>
+        /// <returns></returns>
         public Value Alias(bool readOnly = false)
         {
             return _Alias(readOnly);

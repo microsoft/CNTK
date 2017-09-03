@@ -60,10 +60,27 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\..\..\Examples\Evaluation\ImageExtension\CNTKImageProcessing.cs">
+      <Link>CNTKImageProcessing.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\CifarResNetClassifier.cs">
+      <Link>CifarResNetClassifier.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\LSTMSequenceClassifier.cs">
+      <Link>LSTMSequenceClassifier.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\MNISTClassifier.cs">
+      <Link>MNISTClassifier.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\TestHelper.cs">
+      <Link>TestHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\TransferLearning.cs">
+      <Link>TransferLearning.cs</Link>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleFeedForwardClassifierTest.cs" />
-    <Compile Include="TestHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

@@ -4,44 +4,64 @@
 //
 // NDShapeShim.cs -- C# Api for CNTK NDShape class
 //
+using System;
+using System.Collections.Generic;
+
 namespace CNTK
 {
     public partial class NDShape
     {
+        /// <summary>
+        /// create a shape
+        /// </summary>
+        /// <param name="numAxes">number of axes</param>
+        /// <param name="dimension">number of dimensions</param>
         public NDShape(int numAxes, int dimension) : this((uint)numAxes, (uint)dimension)
         {
             if (numAxes < 0 || dimension < 0)
             {
-                throw new System.ArgumentException("The paraemter numAxes or dimension should not be a negative value");
+                throw new ArgumentException("The parameter numAxes or dimension should not be a negative value");
             }
         }
 
+        /// <summary>
+        /// construct a shape
+        /// </summary>
+        /// <param name="numAxes">number of axes</param>
         public NDShape(int numAxes) : this((uint)numAxes)
         {
             if (numAxes < 0)
             {
-                throw new System.ArgumentException("The paraemter numAxes should not be a negative value");
+                throw new ArgumentException("The parameter numAxes should not be a negative value");
             }
         }
 
+        /// <summary>
+        /// implicitly convert a int array to a shape
+        /// </summary>
+        /// <param name="dim"></param>
         public static implicit operator NDShape(int[] dim)
         {
             return NDShape.CreateNDShape(dim);
         }
 
-        // Property Rank.
+        /// <summary>
+        /// Property Rank.
+        /// </summary>
         public int Rank
         {
             get { return (int)_Rank(); }
         }
 
-        // Property Dimensions.
-        public System.Collections.Generic.IList<int> Dimensions
+        /// <summary>
+        /// Property Dimensions.
+        /// </summary>
+        public IList<int> Dimensions
         {
             get
             {
                 var dimList = _Dimensions();
-                var retList = new System.Collections.Generic.List<int>(dimList.Count);
+                var retList = new List<int>(dimList.Count);
                 foreach (var element in dimList)
                 {
                     retList.Add((int)element);
@@ -50,79 +70,110 @@ namespace CNTK
             }
         }
 
-        // Property IsUnknown.
+        /// <summary>
+        /// Property IsUnknown.
+        /// </summary>
         public bool IsUnknown
         {
             get { return _IsUnknown(); }
         }
 
-        // Property HasInferredDimension.
+        /// <summary>
+        /// Property HasInferredDimension.
+        /// </summary>
         public bool HasInferredDimension
         {
             get { return _HasInferredDimension(); }
         }
 
-        // Property HasFreeDimension.
+        /// <summary>
+        /// Property HasFreeDimension.
+        /// </summary>
         public bool HasFreeDimension
         {
             get { return _HasFreeDimension(); }
         }
 
-        // Property HasUnboundDimension.
+        /// <summary>
+        /// Property HasUnboundDimension.
+        /// </summary>
         public bool HasUnboundDimension
         {
             get { return _HasUnboundDimension(); }
         }
 
-        // Property TotalSize.
+        /// <summary>
+        /// Property TotalSize.
+        /// </summary>
         public int TotalSize
         {
             get { return (int)_TotalSize(); }
         }
 
-        // Indexer operator
+        /// <summary>
+        /// Indexer operator
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public int this[int key]
         {
             get { return (int)_DimensionSize((uint)key); }
         }
 
-        // Returns a subshape.
+        /// <summary>
+        /// Returns a subshape.
+        /// </summary>
+        /// <param name="beginAxisId"></param>
+        /// <param name="endAxisId"></param>
+        /// <returns></returns>
         public NDShape SubShape(int beginAxisId, int endAxisId)
         {
             if (beginAxisId < 0 || endAxisId < 0)
             {
-                throw new System.ArgumentException("The paraemter beginAxisId or endAxisId should not be a negative value");
+                throw new ArgumentException("The parameter beginAxisId or endAxisId should not be a negative value");
             }
             return _SubShape((uint)beginAxisId, (uint)endAxisId);
         }
 
-        // Returns a subshape.
+        /// <summary>
+        /// Returns a subshape.
+        /// </summary>
+        /// <param name="beginAxisId"></param>
+        /// <returns></returns>
         public NDShape SubShape(int beginAxisId = 0)
         {
             if (beginAxisId < 0)
             {
-                throw new System.ArgumentException("The paraemter beginAxisId should not be a negative value");
+                throw new ArgumentException("The parameter beginAxisId should not be a negative value");
             }
             return _SubShape((uint)beginAxisId);
         }
 
-        // Creates a new NDShape.
-        public static NDShape CreateNDShape(System.Collections.Generic.IEnumerable<int> dimensions)
+        /// <summary>
+        /// Creates a new NDShape.
+        /// </summary>
+        /// <param name="dimensions"></param>
+        /// <returns></returns>
+        public static NDShape CreateNDShape(IEnumerable<int> dimensions)
         {
             var dimVector = new SizeTVector();
             foreach (var element in dimensions)
             {
                 if (element < 0 && !IsSpecialDimensionValues(element))
                 {
-                    throw new System.ArgumentException("The paraemter diemnsions cannot contain a negative value");
+                    throw new ArgumentException("The parameter diemnsions cannot contain a negative value");
                 }
                 CSharp_SizeTVector_AddExt(dimVector, DimConvertCSToCPP(element));
             }
             return new NDShape(dimVector);
         }
 
-        // Value equality.
-        public override bool Equals(System.Object obj)
+        /// <summary>
+        /// Value equality.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public override bool Equals(Object obj)
         {
             // If parameter is null return false.
             if (obj == null)
@@ -132,7 +183,7 @@ namespace CNTK
 
             // If parameter cannot be cast to Point return false.
             NDShape p = obj as NDShape;
-            if ((System.Object)p == null)
+            if ((Object)p == null)
             {
                 return false;
             }
@@ -141,7 +192,11 @@ namespace CNTK
             return CNTKLib.AreEqual(this, p);
         }
 
-        // Value Equality.
+        /// <summary>
+        /// Value Equality.
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
         public bool Equals(NDShape p)
         {
             // If parameter is null return false:
@@ -154,26 +209,40 @@ namespace CNTK
             return CNTKLib.AreEqual(this, p);
         }
 
-        // Returns hash code value.
+        /// <summary>
+        /// Returns hash code value.
+        /// </summary>
+        /// <returns></returns>
         public override int GetHashCode()
         {
             //Todo: another hash function??
             return this._Dimensions().GetHashCode();
         }
 
-        // Constants
+        // special constants used to represent the nature of a dimension
         private const ulong InferredDimensionUL = ulong.MaxValue;
         private const ulong FreeDimensionUL = ulong.MaxValue - 2;
 
         public static readonly int InferredDimension = -1;
         public static readonly int FreeDimension = -3;
 
+        /// <summary>
+        /// convert a dimension from ulong to a int. 
+        /// CNTK Cpp code use 64bit for dimension. C# use 32bit for dimension. 
+        /// </summary>
+        /// <param name="dimUL"></param>
+        /// <returns></returns>
         internal static int DimConvertCPPToCS(ulong dimUL)
         {
             // down casting keeps the special dimmension values.
             return (int)(uint)dimUL;
         }
 
+        /// <summary>
+        /// when converting dimensions form C# to Cpp, we need to 
+        /// </summary>
+        /// <param name="dim"></param>
+        /// <returns></returns>
         internal static ulong DimConvertCSToCPP(int dim)
         {
             // need to maintain dimension values during upcast 

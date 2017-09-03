@@ -3356,6 +3356,9 @@ namespace CNTK
         CNTK_API FunctionPtr ReplacePlaceholder(const Variable& placeholderReplacement);
 
         ///
+        CNTK_API void Save(std::vector<char> &vectorBuf);
+
+        ///
         /// Save this Function graph into a model file.
         ///
         CNTK_API void Save(const std::wstring& filepath);

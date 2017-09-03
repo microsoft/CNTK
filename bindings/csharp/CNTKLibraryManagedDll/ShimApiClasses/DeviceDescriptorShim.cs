@@ -4,6 +4,9 @@
 //
 // DeviceDescriptorShim.cs -- C# Api for CNTK DeviceDescriptor class
 //
+using System;
+using System.Collections.Generic;
+
 namespace CNTK
 {
     public partial class DeviceDescriptor
@@ -41,7 +44,7 @@ namespace CNTK
         {
             if (deviceId < 0)
             {
-                throw new System.ArgumentException("The paraemter deviceId should not be a negative value");
+                throw new ArgumentException("The parameter deviceId should not be a negative value");
             }
             return _GPUDevice((uint)deviceId);
         }
@@ -50,13 +53,13 @@ namespace CNTK
         /// Gets all devices.
         /// </summary>
         /// <returns></returns>
-        public static System.Collections.Generic.IList<DeviceDescriptor> AllDevices()
+        public static IList<DeviceDescriptor> AllDevices()
         {
             var deviceVector = _AllDevices();
             // The CopyTo is to ensure the elements in the deviceVector can live beyond deviceVector itself.
             var deviceArray = new DeviceDescriptor[deviceVector.Count];
             deviceVector.CopyTo(deviceArray);
-            var deviceList = new System.Collections.Generic.List<DeviceDescriptor>(deviceArray);
+            var deviceList = new List<DeviceDescriptor>(deviceArray);
             return deviceList;
         }
 
@@ -65,7 +68,7 @@ namespace CNTK
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public override bool Equals(System.Object obj)
+        public override bool Equals(Object obj)
         {
             // If parameter is null return false.
             if (obj == null)
@@ -75,7 +78,7 @@ namespace CNTK
 
             // If parameter cannot be cast to Point return false.
             DeviceDescriptor p = obj as DeviceDescriptor;
-            if ((System.Object)p == null)
+            if ((Object)p == null)
             {
                 return false;
             }
@@ -114,7 +117,7 @@ namespace CNTK
         /// Set devices to be excluded.
         /// </summary>
         /// <param name="excluded"></param>
-        public static void SetExcludedDevices(System.Collections.Generic.IEnumerable<DeviceDescriptor> excluded)
+        public static void SetExcludedDevices(IEnumerable<DeviceDescriptor> excluded)
         {
             var excludeVector = new DeviceDescriptorVector();
             foreach (var element in excluded)

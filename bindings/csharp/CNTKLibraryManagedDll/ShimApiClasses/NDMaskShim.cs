@@ -4,44 +4,63 @@
 //
 // NDMaskShim.cs -- C# Api for CNTK NDMask class
 //
+using System.Collections.Generic;
+
 namespace CNTK
 {
     public partial class NDMask
     {
-        // Property MaskedCount.
+        /// <summary>
+        /// Property MaskedCount.
+        /// </summary>
         public int MaskedCount
         {
             get { return (int)_MaskedCount(); }
         }
 
-        // Property Device.
+        /// <summary>
+        /// Property Device.
+        /// </summary>
         public DeviceDescriptor Device
         {
             get { return _Device(); }
         }
 
-        // Property Shape.
+        /// <summary>
+        /// Property Shape.
+        /// </summary>
         public NDShape Shape
         {
             get { return _Shape(); }
         }
 
-        // Invidates a section of a NDShape.
-        public void InvalidateSection(System.Collections.Generic.IEnumerable<int> sectionOffset, NDShape sectionShape)
+        /// <summary>
+        /// Invidates a section of a NDShape.
+        /// </summary>
+        /// <param name="sectionOffset"></param>
+        /// <param name="sectionShape"></param>
+        public void InvalidateSection(IEnumerable<int> sectionOffset, NDShape sectionShape)
         {
             var offsetVector = Helper.AsSizeTVector(sectionOffset);
             _InvalidateSection(offsetVector, sectionShape);
         }
 
-        // Marks sequence begin.
-        public void MarkSequenceBegin(System.Collections.Generic.IEnumerable<int> offset)
+        /// <summary>
+        /// Marks sequence begin.
+        /// </summary>
+        /// <param name="offset"></param>
+        public void MarkSequenceBegin(IEnumerable<int> offset)
         {
             var offsetVector = Helper.AsSizeTVector(offset);
             _MarkSequenceBegin(offsetVector);
         }
 
-        // Marks sequence begins in a NDShape.
-        public void MarkSequenceBegin(System.Collections.Generic.IEnumerable<int> offset, NDShape sectionShape)
+        /// <summary>
+        /// Marks sequence begins in a NDShape.
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="sectionShape"></param>
+        public void MarkSequenceBegin(IEnumerable<int> offset, NDShape sectionShape)
         {
             var offsetVector = Helper.AsSizeTVector(offset);
             _MarkSequenceBegin(offsetVector, sectionShape);
