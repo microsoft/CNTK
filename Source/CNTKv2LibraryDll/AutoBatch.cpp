@@ -314,14 +314,15 @@ namespace CNTK
             PrimitiveOpType::Splice
         }},
         // 
-        // Conditions (batching)):
-        //   WRONG
-        //   All inputs must have matching shapes, respectively (this is like an N-nary elementwise op).
-        // 
-        // Conditions (stacking):
-        //   WRONG
-        //   Must not splice along stacking dimension.
-        //   Stacking dimension must have matching shapes across items.
+        // Conditions:
+        //   Same as for elementwise ops.
+        //
+        // A batched Splice first batches all operands, and then splices the batched operands.
+        // The resulting batched Splice op is a strided one. Thus, it cannot be executed by the
+        // one-kernel Gather operation. Instead, one strided copy-kernel (opCopy) per batched input
+        // is needed. Most of the time, we only splice a few items, such as 2; for those, this is certainly fine.
+        // (If the original user-issued Splice consists of arguments of identical shapes, then all
+        // involved Splice operations could be merged into a single one, followed by a reshape.)
 
         // TransposeAxes()
         // ---------------
@@ -1444,9 +1445,9 @@ class Variable::AutoBatch
             // PERF BUGBUG: This vv is horrible.
             let& value = *LazilyIndexedValue(SeeThroughNoOps(inputs, k));
             let dataBuffer =
-                /*if*/ value.IsSparse() ?  // BUGBUG: We can do better for sparse data. (DataBuffer() is only available for dense.)
+                /*if*/ value.IsSparse() ?  // DataBuffer() is only available for dense. --PERF BUGBUG: We can find a better hash for sparse data, e.g. its data buffer.
                     (intptr_t)&value
-                /*else if*/ : value.GetDataType() == DataType::Float ?
+                /*else if*/: value.GetDataType() == DataType::Float ?
                     (intptr_t)value.DataBuffer<float>()/sizeof(float)
                 /*else*/:
                     (intptr_t)value.DataBuffer<double>()/sizeof(double);
@@ -1555,6 +1556,7 @@ class Variable::AutoBatch
         let isFree = IsViewOp(op);
         let isTimes       = opClass == OpSpecificConditionKind::MatrixProduct; // is special-cased
         let isElementWise = opClass != OpSpecificConditionKind::MatrixProduct && opClass != OpSpecificConditionKind::Convolution;
+        // "Element-wise" really means that the inputs and the output all share the same batch axis. Also e.g. for Splice. TODO: Rename?
 
         // common sub-expression elimination (CSE)
         // All common sub-expressions become available at the same time and show up in the same ops list.
@@ -1578,7 +1580,6 @@ class Variable::AutoBatch
 #else
         let doNaively =
             isFree ||
-            op == PrimitiveOpType::Splice ||
             batchSize == 1;
 #endif
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
@@ -1633,25 +1634,47 @@ class Variable::AutoBatch
             //    TODO: Verify that mapRank is never counted from the back.
             //  - For global pooling, we need to watch out. TODO!
             m_batchedInputs.resize(numArgs);
-            size_t batchAxis = 0;
-            size_t i0 = isTimes ? 1 : 0;
-            for (size_t i = i0; i < numArgs; i++)
-            {
-                let rank = f0.m_inputs[i].Shape().Rank();
-                if (rank > batchAxis)
-                    batchAxis = rank;
-            }
-            fail_if(isTimes && (numArgs != 2 || batchAxis != f0.m_inputs.back().Shape().Rank()), "batchAxis incorrect for isTimes"); // the loop above also works for the isTimes case
-            if (opClass == OpSpecificConditionKind::Splice)
-                batchAxis++; // Splice may create a new axis at the end; so just add one from the start
-            // determine the position of the resulting batch axis
             let& unbatchedOutputShape = f0.m_outputs[0].Shape();
-            let outputBatchAxis = isElementWise ? batchAxis : unbatchedOutputShape.Rank();
+            size_t i0;              // index of first batched argument (1 for matrix product; 0 otherwise)
+            size_t inputBatchAxis;  // batch axis of all batched args (second arg for matrix product; all args share one new batch axis otherwise)
+            size_t outputBatchAxis; // batch axis in output (appended for matrix product; shared with inputs otherwise)
+            if (isTimes)
+            {
+                // for matrix product, second arg is batched, and batch axes differ for arg and output. Just append one axis, respectively.
+                inputBatchAxis  = f0.m_inputs.back().Shape().Rank();
+                outputBatchAxis = unbatchedOutputShape.Rank();
+                i0 = 1; // first arg does not get batched (since that would no longer be a GEMM operation)  --PERF BUGBUG: implement batched GEMM as well!
+            }
+            else if (opClass == OpSpecificConditionKind::Splice)
+            {
+                outputBatchAxis = unbatchedOutputShape.Rank(); // when splicing into a new axis, output shape may have more axes than inputs
+                inputBatchAxis = outputBatchAxis;              // splice is like an elementwise op, in that batch axes must be the same for input and output
+                i0 = 0;                                        // all args participate in batching
+            }
+            else if (isElementWise)
+            {
+                outputBatchAxis = unbatchedOutputShape.Rank(); // for elementwise ops, output rank is max over all inputs' ranks
+#if 1           // (TODO: Remove this test; it is really redundant and should be fine.)
+                inputBatchAxis = 0;
+                for (let& input : f0.m_inputs)
+                {
+                    let rank = input.Shape().Rank();
+                    if (rank > inputBatchAxis)
+                        inputBatchAxis = rank;
+                }
+                fail_if(inputBatchAxis != outputBatchAxis, "output rank unexpectedly not max over input's ranks");
+#else
+                inputBatchAxis = outputBatchAxis;              // and the inputs get a new batch axis at the same position as well
+#endif
+                i0 = 0;                                        // all args participate in batching
+            }
+            else
+                fail_if(true, "should not get here");
 
             // create all the batched inputs by splicing along the batch axis
             // Special optimizations are taken if all elements are identical.
             bool anyBatchedInputs = false;
-            if (i0 == 1) // Times(): matrix must be identical
+            if (i0 == 1) // Times(): the first arg has already been verified to be identical as part of the batchability condition
                 m_batchedInputs[0] = SeeThroughNoOps(f0.m_inputs, 0);
             for (size_t i = i0; i < numArgs; i++)
             {
@@ -1733,13 +1756,13 @@ class Variable::AutoBatch
                         m_batchedInputs[i] = output;
                         m_batchedInputs[i].m_outputComposite = spliceOp;
                     }
-                    // if this op has a higher batchAxis than the re-batched view, we must move the axis
+                    // if this op has a higher inputBatchAxis than the re-batched view, we must move the axis
                     // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
-                    if (axis != batchAxis)
+                    if (axis != inputBatchAxis)
                     {
                         let batchedInput = m_batchedInputs[i];
                         vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
-                        outputShape.insert(outputShape.end() - 1, batchAxis - axis, 1);
+                        outputShape.insert(outputShape.end() - 1, inputBatchAxis - axis, 1);
                         // insert a Reshape() op
                         auto additionalProperties = Dictionary(); // create additional arguments
                         // Reshape() here does not need the properties at this level anymore; output shape is sufficient
@@ -1764,14 +1787,12 @@ class Variable::AutoBatch
                 {
                     // create a new PrimitiveFunction Splice()
                     vector<size_t> outputShape; // determine output shape
-                    outputShape.reserve(batchAxis + 1);
+                    outputShape.reserve(inputBatchAxis + 1);
                     outputShape = LazilyIndexedValue(spliceInputs[0])->Shape().Dimensions();
-                    outputShape.resize(batchAxis, 1);           // pad to batchAxis
+                    outputShape.resize(inputBatchAxis, 1);      // pad to inputBatchAxis
                     outputShape.push_back(spliceInputs.size()); // and add the batch axis
-                    if (outputShape == NDShape{ 512, 36, 108 })
-                        BreakPoint;
                     auto additionalProperties = Dictionary();   // create additional arguments
-                    additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis((int)batchAxis);
+                    additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis((int)inputBatchAxis);
                     let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties), f0.m_name);
                     spliceOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
@@ -2429,7 +2450,9 @@ public:
         // Note: This needs to be enabled for column-sparse gradients to work!
         // BUGBUG: (perf) We should also have a special path for Reshape(), as to avoid the memory copy.
         let opClass = g_oscTable[f->m_op]; // operation-specific auto-batching class
-        // splice operation must use scatter
+        // splice operation should use scatter
+        // BUGBUG: Really only true if the Splice originated from a batching operation.
+        //         User-specified Splice ops might have arguments that receive no gradient, e.g. constants.
         if (opClass == OpSpecificConditionKind::Splice)
             m_spliceConsumers.push_back(c);
         // matrix product

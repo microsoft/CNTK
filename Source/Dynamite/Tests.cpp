@@ -155,8 +155,8 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     vector<TensorViewTest> tests =
     {
         // splicing. Uniform splicing along last dimension will use single-kernel Gather; otherwise use multiple copy ops. Test both, also batched.
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 0); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(0)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 } } },          // messy shapes -> individual copy ops
         { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 2); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(2)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 },{ 2, 3 } } }, // messy shapes, new axis
+        { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 0); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(0)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 } } },          // messy shapes -> individual copy ops
         { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 1); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(1)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 } } },          // messy shapes
         { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 1); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(1)); },{ { 13, 42 },{ 13, 42 },{ 13, 42 } } },    // all same size -> optimized gather
         // BatchNorm. This is tricky, since it only makes sense when batching. Requires some special-casing in the test code below.
@@ -237,12 +237,10 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                 let isShared = // some tests share arguments across batch items
                     (isBatchNorm && j > 0) ||
                     (strstr(test.op.second, "Times_shared") && j == 0);
-#define if_x(x) (x)? // helpers to make ternary expressions a bit more readable
-#define else_x :
                 allArgValues[n][j] =
-                    if_x (n > 0 && isShared)
+                    /*if*/ (n > 0 && isShared) ?
                         allArgValues[0][j] // some ops require args to be shared across the batch items
-                    else_x
+                    /*else*/:
                         TestTensor(test.shapes[j], 0.3, test.op.second, j, dataType, device);
             }
         }
@@ -276,11 +274,11 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         {
             let refVal1 = test.op.first(allArgValues[n]);
             refVal =
-                if_x (n == 0)
+                /*if*/ (n == 0) ?
                     refVal1
-                else_x if_x (n&1)
+                /*else if*/: (n&1) ?
                     refVal - refVal1
-                else_x
+                /*else*/:
                     refVal + refVal1;
 #if 0
             for (let& arg : argValues)
@@ -296,9 +294,9 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             for (size_t j = 0; j < aryness; j++)
             {
                 allArgs[n][j] =
-                    if_x (n > 0 && allArgValues[n][j] == allArgValues[0][j])
+                    /*if*/ (n > 0 && allArgValues[n][j] == allArgValues[0][j]) ?
                         allArgs[0][j] // for ops that share args across batch items: share the Variables the same way
-                    else_x
+                    /*else*/:
                         Parameter(allArgValues[n][j]); // all args are Parameterse so that we can take the gradient
             }
             if (n == 0) // logging
@@ -316,11 +314,11 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             {
                 let itemRes = test.f(testArgs[n]);
                 res =
-                    if_x (n == 0)
+                    /*if*/ (n == 0) ?
                         itemRes
-                    else_x if_x (n&1)
+                    /*else if*/: (n&1) ?
                         res - itemRes
-                    else_x
+                    /*else*/:
                         res + itemRes;
             }
             return res;
