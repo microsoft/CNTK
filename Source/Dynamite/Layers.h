@@ -163,6 +163,7 @@ typedef TModel<function<Variable(const Variable&)>> UnaryModel;
 typedef TModel<function<Variable(const Variable&, const Variable&)>> BinaryModel;
 typedef TModel<function<Variable(const Variable&, const Variable&, const Variable&)>> TernaryModel;
 typedef TModel<function<Variable(const Variable&, const Variable&, const Variable&, const Variable&)>> QuaternaryModel;
+typedef TModel<function<Variable(const Variable&, const Variable&, const vector<Variable>&, const vector<Variable>&)>> QuaternaryModel11NN;
 typedef TModel<function<void(vector<Variable>&, const vector<Variable>&)>> UnarySequenceModel;
 typedef TModel<function<void(vector<Variable>&, const vector<Variable>&, const vector<Variable>&)>> BinarySequenceModel;
 typedef TModel<function<Variable(const vector<Variable>&)>> UnaryFoldingModel;
@@ -706,16 +707,33 @@ struct Sequence
         });
     }
 
-    // TODO: This is somewhat broken presently.
-    //static UnarySequenceModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
-    //{
-    //    let embed = Dynamite::Embedding(embeddingDim, device);
-    //    return UnarySequenceModel(embed.Parameters(), {},
-    //    [=](vector<Variable>& res, const vector<Variable>& x)
-    //    {
-    //        return Map(embed);
-    //    });
-    //}
+    // Softmax over a vector producing a vector
+    static void Softmax(vector<Variable>& res, const vector<Variable>& z)
+    {
+        let& shape = z[0].Shape();
+        let axis = Axis((int)shape.Rank());
+        let Z = Reshape(ReduceLogSum(Splice(z, axis), axis), shape); // -> [1]
+        // BUGBUG: ^^ barrier causes a BN to fail, and without, it does not get batched nicely
+        //         This should be a primitive.
+        res.resize(z.size());
+        for (size_t t = 0; t < z.size(); t++)
+            res[t] = Exp(z[t] - Z);
+    }
+
+    // InnerProduct over a pair of vectors (dot product over the vector dimension)
+    static Variable InnerProduct(const vector<Variable>& xs, const vector<Variable>& ys, const std::wstring& name = std::wstring())
+    {
+        let xRank = xs[0].Shape().Rank();
+        let yRank = ys[0].Shape().Rank();
+        let axis = Axis((int)max(xRank, yRank));
+        // PERF BUGBUG: malloc. Avoidable?
+        vector<Variable> temps(xs.size());
+        for (size_t t = 0; t < temps.size(); t++)
+            temps[t] = xs[t] * ys[t]; // Batched
+        let res = Reshape(ReduceSum(Splice(temps, axis), axis), temps[0].Shape(), name);
+        // TODO: This should be a primitive.
+        return res;
+    }
 };
 
 // built-in Softmax requires temp memory, so we use an explicit expression instead

@@ -17,6 +17,7 @@
 #include <vector>
 
 #define let const auto
+#define fun const auto
 
 using namespace CNTK;
 using namespace std;
@@ -114,25 +115,45 @@ TernaryModel AttentionModelBahdanau(size_t attentionDim1)
 }
 
 // reference attention model
-QuaternaryModel AttentionModelReference(size_t attentionDim1)
+fun AttentionModelReference(size_t attentionDim1)
 {
     //auto H = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
     auto projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize, device);
     let normH = LengthNormalization(device); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
-    return QuaternaryModel({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
+    //let zBarrier = Barrier(Named("zBarrier"));
+    vector<Variable> us, ws;
+    return QuaternaryModel11NN({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
         [=](const Variable& h,                              // [A] decoder hidden state
             const Variable& historyProjectedKey,            // [A] previous output, embedded
-            const Variable& tanhEncodingProjectedNormedKey, // [A x T] encoder hidden state seq, projected as key >> tanh
-            const Variable& encodingProjectedData           // [A x T] encoder hidden state seq, projected as data
-           ) -> Variable
+            const vector<Variable>& encodingProjectedKeys, // [A x T] encoder hidden state seq, projected as key >> tanh
+            const vector<Variable>& encodingProjectedData           // [A x T] encoder hidden state seq, projected as data
+           ) mutable -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler);
         // compute attention weights
         //let hProjected = Times(H, h, Named("H")); // [A x 1]. Batchable.
-        let hProjected = projectQuery(h); // [A]. Batchable.
-        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A]. Batchable.
-        let u = InnerProduct(tanh, tanhEncodingProjectedNormedKey, Axis(0), Named("u")); // [1 x T] row vector. Batchable by stacking.
+        let hProjected = projectQuery(h); // [A]. Batched.
+        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A]. Batched.
+#if 1
+        // This is not well-batched yet, I don't know why. This is the solution that should realize maximum parallelization (disregarding Gather steps).
+        for (let& k : encodingProjectedKeys)
+            us.push_back(InnerProduct(tanh, k, Axis(0), Named("u"))); // vector<[1]>. Batched.
+        // alternative: ^^ compute the inner product elementwise.
+        //              Will make a broadcast copy of tanh[t] (#copies=mb size), then operate in one go instead of one per sequence
+        // alternative: softmax denom: splice u, ReduceLogSum, slice up -> sequence
+        //              Batched (#mb size in one go): minus, exp -> w[t]
+        //              Not batched (one launch per sentence: ReduceLogSum)
+        Dynamite::Sequence::Softmax(ws, us); // softmax over a vector
+        // BUGBUG: Somehow the Exp() inside does not get batched, although they are unrolled.
+        us.clear();
+        // alternative: product with encodingProjectedData
+        //              Batched: elementwise product -> RAM copy of (encodingProjectedData * u)[t], #items=mb size
+        let res = Dynamite::Sequence::InnerProduct(encodingProjectedData, ws, Named("attContext")); // inner product over a vectors
+        ws.clear();
+#else
+        let encodingProjectedKeysTensor = Splice(encodingProjectedKeys, Axis(1), Named("encodingProjectedKeysTensor"));  // [A x T]
+        let u = InnerProduct(tanh, encodingProjectedKeysTensor, Axis(0), Named("u")); // [1 x T] row vector. Batchable by stacking.
         // alternative: ^^ compute the inner product elementwise.
         //              Will make a broadcast copy of tanh[t] (#copies=mb size), then operate in one go instead of one per sequence
         // alternative: softmax denom: splice u, ReduceLogSum, slice up -> sequence
@@ -141,22 +162,25 @@ QuaternaryModel AttentionModelReference(size_t attentionDim1)
         let w = Dynamite::Softmax(u, Axis(1), Named("w")); // [1 x T] ReduceLogSum() not parallelizable. Pad? E.g. bucket-pad?
         // alternative: product with encodingProjectedData
         //              Batched: elementwise product -> RAM copy of (encodingProjectedData * u)[t], #items=mb size
-        let res = Reshape(InnerProduct(encodingProjectedData, w, Axis(1), Named("attContext")), NDShape{ attentionDim1 }); // [A x T] x [1 x T] -> [A x 1] Batchable with bucket-padding.
+        let encodingProjectedDataTensor = Splice(encodingProjectedData, Axis(1), Named("encodingProjectedDataTensor"));  // [A x T]
+        let res = Reshape(InnerProduct(encodingProjectedDataTensor, w, Axis(1), Named("attContext")), NDShape{ attentionDim1 }); // [A x T] x [1 x T] -> [A x 1] Batchable with bucket-padding.
         // alternative: reduce over encoding length. Gather the products (another copy #items=mb size)
         //              Not batched (one launch per sentence): ReduceSum
+#endif
         Function::SetDynamicProfiler(prevProfiler);
         return res;
     });
 }
 
+// TODO: Break out initial step and recurrent step layers. Decoder will later pull them out frmo here.
 BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(Named("encBarrier"));
     //let encoderKeysProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderKeysProjection")); }); // keys projection for attention
     //let encoderDataProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderDataProjection")); }); // data projection for attention
-    let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("topHiddenProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // keys projection for attention
-    let encoderDataProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("topHiddenProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // data projection for attention
+    let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // keys projection for attention
+    let encoderDataProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("encoderDataProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // data projection for attention
     let embedTarget = Barrier(Named("embedTargetBarrier")) >> Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedTarget"))*/;     // target embeddding
     let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("initialStateProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
@@ -203,11 +227,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
         // We pack the result into a dense matrix; but only after the matrix product, to allow for it to be batched.
         encoderKeysProjection(encodingProjectedKeys, hEncs);
         encoderDataProjection(encodingProjectedData, hEncs);
-        let encodingProjectedKeysTensor = Splice(encodingProjectedKeys, Axis(1), Named("encodingProjectedKeysTensor"));  // [A x T]
-        encodingProjectedKeys.clear();
-        let encodingProjectedDataTensor = Splice(encodingProjectedData, Axis(1), Named("encodingProjectedDataTensor"));  // [A x T]
         // ^^ these are 2 x #sequences splices per MB, (40 for 20 seq in MB)
-        encodingProjectedData.clear();
         for (size_t t = 0; t < history.size(); t++)
         {
             // do recurrent step (in inference, history[t] would become res[t-1])
@@ -215,12 +235,10 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
             // ^^ fully batched, 1 launch
             let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
             let input = Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput"));
-            // ^^ batchable, from one launch per time step (e.g. 600 for 20seqx30wds case) per sequence to #sequences (e.g. 20)
-            //    -> #max time steps launches, vs. currently #target words in MB; could gain 580 in the example
             state = stepFunction(state, stepBarrier(input));
             // compute attention vector
             //attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
-            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeysTensor, encodingProjectedDataTensor);
+            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeys, encodingProjectedData);
             // ^^ two operations that are per-sequence
             Function::SetDynamicProfiler(prevProfiler);
             // stack of non-recurrent projections
@@ -237,6 +255,8 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
             let z = outputProjection(topHidden);
             res[t] = z;
         }
+        encodingProjectedKeys.clear();
+        encodingProjectedData.clear();
     });
 }
 
@@ -421,7 +441,8 @@ void Train()
         }
     } partTimer;
     //wstring modelPath = L"d:/me/tmp_dynamite_model.cmf";
-    wstring modelPath = L"d:/me/tmp_dynamite_model_wn.cmf";
+    //wstring modelPath = L"d:/me/tmp_dynamite_model_wn.cmf";
+    wstring modelPath = L"d:/me/tmp_dynamite_model_attseq.cmf";
     size_t saveEvery = 100;
     size_t startMbCount = 0;
     if (startMbCount > 0)
