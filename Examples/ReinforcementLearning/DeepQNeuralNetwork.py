@@ -270,6 +270,7 @@ class DeepQAgent(object):
 
         self._explorer = explorer
         self._minibatch_size = minibatch_size
+        print("MB size: %i"%self._minibatch_size)
         self._history = History(input_shape)
         self._memory = ReplayMemory(memory_size, input_shape[1:], 4)
         self._num_actions_taken = 0
@@ -323,7 +324,7 @@ class DeepQAgent(object):
         l_sgd = adam(self._action_value_net.parameters, lr_schedule,
                      momentum=m_schedule, variance_momentum=vm_schedule)
 
-        self._metrics_writer = TensorBoardProgressWriter(freq=1, log_dir='metrics', model=criterion) if monitor else None
+        self._metrics_writer = TensorBoardProgressWriter(freq=1, log_dir=args.logdir, model=criterion) if monitor else None
         self._learner = l_sgd
         self._trainer = Trainer(criterion, (criterion, None), l_sgd, self._metrics_writer)
 
@@ -447,6 +448,8 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--epoch', default=100, type=int, help='Number of epochs to run (epoch = 250k actions')
     parser.add_argument('-p', '--plot', action='store_true', default=False, help='Flag for enabling Tensorboard')
     parser.add_argument('env', default='Pong-v3', type=str, metavar='N', nargs='?', help='Gym Atari environment to run')
+    parser.add_argument('-l', '--logdir', default='metrics', type=str, help='TensorBoard logging directory')
+    parser.add_argument('-s', '--mbsize', default=32, type=int, help='Minibatch size. Default 32.')
 
     args = parser.parse_args()
 
@@ -454,7 +457,8 @@ if __name__ == '__main__':
     env = gym.make(args.env)
 
     # 2. Make agent
-    agent = DeepQAgent((4, 84, 84), env.action_space.n, monitor=args.plot)
+    agent = DeepQAgent((4, 84, 84), env.action_space.n,
+            minibatch_size=args.mbsize, monitor=args.plot)
 
     # Train
     current_step = 0
