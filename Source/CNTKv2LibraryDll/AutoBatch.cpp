@@ -1067,6 +1067,10 @@ class Variable::AutoBatch
         // select the next batched op to execute
         NonOwningFunctionList pop_best()
         {
+            //for (auto iter = m_regularOps.begin(); iter != m_regularOps.end(); iter++)
+            //    if (iter->front()->Name() == L"vecSoftmaxMinus")
+            //        fprintf(stderr, "### %S pending\n", iter->front()->Name().c_str()), fflush(stderr);
+
             // try all three queues, in priority order
             if (!m_viewOps.empty()) // view ops always go first, since they are free
                 return move(m_viewOps);
@@ -1078,9 +1082,9 @@ class Variable::AutoBatch
                     // barrier is realized through priority
                     int diff = 0;
                     if (diff == 0)
-                        diff = -(GetBarrierGap(iter) - GetBarrierGap(best)); // lower gap is better
-                    if (diff == 0)
                         diff = -(GetBatchNormPending(iter) - GetBatchNormPending(best)); // BatchNormalization with pending inputs always loses
+                    if (diff == 0)
+                        diff = -(GetBarrierGap(iter) - GetBarrierGap(best)); // lower gap is better
                     if (diff == 0)
                         diff = iter->front()->m_autoBatchState.m_priorityRemoveThis - best->front()->m_autoBatchState.m_priorityRemoveThis;
                     if (diff == 0)
@@ -1113,10 +1117,11 @@ class Variable::AutoBatch
     //  - m_value must not have been set (don't call this function if it has)
     //  - m_autoBatchState.m_pendingInputs has been initialized to -1 by the constructor
     // Caller must call m_visitorTag.Begin() first.
-    void RInitForScheduling(const Variable& var)
+    void RInitForScheduling(const Variable& var, size_t depth)
     {
         auto& fields = *var.m_dataFields;
-        // return if already visit
+        // return if already visited
+        // BUGBUG: We should update depth to the max. Currently we just leave the first.
         if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
         // some sanity checks
@@ -1139,6 +1144,7 @@ class Variable::AutoBatch
         }
         // not a leaf
         auto& f = *fields.m_ownerFunction.lock();
+        f.m_autoBatchState.m_depth = depth;
         // special case BatchNormalization: we must account for all occurences before normalizing
         if (f.m_op == PrimitiveOpType::BatchNormalization)
         {
@@ -1160,7 +1166,7 @@ class Variable::AutoBatch
             // recursively traverse
             if (!fields.m_value)
             {
-                RInitForScheduling(input);
+                RInitForScheduling(input, depth + 1);
                 if (!fields.m_value) // (in case of a Parameter, we now may have a value)
                 {
                     pendingInputs++;
@@ -1963,7 +1969,7 @@ public:
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
         // prepare and schedule first set
         m_visitorTag.Begin();
-        RInitForScheduling(v);
+        RInitForScheduling(v, 0);
         // compute the entire graph
         while (!m_schedule.empty()) // main computation loop over all operations
         {
@@ -2000,22 +2006,26 @@ public:
         // log stats
         if (logMemoizeStatsCounter == 0)
         {
-            double totalLaunch = 0;
-            double totalExec = 0;
-            for (let& s : cudaStats) if (s.numInvocations)
+            for (size_t free = 0; free < 2; free++)
             {
-                let prefix = s.hasSparse ? L"sparse " : L"";
-                let name = PrimitiveOpTypeName(s.op);
-                let execTime = s.timerRun.Total() - s.timerSync.Total();
-                fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + name).c_str(),
+                bool isView = free == 0; // we want this category
+                double totalLaunch = 0;
+                double totalExec = 0;
+                for (let& s : cudaStats) if (s.numInvocations && (IsViewOp(s.op) == isView))
+                {
+                    let prefix = s.hasSparse ? L"sparse " : L"";
+                    let name = PrimitiveOpTypeName(s.op);
+                    let execTime = s.timerRun.Total() - s.timerSync.Total();
+                    fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + name).c_str(),
                         s.timerLaunch.Total(), execTime,
                         1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * execTime / (double)s.numInvocations,
                         (int)s.numInvocations,
                         s.totalElements / (double)s.numInvocations);
-                totalLaunch += s.timerLaunch.Total();
-                totalExec   += execTime;
+                    totalLaunch += s.timerLaunch.Total();
+                    totalExec += execTime;
+                }
+                fprintf(stderr, "-> total launch + exec time: %.4f s + %.4f s\n", totalLaunch, totalExec);
             }
-            fprintf(stderr, "-> total launch + exec time: %.4f s + %.4f s\n", totalLaunch, totalExec);
         }
         logMemoizeStatsCounter++;
         if (logMemoizeStatsCounter == logMemoizeStatsPeriod)

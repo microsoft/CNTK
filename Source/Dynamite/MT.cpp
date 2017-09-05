@@ -124,7 +124,8 @@ fun AttentionModelReference(size_t attentionDim1)
     auto projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize, device);
     let normH = LengthNormalization(device); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
-    //let zBarrier = Barrier(Named("zBarrier"));
+    let zBarrier = Barrier(Named("zBarrier"));
+    let resBarrier = Barrier(Named("resBarrier"));
     vector<Variable> us, ws;
     return QuaternaryModel11NN({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
         [=](const Variable& h,                              // [A] decoder hidden state
@@ -133,7 +134,7 @@ fun AttentionModelReference(size_t attentionDim1)
             const vector<Variable>& encodingProjectedData           // [A x T] encoder hidden state seq, projected as data
            ) mutable -> Variable
     {
-        let prevProfiler = Function::SetDynamicProfiler(profiler);
+        let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // compute attention weights
         //let hProjected = Times(H, h, Named("H")); // [A x 1]. Batchable.
         let hProjected = projectQuery(h); // [A]. Batched.
@@ -147,12 +148,12 @@ fun AttentionModelReference(size_t attentionDim1)
         // alternative: softmax denom: splice u, ReduceLogSum, slice up -> sequence
         //              Batched (#mb size in one go): minus, exp -> w[t]
         //              Not batched (one launch per sentence: ReduceLogSum)
-        Dynamite::Sequence::Softmax(ws, us); // softmax over a vector
+        Dynamite::Sequence::Softmax(ws, us, zBarrier); // softmax over a vector
         // BUGBUG: Somehow the Exp() inside does not get batched, although they are unrolled.
         us.clear();
         // alternative: product with encodingProjectedData
         //              Batched: elementwise product -> RAM copy of (encodingProjectedData * u)[t], #items=mb size
-        let res = Dynamite::Sequence::InnerProduct(encodingProjectedData, ws, Named("attContext")); // inner product over a vectors
+        let res = resBarrier(Dynamite::Sequence::InnerProduct(encodingProjectedData, ws, Named("attContext"))); // inner product over a vectors
         ws.clear();
 #else
         let encodingProjectedKeysTensor = Splice(encodingProjectedKeys, Axis(1), Named("encodingProjectedKeysTensor"));  // [A x T]
@@ -703,7 +704,7 @@ void Train(wstring outputDirectory)
 
 int mt_main(int argc, char *argv[])
 {
-    argc; argv;
+    Internal::PrintBuiltInfo();
     try
     {
         // minimalistic argument parser, only to get a pathname

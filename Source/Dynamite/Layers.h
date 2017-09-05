@@ -715,16 +715,17 @@ struct Sequence
     }
 
     // Softmax over a vector producing a vector
-    static void Softmax(vector<Variable>& res, const vector<Variable>& z)
+    static void Softmax(vector<Variable>& res, const vector<Variable>& z, const UnaryModel& barrier = Identity)
     {
         let& shape = z[0].Shape();
         let axis = Axis((int)shape.Rank());
-        let Z = Reshape(ReduceLogSum(Splice(z, axis), axis), shape); // -> [1]
+        auto Z = Reshape(ReduceLogSum(Splice(z, axis), axis), shape); // -> [1]
         // BUGBUG: ^^ barrier causes a BN to fail, and without, it does not get batched nicely
         //         This should be a primitive.
+        Z = barrier(Z);
         res.resize(z.size());
         for (size_t t = 0; t < z.size(); t++)
-            res[t] = Exp(z[t] - Z);
+            res[t] = Exp(Minus(z[t], Z, Named("vecSoftmaxMinus")));
     }
 
     // InnerProduct over a pair of vectors (dot product over the vector dimension)

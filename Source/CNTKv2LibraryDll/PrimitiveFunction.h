@@ -871,6 +871,7 @@ namespace CNTK
             PrimitiveFunction* m_aliasList;  // list of aliases (common subexpression), local to ExecuteBatchedOpAndUpdateSchedule()
             size_t m_aliasHash = SIZE_MAX;   // hash for alias detection (common subexpression elimination)
             int m_priorityRemoveThis;        // used by scheduler  --TODO: remove this, it should be unused by now
+            size_t m_depth;                  // number of operations away from root (max if multiple paths)
         } m_autoBatchState;
         mutable DynamicProfilerPtr m_profiler;   // profile using this profiler if set
         static const DynamicProfilerPtr& CurrentDynamicProfiler();
