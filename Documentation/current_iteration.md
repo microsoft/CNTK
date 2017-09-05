@@ -21,6 +21,9 @@
 
 ## Examples
 ### Faster R-CNN object detection 
+### Support for bounding box regression and VGG model in Fast R-CNN
+### New tutorial on Faster R-CNN object detection and updated tutorial on Fast R-CNN
+### Object detection demo script that allows to choose different detectors, base models and data sets
 ### New example for natural language processing (NLP) 
 ### Semantic segmentation (stretch goal) 
 
