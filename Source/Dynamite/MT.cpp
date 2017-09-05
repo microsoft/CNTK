@@ -318,6 +318,7 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
         labels.clear(); losses.clear();
         return loss;
     };
+    let profiler = Function::CreateDynamicProfiler(1, L"all");
     // create a batch mapper (which will eventually allow suspension)
     let batchModel = Batch::Map(criterion);
     // for final summation, we create a new lambda (featBatch, labelBatch) -> mbLoss
@@ -325,11 +326,13 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
     return BinaryFoldingModel({}, { { L"model", model_fn } },
     [=](const /*batch*/vector<Variable>& features, const /*batch*/vector<Variable>& labels) mutable -> Variable
     {
+        let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
         batchModel(lossesPerSequence, features, labels);             // batch-compute the criterion
         let collatedLosses = Splice(lossesPerSequence, Axis(0), Named("cesPerSeq"));     // collate all seq lossesPerSequence
         // ^^ this is one launch per MB
         let mbLoss = ReduceSum(collatedLosses, Axis(0), Named("ceBatch"));  // aggregate over entire minibatch
         lossesPerSequence.clear();
+        Function::SetDynamicProfiler(prevProfiler);
         return mbLoss;
     });
 }
@@ -361,8 +364,7 @@ void Train(wstring outputDirectory)
     fprintf(stderr, "redirecting stderr to %S\n", logPath.c_str());
     if (dup2(fileno(outStream), fileno(stderr)))
         InvalidArgument("error %d redirecting stderr to '%S'", errno, logPath.c_str());
-    fprintf(stderr, "starting training as worker[%d]\n", (int)ourRank); // write something to test
-    fflush(stderr);
+    fprintf(stderr, "starting training as worker[%d]\n", (int)ourRank), fflush(stderr); // write something to test
 
     // dynamic model and criterion function
     auto model_fn = CreateModelFunction();
@@ -398,7 +400,7 @@ void Train(wstring outputDirectory)
     size_t numParameters = 0;
     for (let& p : parameters)
         numParameters += p.Shape().TotalSize();
-    fprintf(stderr, "Total number of learnable parameters: %u\n", (unsigned int)numParameters);
+    fprintf(stderr, "Total number of learnable parameters: %u\n", (unsigned int)numParameters), fflush(stderr);
     let epochSize = 10000000; // 10M is a bit more than half an epoch of ROM-ENG (~16M words)
     let minibatchSize = 4096      * communicator->Workers().size() /6; // for debugging: switch to smaller MB when running without MPI
     AdditionalLearningOptions learnerOptions;
@@ -477,7 +479,7 @@ void Train(wstring outputDirectory)
         char startMbCountBuf[20];
         sprintf(startMbCountBuf, "%06d", (int)startMbCount); // append the minibatch index with a fixed width for sorted directory listings
         let path = modelPath + L"." + wstring(startMbCountBuf, startMbCountBuf + strlen(startMbCountBuf)); // (simplistic string->wstring converter)
-        fprintf(stderr, "restarting from: %S\n", path.c_str());
+        fprintf(stderr, "restarting from: %S\n", path.c_str()), fflush(stderr);
         // TODO: The code below is copy-paste from Trainer.cpp, since it is not public. Move this down through the API.
         // TODO: Can we just wrap everything in an actual Trainer instance, and use that?
         //model_fn.RestoreParameters(path);
@@ -526,16 +528,18 @@ void Train(wstring outputDirectory)
 
         minibatchSource->RestoreFromCheckpoint(externalState[/*s_trainingMinibatchSource=*/L"TrainingMinibatchSource"].Value<Dictionary>());
     }
+    fflush(stderr);
+    // MINIBATCH LOOP
     for (mbCount = startMbCount; true; mbCount++)
     {
         // checkpoint
         if (mbCount % saveEvery == 0 &&
-            (startMbCount == 0 || mbCount > startMbCount)) // don't overwrite the starting model
+            (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
         {
             char startMbCountBuf[20];
             sprintf(startMbCountBuf, "%06d", (int)startMbCount); // append the minibatch index with a fixed width for sorted directory listings
             let path = modelPath + L"." + wstring(startMbCountBuf, startMbCountBuf + strlen(startMbCountBuf)); // (simplistic string->wstring converter)
-            fprintf(stderr, "%ssaving: %S\n", communicator->CurrentWorker().IsMain() ? "" : "not ", path.c_str()); // indicate time of saving, but only main worker actually saves
+            fprintf(stderr, "%ssaving: %S\n", communicator->CurrentWorker().IsMain() ? "" : "not ", path.c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
             //model_fn.SaveParameters(path);
 
             // reader state
@@ -634,15 +638,10 @@ void Train(wstring outputDirectory)
 #endif
         let numSeq = args[0].size();
         size_t numLabels = 0, numSamples = 0;
-#if 1
         for (let& seq : args[0])
             numSamples += seq.Shape().Dimensions().back();
         for (let& seq : args[1])
             numLabels += seq.Shape().Dimensions().back();
-#else
-        numLabels = minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples;
-        numSamples = minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples;
-#endif
         partTimer.Log("GetNextMinibatch", numLabels);
         fprintf(stderr, "%d: #seq: %d, #words: %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
                 (int)numSeq, (int)numSamples, (int)numLabels,
@@ -686,8 +685,6 @@ void Train(wstring outputDirectory)
         // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
         if (mbCount < 400 || mbCount % 5 == 0)
             fflush(stderr);
-        //if (mbCount == 20) // for mem leak check
-        //    break;
         if (std::isnan(lossPerLabel))
             throw runtime_error("Loss is NaN.");
         //if (mbCount == 10)
@@ -708,7 +705,6 @@ int mt_main(int argc, char *argv[])
         wstring experimentId(pExpId, pExpId + strlen(pExpId)); // (cheap conversion to wchar_t)
         wstring workingDirectory = L"d:/mt/experiments";       // output dir = "$workingDirectory/$experimentId/"
         Train(workingDirectory + L"/" + experimentId);
-        //Train(DeviceDescriptor::CPUDevice(), true);
     }
     catch (exception& e)
     {

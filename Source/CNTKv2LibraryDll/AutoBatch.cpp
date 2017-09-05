@@ -27,7 +27,7 @@
 
 #ifdef LOG_STATS
 static size_t logMemoizeStatsPeriod = 50;
-static size_t logMemoizeStatsCounter = logMemoizeStatsPeriod - 1; // counts up to logMemoizeStatsPeriod and wraps. We log if it is 0, starting with the second MB.
+static size_t logMemoizeStatsCounter = 0;// logMemoizeStatsPeriod - 1; // counts up to logMemoizeStatsPeriod and wraps. We log if it is 0, starting with the second MB.
 #else
 static size_t logMemoizeStatsPeriod = SIZE_MAX;
 static size_t logMemoizeStatsCounter = 1;
@@ -729,6 +729,9 @@ private:
 static shared_ptr<DynamicProfiler> m_currentProfiler; // current innermost active profiler, or empty
 
 /*static*/ DynamicProfilerPtr Function::CreateDynamicProfiler(int verbosity, const wstring& name) { return MakeSharedObject<DynamicProfiler>(verbosity, name); }
+// if 'outer' then enter a section that is profiled.
+// When outside such a section, any call with 'outer'=false will have no effect.
+// When inside, the effect is to change the name associated in the profiling output.
 /*static*/ DynamicProfilerPtr Function::SetDynamicProfiler(const DynamicProfilerPtr& p, bool outer)
 {
     auto prev = m_currentProfiler;
@@ -1209,7 +1212,7 @@ class Variable::AutoBatch
         if (!name.empty())
             uid = name + L":" + uid;
         if (prefix && *prefix)
-            fprintf(stderr, "[%S]  ", prefix);
+            fprintf(stderr, "[%S] ", prefix);
         fprintf(stderr, "%S%S = %S (", uid.c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -1323,7 +1326,7 @@ class Variable::AutoBatch
         if (ShouldProfile(&f))
             LogFunction(f, f.m_profiler);
         //if (f.m_op == PrimitiveOpType::ElementTimes)
-        //    LogFunction(f, L"[bf]  ");
+        //    LogFunction(f, L"bf  ");
         auto outValue = isFree
             ? nullptr
             : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
@@ -1332,8 +1335,9 @@ class Variable::AutoBatch
         {
             cudaStats.resize(2 * (size_t)PrimitiveOpType::UnknownOP);
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
-            cudaStatsPtr = &cudaStats[(size_t)f.m_op + (hasSparse ? 1 : 0)];
-            cudaStatsPtr->op = f.m_op; // (really only needed the first time)
+            let logAsOp = (f.m_op == PrimitiveOpType::Splice && spliceIsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
+            cudaStatsPtr = &cudaStats[(size_t)logAsOp + (hasSparse ? 1 : 0)];
+            cudaStatsPtr->op = logAsOp; // (really only needed the first time)
             cudaStatsPtr->hasSparse = hasSparse;
             cudaStatsPtr->numInvocations++;
             cudaStatsPtr->totalElements += outputShape.TotalSize();
@@ -1954,7 +1958,7 @@ public:
         if (fields.m_value)
             return fields.m_value;
 #ifdef LOG_DETAILS
-        Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), L"[r] "); });
+        Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), L"r "); });
 #endif
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
         // prepare and schedule first set
@@ -2218,7 +2222,7 @@ public:
     void BackpropToUnbatched(PrimitiveFunction* f, size_t index)
     {
 #ifdef LOG_DETAILS
-        LogFunction(*f, L"[bb] ", index);
+        LogFunction(*f, L"bb ", index);
 #endif
         let& inputs =  f->m_inputs;
         auto& input = SeeThroughNoOps(inputs, index);
@@ -2291,7 +2295,7 @@ public:
         }
 #else
 #ifdef LOG_DETAILS
-        LogFunction(*f, L"[bb#] ", SIZE_MAX);
+        LogFunction(*f, L"bb# ", SIZE_MAX);
 #endif
         // The gradient of Splice is just copying all columns to the respective inputs.
         let& inputs =  f->m_inputs;
@@ -2358,7 +2362,7 @@ public:
         auto& timesDataRightInputs = BorrowBuffer(m_outputGradientsBuffer, numBatchItems);
         let& f0 = *consumers.front().first;
 #ifdef LOG_DETAILS
-        LogFunction(f0, L"[bb*] ", 0);
+        LogFunction(f0, L"bb* ", 0);
 #endif
         let& input0 = SeeThroughNoOps(f0.m_inputs, 0);
         size_t batchDim = 0;

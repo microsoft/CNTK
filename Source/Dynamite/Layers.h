@@ -16,7 +16,7 @@
 #include <set>
 #include <vector>
 
-//#define DISABLE_NORMALIZATIONS // #define this to disable LengthNormalization and Droppo scaling
+//#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling
 
 #define let const auto
 //#define Named(n) (L##n)
@@ -279,10 +279,17 @@ enum ProjectionOptions
 {
     none            = 0x00,
     bias            = 0x01,
+#ifndef DISABLE_NORMALIZATIONS
     stabilize       = 0x02,
     batchNormalize  = 0x04,
     lengthNormalize = 0x08,
     weightNormalize = 0x10
+#else
+    stabilize       = 0,//x02,
+    batchNormalize  = 0,//x04,
+    lengthNormalize = 0,//x08,
+    weightNormalize = 0//x10
+#endif
 };
 static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { return (ProjectionOptions)(((size_t)a) | ((size_t)b)); }
 static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device);
@@ -561,7 +568,7 @@ static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
 // create a Barrier function
 static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const wstring& name /*= wstring()*/)
 {
-#if 0 // use this when running unbatched comparisons (which won't work with BatchNorm)
+#ifdef DISABLE_NORMALIZATIONS
     device; name;
     return Identity;
 #else
