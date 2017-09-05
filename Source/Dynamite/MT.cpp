@@ -351,7 +351,11 @@ void Train(wstring outputDirectory)
     // Log path = "$workingDirectory/$experimentId.log.$ourRank" where $ourRank is missing for rank 0
     let logPath = outputDirectory + L"/train.log" + (ourRank == 0 ? L"" : (L"." + to_wstring(ourRank)));
     boost::filesystem::create_directories(boost::filesystem::path(logPath).parent_path());
-    FILE* outStream = _wfopen(logPath.c_str(), L"wt");
+    FILE* outStream =
+        /*if*/ (communicator->CurrentWorker().IsMain()) ?
+            _wpopen((L"tee " + logPath).c_str(), L"wt")
+        /*else*/:
+            _wfopen(logPath.c_str(), L"wt");
     if (!outStream)
         InvalidArgument("error %d opening log file '%S'", errno, logPath.c_str());
     fprintf(stderr, "redirecting stderr to %S\n", logPath.c_str());
