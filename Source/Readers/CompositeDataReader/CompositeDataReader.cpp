@@ -146,7 +146,11 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
             }
         }
 
+#if 1   // BUGBUG: There is no way to programmatically disable prefetching, which currently may be responsible for bugs.
+        bool shouldPrefetch = multiThreadedDeserialization;
+#else
         bool shouldPrefetch = true;
+#endif
         m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, 
             multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow, GetRandomSeed(config));
     }
