@@ -362,7 +362,7 @@ void Train(wstring outputDirectory)
     if (!outStream)
         InvalidArgument("error %d opening log file '%S'", errno, logPath.c_str());
     fprintf(stderr, "redirecting stderr to %S\n", logPath.c_str());
-    if (dup2(fileno(outStream), fileno(stderr)))
+    if (_dup2(_fileno(outStream), _fileno(stderr)))
         InvalidArgument("error %d redirecting stderr to '%S'", errno, logPath.c_str());
     fprintf(stderr, "starting training as worker[%d]\n", (int)ourRank), fflush(stderr); // write something to test
 
