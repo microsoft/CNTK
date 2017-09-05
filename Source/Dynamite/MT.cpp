@@ -637,14 +637,22 @@ void Train(wstring outputDirectory)
         TrimLength(args[1][2], 2);
 #endif
         let numSeq = args[0].size();
-        size_t numLabels = 0, numSamples = 0;
+        size_t numLabels = 0, numSamples = 0, maxSamples = 0, maxLabels = 0;
         for (let& seq : args[0])
-            numSamples += seq.Shape().Dimensions().back();
+        {
+            let len = seq.Shape().Dimensions().back();
+            numSamples += len;
+            maxSamples = max(maxSamples, len);
+        }
         for (let& seq : args[1])
-            numLabels += seq.Shape().Dimensions().back();
+        {
+            let len = seq.Shape().Dimensions().back();
+            numLabels += len;
+            maxLabels = max(maxLabels, len);
+        }
         partTimer.Log("GetNextMinibatch", numLabels);
-        fprintf(stderr, "%d: #seq: %d, #words: %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
-                (int)numSeq, (int)numSamples, (int)numLabels,
+        fprintf(stderr, "%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
+                (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                 lr0, learner->LearningRate() / lr0);
         // train minibatch
         partTimer.Restart();
