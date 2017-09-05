@@ -15,6 +15,9 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <iostream>
+#include <io.h>
+#include <boost/filesystem.hpp>
 
 #define let const auto
 #define fun const auto
@@ -331,7 +334,7 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
     });
 }
 
-void Train()
+void Train(wstring outputDirectory)
 {
     let communicator = MPICommunicator();
 #if 1 // while we are running with MPI, we always start from start
@@ -344,6 +347,19 @@ void Train()
 #else
     device = DeviceDescriptor::UseDefaultDevice();
 #endif
+    // open log file
+    // Log path = "$workingDirectory/$experimentId.log.$ourRank" where $ourRank is missing for rank 0
+    let logPath = outputDirectory + L"/train.log" + (ourRank == 0 ? L"" : (L"." + to_wstring(ourRank)));
+    boost::filesystem::create_directories(boost::filesystem::path(logPath).parent_path());
+    FILE* outStream = _wfopen(logPath.c_str(), L"wt");
+    if (!outStream)
+        InvalidArgument("error %d opening log file '%S'", errno, logPath.c_str());
+    fprintf(stderr, "redirecting stderr to %S\n", logPath.c_str());
+    if (dup2(fileno(outStream), fileno(stderr)))
+        InvalidArgument("error %d redirecting stderr to '%S'", errno, logPath.c_str());
+    fprintf(stderr, "starting training as worker[%d]\n", (int)ourRank); // write something to test
+    fflush(stderr);
+
     // dynamic model and criterion function
     auto model_fn = CreateModelFunction();
     auto criterion_fn = CreateCriterionFunction(model_fn);
@@ -355,9 +371,14 @@ void Train()
         //PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/train.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk>" })
         PlainTextStreamConfiguration(L"src", srcVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.vocab", L"<s>", L"</s>", L"<unk>" }),
         PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.vocab", L"<s>", L"</s>", L"<unk>" })
-    }) },
+        }) },
         /*randomize=*/true);
     minibatchSourceConfig.maxSamples = MinibatchSource::InfinitelyRepeat;
+    minibatchSourceConfig.isMultithreaded = false;
+    // BUGBUG: ^^ I see two possibly related bugs
+    //  - when running on CPU, this fails reliably with what looks like a race condition
+    //  - even with GPU, training unreliably fails after precisely N data passes minus one data pass. That minus one may indicate a problem in prefetch?
+    // -> Trying without, to see if the problems go away.
     let minibatchSource = CreateCompositeMinibatchSource(minibatchSourceConfig);
     // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep in a single expression
 
@@ -442,13 +463,16 @@ void Train()
     } partTimer;
     //wstring modelPath = L"d:/me/tmp_dynamite_model.cmf";
     //wstring modelPath = L"d:/me/tmp_dynamite_model_wn.cmf";
-    wstring modelPath = L"d:/me/tmp_dynamite_model_attseq.cmf";
+    //wstring modelPath = L"d:/me/tmp_dynamite_model_attseq.cmf";
+    wstring modelPath = outputDirectory + L"/model.dmf"; // DMF=Dynamite model file
     size_t saveEvery = 100;
     size_t startMbCount = 0;
     if (startMbCount > 0)
     {
         // restarting after crash. Note: not checkpointing the reader yet.
-        let path = modelPath + L"." + to_wstring(startMbCount);
+        char startMbCountBuf[20];
+        sprintf(startMbCountBuf, "%06d", (int)startMbCount); // append the minibatch index with a fixed width for sorted directory listings
+        let path = modelPath + L"." + wstring(startMbCountBuf, startMbCountBuf + strlen(startMbCountBuf)); // (simplistic string->wstring converter)
         fprintf(stderr, "restarting from: %S\n", path.c_str());
         // TODO: The code below is copy-paste from Trainer.cpp, since it is not public. Move this down through the API.
         // TODO: Can we just wrap everything in an actual Trainer instance, and use that?
@@ -502,11 +526,12 @@ void Train()
     {
         // checkpoint
         if (mbCount % saveEvery == 0 &&
-            (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
+            (startMbCount == 0 || mbCount > startMbCount)) // don't overwrite the starting model
         {
-            let path = modelPath + L"." + to_wstring(mbCount);
-            if (communicator->CurrentWorker().IsMain())
-                fprintf(stderr, "saving: %S\n", path.c_str());
+            char startMbCountBuf[20];
+            sprintf(startMbCountBuf, "%06d", (int)startMbCount); // append the minibatch index with a fixed width for sorted directory listings
+            let path = modelPath + L"." + wstring(startMbCountBuf, startMbCountBuf + strlen(startMbCountBuf)); // (simplistic string->wstring converter)
+            fprintf(stderr, "%ssaving: %S\n", communicator->CurrentWorker().IsMain() ? "" : "not ", path.c_str()); // indicate time of saving, but only main worker actually saves
             //model_fn.SaveParameters(path);
 
             // reader state
@@ -582,17 +607,11 @@ void Train()
         auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, (size_t)minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);
         if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
             break;
-        let numLabels = minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples;
-        let numSeq = minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSequences;
-        partTimer.Log("GetNextMinibatch", numLabels);
-        fprintf(stderr, "%d: #seq: %d, #words: %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
-                (int)numSeq,
-                (int)minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples,
-                (int)numLabels,
-                lr0, learner->LearningRate() / lr0);
         partTimer.Restart();
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
-        partTimer.Log("FromCNTKMB", numLabels);
+        partTimer.Log("FromCNTKMB", minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
+        //args[0].resize(1);
+        //args[1].resize(1);
 #if 0   // for debugging: reduce #sequences to 3, and reduce their lengths
         args[0].resize(3);
         args[1].resize(3);
@@ -609,6 +628,21 @@ void Train()
         TrimLength(args[1][1], 2);
         TrimLength(args[1][2], 2);
 #endif
+        let numSeq = args[0].size();
+        size_t numLabels = 0, numSamples = 0;
+#if 1
+        for (let& seq : args[0])
+            numSamples += seq.Shape().Dimensions().back();
+        for (let& seq : args[1])
+            numLabels += seq.Shape().Dimensions().back();
+#else
+        numLabels = minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples;
+        numSamples = minibatchData[minibatchSource->StreamInfo(L"src")].numberOfSamples;
+#endif
+        partTimer.Log("GetNextMinibatch", numLabels);
+        fprintf(stderr, "%d: #seq: %d, #words: %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
+                (int)numSeq, (int)numSamples, (int)numLabels,
+                lr0, learner->LearningRate() / lr0);
         // train minibatch
         partTimer.Restart();
         let mbLoss = criterion_fn(args[0], args[1]);
@@ -663,7 +697,13 @@ int mt_main(int argc, char *argv[])
     argc; argv;
     try
     {
-        Train();
+        // minimalistic argument parser, only to get a pathname
+        if (argc != 3)
+            throw invalid_argument("required command line: --id IDSTRING, where IDSTRING is used to form the log and model path for now");
+        let* pExpId = argv[2];
+        wstring experimentId(pExpId, pExpId + strlen(pExpId)); // (cheap conversion to wchar_t)
+        wstring workingDirectory = L"d:/mt/experiments";       // output dir = "$workingDirectory/$experimentId/"
+        Train(workingDirectory + L"/" + experimentId);
         //Train(DeviceDescriptor::CPUDevice(), true);
     }
     catch (exception& e)
