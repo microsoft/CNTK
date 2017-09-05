@@ -826,7 +826,7 @@ class Variable::AutoBatch
     // see through no-ops, such as barrier, Pass, or StopGradient
     // Use this for ANY access to PrimitiveFunction::m_inputs EXCEPT not needed (and possibly wrong one day) when directly getting the shape.
     // This function also determines the top-most barrier id that this input may depend on.
-    static const Variable& SeeThroughNoOps(const vector<Variable>& inputs, size_t index, size_t& topBarrierId)
+    static const Variable& SeeThroughNoOps(const vector<Variable>& inputs, size_t index, size_t& maxDepthHint)
     {
         let& input = inputs[index];
         let& fields = *input.m_dataFields;
@@ -841,14 +841,19 @@ class Variable::AutoBatch
         if (!IsAlias(f->m_op))
             return input;
         // it is an alias (including barrier): register barrier id and see right through
-        if (topBarrierId == SIZE_MAX && IsBarrier(f))
-            topBarrierId = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
-        return SeeThroughNoOps(f->m_inputs, 0, topBarrierId); // (all aliases are unary functions)
+#if 1
+        if (maxDepthHint != SIZE_MAX && IsBarrier(f))
+            maxDepthHint = max(maxDepthHint, f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
+#else
+        if (maxDepthHint == SIZE_MAX && IsBarrier(f))
+            maxDepthHint = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+#endif
+        return SeeThroughNoOps(f->m_inputs, 0, maxDepthHint); // (all aliases are unary functions)
     }
     static const Variable& SeeThroughNoOps(const vector<Variable>& inputs, size_t index)
     {
-        size_t barrierId = 0; // (not passing SIZE_MAX will short-circuit the test)
-        return SeeThroughNoOps(inputs, index, barrierId);
+        size_t depthHint = SIZE_MAX; // (passing SIZE_MAX will short-circuit the test)
+        return SeeThroughNoOps(inputs, index, depthHint);
     }
 
     // helper to check whether we should profile this function execution
@@ -873,7 +878,7 @@ class Variable::AutoBatch
         vector<NonOwningFunctionListBuilder> m_regularOps; // m_regularOps[] is a linked list
         NonOwningFunctionListBuilder m_barrierOps; // TODO: currently dead
         // TODO: remove barrierPendingCounts
-        vector<size_t> m_barrierPendingCounts;  // [barrier id] number of consumers of a barrier id that are not yet ready
+        //vector<size_t> m_barrierPendingCounts;  // [barrier id] number of consumers of a barrier id that are not yet ready
         vector<size_t> m_bnPendingCounts;       // [bn id] number of pending (non-ready) BatchNormalization operations
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
@@ -917,12 +922,13 @@ class Variable::AutoBatch
             for (size_t i = 0; i < a->m_inputs.size(); i++)
             {
                 // see through no-ops for testing the input
-                size_t aBarrierId = SIZE_MAX;
-                size_t bBarrierId = SIZE_MAX;
-                /*let& aInput =*/ SeeThroughNoOps(a->m_inputs, i, aBarrierId);
-                /*let& bInput =*/ SeeThroughNoOps(b->m_inputs, i, bBarrierId);
-                // barrier id, if any, must match
-                if (aBarrierId != bBarrierId)
+                // BUGBUG: We must go back to the old design, where barriers are explicitly tracked ops
+                size_t aDepthHint = 0;
+                size_t bDepthHint = 0;
+                /*let& aInput =*/ SeeThroughNoOps(a->m_inputs, i, aDepthHint);
+                /*let& bInput =*/ SeeThroughNoOps(b->m_inputs, i, bDepthHint);
+                // depth hint must match
+                if (aDepthHint != bDepthHint)
                     return false;
                 // there are a few special cases
                 if (opClass == OpSpecificConditionKind::MatrixProduct && i == 0)
@@ -948,15 +954,15 @@ class Variable::AutoBatch
         }
     public:
         // count an occurrence of a barrier with a given id
-        void CountBarrier(size_t barrierId)
-        {
-            if (barrierId == SIZE_MAX)
-                return;
-            if (barrierId >= m_barrierPendingCounts.size())
-                m_barrierPendingCounts.resize(barrierId * 10, 0);
-            m_barrierPendingCounts[barrierId]++;
-        }
-        int BarrierPendingCounts(size_t barrierId) const { return barrierId != SIZE_MAX ? (int)m_barrierPendingCounts[barrierId]: -1; } // this is used for logging
+        //void CountBarrier(size_t depthHint)
+        //{
+        //    if (depthHint == SIZE_MAX)
+        //        return;
+        //    if (depthHint >= m_barrierPendingCounts.size())
+        //        m_barrierPendingCounts.resize(depthHint * 10, 0);
+        //    m_barrierPendingCounts[depthHint]++;
+        //}
+        //int BarrierPendingCounts(size_t depthHint) const { return depthHint != SIZE_MAX ? (int)m_barrierPendingCounts[depthHint]: -1; } // this is used for logging
         // count an occurrence of a BatchNormalization with a given id
         void CountBatchNorm(size_t bnId)
         {
@@ -990,13 +996,13 @@ class Variable::AutoBatch
                 let& inputs = f->m_inputs;
                 for (size_t i = 0; i < inputs.size(); i++)
                 {
-                    size_t barrierId = SIZE_MAX;
-                    SeeThroughNoOps(inputs, i, barrierId);
-                    if (barrierId != SIZE_MAX)
-                    {
-                        fail_if(m_barrierPendingCounts[barrierId] == 0, "barrierPendingCounts decreased more than increased??");
-                        m_barrierPendingCounts[barrierId]--;
-                    }
+                    //size_t depthHint = SIZE_MAX; // (short-circuits the test)
+                    //SeeThroughNoOps(inputs, i, depthHint);
+                    //if (depthHint != SIZE_MAX)
+                    //{
+                    //    fail_if(m_barrierPendingCounts[depthHint] == 0, "barrierPendingCounts decreased more than increased??");
+                    //    m_barrierPendingCounts[depthHint]--;
+                    //}
                     let& input = inputs[i];
                     if (input.IsOutput() && IsBarrier(input.OutputOwner()))
                     {
@@ -1037,28 +1043,23 @@ class Variable::AutoBatch
         size_t numBatchableOpsPending() const { return m_regularOps.size(); }
         // helper to determine how many barrier ops are unfulfilled
         template <typename IteratorType>
-        int GetBarrierGap(const IteratorType& iter)
+        int GetDepthHint(const IteratorType& iter)
         {
             let& f = iter->front();
             let batchSize = (int)iter->size();
             let& inputs = f->m_inputs;
-            int gap = 0;
+            size_t depthHint = 0;
             // TODO: This is highly inefficient; we should remember somewhere whether a function depends on a barrier
             for (size_t i = 0; i < inputs.size(); i++)
             {
-                size_t barrierId = SIZE_MAX;
-                SeeThroughNoOps(inputs, i, barrierId); // TODO: this is inefficient; better have a second version that stops once it found the first barrier
-                if (barrierId == SIZE_MAX)
+                size_t thisDepthHint = 0;
+                SeeThroughNoOps(inputs, i, thisDepthHint); // TODO: this is inefficient; better have a second version that stops once it found the first barrier
+                if (thisDepthHint == 0)
                     continue;
-#if 1
-                let thisGap = (int)barrierId; // we encode seriousness in the barrierId itself; e.g. 600 is more serious than 20, so wait longer
-#else
-                let thisGap = (int)m_barrierPendingCounts[barrierId]; // how many outstanding (not ready) barrier consumers do we have?
-#endif
-                if (thisGap > gap)
-                    gap = thisGap; // determine the largest gap
+                if (thisDepthHint > depthHint)
+                    depthHint = thisDepthHint; // determine the largest depthHint
             }
-            return gap;
+            return (int)depthHint;
         }
         // helper to check whether this is a BatchNormalization op that still has some instances pending
         int GetBatchNormPending(const vector<NonOwningFunctionListBuilder>::const_iterator& iter)
@@ -1089,7 +1090,7 @@ class Variable::AutoBatch
                     if (diff == 0)
                         diff = -(GetBatchNormPending(iter) - GetBatchNormPending(best)); // BatchNormalization with pending inputs always loses
                     if (diff == 0)
-                        diff = -(GetBarrierGap(iter) - GetBarrierGap(best)); // lower gap is better
+                        diff = -(GetDepthHint(iter) - GetDepthHint(best)); // lower gap is better
                     if (diff == 0)
                         diff = iter->front()->m_autoBatchState.m_priorityRemoveThis - best->front()->m_autoBatchState.m_priorityRemoveThis;
                     if (diff == 0)
@@ -1164,9 +1165,9 @@ class Variable::AutoBatch
         let& inputs = f.m_inputs;
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            size_t barrierId = SIZE_MAX;
-            let& input = SeeThroughNoOps(inputs, i, barrierId);
-            m_schedule.CountBarrier(barrierId);
+            //size_t depthHint = SIZE_MAX; // TODO: change to depthHint, and to determining their max (?)
+            let& input = SeeThroughNoOps(inputs, i);
+            //m_schedule.CountBarrier(depthHint);
             auto& fields = *input.m_dataFields;
             // recursively traverse
             if (!fields.m_value)
@@ -1987,20 +1988,21 @@ public:
                 let& inputs = f->m_inputs;
                 for (size_t i = 0; i < inputs.size(); i++)
                 {
-                    size_t barrierId = SIZE_MAX;
-                    SeeThroughNoOps(inputs, i, barrierId);
-                    if (barrierId != SIZE_MAX)
+                    size_t depthHint = 0;
+                    SeeThroughNoOps(inputs, i, depthHint);
+                    if (depthHint != 0)
                     {
                         let& input = inputs[i]; // we are lazy and only print the name if the barrier is the immediate input, so that we don't have to duplicate the traversal in SeeThroughNoOps()
                         const wchar_t* name = nullptr;
-                        size_t id = SIZE_MAX;
+                        size_t depthHint = 0;
                         if (input.IsOutput())
                         {
                             let& f = input.OutputOwner();
                             name = f->Name().c_str();
-                            id = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+                            depthHint = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
                         }
-                        fprintf(stderr, "\n[%S] --- %d (%S): %d pending\n\n", f->m_profiler->Name(), (int)id, (name && name[0]) ? name : L"?", (int)m_schedule.BarrierPendingCounts(id));
+                        //fprintf(stderr, "\n[%S] --- %d (%S): %d pending\n\n", f->m_profiler->Name(), (int)depthHint, (name && name[0]) ? name : L"?", (int)m_schedule.BarrierPendingCounts(depthHint));
+                        fprintf(stderr, "\n[%S] --- %d (%S)\n\n", f->m_profiler->Name(), (int)depthHint, (name && name[0]) ? name : L"?");
                     }
                 }
             }
