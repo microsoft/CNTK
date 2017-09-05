@@ -12,7 +12,7 @@
 
 #include "Basics.h"
 #include "CommonMatrix.h"
-#include <half.hpp>
+#include "half.hpp"
 
 #pragma push_macro("TENSOR_OPS_DECL")
 #ifndef TENSOR_OPS_DECL // to make these accessible to CUDA kernels, say '#define TENSOR_OPS_DECL __device__ __host__'
