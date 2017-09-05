@@ -124,8 +124,8 @@ fun AttentionModelReference(size_t attentionDim1)
     auto projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize, device);
     let normH = LengthNormalization(device); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
-    let zBarrier = Barrier(Named("zBarrier"));
-    let resBarrier = Barrier(Named("resBarrier"));
+    let zBarrier   = Barrier(20, Named("zBarrier"));
+    let resBarrier = Barrier(20, Named("resBarrier"));
     vector<Variable> us, ws;
     return QuaternaryModel11NN({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
         [=](const Variable& h,                              // [A] decoder hidden state
@@ -180,19 +180,19 @@ fun AttentionModelReference(size_t attentionDim1)
 BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
-    let encBarrier = Barrier(Named("encBarrier"));
+    let encBarrier = Barrier(600, Named("encBarrier"));
     //let encoderKeysProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderKeysProjection")); }); // keys projection for attention
     //let encoderDataProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderDataProjection")); }); // data projection for attention
     let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // keys projection for attention
     let encoderDataProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("encoderDataProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // data projection for attention
-    let embedTarget = Barrier(Named("embedTargetBarrier")) >> Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedTarget"))*/;     // target embeddding
+    let embedTarget = Barrier(600, Named("embedTargetBarrier")) >> Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedTarget"))*/;     // target embeddding
     let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("initialStateProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
-    let stepBarrier = Barrier(Named("stepBarrier"));
+    let stepBarrier = Barrier(20, Named("stepBarrier"));
     let stepFunction = GRU(decoderRecurrentDim, device);
     //let attentionModel = AttentionModelBahdanau(attentionDim);
     let attentionModel = AttentionModelReference(attentionDim);
-    let firstHiddenProjection = Barrier(Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x, Named("firstHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
+    let firstHiddenProjection = Barrier(600, Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x, Named("firstHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
     vector<UnaryBroadcastingModel> resnets;
     for (size_t n = 0; n < numDecoderResNetProjections; n++)
         resnets.push_back(ResidualNet(decoderProjectionDim, device));
@@ -209,7 +209,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
         { L"encoderDataProjection",  encoderDataProjection },
         { L"embedTarget",            embedTarget },
         { L"initialStateProjection", initialStateProjection },
-        { L"stepBarrier",            stepBarrier },
+        //{ L"stepBarrier",            stepBarrier },
         { L"stepFunction",           stepFunction },
         { L"attentionModel",         attentionModel },
         { L"firstHiddenProjection",  firstHiddenProjection },

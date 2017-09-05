@@ -16,7 +16,7 @@
 #include <set>
 #include <vector>
 
-//#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling
+#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling
 
 #define let const auto
 #define Named(n) (L##n)
@@ -306,6 +306,30 @@ static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescrip
     });
 }
 
+#if 1
+// create a Barrier function
+static UnaryBroadcastingModel Barrier(size_t depthHint, const wstring& name = wstring())
+{
+    //static size_t id = 0; // unique id
+    //auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
+    return UnaryModel([=](const Variable& x) -> Variable
+    {
+        return BatchSync(x, depthHint, name);
+    });
+}
+#else
+// create a Barrier function
+static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
+{
+    static size_t id = 0; // unique id
+    auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
+    return UnaryModel([=](const Variable& x) -> Variable
+    {
+        return BatchSync(x, thisId, name);
+    });
+}
+#endif
+
 // layer normalization without bias term (which makes not much sense since we have a bias outside anyway in many cases)
 static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device, const Axis& axis = Axis(0))
 {
@@ -416,6 +440,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     let stackAxis = Axis(0);
     let stackedDim = (int)outputDim;
     let profiler = Function::CreateDynamicProfiler(1, L"GRU");
+    let irBarrier = Barrier(2, Named("irBarrier"));
     // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
     return BinaryModel({ /*W,*/ R, b },
     {
@@ -426,7 +451,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     },
     [=](const Variable& dh, const Variable& x)
     {
-        let prevProfiler = Function::SetDynamicProfiler(profiler);
+        let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // projected contribution from input(s), hidden, and bias
         //let projx3  = b + normW(Times(W, x));
         let projdh3 =     normR(Times(R, dh));
@@ -437,8 +462,8 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         let cx_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("cx_proj"));
         let ch_proj =                                                                              Slice(projdh3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("ch_proj"));
 
-        let i = Sigmoid(i_proj, Named("i"));                  // update gate z(t)  --if 1 then take new input; if 0 then retain state
-        let r = Sigmoid(r_proj, Named("r"));                  // reset gate r(t)   --new input + projected old state mixed in
+        let i = Sigmoid(irBarrier(i_proj), Named("i"));                  // update gate z(t)  --if 1 then take new input; if 0 then retain state
+        let r = Sigmoid(irBarrier(r_proj), Named("r"));                  // reset gate r(t)   --new input + projected old state mixed in
 
         let c_proj = cx_proj + r * ch_proj;
         let c = Tanh(c_proj, Named("c"));                     // "cell"
@@ -555,17 +580,6 @@ static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, c
 //}
 
 // create a Barrier function
-static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
-{
-    static size_t id = 0; // unique id
-    auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
-    return UnaryModel([=](const Variable& x) -> Variable
-    {
-        return BatchSync(x, thisId, name);
-    });
-}
-
-// create a Barrier function
 static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const wstring& name /*= wstring()*/)
 {
 #ifdef DISABLE_NORMALIZATIONS
@@ -649,7 +663,7 @@ struct Sequence
 
     static UnarySequenceModel Recurrence(const BinaryModel& step, const Variable& initialState, bool goBackwards = false)
     {
-        let barrier = Barrier(Named("Recurrence"));
+        let barrier = Barrier(600, Named("Recurrence"));
         // if initialState is a learnable parameter, then we must keep it
         vector<Parameter> rememberedInitialState;
         if (initialState.IsParameter())
@@ -683,8 +697,8 @@ struct Sequence
     {
         let fwd = Recurrence(stepFwd, initialStateFwd);
         let bwd = Recurrence(stepBwd, initialStateBwd, true);
-        let barrier = Barrier(Named("BiRecurrence"));
-        let splice = Sequence::Map(BinaryModel([=](const Variable& a, const Variable& b) { return Splice({ barrier(a), b }, Axis(0), Named("bidi")); }));
+        //let barrier = Barrier(600, Named("BiRecurrence"));
+        let splice = Sequence::Map(BinaryModel([=](const Variable& a, const Variable& b) { return Splice({ /*barrier*/(a), b }, Axis(0), Named("bidi")); }));
         vector<Variable> rFwd, rBwd;
         return BinarySequenceModel({}, { { L"stepFwd", stepFwd },{ L"stepBwd", stepBwd } },
         [=](vector<Variable>& res, const vector<Variable>& inFwd, const vector<Variable>& inBwd) mutable
@@ -702,7 +716,7 @@ struct Sequence
 
     static UnaryFoldingModel Fold(const BinaryModel& step, const Variable& initialState)
     {
-        let barrier = Barrier(Named("Fold"));
+        let barrier = Barrier(600, Named("Fold"));
         return UnaryFoldingModel({}, { { L"step", step }  },
         [=](const vector<Variable>& x) -> Variable
         {

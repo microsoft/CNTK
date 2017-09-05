@@ -872,6 +872,7 @@ class Variable::AutoBatch
         NonOwningFunctionListBuilder m_viewOps;
         vector<NonOwningFunctionListBuilder> m_regularOps; // m_regularOps[] is a linked list
         NonOwningFunctionListBuilder m_barrierOps; // TODO: currently dead
+        // TODO: remove barrierPendingCounts
         vector<size_t> m_barrierPendingCounts;  // [barrier id] number of consumers of a barrier id that are not yet ready
         vector<size_t> m_bnPendingCounts;       // [bn id] number of pending (non-ready) BatchNormalization operations
         // TODO: This must be turned into something hashable.
@@ -1049,7 +1050,11 @@ class Variable::AutoBatch
                 SeeThroughNoOps(inputs, i, barrierId); // TODO: this is inefficient; better have a second version that stops once it found the first barrier
                 if (barrierId == SIZE_MAX)
                     continue;
+#if 1
+                let thisGap = (int)barrierId; // we encode seriousness in the barrierId itself; e.g. 600 is more serious than 20, so wait longer
+#else
                 let thisGap = (int)m_barrierPendingCounts[barrierId]; // how many outstanding (not ready) barrier consumers do we have?
+#endif
                 if (thisGap > gap)
                     gap = thisGap; // determine the largest gap
             }
@@ -1342,7 +1347,7 @@ class Variable::AutoBatch
             cudaStats.resize(2 * (size_t)PrimitiveOpType::UnknownOP);
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
             let logAsOp = (f.m_op == PrimitiveOpType::Splice && spliceIsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
-            cudaStatsPtr = &cudaStats[(size_t)logAsOp + (hasSparse ? 1 : 0)];
+            cudaStatsPtr = &cudaStats[(size_t)logAsOp*2 + (hasSparse ? 1 : 0)];
             cudaStatsPtr->op = logAsOp; // (really only needed the first time)
             cudaStatsPtr->hasSparse = hasSparse;
             cudaStatsPtr->numInvocations++;
