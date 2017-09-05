@@ -12,6 +12,7 @@
 #include <typeindex>
 #include "CuDnnCommon.h"
 #include "CuDnnRNN.h"
+#include "half.hpp"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -172,5 +173,6 @@ void CuDnnRNNExecutor<ElemType>::BackwardWeightsCore(const GPUMatrix<ElemType>& 
 
 template class CuDnnRNNExecutor<double>;
 template class CuDnnRNNExecutor<float>;
+template class CuDnnRNNExecutor<half>;
 
 } } }
