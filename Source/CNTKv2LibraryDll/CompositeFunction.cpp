@@ -874,7 +874,7 @@ namespace CNTK
                 }
                 case PrimitiveOpType::UnpackBatch:
                 {
-                    computationNodePtr = New<UnpackBatchAixsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    computationNodePtr = New<UnpackBatchAxisNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
                 }
                 case PrimitiveOpType::Plus:

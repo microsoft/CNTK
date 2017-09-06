@@ -19,7 +19,21 @@
 
 #include <cublas_v2.h>
 #include <cusparse_v2.h>
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4100) // 'identifier': unreferenced formal parameter
+#pragma warning(disable : 4127) // conditional expression is constant
+#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
+#pragma warning(disable : 4458) // declaration of 'identifier' hides class member
+#pragma warning(disable : 4515) // 'namespace': namespace uses itself
+#pragma warning(disable : 4706) // assignment within conditional expression
+#endif
 #include <cub/cub.cuh>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 #include "half.hpp"
 
 /* A selector used in kernels to get compute type base on ElemType(storage) */
@@ -167,7 +181,7 @@ __host__ __device__ __forceinline__ bool operator!=(const LONG64 &lh, const half
 // Generalize cublas calls
 inline cublasStatus_t cublasgeamHelper(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, float *alpha, float *A, int lda, float *beta, float *B, int ldb, float *C, int ldc){ return cublasSgeam(handle, transa, transb, m, n, alpha, A, lda, beta, B, ldb, C, ldc); }
 inline cublasStatus_t cublasgeamHelper(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, double *alpha, double *A, int lda, double *beta, double *B, int ldb, double *C, int ldc){ return cublasDgeam(handle, transa, transb, m, n, alpha, A, lda, beta, B, ldb, C, ldc); }
-inline cublasStatus_t cublasgeamHelper(cublasHandle_t, cublasOperation_t, int, int, half *, half *, int, half *, half *, int, half *, int){ RuntimeError("Unsupported template argument(half) in cublasgeamHelper"); }
+inline cublasStatus_t cublasgeamHelper(cublasHandle_t, cublasOperation_t, cublasOperation_t, int, int, half *, half *, int, half *, half *, int, half *, int){ RuntimeError("Unsupported template argument(half) in cublasgeamHelper"); }
 
 inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t generator, float *outputPtr, size_t num){ return curandGenerateUniform(generator, outputPtr, num); }
 inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t generator, double *outputPtr, size_t num){ return curandGenerateUniformDouble(generator, outputPtr, num); }

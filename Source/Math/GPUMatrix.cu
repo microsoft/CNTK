@@ -3459,7 +3459,17 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
         Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
                                                      savedMean.Data(), savedInvStdDev.Data(), GetStream());
     }
+
+#ifdef _MSC_VER
+// half only takes float as input, so suppress the warning about double to float conversion
+#pragma warning(push)
+#pragma warning(disable : 4244) // warning C4244: conversion from 'double' to 'float', possible loss of data 
+#endif
     ElemType mbStatsWeight = (ElemType)(1 - blendFactor); // weight for contribution from actual MB stats (0 if none, e.g. locked BN node)
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
     Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
                                                     in.Data(), Data(), grad.Data(), scale.Data(), mbStatsWeight, scaleGrad.Data(), biasGrad.Data(), savedMean.Data(), savedInvStdDev.Data(), GetStream());
 }
@@ -3515,7 +3525,7 @@ static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t trans
 {
     return cublasHgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
 }
-static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const half* alpha, const half* x, int incx, half* y, int incy)
+static cublasStatus_t cublas_axpy(cublasHandle_t, int, const half*, const half*, int, half*, int)
 {
     RuntimeError("Unsupported template argument(half) in cublas_axpy"); // TODO: This is just placeholder. cublasaxpyEx can be used here
     return (cublasStatus_t) 0;

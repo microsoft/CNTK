@@ -182,7 +182,7 @@
       <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)"</PreprocessorDefinitions>
       <!-- UWP does not use MPI -->
       <PreprocessorDefinitions Condition="!$(IsUWP)">%(PreprocessorDefinitions);HAS_MPI=1</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(CudaVersion)' == '9.0'">%(PreprocessorDefinitions);CUDA_NO_HALF;__CUDA_ARCH__=900;__CUDA_NO_HALF_OPERATORS__</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(CudaVersion)' == '9.0'">%(PreprocessorDefinitions);CUDA_NO_HALF;__CUDA_NO_HALF_OPERATORS__</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
 

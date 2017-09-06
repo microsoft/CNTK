@@ -986,21 +986,21 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
 
         // By how much do we underutilize?
         // We increase #blocks by that factor by breaking reduction into that many chunks.
-        let numReductionChunks = max(props.multiProcessorCount / NN, 1); // only >1 for NN < multiProcessorCount
+        int numReductionChunks = std::max<int>(props.multiProcessorCount / NN, 1); // only >1 for NN < multiProcessorCount
 
         // distribute NN over block X and Y
-        let blockXOverBy = CeilDiv(NN, props.maxGridSize[0]);
-        let numBlocksX = CeilDiv(NN, blockXOverBy);
-        let numBlocksY = CeilDiv(NN, numBlocksX);
+        int blockXOverBy = CeilDiv(NN, props.maxGridSize[0]);
+        int numBlocksX = CeilDiv(NN, blockXOverBy);
+        int numBlocksY = CeilDiv(NN, numBlocksX);
         // while block Z is for multiple blocks working together on a single output element
-        let numBlocksZ = numReductionChunks;
+        int numBlocksZ = numReductionChunks;
         // Block dim is now:
         //  - X, Y: such that X*Y covers NN
         //  - Z: reduction chunks
 
         // reduction goes into thread dim X
-        let reductionChunkSize = CeilDiv(reductionDim, numReductionChunks);
-        let numThreadsX = min(reductionChunkSize, GridDim::maxThreadsPerBlock); // any that's over will be done by looping inside the kernel
+        int reductionChunkSize = CeilDiv(reductionDim, numReductionChunks);
+        int numThreadsX = std::min<int>(reductionChunkSize, GridDim::maxThreadsPerBlock); // any that's over will be done by looping inside the kernel
 
         // --- cases (a1) and (a2)
         // This involves no reduction across blocks.
