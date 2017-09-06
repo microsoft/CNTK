@@ -382,6 +382,7 @@ void Train(wstring outputDirectory)
         /*randomize=*/true);
     minibatchSourceConfig.maxSamples = MinibatchSource::InfinitelyRepeat;
     minibatchSourceConfig.isMultithreaded = false;
+    minibatchSourceConfig.enableMinibatchPrefetch = false;
     // BUGBUG: ^^ I see two possibly related bugs
     //  - when running on CPU, this fails reliably with what looks like a race condition
     //  - even with GPU, training unreliably fails after precisely N data passes minus one data pass. That minus one may indicate a problem in prefetch?
@@ -446,27 +447,30 @@ void Train(wstring outputDirectory)
     Microsoft::MSR::CNTK::Timer timer;
     class // helper for timing GPU-side operations
     {
-        bool enabled = false; // set to true to enable, false to disable
         Microsoft::MSR::CNTK::Timer m_timer;
         void syncGpu() { CNTK::NDArrayView::Sync(device); }
     public:
-        void Restart()
+        void Restart(bool syncGPU = false)
         {
-            if (enabled)
-            {
+            if (syncGPU)
                 syncGpu();
-                m_timer.Restart();
-            }
+            m_timer.Restart();
         }
-        void Log(const char* what, size_t numItems)
+        double Elapsed(bool syncGPU = false)
         {
-            if (enabled)
-            {
+            if (syncGPU)
                 syncGpu();
-                let elapsed = m_timer.ElapsedSeconds();
-                fprintf(stderr, "%s: %d items, items/sec=%.2f, ms/item=%.2f\n", what, (int)numItems, numItems / elapsed, 1000.0/*ms*/ * elapsed / numItems);
-            }
+            return m_timer.ElapsedSeconds();
         }
+        //void Log(const char* what, size_t numItems)
+        //{
+        //    if (enabled)
+        //    {
+        //        syncGpu();
+        //        let elapsed = Elapsed();
+        //        fprintf(stderr, "%s: %d items, items/sec=%.2f, ms/item=%.2f\n", what, (int)numItems, numItems / elapsed, 1000.0/*ms*/ * elapsed / numItems);
+        //    }
+        //}
     } partTimer;
     //wstring modelPath = L"d:/me/tmp_dynamite_model.cmf";
     //wstring modelPath = L"d:/me/tmp_dynamite_model_wn.cmf";
@@ -616,9 +620,9 @@ void Train(wstring outputDirectory)
         auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, (size_t)minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);
         if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
             break;
-        partTimer.Restart();
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
-        partTimer.Log("FromCNTKMB", minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
+        let timeGetNextMinibatch = partTimer.Elapsed();
+        //partTimer.Log("FromCNTKMB", minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
         //args[0].resize(1);
         //args[1].resize(1);
 #if 0   // for debugging: reduce #sequences to 3, and reduce their lengths
@@ -651,21 +655,24 @@ void Train(wstring outputDirectory)
             numLabels += len;
             maxLabels = max(maxLabels, len);
         }
-        partTimer.Log("GetNextMinibatch", numLabels);
+        //partTimer.Log("GetNextMinibatch", numLabels);
         fprintf(stderr, "%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
                 (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                 lr0, learner->LearningRate() / lr0);
         // train minibatch
         partTimer.Restart();
         let mbLoss = criterion_fn(args[0], args[1]);
-        partTimer.Log("criterion_fn", numLabels);
+        let timeBuildGraph = partTimer.Elapsed();
+        //partTimer.Log("criterion_fn", numLabels);
         // backprop and model update
         partTimer.Restart();
         mbLoss.Value()->AsScalar<float>();
-        partTimer.Log("ForwardProp", numLabels);
+        let timeForward = partTimer.Elapsed(true);
+        //partTimer.Log("ForwardProp", numLabels);
         partTimer.Restart();
         mbLoss.Backward(gradients);
-        partTimer.Log("BackProp", numLabels);
+        let timeBackward = partTimer.Elapsed(true);
+        //partTimer.Log("BackProp", numLabels);
         mbLoss.Value()->AsScalar<float>();
         // note: we must use numScoredLabels here
         let numScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
@@ -673,7 +680,8 @@ void Train(wstring outputDirectory)
         info.trainingLossValue->AsScalar<float>();
         partTimer.Restart();
         learner->Update(gradients, info);
-        partTimer.Log("Update", numLabels);
+        let timePerUpdate = partTimer.Elapsed();
+        //partTimer.Log("Update", numLabels);
         let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
         totalLabels += info.numberOfSamples;
         // I once saw a strange (impossible) -1e23 or so CE loss, no idea where that comes from. Skip it in smoothed loss. Does not seem to hurt the convergence.
@@ -687,9 +695,10 @@ void Train(wstring outputDirectory)
         let smoothedLossVal = smoothedLoss.Update(lossPerLabel, info.numberOfSamples);
         let elapsed = timer.ElapsedSeconds(); // [sec]
         if (communicator->CurrentWorker().IsMain())
-            fprintf(stderr, "%d: CrossEntropy loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d, words/sec=%.1f, ms/word=%.1f\n",
+            fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f; smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f ms\n",
                             (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
-                            info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples);
+                            info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples,
+                            1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeBackward, 1000.0 * timePerUpdate);
         // log
         // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
         if (mbCount < 400 || mbCount % 5 == 0)

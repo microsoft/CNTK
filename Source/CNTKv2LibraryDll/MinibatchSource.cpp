@@ -559,6 +559,8 @@ namespace CNTK
             augmentedConfiguration[L"multiThreadedDeserialization"] = 
                 (configuration.isMultithreaded.IsInitialized()) ? configuration.isMultithreaded.Get() : defaultMultithreaded;
 
+            augmentedConfiguration[L"prefetch"] = configuration.enableMinibatchPrefetch;
+
             augmentedConfiguration[L"deserializers"] = deserializers;
 
             return augmentedConfiguration;

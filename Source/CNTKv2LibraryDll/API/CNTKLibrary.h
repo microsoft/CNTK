@@ -5556,10 +5556,15 @@ namespace CNTK
 
         ///
         /// Specifies if the deserialization should be done on a single or multiple threads. 
-        /// Defaults to 'auto' (multhithreading is disabled unless ImageDeserializer is present 
+        /// Defaults to 'auto' (multithreading is disabled unless ImageDeserializer is present 
         /// in the deserializers list). 'false' and 'true' faithfully turn the multithreading off/on.
         ///
         Internal::Optional<bool> isMultithreaded;
+
+        ///
+        /// Specifies if the minibatch should be prefetched on a parallel thread.
+        ///
+        bool enableMinibatchPrefetch{ true };
 
         ///
         /// Deserializers to be used in the composite reader.

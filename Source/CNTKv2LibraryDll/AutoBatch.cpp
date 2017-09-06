@@ -542,6 +542,7 @@ class NDArrayViewArena
     // allocate a new tensor in a large arena
     static NDArrayViewPtr s_currentArena;
     static size_t s_currentArenaUsed;
+    static vector<unique_ptr<NDArrayView>> s_recycledArenas;
     static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
 public:
     // allocate an NDArrayView of a given shape, data type, and device
@@ -554,16 +555,50 @@ public:
         let numElements = shape.TotalSize();
         // if too large, or sparse, then plain alloc
         if (numElements > ARENASIZE || format != StorageFormat::Dense)
+        {
+            //fprintf(stderr, "allocating %d elements of format %d, outside arena\n", (int)shape.TotalSize(), (int)format);
             return make_shared<NDArrayView>(dataType, format, shape, device);
+        }
         // If arena not large enough then waste its remainder and just allocate a fresh one.
         // This abandons the current m_arena. This will not cause a memory leak, however:
         // Since the slices into it that were returned before all hold a ref-count to that arena,
         // it will be deallocated automatically as soon the last slice goes away.
-        // If the data type is different, we drop the current arena. We can't presently mix data types, so this is OK.
+        // The deleter, though, will intercept that and move it into the recycledArenas array.
+        // Next time we need a new arena, we will look there first and recycle one.
+        // If the data type is different, we drop the current arena. We can't presently mix data types, so this is ah-OK.
         if (!s_currentArena || numElements > (ARENASIZE - s_currentArenaUsed) ||
             dataType != s_currentArena->GetDataType() || device != s_currentArena->Device())
         {
+#if 0       // BUGBUG: This does not work for unknown reasons. The code below works, but once I uncomment the SetValue(),
+            //         it produces a loss of 0. Somehow the buffer is still being referenced, likely by a CUDA
+            //         operation with output in a different arena. However, SetValue() calls cudaMemset(), which runs on the NULL stream,
+            //         so it should wait until whichever op is there has completed.
+            s_currentArena.reset(); // abandon current one. If no references, then this will go into recycledArenas right here
+            NDArrayView* viewPtr;
+            if (!s_recycledArenas.empty()) // recycle one
+            {
+                viewPtr = s_recycledArenas.back().release(); // take back ownership
+                s_recycledArenas.pop_back(); // pop empty one
+            //    //fprintf(stderr, "..recycling arena of %d elements\n", (int)viewPtr->Shape().TotalSize());
+                //viewPtr->SetValue(0.0); // BUGBUG: without this, we get funky results
+                delete viewPtr;
+            //    viewPtr = new NDArrayView(dataType, StorageFormat::Dense, NDShape{ ARENASIZE }, device);
+            }
+            //else
+            {
+                //fprintf(stderr, "allocating arena of %d elements\n", (int)ARENASIZE);
+                viewPtr = new NDArrayView(dataType, StorageFormat::Dense, NDShape{ ARENASIZE }, device);
+            }
+            s_currentArena = shared_ptr<NDArrayView>(viewPtr, [](NDArrayView* viewPtr)
+            {
+                //fprintf(stderr, "..retiring arena of %d elements\n", (int)viewPtr->Shape().TotalSize());
+                //delete viewPtr;
+                s_recycledArenas.push_back(unique_ptr<NDArrayView>(viewPtr)); // don't release; rather keep it around
+            });
+#else
+            //fprintf(stderr, "..allocating arena of %d elements\n", (int)ARENASIZE);
             s_currentArena = make_shared<NDArrayView>(dataType, StorageFormat::Dense, NDShape{ ARENASIZE }, device);
+#endif
             s_currentArenaUsed = 0;
         }
         vector<size_t> startOffset{ s_currentArenaUsed };
@@ -580,6 +615,7 @@ public:
 
 /*static*/ NDArrayViewPtr NDArrayViewArena::s_currentArena;
 /*static*/ size_t NDArrayViewArena::s_currentArenaUsed = 0;
+/*static*/ vector<unique_ptr<NDArrayView>> NDArrayViewArena::s_recycledArenas;
 
 // ---------------------------------------------------------------------------
 // RuntimeStatistics -- helper class for collecting runtime statistics, for
@@ -1816,6 +1852,10 @@ class Variable::AutoBatch
 #endif
                     // and execute it
                     let& output = MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
+                    // a few more times for reference
+                    //MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
+                    //MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
+                    //MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
                     // and that's our input to the batched operation
                     // To make sure we hold a reference to this PrimitiveFunction, inject a strong ref to the spliceOp into the copy of its Output.
                     // Note that we abuse the composite field for a non-composite, which works because it is just a FunctionPtr, and we own it.
