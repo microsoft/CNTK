@@ -25,7 +25,7 @@ public:
     __CUDA_HOSTDEVICE__ half(const half& other) { __x = other.__x; }
     __CUDA_HOSTDEVICE__ half& operator=(const half& other) { __x = other.__x; return *this; }
     __CUDA_HOSTDEVICE__ half(half&& other) { *this = std::move(other); }
-    __CUDA_HOSTDEVICE__ half& operator=(half&& other) { *this = std::move(other); return *this; }
+    //__CUDA_HOSTDEVICE__ half& operator=(half&& other) { *this = std::move(other); return *this; }
 
     // convert to/from __half
     __CUDA_HOSTDEVICE__ half(const __half& other) : __half(other) {}
@@ -35,6 +35,7 @@ public:
     // construction from build-in types
     __CUDA_HOSTDEVICE__ half(float f) {
 #ifndef __CUDA_ARCH__
+        f;
         __x = 0U; // fake: need to implement float to half conversion here
 #else
         //__x = __float2half(f).__x;
@@ -46,6 +47,7 @@ public:
     // cast to build-in types
     __CUDA_HOSTDEVICE__ half& operator=(float f) {
 #ifndef __CUDA_ARCH__
+        f;
         __x = 0U; return *this; // fake: need to implement float to half conversion here
 #else
         //__x = __float2half(f).__x; return *this;

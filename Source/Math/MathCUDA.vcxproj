@@ -120,9 +120,11 @@ xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <ClInclude Include="CuDnnCommon.h" />
     <ClInclude Include="CuDnnFactories.h" />
     <ClInclude Include="CuDnnRNN.h" />
+    <ClInclude Include="fpgeneric.h" />
     <ClInclude Include="GPUDataTransferer.h" />
     <ClInclude Include="GPURNGHandle.h" />
     <ClInclude Include="GPUTensor.h" />
+    <ClInclude Include="half.hpp" />
     <ClInclude Include="latticefunctionskernels.h" />
     <ClInclude Include="Convolution.cuh" />
     <ClInclude Include="TensorOps.h" />

@@ -131,6 +131,12 @@
     <ClInclude Include="CuDnnRNN.h">
       <Filter>GPU\RNN</Filter>
     </ClInclude>
+    <ClInclude Include="fpgeneric.h">
+      <Filter>GPU</Filter>
+    </ClInclude>
+    <ClInclude Include="half.hpp">
+      <Filter>GPU</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">
