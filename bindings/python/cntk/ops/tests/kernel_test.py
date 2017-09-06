@@ -576,26 +576,26 @@ def test_conv_cudnn_batch_size_change(device_id):
 
 FREE_STATIC_AXES_CONVOLUTION_DATA = [
     # 2D convolution with single free static axis.
-    ([5, 101, 151], # warmup_input_size: Defines the input size used for first run with free static axes. 3- and 4-element vector for 2D and 3D convolution, respectively. 
+    ([3, 101, 151], # warmup_input_size: Defines the input size used for first run with free static axes. 3- and 4-element vector for 2D and 3D convolution, respectively. 
      [200],         # free_dimension_increment: Increments to the input size for the second/actual/test run. Length defines the number of free static axes.
      [5, 5],        # filter_size: kernel size for convolution. Length defines 2D or 3D convolution.
-     128            # num_output_channels
+     32            # num_output_channels
      ),
     # 2D convolution with two free static axes.
     ([3, 51, 101], 
-     [100, 121], 
+     [30, 20], 
      [3, 3], 
-     128
+     64
      ),
     # 3D convolution with three free static axes.
     ([3, 51, 101, 71],
-     [100, 21, 31],
+     [10, 20, 40],
      [3, 3, 3],
-     16
+     8
      ),
     # 3D convolution with two free static axes.
     ([5, 51, 61, 91],
-     [20, 12],
+     [6, 8],
      [3, 3, 3],
      8
      ),
@@ -603,7 +603,7 @@ FREE_STATIC_AXES_CONVOLUTION_DATA = [
     ([2, 101, 121, 151],
      [10],
      [3, 3, 3],
-     8
+     4
      )
 ]
 # This test point exercises 2D and 3D convolution with single and multiple free static axes, and ensures that the result is the same as with fixed axes.
@@ -647,11 +647,11 @@ def test_conv_free_static_axes(warmup_input_size, free_dimension_increment, filt
 
 FREE_STATIC_AXES_WITH_DYNAMIC_AXIS_CONVOLUTION_DATA = [    
     # 2D convolution with two free static axes and one batch (dynamic) axis.
-    ([3, 51, 71], # warmup_input_size: Defines the input size used for first run with free static axes. 3- and 4-element vector for 2D and 3D convolution, respectively.
+    ([3, 31, 51], # warmup_input_size: Defines the input size used for first run with free static axes. 3- and 4-element vector for 2D and 3D convolution, respectively.
      [10, 12],    # free_dimension_increment: Increments to the input size for the second/actual/test run. Length defines the number of free static axes.
      [3, 3],      # filter_size: kernel size for convolution. Length defines 2D or 3D convolution.
-     32,          # num_output_channels
-     [4, 33]      # Half-open range for random selection of of batch-sizes (for reference and warmup)
+     16,          # num_output_channels
+     [2, 10]      # Half-open range for random selection of of batch-sizes (for reference and warmup)
      ),        
 ]
 # This test point exercises convolution with multiple free static axes and batch (dynamic) axis), and ensures that the result is the same as with fixed axes.
@@ -733,3 +733,33 @@ def test_convolution_dilated(input_size, conv_size, result, device_id, precision
 
     unittest_helper(input_op, forward_input, expected_forward,
                     None, device_id=device_id, precision=precision)
+
+FREE_STATIC_AXES_SEQUENCE_UNPACK_CONVOLUTION_DATA = [    
+    # Convolution with free static axes using sequence unpack.
+    (6,         # num_features: Defines the input size used for first run with free static axes. 3- and 4-element vector for 2D and 3D convolution, respectively.
+     4,         # sequence_len: Number of sequences.
+     [3, 3],    # filter_size: kernel size for convolution. Length defines 2D or 3D convolution.
+     8,        # num_output_channels
+     2          # batch_size
+     )
+]
+# This test point exercises convolution with free static axes produced by sequence.unpack, and ensures that the result is the same as with fixed axes.
+@pytest.mark.parametrize("num_features, sequence_len, filter_size, num_output_channels, batch_size", FREE_STATIC_AXES_SEQUENCE_UNPACK_CONVOLUTION_DATA)
+def test_conv_free_static_with_sequence_unpack(num_features, sequence_len, filter_size, num_output_channels, batch_size, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    x_ref = C.input_variable((1, sequence_len, num_features), dtype=dt)
+    conv_map_ref = C.constant(np.random.randn(num_output_channels, 1, filter_size[0], filter_size[1]).astype(dt), device=dev)
+    w2_ref = C.convolution(conv_map_ref, x_ref, auto_padding=[False])
+    x0_ref = np.arange(batch_size*1*sequence_len*num_features).astype(dt).reshape(batch_size, 1, sequence_len, num_features)
+    output_ref = w2_ref.eval({x_ref: x0_ref}, device=dev)
+
+
+    x_test = C.sequence.input_variable(num_features, dtype=dt)
+    y_test, mask_test = C.sequence.unpack(x_test, 0).outputs
+    z_test = C.reshape(y_test, (1, ), 0, 0)
+    w2_test = C.convolution(conv_map_ref, z_test, auto_padding=[False])
+    output_test = w2_test.eval({x_test: np.squeeze(x0_ref)}, device=dev)
+    
+    assert np.allclose(output_test, output_ref, atol=1e-4)
