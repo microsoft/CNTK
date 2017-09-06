@@ -1174,6 +1174,7 @@ class Variable::AutoBatch
         // initialize m_consumers chain
         fields.m_consumers.first.first = nullptr;
         fields.m_consumers.second.clear();
+        // set up some overlaid stuff
         // handle leaves
         if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
         {
@@ -1181,12 +1182,21 @@ class Variable::AutoBatch
                 var.Value(); // this initializes it
             if (!fields.m_value)
                 LogicError("Parameter/Constant has no Value??");
+            fields.m_redirection.m_lazyIndex = SIZE_MAX;
+            fields.m_redirection.m_actualShape = &fields.m_shape;
+            fields.m_redirection.m_depthHint = 0;
             m_stats.numLeafNodes++;
             return;
         }
         // not a leaf
-        auto& f = *fields.m_ownerFunction.lock();
-        f.m_autoBatchState.m_depth = depth;
+        // set up linkage in our overlaid structure
+        fields.m_redirection.m_function = fields.m_ownerFunction.lock().get();
+        fields.m_redirection.m_lazyIndex = SIZE_MAX;
+        fields.m_redirection.m_actualShape = &fields.m_shape;
+        fields.m_redirection.m_depthHint = 0;
+        // TODO: ...short-circuit see-through ops, reshape, etc.
+        auto& f = *fields.m_redirection.m_function;
+        f.m_autoBatchState.m_depth = depth; // ...TODO: does this belong into m_redirection?
         // special case BatchNormalization: we must account for all occurences before normalizing
         if (f.m_op == PrimitiveOpType::BatchNormalization)
         {
@@ -1239,7 +1249,7 @@ class Variable::AutoBatch
             return fields.m_value;
         fail_if(!fields.m_redirection, "variable unexpectedly has no value yet, nor is it a slice view into a batched op");
         // the PrimitiveFunction does not own its output, it is a slice view into another
-        let& from = LazilyIndexedValue(fields.m_redirection.m_ownerFunction->m_outputs[0]);
+        let& from = LazilyIndexedValue(fields.m_redirection.m_actualOwner->m_outputs[0]);
         let index = fields.m_redirection.m_index;
         // TODO: Allow an implicit Reshape() here, so that we can use the same mechanism for slice and reshape.
         if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
@@ -1280,7 +1290,7 @@ class Variable::AutoBatch
             };
             if (fields.m_redirection)
             {
-                let& input1 = fields.m_redirection.m_ownerFunction->m_outputs[0];
+                let& input1 = fields.m_redirection.m_actualOwner->m_outputs[0];
                 fprintf(stderr, "%s%s%S%S[%d]", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input1).c_str(), input1.Shape().AsString().c_str(), (int)fields.m_redirection.m_index);
             }
             else
@@ -1761,8 +1771,8 @@ class Variable::AutoBatch
                         // optimization: if consecutive slices, then recover the original batched tensor
                         // TODO: Can we directly check the data buffer pointer?
                         allConsecutiveSlices = allConsecutiveSlices &&
-                            redirection.m_ownerFunction == redirection0.m_ownerFunction &&
-                            redirection.m_index         == redirection0.m_index + j;
+                            redirection.m_actualOwner == redirection0.m_actualOwner &&
+                            redirection.m_index       == redirection0.m_index + j;
                         // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
                         // scenario, we will loose entries in the middle. We can allow to keep a few around
                         // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
@@ -1779,7 +1789,7 @@ class Variable::AutoBatch
                     m_batchedInputs[i] = spliceInputs[0];
                 else if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
                 {
-                    let& from  = redirection0.m_ownerFunction;
+                    let& from  = redirection0.m_actualOwner;
                     let  begin = redirection0.m_index;
                     let& output = from->m_outputs[0];
                     fail_if(!output.m_dataFields->m_value, "value not yet available??");
@@ -1989,6 +1999,21 @@ public:
     // -----------------------------------------------------------------------
 
     // Value(), computed with automatic batching
+    // This (and BatchedBackward()) represent the graph via the following structures that overlay the CNTK API structures:
+    //  - Variable:
+    //     - m_redirection.m_actualOwner -> PrimitiveFunction (nullptr for leaves, that is, Parameter and Constant)
+    //     - m_redirection.m_lazyIndex    --if not SIZE_MAX, then slice the last dimension with this  --TODO: begin and end?
+    //     - m_redirection.m_actualShape -> NDShape  --actual shape of final result
+    //     - m_depthHint  --this value should only be consumer when thgere is no ready op that consumes a smaller m_depthHint
+    //  - PrimitiveFunction:
+    //     - m_inputs[] -> Variable
+    //     - m_output
+    //     - m_op, m_attributes
+    // See-through ops like Alias and Barrier (StopGradient?) are folded into a single node.
+    // (...How about Reshape()? And Slice/Index()?)
+    // Unlike the CNTK AI structures, m_redirection is not immutable. I.e. we can optimize the graph.
+    // Batching relies on this and replaces unbatched m_actualOwner with batched ones.
+    // Naked pointers are used, assuming that ref counting is handled by the CNTK API structures.
     // This routine uses temporary fields that are assumed initialized in a specific way:
     //  - PrimitiveFunction::m_autoBatchState.m_pendingInputs:
     //     - #inputs that still need to be computed before a node's value can be computed
@@ -2125,7 +2150,7 @@ public:
             // if this op draws from a batched op, then the gradient lives in there as well; we return a view onto it
             if (fields.m_redirection)
             {
-                let& from  = fields.m_redirection.m_ownerFunction;
+                let& from  = fields.m_redirection.m_actualOwner;
                 let  index = fields.m_redirection.m_index;
                 let& fromOutput = from->m_outputs[0];
                 beta = LazilyCreateLazilyIndexedGradient(fromOutput);
@@ -2166,7 +2191,7 @@ public:
 #ifndef NO_BATCHED_BACKPROP
         // if the input is a result of a batched operation, then traverse into that instead
         if (input.m_dataFields->m_redirection)
-            return input.m_dataFields->m_redirection.m_ownerFunction->m_outputs[0];
+            return input.m_dataFields->m_redirection.m_actualOwner->m_outputs[0];
 #endif
         return input;
     }
@@ -2200,9 +2225,9 @@ public:
         // the same batching that was determined in forward computation.
         auto& outFields = *var.m_dataFields;
 #ifndef NO_BATCHED_BACKPROP
-        auto&f = outFields.m_redirection                 // if var was computed via batched op
-              ? *outFields.m_redirection.m_ownerFunction // then backprop into the batched op
-              : *outFields.m_ownerFunction.lock();       // otherwise traverse the original op
+        auto&f = outFields.m_redirection               // if var was computed via batched op
+              ? *outFields.m_redirection.m_actualOwner // then backprop into the batched op
+              : *outFields.m_ownerFunction.lock();     // otherwise traverse the original op
 #else
         auto&f = outFields.m_ownerFunction.lock();
 #endif
@@ -2226,7 +2251,7 @@ public:
 #ifndef NO_BATCHED_BACKPROP
             // if the input is a result of a batched operation, then traverse into that instead
             if (inputp->m_dataFields->m_redirection)
-                inputp = &inputp->m_dataFields->m_redirection.m_ownerFunction->m_outputs[0];
+                inputp = &inputp->m_dataFields->m_redirection.m_actualOwner->m_outputs[0];
 #endif
             let& input = *inputp;
 #endif
