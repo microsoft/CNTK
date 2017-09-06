@@ -1154,53 +1154,43 @@ class Variable::AutoBatch
     //  - schedule all ready operations
     // TODO: Once we are in the main build, change all Function to PrimitiveFunction directly.
     // TODO: What to do with multi-valued functions? Which ones are there? What is Combine(), a barrier?
-    // This function assumes that
-    //  - it only runs once
-    //  - m_value must not have been set (don't call this function if it has)
-    //  - m_autoBatchState.m_pendingInputs has been initialized to -1 by the constructor
     // Caller must call m_visitorTag.Begin() first.
     void RInitForScheduling(const Variable& var, size_t depth)
     {
         auto& fields = *var.m_dataFields;
-        // return if already visited
-        // BUGBUG: We should update depth to the max. Currently we just leave the first.
+        // return if this node was already visited
         if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
+        // if not visited yet then m_redirection is invalid and must be set up
         // some sanity checks
         if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
             LogicError("Value() depends on Input or Placeholder, it is not knowable.");
-        // already has a value: we hit a leaf
-        if (fields.m_value)
-        {
-            m_stats.numLeafNodes++;
-            return;
-        }
         // initialize m_consumers chain
         fields.m_consumers.first.first = nullptr;
         fields.m_consumers.second.clear();
-        // set up some overlaid stuff
         // handle leaves
-        if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
+        // Leaves are Parameters, Constants, and also nodes that already have a value.
+        let isLeaf = (fields.m_value || fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant);
+        if (isLeaf && !fields.m_value)
         {
-            if (!fields.m_value)
-                var.Value(); // this initializes it
-            if (!fields.m_value)
-                LogicError("Parameter/Constant has no Value??");
-            fields.m_redirection.m_function = nullptr;
-            fields.m_redirection.m_sliceEnd = SIZE_MAX;
-            fields.m_redirection.m_depthHint = 0;
+            var.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
+            fail_if(!fields.m_value, "Parameter/Constant has no Value()??");
+        }
+        // set up linkage in our overlaid structure
+        fields.m_redirection.m_function = isLeaf ? nullptr : fields.m_ownerFunction.lock().get();
+        fields.m_redirection.m_sliceEnd = SIZE_MAX;
+        fields.m_redirection.m_depthHint = 0;
+        if (isLeaf)
+        {
             m_stats.numLeafNodes++;
             return;
         }
-        // not a leaf
-        // set up linkage in our overlaid structure
-        fields.m_redirection.m_function = fields.m_ownerFunction.lock().get();
-        fields.m_redirection.m_sliceEnd = SIZE_MAX;
-        fields.m_redirection.m_depthHint = 0;
         fail_if(!fields.m_redirection.m_function, "no owner?");
+        // not a leaf
         // TODO: ...short-circuit see-through ops, reshape, etc.
         auto& f = *fields.m_redirection.m_function;
         f.m_autoBatchState.m_depth = depth; // ...TODO: does this belong into m_redirection?
+        // BUGBUG: We should update depth to the max. Currently we just leave the first.
         // special case BatchNormalization: we must account for all occurences before normalizing
         if (f.m_op == PrimitiveOpType::BatchNormalization)
         {
