@@ -41,20 +41,20 @@ namespace CNTK
         // Dynamite
         struct Redirection // redirect this value to a different owner function. Also allow for lazy Index operation.
         {
-            PrimitiveFunctionPtr m_actualOwner;     // redirected to this owner
-            size_t m_index;                         // and we take this slice on the way (SIZE_MAX if none)
-            PrimitiveFunction* m_function;     // ...for now use these instead, until we are ready to switch; m_actualOwner becomes m_functionHolder
-            size_t m_lazyIndex;
-            const NDShape* m_actualShape = nullptr; // shape of result (may differ from actual function)
+            PrimitiveFunctionPtr m_functionHolder;  // holds shared_ptr to owner if created anew
+            size_t m_index;                         // and we take this slice on the way (SIZE_MAX if none)  --TODO: replace by m_sliceBegin/End
+            PrimitiveFunction* m_function;          // ...for now use these instead, until we are ready to switch; m_functionHolder becomes m_functionHolder
+            size_t m_sliceBegin, m_sliceEnd;        // slice out these items (applied to last dimension). Do nothing if m_sliceEnd==SIZE_MAX.  --TODO: think this through more
+            bool hasSlice() const { return m_sliceEnd != SIZE_MAX; }
             size_t m_depthHint = 0;                 // this redirection skipped a Barrier with this depthHint
             Redirection() {}
-            Redirection(PrimitiveFunctionPtr f, size_t index = SIZE_MAX) : m_actualOwner(f), m_index(index) { }
+            Redirection(PrimitiveFunctionPtr f, size_t index = SIZE_MAX) : m_functionHolder(f), m_index(index) { }
             // TODO: this vv is questionable once we have more properties. What is this used for?
-            bool operator==(const Redirection& other) const { return m_actualOwner == other.m_actualOwner && m_index == other.m_index; }
+            bool operator==(const Redirection& other) const { return m_functionHolder == other.m_functionHolder && m_index == other.m_index; }
             // TODO: this vv will go away once we always redirect
-            operator bool() const { return (bool)m_actualOwner; } // allows for "if (m_lazyIndex)"
+            operator bool() const { return (bool)m_functionHolder; } // allows for "if (m_lazyIndex)"
         };
-        Redirection m_redirection;
+        mutable Redirection m_redirection;
         std::pair<std::pair<PrimitiveFunction*,size_t>, std::vector<std::pair<PrimitiveFunction*, size_t>>> m_consumers; // ((f_0, inputIndex_0), vector(f_n, inputIndex_n))
         mutable size_t m_visitedTag = 0; // used for tree traversal
 
