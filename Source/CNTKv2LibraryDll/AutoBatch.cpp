@@ -867,7 +867,7 @@ class Variable::AutoBatch
         let& input = inputs[index];
         let& fields = *input.m_dataFields;
         // lazy index: not an alias
-        if (fields.m_lazyIndex.first)
+        if (fields.m_lazyIndex.m_ownerFunction)
             return input;
         // does not have an owner: not an alias
         let f = fields.Owner();
@@ -1237,10 +1237,10 @@ class Variable::AutoBatch
         auto& fields = *v.m_dataFields;
         if (fields.m_value)
             return fields.m_value;
-        fail_if(!fields.m_lazyIndex.first, "variable unexpectedly has no value yet, nor is it a slice view into a batched op");
+        fail_if(!fields.m_lazyIndex.m_ownerFunction, "variable unexpectedly has no value yet, nor is it a slice view into a batched op");
         // the PrimitiveFunction does not own its output, it is a slice view into another
-        let& from = LazilyIndexedValue(fields.m_lazyIndex.first->m_outputs[0]);
-        let index = fields.m_lazyIndex.second;
+        let& from = LazilyIndexedValue(fields.m_lazyIndex.m_ownerFunction->m_outputs[0]);
+        let index = fields.m_lazyIndex.m_index;
         // TODO: Allow an implicit Reshape() here, so that we can use the same mechanism for slice and reshape.
         if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
             fields.m_value = from;
@@ -1278,10 +1278,10 @@ class Variable::AutoBatch
                     uid = name + L":" + uid;
                 return uid;
             };
-            if (fields.m_lazyIndex.first)
+            if (fields.m_lazyIndex.m_ownerFunction)
             {
-                let& input1 = fields.m_lazyIndex.first->m_outputs[0];
-                fprintf(stderr, "%s%s%S%S[%d]", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input1).c_str(), input1.Shape().AsString().c_str(), (int)fields.m_lazyIndex.second);
+                let& input1 = fields.m_lazyIndex.m_ownerFunction->m_outputs[0];
+                fprintf(stderr, "%s%s%S%S[%d]", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input1).c_str(), input1.Shape().AsString().c_str(), (int)fields.m_lazyIndex.m_index);
             }
             else
                 fprintf(stderr, "%s%s%S%S", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input).c_str(), input.Shape().AsString().c_str());
@@ -1439,7 +1439,7 @@ class Variable::AutoBatch
         {
             // notify consumers
             auto& fields = *output.m_dataFields;
-            fail_if(!fields.m_value && !fields.m_lazyIndex.first, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
+            fail_if(!fields.m_value && !fields.m_lazyIndex.m_ownerFunction, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
             auto& c = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
             if (c.first)
                 m_schedule.NotifyInputAvailable(c.first);
@@ -1457,7 +1457,7 @@ class Variable::AutoBatch
     {
         // we remember where we came from for backprop in this case
         auto& fields = *op->m_outputs[0].m_dataFields;
-        fields.m_lazyIndex = make_pair(batchedOp, j);
+        fields.m_lazyIndex = VariableFields::Redirection(batchedOp, j);
         // semantically, this will compute as fields.m_value = out->IndexLastAxis(j);
         // but it gets deferred to save effort
         // reset state
@@ -1739,12 +1739,12 @@ class Variable::AutoBatch
                 // optimization: if all args are consecutive slices, then use a slice view instead
                 let* pfields0 = SeeThroughNoOps(f0.m_inputs, i).m_dataFields.get();
                 let& lazyIndex0 = pfields0->m_lazyIndex; // for 'allConsecutiveSlices' test
-                let is0LazyIndex = (bool)lazyIndex0.first;
+                let is0LazyIndex = (bool)lazyIndex0.m_ownerFunction;
                 // loop over all batched ops
                 // BUGBUG: How about NoOp? (used for Barrier) Also Alias and Reshape actually
                 //         Seems if we can carry on a bacth, we should run them once; otherwise don't batch.
                 bool allSame = true;
-                bool allConsecutiveSlices = is0LazyIndex && lazyIndex0.second != SIZE_MAX; // to be consecutive, it must be a slice to start with
+                bool allConsecutiveSlices = is0LazyIndex && lazyIndex0.m_index != SIZE_MAX; // to be consecutive, it must be a slice to start with
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
@@ -1759,9 +1759,10 @@ class Variable::AutoBatch
                     if (allConsecutiveSlices)
                     {
                         // optimization: if consecutive slices, then recover the original batched tensor
+                        // TODO: Can we directly check the data buffer pointer?
                         allConsecutiveSlices = allConsecutiveSlices &&
-                            lazyIndex.first  == lazyIndex0.first    &&
-                            lazyIndex.second == lazyIndex0.second + j;
+                            lazyIndex.m_ownerFunction == lazyIndex0.m_ownerFunction &&
+                            lazyIndex.m_index         == lazyIndex0.m_index + j;
                         // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
                         // scenario, we will loose entries in the middle. We can allow to keep a few around
                         // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
@@ -1778,8 +1779,8 @@ class Variable::AutoBatch
                     m_batchedInputs[i] = spliceInputs[0];
                 else if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
                 {
-                    let& from  = lazyIndex0.first;
-                    let  begin = lazyIndex0.second;
+                    let& from  = lazyIndex0.m_ownerFunction;
+                    let  begin = lazyIndex0.m_index;
                     let& output = from->m_outputs[0];
                     fail_if(!output.m_dataFields->m_value, "value not yet available??");
                     let& fromDims = output.Shape().Dimensions();
@@ -2122,10 +2123,10 @@ public:
             // create new gradient
 #ifndef NO_BATCHED_BACKPROP
             // if this op draws from a batched op, then the gradient lives in there as well; we return a view onto it
-            if (fields.m_lazyIndex.first)
+            if (fields.m_lazyIndex.m_ownerFunction)
             {
-                let& from  = fields.m_lazyIndex.first;
-                let  index = fields.m_lazyIndex.second;
+                let& from  = fields.m_lazyIndex.m_ownerFunction;
+                let  index = fields.m_lazyIndex.m_index;
                 let& fromOutput = from->m_outputs[0];
                 beta = LazilyCreateLazilyIndexedGradient(fromOutput);
                 let& fromGradient = fromOutput.m_dataFields->m_gradient;
@@ -2164,8 +2165,8 @@ public:
         let& input = SeeThroughNoOps(f.m_inputs, index);
 #ifndef NO_BATCHED_BACKPROP
         // if the input is a result of a batched operation, then traverse into that instead
-        if (input.m_dataFields->m_lazyIndex.first)
-            return input.m_dataFields->m_lazyIndex.first->m_outputs[0];
+        if (input.m_dataFields->m_lazyIndex.m_ownerFunction)
+            return input.m_dataFields->m_lazyIndex.m_ownerFunction->m_outputs[0];
 #endif
         return input;
     }
@@ -2199,8 +2200,8 @@ public:
         // the same batching that was determined in forward computation.
         auto& outFields = *var.m_dataFields;
 #ifndef NO_BATCHED_BACKPROP
-        auto&f = outFields.m_lazyIndex.first       // if var was computed via batched op
-              ? *outFields.m_lazyIndex.first       // then backprop into the batched op
+        auto&f = outFields.m_lazyIndex.m_ownerFunction       // if var was computed via batched op
+              ? *outFields.m_lazyIndex.m_ownerFunction       // then backprop into the batched op
               : *outFields.m_ownerFunction.lock(); // otherwise traverse the original op
 #else
         auto&f = outFields.m_ownerFunction.lock();
@@ -2224,8 +2225,8 @@ public:
             let* inputp = &SeeThroughNoOps(inputs, i);
 #ifndef NO_BATCHED_BACKPROP
             // if the input is a result of a batched operation, then traverse into that instead
-            if (inputp->m_dataFields->m_lazyIndex.first)
-                inputp = &inputp->m_dataFields->m_lazyIndex.first->m_outputs[0];
+            if (inputp->m_dataFields->m_lazyIndex.m_ownerFunction)
+                inputp = &inputp->m_dataFields->m_lazyIndex.m_ownerFunction->m_outputs[0];
 #endif
             let& input = *inputp;
 #endif
@@ -2290,7 +2291,7 @@ public:
         fail_if(outputs.size() != 1, "only functions with 1 output are currently supported");
         let& outputFields = *outputs[0].m_dataFields;
 #ifndef NO_BATCHED_BACKPROP
-        fail_if(outputFields.m_lazyIndex.first, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
+        fail_if(outputFields.m_lazyIndex.m_ownerFunction, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
 #endif
         fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
         fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
@@ -2360,7 +2361,7 @@ public:
         let& output = f->m_outputs[0];
         let& outputFields = *output.m_dataFields;
 #ifndef NO_BATCHED_BACKPROP
-        fail_if(outputFields.m_lazyIndex.first, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
+        fail_if(outputFields.m_lazyIndex.m_ownerFunction, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
 #endif
         fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
         fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");

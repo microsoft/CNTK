@@ -34,10 +34,20 @@ namespace CNTK
         // value
         NDArrayViewPtr m_value;
         NDArrayViewPtr m_gradient;
-        std::pair<PrimitiveFunctionPtr, size_t> m_lazyIndex;
 
         // computation
         std::atomic<size_t> m_valueTimeStamp;
+
+        // Dynamite
+        struct Redirection // redirect this value to a different owner function
+        {
+            PrimitiveFunctionPtr m_ownerFunction; // redirected to this owner
+            size_t m_index;                       // and we take this slice on the way (SIZE_MAX if none)
+            Redirection() {}
+            Redirection(PrimitiveFunctionPtr f, size_t index) : m_ownerFunction(f), m_index(index) { }
+            bool operator==(const Redirection& other) const { return m_ownerFunction == other.m_ownerFunction && m_index == other.m_index; }
+        };
+        Redirection m_lazyIndex;
         std::pair<std::pair<PrimitiveFunction*,size_t>, std::vector<std::pair<PrimitiveFunction*, size_t>>> m_consumers; // ((f_0, inputIndex_0), vector(f_n, inputIndex_n))
         mutable size_t m_visitedTag = 0; // used for tree traversal
 
