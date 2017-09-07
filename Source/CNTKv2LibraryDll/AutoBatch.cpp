@@ -2211,26 +2211,6 @@ public:
         return beta;
     }
 
-#define DontSeeThroughNoOps // TODO: remove this once backprop works; for now keep as tag
-
-    // ... TODO: can this be removed?
-    // determine the input to backprop a gradient into
-    // Normally that is SeeThroughNoOps(f.m_inputs, index).
-    // However, some gradients are just copies, so we can see through them.
-    // This saves memory and allows easier discovery of optimizable patterns.
-    // Note that every single time one iterates over m_inputs for gradients, this function must be used.
-    // Note: THIS IS NOT LEVERAGED YET, and could be removed if we don't leverage it.
-    const Variable& GetShortCircuitedGradientInput(const PrimitiveFunction& f, size_t index)
-    {
-        let& input = DontSeeThroughNoOps(f.m_inputs[index]);
-#ifndef NO_BATCHED_BACKPROP // BUGBUG: this #ifdef is likely wrong
-        // if the input is a result of a batched operation, then traverse into that instead
-        if (input.m_dataFields->m_redirection)
-            return input.m_dataFields->m_redirection.m_function->m_outputs[0];
-#endif
-        return input;
-    }
-
     // recursively traverse the tree hanging off a Variable and build the m_consumer fields
     // This propagates in depth-first order like a naive backprop, but only for the purpose
     // of recording consumers of each node.
@@ -2378,6 +2358,8 @@ public:
         m_stats.numBackpropGathers++;
         return move(NDArrayView::GatherBatch(inputValues, (int)axis, move(out)));
     }
+
+#define DontSeeThroughNoOps // TODO: remove this once backprop works; for now keep as tag
 
     // back-propagate f's outputs' m_gradient to a specified input
     // This is the standard path for all unbatched ops.
