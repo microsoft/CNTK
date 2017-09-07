@@ -2882,11 +2882,14 @@ namespace CNTK
                 RuntimeError("The outputVariable '%S' shape '%S' is unknown shape.",
                               outputVariable.AsString().c_str(), outputVariable.Shape().AsString().c_str());
 
-            NDShape inferredVarShape;
+            // Make sure that inferredVarShape has correct rank in order to avoid any rank resize during inferring free dimension.
+            NDShape inferredVarShape = outputVariable.Shape();
             size_t numOfSequences;
             size_t maxSequenceLen;
             // Verify compatibility of 'this' value and outputVariable, get sequence and batch length, and get the inferred shape if the variable has a free dimension.
             std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable, &inferredVarShape);
+            if (outputVariable.Shape().Rank() != inferredVarShape.Rank())
+                RuntimeError("The shape of outputVaraible has a different rank after inferring unbound dimensions.");
 
             // Calculate the number of elements is needed to represent a sample in output buffer.
             // For dense output, it is the total size of the shape.
