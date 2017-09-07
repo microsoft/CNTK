@@ -952,7 +952,7 @@ __global__ void _doGatherColumnsOf(ElemType* us, size_t usStride, const ElemType
     comp_t jInF = idx[jOut * idxStride]; // this is the column we need to get
     if (isnan_(jInF) || jInF < 0)     // negative index means gap
         return;
-    size_t jIn = (size_t)jInF; // TODO:bad idea to store idx in ElemType matrix
+    size_t jIn = (size_t)jInF; // TODO_NV:bad idea to store idx in ElemType matrix
     //if (jIn >= aCols)
     //    return; // actually a failure
 
@@ -1025,14 +1025,14 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
     comp_t jOutF = idx[jIn * idxStride];  // this is the column we copy/add into
     if (isnan_(jOutF) || jOutF < 0)    // negative index means gap
         return;
-    size_t jOut = (size_t)jOutF; // TODO:bad idea to store idx in ElemType matrix
+    size_t jOut = (size_t)jOutF; // TODO_NV:bad idea to store idx in ElemType matrix
     //if (jOut >= usCols)
     //    return; // actually a failure  --TODO: This should not be necessary. Why is it?
 
     const ElemType&  ra =  a[id/*i + jIn  *  aStride*/];
     ElemType&       rus = us[    i + jOut * usStride  ];
 
-    ElemType res = (comp_t)ra * (comp_t)alpha; // TODO_NV: investigate this fp16
+    ElemType res = (comp_t)ra * (comp_t)alpha; // TODO_NV: investigate atomicAdd
     if (res != 0)             // avoid memory conflict if e.g. an entire column has no gradient
 #ifdef ALLOW_ATOMIC_SCATTER
         atomicAdd(&rus, res); // rus += res;
@@ -3517,8 +3517,7 @@ static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t trans
 }
 static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const half* alpha, const half* x, int incx, half* y, int incy)
 {
-    RuntimeError("Unsupported template argument(half) in cublas_axpy"); // TODO: This is just placeholder. cublasaxpyEx can be used here
-    return (cublasStatus_t) 0;
+    return cublasAxpyEx(handle, n, (void*)alpha, CUDA_R_16F, (void*)x, CUDA_R_16F, incx, (void*)y, CUDA_R_16F, incy, CUDA_R_32F);
 }
 
 template <class ElemType>

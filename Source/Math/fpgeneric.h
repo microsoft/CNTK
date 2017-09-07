@@ -187,14 +187,14 @@ inline cublasStatus_t cublasIamaxHelper(cublasHandle_t handle, int n, const half
 
 inline cublasStatus_t cublasscalHelper(cublasHandle_t handle, int n, const float *alpha, float *x, int incx){ return cublasSscal(handle, n, alpha, x, incx); }
 inline cublasStatus_t cublasscalHelper(cublasHandle_t handle, int n, const double *alpha, double *x, int incx){ return cublasDscal(handle, n, alpha, x, incx); }
-inline cublasStatus_t cublasscalHelper(cublasHandle_t handle, int n, const half *alpha, half *x, int incx){ RuntimeError("Unsupported template argument(half) in cublasscalHelper"); }
+inline cublasStatus_t cublasscalHelper(cublasHandle_t handle, int n, const half *alpha, half *x, int incx){ return cublasScalEx(handle, n, (void*)alpha, CUDA_R_16F, (void*)x, CUDA_R_16F, incx, CUDA_R_32F); }
 inline cublasStatus_t cublasscalHelper(cublasHandle_t handle, int n, const char *alpha, char *x, int incx){ RuntimeError("Unsupported template argument(char) in cublasscalHelper"); }
 inline cublasStatus_t cublasscalHelper(cublasHandle_t handle, int n, const short *alpha, short *x, int incx){ RuntimeError("Unsupported template argument(short) in cublasscalHelper"); }
 
 
 inline cublasStatus_t cublasdotHelper(cublasHandle_t handle, int n, const float *x, int incx, const float *y, int incy, float *result){ return cublasSdot(handle, n, x, incx, y, incy, result); }
 inline cublasStatus_t cublasdotHelper(cublasHandle_t handle, int n, const double *x, int incx, const double *y, int incy, double *result){ return cublasDdot(handle, n, x, incx, y, incy, result); }
-inline cublasStatus_t cublasdotHelper(cublasHandle_t handle, int n, const half *x, int incx, const half *y, int incy, half *result){ RuntimeError("Unsupported template argument(half) in cublasdotHelper"); }
+inline cublasStatus_t cublasdotHelper(cublasHandle_t handle, int n, const half *x, int incx, const half *y, int incy, half *result){ return cublasDotEx(handle, n, (void*)x, CUDA_R_16F, incx, (void*)y, CUDA_R_16F, incy, (void*)result, CUDA_R_16F, CUDA_R_32F); }
 
 // Generalize cuSparse calls
 inline cusparseStatus_t cusparsecsr2denseHelper(cusparseHandle_t handle, int m, int n, const cusparseMatDescr_t descrA, const float *csrValA, const int *csrRowPtrA, const int *csrColIndA, float *A, int lda){ return cusparseScsr2dense(handle, m, n, descrA, csrValA, csrRowPtrA, csrColIndA, A, lda); }
