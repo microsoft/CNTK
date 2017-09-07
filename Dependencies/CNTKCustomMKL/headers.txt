@@ -6,6 +6,8 @@ mkl_df_types.h
 mkl_df.h
 mkl_dfti.h
 mkl_direct_call.h
+mkl_dnn.h
+mkl_dnn_types.h
 mkl_dss.h
 mkl_lapack.h
 mkl_lapacke.h
