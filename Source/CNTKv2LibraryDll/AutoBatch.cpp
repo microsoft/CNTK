@@ -825,7 +825,7 @@ class Variable::AutoBatch
     }
 
     // predicate whether an op just passes through its input
-    // This is used to decide whether we can short-circuit it in SeeThroughNoOps().
+    // This is used to decide whether we can short-circuit it in m_redirection.
     static bool IsAlias(PrimitiveOpType op)
     {
         // if really needed, this can be done as a bit-test
@@ -859,43 +859,7 @@ class Variable::AutoBatch
         return f->m_op == PrimitiveOpType::BarrierOp && f->m_attributes.Size() > 0;
     }
 
-#define DontSeeThroughNoOps // TODO: remove this once backprop works
-    //static const Variable& DontSeeThroughNoOps(const vector<Variable>& inputs, size_t index)
-    //{
-    //    return inputs[index];
-    //}
-    // see through no-ops, such as barrier, Pass, or StopGradient
-    // Use this for ANY access to PrimitiveFunction::m_inputs EXCEPT not needed (and possibly wrong one day) when directly getting the shape.
-    // This function also determines the top-most barrier id that this input may depend on.
-    static const Variable& SeeThroughNoOps(const vector<Variable>& inputs, size_t index, size_t& maxDepthHint)
-    {
-        let& input = inputs[index];
-        let& fields = *input.m_dataFields;
-        // lazy index: not an alias
-        if (fields.m_redirection)
-            return input;
-        // does not have an owner: not an alias
-        let f = fields.Owner();
-        if (!f)
-            return input;
-        // op is not an alias
-        if (!IsAlias(f->m_op))
-            return input;
-        // it is an alias (including barrier): register barrier id and see right through
-#if 1
-        if (maxDepthHint != SIZE_MAX && IsBarrier(f))
-            maxDepthHint = max(maxDepthHint, f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
-#else
-        if (maxDepthHint == SIZE_MAX && IsBarrier(f))
-            maxDepthHint = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
-#endif
-        return SeeThroughNoOps(f->m_inputs, 0, maxDepthHint); // (all aliases are unary functions)
-    }
-    static const Variable& SeeThroughNoOps(const vector<Variable>& inputs, size_t index)
-    {
-        size_t depthHint = SIZE_MAX; // (passing SIZE_MAX will short-circuit the test)
-        return SeeThroughNoOps(inputs, index, depthHint);
-    }
+#define DontSeeThroughNoOps // TODO: remove this once backprop works; for now keep as tag
 
     // helper to check whether we should profile this function execution
     set<DynamicProfilerPtr> m_profilersUsed; // all used profilers will be registered for a given batched execution
@@ -929,8 +893,7 @@ class Variable::AutoBatch
             let op = a->m_op;
             let opClass = g_oscTable[op]; // operation-specific auto-batching class
             // free ops always get batched; even if they have different op-codes
-            if (IsViewOp(op) && !IsBarrier(a))
-                LogicError("should not get here for view ops or barrier ops");
+            //fail_if(IsViewOp(op) && !IsBarrier(a), "should not get here for view ops or barrier ops");
             // op codes must match
             if (op != b->m_op)
                 return false;
@@ -1009,10 +972,8 @@ class Variable::AutoBatch
                 m_bnPendingCounts[bnId]--; // only those with pending count 0 are ready
             }
             // we manage three ready sets, since two common kinds are very simple
-            if (IsBarrier(f))
-                // BUGBUG: We never get here since we now see through barriers for efficiency...
-                LogicError("m_barrierOps.push_back(f) should no longer be done"); // m_barrierOps.push_back(f);
-            else if (IsViewOp(op))  // note: this, with possibly a few exceptions, Slice()
+            //fail_if (IsBarrier(f), "m_barrierOps.push_back(f) should no longer be done"); // BUGBUG: We never get here since we now see through barriers for efficiency...
+            if (IsViewOp(op))  // note: this, with possibly a few exceptions, Slice()
                 m_viewOps.push_back(f);
             else
             {
@@ -1295,30 +1256,6 @@ class Variable::AutoBatch
         return fields;
     }
 
-    // return the m_value field of a variable, but possibly realizing it lazily if it is an index operation
-    // TODO: Generalize this to allow implicit reshape to target. Then this can be use for slice, reshape, and slice>>reshape.
-    static const NDArrayViewPtr& LazilyIndexedValue(const Variable& v)
-    {
-#if 1
-        return CacheAndGetValue(v);
-#else
-        auto& fields = *v.m_dataFields;
-        if (fields.m_value)
-            return fields.m_value;
-        fail_if(!fields.m_redirection, "variable unexpectedly has no value yet, nor is it a slice view into a batched op");
-        // the PrimitiveFunction does not own its output, it is a slice view into another
-        let& from = LazilyIndexedValue(fields.m_redirection.m_functionHolder->m_outputs[0]);
-        let index = fields.m_redirection.m_index;
-        // TODO: Allow an implicit Reshape() here, so that we can use the same mechanism for slice and reshape.
-        if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
-            fields.m_value = from;
-        else
-            fields.m_value = from->IndexLastAxis(index);
-        fail_if(fields.m_shape != fields.m_value->Shape(), "variable shape different from its value??");
-        return fields.m_value;
-#endif
-    }
-
     static void LogFunction(const PrimitiveFunction& f, const wchar_t* prefix = L"", size_t markIndex = SIZE_MAX)
     {
         let& inputs = f.m_inputs;
@@ -1433,7 +1370,7 @@ class Variable::AutoBatch
         let& inputs = f.m_inputs;
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
-            inputValues[i] = LazilyIndexedValue(DontSeeThroughNoOps(inputs[i])); // (if this is a lazy slice, then now we must resolve it)
+            inputValues[i] = CacheAndGetValue(DontSeeThroughNoOps(inputs[i])); // (if this is a lazy slice, then now we must resolve it)
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
@@ -1550,7 +1487,7 @@ class Variable::AutoBatch
         for (size_t k = 0; k < inputs.size(); k++)
         {
             // PERF BUGBUG: This vv is horrible. Also, do we need to handle sliced redirects? This may lead to realizing all lazy slices...??
-            let& value = *LazilyIndexedValue(DontSeeThroughNoOps(inputs[k]));
+            let& value = *CacheAndGetValue(DontSeeThroughNoOps(inputs[k]));
             let dataBuffer =
                 /*if*/ value.IsSparse() ?  // DataBuffer() is only available for dense. --PERF BUGBUG: We can find a better hash for sparse data, e.g. its data buffer.
                     (intptr_t)&value
@@ -1589,9 +1526,9 @@ class Variable::AutoBatch
                     goto next_jter;
                 for (size_t k = 0; k < jnputs.size(); k++)
                 {
-                    //if (!LazilyIndexedValue(inputs[k])->IsAliasOf(LazilyIndexedValue(jnputs[k])))
-                    // PERF BUGBUG: This vv is horrible. Alleviated by the hash though.
-                    if (!LazilyIndexedValue(DontSeeThroughNoOps(inputs[k]))->IsAliasOf(LazilyIndexedValue(DontSeeThroughNoOps(jnputs[k]))))
+                    //if (!CacheAndGetValue(inputs[k])->IsAliasOf(CacheAndGetValue(jnputs[k])))
+                    // PERF BUGBUG: This vv is horrible (we force-realize the m_value). Alleviated by the hash though.
+                    if (!CacheAndGetValue(DontSeeThroughNoOps(inputs[k]))->IsAliasOf(CacheAndGetValue(DontSeeThroughNoOps(jnputs[k]))))
                         goto next_jter;
                 }
                 // all inputs are the same: f is a dup of 'jter'
@@ -1730,7 +1667,7 @@ class Variable::AutoBatch
         //  - a PrimitiveFunction that is the op itself
         //  - m_redirection entries that represent a "virtual" Slice() that is never created as a PrimitiveFunction object to saved mallocs.
         // As for resource management, m_redirection will hold a strong ref to the PrimitiveFunction;
-        // and we will hack its SeeThroughNoOps(m_inputs,i).m_outputComposite to hold a strong reference to the Splice() or Slice().
+        // and we will hack its input's m_outputComposite to hold a strong reference to the Splice() or Slice().
         // (This is a little ugly since m_outputComposite is meant to hold a CompositeFunction, but we misuse it
         // to hold a PrimitiveFunction.)
         else
@@ -1907,7 +1844,8 @@ class Variable::AutoBatch
                     // create a new PrimitiveFunction Splice()
                     vector<size_t> outputShape; // determine output shape
                     outputShape.reserve(inputBatchAxis + 1);
-                    outputShape = LazilyIndexedValue(gatherInputs[0])->Shape().Dimensions();
+                    outputShape = CacheAndGetValue(gatherInputs[0])->Shape().Dimensions();
+                    //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
                     outputShape.resize(inputBatchAxis, 1);      // pad to inputBatchAxis
                     outputShape.push_back(gatherInputs.size()); // and add the batch axis
 #if 1
@@ -2151,9 +2089,7 @@ public:
                 let& inputs = f->m_inputs;
                 for (size_t i = 0; i < inputs.size(); i++)
                 {
-                    //size_t depthHint = 0;
-                    //SeeThroughNoOps(inputs, i, depthHint);
-                    let& input = inputs[i]; // we are lazy and only print the name if the barrier is the immediate input, so that we don't have to duplicate the traversal in SeeThroughNoOps()
+                    let& input = inputs[i]; // we are lazy and only print the name if the barrier is the immediate input, so that we don't have to duplicate the traversal
                     let& inputFields = GetInputFields(input);
                     let depthHint = inputFields.m_redirection.m_depthHint;
                     if (depthHint != 0)
@@ -2277,6 +2213,7 @@ public:
         return beta;
     }
 
+    // ... TODO: can this be removed?
     // determine the input to backprop a gradient into
     // Normally that is SeeThroughNoOps(f.m_inputs, index).
     // However, some gradients are just copies, so we can see through them.
@@ -2566,7 +2503,7 @@ public:
         m_stats.numBackpropScatters++;
     }
 
-    // backprop into weight parameter of a Times op (SeeThroughNoOps(inputs, 0))
+    // backprop into weight parameter of a Times op (input 0)
     // This can be batched into a single matrix product.
     void BackpropToMatrixWeight(vector<pair<PrimitiveFunction*, size_t>>& consumers)
     {
