@@ -1492,19 +1492,11 @@ class Variable::AutoBatch
         // notify consumers
         auto& fields = GetOutputFields(op);
         fail_if(!fields.m_value && !fields.m_redirection, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
-#if 1
-        fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi) { m_schedule.NotifyInputAvailable(fi.first); });
-#else
-        auto& c = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
 #if 0   // this test is useful but fails for the root; enable for debugging where helpful
-        if (!c.first)
+        if (!fields.m_consumers.size())
             LogicError("executed a function that shouldn't be executed");
 #endif
-        if (c.first)
-            m_schedule.NotifyInputAvailable(c.first);
-        for (auto& c : fields.m_consumers.second) // all other consumers
-            m_schedule.NotifyInputAvailable(c.first);
-#endif
+        fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi) { m_schedule.NotifyInputAvailable(fi.first); });
         // clear consumer list (this operation is done)
         fields.m_consumers.clear();
         fields.m_consumers.mangle(-3333); // leave a mark that this was reset nullptr;
@@ -1951,7 +1943,7 @@ class Variable::AutoBatch
                     fields.m_redirection.m_function = nullptr;
                     fields.m_redirection.m_index = SIZE_MAX;
                     // initialize m_consumers chain of function that produces the values
-                    fields.m_consumers.first.first = (PrimitiveFunction*)-5; // (temporarily, so that we can discover if this is ever used)
+                    fields.m_consumers.mangle(-5); // (temporarily, so that we can discover if this is ever used)
                     return p;
                 };
                 m_batchedInputs.push_back(createParameter(                 statShape));
@@ -2335,13 +2327,12 @@ public:
             // i.e. it is the lazy source that will pull this gradient.
             if (!m_visitorTag.Visited(fields.m_visitedTag))
             {
-                fields.m_consumers.first = make_pair(&f, i);
-                fields.m_consumers.second.clear();
+                fields.m_consumers.reset(&f, i);
                 // now process recursively the inputs
                 RDetermineConsumersForBackward(input);
             }
             else
-                fields.m_consumers.second.push_back(make_pair(&f, i));
+                fields.m_consumers.push_back(&f, i);
             m_stats.numBackpropsToInputs++;
         }
     }
@@ -2639,19 +2630,27 @@ public:
         if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
 
-        auto& c = fields.m_consumers.first;
         // reached a "leaf" in the revesre tree; i.e. we hit the root
-        if (!c.first)
+        if (fields.m_consumers.empty())
             return;
 
         fail_if(!fields.m_needsGradient, "backprop into variable that does not need gradient");
 
         // recursively realize all consumers' outputs' gradients
+#if 1
+        fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
+        {
+            for (let& output : fi.first->m_outputs)
+                RAggregateGradientFromAllConsumers(output);
+        });
+#else
+        auto& c = fields.m_consumers.first;
         for (let& output : c.first->m_outputs)
             RAggregateGradientFromAllConsumers(output);
         for (auto& c : fields.m_consumers.second)
             for (let& output : c.first->m_outputs)
                 RAggregateGradientFromAllConsumers(output);
+#endif
         // Now all consumers are ready to propagate into var's m_gradient.
         // The resulting gradient is the sum of all that's backpropped here,
         // and this is the only place where a variable's gradient ever gets aggregated.
@@ -2661,11 +2660,11 @@ public:
         // Because of the latter, we cannot really test this here, and should just remove this check.
         //fail_if(var.Kind() != VariableKind::Parameter && fields.m_gradient, "non-Parameter variable unexpectedly already has a gradient"); // (sanity check; I am not sure actually, maybe too strict)
 
-        // fast path: only one consumer, nothing to batch
+        // fast path: if only one consumer then there is nothing to batch
         // (with exception of Splice, which has a different optimization)
-        if (fields.m_consumers.second.empty() && fields.m_consumers.first.first->m_op != PrimitiveOpType::Splice)
+        if (fields.m_consumers.size() == 1 && fields.m_consumers.front().first->m_op != PrimitiveOpType::Splice)
         {
-            BackpropToUnbatched(c.first, c.second);
+            BackpropToUnbatched(fields.m_consumers.front().first, fields.m_consumers.front().second);
             return;
         }
 
@@ -2683,9 +2682,18 @@ public:
         // At present, we aim for weight gradients that are part of a matrix product
         // or a bias addition.
         // First sort all consumer gradients according to their operation.
-        DetermineAndAddToBucket(c, /*isFirstCall=*/true);
+#if 1
+        bool firstCall = true;
+        fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
+        {
+            DetermineAndAddToBucket(fi, firstCall);
+            firstCall = false;
+        });
+#else
+        DetermineAndAddToBucket(fields.m_consumers.front(), /*isFirstCall=*/true);
         for (auto& c : fields.m_consumers.second)
             DetermineAndAddToBucket(c);
+#endif
 
         // splice bucket
         for (auto& c : m_spliceConsumers)
@@ -2747,7 +2755,7 @@ public:
         {
             let& param = kv.first;
             let& fields = *param.m_dataFields;
-            if (!fields.m_consumers.first.first) // if no consumer entry, we did not reach this gradient
+            if (fields.m_consumers.empty()) // if no consumer entry, we did not reach this gradient
                 LogicError("BatchedBackward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
             if (!fields.m_needsGradient) // (we could also just leafve the gradient 0)
                 LogicError("BatchedBackward: cannot compute gradient for variable with m_needsGradient being False.");

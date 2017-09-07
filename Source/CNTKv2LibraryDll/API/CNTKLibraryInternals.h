@@ -528,11 +528,14 @@ namespace CNTK
         };
 
         // optimized for main case of 1 consumer. No std::vector in that case.
-        struct AutoBatchConsumers : public std::pair<std::pair<PrimitiveFunction*, size_t>, std::vector<std::pair<PrimitiveFunction*, size_t>>>
+        struct AutoBatchConsumers : private std::pair<std::pair<PrimitiveFunction*, size_t>, std::vector<std::pair<PrimitiveFunction*, size_t>>>
         {
             AutoBatchConsumers() { first.first = (PrimitiveFunction*)-1; } // this initialization can be removed once this is debugged (or once we replaced this horrible construct)
             size_t size() const { return (first.first ? 1 : 0) + second.size(); }
+            bool empty() const { return first.first == nullptr; }
             void clear() { first.first = nullptr; second.clear(); }
+            const std::pair<PrimitiveFunction*, size_t>& front() const { return first; }
+            void reset(PrimitiveFunction* f, size_t i) { first = std::make_pair(f, i); second.clear(); } // reset to one
             void push_back(PrimitiveFunction* f, size_t i)
             {
                 if (!first.first) // optimized for main case of 1 consumer. No std::vector in that case.
@@ -541,7 +544,7 @@ namespace CNTK
                     second.emplace_back(std::make_pair(f, i));
             }
             template<class F>
-            void ForAll(const F& f)
+            void ForAll(const F& f) const
             {
                 if (first.first)
                     f(first);
