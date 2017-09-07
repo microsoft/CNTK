@@ -129,7 +129,11 @@ __device__ __forceinline__ T Shuffle(T input, int srcLane)
 #ifdef __CUDA_ARCH__
     // shfl is supported only on Kepler+
     static_assert(__CUDA_ARCH__ >= 300, "CNTK only supports only Kepler GPU architecture or newer.");
+#if CUDA_VERSION >= 9000
+    return cub::ShuffleIndex(input, srcLane, CUB_PTX_WARP_THREADS, 0xffffffff); // Need cub > 1.7.0
+#else
     return cub::ShuffleIndex(input, srcLane);
+#endif
 #else
     assert(false);
     return input; // keep compiler happy
