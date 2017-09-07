@@ -12,24 +12,25 @@ namespace CNTK.CSTrainingExamples
         static void Main(string[] args)
         {
             var device = DeviceDescriptor.CPUDevice;
-            Console.WriteLine($"======== runing MNISTClassifierTest.TrainAndEvaluate using {device.Type} with logistic classifier ========");
+            Console.WriteLine($"======== running MNISTClassifier.TrainAndEvaluate with multilayer perceptron (MLP) classifier using {device.Type} ========");
             MNISTClassifier.TrainAndEvaluate(device, false, true);
 
-            Console.WriteLine($"======== runing MNISTClassifierTest.TrainAndEvaluate using {device.Type} with convolution classifier ========");
+            Console.WriteLine($"======== running MNISTClassifier.TrainAndEvaluate with convolutional neural network using {device.Type} ========");
             MNISTClassifier.TrainAndEvaluate(device, true, true);
 
-            // batch normalization is not available on CPU build. These examples are in the GPU project.
-            //Console.WriteLine("======== runing CifarResNet.TrainAndEvaluate using CPU ========");
+            // Batch normalization is not available on CPU build. See following examples in GPU project.
+            // Following examples will be enabled once BN is supported on CPU.
+            //Console.WriteLine("======== running CifarResNet.TrainAndEvaluate using CPU ========");
             //CifarResNetClassifier.TrainAndEvaluate(device, true);
 
-            //Console.WriteLine("======== runing TransferLearning.TrainAndEvaluateWithFlowerData using CPU ========");
+            //Console.WriteLine("======== running TransferLearning.TrainAndEvaluateWithFlowerData using CPU ========");
             //TransferLearning.TrainAndEvaluateWithFlowerData(device, true);
 
-            //Console.WriteLine("======== runing TransferLearning.TrainAndEvaluateWithAnimalData using CPU ========");
+            //Console.WriteLine("======== running TransferLearning.TrainAndEvaluateWithAnimalData using CPU ========");
             //TransferLearning.TrainAndEvaluateWithAnimalData(device, true);
 
-            Console.WriteLine($"======== runing LSTMSequenceClassifier.Train using {device.Type} ========");
-            LSTMSequenceClassifier.Train(device, true);
+            Console.WriteLine($"======== running LSTMSequenceClassifier.Train using {device.Type} ========");
+            LSTMSequenceClassifier.Train(device);
         }
     }
 }
