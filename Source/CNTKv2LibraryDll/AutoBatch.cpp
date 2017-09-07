@@ -1149,8 +1149,12 @@ class Variable::AutoBatch
         fields.m_redirection.m_index = SIZE_MAX;
         fields.m_redirection.m_depthHint = depthHint;
         // initialize m_consumers chain of function that produces the values
+#if 1
+        fields.m_consumers.clear();
+#else
         fields.m_consumers.first.first = nullptr;
         fields.m_consumers.second.clear();
+#endif
         // Leaves are Parameters, Constants, and also nodes that already have a value.
         if (!redirectedFieldsOwner)
         {
@@ -1209,10 +1213,14 @@ class Variable::AutoBatch
                 // record ourselves as a consumer of the input
                 // Note that RInitForScheduling() will have reset this upon first visit of 'input'.
                 // The recorded consumer is the function that produces things, not the redirect.
+#if 1
+                outputFields.m_consumers.push_back(&f, i);
+#else
                 if (!outputFields.m_consumers.first.first) // optimized for main case of 1 consumer. No std::vector in that case.
                     outputFields.m_consumers.first = make_pair(&f, i); // note: we don't need i for forward; can optimize
                 else
                     outputFields.m_consumers.second.push_back(make_pair(&f, i));
+#endif
                 maxDepthHint = max(maxDepthHint, inputFields.m_redirection.m_depthHint);
             }
         }
@@ -1496,6 +1504,9 @@ class Variable::AutoBatch
         // notify consumers
         auto& fields = GetOutputFields(op);
         fail_if(!fields.m_value && !fields.m_redirection, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
+#if 1
+        fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi) { m_schedule.NotifyInputAvailable(fi.first); });
+#else
         auto& c = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
 #if 0   // this test is useful but fails for the root; enable for debugging where helpful
         if (!c.first)
@@ -1505,9 +1516,11 @@ class Variable::AutoBatch
             m_schedule.NotifyInputAvailable(c.first);
         for (auto& c : fields.m_consumers.second) // all other consumers
             m_schedule.NotifyInputAvailable(c.first);
+#endif
         // clear consumer list (this operation is done)
+        fields.m_consumers.clear();
         fields.m_consumers.first.first = (PrimitiveFunction*)-3333; // leave a mark that this was reset nullptr;
-        fields.m_consumers.second.clear();
+        //fields.m_consumers.second.clear();
     }
 
     // implant the the result of a function that was executed as a batched op

@@ -49,8 +49,28 @@ namespace CNTK
             operator bool() const { return m_function != nullptr; } // allows for "if (m_redirection)"
         };
         mutable Redirection m_redirection;
-        std::pair<std::pair<PrimitiveFunction*,size_t>, std::vector<std::pair<PrimitiveFunction*, size_t>>> m_consumers
-             = std::make_pair(std::make_pair((PrimitiveFunction*)-1, SIZE_MAX-1), std::vector<std::pair<PrimitiveFunction*, size_t>>()); // ((f_0, inputIndex_0), vector(f_n, inputIndex_n))
+        struct Consumers : public std::pair<std::pair<PrimitiveFunction*, size_t>, std::vector<std::pair<PrimitiveFunction*, size_t>>>
+        {
+            Consumers() { first.first = (PrimitiveFunction*)-1; } // this initialization can be removed once this is debugged (or once we replaced this horrible construct)
+            size_t size() const { return (first.first ? 1 : 0) + second.size(); }
+            void clear() { first.first = nullptr; second.clear(); }
+            void push_back(PrimitiveFunction* f, size_t i)
+            {
+                if (!first.first) // optimized for main case of 1 consumer. No std::vector in that case.
+                    first = std::move(std::make_pair(f, i)); // note: we don't need i for forward; can optimize
+                else
+                    second.emplace_back(std::make_pair(f, i));
+            }
+            template<class F>
+            void ForAll(const F& f)
+            {
+                if (first.first)
+                    f(first);
+                for (auto& c : second) // all other consumers
+                    f(c);
+            }
+        };
+        Consumers m_consumers;
         mutable size_t m_visitedTag = 0; // used for tree traversal
 
         // lazy initialization
