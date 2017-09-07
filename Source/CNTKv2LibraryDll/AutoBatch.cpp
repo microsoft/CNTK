@@ -859,6 +859,10 @@ class Variable::AutoBatch
         return f->m_op == PrimitiveOpType::BarrierOp && f->m_attributes.Size() > 0;
     }
 
+    static const Variable& DontSeeThroughNoOps(const vector<Variable>& inputs, size_t index)
+    {
+        return inputs[index];
+    }
     // see through no-ops, such as barrier, Pass, or StopGradient
     // Use this for ANY access to PrimitiveFunction::m_inputs EXCEPT not needed (and possibly wrong one day) when directly getting the shape.
     // This function also determines the top-most barrier id that this input may depend on.
@@ -915,7 +919,7 @@ class Variable::AutoBatch
         NonOwningFunctionListBuilder m_barrierOps; // TODO: currently dead
         // TODO: remove barrierPendingCounts
         //vector<size_t> m_barrierPendingCounts;  // [barrier id] number of consumers of a barrier id that are not yet ready
-        vector<size_t> m_bnPendingCounts;       // [bn id] number of pending (non-ready) BatchNormalization operations
+        vector<size_t> m_bnPendingCounts = vector<size_t>(16, 0);       // [bn id] number of pending (non-ready) BatchNormalization operations. We need 0, so why not allocate a few more already
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b)
@@ -932,12 +936,13 @@ class Variable::AutoBatch
             // priority must match (depending on barrier or not)
             if (a->m_autoBatchState.m_priorityRemoveThis != b->m_autoBatchState.m_priorityRemoveThis)
                 return false;
-            // some operations have variable number of arguments. Those cannot be batched, e.g. Splice().
+            // some operations have variable number of arguments, e.g. Splice(). Those can't batch if the number of inputs differ
             if (a->m_inputs.size() != b->m_inputs.size())
                 return false;
             // special case BatchNormalization
             if (op == PrimitiveOpType::BatchNormalization)
             {
+                // ids must match
                 let aId = a->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
                 let bId = b->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
                 if (aId != bId)
@@ -965,6 +970,10 @@ class Variable::AutoBatch
                 /*let& bInput =*/ SeeThroughNoOps(b->m_inputs, i, bDepthHint);
                 // depth hint must match
                 if (aDepthHint != bDepthHint)
+                    return false;
+                // depth hint must match
+                // TODO: get aFields and bFields
+                if (a->m_inputs[i].m_dataFields->m_redirection.m_depthHint != b->m_inputs[i].m_dataFields->m_redirection.m_depthHint)
                     return false;
                 // there are a few special cases
                 if (opClass == OpSpecificConditionKind::MatrixProduct && i == 0)
@@ -1002,6 +1011,7 @@ class Variable::AutoBatch
         // count an occurrence of a BatchNormalization with a given id
         void CountBatchNorm(size_t bnId)
         {
+            fail_if(bnId == 0, "batch norm id should not be 0!");
             if (bnId >= m_bnPendingCounts.size())
                 m_bnPendingCounts.resize(bnId * 10, 0);
             m_bnPendingCounts[bnId]++;
@@ -1014,14 +1024,14 @@ class Variable::AutoBatch
             if (op == PrimitiveOpType::BatchNormalization)
             {
                 let bnId = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
-                fail_if(m_bnPendingCounts[bnId] == 0, "m_bnPendingCounts decreased more than increased??");
+                fail_if(m_bnPendingCounts[bnId] == 0, "m_bnPendingCounts decreased beyond initial count??");
                 m_bnPendingCounts[bnId]--; // only those with pending count 0 are ready
             }
             // we manage three ready sets, since two common kinds are very simple
             if (IsBarrier(f))
                 // BUGBUG: We never get here since we now see through barriers for efficiency...
                 LogicError("m_barrierOps.push_back(f) should no longer be done"); // m_barrierOps.push_back(f);
-            else if (IsViewOp(op))
+            else if (IsViewOp(op))  // note: this, with possibly a few exceptions, Slice()
                 m_viewOps.push_back(f);
             else
             {
@@ -1066,8 +1076,8 @@ class Variable::AutoBatch
         // notify a function that an input has become available; schedule it when all inputs are now available
         void NotifyInputAvailable(PrimitiveFunction* f)
         {
-            if (f->m_autoBatchState.m_pendingInputs <= 0)
-                LogicError("NotifyInputAvailable: pending inputs already 0 yet we are executing it");
+            GetOutputFields(f); // ignoring return value; this just performs a consistency check
+            fail_if(f->m_autoBatchState.m_pendingInputs == 0, "pending inputs already 0 yet we are executing it??");
             f->m_autoBatchState.m_pendingInputs--;
             // if it is now ready then schedule it
             if (f->m_autoBatchState.m_pendingInputs == 0)
@@ -1105,6 +1115,7 @@ class Variable::AutoBatch
                 return 0;
             else
                 return m_bnPendingCounts[f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>()] > 0;
+            // TODO: get this from f->m_autoBatchState.m_batchNormId
         }
         // select the next batched op to execute
         NonOwningFunctionList pop_best()
@@ -1122,15 +1133,18 @@ class Variable::AutoBatch
                 for (auto iter = best + 1; iter != m_regularOps.end(); iter++)
                 {
                     // barrier is realized through priority
+                    // TODO: optimize this further, e.g. don't get autobatch state over again
                     int diff = 0;
-                    if (diff == 0)
-                        diff = -(GetBatchNormPending(iter) - GetBatchNormPending(best)); // BatchNormalization with pending inputs always loses
-                    if (diff == 0)
-                        diff = -(GetDepthHint(iter) - GetDepthHint(best)); // lower gap is better
-                    if (diff == 0)
-                        diff = iter->front()->m_autoBatchState.m_priorityRemoveThis - best->front()->m_autoBatchState.m_priorityRemoveThis;
-                    if (diff == 0)
-                        diff = (int)iter->size() - (int)best->size();
+                    diff = -(GetBatchNormPending(iter) - GetBatchNormPending(best)); // BatchNormalization with pending inputs always loses
+                    if (diff) goto got_diff;
+                    diff = -(GetDepthHint(iter) - GetDepthHint(best)); // lower gap is better
+                    if (diff) goto got_diff;
+                    diff = -((int)iter->front()->m_autoBatchState.m_depthHint - (int)best->front()->m_autoBatchState.m_depthHint); // higher depthHint gets batched last
+                    if (diff) goto got_diff;
+                    diff = iter->front()->m_autoBatchState.m_priorityRemoveThis - best->front()->m_autoBatchState.m_priorityRemoveThis;
+                    if (diff) goto got_diff;
+                    diff = (int)iter->size() - (int)best->size();
+                got_diff:
                     if (diff > 0)
                         best = iter;
                 }
@@ -1161,37 +1175,75 @@ class Variable::AutoBatch
         // return if this node was already visited
         if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
+        fields.m_consumers.first.first = (PrimitiveFunction*)-1;  // temporarily put an invalid value here to make sure we initialize it
         // if not visited yet then m_redirection is invalid and must be set up
+        // see through ops that do nothing
+        auto* redirectedFields = &fields;
+        PrimitiveFunction* redirectedFieldsOwner; // redirectedFields->m_ownerFunction.lock().get(), or null in case of leaf
+        size_t depthHint = 0;
+        for (;;)
+        {
+            let isLeaf = (redirectedFields->m_value || redirectedFields->m_varKind == VariableKind::Parameter || redirectedFields->m_varKind == VariableKind::Constant);
+            if (isLeaf && !redirectedFields->m_value)
+            {
+                var.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
+                fail_if(!redirectedFields->m_value, "Parameter/Constant has no Value()??");
+            }
+            if (isLeaf)
+            {
+                redirectedFieldsOwner = nullptr;
+                assert(fields.m_value); // got set by the call above
+                break;
+            }
+            redirectedFieldsOwner = redirectedFields->m_ownerFunction.lock().get();
+            let redirectedOp = redirectedFieldsOwner->m_op;
+            if (!IsAlias(redirectedOp) && redirectedOp != PrimitiveOpType::Reshape)
+                break;
+            // if a barrier then record the maximum depth hint encountered
+            // Functions consuming this Variable are bound by the barrier (but not the function that produces the original value).
+            if (IsBarrier(redirectedFieldsOwner))
+                depthHint = max(depthHint, redirectedFieldsOwner->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
+            // TODO: what if input is non-continuous? Then Reshape becomes a copy
+            // this is a redirect
+            redirectedFields = redirectedFieldsOwner->m_inputs[0].m_dataFields.get();
+        }
+        // handle leaves
         // some sanity checks
-        if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
-            LogicError("Value() depends on Input or Placeholder, it is not knowable.");
-        // initialize m_consumers chain
+        if (redirectedFields->m_varKind == VariableKind::Input || redirectedFields->m_varKind == VariableKind::Placeholder)
+            LogicError("Dynamic Value() must not depend on Input or Placeholder.");
+        // set up linkage in our overlaid structure
+        fields.m_redirection.m_function = redirectedFieldsOwner;
+        fields.m_redirection.m_index = SIZE_MAX;
+        fields.m_redirection.m_depthHint = depthHint;
+        // initialize m_consumers chain of function that produces the values
         fields.m_consumers.first.first = nullptr;
         fields.m_consumers.second.clear();
-        // handle leaves
         // Leaves are Parameters, Constants, and also nodes that already have a value.
-        let isLeaf = (fields.m_value || fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant);
-        if (isLeaf && !fields.m_value)
+        if (!redirectedFieldsOwner)
         {
-            var.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
-            fail_if(!fields.m_value, "Parameter/Constant has no Value()??");
-        }
-        // set up linkage in our overlaid structure
-        fields.m_redirection.m_function = isLeaf ? nullptr : fields.m_ownerFunction.lock().get();
-        fields.m_redirection.m_sliceEnd = SIZE_MAX;
-        fields.m_redirection.m_depthHint = 0;
-        if (isLeaf)
-        {
+            // leaves have no m_function, so the redirection is resolved right here
+            // BUGBUG:!!!! How aboud the gradient?? We must know how to find the gradient!
+            //        One solution is to redirect to the operation directly on top of the Parameter, not the parameter itself.
+            if (!fields.m_value)
+                ComputeVariableValueFrom(fields, redirectedFields->m_value); // set fields.m_value, and we are done with this node
             m_stats.numLeafNodes++;
             return;
         }
-        fail_if(!fields.m_redirection.m_function, "no owner?");
-        // not a leaf
-        // TODO: ...short-circuit see-through ops, reshape, etc.
-        auto& f = *fields.m_redirection.m_function;
-        f.m_autoBatchState.m_depth = depth; // ...TODO: does this belong into m_redirection?
-        // BUGBUG: We should update depth to the max. Currently we just leave the first.
+        // if redirected then also initialize the producer
+        // This is mostly so that m_consumers gets set correctly.
+        if (redirectedFields != &fields)
+        {
+            RInitForScheduling(redirectedFieldsOwner->m_outputs[0], depth + 1);
+            return;
+        }
+        auto& f = *redirectedFieldsOwner; // == fields.m_redirection.m_function == fields.Owner()
+        if (f.m_outputs.size() > 1)
+            InvalidArgument("Dynamic operations cannot have multiple outputs.");
+
         // special case BatchNormalization: we must account for all occurences before normalizing
+        // We count all occurences during this initial tree traversal.
+        // During batched execution, we hold back BatchNorm ops until the batch size equals
+        // the number of occurences.
         if (f.m_op == PrimitiveOpType::BatchNormalization)
         {
             if (!f.m_attributes.Contains(PrimitiveFunction::AttributeNameSyncId))
@@ -1199,43 +1251,122 @@ class Variable::AutoBatch
                     PrimitiveOpTypeName(f.m_op).c_str());
             let bnId = f.m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
             m_schedule.CountBatchNorm(bnId);
+            f.m_autoBatchState.m_batchNormId = bnId; // cached here since this is tested in inner loop
         }
+        else
+            f.m_autoBatchState.m_batchNormId = 0;
+
         // determine how many inputs are pending; and also recurse and set up the consumer list
+        //if (redirectedFieldsOwner->Name() == L"as_vector[0]")
+        //    BreakPoint;
         size_t pendingInputs = 0;
+        size_t maxDepthHint = 0;
         let& inputs = f.m_inputs;
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            //size_t depthHint = SIZE_MAX; // TODO: change to depthHint, and to determining their max (?)
-            let& input = SeeThroughNoOps(inputs, i);
-            //m_schedule.CountBarrier(depthHint);
-            auto& fields = *input.m_dataFields;
+            let& input = inputs[i];
             // recursively traverse
-            if (!fields.m_value)
+            RInitForScheduling(input, depth + 1);
+            let& inputFields = GetInputFields(input);
+            if (!inputFields.m_value) // (if input is a leaf, it has a value)
             {
-                RInitForScheduling(input, depth + 1);
-                if (!fields.m_value) // (in case of a Parameter, we now may have a value)
-                {
-                    pendingInputs++;
-                    // record ourselves as a consumer of the input
-                    // Note that RInitForScheduling() will have reset this upon first visit of 'input'.
-                    if (!fields.m_consumers.first.first) // optimized for main case of 1 consumer. No std::vector in that case.
-                        fields.m_consumers.first = make_pair(&f, i); // note: we don't need i for forward; can optimize
-                    else
-                        fields.m_consumers.second.push_back(make_pair(&f, i));
-                }
+                fail_if(!inputFields.m_redirection, "input has no value and is not a function either??");
+                auto& outputFields = GetOutputFields(inputFields.m_redirection.m_function);
+                pendingInputs++;
+                // record ourselves as a consumer of the input
+                // Note that RInitForScheduling() will have reset this upon first visit of 'input'.
+                // The recorded consumer is the function that produces things, not the redirect.
+                if (!outputFields.m_consumers.first.first) // optimized for main case of 1 consumer. No std::vector in that case.
+                    outputFields.m_consumers.first = make_pair(&f, i); // note: we don't need i for forward; can optimize
+                else
+                    outputFields.m_consumers.second.push_back(make_pair(&f, i));
+                maxDepthHint = max(maxDepthHint, inputFields.m_redirection.m_depthHint);
             }
         }
-        f.m_autoBatchState.m_pendingInputs = (int)pendingInputs;
+        f.m_autoBatchState.m_pendingInputs = (int)pendingInputs; // TODO: we don't really need the -1 state, right?
+        // and some more initializations since we are here
+        f.m_autoBatchState.m_aliasHash = SIZE_MAX;        // aliasHash is used for detecting aliases (identical ops) in batched ops
+        f.m_autoBatchState.m_depthHint = maxDepthHint;    // this controls batching priority; ops with higher depth hint will be held back longer
         // if none then operation is ready
         if (pendingInputs == 0)
             m_schedule.Schedule(&f); // add to ready set
         m_stats.numOpNodes++;
     }
 
+    // get the value of an input Variable, with full redirection
+    // This will realize any lazy ops (slice, reshape).
+    //static const NDArrayViewPtr& CacheAndGetValue(const PrimitiveFunction* f)
+    //{
+    //    return CacheAndGetValue(f->m_outputs[0]);
+    //}
+    // a Variable's value is defined by its m_redirection.m_function->m_outputs[0], followed by slice and/or reshape
+    static const NDArrayViewPtr& CacheAndGetValue(const Variable& v)
+    {
+        return CacheAndGetValue(*v.m_dataFields);
+    }
+    static const NDArrayViewPtr& CacheAndGetValue(VariableFields& fields)
+    {
+        if (fields.m_value) // value is available (including cached values): use it
+            return fields.m_value;
+        fail_if(!fields.m_redirection, "Variable unexpectedly has no value yet, nor is it a slice view into a batched op");
+        // get the actual value from the function that computed it
+        auto& functionFields = GetOutputFields(fields.m_redirection.m_function);
+        fail_if(&fields == &functionFields, "Variable unexpectedly has no value yet"); // avoid infinite recursion
+        // function itself may be a redirect (a slice into a batched op)
+        CacheAndGetValue(functionFields);
+        ComputeVariableValueFrom(fields, functionFields.m_value);
+        return fields.m_value;
+    }
+    // realize the lazy redirected value; that is, do the slice and reshape
+    // inputFields must have m_value already set.
+    static void ComputeVariableValueFrom(VariableFields& outputFields, const NDArrayViewPtr& from)
+    {
+        fail_if(!from, "Variable's input unexpectedly has no value yet");
+        let index = outputFields.m_redirection.m_index;
+        if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
+            outputFields.m_value = from;
+        else
+            outputFields.m_value = from->IndexLastAxis(index); // ...TODO: change to slice; also use locally cached vectors for shape info
+        // implicit Reshape()
+        if (outputFields.m_shape != outputFields.m_value->Shape())
+            outputFields.m_value = outputFields.m_value->AsShape(outputFields.m_shape);
+    }
+    // this gets the underlying NDArrayView that contains v's value, without realizing the value
+    // The real value may be a view into this object that has not been realized yet.
+    // Use this to find out properties, such as the device, type, and storage format.
+    static const NDArrayView* GetValueObject(const Variable& v)
+    {
+        auto& fields = GetInputFields(v);
+        if (fields.m_value)
+            return fields.m_value.get();
+        if (!fields.m_redirection) // redirect to output of function that produces this value
+            LogicError("GetValueObject() called where no value object exists (hit a leaf)??");
+        let& output = fields.m_redirection.m_function->m_outputs[0]; // note: may be recursive
+        if (&GetInputFields(output) == &fields)
+            LogicError("GetValueObject() called where no value object exists (hit a self-ref)??");
+        return GetValueObject(output);
+    }
+    // this gets the non-redirected data fields, which describe v's properties as aninput
+    static VariableFields& GetInputFields(const Variable& v)
+    {
+        return *v.m_dataFields;
+    }
+    // this the fields of the output of 'f', which describe where f's output goes, without redirection
+    // This can only be used with functions that are not redirected.
+    static VariableFields& GetOutputFields(const PrimitiveFunction* f)
+    {
+        auto& fields = *f->m_outputs[0].m_dataFields;
+        fail_if(fields.m_redirection.m_function == (PrimitiveFunction*)-1, "GetOutputFields() called on a function that is see-through??");
+        return fields;
+    }
+
     // return the m_value field of a variable, but possibly realizing it lazily if it is an index operation
     // TODO: Generalize this to allow implicit reshape to target. Then this can be use for slice, reshape, and slice>>reshape.
     static const NDArrayViewPtr& LazilyIndexedValue(const Variable& v)
     {
+#if 1
+        return CacheAndGetValue(v);
+#else
         auto& fields = *v.m_dataFields;
         if (fields.m_value)
             return fields.m_value;
@@ -1250,6 +1381,7 @@ class Variable::AutoBatch
             fields.m_value = from->IndexLastAxis(index);
         fail_if(fields.m_shape != fields.m_value->Shape(), "variable shape different from its value??");
         return fields.m_value;
+#endif
     }
 
     static void LogFunction(const PrimitiveFunction& f, const wchar_t* prefix = L"", size_t markIndex = SIZE_MAX)
@@ -1266,8 +1398,8 @@ class Variable::AutoBatch
         fprintf(stderr, "%S%S = %S (", uid.c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            let& input = SeeThroughNoOps(inputs, i);
-            let& fields = *input.m_dataFields;
+            let& input = DontSeeThroughNoOps(inputs, i);
+            let& fields = GetInputFields(input); // (the fields that describe input as an input, e.g. its shape after potential see-through ops)
             // little helper function to fix up variable names by removing _Output_0
             // TODO: Once we support >1 output, this needs a bit more code.
             let GetVarName = [](const Variable& input) -> wstring
@@ -1282,7 +1414,7 @@ class Variable::AutoBatch
             };
             if (fields.m_redirection)
             {
-                let& input1 = fields.m_redirection.m_functionHolder->m_outputs[0];
+                let& input1 = fields.m_redirection.m_function->m_outputs[0];
                 fprintf(stderr, "%s%s%S%S[%d]", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input1).c_str(), input1.Shape().AsString().c_str(), (int)fields.m_redirection.m_index);
             }
             else
@@ -1362,13 +1494,11 @@ class Variable::AutoBatch
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool spliceIsGather = false)
     {
-        if (f.m_outputs.size() != 1)
-            LogicError("MemoizeKnowableValueInArena: only functions with 1 output are supported");
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
-            inputValues[i] = LazilyIndexedValue(SeeThroughNoOps(inputs, i)); // (if this is a lazy slice, then now we must resolve it)\
+            inputValues[i] = LazilyIndexedValue(DontSeeThroughNoOps(inputs, i)); // (if this is a lazy slice, then now we must resolve it)
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
@@ -1395,7 +1525,7 @@ class Variable::AutoBatch
             cudaStatsPtr->timerLaunch.Start();
         }
         // execute it
-        output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
+        GetOutputFields(&f).m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
         if (logMemoizeStatsCounter == 0)
         {
             cudaStatsPtr->timerLaunch.Stop();
@@ -1437,20 +1567,19 @@ class Variable::AutoBatch
     // notify consumers of 'op' that op's value is now available
     void NotifyOpsConsumersInputsAvailable(const PrimitiveFunction* op)
     {
-        for (let& output : op->m_outputs)
-        {
-            // notify consumers
-            auto& fields = *output.m_dataFields;
-            fail_if(!fields.m_value && !fields.m_redirection, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
-            auto& c = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
-            if (c.first)
-                m_schedule.NotifyInputAvailable(c.first);
-            for (auto& c : fields.m_consumers.second) // all other consumers
-                m_schedule.NotifyInputAvailable(c.first);
-            // clear consumer list (this operation is done)
-            fields.m_consumers.first.first = nullptr;
-            fields.m_consumers.second.clear();
-        }
+        // notify consumers
+        auto& fields = GetOutputFields(op);
+        fail_if(!fields.m_value && !fields.m_redirection, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
+        auto& c = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
+        if (!c.first)
+            LogicError("executed a function that shouldn't be executed");
+        if (c.first)
+            m_schedule.NotifyInputAvailable(c.first);
+        for (auto& c : fields.m_consumers.second) // all other consumers
+            m_schedule.NotifyInputAvailable(c.first);
+        // clear consumer list (this operation is done)
+        fields.m_consumers.first.first = (PrimitiveFunction*)-3333; // leave a mark that this was reset nullptr;
+        fields.m_consumers.second.clear();
     }
 
     // implant the the result of a function that was executed as a batched op
@@ -1458,14 +1587,15 @@ class Variable::AutoBatch
     void FinalizeBatchedOpAndUpdateSchedule(PrimitiveFunction* op, const PrimitiveFunctionPtr& batchedOp, size_t j = SIZE_MAX)
     {
         // we remember where we came from for backprop in this case
-        auto& fields = *op->m_outputs[0].m_dataFields;
-        fields.m_redirection = VariableFields::Redirection(batchedOp, j);
+        auto& fields = GetOutputFields(op);
+        fields.m_redirection.m_functionHolder = batchedOp; // hold a ref count, for resource management
+        fields.m_redirection.m_function = batchedOp.get(); // this is the actual pointer used to traverse
+        fields.m_redirection.m_index = j;
         // semantically, this will compute as fields.m_value = out->IndexLastAxis(j);
         // but it gets deferred to save effort
         // reset state
         ResetPendingToIdle(*op);
         // update all ops' consumers and schedule them when possible
-        // BUGBUG: Consumer chain here should have been migrated to the batched op; and notifed from there.
         NotifyOpsConsumersInputsAvailable(op);
     }
 
@@ -1475,8 +1605,8 @@ class Variable::AutoBatch
     {
         for (auto* f = op->m_autoBatchState.m_aliasList; f; f = f->m_autoBatchState.m_aliasList)
         {
-            f->m_outputs[0].m_dataFields->m_value = op->m_outputs[0].m_dataFields->m_value;
-            f->m_outputs[0].m_dataFields->m_redirection = op->m_outputs[0].m_dataFields->m_redirection;
+            GetOutputFields(f).m_value       = GetOutputFields(op).m_value;
+            GetOutputFields(f).m_redirection = GetOutputFields(op).m_redirection;
             ResetPendingToIdle(*f);
             NotifyOpsConsumersInputsAvailable(f);
         }
@@ -1496,8 +1626,8 @@ class Variable::AutoBatch
         let& inputs = f.m_inputs;
         for (size_t k = 0; k < inputs.size(); k++)
         {
-            // PERF BUGBUG: This vv is horrible.
-            let& value = *LazilyIndexedValue(SeeThroughNoOps(inputs, k));
+            // PERF BUGBUG: This vv is horrible. Also, do we need to handle sliced redirects? This may lead to realizing all lazy slices...??
+            let& value = *LazilyIndexedValue(DontSeeThroughNoOps(inputs, k));
             let dataBuffer =
                 /*if*/ value.IsSparse() ?  // DataBuffer() is only available for dense. --PERF BUGBUG: We can find a better hash for sparse data, e.g. its data buffer.
                     (intptr_t)&value
@@ -1538,7 +1668,7 @@ class Variable::AutoBatch
                 {
                     //if (!LazilyIndexedValue(inputs[k])->IsAliasOf(LazilyIndexedValue(jnputs[k])))
                     // PERF BUGBUG: This vv is horrible. Alleviated by the hash though.
-                    if (!LazilyIndexedValue(SeeThroughNoOps(inputs, k))->IsAliasOf(LazilyIndexedValue(SeeThroughNoOps(jnputs, k))))
+                    if (!LazilyIndexedValue(DontSeeThroughNoOps(inputs, k))->IsAliasOf(LazilyIndexedValue(DontSeeThroughNoOps(jnputs, k))))
                         goto next_jter;
                 }
                 // all inputs are the same: f is a dup of 'jter'
@@ -1560,9 +1690,20 @@ class Variable::AutoBatch
         return filteredOps;
     }
 
+    static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name)
+    {
+        let p = PrimitiveFunction::RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name);
+        // we must initialize the redirect for backprop
+        auto& fields = *p->m_outputs[0].m_dataFields;
+        fields.m_redirection.m_function = p.get(); // we are computing stuff ourselves
+        fields.m_redirection.m_index = SIZE_MAX; // (indicates that this is not a slice)
+        fields.m_redirection.m_depthHint = INT_MAX; // (to indicate an invalid value)
+        return p;
+    }
+
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
     vector<Variable> m_batchedInputs;
-    vector<Variable> m_spliceArgsBuffer;
+    vector<Variable> m_gatherArgsBuffer;
 
     // batch-execute a set of ops that are known to be batchable
     // For every batched operation, this generates a new PrimitiveFunction object for the op itself, and one
@@ -1607,7 +1748,7 @@ class Variable::AutoBatch
             LogicError("ExecuteBatchedOpAndUpdateSchedule: Unexpected Undefined batching kind? (%S)", PrimitiveOpTypeName(op).c_str());
         }
         // different operation classes have to be treated differently in various aspects. These are all the special conditions:
-        let isFree = IsViewOp(op);
+        let isFree = IsViewOp(op); // (see-through ops except Slice() should have been short-circuited here except for a few boundary cases)
         let isTimes       = opClass == OpSpecificConditionKind::MatrixProduct; // is special-cased
         let isElementWise = opClass != OpSpecificConditionKind::MatrixProduct && opClass != OpSpecificConditionKind::Convolution;
         // "Element-wise" really means that the inputs and the output all share the same batch axis. Also e.g. for Splice. TODO: Rename?
@@ -1729,62 +1870,61 @@ class Variable::AutoBatch
             // Special optimizations are taken if all elements are identical.
             bool anyBatchedInputs = false;
             if (i0 == 1) // Times(): the first arg has already been verified to be identical as part of the batchability condition
-                m_batchedInputs[0] = SeeThroughNoOps(f0.m_inputs, 0);
+                m_batchedInputs[0] = DontSeeThroughNoOps(f0.m_inputs, 0);
             for (size_t i = i0; i < numArgs; i++)
             {
                 // create splice args for this argument
                 // allocate buffers to hold the arguments
-                auto& spliceInputs = m_spliceArgsBuffer; // TODO rename to gatherInputs and m_gatherArgsBuffer
-                fail_if(!spliceInputs.empty(), "spliceInputs was left not empty"); // previous use must have cleared it
-                if (spliceInputs.capacity() < batchSize)
-                    spliceInputs.reserve(max(batchSize, 2 * spliceInputs.capacity()));
+                auto& gatherInputs = m_gatherArgsBuffer;
+                gatherInputs.clear();
+                if (gatherInputs.capacity() < batchSize)
+                    gatherInputs.reserve(max(batchSize, 2 * gatherInputs.capacity()));
                 // optimization: if all args are consecutive slices, then use a slice view instead
-                let* pfields0 = SeeThroughNoOps(f0.m_inputs, i).m_dataFields.get();
+                let* pfields0 = &GetInputFields(f0.m_inputs[i]);
                 let& redirection0 = pfields0->m_redirection; // for 'allConsecutiveSlices' test
                 let is0Redirected = (bool)redirection0;
                 // loop over all batched ops
-                // BUGBUG: How about NoOp? (used for Barrier) Also Alias and Reshape actually
-                //         Seems if we can carry on a bacth, we should run them once; otherwise don't batch.
                 bool allSame = true;
                 bool allConsecutiveSlices = is0Redirected && redirection0.m_index != SIZE_MAX; // to be consecutive, it must be a slice to start with
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
-                    let& input = SeeThroughNoOps(op->m_inputs, i);
-                    let* pfields = input.m_dataFields.get();
+                    let& input = DontSeeThroughNoOps(op->m_inputs, i);
+                    let* pfields = &GetInputFields(input);
                     let& redirection = pfields->m_redirection;
                     // optimization: if all args are the same, then don't batch
                     allSame = allSame &&
-                        (pfields == pfields0 ||                 // same
-                         (is0Redirected && redirection == redirection0)); // or same view  --TODO: could this need to be checked recursively?
+                        (pfields == pfields0 ||                           // same
+                         (is0Redirected && redirection.m_function == redirection0.m_function && redirection.m_index == redirection0.m_index)); // or same view
+                    // ^^ we can remove this double check, and just compare m_function abnd m_index
                     // optimization: if all args are consecutive slices, then use a slice view instead
                     if (allConsecutiveSlices)
                     {
                         // optimization: if consecutive slices, then recover the original batched tensor
                         // TODO: Can we directly check the data buffer pointer?
                         allConsecutiveSlices = allConsecutiveSlices &&
-                            redirection.m_functionHolder == redirection0.m_functionHolder &&
-                            redirection.m_index       == redirection0.m_index + j;
+                            redirection.m_function == redirection0.m_function &&
+                            redirection.m_index    == redirection0.m_index + j;
                         // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
                         // scenario, we will loose entries in the middle. We can allow to keep a few around
                         // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
                         // carry them forward, and ignore them when implanting the result.
                     }
                     // append the input
-                    spliceInputs.push_back(input);
+                    gatherInputs.push_back(input);
                     // note: Variable is just two shared_ptrs, one being NULL; so this is cheap
                     // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
                 }
                 // and splice
                 if (allSame) // optimized case: all ops share the same operand: no need to batch them
                     // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
-                    m_batchedInputs[i] = spliceInputs[0];
+                    m_batchedInputs[i] = gatherInputs[0];
                 else if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
                 {
-                    let& from  = redirection0.m_functionHolder;
+                    let& from  = redirection0.m_function;
                     let  begin = redirection0.m_index;
                     let& output = from->m_outputs[0];
-                    fail_if(!output.m_dataFields->m_value, "value not yet available??");
+                    fail_if(!GetOutputFields(from).m_value, "value not yet available??");
                     let& fromDims = output.Shape().Dimensions();
                     fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
                     let axis = fromDims.size() - 1;
@@ -1799,10 +1939,11 @@ class Variable::AutoBatch
                         additionalProperties[PrimitiveFunction::AttributeNameAxis      ] = Axis((int)axis);
                         additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = (int)begin;
                         additionalProperties[PrimitiveFunction::AttributeNameEndIndex  ] = (int)(begin + j);
-                        let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties), f0.m_name);
+                        let spliceOp = RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties), f0.m_name);
+                        // TODO: use Dictionary initializer syntax
                         spliceOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
-                        spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
+                        spliceOp->m_uid = L"#" + gatherInputs[0].Uid();
 #endif
                         // and execute it
                         let& output = MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/true);
@@ -1815,6 +1956,7 @@ class Variable::AutoBatch
                     // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
                     if (axis != inputBatchAxis)
                     {
+                        // TODO: Any way we can fold the reshape in using m_redirect?
                         let batchedInput = m_batchedInputs[i];
                         vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
                         outputShape.insert(outputShape.end() - 1, inputBatchAxis - axis, 1);
@@ -1824,10 +1966,10 @@ class Variable::AutoBatch
                         //additionalProperties[PrimitiveFunction::AttributeNameNewShape]  = NDShape(outputShape);
                         //additionalProperties[PrimitiveFunction::AttributeNameBeginAxis] = Axis((int)0);
                         //additionalProperties[PrimitiveFunction::AttributeNameEndAxis]   = Axis((int)axis);
-                        let reshapeOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape, move(additionalProperties), f0.m_name);
+                        let reshapeOp = RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape, move(additionalProperties), f0.m_name);
                         reshapeOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
-                        reshapeOp->m_uid = L"#," + spliceInputs[0].Uid();
+                        reshapeOp->m_uid = L"#," + gatherInputs[0].Uid();
 #endif
                         // and execute it
                         let& output = MemoizeKnowableValueInArena(*reshapeOp, /*isFree=*/true);
@@ -1843,15 +1985,15 @@ class Variable::AutoBatch
                     // create a new PrimitiveFunction Splice()
                     vector<size_t> outputShape; // determine output shape
                     outputShape.reserve(inputBatchAxis + 1);
-                    outputShape = LazilyIndexedValue(spliceInputs[0])->Shape().Dimensions();
+                    outputShape = LazilyIndexedValue(gatherInputs[0])->Shape().Dimensions();
                     outputShape.resize(inputBatchAxis, 1);      // pad to inputBatchAxis
-                    outputShape.push_back(spliceInputs.size()); // and add the batch axis
+                    outputShape.push_back(gatherInputs.size()); // and add the batch axis
                     auto additionalProperties = Dictionary();   // create additional arguments
                     additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis((int)inputBatchAxis);
-                    let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties), f0.m_name);
+                    let spliceOp = RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape, move(additionalProperties), f0.m_name);
                     spliceOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
-                    spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
+                    spliceOp->m_uid = L"#" + gatherInputs[0].Uid();
 #endif
                     // and execute it
                     let& output = MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
@@ -1867,23 +2009,24 @@ class Variable::AutoBatch
                     m_batchedInputs[i].m_outputComposite = spliceOp;
                     anyBatchedInputs = true;
                 }
-                // release shared_ptrs asap
-                spliceInputs.clear();
+                // release shared_ptrs asap   --TODO: naw, not needed
+                gatherInputs.clear();
             }
             // special case: BatchNormalization
             if (op == PrimitiveOpType::BatchNormalization)
             {
                 // BatchNorm requires three additional parameters for the current mean and invStdDev, and the zero-mean/unit-variance intermediate. These must be kept for backprop.
                 let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
-                m_batchedInputs.push_back(Parameter(m_arena.NewNDArrayView(statShape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, m_batchedInputs[0].m_dataFields->m_value->Device())));
-                m_batchedInputs.push_back(Parameter(m_arena.NewNDArrayView(statShape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, m_batchedInputs[0].m_dataFields->m_value->Device())));
-                m_batchedInputs.push_back(Parameter(m_arena.NewNDArrayView(m_batchedInputs[0].Shape(), m_batchedInputs[0].GetDataType(), StorageFormat::Dense, m_batchedInputs[0].m_dataFields->m_value->Device())));
+                let device = GetValueObject(m_batchedInputs[0])->Device();
+                m_batchedInputs.push_back(Parameter(m_arena.NewNDArrayView(statShape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, device)));
+                m_batchedInputs.push_back(Parameter(m_arena.NewNDArrayView(statShape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, device)));
+                m_batchedInputs.push_back(Parameter(m_arena.NewNDArrayView(m_batchedInputs[0].Shape(), m_batchedInputs[0].GetDataType(), StorageFormat::Dense, device)));
                 anyBatchedInputs = true; // BUGBUG: If all operands are the same, then BatchNorm does not make sense (variance=0). Should we throw an error?
             }
             // execute the operation and implant the results
             // BUGBUG: The newly created PrimitiveFunction objects must get their consumer chain set up.
             PrimitiveFunctionPtr batchedOp;
-            Dictionary attributes(f0.Attributes());
+            Dictionary attributes(f0.Attributes());   // TODO: we can just shallow-clone the object; it will copy its internal shared_ptr. Dicts are immutable in here, so it's OK to copy the pointer.
             if (anyBatchedInputs)
             {
                 // create a new PrimitiveFunction for the batched op
@@ -1907,7 +2050,7 @@ class Variable::AutoBatch
 #endif
 
                 let expectedOutputShape = unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize);
-                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(m_batchedInputs), expectedOutputShape, move(attributes), f0.m_name);
+                batchedOp = RawPrimitiveFunction(f0.m_op, vector<Variable>(m_batchedInputs), expectedOutputShape, move(attributes), f0.m_name);
                 batchedOp->m_profiler = f0.m_profiler;
                 // Note: We could move(m_batchedInputs), but don't, since then we would have to reallocate m_batchedInputs for the next operation, so makes no difference.
                 fail_if(batchedOp->m_outputs[0].Shape().Rank() != outputBatchAxis + 1, "outputBatchAxis was not predicted right");
@@ -1921,7 +2064,7 @@ class Variable::AutoBatch
                 // Let's keep this check for now so I can switch CSE on and off easily.
                 //fail_if(true, "CSE missed a batched op with all-identical inputs?");
                 // all inputs identical: compute it only once
-                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), move(attributes), f0.m_name);
+                batchedOp = RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), move(attributes), f0.m_name);
                 batchedOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
                 batchedOp->m_uid = L"." + f0.Uid();
@@ -1941,6 +2084,7 @@ class Variable::AutoBatch
             {
                 if (outputBatchAxis != unbatchedOutputShape.Rank())
                 {
+                    // TODO: This should not be necessary anymore, it is automatically hanlded by the redirect.
                     fail_if(!isElementWise, "output shape should only have additional singleton axes for elementwise operations");
                     // insert a Reshape() op to remove the axes
                     let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
@@ -1954,7 +2098,7 @@ class Variable::AutoBatch
                     //additionalProperties[PrimitiveFunction::AttributeNameNewShape]  = NDShape(outputShape);
                     //additionalProperties[PrimitiveFunction::AttributeNameBeginAxis] = Axis((int)0);
                     //additionalProperties[PrimitiveFunction::AttributeNameEndAxis]   = Axis((int)axis);
-                    let reshapeOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, move(additionalProperties), f0.m_name);
+                    let reshapeOp = RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, move(additionalProperties), f0.m_name);
                     reshapeOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
                     reshapeOp->m_uid = L"*," + arg.Uid();
@@ -1993,13 +2137,15 @@ public:
     // Value(), computed with automatic batching
     // This (and BatchedBackward()) represent the graph via the following structures that overlay the CNTK API structures:
     //  - Variable:
-    //     - m_redirection.m_functionHolder -> PrimitiveFunction (nullptr for leaves, that is, Parameter and Constant)
-    //     - m_redirection.m_lazyIndex    --if not SIZE_MAX, then slice the last dimension with this  --TODO: begin and end?
-    //     - m_redirection.m_actualShape -> NDShape  --actual shape of final result
+    //     - never look at Variable itself unless it has no m_redirection.m_function, except for:
+    //        - m_value: if not NULL then this is the cached value after applying m_sliceBegin/End and a potential reshape
+    //        - m_shape: the desired shape of this variable, if different from result of op/m_sliceBegin/End
+    //     - m_redirection.m_function     -> PrimitiveFunction (nullptr for leaves, that is, Parameter and Constant)
+    //     - m_redirection.m_sliceBegin    --if m_sliceEnd not SIZE_MAX, then slice the last dimension with this  --TODO: begin and end?
     //     - m_depthHint  --this value should only be consumer when thgere is no ready op that consumes a smaller m_depthHint
     //  - PrimitiveFunction:
-    //     - m_inputs[] -> Variable
-    //     - m_output
+    //     - m_inputs[] -> Variable.m_redirection
+    //     - m_output -> Variable.m_value, m_gradient
     //     - m_op, m_attributes
     // The value of a Variable is computed by this sequence:
     //  - execute m_function
@@ -2028,7 +2174,7 @@ public:
     //     - Any newly created batched ops are referenced this way.
     NDArrayViewPtr BatchedForward(const Variable& v)
     {
-        auto& fields = *v.m_dataFields;
+        auto& fields = GetInputFields(v);
         // if value already there then just return it
         if (fields.m_value)
             return fields.m_value;
@@ -2051,18 +2197,18 @@ public:
                 let& inputs = f->m_inputs;
                 for (size_t i = 0; i < inputs.size(); i++)
                 {
-                    size_t depthHint = 0;
-                    SeeThroughNoOps(inputs, i, depthHint);
+                    //size_t depthHint = 0;
+                    //SeeThroughNoOps(inputs, i, depthHint);
+                    let& input = inputs[i]; // we are lazy and only print the name if the barrier is the immediate input, so that we don't have to duplicate the traversal in SeeThroughNoOps()
+                    let& inputFields = GetInputFields(input);
+                    let depthHint = inputFields.m_redirection.m_depthHint;
                     if (depthHint != 0)
                     {
-                        let& input = inputs[i]; // we are lazy and only print the name if the barrier is the immediate input, so that we don't have to duplicate the traversal in SeeThroughNoOps()
                         const wchar_t* name = nullptr;
-                        size_t depthHint = 0;
-                        if (input.IsOutput())
+                        if (inputFields.m_redirection)
                         {
-                            let& f = input.m_dataFields->m_redirection.m_function;
+                            let& f = inputFields.m_redirection.m_function;
                             name = f->Name().c_str();
-                            depthHint = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
                         }
                         //fprintf(stderr, "\n[%S] --- %d (%S): %d pending\n\n", f->m_profiler->Name(), (int)depthHint, (name && name[0]) ? name : L"?", (int)m_schedule.BarrierPendingCounts(depthHint));
                         fprintf(stderr, "\n[%S] --- %d (%S)\n\n", f->m_profiler->Name(), (int)depthHint, (name && name[0]) ? name : L"?");
@@ -2072,6 +2218,7 @@ public:
             // execute it, and also update all outputs' values and consumers, and the schedule
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
+        CacheAndGetValue(fields);
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
         // log stats
         if (logMemoizeStatsCounter == 0)
@@ -2147,7 +2294,7 @@ public:
             // if this op draws from a batched op, then the gradient lives in there as well; we return a view onto it
             if (fields.m_redirection)
             {
-                let& from  = fields.m_redirection.m_functionHolder;
+                let& from  = fields.m_redirection.m_function;
                 let  index = fields.m_redirection.m_index;
                 let& fromOutput = from->m_outputs[0];
                 beta = LazilyCreateLazilyIndexedGradient(fromOutput);
@@ -2184,11 +2331,11 @@ public:
     // Note: THIS IS NOT LEVERAGED YET, and could be removed if we don't leverage it.
     const Variable& GetShortCircuitedGradientInput(const PrimitiveFunction& f, size_t index)
     {
-        let& input = SeeThroughNoOps(f.m_inputs, index);
-#ifndef NO_BATCHED_BACKPROP
+        let& input = DontSeeThroughNoOps(f.m_inputs, index);
+#ifndef NO_BATCHED_BACKPROP // BUGBUG: this #ifdef is likely wrong
         // if the input is a result of a batched operation, then traverse into that instead
         if (input.m_dataFields->m_redirection)
-            return input.m_dataFields->m_redirection.m_functionHolder->m_outputs[0];
+            return input.m_dataFields->m_redirection.m_function->m_outputs[0];
 #endif
         return input;
     }
@@ -2223,7 +2370,7 @@ public:
         auto& outFields = *var.m_dataFields;
 #ifndef NO_BATCHED_BACKPROP
         auto&f = outFields.m_redirection               // if var was computed via batched op
-              ? *outFields.m_redirection.m_functionHolder // then backprop into the batched op
+              ? *outFields.m_redirection.m_function    // then backprop into the batched op
               : *outFields.m_ownerFunction.lock();     // otherwise traverse the original op
 #else
         auto&f = outFields.m_ownerFunction.lock();
@@ -2238,20 +2385,10 @@ public:
         let& inputs = f.m_inputs;
         for (size_t i = 0; i < inputs.size(); i++)
         {
-#if 1
             // Note: Using this function may be misleading.
             // We are not short-circuiting the input here, but rather determine which function
             // it came from.
             let& input = GetShortCircuitedGradientInput(f, i);
-#else
-            let* inputp = &SeeThroughNoOps(inputs, i);
-#ifndef NO_BATCHED_BACKPROP
-            // if the input is a result of a batched operation, then traverse into that instead
-            if (inputp->m_dataFields->m_redirection)
-                inputp = &inputp->m_dataFields->m_redirection.m_functionHolder->m_outputs[0];
-#endif
-            let& input = *inputp;
-#endif
             auto& fields = *input.m_dataFields;
             if (!fields.m_needsGradient)
                 continue; // skip inputs that receive no gradients
@@ -2305,7 +2442,7 @@ public:
         LogFunction(*f, L"bb ", index);
 #endif
         let& inputs =  f->m_inputs;
-        auto& input = SeeThroughNoOps(inputs, index);
+        auto& input = DontSeeThroughNoOps(inputs, index);
         auto& fields = *input.m_dataFields;
         fail_if(!fields.m_needsGradient, "function unexpectedly does not need a gradient");
         // get the TensorViews for everything we may compute the gradient from
@@ -2324,7 +2461,7 @@ public:
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, numInputs);
         for (size_t i = 0; i < numInputs; i++)
         {
-            let& input1 = SeeThroughNoOps(inputs, i);
+            let& input1 = DontSeeThroughNoOps(inputs, i);
             let& fields = *input1.m_dataFields;
             fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
             inputValues[i] = fields.m_value.get();
@@ -2394,7 +2531,7 @@ public:
         bool allBetasZero = true;
         for (size_t i = 0; i < numInputs; i++)
         {
-            let& input = SeeThroughNoOps(inputs, i);
+            let& input = DontSeeThroughNoOps(inputs, i);
             // create the gradient memory for this input
             let beta = LazilyCreateLazilyIndexedGradient(input);
             let& fields = *input.m_dataFields;
@@ -2405,7 +2542,7 @@ public:
                 // We were running under the assumption that all betas are zero, so we can use beta=0 below.
                 // Now we must run with beta 1, and therefore manually reset all pevious ones.
                 for (size_t i1 = 0; i1 < i; i1++) // these were all beta=0
-                    SeeThroughNoOps(inputs, i1).m_dataFields->m_gradient->SetValue(0.0f);
+                    DontSeeThroughNoOps(inputs, i1).m_dataFields->m_gradient->SetValue(0.0f);
                 allBetasZero = false;
             }
             else if (beta == 0 && !allBetasZero)
@@ -2444,14 +2581,14 @@ public:
 #ifdef LOG_DETAILS
         LogFunction(f0, L"bb* ", 0);
 #endif
-        let& input0 = SeeThroughNoOps(f0.m_inputs, 0);
+        let& input0 = DontSeeThroughNoOps(f0.m_inputs, 0);
         size_t batchDim = 0;
         for (size_t i = 0; i < numBatchItems; i++)
         {
             let &c = consumers[i];
             fail_if(c.second != 0, "wrong input??");
             let& outGrad = c.first->m_outputs[0].m_dataFields->m_gradient;
-            let& right = SeeThroughNoOps(c.first->m_inputs, 1).m_dataFields->m_value;
+            let& right = DontSeeThroughNoOps(c.first->m_inputs, 1).m_dataFields->m_value;
             timesOutGrads       [i] = outGrad;
             timesDataRightInputs[i] = right;
             let numItems = outGrad->Shape().Dimensions().back();

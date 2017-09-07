@@ -1807,7 +1807,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameNormalizationTimeConstant] = normalizationTimeConstant;
         additionalProperties[PrimitiveFunction::AttributeNameBlendTimeConstant] = blendTimeConstant;
         additionalProperties[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
-        additionalProperties[PrimitiveFunction::AttributeNameSyncId] = id; // the Dynamite version takes an extra parameter
+        additionalProperties[PrimitiveFunction::AttributeNameSyncId] = id + 1; // the Dynamite version takes an extra parameter (+1 because 0 is reserved)
 
         std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd, runningCount };
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization, operands, std::move(additionalProperties), name));
