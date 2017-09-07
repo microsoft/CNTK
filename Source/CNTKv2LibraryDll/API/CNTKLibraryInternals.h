@@ -527,6 +527,7 @@ namespace CNTK
             operator bool() const { return m_function != nullptr; } // allows for "if (m_redirection)"
         };
 
+        // optimized for main case of 1 consumer. No std::vector in that case.
         struct AutoBatchConsumers : public std::pair<std::pair<PrimitiveFunction*, size_t>, std::vector<std::pair<PrimitiveFunction*, size_t>>>
         {
             AutoBatchConsumers() { first.first = (PrimitiveFunction*)-1; } // this initialization can be removed once this is debugged (or once we replaced this horrible construct)
@@ -547,6 +548,7 @@ namespace CNTK
                 for (auto& c : second) // all other consumers
                     f(c);
             }
+            void mangle(int val) { first.first = (PrimitiveFunction*)(intptr_t)val; } // put an intentionally broken value that we can detect during debugging
         };
     } // Internal
 
