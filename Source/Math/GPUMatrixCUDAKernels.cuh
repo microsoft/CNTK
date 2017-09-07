@@ -349,8 +349,9 @@ __global__ void _elementWiseLogOnCuda(
     ElemType* res,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
-    res[id] = (a[id] < EPS_IN_LOG) ? (ElemType)LOG_OF_EPS_IN_LOG : log_(a[id]);
+    res[id] = ((comp_t)a[id] < EPS_IN_LOG) ? (comp_t)LOG_OF_EPS_IN_LOG : log_((comp_t)a[id]);
 };
 
 template <class ElemType>
@@ -359,8 +360,9 @@ __global__ void _elementWiseAbsOnCuda(
     ElemType* res,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
-    res[id] = fabs_(a[id]);
+    res[id] = fabs_((comp_t)a[id]);
 };
 
 template <class ElemType>
@@ -1252,10 +1254,11 @@ __global__ void _setToZeroIfAbsLessThan(
     const ElemType threshold,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    if (fabs_(a[id]) < threshold)
+    if (fabs_((comp_t)a[id]) < (comp_t)threshold)
         a[id] = 0;
 }
 
@@ -4454,14 +4457,14 @@ __global__ void _reductionMatrixNormInf1024Threads(
     ElemType* maxAbs,
     CUDA_LONG N)
 {
-
-    __shared__ ElemType partialSums[1024];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partialSums[1024];
     partialSums[threadIdx.x] = 0;
     // int id = blockDim.x * blockIdx.x + threadIdx.x;
     int loadPerThread = N / blockDim.x;
     for (int i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        partialSums[threadIdx.x] = max(fabs_(data[i]), partialSums[threadIdx.x]);
+        partialSums[threadIdx.x] = max(fabs_((comp_t)data[i]), partialSums[threadIdx.x]);
     }
     __syncthreads();
 
