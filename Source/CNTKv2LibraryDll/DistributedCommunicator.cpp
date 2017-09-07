@@ -287,7 +287,7 @@ namespace CNTK
         AggregateImpl(values, values, sendToWorkers);
     }
 
-    void  MPICommunicatorImpl::AggregateImpl(
+    void MPICommunicatorImpl::AggregateImpl(
         const std::vector<NDArrayViewPtr>& inputValues,
         const std::vector<NDArrayViewPtr>& outputValues,
         const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers)
@@ -390,13 +390,13 @@ namespace CNTK
 
             if (dataType == DataType::Float)
             {
-                AllReduceGradients(static_cast<float*>(inputData), static_cast<float*>(outputData), numElements,
-                    allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
+                AllReduceData(static_cast<float*>(inputData), static_cast<float*>(outputData), numElements,
+                    &allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
             }
             else if (dataType == DataType::Double)
             {
-                AllReduceGradients(static_cast<double*>(inputData), static_cast<double*>(outputData), numElements,
-                    allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
+                AllReduceData(static_cast<double*>(inputData), static_cast<double*>(outputData), numElements,
+                    &allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
             }
             else
                 LogicError("MPICommunicator: Unknown DataType.");
@@ -433,6 +433,7 @@ namespace CNTK
                 transferer->CopyCPUToGPUAsync(buffer.data.get(), size, GetDataBuffer(view));
             }
         }
+
         // TODO: Should not wait, simply publishing event on the compute stream should be sufficient
         for (auto i = 0; i < numValues; ++i)
         {
@@ -445,7 +446,154 @@ namespace CNTK
         UnpackFromContinuousBuffer(m_aggregationBufferDouble.get(), outputValues, packedDoubleGradientsIndex);
     }
 
-    void  MPICommunicatorImpl::Barrier()
+    void MPICommunicatorImpl::AllReduceSparseBlockColumn(
+        std::vector<NDArrayViewPtr>& sbcValues)
+    {
+        if (m_mpi->NumNodesInUse() == 1) // No need to aggregate anything.
+            return;
+#ifdef CPUONLY
+        LogicError("Sparse block column aggregation on CPUDevice not implemented");
+#else
+        // a handy struct to access sparse block column matrix internal data
+        struct SBCInfo
+        {
+            const void* nz;
+            const SparseIndexType* blockId2Col;
+            const SparseIndexType* col2BlockId;
+            size_t numBlocks;
+            size_t numRows;
+            size_t numCols;
+
+            SBCInfo(const NDArrayViewPtr& sbc)
+            {
+                if (sbc->Device() == DeviceDescriptor::CPUDevice())
+                    LogicError("Unimplmented sparse block column aggregation on CPUDevice. Please cntk.cntk_py.use_sparse_gradient_aggregation_in_data_parallel_sgd(False) to avoid this error.");
+
+                if (sbc->GetDataType() == DataType::Float)
+                {
+                    auto tuple = sbc->SparseBlockColumnDataBuffers<float>();
+                    nz = std::get<0>(tuple);
+                    blockId2Col = std::get<1>(tuple);
+                    col2BlockId = std::get<2>(tuple);
+                    numBlocks = std::get<3>(tuple);
+                    numRows = std::get<4>(tuple);
+                    numCols = std::get<5>(tuple);
+                }
+                else if (sbc->GetDataType() == DataType::Double)
+                {
+                    auto tuple = sbc->SparseBlockColumnDataBuffers<double>();
+                    nz = std::get<0>(tuple);
+                    blockId2Col = std::get<1>(tuple);
+                    col2BlockId = std::get<2>(tuple);
+                    numBlocks = std::get<3>(tuple);
+                    numRows = std::get<4>(tuple);
+                    numCols = std::get<5>(tuple);
+                }
+                else
+                    LogicError("MPICommunicator: Unknown DataType.");
+            }
+        };
+
+        m_intermediateSBCIndexCPUBuffers.resize(sbcValues.size());
+        m_intermediateSBCValueCPUBuffers.resize(sbcValues.size());
+
+        // First, AllReduce(Max) to get the aggregated non-zero columns
+        bool aggregateOnCPU = !(m_nccl->IsSupported() || m_mpi->UseGpuGdr());
+
+        std::vector<SBCInfo> sbcInfos;
+        for (size_t idx = 0; idx < sbcValues.size(); idx++)
+        {
+            sbcInfos.emplace_back(SBCInfo(sbcValues[idx]));
+            auto& sbcInfo = sbcInfos[idx];
+            size_t requiredSize = sbcInfo.numCols * sizeof(SparseIndexType);
+            if (m_intermediateSBCIndexCPUBuffers[idx].totalSize < requiredSize)
+                m_intermediateSBCIndexCPUBuffers[idx] = AllocateIntermediateBuffer(sbcValues[idx]->Device().Id(), requiredSize);
+
+            SparseIndexType* pCol2BlockId = nullptr;
+            if (aggregateOnCPU)
+            {
+                pCol2BlockId = reinterpret_cast<SparseIndexType*>(m_intermediateSBCIndexCPUBuffers[idx].data.get());
+                cudaMemcpy(pCol2BlockId, sbcInfo.col2BlockId, sizeof(SparseIndexType) * sbcInfo.numCols, cudaMemcpyDeviceToHost);
+            }
+            else
+            {
+                // aggregate on GPU, since we'll do inplace aggregation for col2BlockId, remember the original one in blockId2Col
+                pCol2BlockId = const_cast<SparseIndexType*>(sbcInfo.col2BlockId);
+                cudaMemcpy(const_cast<SparseIndexType*>(sbcInfo.blockId2Col), pCol2BlockId, sizeof(SparseIndexType) * sbcInfo.numCols, cudaMemcpyDeviceToDevice);
+            }
+
+            // all-reduce max to find out the columns that would have value after aggregation
+            AllReduceData<SparseIndexType>(pCol2BlockId, pCol2BlockId, sbcInfo.numCols, nullptr, aggregateOnCPU, MPI_MAX, true);
+        }
+
+        if (m_nccl->IsSupported())
+        {
+            m_nccl->Sync();
+        }
+
+        for (size_t idx = 0; idx < sbcInfos.size(); idx++)
+        {
+            auto sbc = sbcValues[idx];
+            auto& sbcInfo = sbcInfos[idx];
+
+            // copy to CPU to count aggregated columns and allocate space for values
+            SparseIndexType* aggregatedCol2BlockId = reinterpret_cast<SparseIndexType*>(m_intermediateSBCIndexCPUBuffers[idx].data.get());
+
+            // if aggregation is done on CPU, the buffer already has valid data, otherwise, copy from gpu
+            if (!aggregateOnCPU)
+            {
+                cudaMemcpy(aggregatedCol2BlockId, sbcInfo.col2BlockId, sbcInfo.numCols * sizeof(SparseIndexType), cudaMemcpyDeviceToHost);
+            }
+
+            // update col2blockId and count new blocks
+            size_t numBlocks = 0;
+            for (size_t col = 0; col < sbcInfo.numCols; col++)
+            {
+                if (aggregatedCol2BlockId[col] != SparseIndex_NotAssigned)
+                {
+                    // note that the order has been changed after aggregation. This is to make sure the indices are the same for all workers
+                    aggregatedCol2BlockId[col] = numBlocks;
+                    numBlocks++;
+                }
+            }
+
+            // adjust sbc with the new col2BlockId. old nz would be copied to the new nz buffer according to the new Col2BlockId,
+            // and the rest of nz buffer would be filled with zero. BlockId2Col would be set accordingly too.
+            // after this, all nz buffers in workers are aligned and ready for aggregation
+            sbc->AdjustSparseBlockColumn(aggregatedCol2BlockId, numBlocks, /*useBlockId2Col*/ !aggregateOnCPU);
+
+            // update the info as nzvalue may got reallocated
+            sbcInfo = SBCInfo(sbc);
+            size_t requiredElements = sbcInfo.numRows * numBlocks;
+            size_t requiredSize = requiredElements * DataTypeSize(sbc->GetDataType());
+
+            void* nzGPU = const_cast<void*>(sbcInfo.nz);
+            void* nz = nzGPU;
+            if (aggregateOnCPU)
+            {
+                // if aggregating on CPU, copy nz from GPU first
+                if (m_intermediateSBCValueCPUBuffers[idx].totalSize < requiredSize)
+                    m_intermediateSBCValueCPUBuffers[idx] = AllocateIntermediateBuffer(sbcValues[idx]->Device().Id(), requiredSize);
+                void* nzCPU = m_intermediateSBCValueCPUBuffers[idx].data.get();
+                cudaMemcpy(nzCPU, nz, requiredSize, cudaMemcpyDeviceToHost);
+                nz = nzCPU;
+            }
+
+            if (sbc->GetDataType() == DataType::Float)
+                AllReduceData<float>((float*)nz, (float*)nz, requiredElements, nullptr, aggregateOnCPU, MPI_SUM, true);
+            else
+                AllReduceData<double>((double*)nz, (double*)nz, requiredElements, nullptr, aggregateOnCPU, MPI_SUM, true);
+
+            if (aggregateOnCPU)
+            {
+                // since only GPU sparse block column is supported, copy aggregated nz back to GPU
+                cudaMemcpy(nzGPU, nz, requiredSize, cudaMemcpyHostToDevice);
+            }
+        }
+#endif
+    }
+
+    void MPICommunicatorImpl::Barrier()
     {
         m_mpi->WaitAll();
     }
@@ -546,29 +694,29 @@ namespace CNTK
     }
 
     template <typename ElemType>
-    void MPICommunicatorImpl::AllReduceGradients(ElemType* inputData, ElemType* outputData, size_t numElements, std::vector<MPI_Request> &allReduceRequests, bool dataOnCPU)
+    void MPICommunicatorImpl::AllReduceData(ElemType* inputData, ElemType* outputData, size_t numElements, std::vector<MPI_Request>* pAllReduceRequests, bool dataOnCPU, MPI_Op op, bool forceSync)
     {
         if (m_nccl->IsSupported() && !dataOnCPU)
         {
-            m_nccl->AllReduce(inputData, outputData, numElements);
+            m_nccl->AllReduce(inputData, outputData, numElements, op);
 
             return;
         }
 
-        if (m_mpi->UseGpuGdr())
+        if (m_mpi->UseGpuGdr() || forceSync)
         {
             if (inputData == outputData)
-                m_mpi->AllReduce(outputData, numElements);
+                m_mpi->AllReduce(outputData, numElements, op);
             else
-                m_mpi->AllReduce(inputData, outputData, numElements);
+                m_mpi->AllReduce(inputData, outputData, numElements, op);
 
             return;
         }
 
-        allReduceRequests.push_back(MPI_Request());
+        pAllReduceRequests->push_back(MPI_Request());
         if (inputData == outputData)
-            m_mpi->AllReduceAsync(outputData, numElements, &allReduceRequests.back());
+            m_mpi->AllReduceAsync(outputData, numElements, &(pAllReduceRequests->back()), op);
         else
-            m_mpi->AllReduceAsync(inputData, outputData, numElements, &allReduceRequests.back());
+            m_mpi->AllReduceAsync(inputData, outputData, numElements, &(pAllReduceRequests->back()), op);
     }
 }

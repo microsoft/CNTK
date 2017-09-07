@@ -19,9 +19,10 @@ namespace CNTK.CSTrainingExamples
         /// <summary>
         /// test execution folder is: CNTK/Tests/EndToEndTests/CNTKv2CSharp/ExampleTests/TransferLearningTest
         /// data folder is: CNTK/Examples/Image
+        /// model folder is: CNTK/PretrainedModels
         /// </summary>
         public static string ExampleImageFoler = "../../Examples/Image/DataSets";
-        public static string BaseResnetModelFile = "../../Examples/Image/PretrainedModels/ResNet_18.model";
+        public static string BaseResnetModelFile = "../../PretrainedModels/ResNet18_ImageNet_CNTK.model";
 
         private static string featureNodeName = "features";
         private static string lastHiddenNodeName = "z.x";
