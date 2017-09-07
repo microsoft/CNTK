@@ -515,7 +515,40 @@ namespace CNTK
              T m_value;
              bool m_initialized { false };
         };
-    }
+
+        // Dynamite
+        struct AutoBatchRedirection // redirect this value to a different owner function. Also allow for lazy Index operation.
+        {
+            PrimitiveFunctionPtr m_functionHolder;  // holds shared_ptr to owner if created anew
+            size_t m_index;                         // and we take this slice on the way (SIZE_MAX if none)  --TODO: replace by m_sliceBegin/End
+            PrimitiveFunction* m_function = (PrimitiveFunction*)-1;          // ...for now use these instead, until we are ready to switch; m_functionHolder becomes m_functionHolder
+            size_t m_sliceBegin, m_sliceEnd;        // slice out these items (applied to last dimension). Do nothing if m_sliceEnd==SIZE_MAX.  --TODO: think this through more
+            size_t m_depthHint = 0;                 // this redirection skipped a Barrier with this depthHint
+            operator bool() const { return m_function != nullptr; } // allows for "if (m_redirection)"
+        };
+
+        struct AutoBatchConsumers : public std::pair<std::pair<PrimitiveFunction*, size_t>, std::vector<std::pair<PrimitiveFunction*, size_t>>>
+        {
+            AutoBatchConsumers() { first.first = (PrimitiveFunction*)-1; } // this initialization can be removed once this is debugged (or once we replaced this horrible construct)
+            size_t size() const { return (first.first ? 1 : 0) + second.size(); }
+            void clear() { first.first = nullptr; second.clear(); }
+            void push_back(PrimitiveFunction* f, size_t i)
+            {
+                if (!first.first) // optimized for main case of 1 consumer. No std::vector in that case.
+                    first = std::move(std::make_pair(f, i)); // note: we don't need i for forward; can optimize
+                else
+                    second.emplace_back(std::make_pair(f, i));
+            }
+            template<class F>
+            void ForAll(const F& f)
+            {
+                if (first.first)
+                    f(first);
+                for (auto& c : second) // all other consumers
+                    f(c);
+            }
+        };
+    } // Internal
 
     // Forward-declare test fixtures, so that they can be used as friends.
     namespace Test 
