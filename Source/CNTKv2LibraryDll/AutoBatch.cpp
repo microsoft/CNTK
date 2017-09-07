@@ -1103,7 +1103,7 @@ class Variable::AutoBatch
     // TODO: Once we are in the main build, change all Function to PrimitiveFunction directly.
     // TODO: What to do with multi-valued functions? Which ones are there? What is Combine(), a barrier?
     // Caller must call m_visitorTag.Begin() first.
-    void RInitForScheduling(const Variable& var, size_t depth)
+    void RBuildForwardGraphAndSchedule(const Variable& var, size_t depth)
     {
         auto& fields = *var.m_dataFields;
         // return if this node was already visited
@@ -1124,11 +1124,11 @@ class Variable::AutoBatch
             }
             if (isLeaf)
             {
-                redirectedFieldsOwner = nullptr;
+                redirectedFieldsOwner = nullptr; // indicates that this is a leaf
                 assert(fields.m_value); // got set by the call above
                 break;
             }
-            redirectedFieldsOwner = redirectedFields->m_ownerFunction.lock().get();
+            redirectedFieldsOwner = redirectedFields->m_ownerFunction.lock().get(); // this is the only place we ever call lock(); after this, we just use the raw pointer (relying on immutability)
             let redirectedOp = redirectedFieldsOwner->m_op;
             if (!IsAlias(redirectedOp) && redirectedOp != PrimitiveOpType::Reshape)
                 break;
@@ -1144,16 +1144,15 @@ class Variable::AutoBatch
         // some sanity checks
         if (redirectedFields->m_varKind == VariableKind::Input || redirectedFields->m_varKind == VariableKind::Placeholder)
             LogicError("Dynamic Value() must not depend on Input or Placeholder.");
-        // set up linkage in our overlaid structure
-        fields.m_redirection.m_function = redirectedFieldsOwner;
-        fields.m_redirection.m_index = SIZE_MAX;
-        fields.m_redirection.m_depthHint = depthHint;
         // initialize m_consumers chain of function that produces the values
         fields.m_consumers.clear();
         // Leaves are Parameters, Constants, and also nodes that already have a value.
         if (!redirectedFieldsOwner)
         {
-            // leaves have no m_function, so the redirection is resolved right here
+            // m_function has already been set either by default (for Parameters/Constants) or by a previous invocation
+            // (for output values that already existed when this was called).
+            // Redirect and Parameter/Constant are mutualyl exclusive.
+            fail_if(!(redirectedFields->m_redirection ^ (redirectedFields->m_varKind == VariableKind::Parameter || redirectedFields->m_varKind == VariableKind::Constant)), "Parameter or Constantun with redirect??");
             // BUGBUG:!!!! How aboud the gradient?? We must know how to find the gradient!
             //        One solution is to redirect to the operation directly on top of the Parameter, not the parameter itself.
             if (!fields.m_value)
@@ -1161,11 +1160,15 @@ class Variable::AutoBatch
             m_stats.numLeafNodes++;
             return;
         }
+        // set up linkage in our overlaid structure
+        fields.m_redirection.m_function = redirectedFieldsOwner; // BUGBUG: If null (leaf) then don't touch this field; yet return
+        fields.m_redirection.m_index = SIZE_MAX;
+        fields.m_redirection.m_depthHint = depthHint;
         // if redirected then also initialize the producer
         // This is mostly so that m_consumers gets set correctly.
         if (redirectedFields != &fields)
         {
-            RInitForScheduling(redirectedFieldsOwner->m_outputs[0], depth + 1);
+            RBuildForwardGraphAndSchedule(redirectedFieldsOwner->m_outputs[0], depth + 1);
             return;
         }
         auto& f = *redirectedFieldsOwner; // == fields.m_redirection.m_function == fields.Owner()
@@ -1198,7 +1201,7 @@ class Variable::AutoBatch
         {
             let& input = inputs[i];
             // recursively traverse
-            RInitForScheduling(input, depth + 1);
+            RBuildForwardGraphAndSchedule(input, depth + 1);
             let& inputFields = GetInputFields(input);
             if (!inputFields.m_value) // (if input is a leaf, it has a value)
             {
@@ -1206,7 +1209,7 @@ class Variable::AutoBatch
                 auto& outputFields = GetOutputFields(inputFields.m_redirection.m_function);
                 pendingInputs++;
                 // record ourselves as a consumer of the input
-                // Note that RInitForScheduling() will have reset this upon first visit of 'input'.
+                // Note that RBuildForwardGraphAndSchedule() will have reset this upon first visit of 'input'.
                 // The recorded consumer is the function that produces things, not the redirect.
                 outputFields.m_consumers.push_back(&f, i);
                 maxDepthHint = max(maxDepthHint, inputFields.m_redirection.m_depthHint);
@@ -1288,7 +1291,7 @@ class Variable::AutoBatch
     static VariableFields& GetOutputFields(const PrimitiveFunction* f)
     {
         auto& fields = *f->m_outputs[0].m_dataFields;
-        fail_if(fields.m_redirection.m_function == (PrimitiveFunction*)-1, "GetOutputFields() called on a function that is see-through??");
+        fail_if(!fields.m_redirection, "GetOutputFields() called on a function that is see-through or leaf??");
         return fields;
     }
 
@@ -1939,7 +1942,7 @@ class Variable::AutoBatch
                 // BatchNorm requires three additional parameters for the current mean and invStdDev, and the zero-mean/unit-variance intermediate. These must be kept for backprop.
                 let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
                 let device = GetValueObject(m_batchedInputs[0])->Device();
-                let createParameter = [&](const NDShape& shape) -> Variable // helper to create a Parameter as if it had been initialized by RInitForScheduling()
+                let createParameter = [&](const NDShape& shape) -> Variable // helper to create a Parameter as if it had been initialized by RBuildForwardGraphAndSchedule()
                 {
                     let p = Parameter(m_arena.NewNDArrayView(shape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, device));
                     auto& fields = GetInputFields(p);
@@ -2130,7 +2133,7 @@ public:
         //  - mark all nodes w.r.t. how many inputs they are waiting for before being computable
         //  - prepare and schedule first set
         m_visitorTag.Begin();
-        RInitForScheduling(v, 0);
+        RBuildForwardGraphAndSchedule(v, 0);
         // phase 2:
         //  - compute the entire graph
         while (!m_schedule.empty()) // main computation loop over all operations
@@ -2317,18 +2320,30 @@ public:
     // All nodes that were traversed have all input's m_consumers set up.
     // Caller must call m_visitorTag.Begin() first. This routine uses two visitor tags, one in the
     // function, and one in the fields.
-    void RDetermineConsumersForBackward(const Variable& var)
+    //
+    // Each iteration updates the m_consumer fields of the inputs leading to this var.
+    // Precondition: Call this only once per input.
+    void RBuildBackwardGraph(const Variable& inputVar)
     {
-        auto& fields = *var.m_dataFields;
+        auto& fields = *inputVar.m_dataFields;
 
-        if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
-            return; // reached a leaf
+        // handle leaves
+        if (!fields.m_redirection) // has no owner/producer function: it's a leaf
+        {
+            //fail_if(fields.m_varKind != VariableKind::Parameter && fields.m_varKind != VariableKind::Constant, "")
+            //{
+            //    fields.m_consumers.clear();
+            //    return; // reached a leaf
+            //}
+            fields.m_consumers.clear();
+            return;
+        }
 
         fail_if(!fields.m_value, "variable has no value yet??");
         fail_if(!fields.m_needsGradient, "unexpectedly encountered a node with m_needsGradient=false??");
         fail_if(fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??");
 
-        // Determine the function that 'var' is the output of.
+        // Determine the function that 'inputVar' is the output of.
         // We back-propagated through the modified graph that is established by the m_redirection
         // fields. This means that if a value was not
         // actually computed from its true owner function, but rather a slice into the result of
@@ -2337,7 +2352,7 @@ public:
         // consumer of all inputs of the batched operation, rather than the original
         // unbatched operation. And as a consequence of that, back propagation will use
         // the same batching that was determined in forward computation. We do not need to rediscover it.
-        auto& outFields = GetInputFields(var);
+        auto& outFields = GetInputFields(inputVar);
         auto& f = *outFields.m_redirection.m_function; // function that generated this value (seeing through see-through ops)
         // return if we already visited the function
         if (m_visitorTag.Visited(f.m_autoBatchState.m_visitedTag))
@@ -2353,25 +2368,21 @@ public:
             // We are not short-circuiting the input here, but rather determine which function
             // it came from.
             let& input = GetShortCircuitedGradientInput(f, i);
-            auto& fields = *input.m_dataFields;
-            if (!fields.m_needsGradient)
+            auto& inputFields = *input.m_dataFields;
+            if (!inputFields.m_needsGradient) // TODO: use our own field for this. Interpret Constant and StopGradient. StopGradient output receives no gradient.
                 continue; // skip inputs that receive no gradients
             // this input will receive a gradient; reset it (later, we *accumulate* into it since nodes can receive gradients from multiple consumers)
             // Note that BatchedBackward() returns shared_ptrs to the gradient values, so they won't get lost.
             // BUGBUG: (But they get reallocated over again, and will hold the entire arena!!) BUGBUG!
             // BUGBUG: we must not kill the gradient buffers passed by the user
-            fields.m_gradient.reset();
+            inputFields.m_gradient.reset();
             // record ourselves as a consumer of the input
             // Remember that any input that is a redirection has been redirected to its lazy source,
             // i.e. it is the lazy source that will pull this gradient.
-            if (!m_visitorTag.Visited(fields.m_visitedTag))
-            {
-                fields.m_consumers.reset(&f, i);
-                // now process recursively the inputs
-                RDetermineConsumersForBackward(input);
-            }
-            else
-                fields.m_consumers.push_back(&f, i);
+            if (!m_visitorTag.Visited(inputFields.m_visitedTag))
+                // process recursively the inputs
+                RBuildBackwardGraph(input);
+            inputFields.m_consumers.push_back(&f, i);
             m_stats.numBackpropsToInputs++;
         }
     }
@@ -2770,7 +2781,7 @@ public:
         BatchedForward(root);
         // set up the m_consumer fields, which BatchedBackward() will work off
         m_visitorTag.Begin();
-        RDetermineConsumersForBackward(root); // (gotta improve the name of these things)
+        RBuildBackwardGraph(root); // (gotta improve the name of these things)
         // implant the first gradient
         // TODO: allow user to pass in the starting value
         // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.

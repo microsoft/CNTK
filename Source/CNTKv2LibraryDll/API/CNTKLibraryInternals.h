@@ -519,11 +519,11 @@ namespace CNTK
         // Dynamite
         struct AutoBatchRedirection // redirect this value to a different owner function. Also allow for lazy Index operation.
         {
-            PrimitiveFunctionPtr m_functionHolder;  // holds shared_ptr to owner if created anew
-            size_t m_index;                         // and we take this slice on the way (SIZE_MAX if none)  --TODO: replace by m_sliceBegin/End
-            PrimitiveFunction* m_function = (PrimitiveFunction*)-1;          // ...for now use these instead, until we are ready to switch; m_functionHolder becomes m_functionHolder
-            size_t m_sliceBegin, m_sliceEnd;        // slice out these items (applied to last dimension). Do nothing if m_sliceEnd==SIZE_MAX.  --TODO: think this through more
-            size_t m_depthHint = 0;                 // this redirection skipped a Barrier with this depthHint
+            PrimitiveFunction* m_function = nullptr; // function that actually produces the value for this
+            size_t m_index = SIZE_MAX - 1;           // and we take this slice on the way (SIZE_MAX if none)  --TODO: replace by m_sliceBegin/End
+            size_t m_depthHint = 0;                  // this redirection skipped a Barrier with this depthHint
+            PrimitiveFunctionPtr m_functionHolder;   // holds shared_ptr to owner if it was added by auto-batching
+            //size_t m_sliceBegin, m_sliceEnd;         // slice out these items (applied to last dimension). Do nothing if m_sliceEnd==SIZE_MAX.  --TODO: think this through more
             operator bool() const { return m_function != nullptr; } // allows for "if (m_redirection)"
         };
 
