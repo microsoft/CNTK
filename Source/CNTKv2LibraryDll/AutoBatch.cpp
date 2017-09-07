@@ -2711,33 +2711,27 @@ public:
     // This uses Variable::m_visitedTag for traversing the consumer tree upwards.
     // It uses PrimitiveFunction::m_visitedTag for bulk gradient of currently the
     // Splice op, which produces all inputs' gradients in a single go and must therefore only run once.
-    __declspec(noinline) void RAggregateGradientFromAllConsumers(const Variable& var)
+    __declspec(noinline) void RAggregateGradientFromAllConsumers(VariableFields& fields)
     {
-        let& fields = *var.m_dataFields;
+        //let& fields = *var.m_dataFields;
         if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
 
-        // reached a "leaf" in the revesre tree; i.e. we hit the root
+        // reached a "leaf" in the inverted backprop graph; i.e. we hit the root
         if (fields.m_consumers.empty())
             return;
 
         fail_if(!fields.m_needsGradient, "backprop into variable that does not need gradient");
 
         // recursively realize all consumers' outputs' gradients
-#if 1
+        // i.e. realize all that this gradient depends on
         fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
         {
-            for (let& output : fi.first->m_outputs)
-                RAggregateGradientFromAllConsumers(output);
+            auto& consumerGradFields = GetOutputFields(fi.first);
+            fail_if(!ArePhysicalOutputFields(consumerGradFields), "pulling gradient from a redirected output location??");
+            RAggregateGradientFromAllConsumers(consumerGradFields);
         });
-#else
-        auto& c = fields.m_consumers.first;
-        for (let& output : c.first->m_outputs)
-            RAggregateGradientFromAllConsumers(output);
-        for (auto& c : fields.m_consumers.second)
-            for (let& output : c.first->m_outputs)
-                RAggregateGradientFromAllConsumers(output);
-#endif
+
         // Now all consumers are ready to propagate into var's m_gradient.
         // The resulting gradient is the sum of all that's backpropped here,
         // and this is the only place where a variable's gradient ever gets aggregated.
@@ -2833,11 +2827,10 @@ public:
         // BUGBUG:
         for (auto& kv : gradients)
         {
-            let& param = kv.first;
-            auto& paramGradFields = GetGradientFieldsForBackprop(param, /*firstTimes=*/true);
-            if (m_visitorTag.Visited(paramGradFields.m_visitedTag)) // (note that the code does not require this; this is only to point out a likely user error)
+            auto& gradFields = GetGradientFieldsForBackprop(kv.first, /*firstTimes=*/true);
+            if (m_visitorTag.Visited(gradFields.m_visitedTag)) // (note that the code does not require this; this is only to point out a likely user error)
                 InvalidArgument("BatchedBackward: a Parameter was included more than once in gradients[]");
-            RBuildBackwardGraph(paramGradFields, /*userOwnsGradients=*/true);
+            RBuildBackwardGraph(gradFields, /*userOwnsGradients=*/true);
             // BUGBUG: ^^ userOwnsGradients won't work correctly if one Var in gradients[] is an input to another
         }
         // now build the graph. We use visited information for the gradients to infer our own needsGradient flag
@@ -2847,9 +2840,11 @@ public:
         // sanity check
         for (auto& kv : gradients)
         {
-            let& fields = *kv.first.m_dataFields;
-            if (fields.m_consumers.empty()) // if gradient's Parameter has no consumers, then it is not part of the root
+            let& gradFields = GetGradientFieldsForBackprop(kv.first);
+            if (gradFields.m_consumers.empty()) // if gradient's Parameter has no consumers, then it is not part of the root
                 LogicError("BatchedBackward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
+            if (!gradFields.m_needsGradient) // (we could also just leave the gradient 0)
+                LogicError("BatchedBackward: cannot compute gradient for variable with m_needsGradient being False."); // such as a Constant. Actually, why? User can certainly get that if desired.
         }
         // --- Phase 2: backprop through the inverted backprop graph
         //  - perform backprop operation, by depth-first traversal of inverted backprop graph starting from gradients
@@ -2866,11 +2861,8 @@ public:
         m_visitorTag.Begin();
         for (auto& kv : gradients)
         {
-            let& param = kv.first;
-            let& fields = *param.m_dataFields;
-            if (!fields.m_needsGradient) // (we could also just leafve the gradient 0)
-                LogicError("BatchedBackward: cannot compute gradient for variable with m_needsGradient being False.");
-            RAggregateGradientFromAllConsumers(param); // TODO: also go by fields?
+            auto& gradFields = GetGradientFieldsForBackprop(kv.first);
+            RAggregateGradientFromAllConsumers(gradFields);
         }
         //fprintf(stderr, "Back-propagated through %d functions\n", (int)order.size());
         // implant the results into the map the user passed in
