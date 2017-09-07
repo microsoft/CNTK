@@ -26,7 +26,9 @@ public:
     __CUDA_HOSTDEVICE__ half(const half& other) { __x = other.__x; }
     __CUDA_HOSTDEVICE__ half& operator=(const half& other) { __x = other.__x; return *this; }
     __CUDA_HOSTDEVICE__ half(half&& other) { *this = std::move(other); }
-    __CUDA_HOSTDEVICE__ half& operator=(half&& other) { *this = std::move(other); return *this; }
+
+    //warning C4717 : 'half::operator=' : recursive on all control paths, function will cause runtime stack overflow
+    //__CUDA_HOSTDEVICE__ half& operator=(half&& other) { *this = std::move(other); return *this; }
 
     // convert from __half
     __CUDA_HOSTDEVICE__ half(const __half& other) : __half(other) {}
@@ -97,7 +99,8 @@ inline void float2halfbits(float* src, unsigned short* dest)
 {
     unsigned x = *(unsigned*)src;
     unsigned u = (x & 0x7fffffff), remainder, shift, lsb, lsb_s1, lsb_m1;
-    unsigned sign, exponent, mantissa;
+    unsigned short sign;
+    unsigned exponent, mantissa;
 
     // Get rid of +NaN/-NaN case first.
     if (u > 0x7f800000) {
@@ -105,7 +108,7 @@ inline void float2halfbits(float* src, unsigned short* dest)
         return ;
     }
 
-    sign = ((x >> 16) & 0x8000);
+    sign = (unsigned short)((x >> 16) & 0x8000);
 
     // Get rid of +Inf/-Inf, +0/-0.
     if (u > 0x477fefff) {
@@ -143,7 +146,7 @@ inline void float2halfbits(float* src, unsigned short* dest)
         }
     }
 
-    *dest = (sign | (exponent << 10) | mantissa);
+    *dest = (sign | (unsigned short)((exponent << 10) | mantissa));
 }
 
 #undef __CUDA_HOSTDEVICE__

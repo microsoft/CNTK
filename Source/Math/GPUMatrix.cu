@@ -3525,7 +3525,7 @@ static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t trans
 {
     return cublasHgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
 }
-static cublasStatus_t cublas_axpy(cublasHandle_t, int, const half*, const half*, int, half*, int)
+static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const half* alpha, const half* x, int incx, half* y, int incy)
 {
     return cublasAxpyEx(handle, n, (void*)alpha, CUDA_R_16F, (void*)x, CUDA_R_16F, incx, (void*)y, CUDA_R_16F, incy, CUDA_R_32F);
 }
