@@ -53,6 +53,9 @@ namespace CNTK
             const std::vector<NDArrayViewPtr>& values,
             const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
 
+        virtual void AllReduceSparseBlockColumn(
+            std::vector<NDArrayViewPtr>& sbcValues) override;
+
         virtual void Aggregate(
             const std::vector<NDArrayViewPtr>& inValues,
             std::vector<NDArrayViewPtr>& outValues,
@@ -93,6 +96,8 @@ namespace CNTK
         // NcclComm
         std::unique_ptr<Microsoft::MSR::CNTK::NcclComm> m_nccl;
 
+        std::vector<Buffer> m_intermediateSBCIndexCPUBuffers;
+        std::vector<Buffer> m_intermediateSBCValueCPUBuffers;
     protected:
         DeviceDescriptor GetNonCPUDevice(const std::vector<NDArrayViewPtr>& values)
         {
@@ -137,6 +142,6 @@ namespace CNTK
         void UnpackFromContinuousBuffer(Microsoft::MSR::CNTK::Matrix<ElemType>* aggregationBuffer, const std::vector<NDArrayViewPtr>& outputValues, std::vector<size_t>& packedGradientsIndex);
 
         template <typename ElemType>
-        void AllReduceGradients(ElemType* inputData, ElemType* outputData, size_t numElements, std::vector<MPI_Request> &allReduceRequests, bool dataOnCPU);
+        void AllReduceData(ElemType* inputData, ElemType* outputData, size_t numElements, std::vector<MPI_Request>* pAllReduceRequests, bool dataOnCPU, MPI_Op op = MPI_SUM, bool forceSync = false);
     };
 }

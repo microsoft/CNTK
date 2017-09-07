@@ -176,7 +176,10 @@ IGNORE_CLASS CNTK::IDictionarySerializable;
 // To suppress SWIG warning 302: Identifier redefined.
 %ignore CNTK::DictionaryValue::operator=;
 %ignore CNTK::DictionaryValue::Value;
+%ignore CNTK::NDArrayView::AdjustSparseBlockColumn;
+
 IGNORE_CLASS CNTK::ParameterInitializer;
+
 %ignore CNTK::SentinelValueForAutoSelectRandomSeed;
 %ignore CNTK::DefaultParamInitOutputRank;
 %ignore CNTK::DefaultParamInitFilterRank;

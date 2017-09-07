@@ -289,6 +289,8 @@ public:
     void SetColumn(const ElemType val, size_t colInd);
     void SetColumn(const Matrix<ElemType>& valMat, size_t colInd);
 
+    void AdjustSparseBlockColumn(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
+
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const Matrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);

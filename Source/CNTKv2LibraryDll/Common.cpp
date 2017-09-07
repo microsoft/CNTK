@@ -567,6 +567,23 @@ namespace CNTK
             return SyncGuard::IsSyncEnabled();
         }
 
+#ifdef CPUONLY
+        // CPU SBC aggregation not implemented yet, so fall back to conversion of sparse to dense 
+        std::atomic<bool> s_useSparseGradientAggregationInDataParallelSGD(false);
+#else
+        std::atomic<bool> s_useSparseGradientAggregationInDataParallelSGD(true);
+#endif
+
+        void UseSparseGradientAggregationInDataParallelSGD(bool enable)
+        {
+            s_useSparseGradientAggregationInDataParallelSGD = enable;
+        }
+
+        bool ShouldUseSparseGradientAggregationInDataParallelSGD()
+        {
+            return s_useSparseGradientAggregationInDataParallelSGD;
+        }
+
         static std::atomic<bool> s_threadsAreSet(false);
         bool MaxNumCPUThreadsSet()
         {

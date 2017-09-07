@@ -531,6 +531,49 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
     }
 }
 
+///
+/// adjusts the sparse block column matrix with the new Col2BlockId
+/// For each column, if new Col2BlockId contains valid index, a corresponding block exists at the index
+/// if old col2BlockId[i] contains value at that column, it would be copied over; otherwise the block would be filled with zeros
+///
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::AdjustCol2BlockId(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col)
+{
+    if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
+        LogicError("Expected sparse block col matrix");
+
+    // create new buffer
+    size_t numRows = GetNumRows();
+    size_t numCols = GetNumCols();
+    size_t numNZ = numBlocks * numRows;
+    size_t bufferSizeNeeded = BufferSizeNeeded(GetNumRows(), GetNumCols(), numNZ, GetFormat());
+    ElemType* pArray = reinterpret_cast<ElemType*>(TracingGPUMemoryAllocator::Allocate<char>(GetComputeDeviceId(), bufferSizeNeeded));
+    GPUSPARSE_INDEX_TYPE* newBlockId2Col = (GPUSPARSE_INDEX_TYPE*)(pArray + numNZ);
+    GPUSPARSE_INDEX_TYPE* newCol2BlockId = newBlockId2Col + numCols;
+
+    CUDA_CALL(cudaMemset(newBlockId2Col, SparseIndex_NotAssigned, numCols * sizeof(GPUSPARSE_INDEX_TYPE)));
+    CUDA_CALL(cudaMemcpy(newCol2BlockId, cpuCol2BlockId, numCols * sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyHostToDevice));
+
+    int blocksPerGrid = CeilDiv(numCols, GridDim::maxThreadsPerBlock);
+ 
+    // when useBlockId2Col==true, the original col2BlockId is copied to blockId2Col to avoid getting overwritten 
+    // during the inplace aggregation of col2BlockId prior to this
+    _adjustCol2BlockId<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (
+        numRows,
+        numCols,
+        useBlockId2Col ? BlockId2ColOrRow() : ColOrRow2BlockId(),
+        Data(),
+        newCol2BlockId,
+        pArray,
+        newBlockId2Col);
+
+    TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
+
+    SetBuffer(pArray, bufferSizeNeeded);
+    SetSizeAllocated(numNZ);
+    SetBlockSize(numBlocks);
+}
+
 template <class ElemType>
 GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
 {
@@ -985,8 +1028,8 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, c
     static std::vector<GPUSPARSE_INDEX_TYPE> gpuBlockId2Col(numCols);
     static std::vector<GPUSPARSE_INDEX_TYPE> gpuCol2BlockId(numCols);
 
-    std::fill(gpuBlockId2Col.begin(), gpuBlockId2Col.end(), Id_NotAssigned);
-    std::fill(gpuCol2BlockId.begin(), gpuCol2BlockId.end(), Id_NotAssigned);
+    std::fill(gpuBlockId2Col.begin(), gpuBlockId2Col.end(), SparseIndex_NotAssigned);
+    std::fill(gpuCol2BlockId.begin(), gpuCol2BlockId.end(), SparseIndex_NotAssigned);
 
     #pragma omp parallel for
     for (int i = 0; i < numBlocks; ++i)
@@ -1310,8 +1353,8 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         if (blockSizePrev == 0)
         {
             c.Resize(m, n, 0);
-            CUDA_CALL(cudaMemset(c.ColOrRow2BlockId(), Id_NotAssigned, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
-            CUDA_CALL(cudaMemset(c.BlockId2ColOrRow(), Id_NotAssigned, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
+            CUDA_CALL(cudaMemset(c.ColOrRow2BlockId(), SparseIndex_NotAssigned, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
+            CUDA_CALL(cudaMemset(c.BlockId2ColOrRow(), SparseIndex_NotAssigned, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
         }
 
         size_t* blockSize = TracingGPUMemoryAllocator::Allocate<size_t>(lhs.GetComputeDeviceId(), 1);
