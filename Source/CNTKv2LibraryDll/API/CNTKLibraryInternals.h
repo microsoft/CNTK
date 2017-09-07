@@ -287,6 +287,9 @@ namespace CNTK
         CNTK_API void EnableSynchronousGPUKernelExecution();
         CNTK_API bool IsSynchronousGPUKernelExecutionEnabled();
 
+        CNTK_API void UseSparseGradientAggregationInDataParallelSGD(bool enable);
+        CNTK_API bool ShouldUseSparseGradientAggregationInDataParallelSGD();
+
         CNTK_API unsigned long GetRandomSeed();
         CNTK_API void SetFixedRandomSeed(unsigned long value);
         CNTK_API bool IsRandomSeedFixed();

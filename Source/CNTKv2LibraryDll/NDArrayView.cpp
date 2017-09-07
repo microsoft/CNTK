@@ -483,6 +483,69 @@ namespace CNTK
         return std::tuple<ElementType *, SparseIndexType *, SparseIndexType *, size_t>(nonZeroValues, colStarts, rowIndices, numNonZeroValues);
     }
 
+    template <typename ElementType>
+    std::tuple<const void *, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> NDArrayView::SparseBlockColumnDataBuffers() const
+    {
+        if (AsDataType<ElementType>() != m_dataType)
+            InvalidArgument("NDArrayView::SparseBlockColumnDataBuffers: The specified ElementType '%s' does not match this NDArrayView's DataType '%s'.", typeid(ElementType).name(), DataTypeName(m_dataType));
+
+        if (!IsSparse())
+            RuntimeError("The storage format of 'this' NDArrayView is dense. Please use another DataBuffer().");
+
+        if (GetStorageFormat() != StorageFormat::SparseBlockCol)
+            RuntimeError("The SparseBlockColumnDataBuffers() method only supports sparse block column format.");
+
+        std::shared_ptr<const Matrix<ElementType>> matrix = GetMatrix<ElementType>();
+
+        size_t numBlocks;
+        size_t numRows;
+        size_t numCols;
+        ElementType* blockValues;
+        SparseIndexType* blockId2Col;
+        SparseIndexType* col2BlockId;
+        if (m_device.Type() == DeviceKind::GPU)
+        {
+            if (sizeof(GPUSPARSE_INDEX_TYPE) != sizeof(SparseIndexType))
+                LogicError("Inconsistent data type for sparse index in 'this' Value and the underlying matrix on GPU.");
+            std::shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<ElementType>> sparseMatrix = matrix->m_GPUSparseMatrix;
+            numBlocks = sparseMatrix->GetBlockSize();
+            numRows = sparseMatrix->GetNumRows();
+            numCols = sparseMatrix->GetNumCols();
+            blockValues = static_cast<ElementType *>(sparseMatrix->NzValues());
+            blockId2Col = static_cast<SparseIndexType *>(sparseMatrix->BlockId2ColOrRow());
+            col2BlockId = static_cast<SparseIndexType *>(sparseMatrix->ColOrRow2BlockId());
+        }
+        else
+        {
+            // CPU sparse block column is not yet supported, as the index format is different from GPU sparse block column
+            RuntimeError("NDArrayView::SparseBlockColumnDataBuffers: The device %S is currently not supported.", DeviceKindName(m_device.Type()));
+        }
+
+        return std::tuple<ElementType *, SparseIndexType *, SparseIndexType *, size_t, size_t, size_t>(blockValues, blockId2Col, col2BlockId, numBlocks, numRows, numCols);
+    }
+
+    void NDArrayView::AdjustSparseBlockColumn(const SparseIndexType* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col)
+    {
+        switch (m_dataType)
+        {
+        case DataType::Float:
+        {
+            auto matrix = GetWritableMatrix<float>();
+            matrix->AdjustSparseBlockColumn(cpuCol2BlockId, numBlocks, useBlockId2Col);
+            break;
+        }
+        case DataType::Double:
+        {
+            auto matrix = GetWritableMatrix<double>();
+            matrix->AdjustSparseBlockColumn(cpuCol2BlockId, numBlocks, useBlockId2Col);
+            break;
+        }
+        default:
+            LogicError("NDArrayView::AdjustSparseBlockColumn: Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+    }
+
     void NDArrayView::ChangeDevice(const DeviceDescriptor& device)
     {
         if (device == m_device)
@@ -583,6 +646,9 @@ namespace CNTK
 
     template CNTK_API std::tuple<const float*, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<float>() const;
     template CNTK_API std::tuple<const double*, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<double>() const;
+
+    template CNTK_API std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> NDArrayView::SparseBlockColumnDataBuffers<float>() const;
+    template CNTK_API std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> NDArrayView::SparseBlockColumnDataBuffers<double>() const;
 
     template CNTK_API float* NDArrayView::WritableDataBuffer<float>();
     template CNTK_API double* NDArrayView::WritableDataBuffer<double>();

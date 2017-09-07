@@ -19,6 +19,15 @@ static void operator||(cudaError_t rc, const char *msg)
         RuntimeError("%s: %s (cuda error %d)", msg, cudaGetErrorString(rc), (int) rc);
 }
 
+ncclRedOp_t ncclRedOpFromMpiOp(MPI_Op op)
+{
+    if (op == MPI_SUM) return ncclSum;
+    else if (op == MPI_MAX) return ncclMax;
+    else if (op == MPI_MIN) return ncclMin;
+    else if (op == MPI_PROD) return ncclProd;
+    else RuntimeError("Invalid MPI_Op");
+}
+
 NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     : m_ncclComm(nullptr), m_stream(nullptr)
 {
@@ -76,18 +85,28 @@ bool NcclComm::IsSupported()
     return m_ncclComm != nullptr;
 }
 
-void NcclComm::AllReduceImpl(void* inputbuffer, void *outputbuffer, size_t count, DataType dtype)
+void NcclComm::AllReduceImpl(void* inputbuffer, void *outputbuffer, size_t count, DataType dtype, MPI_Op op)
 {
     ncclResult_t res;
-    if (dtype == DataType::FLOAT)
+    class NcclTypeLookup
     {
-        res = ncclAllReduce(inputbuffer, outputbuffer, count, ncclFloat, ncclSum, m_ncclComm, m_stream);
-    }
-    else
-    {
-        assert(dtype == DataType::DOUBLE);
-        res = ncclAllReduce(inputbuffer, outputbuffer, count, ncclDouble, ncclSum, m_ncclComm, m_stream);
-    }
+        ncclDataType_t ncclTypes[(int)DataType::COUNT];
+    public:
+        NcclTypeLookup()
+        {
+            ncclTypes[(int)DataType::FLOAT]  = ncclFloat;
+            ncclTypes[(int)DataType::DOUBLE] = ncclDouble;
+            ncclTypes[(int)DataType::INT]    = ncclInt;
+        }
+        ncclDataType_t Lookup(DataType dtype)
+        {
+            return ncclTypes[(int)dtype];
+        }
+    };
+
+    static NcclTypeLookup s_ncclTypeLookup;
+
+    res = ncclAllReduce(inputbuffer, outputbuffer, count, s_ncclTypeLookup.Lookup(dtype), ncclRedOpFromMpiOp(op), m_ncclComm, m_stream);
 
     if (res != ncclSuccess)
         RuntimeError("NcclComm ncclAllReduce failed: %s", ncclGetErrorString(res));

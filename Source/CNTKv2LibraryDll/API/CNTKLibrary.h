@@ -738,6 +738,19 @@ namespace CNTK
         CNTK_API std::tuple<const ElementType *, const SparseIndexType*, const SparseIndexType*, size_t> SparseCSCDataBuffers() const;
 
         ///
+        /// Returns a read-only pointer to the data buffer in sparse block column format underlying 'this' view
+        /// 
+        template <typename ElementType>
+        CNTK_API std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> SparseBlockColumnDataBuffers() const;
+
+        ///
+        /// adjusts the sparse block column matrix with the new Col2BlockId
+        /// For each column, if new Col2BlockId contains valid index, a corresponding block exists at the index
+        /// if old col2BlockId[i] contains value at that column, it would be copied over; otherwise the block would be filled with zeros
+        ///
+        CNTK_API void AdjustSparseBlockColumn(const SparseIndexType* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
+
+        ///
         /// Returns the descriptor of the device that 'this' view resides on
         ///
         DeviceDescriptor Device() const { return m_device; }
@@ -5588,6 +5601,12 @@ namespace CNTK
         CNTK_API virtual void AggregateInPlace(
             const std::vector<NDArrayViewPtr>& values,
             const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
+
+        CNTK_API virtual void AllReduceSparseBlockColumn(
+            std::vector<NDArrayViewPtr>&)
+        {
+            LogicError("This function should not be reached.");
+        }
 
         CNTK_API virtual void Aggregate(
             const std::vector<NDArrayViewPtr>& values,

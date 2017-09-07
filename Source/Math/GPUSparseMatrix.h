@@ -288,6 +288,8 @@ public:
     void SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat);
     void SetValue(const GPUMatrix<ElemType>& denseMatrix);
 
+    void AdjustCol2BlockId(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
+
     GPUSPARSE_INDEX_TYPE* GetCondensedVector() const;
     void MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 

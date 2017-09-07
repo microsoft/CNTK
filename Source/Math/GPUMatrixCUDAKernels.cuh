@@ -41,10 +41,6 @@
 #define CUDA_LONG int32_t
 #endif
 
-// special markers in BlockId2ColOrRow()/ColOrRow2BlockId()
-static const GPUSPARSE_INDEX_TYPE Id_NotAssigned = -1;
-static const GPUSPARSE_INDEX_TYPE Id_Pending = INT_MAX;
-
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 
 // On older GPUs, CUDA atomicAdd() only exists for 'float'. This is the 'double' version.
@@ -1505,7 +1501,7 @@ inline __device__ ElemType _getvalue4BlockSparseCol(ElemType* v, const GPUSPARSE
     CUDA_LONG col = idx / len;
     CUDA_LONG row = idx - col * len;
     CUDA_LONG blockid = colOrRow2blockId[col];
-    return (blockid == Id_NotAssigned) ? 0 : v[blockid * len + row];
+    return (blockid == SparseIndex_NotAssigned) ? 0 : v[blockid * len + row];
 }
 
 template<class ElemType>
@@ -1514,7 +1510,7 @@ inline __device__ void _scalevalue4BlockSparseCol(ElemType* v, const GPUSPARSE_I
     CUDA_LONG col = idx / len;
     CUDA_LONG row = idx - col * len;
     CUDA_LONG blockid = colOrRow2blockId[col];
-    if (blockid != Id_NotAssigned)
+    if (blockid != SparseIndex_NotAssigned)
     {
         v[blockid * len + row] *= s;
     }
@@ -3253,6 +3249,50 @@ __global__ void _columnwiseScaleAndWeightedAdd4CSC(
     }
 }
 
+///
+/// adjusts the sparse block column matrix with the new Col2BlockId
+/// For each column, if new Col2BlockId contains valid index, a corresponding block exists at the index
+/// if old col2BlockId[i] contains value at that column, it would be copied over; otherwise the block would be filled with zeros
+///
+template <class ElemType>
+__global__ void _adjustCol2BlockId(
+    const int numRows,
+    const int numCols,
+    const GPUSPARSE_INDEX_TYPE* oldCol2BlockId,
+    const ElemType* oldNZ,
+    const GPUSPARSE_INDEX_TYPE* newCol2BlockId,
+    ElemType* newNZ,
+    GPUSPARSE_INDEX_TYPE* newBlockId2Col)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numCols)
+        return;
+
+    int newBlockId = newCol2BlockId[id];
+    if (newBlockId != SparseIndex_NotAssigned)
+    {
+        newBlockId2Col[newBlockId] = id;
+        int oldBlockId = oldCol2BlockId[id];
+        if (oldBlockId != SparseIndex_NotAssigned)
+        {
+            const ElemType* oldValue = oldNZ + numRows * oldBlockId;
+            ElemType* newValue = newNZ + numRows * newBlockId;
+            for (int row = 0; row < numRows; row++)
+            {
+                newValue[row] = oldValue[row];
+            }
+        }
+        else
+        {
+            ElemType* newValue = newNZ + numRows * newBlockId;
+            for (int row = 0; row < numRows; row++)
+            {
+                newValue[row] = 0;
+            }
+        }
+    }
+}
+
 template <class ElemType>
 __global__ void _reshape(
     const int oldNumRows,                       // old row count
@@ -3324,8 +3364,8 @@ __global__ void _findColsWithValues(
     if (nzIndex >= nnz)
         return;
 
-    if (col2BlockIds[rowIndexes[nzIndex]] == Id_NotAssigned)
-        col2BlockIds[rowIndexes[nzIndex]] = Id_Pending; // this row has value.
+    if (col2BlockIds[rowIndexes[nzIndex]] == SparseIndex_NotAssigned)
+        col2BlockIds[rowIndexes[nzIndex]] = SparseIndex_Pending; // this row has value.
 }
 
 //called before _denseMulSparseCSCTransposeToSparseBlockCol and after _findColsWithValuesto determine which columns have values and
@@ -3343,7 +3383,7 @@ __global__ void _determineBlockIds(
     if (col >= numCols)
         return;
 
-    if (col2BlockId[col] == Id_Pending)
+    if (col2BlockId[col] == SparseIndex_Pending)
     {
         GPUSPARSE_INDEX_TYPE blockIndex = atomicAdd((unsigned int*)blockSize, (unsigned int)1);
         col2BlockId[col] = blockIndex;
