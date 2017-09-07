@@ -7,10 +7,10 @@ MAINTAINER Reza Farrahi <imriss@ieee.org>
 LABEL description="CNTK GPU / Arch Linux"
 
 RUN  pacman -Syyu --noconfirm && \
-  pacman -S findutils nano vi --noconfirm && \
+  pacman -S findutils nano vi --noconfirm --needed && \
   pacman-db-upgrade && \
   export editor=nano && \
-  pacman -S --noconfirm systemd python python-yaml wget python-pip openssh git curl jq yajl perl expac \
+  pacman -S --noconfirm --needed systemd python python-yaml wget python-pip openssh git curl jq yajl perl expac \
   gcc gcc-libs clang && \
   pip install --upgrade pip && \
   pip install simplejson
@@ -24,7 +24,7 @@ RUN chmod u+x /usr/sbin/add-aur
 RUN export "PATH=/usr/bin/core_perl:$PATH" && \
   add-aur docker
 
-RUN su docker -c 'pacaur -S --noprogressbar --noedit --noconfirm base-devel expect cmake gcc-fortran \
+RUN su docker -c 'pacaur -S --noprogressbar --noedit --noconfirm --needed base-devel expect cmake gcc-fortran \
     ffmpeg jasper libjpeg-turbo libpng lapacke libtiff protobuf python-protobuf unzip automake libtool autoconf \
     subversion apr apr-util serf m4 jdk7-openjdk openmpi python2-mpi4py libzip opencv openblas-lapack boost boost-libs swig \
     anaconda swig gcc5 cuda cudnn nccl ' && \
