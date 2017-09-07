@@ -859,8 +859,6 @@ class Variable::AutoBatch
         return f->m_op == PrimitiveOpType::BarrierOp && f->m_attributes.Size() > 0;
     }
 
-#define DontSeeThroughNoOps // TODO: remove this once backprop works; for now keep as tag
-
     // helper to check whether we should profile this function execution
     set<DynamicProfilerPtr> m_profilersUsed; // all used profilers will be registered for a given batched execution
     bool ShouldProfile(const PrimitiveFunction* f)
@@ -1270,7 +1268,7 @@ class Variable::AutoBatch
         fprintf(stderr, "%S%S = %S (", uid.c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            let& input = DontSeeThroughNoOps(inputs[i]);
+            let& input = inputs[i];
             let& fields = GetInputFields(input); // (the fields that describe input as an input, e.g. its shape after potential see-through ops)
             // little helper function to fix up variable names by removing _Output_0
             // TODO: Once we support >1 output, this needs a bit more code.
@@ -1370,7 +1368,7 @@ class Variable::AutoBatch
         let& inputs = f.m_inputs;
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
-            inputValues[i] = CacheAndGetValue(DontSeeThroughNoOps(inputs[i])); // (if this is a lazy slice, then now we must resolve it)
+            inputValues[i] = CacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
@@ -1486,8 +1484,8 @@ class Variable::AutoBatch
         let& inputs = f.m_inputs;
         for (size_t k = 0; k < inputs.size(); k++)
         {
-            // PERF BUGBUG: This vv is horrible. Also, do we need to handle sliced redirects? This may lead to realizing all lazy slices...??
-            let& value = *CacheAndGetValue(DontSeeThroughNoOps(inputs[k]));
+            // PERF BUGBUG: This vv is horrible, as it force-realizes the slices. Also, do we need to handle sliced redirects? This may lead to realizing all lazy slices...??
+            let& value = *CacheAndGetValue(inputs[k]);
             let dataBuffer =
                 /*if*/ value.IsSparse() ?  // DataBuffer() is only available for dense. --PERF BUGBUG: We can find a better hash for sparse data, e.g. its data buffer.
                     (intptr_t)&value
@@ -1528,7 +1526,7 @@ class Variable::AutoBatch
                 {
                     //if (!CacheAndGetValue(inputs[k])->IsAliasOf(CacheAndGetValue(jnputs[k])))
                     // PERF BUGBUG: This vv is horrible (we force-realize the m_value). Alleviated by the hash though.
-                    if (!CacheAndGetValue(DontSeeThroughNoOps(inputs[k]))->IsAliasOf(CacheAndGetValue(DontSeeThroughNoOps(jnputs[k]))))
+                    if (!CacheAndGetValue(inputs[k])->IsAliasOf(CacheAndGetValue(jnputs[k])))
                         goto next_jter;
                 }
                 // all inputs are the same: f is a dup of 'jter'
@@ -1727,7 +1725,7 @@ class Variable::AutoBatch
             // Special optimizations are taken if all elements are identical.
             bool anyBatchedInputs = false;
             if (i0 == 1) // Times(): the first arg has already been verified to be identical as part of the batchability condition
-                m_batchedInputs[0] = DontSeeThroughNoOps(f0.m_inputs[0]);
+                m_batchedInputs[0] = f0.m_inputs[0];
             for (size_t i = i0; i < numArgs; i++)
             {
                 // create splice args for this argument
@@ -1746,7 +1744,7 @@ class Variable::AutoBatch
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
-                    let& input = DontSeeThroughNoOps(op->m_inputs[i]);
+                    let& input = op->m_inputs[i];
                     let* pfields = &GetInputFields(input);
                     let& redirection = pfields->m_redirection;
                     // optimization: if all args are the same, then don't batch
@@ -2212,6 +2210,8 @@ public:
         }
         return beta;
     }
+
+#define DontSeeThroughNoOps // TODO: remove this once backprop works; for now keep as tag
 
     // ... TODO: can this be removed?
     // determine the input to backprop a gradient into
