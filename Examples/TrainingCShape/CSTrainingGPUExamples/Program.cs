@@ -11,23 +11,23 @@ namespace CNTK.CSTrainingExamples
         static void Main(string[] args)
         {
             var device = DeviceDescriptor.GPUDevice(0);
-            Console.WriteLine($"======== runing MNISTClassifierTest.TrainAndEvaluate using {device.Type} with logistic classifier ========");
+            Console.WriteLine($"======== running MNISTClassifier.TrainAndEvaluate with multilayer perceptron (MLP) classifier using {device.Type} ========");
             MNISTClassifier.TrainAndEvaluate(device, false, true);
 
-            Console.WriteLine($"======== runing MNISTClassifierTest.TrainAndEvaluate using {device.Type} with convolution classifier ========");
+            Console.WriteLine($"======== running MNISTClassifier.TrainAndEvaluate with convolutional neural network using {device.Type} ========");
             MNISTClassifier.TrainAndEvaluate(device, true, true);
 
-            Console.WriteLine($"======== runing CifarResNet.TrainAndEvaluate using {device.Type} ========");
+            Console.WriteLine($"======== running CifarResNet.TrainAndEvaluate using {device.Type} ========");
             CifarResNetClassifier.TrainAndEvaluate(device, true);
 
-            Console.WriteLine($"======== runing TransferLearning.TrainAndEvaluateWithFlowerData using {device.Type} ========");
+            Console.WriteLine($"======== running TransferLearning.TrainAndEvaluateWithFlowerData using {device.Type} ========");
             TransferLearning.TrainAndEvaluateWithFlowerData(device, true);
 
-            Console.WriteLine($"======== runing TransferLearning.TrainAndEvaluateWithAnimalData using {device.Type} ========");
+            Console.WriteLine($"======== running TransferLearning.TrainAndEvaluateWithAnimalData using {device.Type} ========");
             TransferLearning.TrainAndEvaluateWithAnimalData(device, true);
 
-            Console.WriteLine($"======== runing LSTMSequenceClassifier.Train using {device.Type} ========");
-            LSTMSequenceClassifier.Train(device, true);
+            Console.WriteLine($"======== running LSTMSequenceClassifier.Train using {device.Type} ========");
+            LSTMSequenceClassifier.Train(device);
         }
     }
 }

@@ -59,7 +59,7 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                         break;
                     case "MNISTClassifierTest":
                         MNISTClassifier.ImageDataFolder = "../../../Image/Data/";
-                        Console.WriteLine($"======== running MNISTClassifierTest.TrainAndEvaluate with Convnet using {device.Type} ========");
+                        Console.WriteLine($"======== running MNISTClassifier.TrainAndEvaluate with Convnet using {device.Type} ========");
                         MNISTClassifier.TrainAndEvaluate(device, true, true);
                         break;
                     case "TransferLearningTest":
@@ -97,13 +97,13 @@ namespace CNTK.CNTKLibraryCSTrainingTest
 
         static void RunAllExamples(DeviceDescriptor device)
         {
-            Console.WriteLine($"======== running SimpleFeedForwardClassifierTest.TrainSimpleFeedForwardClassifier using {device.Type} ========");
+            Console.WriteLine($"======== running SimpleFeedForwardClassifier.TrainSimpleFeedForwardClassifier using {device.Type} ========");
             SimpleFeedForwardClassifierTest.TrainSimpleFeedForwardClassifier(device);
 
-            Console.WriteLine($"======== running MNISTClassifierTest.TrainAndEvaluate using {device.Type} with MLP classifier ========");
+            Console.WriteLine($"======== running MNISTClassifier.TrainAndEvaluate using {device.Type} with MLP classifier ========");
             MNISTClassifier.TrainAndEvaluate(device, false, true);
 
-            Console.WriteLine($"======== running MNISTClassifierTest.TrainAndEvaluate using {device.Type} with convolution neural network ========");
+            Console.WriteLine($"======== running MNISTClassifier.TrainAndEvaluate using {device.Type} with convolution neural network ========");
             MNISTClassifier.TrainAndEvaluate(device, true, true);
 
             if (device.Type == DeviceKind.GPU)

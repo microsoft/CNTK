@@ -85,8 +85,6 @@ namespace CNTK.CSTrainingExamples
                 if (minibatchData == null || minibatchData.Count == 0)
                     break;
                 totalCount += (int)minibatchData[featureStreamInfo].numberOfSamples;
-                if (totalCount > maxCount)
-                    break;
 
                 // expected lables are in the minibatch data.
                 var labelData = minibatchData[labelStreamInfo].data.GetDenseData<float>(labelOutput);
@@ -108,6 +106,9 @@ namespace CNTK.CSTrainingExamples
 
                 miscountTotal += misMatches;
                 Console.WriteLine($"Validating Model: Total Samples = {totalCount}, Misclassify Count = {miscountTotal}");
+
+                if (totalCount > maxCount)
+                    break;
             }
 
             float errorRate = 1.0F * miscountTotal / totalCount;
