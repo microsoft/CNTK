@@ -865,12 +865,10 @@ namespace CNTK
         struct
         {
             mutable size_t m_visitedTag = 0; // used for tree traversal at various places (currently only in backprop, in two places)
-            // TODO: move all below into a struct m_autoBatchState
-            int m_pendingInputs = -1;        // during batched forward: counter how many inputs have already become available  --TODO: no need to initialize it
+            size_t m_pendingInputs;          // during batched forward: counter how many inputs have already become available
             PrimitiveFunction* m_link;       // temporary linked list, e.g. for batched operations
             PrimitiveFunction* m_aliasList;  // list of aliases (common subexpression), local to ExecuteBatchedOpAndUpdateSchedule()
             size_t m_aliasHash = SIZE_MAX-1; // hash for alias detection (common subexpression elimination)    --set to -1 to detect if we miss to initialize; remove this
-            int m_priorityRemoveThis;        // used by scheduler  --TODO: remove this, it should be unused by now
             size_t m_depthHint;              // max of depth hints over all inputs
             size_t m_batchNormId = INT_MAX-1; // 0 if none   --TODO: INT_MAX chosen as to cause an access violation if left unchanged
         } m_autoBatchState;

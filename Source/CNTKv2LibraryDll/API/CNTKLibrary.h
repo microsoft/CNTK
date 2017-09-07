@@ -1766,6 +1766,8 @@ namespace CNTK
         CNTK_API Dictionary(Dictionary&& other);
         CNTK_API Dictionary& operator=(Dictionary&& other);
 
+        CNTK_API void ShallowCloneTo(Dictionary& to) const;
+
         CNTK_API DictionaryValue& operator[](const wchar_t* key);
         DictionaryValue& operator[](const std::wstring& key)
         {

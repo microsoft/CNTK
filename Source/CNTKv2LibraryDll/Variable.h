@@ -45,10 +45,7 @@ namespace CNTK
             size_t m_index;                         // and we take this slice on the way (SIZE_MAX if none)  --TODO: replace by m_sliceBegin/End
             PrimitiveFunction* m_function = (PrimitiveFunction*)-1;          // ...for now use these instead, until we are ready to switch; m_functionHolder becomes m_functionHolder
             size_t m_sliceBegin, m_sliceEnd;        // slice out these items (applied to last dimension). Do nothing if m_sliceEnd==SIZE_MAX.  --TODO: think this through more
-            bool HasSlice() const { return m_function && m_sliceEnd != SIZE_MAX; }
             size_t m_depthHint = 0;                 // this redirection skipped a Barrier with this depthHint
-            // TODO: this vv is questionable once we have more properties. What is this used for?
-            //bool operator==(const Redirection& other) const { return m_functionHolder == other.m_functionHolder && m_index == other.m_index; }
             operator bool() const { return m_function != nullptr; } // allows for "if (m_redirection)"
         };
         mutable Redirection m_redirection;

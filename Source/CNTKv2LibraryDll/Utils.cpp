@@ -193,6 +193,11 @@ namespace CNTK
         return *this;
     }
 
+    CNTK_API void Dictionary::ShallowCloneTo(Dictionary& to) const
+    {
+        to.m_dictionaryData = m_dictionaryData; // we share the pointer
+    }
+
     DictionaryValue& Dictionary::operator[](const wchar_t* key)
     {
         return GetDictionaryData()[key]; // this will lazily create the dict if not yet existing
