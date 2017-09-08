@@ -33,6 +33,7 @@ static size_t logMemoizeStatsCounter = logMemoizeStatsPeriod - 1; // counts up t
 static size_t logMemoizeStatsPeriod = SIZE_MAX;
 static size_t logMemoizeStatsCounter = 1;
 #endif
+static bool ShouldLogMemoizeStats() { return logMemoizeStatsCounter < 4; }
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
@@ -1361,11 +1362,35 @@ class Variable::AutoBatch
         size_t totalElements = 0;  // sum of all output elements, for a rough indication of utilization
         PCTimer timerLaunch;
         double cudaElapsed = 0;
-        // TODO: timerRun and Sync don't work properly
-        PCTimer timerRun;
-        PCTimer timerSync; // measure a dummy sync
     };
     vector<CudaStats> cudaStats;
+    // call this at start
+    // The interface is quite horrible w.r.t. device. We just need a flag.
+    CudaStats* BeginCudaStats(PrimitiveOpType op, bool isSparse = false, size_t totalElements = 0, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
+    {
+        if (!ShouldLogMemoizeStats())
+            return nullptr;
+        cudaStats.resize(2 * (size_t)PrimitiveOpType::UnknownOP);
+        auto* cudaStatsPtr = &cudaStats[(size_t)op * 2 + (isSparse ? 1 : 0)];
+        cudaStatsPtr->op = op; // (really only needed the first time)
+        cudaStatsPtr->hasSparse = isSparse;
+        cudaStatsPtr->numInvocations++;
+        cudaStatsPtr->totalElements += totalElements;
+        if (logMemoizeStatsCounter & 1)
+            NDArrayView::Sync(device); // reset CUDA timer
+        cudaStatsPtr->timerLaunch.Start();
+        return cudaStatsPtr;
+    }
+    // call this at end
+    void EndCudaStats(CudaStats* cudaStatsPtr, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
+    {
+        if (cudaStatsPtr)
+        {
+            cudaStatsPtr->timerLaunch.Stop();
+            if (logMemoizeStatsCounter & 1)
+                cudaStatsPtr->cudaElapsed += NDArrayView::Sync(device);
+        }
+    }
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool spliceIsGather = false)
@@ -1387,44 +1412,16 @@ class Variable::AutoBatch
             ? nullptr
             : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
         CudaStats* cudaStatsPtr = nullptr;
-        if (logMemoizeStatsCounter < 4)
+        if (ShouldLogMemoizeStats())
         {
-            cudaStats.resize(2 * (size_t)PrimitiveOpType::UnknownOP);
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
             let logAsOp = (f.m_op == PrimitiveOpType::Splice && spliceIsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
-            cudaStatsPtr = &cudaStats[(size_t)logAsOp*2 + (hasSparse ? 1 : 0)];
-            cudaStatsPtr->op = logAsOp; // (really only needed the first time)
-            cudaStatsPtr->hasSparse = hasSparse;
-            cudaStatsPtr->numInvocations++;
-            cudaStatsPtr->totalElements += outputShape.TotalSize();
-            if (logMemoizeStatsCounter & 1)
-                NDArrayView::Sync(inputValues[0]->Device());
-            cudaStatsPtr->timerLaunch.Start();
+            cudaStatsPtr = BeginCudaStats(logAsOp, hasSparse, outputShape.TotalSize(), inputValues[0]->Device());
         }
         // execute it
         GetOutputFields(&f).m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
-        if (logMemoizeStatsCounter < 4)
-       {
-            cudaStatsPtr->timerLaunch.Stop();
-            cudaStatsPtr->timerRun.Start();
-            if (logMemoizeStatsCounter & 1)
-                cudaStatsPtr->cudaElapsed += NDArrayView::Sync(inputValues[0]->Device());
-            cudaStatsPtr->timerRun.Stop();
-            //cudaStatsPtr->timerSync.Start(); // measure the overhead of just syncing the GPU
-            //NDArrayView::Sync(inputValues[0]->Device());
-            //cudaStatsPtr->timerSync.Stop();
-        }
-#if 0   // run multiple times to get a feel for the runtime cost
-        for (size_t i = 1; i < 5; i++)
-        {
-            outValue =
-                  isFree ? nullptr
-                //: !output.IsSparse() ? output.m_dataFields->m_value;
-                : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
-            output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
-        }
-#endif
         // stats
+        EndCudaStats(cudaStatsPtr, inputValues[0]->Device());
         let primitiveOp = f.m_op;
         if (isFree) // means we did not pass a data buffer for the result; any one we pass a buffer does actual work
             m_stats.numDoneFreeOps++;
@@ -2085,10 +2082,13 @@ public:
         //  - create our graph overlay, esp. short-circuit see-through ops
         //  - mark all nodes w.r.t. how many inputs they are waiting for before being computable
         //  - prepare and schedule first set
+        auto* cudaStatsPtr = BeginCudaStats(PrimitiveOpType::LabelsToGraph/*misusing this for graph initializing*/);
         m_visitorTag.Begin();
         RBuildForwardGraphAndSchedule(v, 0);
+        EndCudaStats(cudaStatsPtr, DeviceDescriptor::CPUDevice());
         // phase 2:
         //  - compute the entire graph
+        cudaStatsPtr = BeginCudaStats(PrimitiveOpType::Block/*misusing this for actual op*/);
         while (!m_schedule.empty()) // main computation loop over all operations
         {
             // select the "best" amongst the scheduled op batches
@@ -2122,10 +2122,11 @@ public:
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
         CacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
+        EndCudaStats(cudaStatsPtr, DeviceDescriptor::CPUDevice());
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
         // log stats
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
-        if (logMemoizeStatsCounter < 4)
+        if (ShouldLogMemoizeStats())
         {
             for (size_t free = 0; free < 2; free++)
             {
