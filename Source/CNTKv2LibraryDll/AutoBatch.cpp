@@ -663,7 +663,6 @@ public:
             CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"single NewNDArrayView", 3, numElements);
             return make_shared<NDArrayView>(dataType, format, shape, device);
         }
-        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"arena NewNDArrayView", 3, numElements);
         // If arena not large enough then waste its remainder and just allocate a fresh one.
         // This abandons the current m_arena. This will not cause a memory leak, however:
         // Since the slices into it that were returned before all hold a ref-count to that arena,
@@ -674,6 +673,7 @@ public:
         if (!s_currentArena || numElements > (ARENASIZE - s_currentArenaUsed) ||
             dataType != s_currentArena->GetDataType() || device != s_currentArena->Device())
         {
+            CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
 #if 0       // BUGBUG: This does not work for unknown reasons. The code below works, but once I uncomment the SetValue(),
             //         it produces a loss of 0. Somehow the buffer is still being referenced, likely by a CUDA
             //         operation with output in a different arena. However, SetValue() calls cudaMemset(), which runs on the NULL stream,
@@ -706,10 +706,11 @@ public:
 #endif
             s_currentArenaUsed = 0;
         }
+        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"arena NewNDArrayView", 3, numElements);
         vector<size_t> startOffset{ s_currentArenaUsed };
         vector<size_t> extent{ numElements };
         //NDArrayViewPtr region = s_currentArena->SliceView(startOffset, extent); // SliceView() adjusts the MatrixView
-        NDArrayViewPtr region = s_currentArena->Slice(startOffset, extent);  // BUGBUG: fails in DistributedLearner
+        NDArrayViewPtr region = s_currentArena->Slice(startOffset, extent);
         s_currentArenaUsed += numElements;
         if (region->Shape() == shape)
             return region;
@@ -992,9 +993,9 @@ class Variable::AutoBatch
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b)
         {
+            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::Equal, L"AreBatchable()", 3);
             // first it must be the same operation
             let op = a->m_op;
-            let opClass = g_oscTable[op]; // operation-specific auto-batching class
             // free ops always get batched; even if they have different op-codes
             //fail_if(IsViewOp(op) && !IsBarrier(a), "should not get here for view ops or barrier ops");
             // op codes must match
@@ -1007,6 +1008,7 @@ class Variable::AutoBatch
             if (op == PrimitiveOpType::BatchNormalization)
             {
                 // ids must match
+                // TODO: Get this from autobatch state.
                 let aId = a->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
                 let bId = b->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
                 if (aId != bId)
@@ -1024,16 +1026,14 @@ class Variable::AutoBatch
                 return true; // these *must* be batched
             }
             // all input dimensions must match (with exception of a few special cases)
+            let opClass = g_oscTable[op]; // operation-specific auto-batching class
+            let isTimes = opClass == OpSpecificConditionKind::MatrixProduct;
             for (size_t i = 0; i < a->m_inputs.size(); i++)
             {
-                // depth hint must match
-                // TODO: get aFields and bFields
-                let& aFields = GetInputFields(a->m_inputs[i]);
+                let& aFields = GetInputFields(a->m_inputs[i]); // (we don't see through no-ops since the target shape is the right one to test)
                 let& bFields = GetInputFields(b->m_inputs[i]);
-                if (aFields.m_redirection.m_depthHint != bFields.m_redirection.m_depthHint)
-                    return false;
                 // there are a few special cases
-                if (opClass == OpSpecificConditionKind::MatrixProduct && i == 0)
+                if (isTimes && i == 0)
                 {
                     // for Times, the first arg must be the same object, not just the same shape
                     // TODO: a special case is a dot product, which we can write as ReduceSum(ElementTimes(a,b))
@@ -1043,13 +1043,21 @@ class Variable::AutoBatch
                 }
                 else
                 {
-                    // shapes must match (we don't see through no-ops since the target shape is the right one to test)
-                    if (a->m_inputs[i].Shape() != b->m_inputs[i].Shape())
+                    // shapes and data types must match
+                    // BUGBUG: How about strides?
+                    if (aFields.m_shape != bFields.m_shape)
+                        return false;
+                    if (aFields.m_dataType != bFields.m_dataType)
+                        return false;
+                    if (aFields.m_isSparse != bFields.m_isSparse)
+                        return false;
+                    // depth hint must match
+                    if (aFields.m_redirection.m_depthHint != bFields.m_redirection.m_depthHint)
                         return false;
                 }
             }
             // attributes must also match
-            if (a->m_attributes != b->m_attributes)
+            if (a->m_attributes != b->m_attributes) // TODO: this could be an expensive operation; check that
                 return false;
             // all match: we can batch
             return true;
@@ -1064,13 +1072,15 @@ class Variable::AutoBatch
             m_bnPendingCounts[bnId]++;
         }
         // schedule an operation that has been confirmed to be ready
+        // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
         void Schedule(PrimitiveFunction* f)
         {
-            auto* cudaStatsPtr = BeginCudaStats(PrimitiveOpType::ToSequence, L"Schedule()", 3);
+            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ToSequence, L"Schedule()", 3, m_regularOps.size());
             let op = f->m_op;
             // special case BatchNormalization: we must account for all occurences
             if (op == PrimitiveOpType::BatchNormalization)
             {
+                // PERF BUGBUG: We should have this in autobatch state by now, no? Then get it from there.
                 let bnId = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
                 fail_if(m_bnPendingCounts[bnId] == 0, "m_bnPendingCounts decreased beyond initial count??");
                 m_bnPendingCounts[bnId]--; // only those with pending count 0 are ready
@@ -1089,16 +1099,16 @@ class Variable::AutoBatch
                     if (AreBatchable(f, iter->front()))
                     {
                         // Found another function that this is batchable with: add to batch.
-                        iter->push_back(f);
+                        iter->push_back(f); // (note: This just adds to a linked list, and is therefore cheap.)
                         return;
                     }
                 }
                 // none fit: open a new set
                 m_regularOps.push_back(NonOwningFunctionListBuilder(f));
             }
-            EndCudaStats(cudaStatsPtr);
         }
         // notify a function that an input has become available; schedule it when all inputs are now available
+        // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
         void NotifyInputAvailable(PrimitiveFunction* f)
         {
             GetOutputFields(f); // ignoring return value; this just performs a consistency check
@@ -1526,10 +1536,11 @@ class Variable::AutoBatch
     }
 
     // compute a hash value for f
+    // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
     // TODO: instead of doing this lazily, should it be done in Schedule()?
     static void ComputeAliasHash(PrimitiveFunction& f)
     {
-        if (f.m_autoBatchState.m_aliasHash != SIZE_MAX) // lazy
+        if (f.m_autoBatchState.m_aliasHash != SIZE_MAX) // lazy  --TODO: no need; we don't need to even save this
             return;
         size_t hash = 0;
         // we only hash the argument identities; that is, their base pointer
@@ -1537,7 +1548,9 @@ class Variable::AutoBatch
         // If we really allow strides in the future, we may include them in the hash.
         static const size_t multiplier = 1572869; // an arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
         let& inputs = f.m_inputs;
-        for (size_t k = 0; k < inputs.size(); k++)
+        let numInputs = inputs.size();
+        CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ElementTimes, L"ComputeAliasHash()", 3, numInputs);
+        for (size_t k = 0; k < numInputs; k++)
         {
             // PERF BUGBUG: This vv is horrible, as it force-realizes the slices. Also, do we need to handle sliced redirects? This may lead to realizing all lazy slices...??
             let& value = *CacheAndGetValue(inputs[k]);
@@ -1549,7 +1562,7 @@ class Variable::AutoBatch
                 /*else*/:
                     (intptr_t)value.DataBuffer<double>()/sizeof(double);
             hash += (size_t)dataBuffer; // add the page number, in case allocation is page-aligned
-            hash *= multiplier;
+            //hash *= multiplier;
             hash += (size_t)(dataBuffer >> 8); // also hash the page number, in case allocation is page-aligned
             hash *= multiplier;
         }
@@ -1561,7 +1574,7 @@ class Variable::AutoBatch
     // TODO: Choose one name: ShortCircuit? Duplicate? Alias? Common subexpression?
     NonOwningFunctionList ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(NonOwningFunctionList ops)
     {
-        auto* cudaStatsPtr = BeginCudaStats(PrimitiveOpType::ReconcileDynamicAxis, L"CSE", 3);
+        CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ReconcileDynamicAxis, L"CSE", 3, ops.size());
         NonOwningFunctionListBuilder filteredOps;
         for (auto iter = ops.begin(); iter != ops.end(); ) // create the batched tensors
         {
@@ -1570,13 +1583,14 @@ class Variable::AutoBatch
             // PERF BUGBUG: This gives O(N^2) complexity. Fix this once I get correct behavior.
             //              For now, it seems using the hash with a linear search gets it fast enough, but we should use a proper hash table of course.
             ComputeAliasHash(*f);
+            // PERF BUGBUG: no need to cache the hash, as it is only ever used on this very list
             let fHash = f->m_autoBatchState.m_aliasHash;
             let& inputs = f->m_inputs;
             let arity = inputs.size();
             for (auto jter = filteredOps.begin(); jter != filteredOps.end(); ++jter)
             {
                 let& jnputs = jter->m_inputs;
-                if (jter->m_autoBatchState.m_aliasHash != fHash)
+                if (jter->m_autoBatchState.m_aliasHash != fHash) // TODO: no need, we just fetch from hash table according to hash code (no need to check again, since very little clashes)
                     goto next_jter;
                 for (size_t k = 0; k < jnputs.size(); k++)
                 {
@@ -1601,7 +1615,6 @@ class Variable::AutoBatch
             filteredOps.push_back(f);
         break_iter:;
         }
-        EndCudaStats(cudaStatsPtr);
         return filteredOps;
     }
 
