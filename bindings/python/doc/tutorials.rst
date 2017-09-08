@@ -1,6 +1,8 @@
 Tutorials
 =======================================================
 
+*For a quick tour if you are familiar with another deep learning toolkit please fast forward to CNTK 200 (A guided tour) for a range of constructs to train and evaluate models using CNTK.*
+
 #.  *Classify cancer using simulated data (Logistic Regression)*
      CNTK 101:`Logistic Regression <CNTK_101_LogisticRegression.html>`_ with NumPy (:cntktut:`source <CNTK_101_LogisticRegression>`)
     
