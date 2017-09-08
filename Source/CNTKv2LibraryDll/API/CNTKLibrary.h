@@ -2889,7 +2889,7 @@ namespace CNTK
             // Verify compatibility of 'this' value and outputVariable, get sequence and batch length, and get the inferred shape if the variable has a free dimension.
             std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable, &inferredVarShape);
             if (outputVariable.Shape().Rank() != inferredVarShape.Rank())
-                RuntimeError("The shape of outputVaraible has a different rank after inferring unbound dimensions.");
+                RuntimeError("The shape of outputVariable has a different rank after inferring unbound dimensions.");
 
             // Calculate the number of elements is needed to represent a sample in output buffer.
             // For dense output, it is the total size of the shape.

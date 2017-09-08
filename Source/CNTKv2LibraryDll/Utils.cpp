@@ -562,7 +562,7 @@ namespace CNTK
             (valueShape.SubShape(1).Rank() <= maxAddionalValueAxes))
         {
             auto numberOfDynamicAxesInPackedValue = std::dynamic_pointer_cast<PackedValue>(value)->DynamicAxes().size();
-            // The reader always provide sequence and batch axes
+            // Further check whether the packed Value is really from the reader, which always provides sequence and batch axes in value and 1 additional axis for the flattened sample layout.
             if ((numberOfDynamicAxesInPackedValue == 2) && (numberOfDynamicAxesInPackedValue + 1 == valueShape.Rank()))
             {
                 // If the leading dim of the value shape is same as the total size of the varShape,
@@ -595,8 +595,8 @@ namespace CNTK
             for (size_t i = 0; i < (valueShape.Rank() - (varShape.Rank() + numDynamicAxes)); ++i)
             {
                 if (valueShape[varShape.Rank() + i] != 1)
-                    InvalidArgument("Value rank (%d) should be larger than the Variable rank (%d) at most by number of dynamic axes (%d); Variable = '%S', Value shape = '%S'.",
-                                    (int)valueShape.Rank(), (int)varShape.Rank(), (int)numDynamicAxes, var.AsString().c_str(), valueShape.AsString().c_str());
+                    InvalidArgument("The dimension size (%d) of the axis (%d) of the Value ('%S') must be 1, because this axis is not specified as a dynamic axis of the Variable ('%S').",
+                                    (int)valueShape[varShape.Rank() + i], (int)(varShape.Rank() + i), valueShape.AsString().c_str(), var.AsString().c_str());
             }
         }
 
