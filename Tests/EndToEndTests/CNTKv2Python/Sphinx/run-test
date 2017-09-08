@@ -43,7 +43,9 @@ rm CNTK_*.ipynb
 
 ERROR=0
 
-# Exclude the CNTK_*.html and Manual_*.html since 
+# Exclude the CNTK_*.html and Manual_*.html since the rules below do not apply
+# to content generated from ipynb files (Specifically Object addresses for Matplotlib
+# and back-ticks in the notebook markdown text. 
 rm _build/html/CNTK_*.html
 rm _build/html/Manual_*.html
 
