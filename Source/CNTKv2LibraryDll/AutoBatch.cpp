@@ -21,9 +21,10 @@
 #include <string>
 
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
-#define LOG_STATS     // if defined, log statistics (#operations)
+//#define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 #define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
+// ^^ BUGBUG: For now this is the only mode that runs, until we update the remaining batched backprop functions
 
 #ifdef LOG_STATS
 static size_t logMemoizeStatsPeriod = 50;
@@ -1630,12 +1631,19 @@ class Variable::AutoBatch
         if (!isFree)
             m_stats.numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
+        // is unbatched actually more expensive than batched?
+        // We count CUDA launches, assuming all args are batched and require a Gather launch.
+        // If not all args require that, we err on the side of not batching. BatchNorm must always be batched.
+        let worthIt = batchSize/*unbatched launches*/ > (numArgs + 1)/*batched launches*/ || op == PrimitiveOpType::BatchNormalization;
+        //if (batchSize > 1 && !worthIt) // TODO: remove this message once I see it happen
+        //    fprintf(stderr, "%S not worth it: %d vs. %d\n", PrimitiveOpTypeName(f0.m_op).c_str(), (int)batchSize, (int)numArgs + 1);
 #ifdef NO_BATCHED_FORWARD
         auto doNaively = true;
 #else
         let doNaively =
             isFree ||
-            batchSize == 1;
+            batchSize == 1 ||
+            !worthIt;
 #endif
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
         //        isFree ? -1 : (int)m_stats.numBatchedLaunches,

@@ -223,6 +223,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     };
 
     fprintf(stderr, "\n--- Running tests for batch of %d. %s on %S\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str());
+    let doGradientCheck = dataType == DataType::Double;
     size_t numFailed = 0;
     for (let& test : tests) // loop over all tests
     {
@@ -339,7 +340,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         //  - numeric:  perturb the all inputs by an epsilon; compute the test function on that
         //  - symbolic: get all gradients from the test function and multiply with the same epsilon and add to the unperturbed result
         // We test each argument index separately, to make this test more informative.
-        if (dataType == DataType::Double)
+        if (doGradientCheck)
         {
             let epsScale = 1e-7;
             for (size_t argIndexUnderTest = 0; argIndexUnderTest < aryness; argIndexUnderTest++)
@@ -416,16 +417,19 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             }
         }
     } // loop over tests
+    if (!doGradientCheck)
+        fprintf(stderr, "Skipped gradient checks for Float precision.\n");
     return numFailed;
 }
 
 void RunDynamiteTests()
 {
     size_t numFailed = 0;
-    numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::GPUDevice(0));
+    size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
+    numFailed += DynamiteTest(N, DataType::Double, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
-    numFailed += DynamiteTest(3, DataType::Double, DeviceDescriptor::CPUDevice());
-    numFailed += DynamiteTest(3, DataType::Float,  DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(N, DataType::Double, DeviceDescriptor::CPUDevice());
+    numFailed += DynamiteTest(N, DataType::Float,  DeviceDescriptor::GPUDevice(0));
 #if 1 // do this not every time
     numFailed += DynamiteTest(1, DataType::Float,  DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::CPUDevice());

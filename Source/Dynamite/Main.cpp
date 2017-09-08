@@ -373,7 +373,7 @@ int main(int argc, char *argv[])
     argc; argv;
     try
     {
-#if 0
+#if 1
         RunDynamiteTests();
 #endif
 #if 1
