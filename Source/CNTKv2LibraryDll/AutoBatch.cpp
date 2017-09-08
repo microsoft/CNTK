@@ -23,7 +23,7 @@
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
 #define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
-//#define NO_BATCHED_BACKPROP // if defined, don't do batched backprop
+#define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
 
 #ifdef LOG_STATS
 static size_t logMemoizeStatsPeriod = 50;
@@ -1186,14 +1186,10 @@ class Variable::AutoBatch
 
     // get the value of an input Variable, with full redirection
     // This will realize any lazy ops (slice, reshape).
-    //static const NDArrayViewPtr& CacheAndGetValue(const PrimitiveFunction* f)
-    //{
-    //    return CacheAndGetValue(f->m_outputs[0]);
-    //}
-    // a Variable's value is defined by its m_redirection.m_function->m_outputs[0], followed by slice and/or reshape
+    // A Variable's value is defined by its m_redirection.m_function->m_outputs[0], followed by slice and/or reshape.
     static const NDArrayViewPtr& CacheAndGetValue(const Variable& v)
     {
-        return CacheAndGetValue(*v.m_dataFields);
+        return CacheAndGetValue(GetInputFields(v));
     }
     static const NDArrayViewPtr& CacheAndGetValue(VariableFields& fields)
     {
@@ -1221,6 +1217,13 @@ class Variable::AutoBatch
         // implicit Reshape()
         if (outputFields.m_shape != outputFields.m_value->Shape())
             outputFields.m_value = outputFields.m_value->AsShape(outputFields.m_shape);
+    }
+    // get the value that must already have been cached
+    static const NDArrayViewPtr& GetCachedValue(const Variable& v)
+    {
+        let& value = GetInputFields(v).m_value;
+        fail_if(!value, "GetCachedValue: Variable unexpectedly has no value yet");
+        return value;
     }
     // this gets the underlying NDArrayView that contains v's value, without realizing the value
     // The real value may be a view into this object that has not been realized yet.
@@ -2164,51 +2167,62 @@ public:
             return StorageFormat::Dense;
     }
 
-    // allocate memory for m_gradient
-    // This lazily creates the m_gradient NDArrayView, which may live in a batched op.
-    // Returns beta = 0 if gradient was newly created, otherwise 1
-    // TODO: allocate Parameter gradients outside the arena; those will be kept for next round (without hogging the arena)
-    double LazilyCreateLazilyIndexedGradient(const Variable& v, StorageFormat format = StorageFormat::Dense)
+    // return value of CacheAndGetGradientView()
+    struct NewGradient
     {
-        auto& fields = *v.m_dataFields;
-        // if gradient exists then return it
-        double beta;
-        if (fields.m_gradient)
-            beta = 1.0;
-        else
+        NDArrayViewPtr view; // view into gradient
+        double beta;         // 0 or 1. If 0 then gradient is uninitialized virgin memory; if 1 then gradient already existed and must be added into.
+    };
+
+    // get the gradient view for a function's input, and allocate memory for m_gradient if needed
+    // This lazily sets up the gradient for an input variable, and returns it.
+    // The physical gradient object is held by the redirect, while the cached gradient object in the input itself may be a view.
+    // Returns beta = 0 if gradient was newly created, otherwise 1.
+    // BIG BUGBUG: What this atchitecture does not handle is see-through gradients (e.g. Plus). That must be fixed. It will change quite a bit.
+    NewGradient CacheAndGetGradientView(const Variable& input, StorageFormat format = StorageFormat::Dense)
+    {
+        auto& inputFields = GetInputFields(input); // describes the input variable, e.g. shape. May be a redirect
+        auto& gradFields = GetGradientFieldsForBackprop(inputFields); // describes the physical function output. This is where the gradient lives physically.
+
+        double beta = 1.0;
+
+        // if cached gradient object exists then return it, & done.
+        if (inputFields.m_gradient)
+            return{ inputFields.m_gradient, beta };
+
+        // if we don't even have a physical one, then create the thatone
+        if (!gradFields.m_gradient)
         {
-            // create new gradient
-#ifndef NO_BATCHED_BACKPROP
-            // if this op draws from a batched op, then the gradient lives in there as well; we return a view onto it
-            if (fields.m_redirection)
-            {
-                let& from  = fields.m_redirection.m_function;
-                let  index = fields.m_redirection.m_index;
-                let& fromOutput = from->m_outputs[0];
-                beta = LazilyCreateLazilyIndexedGradient(fromOutput);
-                let& fromGradient = fromOutput.m_dataFields->m_gradient;
-                if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
-                    fields.m_gradient = fromGradient;
-                else // it's a slice: gradient is a slice view into from's output gradient
-                {
-                    if (beta == 0.0) // gradient is fresh: explicitly reset all (since we are slicing into the input gradientm, we cannot use the beta mechanism)
-                    {
-                        fromGradient->SetValue(0.0f);
-                        beta = 1.0;
-                    }
-                    fields.m_gradient = fromGradient->IndexLastAxis(index);
-                }
-            }
-            else
-#endif
-            {
-                // create a new one
-                // TODO: allocate parameters as separate objects; and allow user to pass buffers in
-                fields.m_gradient = m_arena.NewNDArrayView(fields.m_shape, fields.m_dataType, format, fields.m_value->Device());
-                beta = 0.0; // has not been initialized (random section in arena)
-            }
+            // create a new one
+            // TODO: allocate parameters as separate objects; and allow user to pass buffers in
+            gradFields.m_gradient = m_arena.NewNDArrayView(gradFields.m_shape, gradFields.m_dataType, format, gradFields.m_value->Device());
+            beta = 0.0; // has not been initialized (random section in arena)
+            // if there is no redirect, then the physical one is the cached one, & done.
+            if (inputFields.m_gradient)
+                return{ inputFields.m_gradient, beta };
         }
-        return beta;
+
+        // we now have a physical one, but no cached view
+        // Reminder: cached view = physical  value |> Barrier >> Slice >> Reshape
+        // We must do this backwards. 
+        let index = inputFields.m_redirection.m_index;
+        auto gradient = gradFields.m_gradient;
+        // slice if needed
+        if (index != SIZE_MAX) // it's a slice: gradient is a slice view into from's output gradient
+        {
+            if (beta == 0.0) // gradient is fresh: explicitly reset all (since we are slicing into the input gradientm, we cannot use the beta mechanism)
+            {
+                gradient->SetValue(0.0f);
+                beta = 1.0;
+            }
+            gradient = gradient->IndexLastAxis(index);
+        }
+        // reshape if needed
+        if (inputFields.m_shape != gradient->Shape())
+            gradient = gradient->AsShape(inputFields.m_shape);
+        // implant the cached gradient
+        inputFields.m_gradient = move(gradient);
+        return{ inputFields.m_gradient, beta };
     }
 
     // recursively traverse the tree hanging off a Variable and build the m_consumer fields
@@ -2315,6 +2329,10 @@ public:
     VariableFields& GetGradientFieldsForBackprop(const Variable& input, bool firstTime = false)
     {
         auto& inputFields = GetInputFields(input);
+        return GetGradientFieldsForBackprop(inputFields, firstTime);
+    }
+    VariableFields& GetGradientFieldsForBackprop(VariableFields& inputFields, bool firstTime = false)
+    {
         if (!inputFields.m_redirection) // leaf
             return inputFields;
         auto& gradFields = GetOutputFields(inputFields.m_redirection.m_function);
@@ -2325,20 +2343,10 @@ public:
         // if not firstTime then we should not get here
         fail_if(!firstTime, "GetGradientFieldsForBackprop (not firstTime): hit a see-through slice??");
         // move up the m_redirection into 'input', overwriting the current one
-#if 1
         fail_if(inputFields.m_redirection.m_index != SIZE_MAX, "GetGradientFieldsForBackprop (firstTime): short-circuiting a see-through slice??"); // can only handle one slice per chain
         inputFields.m_redirection = gradFields.m_redirection; // replace current redirect with the down-stream one
-#else
-        let& outputGradFields = GetOutputFields(gradFields.m_redirection.m_function);
-        let index = gradFields.m_redirection.m_index; // preserve the slice index if any
-        gradFields.m_redirection = outputGradFields.m_redirection; // replace current redirect with the down-stream one
-        if (gradFields.m_redirection.m_index == SIZE_MAX) // recover a preserved slice index if down-stream one had no slice
-            gradFields.m_redirection.m_index = index;
-        else // otherwise make sure there is only one slice in this chain
-            fail_if(index != SIZE_MAX, "GetGradientFieldsForBackprop (firstTime): short-circuiting a see-through slice??"); // can only handle one slice per chain
-#endif
         // and try again
-        return GetGradientFieldsForBackprop(input, firstTime/*=true*/); // (note: tail recursion)
+        return GetGradientFieldsForBackprop(inputFields, firstTime/*=true*/); // (note: tail recursion)
     }
 
     // helper to batch an array of NDArrayViews of the same rank along either the last or into a new axis
@@ -2370,39 +2378,28 @@ public:
 #ifdef LOG_DETAILS
         LogFunction(*f, L"bb ", index);
 #endif
-        let& inputs =  f->m_inputs;
-        auto& input = DontSeeThroughNoOps(inputs[index]);
-        auto& fields = *input.m_dataFields;
-        fail_if(!fields.m_needsGradient, "function unexpectedly does not need a gradient");
-        // get the TensorViews for everything we may compute the gradient from
-        let& outputs = f->m_outputs;
-        fail_if(outputs.size() != 1, "only functions with 1 output are currently supported");
-        let& outputFields = *outputs[0].m_dataFields;
-#ifndef NO_BATCHED_BACKPROP
-        fail_if(outputFields.m_redirection, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
-#endif
+        // function's forward output and received gradient from top live here
+        let& outputFields = GetOutputFields(f); // result of f lives here; hence also the gradient we back-propagate
         fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
         fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
-        let* outputValue    = outputFields.m_value   .get();
-        let* outputGradient = outputFields.m_gradient.get();
 
+        // get the TensorViews for the forward inputs to this function
+        let& inputs = f->m_inputs;
         let numInputs = inputs.size();
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, numInputs);
         for (size_t i = 0; i < numInputs; i++)
-        {
-            let& input1 = DontSeeThroughNoOps(inputs[i]);
-            let& fields = *input1.m_dataFields;
-            fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
-            inputValues[i] = fields.m_value.get();
-        }
+            inputValues[i] = GetCachedValue(inputs[i]).get();
+
+        // get the gradient view for the input whose gradient we desire
+        // If it was newly created, then gradient.beta will be 0
+        let& input = inputs[index];
+        fail_if(!GetInputFields(input).m_needsGradient, "function unexpectedly does not need a gradient");
+        let gradient = CacheAndGetGradientView(input, DetermineGradientStorageType(*f, 0));
 
         // compute gradients for the desired input
-        // Get or create m_gradient as the desired gradient's TensorView.
-        // If the input is a redirection, then the gradient is a view into the lazy source.
-        let beta = LazilyCreateLazilyIndexedGradient(input, DetermineGradientStorageType(*f, 0));
         // backprop into the input
         // BUGBUG: (perf) In case of Reshape we currently make a copy, which is not needed --> see-through the op, and backprop through a reshaped view into Reshape's argument gradient?
-        PrimitiveFunction::BackpropTo(outputGradient/*incoming*/, index, f->m_op, f->m_attributes, outputValue, inputValues, fields.m_gradient/*target*/, beta, *f);
+        PrimitiveFunction::BackpropTo(outputFields.m_gradient.get()/*incoming*/, index, f->m_op, f->m_attributes, outputFields.m_value.get(), inputValues, gradient.view/*target*/, gradient.beta, *f);
         m_stats.numBatchedBackpropToCalls++;
 #if 0   // debug the actual values
         fields.m_gradient->LogToFile(L"gradient", stderr);
@@ -2448,9 +2445,6 @@ public:
         // get the TensorViews for everything we may compute the gradient from
         let& output = f->m_outputs[0];
         let& outputFields = *output.m_dataFields;
-#ifndef NO_BATCHED_BACKPROP
-        fail_if(outputFields.m_redirection, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
-#endif
         fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
         fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
         let& outputGradient = outputFields.m_gradient; // this is the incoming batch of gradients
@@ -2462,11 +2456,12 @@ public:
         {
             let& input = DontSeeThroughNoOps(inputs[i]);
             // create the gradient memory for this input
-            let beta = LazilyCreateLazilyIndexedGradient(input);
+            let gradient = CacheAndGetGradientView(input);
+            // ...CONTINUE HERE
             let& fields = *input.m_dataFields;
-            inputGradients[i] = fields.m_gradient;
+            inputGradients[i] = gradient.view;
             // handle inconsistent betas
-            if (beta != 0 && allBetasZero)
+            if (gradient.beta != 0 && allBetasZero)
             {
                 // We were running under the assumption that all betas are zero, so we can use beta=0 below.
                 // Now we must run with beta 1, and therefore manually reset all pevious ones.
@@ -2474,7 +2469,7 @@ public:
                     DontSeeThroughNoOps(inputs[i1]).m_dataFields->m_gradient->SetValue(0.0f);
                 allBetasZero = false;
             }
-            else if (beta == 0 && !allBetasZero)
+            else if (gradient.beta == 0 && !allBetasZero)
                 fields.m_gradient->SetValue(0.0f);
         }
         let beta = allBetasZero ? 0.0 : 1.0; // if at least one is not zero, we must run qwith beta=1
@@ -2531,11 +2526,12 @@ public:
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, 2);
         inputValues[0] = nullptr;
         inputValues[1] = rightBatch.get();
-        let beta = LazilyCreateLazilyIndexedGradient(input0, DetermineGradientStorageType(f0, 0));
+        let gradient = CacheAndGetGradientView(input0, DetermineGradientStorageType(f0, 0));
+        // ...CONTINUE HERE
         PrimitiveFunction::BackpropTo(/*outputGradient=*/outGradBatch.get(),      // incoming gradient from top...
                                       /*index=*/0, f0.m_op, f0.m_attributes,      // ...goes through this function...
                                       /*outputValue=*/nullptr, inputValues,       // ...using these values from forward pass...
-                                      input0.m_dataFields->m_gradient, beta, f0); // ...into here
+                                      gradient.view, gradient.beta, f0);          // ...into here
         m_stats.numBatchedBackpropToCalls++;
 #endif
     }
@@ -2660,6 +2656,12 @@ public:
         // Because of the latter, we cannot really test this here, and should just remove this check.
         //fail_if(var.Kind() != VariableKind::Parameter && fields.m_gradient, "non-Parameter variable unexpectedly already has a gradient"); // (sanity check; I am not sure actually, maybe too strict)
 
+#ifdef NO_BATCHED_BACKPROP
+        fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
+        {
+            BackpropToUnbatched(fi.first, fi.second);
+        });
+#else
         // fast path: if only one consumer then there is nothing to batch
         // (with exception of Splice, which has a different optimization)
         if (fields.m_consumers.size() == 1 && fields.m_consumers.front().first->m_op != PrimitiveOpType::Splice)
@@ -2667,6 +2669,8 @@ public:
             BackpropToUnbatched(fields.m_consumers.front().first, fields.m_consumers.front().second);
             return;
         }
+
+        // ...TODO: CONTINUE HERE
 
         // auto-batched path
         // The forward prop has already batched data. However, for backprop, there can
@@ -2709,6 +2713,7 @@ public:
         // others bucket
         for (auto& c : m_otherConsumers)
             BackpropToUnbatched(c.first, c.second);
+#endif
     }
 
 public:
