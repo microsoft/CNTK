@@ -668,7 +668,7 @@ void Train(wstring outputDirectory)
         partTimer.Restart();
         mbLoss.Value()->AsScalar<float>();
         let timeForward = partTimer.Elapsed(true);
-        fprintf(stderr, "%.5f\n", mbLoss.Value()->AsScalar<float>()), fflush(stderr);
+        //fprintf(stderr, "%.5f\n", mbLoss.Value()->AsScalar<float>()), fflush(stderr);
         //partTimer.Log("ForwardProp", numLabels);
         partTimer.Restart();
         mbLoss.Backward(gradients);
