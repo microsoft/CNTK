@@ -1,1 +1,1 @@
-sudo docker build --tag imriss/cntk_gpu_archlinux:v2 .
+sudo docker build --squash --tag imriss/cntk_gpu_archlinux:v2 .
