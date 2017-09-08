@@ -2303,7 +2303,7 @@ public:
         let& inputs = f.m_inputs;
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            auto& inputGradFields = GetGradientFieldsForBackprop(inputs[i], /*firstTimes=*/true); // this is where the gradient will be held   --TODO: also cache the reshaped/sliced gradient in input fields
+            auto& inputGradFields = GetGradientFieldsForBackprop(ResetInputGradient(inputs[i]), /*firstTimes=*/true); // this is where the gradient will be held   --TODO: also cache the reshaped/sliced gradient in input fields
             if (!inputGradFields.m_needsGradient) // TODO: use our own field for this. Interpret Constant and StopGradient. StopGradient output receives no gradient.
                 continue; // skip inputs that receive no gradients
             // process recursively the inputs
@@ -2347,6 +2347,19 @@ public:
         inputFields.m_redirection = gradFields.m_redirection; // replace current redirect with the down-stream one
         // and try again
         return GetGradientFieldsForBackprop(inputFields, firstTime/*=true*/); // (note: tail recursion)
+    }
+
+    // helper during initialization: reset m_gradients if it is redirected
+    VariableFields& ResetInputGradient(const Variable& input)
+    {
+        auto& inputFields = GetInputFields(input);
+        if (inputFields.m_redirection)
+        {
+            auto& gradFields = GetOutputFields(inputFields.m_redirection.m_function);
+            if (&gradFields != &inputFields)
+                inputFields.m_gradient.reset();
+        }
+        return inputFields;
     }
 
     // helper to batch an array of NDArrayViews of the same rank along either the last or into a new axis
@@ -2751,14 +2764,14 @@ public:
         // BUGBUG:
         for (auto& kv : gradients)
         {
-            auto& gradFields = GetGradientFieldsForBackprop(kv.first, /*firstTimes=*/true);
+            auto& gradFields = GetGradientFieldsForBackprop(ResetInputGradient(kv.first), /*firstTimes=*/true);
             if (m_visitorTag.Visited(gradFields.m_visitedTag)) // (note that the code does not require this; this is only to point out a likely user error)
                 InvalidArgument("BatchedBackward: a Parameter was included more than once in gradients[]");
             RBuildBackwardGraph(gradFields, /*userOwnsGradients=*/true);
             // BUGBUG: ^^ userOwnsGradients won't work correctly if one Var in gradients[] is an input to another
         }
         // now build the graph. We use visited information for the gradients to infer our own needsGradient flag
-        auto& rootGradFields = GetGradientFieldsForBackprop(root, /*firstTimes=*/true);
+        auto& rootGradFields = GetGradientFieldsForBackprop(ResetInputGradient(root), /*firstTimes=*/true);
         if (!m_visitorTag.Visited(rootGradFields.m_visitedTag)) // (A crazy user may have passed root itself in gradients[]. That is OK.)
             RBuildBackwardGraph(rootGradFields);
         // sanity check
