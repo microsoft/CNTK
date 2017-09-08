@@ -331,7 +331,7 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
         batchModel(lossesPerSequence, features, labels);             // batch-compute the criterion
         let collatedLosses = Splice(lossesPerSequence, Axis(0), Named("cesPerSeq"));     // collate all seq lossesPerSequence
         // ^^ this is one launch per MB
-        let mbLoss = ReduceSum(collatedLosses, Axis(0), Named("ceBatch"));  // aggregate over entire minibatch
+        let mbLoss = Reshape(ReduceSum(collatedLosses, Axis(0), Named("ceBatch")), NDShape{});  // aggregate over entire minibatch
         lossesPerSequence.clear();
         Function::SetDynamicProfiler(prevProfiler);
         return mbLoss;

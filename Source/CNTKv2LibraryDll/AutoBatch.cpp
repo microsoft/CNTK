@@ -2109,6 +2109,7 @@ public:
             // execute it, and also update all outputs' values and consumers, and the schedule
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
+        CacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
         // log stats
         if (logMemoizeStatsCounter == 0)
@@ -2137,7 +2138,6 @@ public:
         logMemoizeStatsCounter++;
         if (logMemoizeStatsCounter == logMemoizeStatsPeriod)
             logMemoizeStatsCounter = 0;
-        CacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedForward: %d forward ops executed besides %d gathers, %d views, and %d CSEs, in nominally %d PrimitiveFunctions on %d known values\n",
                 (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneGatherOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numCommonSubexpressionsEliminated, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);

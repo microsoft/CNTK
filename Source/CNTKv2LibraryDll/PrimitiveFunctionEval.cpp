@@ -400,37 +400,36 @@ namespace CNTK
             // hard stuff
         case PrimitiveOpType::Splice:
             {
-                let& outputGradientShape = outputGradient->Shape();
+                let& outputGradientShape = outputGradient->Shape(); // what's coming from the top (spliced)
                 let axis = attributes[/*L"axis"*/PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex();
-                auto rank = outputGradientShape.Rank();
-                if (axis >= rank)
-                    LogicError("Variable '%S' Value(): Splice axis %d exceeds rank %d.", funcForErrMsg.AsString().c_str(), (int)axis, (int)rank);
+                auto outputGradientRank = outputGradientShape.Rank();
+                if (axis >= outputGradientRank)
+                    LogicError("Variable '%S' Value(): Splice axis %d exceeds outputGradientRank %d.", funcForErrMsg.AsString().c_str(), (int)axis, (int)outputGradientRank);
                 if (i >= outputGradientShape[axis])
                     LogicError("Variable '%S' Value(): Input index %d exceeds dimension[%d]=%d.", funcForErrMsg.AsString().c_str(), (int)i, (int)axis, (int)outputGradientShape[axis]);
                 // determine the slice of the incoming gradient that we should copy
-                NDArrayViewPtr outputGradientSlice;
-                if (outputGradientShape[axis] == 1) // a splice of 1
-                    outputGradientSlice = const_cast<NDArrayView*>(outputGradient)->shared_from_this(); // propagate the entire object
-                else
+                vector<size_t> startOffset(outputGradientRank, 0);
+                vector<size_t> extent = outputGradientShape.Dimensions();
+                let gradientRank = gradient->Shape().Rank();
+                if (axis >= gradientRank) // this was a splice along a new axis: we can index directly
                 {
-                    // set startOffset to 0 except for the sliced axis
-                    vector<size_t> startOffset(rank, 0);
                     startOffset[axis] = i;
-                    vector<size_t> extent;
-                    if (axis == rank - 1) // final shape drops final axis: we let Slice() do that for us
-                        extent = outputGradientShape.SubShape(0, rank - 1).Dimensions();
-                    else // we don't drop the axis: change the extent of that axis to 1
-                    {
-                        extent = outputGradientShape.Dimensions();
-                        extent[axis] = 1;
-                    }
-                    outputGradientSlice = outputGradient->Slice(startOffset, extent, /*strides=*/vector<size_t>());
+                    extent.resize(gradientRank); // chop off the trailing dims, which will lead to the slice to not have them either; which will in turn opCopy correctly
                 }
-                // match the shapes (w.r.t. dropped final axes)
-                if (outputGradientSlice->Shape() != gradient->Shape())
-                    outputGradientSlice = outputGradientSlice->AsShape(gradient->Shape());
+                else // splice along an existing axis: we must find out the start and extent by aggregation
+                {
+                    // Note that this is O(N^2) when back-propping into all inputs. This code, however, only runs
+                    // if we don't use batched backprop. Batched backprop optimizes this using bulk Scatter propagation.
+                    for (size_t j = 0; j < i; j++)
+                    {
+                        let& inputShape = inputValues[j]->Shape();
+                        startOffset[axis] += axis < inputShape.Rank() ? inputShape[axis] : 1;
+                    }
+                    let& inputShape = inputValues[i]->Shape();
+                    extent[axis] = axis < inputShape.Rank() ? inputShape[axis] : 1;
+                }
                 // note: we are doing this here instead of in the shared code below (arg1=outputGradientSlice) only because arg1 is a naked pointer, but we must manage lifetime of 'outputGradientSlice'
-                NDArrayView::NumericOperation({ outputGradientSlice }, alpha,
+                NDArrayView::NumericOperation({ outputGradient->Slice(startOffset, extent, /*strides=*/vector<size_t>()) }, alpha,
                                               Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
                 handled = true;
             }
