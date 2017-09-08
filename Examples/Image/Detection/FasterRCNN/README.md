@@ -18,20 +18,20 @@ To run Faster R-CNN you need a CNTK Python environment. Install the following ad
 pip install opencv-python easydict pyyaml
 ```
 
-The code uses prebuild Cython modules for parts of the region proposal network (see `Examples/Image/Detection/utils/cython_modules`). 
-These binaries are contained in the repository for Python 3.5 under Windows and Python 3.4 under Linux.
+The code uses prebuild Cython modules for parts of the region proposal network. 
+These binaries are contained in the folder (`Examples/Image/Detection/utils/cython_modules`) for Python 3.5 for Windows and Python 3.4, 3.5, and 3.6 for Linux.
 If you require other versions please follow the instructions at [https://github.com/rbgirshick/py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#installation-sufficient-for-the-demo).
 
 If you want to use the debug output you need to run `pip install pydot_ng` ([website](https://pypi.python.org/pypi/pydot-ng)) and install [graphviz](http://graphviz.org/) to be able to plot the CNTK graphs (the GraphViz executable has to be in the system’s PATH).
 
 ### Getting the data and AlexNet model
 
-We use a toy dataset of images captured from a refrigerator to demonstrate Faster R-CNN (the same as for the Fast R-CNN example). Both the dataset and the pre-trained AlexNet model can be downloaded by running the following Python command from the Examples/Image/Detection/FastRCNN folder:
+We use a toy dataset of images captured from a refrigerator to demonstrate Faster R-CNN (the same one is used in the Fast R-CNN example). Both the dataset and the pre-trained AlexNet model can be downloaded by running the following Python command from the Examples/Image/Detection/FastRCNN folder:
 
 `python install_data_and_model.py`
 
 After running the script, the toy dataset will be installed under the `Image/DataSets/Grocery` folder. The AlexNet model will be downloaded to the `Image/PretrainedModels` folder. 
-We recommend you to keep the downloaded data in the respective folder while downloading, as the configuration files assume that by default.
+We recommend you to keep the downloaded data in the respective folder while downloading, as the configuration files expect that by default.
 
 ### Running Faster R-CNN on the example data
 
@@ -80,8 +80,8 @@ Now you're set to train on the Pascal VOC 2007 data using `python run_faster_rcn
 
 ### Running Faster R-CNN on your own data
 
-Preparing your own data and annotating it with ground truth bounding boxes is describer [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN#train-on-your-own-data).
-After storing your images in the described folder structure and annotating them please run
+Preparing your own data and annotating it with ground truth bounding boxes is described [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN#train-on-your-own-data).
+After storing your images in the described folder structure and annotating them, please run
 
 `python Examples/Image/Detection/utils/annotations/annotations_helper.py`
 
