@@ -133,7 +133,7 @@ public:
     static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 
     static void SetDevice(DEVICEID_TYPE deviceId); // TODO: unify with PrepareDevice()
-    static void SyncDevice(DEVICEID_TYPE deviceId);
+    static double SyncDevice(DEVICEID_TYPE deviceId);
 
     void ReleaseMemory();
     ~Matrix();

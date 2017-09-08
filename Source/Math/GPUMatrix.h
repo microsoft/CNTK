@@ -75,14 +75,21 @@ private:
     bool m_forceSync;
 #ifndef CPUONLY
     cudaEvent_t m_done;
+    // a quick hack to measure GPU cost more accurately
+    cudaEvent_t m_start;
+    cudaEvent_t m_stop;
+    static double s_elapsed;
+    static size_t s_elapsedArmed;
 #endif
 
 public:
     static MATH_API void EnableSync();
     static MATH_API bool IsSyncEnabled();
 
-    SyncGuard(bool forceSync = false);
-    ~SyncGuard();
+    __declspec(noinline) MATH_API SyncGuard(bool forceSync = false);
+    __declspec(noinline) MATH_API ~SyncGuard();
+
+    static MATH_API double Elapsed() { double r = s_elapsed / 1000.0; s_elapsed = 0; s_elapsedArmed = 1000; return r; }
 };
 
 // -----------------------------------------------------------------------
@@ -199,7 +206,7 @@ public:
     static void SetDevice(DEVICEID_TYPE deviceId);
     DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
-    static void SyncDevice(DEVICEID_TYPE deviceId);
+    static double SyncDevice(DEVICEID_TYPE deviceId);
 
     static cublasHandle_t GetCublasHandle(int computeDevice = -1);
     ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller

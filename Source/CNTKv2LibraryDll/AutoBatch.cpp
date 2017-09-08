@@ -1360,6 +1360,8 @@ class Variable::AutoBatch
         size_t numInvocations = 0;
         size_t totalElements = 0;  // sum of all output elements, for a rough indication of utilization
         PCTimer timerLaunch;
+        double cudaElapsed = 0;
+        // TODO: timerRun and Sync don't work properly
         PCTimer timerRun;
         PCTimer timerSync; // measure a dummy sync
     };
@@ -1385,7 +1387,7 @@ class Variable::AutoBatch
             ? nullptr
             : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
         CudaStats* cudaStatsPtr = nullptr;
-        if (logMemoizeStatsCounter == 0)
+        if (logMemoizeStatsCounter < 4)
         {
             cudaStats.resize(2 * (size_t)PrimitiveOpType::UnknownOP);
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
@@ -1395,20 +1397,22 @@ class Variable::AutoBatch
             cudaStatsPtr->hasSparse = hasSparse;
             cudaStatsPtr->numInvocations++;
             cudaStatsPtr->totalElements += outputShape.TotalSize();
-            NDArrayView::Sync(inputValues[0]->Device());
+            if (logMemoizeStatsCounter & 1)
+                NDArrayView::Sync(inputValues[0]->Device());
             cudaStatsPtr->timerLaunch.Start();
         }
         // execute it
         GetOutputFields(&f).m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
-        if (logMemoizeStatsCounter == 0)
-        {
+        if (logMemoizeStatsCounter < 4)
+       {
             cudaStatsPtr->timerLaunch.Stop();
             cudaStatsPtr->timerRun.Start();
-            NDArrayView::Sync(inputValues[0]->Device());
+            if (logMemoizeStatsCounter & 1)
+                cudaStatsPtr->cudaElapsed += NDArrayView::Sync(inputValues[0]->Device());
             cudaStatsPtr->timerRun.Stop();
-            cudaStatsPtr->timerSync.Start(); // measure the overhead of just syncing the GPU
-            NDArrayView::Sync(inputValues[0]->Device());
-            cudaStatsPtr->timerSync.Stop();
+            //cudaStatsPtr->timerSync.Start(); // measure the overhead of just syncing the GPU
+            //NDArrayView::Sync(inputValues[0]->Device());
+            //cudaStatsPtr->timerSync.Stop();
         }
 #if 0   // run multiple times to get a feel for the runtime cost
         for (size_t i = 1; i < 5; i++)
@@ -2120,28 +2124,34 @@ public:
         CacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
         // log stats
-        if (logMemoizeStatsCounter == 0)
+        // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
+        if (logMemoizeStatsCounter < 4)
         {
             for (size_t free = 0; free < 2; free++)
             {
-                bool isView = free == 0; // we want this category
+                let isView = free == 0; // show free ops first
                 double totalLaunch = 0;
                 double totalExec = 0;
-                for (let& s : cudaStats) if (s.numInvocations && (IsViewOp(s.op) == isView))
+                for (size_t sparse = 0; sparse < 2; sparse++) // show non-sparse visually separated from sparse
                 {
-                    let prefix = s.hasSparse ? L"sparse " : L"";
-                    let name = PrimitiveOpTypeName(s.op);
-                    let execTime = s.timerRun.Total() - s.timerSync.Total();
-                    fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + name).c_str(),
-                        s.timerLaunch.Total(), execTime,
-                        1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * execTime / (double)s.numInvocations,
-                        (int)s.numInvocations,
-                        s.totalElements / (double)s.numInvocations);
-                    totalLaunch += s.timerLaunch.Total();
-                    totalExec += execTime;
+                    let isSparse = sparse == 1;
+                    for (let& s : cudaStats) if (s.numInvocations && (IsViewOp(s.op) == isView) && s.hasSparse == isSparse)
+                    {
+                        let prefix = s.hasSparse ? L"sparse " : L"";
+                        let name = PrimitiveOpTypeName(s.op);
+                        let execTime = s.cudaElapsed;// s.timerRun.Total() - s.timerSync.Total(); // TODO: timerRun etc. should go
+                        fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + name).c_str(),
+                            s.timerLaunch.Total(), execTime,
+                            1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * execTime / (double)s.numInvocations,
+                            (int)s.numInvocations,
+                            s.totalElements / (double)s.numInvocations);
+                        totalLaunch += s.timerLaunch.Total();
+                        totalExec += execTime;
+                    }
                 }
                 fprintf(stderr, "-> total launch + exec time: %.4f s + %.4f s\n", totalLaunch, totalExec);
             }
+            cudaStats.clear(); // (should not be needed, will get cleared when destructing ther Autobatch instance)
         }
         logMemoizeStatsCounter++;
         if (logMemoizeStatsCounter == logMemoizeStatsPeriod)

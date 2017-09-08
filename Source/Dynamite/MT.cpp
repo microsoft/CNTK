@@ -448,7 +448,7 @@ void Train(wstring outputDirectory)
     class // helper for timing GPU-side operations
     {
         Microsoft::MSR::CNTK::Timer m_timer;
-        void syncGpu() { CNTK::NDArrayView::Sync(device); }
+        double syncGpu() { return CNTK::NDArrayView::Sync(device); }
     public:
         void Restart(bool syncGPU = false)
         {
@@ -459,7 +459,7 @@ void Train(wstring outputDirectory)
         double Elapsed(bool syncGPU = false)
         {
             if (syncGPU)
-                syncGpu();
+                return syncGpu();
             return m_timer.ElapsedSeconds();
         }
         //void Log(const char* what, size_t numItems)
@@ -667,12 +667,12 @@ void Train(wstring outputDirectory)
         // backprop and model update
         partTimer.Restart();
         mbLoss.Value()->AsScalar<float>();
-        let timeForward = partTimer.Elapsed(true);
+        let timeForward = partTimer.Elapsed();
         //fprintf(stderr, "%.5f\n", mbLoss.Value()->AsScalar<float>()), fflush(stderr);
         //partTimer.Log("ForwardProp", numLabels);
         partTimer.Restart();
         mbLoss.Backward(gradients);
-        let timeBackward = partTimer.Elapsed(true);
+        let timeBackward = partTimer.Elapsed();
         //partTimer.Log("BackProp", numLabels);
         mbLoss.Value()->AsScalar<float>();
         // note: we must use numScoredLabels here

@@ -120,6 +120,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 /*static*/ std::once_flag GridDim::s_cachedDevicePropsInitFlag;
 
 /*static*/ bool SyncGuard::s_isSyncEnabled = false;
+/*static*/ double SyncGuard::s_elapsed = 0;
+/*static*/ size_t SyncGuard::s_elapsedArmed = 0;
 
 /*static*/ void SyncGuard::EnableSync()
 {
@@ -134,16 +136,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 SyncGuard::SyncGuard(bool forceSync /*= false*/)
     : m_forceSync(forceSync)
 {
+    m_start = m_stop = nullptr;
+
     m_done = nullptr;
     if (m_forceSync || s_isSyncEnabled)
     {
         CUDA_CALL(cudaGetLastError());
         CUDA_CALL(cudaEventCreate(&m_done));
     }
+
+    // hack
+    if (s_elapsedArmed > 0) //calling Elapsed() arms this
+    {
+        s_elapsedArmed--; // stop doing this after N times unless we keep asking
+        CUDA_CALL(cudaGetLastError());
+        CUDA_CALL(cudaEventCreate(&m_start));
+        CUDA_CALL(cudaEventCreate(&m_stop));
+        CUDA_CALL(cudaEventRecord(m_start, t_stream));
+        // But how about the time between here and the <<< >>> expression?
+    }
 }
 
 SyncGuard::~SyncGuard()
 {
+    if (m_stop)
+    {
+        CUDA_CALL(cudaEventRecord(m_stop, t_stream));
+        CUDA_CALL(cudaEventSynchronize(m_stop));
+        float elapsedTime;
+        cudaEventElapsedTime(&elapsedTime, m_start, m_stop);
+        s_elapsed += elapsedTime; // aggregate upon each SyncGuard. Gets read out and reset upon Elapsed() call.
+        cudaEventDestroy(m_stop);
+        cudaEventDestroy(m_start);
+    }
+
     if (m_forceSync || s_isSyncEnabled)
     {
         // The regular use of this destructor is to synchronize the GPU, but also
@@ -316,11 +342,13 @@ void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId)
 }
 
 template <class ElemType>
-/*static*/ void GPUMatrix<ElemType>::SyncDevice(DEVICEID_TYPE deviceId)
+/*static*/ double GPUMatrix<ElemType>::SyncDevice(DEVICEID_TYPE deviceId)
 {
     assert(deviceId >= 0);
     Microsoft::MSR::CNTK::PrepareDevice(deviceId);
-    CUDA_CALL(cudaDeviceSynchronize());
+    double r = SyncGuard::Elapsed();
+    //CUDA_CALL(cudaDeviceSynchronize());
+    return r;
 }
 
 // PrepareDevice - Set up the correct cuda context for an operation
@@ -1382,7 +1410,8 @@ void GPUMatrix<ElemType>::SetValue(const ElemType v)
 
     if (isZero)
     {
-        CUDA_CALL(cudaMemset(Data(), 0, N * sizeof(ElemType)));
+        //CUDA_CALL(cudaMemset(Data(), 0, N * sizeof(ElemType)));
+        CUDA_CALL(cudaMemsetAsync(Data(), 0, N * sizeof(ElemType), t_stream));
     }
     else
     {
@@ -3844,6 +3873,7 @@ void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix
         RuntimeError("!(m>0 && k>0 && l>0 && n>0)"); // converting from size_t to int may cause overflow
     if (k != l)
         RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
+    SyncGuard syncGuard;
     CUBLAS_CALL(cublas_gemm(cuHandle, transA, transB, m, n, k, &alpha, a.Data(), (int) a.m_numRows, b.Data(), (int) b.m_numRows, &beta, c.Data(), (int) c.m_numRows));
 }
 
@@ -5180,6 +5210,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
         auto ACols = reducingOpDims[0];   // horizontal steps (reduction)
         auto ALd = reducingStrides[0][0]; // horizontal step width through matrix
         cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
+        SyncGuard syncGuard;
         CUBLAS_CALL(cublas_gemm(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int) /*CRows=*/ARows, /*CCols=*/1, (int) ACols, &alpha,
                                 /*A00=*/a.Data()+ offsets[0], (int) ALd,
                                 /*B00=*/GetOnesVector<ElemType>(ACols, a.GetComputeDeviceId())->Data(), (int) /*BRows=*/ACols, &beta,

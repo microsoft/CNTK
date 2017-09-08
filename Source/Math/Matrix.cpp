@@ -597,10 +597,11 @@ void Matrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId)
 }
 
 template <class ElemType>
-/*static*/ void Matrix<ElemType>::SyncDevice(DEVICEID_TYPE deviceId)
+/*static*/ double Matrix<ElemType>::SyncDevice(DEVICEID_TYPE deviceId)
 {
     if (deviceId >= 0)
-        GPUMatrix<ElemType>::SyncDevice(deviceId);
+        return GPUMatrix<ElemType>::SyncDevice(deviceId);
+    return 0;
 }
 
 template <class ElemType>

@@ -174,9 +174,9 @@ namespace CNTK
         }
     }
 
-    /*static*/ void NDArrayView::Sync(const DeviceDescriptor& device)
+    /*static*/ double NDArrayView::Sync(const DeviceDescriptor& device)
     {
-        Matrix<float>::SyncDevice(AsCNTKImplDeviceId(device));
+        return Matrix<float>::SyncDevice(AsCNTKImplDeviceId(device));
     }
 
     void NDArrayView::SetValue(double value)
