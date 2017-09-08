@@ -510,6 +510,107 @@ namespace CNTK
 // ===========================================================================
 
 // ---------------------------------------------------------------------------
+// cuda stats -- helper for profiling execution cost (CPU, GPU)
+// ---------------------------------------------------------------------------
+
+class PCTimer // roll our own; high_resolution_timer is reportedly not high-resolution (0.1 us)
+{
+    LARGE_INTEGER freq, start;
+    double total;
+public:
+    PCTimer() { if (!QueryPerformanceFrequency(&freq)) RuntimeError("PCTimer: QueryPerformanceFrequency failure"); } // count ticks per second
+    void Start() { QueryPerformanceCounter(&start); }
+    double Stop() // each read gives time elapsed since start, in seconds
+    {
+        LARGE_INTEGER end;
+        QueryPerformanceCounter(&end);
+        let elapsed = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+        total += elapsed;
+        return elapsed;
+    }
+    double Total() const { return total; }
+};
+struct CudaStats
+{
+    PrimitiveOpType op = PrimitiveOpType::UnknownOP;
+    const wchar_t* opLabel = nullptr;
+    size_t category = 0; // 1 = sparse, 2 = not an op
+    size_t numInvocations = 0;
+    size_t totalElements = 0;  // sum of all output elements, for a rough indication of utilization
+    PCTimer timerLaunch;
+    double cudaElapsed = 0;
+};
+vector<CudaStats> cudaStats;
+// call this at start
+// The interface is quite horrible w.r.t. device. We just need a flag.
+CudaStats* BeginCudaStats(PrimitiveOpType op, const wchar_t* opLabel, size_t category = 0, size_t totalElements = 0, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
+{
+    if (!ShouldLogMemoizeStats())
+        return nullptr;
+    cudaStats.resize(4 * (size_t)PrimitiveOpType::UnknownOP);
+    auto* cudaStatsPtr = &cudaStats[(size_t)op * 4 + category];
+    cudaStatsPtr->op = op; // (really only needed the first time)
+    cudaStatsPtr->opLabel = opLabel;
+    if (!cudaStatsPtr->opLabel)
+        cudaStatsPtr->opLabel = PrimitiveOpTypeName(op).c_str();
+    cudaStatsPtr->category = category;
+    cudaStatsPtr->numInvocations++;
+    cudaStatsPtr->totalElements += totalElements;
+    if (logMemoizeStatsCounter & 1)
+        NDArrayView::Sync(device); // reset CUDA timer
+    cudaStatsPtr->timerLaunch.Start();
+    return cudaStatsPtr;
+}
+// call this at end
+void EndCudaStats(CudaStats* cudaStatsPtr, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
+{
+    if (cudaStatsPtr)
+    {
+        cudaStatsPtr->timerLaunch.Stop();
+        if (logMemoizeStatsCounter & 1)
+            cudaStatsPtr->cudaElapsed += NDArrayView::Sync(device);
+    }
+}
+// guard class to make it easy to use
+struct CudaStatsGuard
+{
+    CudaStats* cudaStatsPtr;
+    template <typename ...CtorArgTypes>
+    CudaStatsGuard(CtorArgTypes&& ...ctorArgs) : cudaStatsPtr(BeginCudaStats(std::forward<CtorArgTypes>(ctorArgs)...)) { }
+    ~CudaStatsGuard() { EndCudaStats(cudaStatsPtr); }
+};
+// and this at the end of when you want to dump the log
+void ShowCudaStats()
+{
+    if (ShouldLogMemoizeStats())
+    {
+        for (size_t category = 0; category < 4; category++) // show non-sparse visually separated from sparse
+        {
+            double totalLaunch = 0;
+            double totalExec = 0;
+            wstring prefix = category == 1 ? L"sparse " : category == 2 ? L"free " : category == 3 ? L"batch " : L"";
+            for (let& s : cudaStats) if (s.category == category && s.numInvocations > 0)
+            {
+                fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + s.opLabel).c_str(),
+                        s.timerLaunch.Total(), s.cudaElapsed,
+                        1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * s.cudaElapsed / (double)s.numInvocations,
+                        (int)s.numInvocations,
+                        s.totalElements / (double)s.numInvocations);
+                totalLaunch += s.timerLaunch.Total();
+                totalExec += s.cudaElapsed;
+            }
+            if (prefix != L"batch ") // (batch ones are nested, so sum is meaningless)
+                fprintf(stderr, "%Stotal launch + exec time: %.4f s + %.4f s\n", prefix.c_str(), totalLaunch, totalExec);
+        }
+        cudaStats.clear();
+    }
+    // control how often this is active
+    logMemoizeStatsCounter++;
+    if (logMemoizeStatsCounter == logMemoizeStatsPeriod)
+        logMemoizeStatsCounter = 0;
+}
+
+// ---------------------------------------------------------------------------
 // OpSpecificConditionKindTable -- singleton lookup table for the OSC codes
 // ---------------------------------------------------------------------------
 
@@ -559,8 +660,10 @@ public:
         if (numElements > ARENASIZE || format != StorageFormat::Dense)
         {
             //fprintf(stderr, "allocating %d elements of format %d, outside arena\n", (int)shape.TotalSize(), (int)format);
+            CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"single NewNDArrayView", 3, numElements);
             return make_shared<NDArrayView>(dataType, format, shape, device);
         }
+        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"arena NewNDArrayView", 3, numElements);
         // If arena not large enough then waste its remainder and just allocate a fresh one.
         // This abandons the current m_arena. This will not cause a memory leak, however:
         // Since the slices into it that were returned before all hold a ref-count to that arena,
@@ -963,6 +1066,7 @@ class Variable::AutoBatch
         // schedule an operation that has been confirmed to be ready
         void Schedule(PrimitiveFunction* f)
         {
+            auto* cudaStatsPtr = BeginCudaStats(PrimitiveOpType::ToSequence, L"Schedule()", 3);
             let op = f->m_op;
             // special case BatchNormalization: we must account for all occurences
             if (op == PrimitiveOpType::BatchNormalization)
@@ -992,6 +1096,7 @@ class Variable::AutoBatch
                 // none fit: open a new set
                 m_regularOps.push_back(NonOwningFunctionListBuilder(f));
             }
+            EndCudaStats(cudaStatsPtr);
         }
         // notify a function that an input has become available; schedule it when all inputs are now available
         void NotifyInputAvailable(PrimitiveFunction* f)
@@ -1020,6 +1125,7 @@ class Variable::AutoBatch
         // select the next batched op to execute
         NonOwningFunctionList pop_best()
         {
+            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::PastValue, L"pop_best()", 3, m_regularOps.size());
             //for (auto iter = m_regularOps.begin(); iter != m_regularOps.end(); iter++)
             //    if (iter->front()->Name() == L"vecSoftmaxMinus")
             //        fprintf(stderr, "### %S pending\n", iter->front()->Name().c_str()), fflush(stderr);
@@ -1336,62 +1442,6 @@ class Variable::AutoBatch
         LogFunction(f, profiler ? profiler->Name() : L"-", markIndex);
     }
 
-    // for memoization statistics
-    class PCTimer // roll our own; high_resolution_timer is reportedly not high-resolution (0.1 us)
-    {
-        LARGE_INTEGER freq, start;
-        double total;
-    public:
-        PCTimer() { if (!QueryPerformanceFrequency(&freq)) RuntimeError("auto_timer: QueryPerformanceFrequency failure"); } // count ticks per second
-        void Start() { QueryPerformanceCounter(&start); }
-        double Stop() // each read gives time elapsed since start, in seconds
-        {
-            LARGE_INTEGER end;
-            QueryPerformanceCounter(&end);
-            let elapsed = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
-            total += elapsed;
-            return elapsed;
-        }
-        double Total() const { return total; }
-    };
-    struct CudaStats
-    {
-        PrimitiveOpType op = PrimitiveOpType::UnknownOP;
-        bool hasSparse = false;
-        size_t numInvocations = 0;
-        size_t totalElements = 0;  // sum of all output elements, for a rough indication of utilization
-        PCTimer timerLaunch;
-        double cudaElapsed = 0;
-    };
-    vector<CudaStats> cudaStats;
-    // call this at start
-    // The interface is quite horrible w.r.t. device. We just need a flag.
-    CudaStats* BeginCudaStats(PrimitiveOpType op, bool isSparse = false, size_t totalElements = 0, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
-    {
-        if (!ShouldLogMemoizeStats())
-            return nullptr;
-        cudaStats.resize(2 * (size_t)PrimitiveOpType::UnknownOP);
-        auto* cudaStatsPtr = &cudaStats[(size_t)op * 2 + (isSparse ? 1 : 0)];
-        cudaStatsPtr->op = op; // (really only needed the first time)
-        cudaStatsPtr->hasSparse = isSparse;
-        cudaStatsPtr->numInvocations++;
-        cudaStatsPtr->totalElements += totalElements;
-        if (logMemoizeStatsCounter & 1)
-            NDArrayView::Sync(device); // reset CUDA timer
-        cudaStatsPtr->timerLaunch.Start();
-        return cudaStatsPtr;
-    }
-    // call this at end
-    void EndCudaStats(CudaStats* cudaStatsPtr, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
-    {
-        if (cudaStatsPtr)
-        {
-            cudaStatsPtr->timerLaunch.Stop();
-            if (logMemoizeStatsCounter & 1)
-                cudaStatsPtr->cudaElapsed += NDArrayView::Sync(device);
-        }
-    }
-
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool spliceIsGather = false)
     {
@@ -1416,7 +1466,7 @@ class Variable::AutoBatch
         {
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
             let logAsOp = (f.m_op == PrimitiveOpType::Splice && spliceIsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
-            cudaStatsPtr = BeginCudaStats(logAsOp, hasSparse, outputShape.TotalSize(), inputValues[0]->Device());
+            cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, IsViewOp(f.m_op) ? 2 : hasSparse ? 1 : 0, outputShape.TotalSize(), inputValues[0]->Device());
         }
         // execute it
         GetOutputFields(&f).m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
@@ -1511,6 +1561,7 @@ class Variable::AutoBatch
     // TODO: Choose one name: ShortCircuit? Duplicate? Alias? Common subexpression?
     NonOwningFunctionList ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(NonOwningFunctionList ops)
     {
+        auto* cudaStatsPtr = BeginCudaStats(PrimitiveOpType::ReconcileDynamicAxis, L"CSE", 3);
         NonOwningFunctionListBuilder filteredOps;
         for (auto iter = ops.begin(); iter != ops.end(); ) // create the batched tensors
         {
@@ -1550,6 +1601,7 @@ class Variable::AutoBatch
             filteredOps.push_back(f);
         break_iter:;
         }
+        EndCudaStats(cudaStatsPtr);
         return filteredOps;
     }
 
@@ -2082,13 +2134,13 @@ public:
         //  - create our graph overlay, esp. short-circuit see-through ops
         //  - mark all nodes w.r.t. how many inputs they are waiting for before being computable
         //  - prepare and schedule first set
-        auto* cudaStatsPtr = BeginCudaStats(PrimitiveOpType::LabelsToGraph/*misusing this for graph initializing*/);
+        auto* cudaStatsPtr = BeginCudaStats(PrimitiveOpType::LabelsToGraph/*misusing this for graph initializing*/, L"forward init", 3);
         m_visitorTag.Begin();
         RBuildForwardGraphAndSchedule(v, 0);
-        EndCudaStats(cudaStatsPtr, DeviceDescriptor::CPUDevice());
+        EndCudaStats(cudaStatsPtr);
         // phase 2:
         //  - compute the entire graph
-        cudaStatsPtr = BeginCudaStats(PrimitiveOpType::Block/*misusing this for actual op*/);
+        cudaStatsPtr = BeginCudaStats(PrimitiveOpType::Block/*misusing this for actual op*/, L"forward loop", 3);
         while (!m_schedule.empty()) // main computation loop over all operations
         {
             // select the "best" amongst the scheduled op batches
@@ -2122,41 +2174,11 @@ public:
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
         CacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
-        EndCudaStats(cudaStatsPtr, DeviceDescriptor::CPUDevice());
+        EndCudaStats(cudaStatsPtr);
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
         // log stats
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
-        if (ShouldLogMemoizeStats())
-        {
-            for (size_t free = 0; free < 2; free++)
-            {
-                let isView = free == 0; // show free ops first
-                double totalLaunch = 0;
-                double totalExec = 0;
-                for (size_t sparse = 0; sparse < 2; sparse++) // show non-sparse visually separated from sparse
-                {
-                    let isSparse = sparse == 1;
-                    for (let& s : cudaStats) if (s.numInvocations && (IsViewOp(s.op) == isView) && s.hasSparse == isSparse)
-                    {
-                        let prefix = s.hasSparse ? L"sparse " : L"";
-                        let name = PrimitiveOpTypeName(s.op);
-                        let execTime = s.cudaElapsed;// s.timerRun.Total() - s.timerSync.Total(); // TODO: timerRun etc. should go
-                        fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + name).c_str(),
-                            s.timerLaunch.Total(), execTime,
-                            1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * execTime / (double)s.numInvocations,
-                            (int)s.numInvocations,
-                            s.totalElements / (double)s.numInvocations);
-                        totalLaunch += s.timerLaunch.Total();
-                        totalExec += execTime;
-                    }
-                }
-                fprintf(stderr, "-> total launch + exec time: %.4f s + %.4f s\n", totalLaunch, totalExec);
-            }
-            cudaStats.clear(); // (should not be needed, will get cleared when destructing ther Autobatch instance)
-        }
-        logMemoizeStatsCounter++;
-        if (logMemoizeStatsCounter == logMemoizeStatsPeriod)
-            logMemoizeStatsCounter = 0;
+        ShowCudaStats();
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedForward: %d forward ops executed besides %d gathers, %d views, and %d CSEs, in nominally %d PrimitiveFunctions on %d known values\n",
                 (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneGatherOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numCommonSubexpressionsEliminated, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);
