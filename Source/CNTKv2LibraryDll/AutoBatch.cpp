@@ -1294,7 +1294,7 @@ class Variable::AutoBatch
         }
         f.m_autoBatchState.m_pendingInputs = pendingInputs;
         // and some more initializations since we are here
-        f.m_autoBatchState.m_aliasHash = SIZE_MAX;        // aliasHash is used for detecting aliases (identical ops) in batched ops
+        //f.m_autoBatchState.m_aliasHash = SIZE_MAX;        // aliasHash is used for detecting aliases (identical ops) in batched ops
         f.m_autoBatchState.m_depthHint = maxDepthHint;    // this controls batching priority; ops with higher depth hint will be held back longer
         // if none then operation is ready
         if (pendingInputs == 0)
@@ -1582,11 +1582,11 @@ class Variable::AutoBatch
     // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
     // TODO: instead of doing this lazily, should it be done in Schedule()?
     // TODO: ^^ no need to do this lazily actually. Only called once.
-    static void ComputeAliasHash(PrimitiveFunction& f)
+    static size_t ComputeAliasHash(PrimitiveFunction& f)
     {
-        if (f.m_autoBatchState.m_aliasHash != SIZE_MAX) // lazy  --TODO: no need; we don't need to even save this
-            LogicError("ComputeAliasHash should never be called twice on the same object");
-            //return;
+        //if (f.m_autoBatchState.m_aliasHash != SIZE_MAX) // lazy  --TODO: no need; we don't need to even save this
+        //    LogicError("ComputeAliasHash should never be called twice on the same object");
+        //    //return;
         size_t hash = 0;
         // we only hash the argument identities; that is, their base pointer
         // We already know that opcode and shapes are identical.
@@ -1602,7 +1602,8 @@ class Variable::AutoBatch
             hash += (size_t)(addrForHash >> 8); // also hash the page number, in case allocation is page-aligned
             hash *= multiplier;
         }
-        f.m_autoBatchState.m_aliasHash = hash;
+        //f.m_autoBatchState.m_aliasHash = hash;
+        return hash;
     }
 
     // detect equivalent Functions and uniq them, redirecting dups to the first one
@@ -1618,9 +1619,10 @@ class Variable::AutoBatch
             ++iter;
             // PERF BUGBUG: This gives O(N^2) complexity. Fix this once I get correct behavior.
             //              For now, it seems using the hash with a linear search gets it fast enough, but we should use a proper hash table of course.
-            ComputeAliasHash(*f);
+            let fHash = ComputeAliasHash(*f);
+            f->m_autoBatchState.m_aliasHash = fHash;
             // PERF BUGBUG: no need to cache the hash, as it is only ever used on this very list
-            let fHash = f->m_autoBatchState.m_aliasHash;
+            //let fHash = f->m_autoBatchState.m_aliasHash;
             let& inputs = f->m_inputs;
             let arity = inputs.size();
             for (auto jter = filteredOps.begin(); jter != filteredOps.end(); ++jter)
@@ -1648,6 +1650,7 @@ class Variable::AutoBatch
             }
             // no matching one was found
             f->m_autoBatchState.m_aliasList = nullptr; // first entry in a potential list of duplicates
+            //f->m_autoBatchState.m_aliasHash = fHash; // TODO: later this comes out of the hash table itself
             filteredOps.push_back(f);
         break_iter:;
         }
