@@ -1535,35 +1535,71 @@ class Variable::AutoBatch
         }
     }
 
+    static uintptr_t GetValueAddrForHash(const NDArrayViewPtr& value)
+    {
+        return
+            /*if*/ value->IsSparse() ?  // DataBuffer() is only available for dense. --PERF BUGBUG: We can find a better hash for sparse data, e.g. its data buffer.
+                (uintptr_t)&value
+            /*else if*/: value->GetDataType() == DataType::Float ?
+                (uintptr_t)value->DataBuffer<float>() / sizeof(float)
+            /*else*/:
+                (uintptr_t)value->DataBuffer<double>() / sizeof(double);
+    }
+
+    // get an offsettable address of m_value for hashing purposes
+    static uintptr_t CacheAndGetValueAddrForHash(/*const*/ VariableFields& fields)
+    {
+        auto addrForHash = fields.m_valueAddrForHash;
+        if (!addrForHash)
+        {
+            if (fields.m_value) // if we have a m_value then get it from there
+                addrForHash = GetValueAddrForHash(fields.m_value);
+            else // we don't: get it from the redirect
+            {
+                fail_if(!fields.m_redirection, "CacheAndGetValueAddrForHash called for Variable with no value yet??");
+                // get it from the redirect
+                auto& outFields = GetOutputFields(fields.m_redirection.m_function);
+                fail_if(&fields == &outFields, "CacheAndGetValueAddrForHash called for Function with no value yet??");
+                addrForHash = CacheAndGetValueAddrForHash(outFields); // recurse (result may be see-through into a batched slice)
+                if (fields.m_redirection.m_index != SIZE_MAX && fields.m_redirection.m_index != 0 && !fields.m_isSparse) // correct for slice
+                {
+                    // (BUGBUG: We skip this for sparse, which will prevent CSE discovery. Needs a solution.)
+                    // determine stride
+                    let& shape = outFields.m_shape;
+                    let stride = shape.TotalSize() / shape.Dimensions().back(); // BUGBUG: This must use the actual stride from the TensorView; this is a hack.
+                    addrForHash += fields.m_redirection.m_index * stride;
+                }
+            }
+            fields.m_valueAddrForHash = addrForHash;
+            // WARNING: Expensive! Disable once it seems to work.
+            //fail_if(!fields.m_isSparse && addrForHash != GetValueAddrForHash(CacheAndGetValue(fields)), "CacheAndGetValueAddrForHash computed wrong hash value");
+            // Note: ^^ broken for sparse. May miss CSE.
+        }
+        return addrForHash;
+    }
+
     // compute a hash value for f
     // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
     // TODO: instead of doing this lazily, should it be done in Schedule()?
+    // TODO: ^^ no need to do this lazily actually. Only called once.
     static void ComputeAliasHash(PrimitiveFunction& f)
     {
         if (f.m_autoBatchState.m_aliasHash != SIZE_MAX) // lazy  --TODO: no need; we don't need to even save this
-            return;
+            LogicError("ComputeAliasHash should never be called twice on the same object");
+            //return;
         size_t hash = 0;
         // we only hash the argument identities; that is, their base pointer
         // We already know that opcode and shapes are identical.
         // If we really allow strides in the future, we may include them in the hash.
-        static const size_t multiplier = 1572869; // an arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
+        static const size_t multiplier = 1572869; // 4 1-bits. An arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
         let& inputs = f.m_inputs;
         let numInputs = inputs.size();
         CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ElementTimes, L"ComputeAliasHash()", 3, numInputs);
         for (size_t k = 0; k < numInputs; k++)
         {
-            // PERF BUGBUG: This vv is horrible, as it force-realizes the slices. Also, do we need to handle sliced redirects? This may lead to realizing all lazy slices...??
-            let& value = *CacheAndGetValue(inputs[k]);
-            let dataBuffer =
-                /*if*/ value.IsSparse() ?  // DataBuffer() is only available for dense. --PERF BUGBUG: We can find a better hash for sparse data, e.g. its data buffer.
-                    (intptr_t)&value
-                /*else if*/: value.GetDataType() == DataType::Float ?
-                    (intptr_t)value.DataBuffer<float>()/sizeof(float)
-                /*else*/:
-                    (intptr_t)value.DataBuffer<double>()/sizeof(double);
-            hash += (size_t)dataBuffer; // add the page number, in case allocation is page-aligned
-            //hash *= multiplier;
-            hash += (size_t)(dataBuffer >> 8); // also hash the page number, in case allocation is page-aligned
+            let addrForHash = CacheAndGetValueAddrForHash(GetInputFields(inputs[k]));
+            hash += (size_t)addrForHash;
+            hash += (size_t)(addrForHash >> 8); // also hash the page number, in case allocation is page-aligned
             hash *= multiplier;
         }
         f.m_autoBatchState.m_aliasHash = hash;
