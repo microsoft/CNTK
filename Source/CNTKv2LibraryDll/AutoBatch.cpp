@@ -609,6 +609,11 @@ void ShowCudaStats()
     if (logMemoizeStatsCounter == logMemoizeStatsPeriod)
         logMemoizeStatsCounter = 0;
 }
+// call this at start to eliminate potential carry-over from the previous minibatch
+void ResetCudaStats()
+{
+    cudaStats.clear();
+}
 
 // ---------------------------------------------------------------------------
 // OpSpecificConditionKindTable -- singleton lookup table for the OSC codes
@@ -2297,6 +2302,7 @@ public:
 #ifdef LOG_DETAILS
         Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), L"r "); });
 #endif
+        ResetCudaStats();
         // phase 1 (all done in the same function call):
         //  - create our graph overlay, esp. short-circuit see-through ops
         //  - mark all nodes w.r.t. how many inputs they are waiting for before being computable
