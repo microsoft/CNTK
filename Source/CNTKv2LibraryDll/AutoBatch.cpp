@@ -1632,9 +1632,12 @@ class Variable::AutoBatch
                     goto next_jter;
                 for (size_t k = 0; k < jnputs.size(); k++)
                 {
-                    //if (!CacheAndGetValue(inputs[k])->IsAliasOf(CacheAndGetValue(jnputs[k])))
-                    // PERF BUGBUG: This vv is horrible (we force-realize the m_value). Alleviated by the hash though.
-                    if (!CacheAndGetValue(inputs[k])->IsAliasOf(CacheAndGetValue(jnputs[k])))
+                    auto& fields = GetInputFields(inputs[k]);
+                    auto& fjelds = GetInputFields(jnputs[k]);
+                    if (&fields == &fjelds)
+                        continue;
+                    // PERF BUGBUG: This vv is suboptimal as we force-realize the m_value, which is a slice. Alleviated by the hash though.
+                    if (!CacheAndGetValue(fields)->IsAliasOf(CacheAndGetValue(fjelds)))
                         goto next_jter;
                 }
                 // all inputs are the same: f is a dup of 'jter'
