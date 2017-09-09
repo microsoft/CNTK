@@ -23,6 +23,8 @@ python install_data_and_model.py
 2. Install Nuget package CNTK.GPU version v2.2.0 or higher for CSTrainingGPUExamples
 3. Run following examples:
 
+#### LogisticRegression
+A hello-world example to train and evaluate a logistic regression model using C#/API. See [CNTK 101: Logistic Regression and ML Primer](https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_101_LogisticRegression.ipynb) for more details.
 #### MNISTClassifier 
 This class shows how to build and train a classifier for handwritting data (MNIST).  
 #### CifarResNetClassifier 

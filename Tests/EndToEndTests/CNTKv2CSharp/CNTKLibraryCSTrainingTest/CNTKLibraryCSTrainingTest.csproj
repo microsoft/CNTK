@@ -66,6 +66,9 @@
     <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\CifarResNetClassifier.cs">
       <Link>CifarResNetClassifier.cs</Link>
     </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\LogisticRegression.cs">
+      <Link>LogisticRegression.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\LSTMSequenceClassifier.cs">
       <Link>LSTMSequenceClassifier.cs</Link>
     </Compile>
