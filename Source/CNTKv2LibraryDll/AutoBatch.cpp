@@ -1606,17 +1606,127 @@ class Variable::AutoBatch
         return hash;
     }
 
+    // class to help deduplicating
+    class DedupSet
+    {
+        static const size_t numBuckets = 65536;
+        class Bucket
+        {
+            Bucket* m_nextBucket = nullptr;
+            PrimitiveFunction* m_bucketList = nullptr; // list of items in this bucket, linked via m_bucketList
+        public:
+            // iterate over buckets themselves (note: not over the bucket *list*). This is used during cleanup.
+            Bucket* ClearAndNext()
+            {
+                auto* next = m_nextBucket;
+                m_nextBucket = nullptr;
+                m_bucketList = nullptr; // abandon the list
+                return next;
+            }
+            void CheckClean() const
+            {
+                fail_if(m_nextBucket || m_bucketList, "DedupSet bucket was not cleaned up upon last use");
+            }
+            // add an entry to the bucket list
+            void PushFront(PrimitiveFunction* f, Bucket* &cleanupList)
+            {
+                if (!m_bucketList) // first time (bucket just became active): register the bucket for cleanup
+                {
+                    m_nextBucket = cleanupList;
+                    cleanupList = this;
+                }
+                // insert f into the bucket
+                f->m_autoBatchState.m_bucketList = m_bucketList;
+                m_bucketList = f;
+            }
+            // use these to iterate over the entries
+            PrimitiveFunction* Begin() const { return m_bucketList; }
+            PrimitiveFunction* End() const { return nullptr; }
+            void Next(PrimitiveFunction* &f) const { f = f->m_autoBatchState.m_bucketList; }
+        };
+        vector<Bucket> m_buckets = vector<Bucket>(numBuckets);
+        Bucket* m_firstBucketInUse = nullptr; // for cleanup at the end: all active buckets are registered here
+    public:
+        // prepare for next use (clear out all entries)
+        void Reset()
+        {
+            for (auto* bucket = m_firstBucketInUse; bucket; bucket = bucket->ClearAndNext())
+                ;
+            m_firstBucketInUse = nullptr;
+            CheckClean();
+        }
+        // check that we are clean
+        void CheckClean() const
+        {
+            fail_if(m_firstBucketInUse, "DedupSet was not cleaned up upon last use");
+            //for (let& bucket : m_buckets) // expensive thorough check
+            //    bucket.CheckClean();
+        }
+        // add to set and return nullptr, unless f is an alias of something that's already in the set; then return that
+        PrimitiveFunction* FindDuplicateOrAddToSet(PrimitiveFunction* f)
+        {
+            let fHash = ComputeAliasHash(*f);
+            let fIndex = fHash % numBuckets;
+            auto* bucket = &m_buckets[fIndex]; // bucket for f
+            // search for an alias in the list. Most of the same this will be a match, but we must confirm.
+            let& inputs = f->m_inputs;
+            let arity = inputs.size();
+            for (auto* alias = bucket->Begin(); alias != bucket->End(); bucket->Next(alias)) // iterate over all entries with the same hash value
+            {
+                for (size_t k = 0; k < arity; k++)
+                {
+                    auto& fields      = GetInputFields(inputs[k]);
+                    auto& aliasFields = GetInputFields(alias->m_inputs[k]);
+                    if (&fields == &aliasFields)
+                        continue;
+                    // PERF BUGBUG: This vv is suboptimal as we force-realize the m_value, which is a slice. Alleviated by the hash though.
+                    if (!CacheAndGetValue(fields)->IsAliasOf(CacheAndGetValue(aliasFields)))
+                        goto try_next;
+                }
+                // all inputs are the same: f is a dup of 'alias'
+                return alias; // was indeed an alias
+            try_next:; // this bucket-list entry does not match
+            }
+            // no alias found: insert into the bucket
+            bucket->PushFront(f, m_firstBucketInUse);
+            return nullptr; // it was a new one
+        }
+    };
+    DedupSet m_dedupSet; // TODO: make this a static thread local, to avoid reallocating the bucket list
+
     // detect equivalent Functions and uniq them, redirecting dups to the first one
     // Returns a filtered list. Call this at start of batched execution.
     // TODO: Choose one name: ShortCircuit? Duplicate? Alias? Common subexpression?
     NonOwningFunctionList ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(NonOwningFunctionList ops)
     {
         CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ReconcileDynamicAxis, L"CSE", 3, ops.size());
+        m_dedupSet.CheckClean(); // verify that we have cleaned up correctly
         NonOwningFunctionListBuilder filteredOps;
         for (auto iter = ops.begin(); iter != ops.end(); ) // create the batched tensors
         {
             let f = iter;
             ++iter;
+            // f has been taken out of the list, its m_link field is unused. If it is not a dup, then m_link will live in the filteredOps list instead.
+#if 1
+            auto* duplicate = m_dedupSet.FindDuplicateOrAddToSet(f); // this is now O(1) in most cases
+            if (!duplicate) // no matching one was found: start a new list, and return in filteredOps
+            {
+                // note that the above call has added f to the dedup table. It will be returned in the future for any alias we find.
+                f->m_autoBatchState.m_aliasList = nullptr; // first entry in a potential list of duplicates
+                filteredOps.push_back(f); // now m_link is used again
+            }
+            else // duplicate: add f to the duplicate list (which must already be in filteredOps list)
+            {
+#if 1           // TODO: one day try if the #if 0 branch works. It should (but failed earlier on). Would allow to remove the brittle m_autoBatchState.m_aliasList.
+                f->m_autoBatchState.m_link = (PrimitiveFunction*)-1; // (for good measure--it is not part of any m_link chain anymore)
+                f->m_autoBatchState.m_aliasList = duplicate->m_autoBatchState.m_aliasList;
+                duplicate->m_autoBatchState.m_aliasList = f; // duplicate is the original anchor; it is the root of a linked list into the aliases
+#else
+                FinalizeBatchedOpAndUpdateSchedule(f, dynamic_pointer_cast<PrimitiveFunction>(jter->shared_from_this()));
+#endif
+                m_stats.numCommonSubexpressionsEliminated++;
+            }
+#else
             // PERF BUGBUG: This gives O(N^2) complexity. Fix this once I get correct behavior.
             //              For now, it seems using the hash with a linear search gets it fast enough, but we should use a proper hash table of course.
             let fHash = ComputeAliasHash(*f);
@@ -1656,7 +1766,9 @@ class Variable::AutoBatch
             //f->m_autoBatchState.m_aliasHash = fHash; // TODO: later this comes out of the hash table itself
             filteredOps.push_back(f);
         break_iter:;
+#endif
         }
+        m_dedupSet.Reset(); // clean up after ourselves
         return filteredOps;
     }
 
@@ -2195,7 +2307,6 @@ public:
         EndCudaStats(cudaStatsPtr);
         // phase 2:
         //  - compute the entire graph
-        cudaStatsPtr = BeginCudaStats(PrimitiveOpType::Block/*misusing this for actual op*/, L"forward loop", 3);
         while (!m_schedule.empty()) // main computation loop over all operations
         {
             // select the "best" amongst the scheduled op batches
@@ -2226,10 +2337,10 @@ public:
                 }
             }
             // execute it, and also update all outputs' values and consumers, and the schedule
+            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::Block/*misusing this for actual op*/, L"forward execute", 3);
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
         CacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
-        EndCudaStats(cudaStatsPtr);
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
         // log stats
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.

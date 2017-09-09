@@ -868,6 +868,7 @@ namespace CNTK
             size_t m_pendingInputs;          // during batched forward: counter how many inputs have already become available
             PrimitiveFunction* m_link;       // temporary linked list, e.g. for batched operations
             PrimitiveFunction* m_aliasList;  // list of aliases (common subexpression), local to ExecuteBatchedOpAndUpdateSchedule()
+            PrimitiveFunction* m_bucketList; // list of hach-table entries (for CSE, local to class DedupSet)
             size_t m_aliasHash = SIZE_MAX-1; // hash for alias detection (common subexpression elimination)    --set to -1 to detect if we miss to initialize; remove this
             size_t m_depthHint;              // max of depth hints over all inputs
             size_t m_batchNormId = INT_MAX-1; // 0 if none   --TODO: INT_MAX chosen as to cause an access violation if left unchanged
