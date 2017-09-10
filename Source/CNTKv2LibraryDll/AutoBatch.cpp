@@ -667,7 +667,7 @@ public:
         if (numElements > ARENASIZE || format != StorageFormat::Dense)
         {
             //fprintf(stderr, "allocating %d elements of format %d, outside arena\n", (int)shape.TotalSize(), (int)format);
-            CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"single NewNDArrayView", 3, numElements);
+            //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"single NewNDArrayView", 3, numElements);
             return make_shared<NDArrayView>(dataType, format, shape, device);
         }
         // If arena not large enough then waste its remainder and just allocate a fresh one.
@@ -680,7 +680,7 @@ public:
         if (!s_currentArena || numElements > (ARENASIZE - s_currentArenaUsed) ||
             dataType != s_currentArena->GetDataType() || device != s_currentArena->Device())
         {
-            CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
+            //CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
 #if 0       // BUGBUG: This does not work for unknown reasons. The code below works, but once I uncomment the SetValue(),
             //         it produces a loss of 0. Somehow the buffer is still being referenced, likely by a CUDA
             //         operation with output in a different arena. However, SetValue() calls cudaMemset(), which runs on the NULL stream,
@@ -713,7 +713,7 @@ public:
 #endif
             s_currentArenaUsed = 0;
         }
-        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"arena NewNDArrayView", 3, numElements);
+        //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"arena NewNDArrayView", 3, numElements);
         vector<size_t> startOffset{ s_currentArenaUsed };
         vector<size_t> extent{ numElements };
         //NDArrayViewPtr region = s_currentArena->SliceView(startOffset, extent); // SliceView() adjusts the MatrixView
@@ -1090,6 +1090,7 @@ class Variable::AutoBatch
             // special case BatchNormalization: we must account for all occurences
             if (op == PrimitiveOpType::BatchNormalization)
             {
+                //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::BatchNormalization, L"batchNormId", 3);
                 let bnId = f->m_autoBatchState.m_batchNormId;
                 fail_if(bnId != f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>(), "m_batchNormId not initialized correctly??"); // TODO: remove once confirmed not flagging for a while
                 fail_if(m_bnPendingCounts[bnId] == 0, "m_bnPendingCounts decreased beyond initial count??");
@@ -1354,12 +1355,13 @@ class Variable::AutoBatch
     static const NDArrayViewPtr& GetCachedValue(const Variable& v)
     {
         let& value = GetInputFields(v).m_value;
-        fail_if(!value, "GetCachedValue: Variable unexpectedly has no value yet");
+        //fail_if(!value, "GetCachedValue: Variable unexpectedly has no value yet");
         return value;
     }
     // this gets the underlying NDArrayView that contains v's value, without realizing the value
     // The real value may be a view into this object that has not been realized yet.
     // Use this to find out properties, such as the device, type, and storage format.
+    // Currently only used for batched BatchNorm.
     static const NDArrayView* GetValueObject(const Variable& v)
     {
         auto& fields = GetInputFields(v);
@@ -1385,7 +1387,7 @@ class Variable::AutoBatch
     static VariableFields& GetOutputFields(const PrimitiveFunction* f)
     {
         auto& fields = *f->m_outputs[0].m_dataFields;
-        fail_if(!fields.m_redirection, "GetOutputFields() called on a function that is see-through or leaf??");
+        //fail_if(!fields.m_redirection, "GetOutputFields() called on a function that is see-through or leaf??");
         return fields;
     }
 
@@ -1511,14 +1513,14 @@ class Variable::AutoBatch
     {
         // notify consumers
         auto& fields = GetOutputFields(op);
-        fail_if(!fields.m_value && !fields.m_redirection, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
+        //fail_if(!fields.m_value && !fields.m_redirection, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
 #if 0   // this test is useful but fails for the root; enable for debugging where helpful
         if (!fields.m_consumers.size())
             LogicError("executed a function that shouldn't be executed");
 #endif
         fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi) { m_schedule.NotifyAnInputHasBecomeAvailable(fi.first); });
         // clear consumer list (this operation is done) for good measure (not really necessary, we could just leave it dangling)
-        fields.m_consumers.clear();
+        //fields.m_consumers.clear();
         //fields.m_consumers.mangle(-3333); // leave a mark that this was reset nullptr;
     }
 
@@ -1611,6 +1613,7 @@ class Variable::AutoBatch
         CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ElementTimes, L"ComputeAliasHash()", 3, numInputs);
         for (size_t k = 0; k < numInputs; k++)
         {
+            // TODO: just use object identity (follow redirects through m_index=SIZE_MAX) plus index
             let addrForHash = CacheAndGetValueAddrForHash(GetInputFields(inputs[k]));
             hash += (size_t)addrForHash;
             hash += (size_t)(addrForHash >> 8); // also hash the page number, in case allocation is page-aligned
@@ -1988,6 +1991,8 @@ class Variable::AutoBatch
                 bool allSame = true;
                 bool allConsecutiveSlices = is0Redirected && redirection0.m_index != SIZE_MAX; // to be consecutive, it must be a slice to start with
                 size_t j = 0;
+              {
+                CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, batchSize);
                 for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
                     let& input = op->m_inputs[i];
@@ -2016,6 +2021,9 @@ class Variable::AutoBatch
                     // note: Variable is just two shared_ptrs, one being NULL; so this is cheap
                     // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
                 }
+              }
+                fail_if(j != ops.size(), "bad j??");
+                fail_if(j != batchSize, "badder j??");
                 // and splice
                 if (allSame) // optimized case: all ops share the same operand: no need to batch them
                     // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
@@ -2033,6 +2041,7 @@ class Variable::AutoBatch
                         m_batchedInputs[i] = output; // note: graph already has a strong ref to output elsewhere
                     else // sub-range: splice it by taking a slice view on the previously spliced batch
                     {
+                        //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"re-batch", 3, batchSize);
                         // create a new PrimitiveFunction Slice()
                         vector<size_t> outputShape = fromDims; // determine output shape
                         outputShape[axis] = j;
@@ -2059,6 +2068,7 @@ class Variable::AutoBatch
                     // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
                     if (axis != inputBatchAxis)
                     {
+                        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"re-reshape", 3, batchSize);
                         // TODO: Any way we can fold the reshape in using m_redirect?
                         let batchedInput = m_batchedInputs[i];
                         vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
@@ -2085,6 +2095,7 @@ class Variable::AutoBatch
                 }
                 else
                 {
+                    CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, batchSize);
                     // create a new PrimitiveFunction Splice()
                     vector<size_t> outputShape; // determine output shape
                     outputShape.reserve(inputBatchAxis + 1);
@@ -2232,6 +2243,7 @@ class Variable::AutoBatch
             }
 
             // implant all results (all as lazy/virtual references through m_redirection)
+            CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3, batchSize);
             size_t j = anyBatchedInputs ? 0 : SIZE_MAX;
             for (auto op = ops.begin(); op != ops.end(); ++op)
             {
