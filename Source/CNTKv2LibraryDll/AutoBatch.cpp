@@ -1847,7 +1847,6 @@ class Variable::AutoBatch
         let isTimes       = opClass == OpSpecificConditionKind::MatrixProduct; // is special-cased
         let isElementWise = opClass != OpSpecificConditionKind::MatrixProduct && opClass != OpSpecificConditionKind::Convolution;
         // "Element-wise" really means that the inputs and the output all share the same batch axis. Also e.g. for Splice. TODO: Rename?
-        let batchSize = ops.size();
 
         // common sub-expression elimination (CSE)
         // All common sub-expressions become available at the same time and show up in the same ops list.
@@ -1855,7 +1854,7 @@ class Variable::AutoBatch
         // Those will be removed from the list. The removed ones will have a result value implanted
         // that is a lazy view onto the non-removed one.
         // Batch norm must be excluded  since we must count samples as often as they appear in the batch statistics.
-        if (!isFree && op != PrimitiveOpType::BatchNormalization && batchSize > 1)
+        if (!isFree && op != PrimitiveOpType::BatchNormalization && ops.size() > 1)
             ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
         else
             for (auto iter = ops.begin(); iter != ops.end(); ++iter) // create the batched tensors
@@ -1863,6 +1862,7 @@ class Variable::AutoBatch
         // TODO: ^^ if the CSE can directly redirect, then this loop ^^ is no longer needed
 
         // perform the op
+        let batchSize = ops.size();
         if (!isFree)
             m_stats.numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();

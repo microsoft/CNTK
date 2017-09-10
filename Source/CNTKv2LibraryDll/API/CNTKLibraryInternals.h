@@ -530,7 +530,7 @@ namespace CNTK
         // optimized for main case of 1 consumer. No std::vector in that case.
         // Note: We may want to generalize this class.
         typedef std::pair<PrimitiveFunction*, size_t> AutoBatchConsumer;
-#if 0
+#if 1
         class AutoBatchConsumers
         {
         public:
