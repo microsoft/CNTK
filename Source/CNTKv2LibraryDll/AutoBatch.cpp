@@ -589,10 +589,11 @@ void ShowCudaStats()
             double totalLaunch = 0;
             double totalExec = 0;
             wstring prefix = category == 1 ? L"sparse " : category == 2 ? L"free " : category == 3 ? L"batch " : L"";
+            fprintf(stderr, "\n");
             for (let& s : cudaStats) if (s.category == category && s.numInvocations > 0)
             {
-                fprintf(stderr, "-> %30S: %7.4f s + %7.4f s = (%9.6f + %9.6f) ms/node * %5d nodes, %9.2f elements/node\n", (prefix + s.opLabel).c_str(),
-                        s.timerLaunch.Total(), s.cudaElapsed,
+                fprintf(stderr, "-> %30S: %7.1f ms + %7.1f ms = (%9.6f + %9.6f) ms/call * %7d calls, %9.1f avsize/call\n", (prefix + s.opLabel).c_str(),
+                        1000.0 * s.timerLaunch.Total(), 1000.0 * s.cudaElapsed,
                         1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * s.cudaElapsed / (double)s.numInvocations,
                         (int)s.numInvocations,
                         s.totalElements / (double)s.numInvocations);
@@ -600,7 +601,8 @@ void ShowCudaStats()
                 totalExec += s.cudaElapsed;
             }
             if (prefix != L"batch ") // (batch ones are nested, so sum is meaningless)
-                fprintf(stderr, "%Stotal launch + exec time: %.4f s + %.4f s\n", prefix.c_str(), totalLaunch, totalExec);
+                fprintf(stderr, "=> %Stotal launch + exec time: %.4f s + %.4f s\n", prefix.c_str(), totalLaunch, totalExec);
+            fflush(stderr);
         }
         cudaStats.clear();
     }
@@ -925,7 +927,7 @@ class Variable::AutoBatch
     {
         // if really needed, this can be done as a bit-test
         // TODO: The NoOps should never be tested here, right?
-        fail_if(IsAlias(op), "IsViewOp should never be asked about a no-op, should be short-circuited before");
+        fail_if(IsAliasOp(op), "IsViewOp should never be asked about a no-op, should be short-circuited before");
         return
             op == PrimitiveOpType::StopGradient ||
             op == PrimitiveOpType::Pass         ||
@@ -937,7 +939,7 @@ class Variable::AutoBatch
 
     // predicate whether an op just passes through its input
     // This is used to decide whether we can short-circuit it in m_redirection.
-    static bool IsAlias(PrimitiveOpType op)
+    static bool IsAliasOp(PrimitiveOpType op)
     {
         // if really needed, this can be done as a bit-test
         return
@@ -990,7 +992,7 @@ class Variable::AutoBatch
     {
         NonOwningFunctionListBuilder m_viewOps;
         vector<NonOwningFunctionListBuilder> m_regularOps; // m_regularOps[] is a linked list
-        NonOwningFunctionListBuilder m_barrierOps; // TODO: currently dead
+        //NonOwningFunctionListBuilder m_barrierOps; // TODO: currently dead
         // TODO: remove barrierPendingCounts
         //vector<size_t> m_barrierPendingCounts;  // [barrier id] number of consumers of a barrier id that are not yet ready
         vector<size_t> m_bnPendingCounts = vector<size_t>(16, 0);       // [bn id] number of pending (non-ready) BatchNormalization operations. We need 0, so why not allocate a few more already
@@ -1014,8 +1016,11 @@ class Variable::AutoBatch
             {
                 // ids must match
                 // TODO: Get this from autobatch state.
-                let aId = a->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
-                let bId = b->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+                let aId = a->m_autoBatchState.m_batchNormId;
+                let bId = b->m_autoBatchState.m_batchNormId;
+                fail_if(aId != a->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>() || bId != b->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>(), "m_batchNormId not initialized correctly??"); // TODO: remove once confirmed not flagging for a while
+                //let aId = a->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+                //let bId = b->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
                 if (aId != bId)
                     return false;
                 // shape of first argument and object identities of all other arguments must match, otherwise it's an error
@@ -1085,12 +1090,12 @@ class Variable::AutoBatch
             // special case BatchNormalization: we must account for all occurences
             if (op == PrimitiveOpType::BatchNormalization)
             {
-                // PERF BUGBUG: We should have this in autobatch state by now, no? Then get it from there.
-                let bnId = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+                let bnId = f->m_autoBatchState.m_batchNormId;
+                fail_if(bnId != f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>(), "m_batchNormId not initialized correctly??"); // TODO: remove once confirmed not flagging for a while
                 fail_if(m_bnPendingCounts[bnId] == 0, "m_bnPendingCounts decreased beyond initial count??");
                 m_bnPendingCounts[bnId]--; // only those with pending count 0 are ready
             }
-            // we manage three ready sets, since two common kinds are very simple
+            // we manage two ready sets, since two common kinds are very simple
             //fail_if (IsBarrier(f), "m_barrierOps.push_back(f) should no longer be done"); // BUGBUG: We never get here since we now see through barriers for efficiency...
             if (IsViewOp(op))  // note: this, with possibly a few exceptions, Slice()
                 m_viewOps.push_back(f);
@@ -1114,7 +1119,7 @@ class Variable::AutoBatch
         }
         // notify a function that an input has become available; schedule it when all inputs are now available
         // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
-        void NotifyInputAvailable(PrimitiveFunction* f)
+        void NotifyAnInputHasBecomeAvailable(PrimitiveFunction* f)
         {
             GetOutputFields(f); // ignoring return value; this just performs a consistency check
             fail_if(f->m_autoBatchState.m_pendingInputs == 0, "pending inputs already 0 yet we are executing it??");
@@ -1124,17 +1129,20 @@ class Variable::AutoBatch
                 Schedule(f);
         }
         // test if no more ready ops
-        bool empty() const { return m_viewOps.empty() && m_regularOps.empty() && m_barrierOps.empty(); }
-        size_t size() const { return (m_viewOps.size() > 0) +  + (m_barrierOps.size() > 0); }
+        bool empty() const { return m_viewOps.empty() && m_regularOps.empty() /*&& m_barrierOps.empty()*/; }
+        //size_t size() const { return (m_viewOps.size() > 0) /*+  + (m_barrierOps.size() > 0)*/; } // TODO: What is this double +??
         size_t numBatchableOpsPending() const { return m_regularOps.size(); }
         // helper to check whether this is a BatchNormalization op that still has some instances pending
+        // TODO: just return 'true'; or maybe rename to IsBatchNormPending()
         int GetBatchNormPending(const vector<NonOwningFunctionListBuilder>::const_iterator& iter)
         {
             let& f = iter->front();
             if (f->m_op != PrimitiveOpType::BatchNormalization)
                 return 0;
-            else
-                return m_bnPendingCounts[f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>()] > 0;
+            let bnId = f->m_autoBatchState.m_batchNormId;
+            fail_if(bnId != f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>(), "m_batchNormId not initialized correctly??"); // TODO: remove once confirmed not flagging for a while
+            //let bnId = f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+            return m_bnPendingCounts[bnId] > 0;
             // TODO: get this from f->m_autoBatchState.m_batchNormId
         }
         // select the next batched op to execute
@@ -1148,13 +1156,14 @@ class Variable::AutoBatch
             // try all three queues, in priority order
             if (!m_viewOps.empty()) // view ops always go first, since they are free
                 return move(m_viewOps);
-            else if (!m_regularOps.empty()) // regular ops
+            else //if (!m_regularOps.empty()) // regular ops
             {
                 auto best = m_regularOps.begin();
                 for (auto iter = best + 1; iter != m_regularOps.end(); iter++)
                 {
                     // TODO: optimize this further, e.g. don't get autobatch state over again
                     int diff = 0;
+                    // TODO: just say if IsBatchNormPending(iter) continue;
                     diff = -(GetBatchNormPending(iter) - GetBatchNormPending(best)); // BatchNormalization with pending inputs always loses
                     if (diff) goto got_diff;
                     diff = -((int)iter->front()->m_autoBatchState.m_depthHint - (int)best->front()->m_autoBatchState.m_depthHint); // barrier: higher depthHint gets batched last
@@ -1173,8 +1182,8 @@ class Variable::AutoBatch
                 m_regularOps.erase(best); // TODO: suboptimal complexity; but a list has the same problem. Priority queue?
                 return out;
             }
-            else
-                return move(m_barrierOps); // barriers only get returned when no other op is available
+            //else
+            //    return move(m_barrierOps); // barriers only get returned when no other op is available
         }
     };
     ReadyOps m_schedule;
@@ -1212,11 +1221,11 @@ class Variable::AutoBatch
             }
             redirectedFieldsOwner = redirectedFields->m_ownerFunction.lock().get(); // this is the only place we ever call lock(); after this, we just use the raw pointer (relying on immutability)
             let redirectedOp = redirectedFieldsOwner->m_op;
-            if (!IsAlias(redirectedOp) && redirectedOp != PrimitiveOpType::Reshape)
+            if (!IsAliasOp(redirectedOp) && redirectedOp != PrimitiveOpType::Reshape)
                 break;
             // if a barrier then record the maximum depth hint encountered
             // Functions consuming this Variable are bound by the barrier (but not the function that produces the original value).
-            if (IsBarrier(redirectedFieldsOwner))
+            if (IsBarrier(redirectedFieldsOwner)) // TODO: get this from a different attribute
                 depthHint = max(depthHint, redirectedFieldsOwner->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
             // TODO: what if input is non-continuous? Then Reshape becomes a copy
             // this is a redirect
@@ -1263,12 +1272,12 @@ class Variable::AutoBatch
         // the number of occurences.
         if (f.m_op == PrimitiveOpType::BatchNormalization)
         {
-            if (!f.m_attributes.Contains(PrimitiveFunction::AttributeNameSyncId))
-                InvalidArgument("Primitive op '%S' requires an id parameter. Please use the version that takes an id.",
-                    PrimitiveOpTypeName(f.m_op).c_str());
+            //if (!f.m_attributes.Contains(PrimitiveFunction::AttributeNameSyncId))
+            //    InvalidArgument("Primitive op '%S' requires an id parameter. Please use the version that takes an id.",
+            //        PrimitiveOpTypeName(f.m_op).c_str());
             let bnId = f.m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
-            m_schedule.CountBatchNorm(bnId);
             f.m_autoBatchState.m_batchNormId = bnId; // cached here since this is tested in inner loop
+            m_schedule.CountBatchNorm(bnId);
         }
         else
             f.m_autoBatchState.m_batchNormId = 0;
@@ -1507,10 +1516,10 @@ class Variable::AutoBatch
         if (!fields.m_consumers.size())
             LogicError("executed a function that shouldn't be executed");
 #endif
-        fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi) { m_schedule.NotifyInputAvailable(fi.first); });
-        // clear consumer list (this operation is done)
+        fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi) { m_schedule.NotifyAnInputHasBecomeAvailable(fi.first); });
+        // clear consumer list (this operation is done) for good measure (not really necessary, we could just leave it dangling)
         fields.m_consumers.clear();
-        fields.m_consumers.mangle(-3333); // leave a mark that this was reset nullptr;
+        //fields.m_consumers.mangle(-3333); // leave a mark that this was reset nullptr;
     }
 
     // implant the the result of a function that was executed as a batched op
@@ -2115,17 +2124,19 @@ class Variable::AutoBatch
             if (op == PrimitiveOpType::BatchNormalization)
             {
                 // BatchNorm requires three additional parameters for the current mean and invStdDev, and the zero-mean/unit-variance intermediate. These must be kept for backprop.
+                // This is sort of a hack for now. It is not, however, an efficiency problem since there are relatively few batched BatchNorm nodes in the graph.
                 let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
                 let device = GetValueObject(m_batchedInputs[0])->Device();
                 let createParameter = [&](const NDShape& shape) -> Variable // helper to create a Parameter as if it had been initialized by RBuildForwardGraphAndSchedule()
                 {
                     let p = Parameter(m_arena.NewNDArrayView(shape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, device));
                     auto& fields = GetInputFields(p);
-                    fields.m_redirection.m_function = nullptr;
-                    fields.m_redirection.m_index = SIZE_MAX;
+                    //fields.m_redirection.m_function = nullptr; // it is already null after creation
+                    fail_if(fields.m_redirection.m_function != nullptr, "Parameter redirect not initialized??");
+                    //fields.m_redirection.m_index = SIZE_MAX;
                     // initialize m_consumers chain of function that produces the values
-                    fields.m_consumers.mangle(-5); // (temporarily, so that we can discover if this is ever used)
-                    return p;
+                    //fields.m_consumers.mangle(-5); // (temporarily, so that we can discover if this is ever used)
+                    return p; // TODO: change to return Parameter...
                 };
                 m_batchedInputs.push_back(createParameter(                 statShape));
                 m_batchedInputs.push_back(createParameter(                 statShape));
@@ -2767,19 +2778,19 @@ public:
     // This is the second function that does batching.
     // The vectors for building the lists are class members so that we reuse the malloc.
     // This is a subroutine of RAggregateGradientFromAllConsumers().
-    vector<pair<PrimitiveFunction*, size_t>> m_spliceConsumers;
-    vector<pair<PrimitiveFunction*, size_t>> m_matrixWeightConsumers;
-    vector<pair<PrimitiveFunction*, size_t>> m_summandConsumers;
-    vector<pair<PrimitiveFunction*, size_t>> m_otherConsumers;
-    void DetermineAndAddToBucket (const pair<PrimitiveFunction*, size_t>& c, bool isFirstCall = false)
+    /*Internal::AutoBatchConsumers*/vector<pair<PrimitiveFunction*, size_t>>/**/ m_spliceConsumers;
+    /*Internal::AutoBatchConsumers*/vector<pair<PrimitiveFunction*, size_t>>/**/ m_matrixWeightConsumers;
+    /*Internal::AutoBatchConsumers*/vector<pair<PrimitiveFunction*, size_t>>/**/ m_summandConsumers;
+    /*Internal::AutoBatchConsumers*/vector<pair<PrimitiveFunction*, size_t>>/**/ m_otherConsumers;
+    void ClearBuckets()
     {
-        if (isFirstCall) // first time pass true here
-        {
-            m_spliceConsumers      .clear();
-            m_matrixWeightConsumers.clear();
-            m_summandConsumers     .clear();
-            m_otherConsumers       .clear();
-        }
+        m_spliceConsumers      .clear();
+        m_matrixWeightConsumers.clear();
+        m_summandConsumers     .clear();
+        m_otherConsumers       .clear();
+    }
+    void DetermineAndAddToBucket (const Internal::AutoBatchConsumer& c)
+    {
         let* f = c.first;
         let index = c.second;
         fail_if(f->m_outputs.size() != 1, "for now only functions with a single output are supported"); // (needs some more plumbing to fix this)
@@ -2914,11 +2925,10 @@ public:
         // or a bias addition.
         // First sort all consumer gradients according to their operation.
 #if 1
-        bool firstCall = true;
+        ClearBuckets();
         fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
         {
-            DetermineAndAddToBucket(fi, firstCall);
-            firstCall = false;
+            DetermineAndAddToBucket(fi);
         });
 #else
         DetermineAndAddToBucket(fields.m_consumers.front(), /*isFirstCall=*/true);

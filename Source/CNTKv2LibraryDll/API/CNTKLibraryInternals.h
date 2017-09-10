@@ -528,10 +528,52 @@ namespace CNTK
         };
 
         // optimized for main case of 1 consumer. No std::vector in that case.
+        // Note: We may want to generalize this class.
         typedef std::pair<PrimitiveFunction*, size_t> AutoBatchConsumer;
+#if 0
+        class AutoBatchConsumers
+        {
+        public:
+            //AutoBatchConsumers() { first.first = (PrimitiveFunction*)-1; } // this initialization can be removed once this is debugged (or once we replaced this horrible construct)
+            size_t size() const { return m_numElements; }
+            bool empty() const { return size() == 0; }
+            void clear() { m_numElements = 0; m_secondary.clear(); }
+            const AutoBatchConsumer& front() const { return m_primary.front(); }
+            //void reset(AutoBatchConsumer&& fi) { first = std::move(fi); second.clear(); } // reset to one
+            void push_back(AutoBatchConsumer&& fi)
+            {
+                // optimized for main case of few consumers. No std::vector in that case.
+                if (m_numElements < m_primary.size()) // watch out: array::size() is the capacity
+                    m_primary[m_numElements] = std::move(fi);
+                else
+                    m_secondary.emplace_back(std::move(fi));
+                m_numElements++;
+            }
+            template<class F>
+            void ForAll(const F& f) const
+            {
+                if (m_numElements <= m_primary.size())
+                {
+                    for (size_t i = 0; i < m_numElements; i++) // first few consumers
+                        f(m_primary[i]);
+                }
+                else
+                {
+                    for (size_t i = 0; i < m_primary.size(); i++) // first few consumers
+                        f(m_primary[i]);
+                    for (auto& c : m_secondary) // all other consumers
+                        f(c);
+                }
+            }
+        private:
+            size_t m_numElements = 0; // number of elements
+            std::array<AutoBatchConsumer, 4> m_primary;  // the first few are stored without malloc. 4 seems a good choice.
+            std::vector<AutoBatchConsumer> m_secondary;  // additional ones go into a vector object
+        };
+#else // somehow I cannot get the above to work, too tired it seems
         struct AutoBatchConsumers : private std::pair<AutoBatchConsumer, std::vector<AutoBatchConsumer>>
         {
-            AutoBatchConsumers() { first.first = (PrimitiveFunction*)-1; } // this initialization can be removed once this is debugged (or once we replaced this horrible construct)
+            //AutoBatchConsumers() { first.first = (PrimitiveFunction*)-1; } // this initialization can be removed once this is debugged (or once we replaced this horrible construct)
             size_t size() const { return (first.first ? 1 : 0) + second.size(); }
             bool empty() const { return first.first == nullptr; }
             void clear() { first.first = nullptr; second.clear(); }
@@ -552,8 +594,8 @@ namespace CNTK
                 for (auto& c : second) // all other consumers
                     f(c);
             }
-            void mangle(int val) { first.first = (PrimitiveFunction*)(intptr_t)val; } // put an intentionally broken value that we can detect during debugging
         };
+#endif
     } // Internal
 
     // Forward-declare test fixtures, so that they can be used as friends.
