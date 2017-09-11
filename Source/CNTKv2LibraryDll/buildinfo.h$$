@@ -2,7 +2,7 @@
 #define _BUILDINFO_H 
 #define _GIT_EXIST 
 #define _BUILDBRANCH_  "HEAD"      
-#define _BUILDSHA1_    "785083753b61b00214caca3f3447fba7f9478d3d (modified)"
+#define _BUILDSHA1_    "85efd880fb5c6577ef79caffefca498b7e0b2ef0 (modified)"
 #define _MATHLIB_ "mkl"
 #define _BUILDER_ "fseide"     
 #define _BUILDMACHINE_ "FSEIDE-GPU"    
