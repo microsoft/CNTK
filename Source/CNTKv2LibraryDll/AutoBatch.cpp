@@ -23,8 +23,7 @@
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
 #define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
-#define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
-// ^^ BUGBUG: For now this is the only mode that runs, until we update the remaining batched backprop functions
+//#define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
 
 #ifdef LOG_STATS
 static size_t logMemoizeStatsPeriod = 50;
@@ -2613,12 +2612,16 @@ public:
         return move(NDArrayView::GatherBatch(inputValues, (int)axis, move(out)));
     }
 
+    typedef Internal::AutoBatchConsumer AutoBatchConsumer; // TODO: shouldn't this be done with using?
+
     // back-propagate f's outputs' m_gradient to a specified input
     // This is the standard path for all unbatched ops.
     // This wraps the PrimitiveFunction's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
     // Note that each input that is lazy should redirect into a slice in its lazy source.
-    void BackpropToUnbatched(PrimitiveFunction* f, size_t index)
+    void BackpropToUnbatched(const AutoBatchConsumer& fi)
     {
+        let* f = fi.first;
+        let index = fi.second;
 #ifdef LOG_DETAILS
         LogFunction(*f, L"bb ", index);
 #endif
@@ -2665,7 +2668,7 @@ public:
             return;
         // fast path: only one input (and not Splice, which we do in bulk)
         if (f->m_inputs.size() == 1)
-            return BackpropToUnbatched(f, 0);
+            return BackpropToUnbatched({ f, 0 });
         // Considerations:
         //  - For now we do optimize for consecutive inputs, because those would not
         //    have been transformed into a Splice operation in auto-batching.
@@ -2679,7 +2682,7 @@ public:
 #if 0
         for (size_t index = 0; index < f->m_inputs.size(); index++)
         {
-            BackpropToUnbatched(f, index);
+            BackpropToUnbatched({ f, index });
             m_stats.numBatchedBackpropToCalls--; // for now fake the call count to see the potentail impact
         }
 #else
@@ -2732,13 +2735,13 @@ public:
     {
 #if 0
         for (auto& c : consumers)
-            BackpropToUnbatched(c.first, c.second);
+            BackpropToUnbatched(c);
 #else
         // batch all outGrads, and batch all right inputs
         let numBatchItems = consumers.size();
         if (numBatchItems == 1) // fast path if only one (and the last dim is not guaranteed to be a batch dim)
             // ^^ This comment makes no sense. The batching condition is hosed (too restrictive).
-            return BackpropToUnbatched(consumers.front().first, consumers.front().second);
+            return BackpropToUnbatched(consumers.front());
         // We compute
         //  leftGrad += sum_i outGrad_i @ right_i^T
         //            = (concat_i outGrad_i) @ (concat_i right_i)^T
@@ -2786,10 +2789,10 @@ public:
     // This is the second function that does batching.
     // The vectors for building the lists are class members so that we reuse the malloc.
     // This is a subroutine of RAggregateGradientFromAllConsumers().
-    /*Internal::AutoBatchConsumers*/vector<pair<PrimitiveFunction*, size_t>>/**/ m_spliceConsumers;
-    /*Internal::AutoBatchConsumers*/vector<pair<PrimitiveFunction*, size_t>>/**/ m_matrixWeightConsumers;
-    /*Internal::AutoBatchConsumers*/vector<pair<PrimitiveFunction*, size_t>>/**/ m_summandConsumers;
-    /*Internal::AutoBatchConsumers*/vector<pair<PrimitiveFunction*, size_t>>/**/ m_otherConsumers;
+    vector<AutoBatchConsumer> m_spliceConsumers;
+    vector<AutoBatchConsumer> m_matrixWeightConsumers;
+    vector<AutoBatchConsumer> m_summandConsumers;
+    vector<AutoBatchConsumer> m_otherConsumers;
     void ClearBuckets()
     {
         m_spliceConsumers      .clear();
@@ -2797,7 +2800,7 @@ public:
         m_summandConsumers     .clear();
         m_otherConsumers       .clear();
     }
-    void DetermineAndAddToBucket (const Internal::AutoBatchConsumer& c)
+    void DetermineAndAddToBucket (const AutoBatchConsumer& c)
     {
         let* f = c.first;
         let index = c.second;
@@ -2838,13 +2841,13 @@ public:
             return true;
 #endif
         };
-#ifndef NO_BATCHED_FORWARD  // (the backward batching disable flag does not work somehow)
         // Note: This needs to be enabled for column-sparse gradients to work!
         // BUGBUG: (perf) We should also have a special path for Reshape(), as to avoid the memory copy.
         let opClass = g_oscTable[f->m_op]; // operation-specific auto-batching class
         // splice operation should use scatter
         // BUGBUG: Really only true if the Splice originated from a batching operation.
         //         User-specified Splice ops might have arguments that receive no gradient, e.g. constants.
+#if 0
         if (opClass == OpSpecificConditionKind::Splice)
             m_spliceConsumers.push_back(c);
         // matrix product
@@ -2905,18 +2908,16 @@ public:
 #ifdef NO_BATCHED_BACKPROP
         fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
         {
-            BackpropToUnbatched(fi.first, fi.second);
+            BackpropToUnbatched(fi);
         });
 #else
         // fast path: if only one consumer then there is nothing to batch
         // (with exception of Splice, which has a different optimization)
         if (fields.m_consumers.size() == 1 && fields.m_consumers.front().first->m_op != PrimitiveOpType::Splice)
         {
-            BackpropToUnbatched(fields.m_consumers.front().first, fields.m_consumers.front().second);
+            BackpropToUnbatched(fields.m_consumers.front());
             return;
         }
-
-        // ...TODO: CONTINUE HERE
 
         // auto-batched path
         // The forward prop has already batched data. However, for backprop, there can
@@ -2932,17 +2933,13 @@ public:
         // At present, we aim for weight gradients that are part of a matrix product
         // or a bias addition.
         // First sort all consumer gradients according to their operation.
-#if 1
         ClearBuckets();
         fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
         {
             DetermineAndAddToBucket(fi);
         });
-#else
-        DetermineAndAddToBucket(fields.m_consumers.front(), /*isFirstCall=*/true);
-        for (auto& c : fields.m_consumers.second)
-            DetermineAndAddToBucket(c);
-#endif
+
+        // ...TODO: CONTINUE HERE
 
         // splice bucket
         for (auto& c : m_spliceConsumers)
@@ -2957,7 +2954,7 @@ public:
 
         // others bucket
         for (auto& c : m_otherConsumers)
-            BackpropToUnbatched(c.first, c.second);
+            BackpropToUnbatched(c);
 #endif
     }
 
