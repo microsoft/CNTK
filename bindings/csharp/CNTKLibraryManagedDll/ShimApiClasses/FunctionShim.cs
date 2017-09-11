@@ -6,6 +6,7 @@
 //
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CNTK
 {
@@ -319,6 +320,26 @@ namespace CNTK
         {
             VariableVector operandVector = Helper.AsVariableVector(operands);
             return CNTKLib.Combine(operandVector, name);
+        }
+
+        public static implicit operator Function(Variable[] models)
+        {
+            return Function.Combine(models);
+        }
+
+        public Function this[int timeOffset]
+        {
+            get
+            {
+                if (timeOffset > 0)
+                {
+                    return CNTKLib.PastValue(this, (uint)Math.Abs(timeOffset));
+                }
+                else // if (timeOffset > 0)
+                {
+                    return CNTKLib.FutureValue(this, (uint)Math.Abs(timeOffset));
+                }
+            }
         }
 
     }
