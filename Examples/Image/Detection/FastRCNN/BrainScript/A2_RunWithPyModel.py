@@ -74,7 +74,7 @@ def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, dat
 
     if not os.path.exists(map_file) or not os.path.exists(roi_file) or not os.path.exists(label_file):
         raise RuntimeError("File '%s', '%s' or '%s' does not exist. "
-                           "Please run install_fastrcnn.py from Examples/Image/Detection/FastRCNN to fetch them" %
+                           "Please run install_data_and_model.py from Examples/Image/Detection/FastRCNN to fetch them" %
                            (map_file, roi_file, label_file))
 
     # read images
