@@ -86,6 +86,10 @@ Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 Write-Verbose "Copying Tutorials ..."
 Copy-Item Tutorials -Recurse -Destination $baseDropPath\Tutorials
 
+# Copy PretrainedModels
+Write-Verbose "Copying PretrainedModels ..."
+Copy-Item PretrainedModels -Recurse -Destination $baseDropPath\PretrainedModels
+
 # Copy Manual
 Write-Verbose "Copying Manual ..."
 Copy-Item Manual -Recurse -Destination $baseDropPath\Manual
