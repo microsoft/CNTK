@@ -329,9 +329,9 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
         batchModel(lossesPerSequence, features, labels);             // batch-compute the criterion
-        let collatedLosses = Splice(lossesPerSequence, Axis(0), Named("cesPerSeq"));     // collate all seq lossesPerSequence
+        let collatedLosses = Splice(lossesPerSequence, Axis(0), Named("seqLosses"));     // collate all seq lossesPerSequence
         // ^^ this is one launch per MB
-        let mbLoss = Reshape(ReduceSum(collatedLosses, Axis(0), Named("ceBatch")), NDShape{});  // aggregate over entire minibatch
+        let mbLoss = /*Reshape*/(ReduceSum(collatedLosses, /*Axis(0)*/Axis_DropLastAxis, Named("batchLoss"))/*, NDShape{}*/);  // aggregate over entire minibatch
         lossesPerSequence.clear();
         Function::SetDynamicProfiler(prevProfiler);
         return mbLoss;

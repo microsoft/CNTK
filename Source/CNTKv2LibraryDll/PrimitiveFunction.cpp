@@ -534,6 +534,7 @@ namespace CNTK
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndex))
                             {
+                                // TODO: understand Axis_DropLastAxis
                                 axis.push_back(NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape()));
                                 beginIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
                                 endIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
@@ -886,7 +887,7 @@ namespace CNTK
                                 outputShape = m_inputs[0].Shape();
                             else
                             {
-                                std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };
+                                std::array<int, 1> reductionAxes = { reductionAxis.StaticAxisIndex() };
                                 outputShape = ReductionOpOutputShape(m_op, m_inputs[0].Shape(), reductionAxes, /*preserveReductionAxes =*/ keepDimensions);
                             }
                             break;

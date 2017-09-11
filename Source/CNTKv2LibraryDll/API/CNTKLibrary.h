@@ -2086,7 +2086,7 @@ namespace CNTK
     public:
         CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
 
-private:
+    private:
         PrimitiveFunctionPtr OutputOwner() const; // for Outputs only; can never return null
         bool OwnerIs(const Function* f) const; // faster than saying Owner() == ...
 
@@ -2126,6 +2126,8 @@ private:
     private:
         std::shared_ptr<const Function> m_outputComposite; // Outputs() returns copies with this set.
         std::shared_ptr<const PrimitiveFunction> m_acyclicOutputPrimitiveReference; // Output: ref to Primitive if known to be acyclic.
+        // for debugging:
+        const std::vector<size_t>* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in tehd ebugger
     };
 
     // TODO: Variable equality should be based on uids.

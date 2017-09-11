@@ -1424,7 +1424,9 @@ namespace CNTK
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
-        additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = !(axis == Axis::AllStaticAxes() || axis == Axis::AllAxes());
+        let dropDims = axis == Axis::AllStaticAxes() || axis == Axis::AllAxes()
+            || (axis.IsStaticAxis() && axis.StaticAxisIndex(false) == -1); // HACK: implements Axis_DropLastAxis
+        additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = !dropDims;
         return BinaryOp(PrimitiveOpType::ElementTimes, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
@@ -1828,8 +1830,6 @@ namespace CNTK
 
     FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name)
     {
-        if (operands.size() == 1)
-            return operands.front();
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
 
@@ -2228,7 +2228,8 @@ namespace CNTK
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
         {
             bool keepReducedDimensions = true;
-            if (axis == Axis::AllStaticAxes() || axis == Axis::AllAxes())
+            if (axis == Axis::AllStaticAxes() || axis == Axis::AllAxes()
+                || (axis.IsStaticAxis() && axis.StaticAxisIndex(false) == -1)) // HACK: implements Axis_DropLastAxis
                 keepReducedDimensions = false;
 
             return ReduceElements(operand, reductionOpName, axis, keepReducedDimensions, name);

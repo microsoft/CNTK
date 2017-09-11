@@ -745,7 +745,8 @@ namespace CNTK
             return leftOperandShape.SubShape(0, outputRank).AppendShape(rightOperandShape.SubShape(numReductionAxes));
         }
 
-        static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<int>& reductionAxes, bool preserveReductionAxes)
+        template<typename AxesType> // std::vector<int>, std::array<int, N>, or compatible
+        static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const AxesType/*std::vector<int>*/& reductionAxes, bool preserveReductionAxes)
         {
             if (reductionAxes.size() > operandShape.Rank())
                 RuntimeError("Reduction operation %S: number (%d) of reduction axes exceeds the rank (%d) of the operand shape '%S'.",

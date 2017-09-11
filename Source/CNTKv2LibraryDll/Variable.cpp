@@ -65,6 +65,7 @@ namespace CNTK
     {
         Variable clonedVariable;
         clonedVariable.m_dataFields = m_dataFields->Clone();
+        clonedVariable.m_shapeDims = &m_dataFields->m_shape.Dimensions();
 
         return clonedVariable;
     }
@@ -102,6 +103,7 @@ namespace CNTK
         result.m_outputComposite = composite;
         result.m_dataFields = m_dataFields;
         result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
+        result.m_shapeDims = &m_dataFields->m_shape.Dimensions();
         return result;
     }
 
@@ -112,6 +114,7 @@ namespace CNTK
         // This must copy all data members except m_outputComposite.
         result.m_dataFields = m_dataFields;
         result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
+        result.m_shapeDims = &m_dataFields->m_shape.Dimensions();
         return result;
 #else
         Variable copy = *this;
@@ -460,8 +463,9 @@ namespace CNTK
         return CreateInitializer(Microsoft::MSR::CNTK::TruncNormalInitializerTypeName, scale, seed);
     }
 
-    Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, name, uid))
+    Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
+        m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, name, uid)),
+        m_shapeDims(&m_dataFields->m_shape.Dimensions())
     {}
 
     template <typename ElementType>

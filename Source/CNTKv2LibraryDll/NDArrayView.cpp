@@ -946,6 +946,7 @@ namespace CNTK
 
         // For sparse input, strided views are not supported in any form.
         // In this case, we just call Slice() with sliceMode ContiguousView.
+        // TODO: This is defensive, as there is no test for this presently. But is this necessary? Wouldn't the resulting slice still be contiguous?
         if (IsSparse())
         {
             auto sliceViewShape = m_viewShape.SubShape(0, axis); // final shape drops final axis

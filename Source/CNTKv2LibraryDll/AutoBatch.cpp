@@ -1952,19 +1952,15 @@ class Variable::AutoBatch
             }
             else if (isElementWise)
             {
-                outputBatchAxis = unbatchedOutputShape.Rank(); // for elementwise ops, output rank is max over all inputs' ranks
-#if 1           // (TODO: Remove this test; it is really redundant and should be fine.)
-                inputBatchAxis = 0;
+                // Elementwise ops may remove the last axis (e.g. InnerProduct()), or add axes (see-through Reshape).
+                // So the batch axis must be the max over all inputs' and output's rank.
+                // From the batching condition, we know that all input shapes are the same. So we can look to the first input instead.
+                outputBatchAxis = max(f0.m_inputs.front().Shape().Rank(), unbatchedOutputShape.Rank());
+#if 1
                 for (let& input : f0.m_inputs)
-                {
-                    let rank = input.Shape().Rank();
-                    if (rank > inputBatchAxis)
-                        inputBatchAxis = rank;
-                }
-                fail_if(inputBatchAxis != outputBatchAxis, "output rank unexpectedly not max over input's ranks");
-#else
-                inputBatchAxis = outputBatchAxis;              // and the inputs get a new batch axis at the same position as well
+                    fail_if(input.Shape().Rank() > outputBatchAxis, "output rank unexpectedly not max over input's ranks");
 #endif
+                inputBatchAxis = outputBatchAxis;              // and the inputs get a new batch axis at the same position as well
                 i0 = 0;                                        // all args participate in batching
             }
             else

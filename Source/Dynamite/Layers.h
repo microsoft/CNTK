@@ -16,6 +16,8 @@
 #include <set>
 #include <vector>
 
+#define Axis_DropLastAxis (Axis(-1)) // TODO: make this a CNTK construct, Axis::DropLastAxis(), with a special sentinel; or an official flag to ReduceXXX()
+
 //#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling
 
 #define let const auto
@@ -230,7 +232,7 @@ struct Batch
     {
         let& shape = batch.front().Shape();
         let axis = (int)shape.Rank(); // add a new axis
-        return Reshape(ReduceSum(Splice(batch, Axis(axis)), Axis(axis)), shape, Named("sum"));
+        return /*Reshape*/(ReduceSum(Splice(batch, Axis(axis)), /*Axis(axis)*/Axis_DropLastAxis)/*, shape, Named("sum")*/);
     }
 
     static Variable sum(const vector<vector<Variable>>& batch)
@@ -543,7 +545,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
             // pretend W had rows of length 1, by dividing by the row length after the fact
             // Note that this is generated over again, but will be computed only once since it is ready upfront.
             // BUGBUG: Does not work with sparse input, as that implies a sparse gradient, for which we cannot compute the elementwise ops.
-            let rowNorm = Reshape(InnerProduct(W, W, Axis(1)), NDShape{ outputDim });
+            let rowNorm = /*Reshape*/(InnerProduct(W, W, /*Axis(1)*/Axis_DropLastAxis)/*, NDShape{ outputDim }*/);
             // BUGBUG: ^^ this reduction is wrong if W has more than one input axes, e.g. for image
             // TODO: need a ReduceToShape operation? Where instead of an axis, the target shape is specified?
             let invLen = Pow(rowNorm, weightNormMinusHalf);
@@ -733,9 +735,7 @@ struct Sequence
     {
         let& shape = z[0].Shape();
         let axis = Axis((int)shape.Rank());
-        auto Z = Reshape(ReduceLogSum(Splice(z, axis), axis), shape); // -> [1]
-        // BUGBUG: ^^ barrier causes a BN to fail, and without, it does not get batched nicely
-        //         This should be a primitive.
+        auto Z = /*Reshape*/(ReduceLogSum(Splice(z, axis), /*axis*/Axis_DropLastAxis)/*, shape*/); // -> [1]
         Z = barrier(Z);
         res.resize(z.size());
         for (size_t t = 0; t < z.size(); t++)
@@ -752,7 +752,7 @@ struct Sequence
         vector<Variable> temps(xs.size());
         for (size_t t = 0; t < temps.size(); t++)
             temps[t] = xs[t] * ys[t]; // Batched
-        let res = Reshape(ReduceSum(Splice(temps, axis), axis), temps[0].Shape(), name);
+        let res = /*Reshape*/(ReduceSum(Splice(temps, axis), /*axis*/Axis_DropLastAxis, name)/*, temps[0].Shape(), name*/);
         // TODO: This should be a primitive.
         return res;
     }
