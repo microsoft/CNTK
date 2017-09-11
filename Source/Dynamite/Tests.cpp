@@ -149,21 +149,23 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         return out;
     };
     // definition of all tests
+    // Op = reference operation, implemented via NDArrayView
+    // Func = CNTK function under test
 #define OpExpr(expr) ([&](const vector<NDArrayViewPtr>& argValues) { return expr; })
-#define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode); }, #opCode))
-#define RedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0/denom, L"Copy", make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L#redOpCode); }, "Reduce" #redOpCode))
-#define OpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum"); }, #opCode "|Reduce"))
+#define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(OpExpr(NDArrayView::NumericOperation(argValues, 1.0, L#opCode)), #opCode))
+#define RedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(OpExpr(NDArrayView::NumericOperation(argValues, 1.0/denom, L"Copy", make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L#redOpCode)), "Reduce" #redOpCode))
+#define OpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(OpExpr(NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum")), #opCode "|Reduce"))
 #define FuncExpr(expr) ([](const vector<Variable>& args) { return expr; })
     vector<TensorViewTest> tests =
     {
         // splicing. Uniform splicing along last dimension will use single-kernel Gather; otherwise use multiple copy ops. Test both, also batched.
         { { OpExpr(doSplice(argValues, 2)), "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(2)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 },{ 2, 3 } } }, // messy shapes, new axis
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 2); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(2)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 },{ 2, 3 } } }, // messy shapes, new axis
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 0); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(0)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 } } },          // messy shapes -> individual copy ops
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 1); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(1)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 } } },          // messy shapes
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 1); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(1)); },{ { 13, 42 },{ 13, 42 },{ 13, 42 } } },    // all same size -> optimized gather
+        { { OpExpr(doSplice(argValues, 2)), "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(2)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 },{ 2, 3 } } }, // messy shapes, new axis
+        { { OpExpr(doSplice(argValues, 0)), "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(0)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 } } },          // messy shapes -> individual copy ops
+        { { OpExpr(doSplice(argValues, 1)), "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(1)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 } } },          // messy shapes
+        { { OpExpr(doSplice(argValues, 1)), "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(1)); },{ { 13, 42 },{ 13, 42 },{ 13, 42 } } },    // all same size -> optimized gather
         // BatchNorm. This is tricky, since it only makes sense when batching. Requires some special-casing in the test code below.
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return batchNormFwd(argValues); }, "BatchNormalization" }, [&](const vector<Variable>& args) { return CNTK::BatchNormalization(args[0], /*id=*/1, args[1], args[2], bnRunningMean, bnRunningInvStd, bnRunningCount, /*spatial=*/false, 0, 0, 0); },{ BN_SHAPE, BN_SHAPE, BN_SHAPE } },
+        { { OpExpr(batchNormFwd(argValues)), "BatchNormalization" }, [&](const vector<Variable>& args) { return CNTK::BatchNormalization(args[0], /*id=*/1, args[1], args[2], bnRunningMean, bnRunningInvStd, bnRunningCount, /*spatial=*/false, 0, 0, 0); },{ BN_SHAPE, BN_SHAPE, BN_SHAPE } },
         // dot product (both explicitly as InnerProduct() as well as composition, to verify the InnerProduct() optimization)
         { OpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), FuncExpr(CNTK::InnerProduct(args[0], args[1], Axis(0))), { { 13,    42    }, { 13,    42    } } },
         { OpWithRed(ElementwiseProduct, NDShape({ 1           })), FuncExpr(CNTK::InnerProduct(args[0], args[1], Axis(0))), { { 13           }, { 13           } } },
@@ -172,22 +174,22 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         { OpWithRed(ElementwiseProduct, NDShape({ 1           })), FuncExpr(                CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0))          ), { { 13           }, { 13           } } },
         // splicing. NDArrayView::Slice() and SliceView() differ in also slicing the matrix or not. Test both.
         // slicing, reshaping   --TODO: reshaping (should be easy)
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->Slice           ({ 0, 3 }, {     13 }); }, "Index" }, [&](const vector<Variable>& args) { return CNTK::Index(args[0], 3); },{ { 13, 42 } } }, // index of rank > 1; also testing SlicedTensorView()
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView       ({    1 }, {        }); }, "Index" }, [&](const vector<Variable>& args) { return CNTK::Index(args[0], 1); },{ { 13 } } }, // index of rank 1
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView       ({ 0, 1 }, { 13,  4 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0), Axis(1) }, { 0, 1 }, { 13, 1+4 }); },{ { 13, 42 } } }, // multi-axis slice
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->Slice           ({ 2, 0 }, {  3, 42 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0) }, { 2 }, { 2+3 }); },{ { 13, 42 } } }, // non-contiguous slice
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView       ({ 0, 1 }, { 13,  4 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(1) }, { 1 }, { 1+4 }); },{ { 13, 42 } } }, // contiguous slice of rank > 1
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->Slice           ({ 0, 1 }, { 13,  4 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(1) }, { 1 }, { 1+4 }); },{ { 13, 42 } } }, // same but testing SlicedTensorView() on the reference path
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->SliceView       ({    1 }, {      3 }); }, "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0) }, { 1 }, { 1+3 }); },{ { 13 } } }, // slice of rank 1
+        { { OpExpr(argValues[0]->Slice           ({ 0, 3 }, {     13 })), "Index" }, [&](const vector<Variable>& args) { return CNTK::Index(args[0], 3); },{ { 13, 42 } } }, // index of rank > 1; also testing SlicedTensorView()
+        { { OpExpr(argValues[0]->SliceView       ({    1 }, {        })), "Index" }, [&](const vector<Variable>& args) { return CNTK::Index(args[0], 1); },{ { 13 } } }, // index of rank 1
+        { { OpExpr(argValues[0]->SliceView       ({ 0, 1 }, { 13,  4 })), "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0), Axis(1) }, { 0, 1 }, { 13, 1+4 }); },{ { 13, 42 } } }, // multi-axis slice
+        { { OpExpr(argValues[0]->Slice           ({ 2, 0 }, {  3, 42 })), "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0) }, { 2 }, { 2+3 }); },{ { 13, 42 } } }, // non-contiguous slice
+        { { OpExpr(argValues[0]->SliceView       ({ 0, 1 }, { 13,  4 })), "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(1) }, { 1 }, { 1+4 }); },{ { 13, 42 } } }, // contiguous slice of rank > 1
+        { { OpExpr(argValues[0]->Slice           ({ 0, 1 }, { 13,  4 })), "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(1) }, { 1 }, { 1+4 }); },{ { 13, 42 } } }, // same but testing SlicedTensorView() on the reference path
+        { { OpExpr(argValues[0]->SliceView       ({    1 }, {      3 })), "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0) }, { 1 }, { 1+3 }); },{ { 13 } } }, // slice of rank 1
         // matrix product
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times_shared"   }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42, 9 } } },
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42, 9 } } },
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42 } } },
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1], 0); },{ { 42 },{ 42 } } }, // should get batched
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1); }, "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42, 9, 5 } } },
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1); }, "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42, 9 } } },
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1); }, "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42 } } },
-        { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1); }, "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42, 9, 3 } } },
+        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times_shared"   }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42, 9 } } },
+        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42, 9 } } },
+        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42 } } },
+        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1], 0); },{ { 42 },{ 42 } } }, // should get batched
+        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42, 9, 5 } } },
+        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42, 9 } } },
+        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42 } } },
+        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42, 9, 3 } } },
         // ternary
         { Op(Clip                 ), FuncExpr(CNTK::Clip         (args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
         { Op(Clip                 ), FuncExpr(CNTK::Clip         (args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
@@ -414,8 +416,13 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 
                 // check result
                 let relErr = (perturbationBasedDelta == gradientBasedDelta) ? 0 : fabs(((perturbationBasedDelta - gradientBasedDelta) / perturbationBasedDelta));
-                if (relErr > 1e-5)
+                if (relErr > 1e-3)
+                {
                     fprintf(stderr, ">>>>>>>>>> BWD[%d] FAILED: err=%.10f%% (numeric=%.20f, symbolic=%.20f)\n", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
+                    numFailed++;
+                }
+                else if (relErr > 1e-5)
+                    fprintf(stderr, "           BWD[%d] SOMEWHAT OFF: err=%.10f%% (numeric=%.20f, symbolic=%.20f)\n", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
                 // Once in a while enable the following, to see whether there are some broken tests. We do have zeroes e.g. for Equal().
                 //else if (gradientBasedDelta == 0)
                 //    fprintf(stderr, ">>>>>>>>>> BWD[%d] IS 0??\n", (int)argIndexUnderTest);
