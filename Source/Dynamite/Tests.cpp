@@ -149,84 +149,83 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         return out;
     };
     // definition of all tests
-    // Op = reference operation, implemented via NDArrayView
-    // Func = CNTK function under test
-#define OpExpr(expr) ([&](const vector<NDArrayViewPtr>& argValues) { return expr; })
-#define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(OpExpr(NDArrayView::NumericOperation(argValues, 1.0, L#opCode)), #opCode))
-#define RedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(OpExpr(NDArrayView::NumericOperation(argValues, 1.0/denom, L"Copy", make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L#redOpCode)), "Reduce" #redOpCode))
-#define OpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(OpExpr(NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum")), #opCode "|Reduce"))
-#define FuncExpr(expr) ([](const vector<Variable>& args) { return expr; })
+    //  - Var* = CNTK function under test, implemented on Variables
+    //  - Val* = reference operation, implemented on values (NDArrayView)
+#define VarExpr(expr) ([&](const vector<Variable>& args) { return expr; })
+#define ValExpr(expr) ([&](const vector<NDArrayViewPtr>& argValues) { return expr; })
+#define ValOp(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(ValExpr(NDArrayView::NumericOperation(argValues, 1.0, L#opCode)), #opCode))
+#define ValRedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(ValExpr(NDArrayView::NumericOperation(argValues, 1.0/denom, L"Copy", make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L#redOpCode)), "Reduce" #redOpCode))
+#define ValOpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(ValExpr(NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum")), #opCode "|Reduce"))
     vector<TensorViewTest> tests =
     {
         // splicing. Uniform splicing along last dimension will use single-kernel Gather; otherwise use multiple copy ops. Test both, also batched.
-        { { OpExpr(doSplice(argValues, 2)), "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(2)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 },{ 2, 3 } } }, // messy shapes, new axis
-        { { OpExpr(doSplice(argValues, 2)), "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(2)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 },{ 2, 3 } } }, // messy shapes, new axis
-        { { OpExpr(doSplice(argValues, 0)), "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(0)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 } } },          // messy shapes -> individual copy ops
-        { { OpExpr(doSplice(argValues, 1)), "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(1)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 } } },          // messy shapes
-        { { OpExpr(doSplice(argValues, 1)), "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(1)); },{ { 13, 42 },{ 13, 42 },{ 13, 42 } } },    // all same size -> optimized gather
+        { { ValExpr(doSplice(argValues, 2)), "Splice" }, VarExpr(CNTK::Splice(args, Axis(2))),{ {  2,  1 },{  1,  3 },{  1,  1 },{ 2, 3 } } }, // messy shapes, new axis
+        { { ValExpr(doSplice(argValues, 2)), "Splice" }, VarExpr(CNTK::Splice(args, Axis(2))),{ {  2,  1 },{  1,  3 },{  1,  1 },{ 2, 3 } } }, // messy shapes, new axis
+        { { ValExpr(doSplice(argValues, 0)), "Splice" }, VarExpr(CNTK::Splice(args, Axis(0))),{ {  2,  1 },{  1,  3 },{  1,  1 }          } }, // messy shapes -> individual copy ops
+        { { ValExpr(doSplice(argValues, 1)), "Splice" }, VarExpr(CNTK::Splice(args, Axis(1))),{ {  2,  1 },{  1,  3 },{  1,  1 }          } }, // messy shapes
+        { { ValExpr(doSplice(argValues, 1)), "Splice" }, VarExpr(CNTK::Splice(args, Axis(1))),{ { 13, 42 },{ 13, 42 },{ 13, 42 }          } }, // all same size -> optimized gather
         // BatchNorm. This is tricky, since it only makes sense when batching. Requires some special-casing in the test code below.
-        { { OpExpr(batchNormFwd(argValues)), "BatchNormalization" }, [&](const vector<Variable>& args) { return CNTK::BatchNormalization(args[0], /*id=*/1, args[1], args[2], bnRunningMean, bnRunningInvStd, bnRunningCount, /*spatial=*/false, 0, 0, 0); },{ BN_SHAPE, BN_SHAPE, BN_SHAPE } },
+        { { ValExpr(batchNormFwd(argValues)), "BatchNormalization" }, VarExpr(CNTK::BatchNormalization(args[0], /*id=*/1, args[1], args[2], bnRunningMean, bnRunningInvStd, bnRunningCount, /*spatial=*/false, 0, 0, 0)),{ BN_SHAPE, BN_SHAPE, BN_SHAPE } },
         // dot product (both explicitly as InnerProduct() as well as composition, to verify the InnerProduct() optimization)
-        { OpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), FuncExpr(CNTK::InnerProduct(args[0], args[1], Axis(0))), { { 13,    42    }, { 13,    42    } } },
-        { OpWithRed(ElementwiseProduct, NDShape({ 1           })), FuncExpr(CNTK::InnerProduct(args[0], args[1], Axis(0))), { { 13           }, { 13           } } },
-        { OpWithRed(ElementwiseProduct, NDShape({ 1, 1, 42, 5 })), FuncExpr(CNTK::ReduceSum(CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0)), Axis(1))), { { 13, 2, 42, 5 }, { 13, 2, 42, 5 } } },
-        { OpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), FuncExpr(                CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0))          ), { { 13,    42    }, { 13,    42    } } },
-        { OpWithRed(ElementwiseProduct, NDShape({ 1           })), FuncExpr(                CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0))          ), { { 13           }, { 13           } } },
+        { ValOpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), VarExpr(CNTK::InnerProduct(args[0], args[1], Axis(0))), { { 13, 42    }, { 13, 42 } } },
+        { ValOpWithRed(ElementwiseProduct, NDShape({ 1           })), VarExpr(CNTK::InnerProduct(args[0], args[1], Axis(0))), { { 13        }, { 13     } } },
+        { ValOpWithRed(ElementwiseProduct, NDShape({ 1, 1, 42, 5 })), VarExpr(CNTK::ReduceSum(CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0)), Axis(1))), { { 13, 2, 42, 5 }, { 13, 2, 42, 5 } } },
+        { ValOpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), VarExpr(                CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0))          ), { { 13,    42    }, { 13,    42    } } },
+        { ValOpWithRed(ElementwiseProduct, NDShape({ 1           })), VarExpr(                CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0))          ), { { 13           }, { 13           } } },
         // splicing. NDArrayView::Slice() and SliceView() differ in also slicing the matrix or not. Test both.
         // slicing, reshaping   --TODO: reshaping (should be easy)
-        { { OpExpr(argValues[0]->Slice           ({ 0, 3 }, {     13 })), "Index" }, [&](const vector<Variable>& args) { return CNTK::Index(args[0], 3); },{ { 13, 42 } } }, // index of rank > 1; also testing SlicedTensorView()
-        { { OpExpr(argValues[0]->SliceView       ({    1 }, {        })), "Index" }, [&](const vector<Variable>& args) { return CNTK::Index(args[0], 1); },{ { 13 } } }, // index of rank 1
-        { { OpExpr(argValues[0]->SliceView       ({ 0, 1 }, { 13,  4 })), "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0), Axis(1) }, { 0, 1 }, { 13, 1+4 }); },{ { 13, 42 } } }, // multi-axis slice
-        { { OpExpr(argValues[0]->Slice           ({ 2, 0 }, {  3, 42 })), "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0) }, { 2 }, { 2+3 }); },{ { 13, 42 } } }, // non-contiguous slice
-        { { OpExpr(argValues[0]->SliceView       ({ 0, 1 }, { 13,  4 })), "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(1) }, { 1 }, { 1+4 }); },{ { 13, 42 } } }, // contiguous slice of rank > 1
-        { { OpExpr(argValues[0]->Slice           ({ 0, 1 }, { 13,  4 })), "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(1) }, { 1 }, { 1+4 }); },{ { 13, 42 } } }, // same but testing SlicedTensorView() on the reference path
-        { { OpExpr(argValues[0]->SliceView       ({    1 }, {      3 })), "Slice" }, [&](const vector<Variable>& args) { return CNTK::Slice(args[0], { Axis(0) }, { 1 }, { 1+3 }); },{ { 13 } } }, // slice of rank 1
+        { { ValExpr(argValues[0]->Slice    ({ 0, 3 }, {     13 })), "Index" }, VarExpr(CNTK::Index(args[0], 3)),{ { 13, 42 } } }, // index of rank > 1; also testing SlicedTensorView()
+        { { ValExpr(argValues[0]->SliceView({    1 }, {        })), "Index" }, VarExpr(CNTK::Index(args[0], 1)),{ { 13 } } }, // index of rank 1
+        { { ValExpr(argValues[0]->SliceView({ 0, 1 }, { 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0), Axis(1) }, { 0, 1 }, { 13, 1+4 })),{ { 13, 42 } } }, // multi-axis slice
+        { { ValExpr(argValues[0]->Slice    ({ 2, 0 }, {  3, 42 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0)          }, { 2    }, { 2+3     })),{ { 13, 42 } } }, // non-contiguous slice
+        { { ValExpr(argValues[0]->SliceView({ 0, 1 }, { 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(1)          }, { 1    }, { 1+4     })),{ { 13, 42 } } }, // contiguous slice of rank > 1
+        { { ValExpr(argValues[0]->Slice    ({ 0, 1 }, { 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(1)          }, { 1    }, { 1+4     })),{ { 13, 42 } } }, // same but testing SlicedTensorView() on the reference path
+        { { ValExpr(argValues[0]->SliceView({    1 }, {      3 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0)          }, { 1    }, { 1+3     })),{ { 13     } } }, // slice of rank 1
         // matrix product
-        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times_shared"   }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42, 9 } } },
-        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42, 9 } } },
-        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42 } } },
-        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1], 0); },{ { 42 },{ 42 } } }, // should get batched
-        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, [&](const vector<Variable>& args) { return CNTK::Times         (args[0], args[1]   ); },{ { 13, 42 },{ 42, 9, 5 } } },
-        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42, 9 } } },
-        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42 } } },
-        { { OpExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42, 9, 3 } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times_shared"   }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9    } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9    } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42       } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, VarExpr(CNTK::Times         (args[0], args[1], 0)),{ {     42 },{ 42       } } }, // should get batched
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9, 5 } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42, 9    } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42       } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42, 9, 3 } } },
         // ternary
-        { Op(Clip                 ), FuncExpr(CNTK::Clip         (args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
-        { Op(Clip                 ), FuncExpr(CNTK::Clip         (args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
-        { Op(Cond                 ), FuncExpr(CNTK::ElementSelect(args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
+        { ValOp(Clip), VarExpr(CNTK::Clip         (args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
+        { ValOp(Cond), VarExpr(CNTK::ElementSelect(args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
         // binary
-        { Op(Sum                  ), FuncExpr(CNTK::Plus         (args[0], args[1])), { { 13, 42 }, { 13, 42 } } },
-        { Op(Difference           ), FuncExpr(CNTK::Minus        (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
-        { Op(ElementwiseProduct   ), FuncExpr(CNTK::ElementTimes (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
-        { Op(LogSum               ), FuncExpr(CNTK::LogAddExp    (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
-        { Op(Pow                  ), FuncExpr(CNTK::Pow          (args[0], args[1])), { { 13, 42, 12 }, { 13, 1 } } },
-        { Op(Equal                ), FuncExpr(CNTK::Equal        (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
-        { Op(NotEqual             ), FuncExpr(CNTK::NotEqual     (args[0], args[1])), { { 13, 42 }, { 13, 42 } } },
-        { Op(Less                 ), FuncExpr(CNTK::Less         (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
-        { Op(LessEqual            ), FuncExpr(CNTK::LessEqual    (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
-        { Op(Greater              ), FuncExpr(CNTK::Greater      (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
-        { Op(GreaterEqual         ), FuncExpr(CNTK::GreaterEqual (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
+        { ValOp(Sum               ), VarExpr(CNTK::Plus         (args[0], args[1])), { { 13, 42     }, { 13, 42 } } },
+        { ValOp(Difference        ), VarExpr(CNTK::Minus        (args[0], args[1])), { { 13, 42     }, { 13,  1 } } },
+        { ValOp(ElementwiseProduct), VarExpr(CNTK::ElementTimes (args[0], args[1])), { { 13, 42     }, { 13,  1 } } },
+        { ValOp(LogSum            ), VarExpr(CNTK::LogAddExp    (args[0], args[1])), { { 13, 42     }, { 13,  1 } } },
+        { ValOp(Pow               ), VarExpr(CNTK::Pow          (args[0], args[1])), { { 13, 42, 12 }, { 13,  1 } } },
+        { ValOp(Equal             ), VarExpr(CNTK::Equal        (args[0], args[1])), { { 13, 42     }, { 13,  1 } } },
+        { ValOp(NotEqual          ), VarExpr(CNTK::NotEqual     (args[0], args[1])), { { 13, 42     }, { 13, 42 } } },
+        { ValOp(Less              ), VarExpr(CNTK::Less         (args[0], args[1])), { { 13, 42     }, { 13,  1 } } },
+        { ValOp(LessEqual         ), VarExpr(CNTK::LessEqual    (args[0], args[1])), { { 13, 42     }, { 13,  1 } } },
+        { ValOp(Greater           ), VarExpr(CNTK::Greater      (args[0], args[1])), { { 13, 42     }, { 13,  1 } } },
+        { ValOp(GreaterEqual      ), VarExpr(CNTK::GreaterEqual (args[0], args[1])), { { 13, 42     }, { 13,  1 } } },
         // unary
-        { Op(LinearRectifier      ), FuncExpr(CNTK::ReLU      (args[0])), { { 13, 42 } } },
-        { Op(Tanh                 ), FuncExpr(CNTK::Tanh      (args[0])), { { 13 } } },
-        { Op(Log                  ), FuncExpr(CNTK::Log       (args[0])), { { 13, 42 } } },
-        { Op(Exp                  ), FuncExpr(CNTK::Exp       (args[0])), { { 13, 42 } } },
-        { Op(Cosine               ), FuncExpr(CNTK::Cos       (args[0])), { { 13, 42 } } },
-        { Op(Sin                  ), FuncExpr(CNTK::Sin       (args[0])), { { 235, 13, 2 } } },
-        { Op(Negate               ), FuncExpr(CNTK::Negate    (args[0])), { { 13 } } },
-        { Op(Floor                ), FuncExpr(CNTK::Floor     (args[0])), { { 13, 42 } } },
-        { Op(Abs                  ), FuncExpr(CNTK::Abs       (args[0])), { { 13, 42 } } },
-        { Op(Sqrt                 ), FuncExpr(CNTK::Sqrt      (args[0])), { { 13, 42 } } },
-        { Op(Reciprocal           ), FuncExpr(CNTK::Reciprocal(args[0])), { { 13, 42 } } },
-        { Op(ExponentialLinearUnit), FuncExpr(CNTK::ELU       (args[0])), { { 13, 42 } } },
-        { Op(StableSigmoid        ), FuncExpr(CNTK::Sigmoid   (args[0])), { { 128 } } },
+        { ValOp(LinearRectifier      ), VarExpr(CNTK::ReLU      (args[0])), { {  13, 42    } } },
+        { ValOp(Tanh                 ), VarExpr(CNTK::Tanh      (args[0])), { {  13        } } },
+        { ValOp(Log                  ), VarExpr(CNTK::Log       (args[0])), { {  13, 42    } } },
+        { ValOp(Exp                  ), VarExpr(CNTK::Exp       (args[0])), { {  13, 42    } } },
+        { ValOp(Cosine               ), VarExpr(CNTK::Cos       (args[0])), { {  13, 42    } } },
+        { ValOp(Sin                  ), VarExpr(CNTK::Sin       (args[0])), { { 235, 13, 2 } } },
+        { ValOp(Negate               ), VarExpr(CNTK::Negate    (args[0])), { {  13        } } },
+        { ValOp(Floor                ), VarExpr(CNTK::Floor     (args[0])), { {  13, 42    } } },
+        { ValOp(Abs                  ), VarExpr(CNTK::Abs       (args[0])), { {  13, 42    } } },
+        { ValOp(Sqrt                 ), VarExpr(CNTK::Sqrt      (args[0])), { {  13, 42    } } },
+        { ValOp(Reciprocal           ), VarExpr(CNTK::Reciprocal(args[0])), { {  13, 42    } } },
+        { ValOp(ExponentialLinearUnit), VarExpr(CNTK::ELU       (args[0])), { {  13, 42    } } },
+        { ValOp(StableSigmoid        ), VarExpr(CNTK::Sigmoid   (args[0])), { { 128        } } },
         // reductions
-        { RedOp(Sum,    NDShape({  1     }), 1 ), FuncExpr(CNTK::ReduceSum   (args[0], Axis(0)          )), { { 13 } } },
-        { RedOp(Sum,    NDShape({ 13,  1 }), 1 ), FuncExpr(CNTK::ReduceSum   (args[0], Axis(1)          )), { { 13, 42 } } },
-        { RedOp(Sum,    NDShape({ 13     }), 1 ), FuncExpr(CNTK::ReduceSum   (args[0], Axis_DropLastAxis)), { { 13, 42 } } }, // removes the last axis
-        { RedOp(Sum,    NDShape({  1, 42 }), 1 ), FuncExpr(CNTK::ReduceSum   (args[0], Axis(0)          )), { { 13, 42 } } },
-        { RedOp(LogSum, NDShape({  1     }), 1 ), FuncExpr(CNTK::ReduceLogSum(args[0], Axis(0)          )), { { 13 } } },
-        { RedOp(Sum,    NDShape({  1     }), 13), FuncExpr(CNTK::ReduceMean  (args[0], Axis(0)          )), { { 13 } } }
+        { ValRedOp(Sum,    NDShape({  1     }), 1 ), VarExpr(CNTK::ReduceSum   (args[0], Axis(0)          )), { { 13     } } },
+        { ValRedOp(Sum,    NDShape({ 13,  1 }), 1 ), VarExpr(CNTK::ReduceSum   (args[0], Axis(1)          )), { { 13, 42 } } },
+        { ValRedOp(Sum,    NDShape({ 13     }), 1 ), VarExpr(CNTK::ReduceSum   (args[0], Axis_DropLastAxis)), { { 13, 42 } } }, // removes the last axis
+        { ValRedOp(Sum,    NDShape({  1, 42 }), 1 ), VarExpr(CNTK::ReduceSum   (args[0], Axis(0)          )), { { 13, 42 } } },
+        { ValRedOp(LogSum, NDShape({  1     }), 1 ), VarExpr(CNTK::ReduceLogSum(args[0], Axis(0)          )), { { 13     } } },
+        { ValRedOp(Sum,    NDShape({  1     }), 13), VarExpr(CNTK::ReduceMean  (args[0], Axis(0)          )), { { 13     } } }
     };
 
     fprintf(stderr, "\n--- Running tests for batch of %d. %s on %S\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str());
