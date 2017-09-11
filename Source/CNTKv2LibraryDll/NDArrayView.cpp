@@ -937,211 +937,37 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(GetDataType(), sliceViewShape, IsReadOnly() || readOnly, matrix);
     }
 
-    // TODO: This case is covered by using a shorter extent above; so just implement it with that.
     NDArrayViewPtr NDArrayView::IndexLastAxis(size_t index, bool readOnly) const
     {
         let rank = Shape().Rank();
         if (rank == 0)
             InvalidArgument("NDArrayView::IndexLastAxis: Cannot index a scalar.");
-
-        auto sliceViewShape1 = m_viewShape.SubShape(0, rank - 1); // final shape drops final axis
-        // if last axis already has only 1 element then just reshape it away
-        if (m_viewShape[rank - 1] == 1)
-            return AsShape(sliceViewShape1);
-        // set startOffset to 0 except for the last axis
-
-        std::vector<size_t> startOffset(rank, 0);
-        startOffset[rank - 1] = index;
-
-        let& extent = sliceViewShape1.Dimensions();
-        std::vector<size_t> strides;
-        SliceMode sliceMode = SliceMode::View;
-
-#if 1
-        if (startOffset.size() != rank)
-            InvalidArgument("NDArrayView::Slice: Rank (%d) of the NDArrayView does not match the dimensionality (%d) of the specified slice offset.", (int)rank, (int)startOffset.size());
-
-        if (extent.size() > rank)
-            InvalidArgument("NDArrayView::Slice: Dimensionality (%d) of the specified slice extent exceeds the rank (%d) of this NDArrayView.", (int)extent.size(), (int)rank);
-
-        if (std::find(extent.begin(), extent.end(), 0) != extent.end())
-            InvalidArgument("NDArrayView::Slice: Specified slice extent is zero along at least one of the axes.");
+        let axis = rank - 1;
 
         // For sparse input, strided views are not supported in any form.
-        // In this case, we just set the sliceMode to ContiguousViews. If we originaly requested a TensorView, this will still
-        // do the right thing in case of SliceMode::View, and also for ContiguousViewOrCopy if no copy is needed.
-        if (IsSparse())
-            sliceMode = SliceMode::ContiguousView;
-
-        if (sliceMode == SliceMode::ContiguousView && any_of(strides.begin(), strides.end(), [](size_t v) { return v != 1; }))
-            InvalidArgument("NDArrayView::Slice: Strides != 1 are not allowed for SliceMode::ContiguousView, and presently not supported fo sparse data.");
-
-        // Modes:
-        //  - ContiguousView --> create both a TensorView and Matrix-level view; fail if not possible
-        //  - View --> create a TensorView view, without updating the underlying matrix
-        //  - ContiguousViewOrCopy --> first try TensorView view. If not contiguous, then copy it. If contiguous then fall through to ContiguousView. This way, we always get an updated Matrix view.
-        // If sparse then the slice must always be contiguous presently (due to lack of underlying slicing function for sparse matrices/tensors).
-        if (sliceMode != SliceMode::ContiguousView)
-        {
-            // get current actual shape
-            auto tensorShape = GetTensorShape();
-
-            // narrow it down
-            for (size_t i = 0; i < rank; ++i)
-            {
-                let beginIndex = startOffset[i];
-                let endIndex = i >= extent.size()
-                               ? beginIndex + 1 // missing extent at the end means index
-                               : extent[i] == NDShape::InferredDimension
-                                 ? tensorShape[i] // InferredDimension means end index = dim
-                                 : beginIndex + extent[i];
-                let stride = i < strides.size() ? strides[i] : 1;
-                tensorShape.NarrowTo(i, beginIndex, endIndex, (int)stride);
-            }
-
-            // drop trailing singleton dimensions
-            tensorShape.TrimRankInPlace(extent.size());
-
-            // now continue based on sliceMode and whether the resulting tensor is contiguous or not
-            if (sliceMode == SliceMode::View || !tensorShape.IsDense())
-            {
-                // create a NDArrayView with this new tensor shape onto the existing storage object
-                // Note that this version may create an NDArrayView with strides, which is not accepted by some operations.
-                // TODO: Check that at least this will be discovered. AsMatrix() checks it. Does that cover all use cases?
-                let view = MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
-
-                // View: we are done
-                if (sliceMode == SliceMode::View)
-                    return view;
-                // ContiguousViewOrCopy and not contiguous: return a copy of the view
-                else
-                {
-                    assert(sliceMode == SliceMode::ContiguousViewOrCopy && !tensorShape.IsDense());
-                    return view->DeepClone(); // the copy is contiguous
-                }
-            }
-            // we get here for ContiguousViewOrCopy if data is contiguous and does not need to be copied
-            assert(sliceMode == SliceMode::ContiguousViewOrCopy && tensorShape.IsDense());
-            // fall through SliceMode::ContiguousView
-        }
-
-        // create a menmory-contiguous view
-        // We get here under these conditions:
-        //  - caller requested ContiguousView
-        //  - caller requested ContiguousViewOrCopy when no copy is required
-        //  - input is sparse
-        // This also updates the underlying Matrix view, and is thus a little slower.
-        // TODO: This is old code which may be simplified by merging with the TensorShape code above.
-        // TODO: We should change NDArrayView::Slice() to never update the Matrix view, but do that on the fly in GetMatrixImpl() (AsMatrix() probably already does most of the work).
-        bool anyPrevAxisSliced = false;
-        NDShape sliceViewShape(extent);       // note: has same #dims as extent
-        std::vector<size_t> endOffset(rank);  // note: these have same #dims as 'this', not extent
-        std::vector<size_t> lastOffset(rank);
-        for (size_t i = 0; i < rank; ++i)
-        {
-            if ((i < sliceViewShape.Rank()) && (sliceViewShape[i] == NDShape::InferredDimension))
-                sliceViewShape[i] = Shape()[i] - startOffset[i];
-
-            // It is allowed that extent[] is shorter than Shape().
-            // In this case, those extend values default to 1, and the dimensions are dropped in the result.
-            // This allows to express the common case of indexing the last axis and dropping it.
-            endOffset[i] = startOffset[i] + ((i < sliceViewShape.Rank()) ? sliceViewShape[i] : 1);
-            lastOffset[i] = endOffset[i] - 1;
-
-            // Only the last non-singleton axis can be a slice proper.
-            // Any axes after that must be sliced to a singleton axis.
-            // Otherwise, data would be non-contiguous, which the Matrix class does not support.
-            if (anyPrevAxisSliced && ((endOffset[i] - startOffset[i]) != 1))
-                InvalidArgument("NDArrayView::Slice: Cannot create a slice which is not contiguous in memory. "
-                    "This NDArrayView shape = %S, slice offset = %S, slice extent = %S.",
-                    Shape().AsString().c_str(), NDShape(startOffset).AsString().c_str(), NDShape(extent).AsString().c_str());
-
-            bool isCurrentAxisSliced = (startOffset[i] != 0) || (endOffset[i] != Shape()[i]);
-            anyPrevAxisSliced = anyPrevAxisSliced || isCurrentAxisSliced;
-        }
-
-        // determine the canonical matrix shape of our storage object
+        // In this case, we just call Slice() with sliceMode ContiguousView.
         if (IsSparse())
         {
-            if (rank == 0)
-                LogicError("NDArrayView::Slice: Scalars cannot be sparse.");
-            if (startOffset.front() != 0 || endOffset.front() != Shape().Dimensions().front())
-                InvalidArgument("NDArrayView::Slice: The first axis of a sparse tensor cannot be slice-viewed.");
-        }
-        auto tensorShape = AsTensorShape(Shape());
-        auto flatBufferOffset = tensorShape.Locate(startOffset);  // offset and length into underlying ElementType array...
-        auto flatBufferLength = tensorShape.Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
+            auto sliceViewShape = m_viewShape.SubShape(0, axis); // final shape drops final axis
+            // if last axis already has only 1 element then just reshape it away
+            if (m_viewShape[axis] == 1)
+                return AsShape(sliceViewShape);
+            // set startOffset to 0 except for the last axis
 
-        ToMatrixShape(tensorShape, NDArrayView::AutoSelectRowColSplitPoint, NDArrayView::AutoSelectRowColSplitPoint);
-        let storedRows = tensorShape[0];
-        let storedCols = tensorShape[1];
+            std::vector<size_t> startOffset(rank, 0);
+            startOffset[axis] = index;
 
-        shared_ptr<MatrixBase> matrix;
-        // At this point, it is guaranteed that the slice is consecutive in memory. We distinguish two cases:
-        // If the slice is expressable a column slice, we will use ColumnSlice(). This will work with sparse data.
-        // If, on the other hand, it is a row slice in a single column (such as a single element), we will
-        // reshape the matrix into a flat row vector, and then slice the elements.
-        // The latter will fail for sparse matrices, as sparse columns can only be slice-viewed as an entire column.
-        switch (m_dataType)
-        {
-        case DataType::Float:
-        {
-            const auto& sob = GetTensorViewPtr<float>()->GetSOBViewPtr();
-            if (!anyPrevAxisSliced)
-                // Nothing was sliced: current SOB is just fine.
-                matrix = sob;
-            else if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0)
-                // SliceView() can be expressed as column slice. This slices the range as columns.
-                // In order to not have to care about the actual SOB shape, we tell ColumnSlice()
-                // to interpret it as having 'storedCols', w.r.t. which we had found that we can column-slice.
-                matrix = make_shared<Matrix<float>>(std::move(sob->ColumnSlice(flatBufferOffset / storedRows,
-                                                                               flatBufferLength / storedRows,
-                                                                               storedCols)));
-            else
-                // SliceView() cannot be expressed as column slice. This does the following:
-                //  - reinterpret the SOB as a row vector of (storedRows * storedCols)
-                //  - column-slice the desired elements (which are really a range of row elements)
-                //  - reshape it back to a column
-                matrix = make_shared<Matrix<float>>(std::move(sob->ColumnSlice(flatBufferOffset, flatBufferLength, storedRows * storedCols).
-                                                                   Reshape(flatBufferLength, 1)));
-            break;
-        }
-        case DataType::Double:
-        {
-            const auto& sob = GetTensorViewPtr<double>()->GetSOBViewPtr();
-            if (!anyPrevAxisSliced)
-                // Nothing was sliced: current SOB is just fine.
-                matrix = sob;
-            else if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0)
-                // SliceView() can be expressed as column slice. This slices the range as columns.
-                // In order to not have to care about the actual SOB shape, we tell ColumnSlice()
-                // to interpret it as having 'storedCols', w.r.t. which we had found that we can column-slice.
-                matrix = make_shared<Matrix<double>>(std::move(sob->ColumnSlice(flatBufferOffset / storedRows,
-                                                                                flatBufferLength / storedRows,
-                                                                                storedCols)));
-            else
-                // SliceView() cannot be expressed as column slice. This does the following:
-                //  - reinterpret the SOB as a row vector of (storedRows * storedCols)
-                //  - column-slice the desired elements (which are really a range of row elements)
-                //  - reshape it back to a column
-                matrix = make_shared<Matrix<double>>(std::move(sob->ColumnSlice(flatBufferOffset, flatBufferLength, storedRows * storedCols).
-                                                                    Reshape(flatBufferLength, 1)));
-            break;
-        }
-        default:
-            LogicError("NDArrayView::Slice: Unsupported DataType %s", DataTypeName(m_dataType));
-            break;
+            return Slice(startOffset, /*extent=*/ sliceViewShape.Dimensions(), vector<size_t>(), SliceMode::ContiguousView, readOnly);
         }
 
-        return MakeSharedObject<NDArrayView>(GetDataType(), sliceViewShape, IsReadOnly() || readOnly, matrix);
-#else
-        // Slice() keeps as many axes as extent[] has.
-        // Any additional axes are sliced to 1 element. So by passing sliceViewShape,
-        // which has been striped of the last axis, as extent[], the last axis will be
-        // sliced to 1 element and removed.
-        //return SliceView(startOffset, /*extent=*/ sliceViewShape.Dimensions(), readOnly);
-        return Slice(startOffset, /*extent=*/ sliceViewShape.Dimensions(), vector<size_t>(), SliceMode::View, readOnly);
-#endif
+        auto tensorShape = GetTensorShape();          // get current actual shape
+        tensorShape.NarrowTo(axis, index, index + 1); // narrow it down
+        tensorShape.TrimRankInPlace(axis);            // drop trailing singleton dimensions
+
+        // create a NDArrayView with this new tensor shape onto the existing storage object
+        // Note that this version may create an NDArrayView with strides, which is not accepted by some operations.
+        // TODO: Check that at least this will be discovered. AsMatrix() checks it. Does that cover all use cases?
+        return MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
     }
 
     NDArrayViewPtr NDArrayView::AsShape(const NDShape& newShape) const
@@ -1158,7 +984,8 @@ namespace CNTK
         //return MakeSharedObject<NDArrayView>(GetDataType(), newShape, IsReadOnly(), GetStorageObjectPtr());
         auto tensorShape = GetTensorShape();
         tensorShape.ReshapeInPlace(newShape.Dimensions());
-        return MakeSharedObject<NDArrayView>(GetDataType(), tensorShape, IsReadOnly(), GetStorageObjectPtr());
+        return MakeSharedObject<NDArrayView>(m_dataType, tensorShape, m_isReadOnly, GetStorageObjectPtr());
+        // TODO: A new constructor that takes an NDArrayView. .Reviewed()?
     }
 
     // TODO: This could actually be strided?
