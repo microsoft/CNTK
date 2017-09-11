@@ -690,9 +690,6 @@ namespace CNTK
                             std::vector<bool> sharing = { true };
                             auto inputShape = m_inputs[0].Shape();
 
-                            if (inputShape.HasFreeDimension())
-                                LogicError("Function '%S': Currently pooling does not support operands with free static axes dimensions.", AsString().c_str());
-
                             // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
                             if (poolingWindowsShape.IsUnknown() && !inputShape.SubShape(0, inputShape.Rank() - 1).HasUnboundDimension())
                             {
