@@ -42,6 +42,10 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                 /// In case of CNTK test runs (runTest is set to a test name) data folders need to be set accordingly.
                 switch (runTest)
                 {
+                    case "LogisticRegressionTest":
+                        Console.WriteLine($"======== running LogisticRegression.TrainAndEvaluate using {device.Type} ========");
+                        LogisticRegression.TrainAndEvaluate(device);
+                        break;
                     case "SimpleFeedForwardClassifierTest":
                         SimpleFeedForwardClassifierTest.DataFolder = ".";
                         Console.WriteLine($"======== running SimpleFeedForwardClassifierTest.TrainSimpleFeedForwardClassifier using {device.Type} ========");
@@ -97,6 +101,9 @@ namespace CNTK.CNTKLibraryCSTrainingTest
 
         static void RunAllExamples(DeviceDescriptor device)
         {
+            Console.WriteLine($"======== running LogisticRegression.TrainAndEvaluate using {device.Type} ========");
+            LogisticRegression.TrainAndEvaluate(device);
+
             Console.WriteLine($"======== running SimpleFeedForwardClassifier.TrainSimpleFeedForwardClassifier using {device.Type} ========");
             SimpleFeedForwardClassifierTest.TrainSimpleFeedForwardClassifier(device);
 
