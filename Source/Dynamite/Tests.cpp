@@ -435,7 +435,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 
 void RunDynamiteTests()
 {
-#if 1 // (interferes with logging for profiling)
+#if 1 // (interferes with logging for profiling and reprodible Parameter initialization)
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
     numFailed += DynamiteTest(N, DataType::Double, DeviceDescriptor::GPUDevice(0));

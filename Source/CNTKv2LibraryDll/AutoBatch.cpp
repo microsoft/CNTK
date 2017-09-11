@@ -23,7 +23,7 @@
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
 #define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
-#define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
+//#define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
 
 #ifdef LOG_STATS
 static size_t logMemoizeStatsPeriod = 50;
@@ -745,9 +745,11 @@ struct RuntimeStatistics
     size_t numBatchedLaunches = 0;
     size_t numCommonSubexpressionsEliminated = 0; // equivalent Functions (same op, same inputs) discovered
     // backward
-    size_t numBackpropsToInputs = 0;
+    size_t numBackpropsThrough = 0;  // number of functions (after batching) that we backprop through to at least oneinput
+    size_t numBackpropsToInputs = 0; // total number of inputs we backprop to
     size_t numBackpropGathers = 0;
     size_t numBackpropScatters = 0;
+    size_t numBackpropSetZeroes = 0; // number of explicit SetValue(0) calls to clear a gradient
     size_t numBatchedBackpropToViews = 0; // number of gradients that turned out to be views and were short-circuited
     size_t numBatchedBackpropToCalls = 0; // number of gradients actually computed
 };
@@ -905,6 +907,7 @@ class Variable::AutoBatch
 
     // buffers e.g. for building NDArrayViewPtr vectors. Kept as class members to avoid repeated memory allocations.
     vector<NDArrayViewPtr>     m_inputValuesBuffer;
+    vector<NDArrayViewPtr>     m_inputValuesBuffer2;
     vector<NDArrayViewPtr>     m_outputGradientsBuffer;
     vector<const NDArrayView*> m_inputValuesBufferRaw;
     vector<size_t>             m_dimsBuffer;
@@ -2447,6 +2450,7 @@ public:
             if (beta == 0.0) // gradient is fresh: explicitly reset all (since we are slicing into the input gradientm, we cannot use the beta mechanism)
             {
                 gradient->SetValue(0.0f);
+                m_stats.numBackpropSetZeroes++;
                 beta = 1.0;
             }
             gradient = gradient->IndexLastAxis(index);
@@ -2490,7 +2494,7 @@ public:
     // function, and one in the fields.
     //
     // Each iteration updates the m_consumer fields of the inputs leading to this var.
-    // Precondition: Call this only once per input.
+    // Precondition: Call this only once per redirection target and once per leaf.
     void RBuildBackwardGraph(VariableFields& gradFields, bool userOwnsGradients = false)
     {
         fail_if(gradFields.m_varKind == VariableKind::Input || gradFields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??"); // (should have been caught in forward)
@@ -2504,7 +2508,10 @@ public:
         if (!userOwnsGradients) // user-owned gradients are those passed in by the user
             gradFields.m_gradient.reset();
         if (gradFields.m_gradient) // if one was passed in, clear it to zero   --TODO: use a dirty flag, and use beta=0 for this instead
+        {
             gradFields.m_gradient->SetValue(0.0);
+            m_stats.numBackpropSetZeroes++;
+        }
         // done initializing this node. Now on to its inputs.
 
         // handle leaves
@@ -2547,6 +2554,8 @@ public:
             inputGradFields.m_consumers.push_back({ &f, i });
             m_stats.numBackpropsToInputs++;
         }
+        // BUGBUG: Why is this count significantly higher (4x) than the number of batched forward ops? Are we missing batched forward ops?
+        m_stats.numBackpropsThrough++;
     }
 
     // test whether 'fields' is a physical output of its m_function
@@ -2706,20 +2715,20 @@ public:
 
 #define DontSeeThroughNoOps // TODO: remove this once backprop works; for now keep as tag
 
-    // backprop into an input of a splice operation
+    // backprop into all inputs of a splice operation
     // This is done as a single CUDA launch into all inputs.
-    // This is a little tricky. We backprop into all inputs.
-    // So we must make sure we run this only once.
+    // We must make sure we run this only once.
     // The first time this gradient gets pulled, we do it for all inputs
     // and remember that this has been done.
     void BackpropThroughSplice(PrimitiveFunction* f)
     {
         // if we pull this a second time, then don't propagate again
+        // Note: This visited-tag is only used by this function.
         if (m_visitorTag.Visited(f->m_autoBatchState.m_visitedTag))
             return;
         // fast path: only one input (and not Splice, which we do in bulk)
         if (f->m_inputs.size() == 1)
-            return BackpropToUnbatched({ f, 0 }, /*viewAllowed=*/false/*TODO: think this through*/);
+            return BackpropToUnbatched({ f, 0 }, /*viewAllowed=*/false);
         // Considerations:
         //  - For now we do optimize for consecutive inputs, because those would not
         //    have been transformed into a Splice operation in auto-batching.
@@ -2729,7 +2738,7 @@ public:
         //    This is currently handled via atomicAdd(), i.e. will have non-determinism.
         //    (A striding trick minimizes the probability of clashes.)
         //    Note that in this case, beta will be 1, since at least one of those
-        //    gradients is not newly created, which is detected and force beta=1.
+        //    gradients is not newly created, which is detected below and forces beta=1.
 #if 0
         for (size_t index = 0; index < f->m_inputs.size(); index++)
         {
@@ -2740,41 +2749,50 @@ public:
 #ifdef LOG_DETAILS
         LogFunction(*f, L"bb# ", SIZE_MAX);
 #endif
-        // The gradient of Splice is just copying all columns to the respective inputs.
-        let& inputs =  f->m_inputs;
-        // get the TensorViews for everything we may compute the gradient from
-        let& output = f->m_outputs[0];
-        let& outputFields = *output.m_dataFields;
+        // function's forward output and received gradient from top live here
+        let& outputFields = GetOutputFields(f); // result of f lives here; hence also the gradient we back-propagate
         fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
         fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
-        let& outputGradient = outputFields.m_gradient; // this is the incoming batch of gradients
 
+        // The gradient of Splice is just copying all columns to the respective inputs.
+        let& inputs =  f->m_inputs;
         let numInputs = inputs.size();
-        auto& inputGradients = BorrowBuffer(m_inputValuesBuffer, numInputs); // target locations to propagate the columns to
-        bool allBetasZero = true;
+        auto& inputGradients = BorrowBuffer(m_inputValuesBuffer, numInputs);   // target locations to propagate the columns to (GetinputFields(input).m_gradient; no redirect unless it's a view)
+        auto& inputGradientsToZeroOut = BorrowBuffer(m_inputValuesBuffer2, 0); // if we manually must reset gradients to zero, this is the list fo those
+        bool allBetasZeroSoFar = true;
         for (size_t i = 0; i < numInputs; i++)
         {
-            let& input = DontSeeThroughNoOps(inputs[i]);
-            // create the gradient memory for this input
+            let& input = inputs[i];
+            // create the gradient memory for this input. This sets both input->m_dataFields and the redirect if any
             let gradient = CacheAndGetGradientView(input);
-            // ...CONTINUE HERE
-            let& fields = *input.m_dataFields;
             inputGradients[i] = gradient.view;
             // handle inconsistent betas
-            if (gradient.beta != 0 && allBetasZero)
+            if (gradient.beta != 0 && allBetasZeroSoFar)
             {
                 // We were running under the assumption that all betas are zero, so we can use beta=0 below.
                 // Now we must run with beta 1, and therefore manually reset all pevious ones.
                 for (size_t i1 = 0; i1 < i; i1++) // these were all beta=0
-                    DontSeeThroughNoOps(inputs[i1]).m_dataFields->m_gradient->SetValue(0.0f);
-                allBetasZero = false;
+                    inputGradientsToZeroOut.push_back(GetInputFields(inputs[i1]).m_gradient);
+                allBetasZeroSoFar = false;
             }
-            else if (gradient.beta == 0 && !allBetasZero)
-                fields.m_gradient->SetValue(0.0f);
+            else if (gradient.beta == 0 && !allBetasZeroSoFar)
+                inputGradientsToZeroOut.push_back(GetInputFields(input).m_gradient);
         }
-        let beta = allBetasZero ? 0.0 : 1.0; // if at least one is not zero, we must run qwith beta=1
+        let beta = allBetasZeroSoFar ? 0.0 : 1.0; // if at least one is not zero, we must run qwith beta=1
+
+        // manually reset all newly created ones when we are forced to use beta=1
+        // TODO: Once we have virtual scatter, then scatter a ConstOne(alpha=0) into these in a single CUDA launch.
+        //       E.g., the first time this is hit, it's for 515 items; that is, 515 CUDA launches (cudaMemsetAsync()).
+        if (!inputGradientsToZeroOut.empty())
+        {
+            BreakPoint;
+            for (let& grad : inputGradientsToZeroOut)
+                grad->SetValue(0.0f);
+            m_stats.numBackpropSetZeroes += inputGradientsToZeroOut.size();
+        }
 
         // backprop into all inputs
+        let& outputGradient = outputFields.m_gradient; // this is the incoming batch of gradients
         NDArrayView::ScatterBatch(outputGradient, inputGradients, (size_t)f->m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex(), beta);
 #endif
         m_stats.numBackpropScatters++;
@@ -2898,9 +2916,9 @@ public:
         // splice operation should use scatter
         // BUGBUG: Really only true if the Splice originated from a batching operation.
         //         User-specified Splice ops might have arguments that receive no gradient, e.g. constants.
-#if 0
         if (opClass == OpSpecificConditionKind::Splice)
             m_spliceConsumers.push_back(c);
+#if 0
         // matrix product
         // We only collect matrix products with fully matching dimensions.
         else if (opClass == OpSpecificConditionKind::MatrixProduct && index == 0 &&
@@ -2910,8 +2928,8 @@ public:
         //else if (f->m_op == PrimitiveOpType::Plus)
         //    return m_viewableConsumers;
         // all other
-        else
 #endif
+        else
             m_otherConsumers.push_back(c);
     };
 
@@ -2957,7 +2975,7 @@ public:
 
 #ifdef NO_BATCHED_BACKPROP
         if (fields.m_consumers.size() == 1)
-            BackpropToUnbatched(fields.m_consumers.front(), /*viewAllowed=*/true); // only one: allow gradient to be a view, since no aggregation is needed
+            BackpropToUnbatched(fields.m_consumers.front(), /*viewAllowed=*/true); // viewAllowed because there is only one, no aggregation needed
         else
             fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
             {
@@ -2992,11 +3010,13 @@ public:
             DetermineAndAddToBucket(fi);
         });
 
-        // ...TODO: CONTINUE HERE
-
         // splice bucket
+        // This input is pulling a gradient from a Splice operation.
+        // Instead of producing just this one input's gradient, we use ScatterBatch to fill all of them.
         for (auto& c : m_spliceConsumers)
             BackpropThroughSplice(c.first);
+
+        // ...TODO: CONTINUE HERE
 
         // matrix-weight bucket
         if (!m_matrixWeightConsumers.empty())
@@ -3089,8 +3109,8 @@ public:
             kv.second = kv.first.m_dataFields->m_gradient;
         // note: we will leave the m_consumers fields dangling, and reset them upon next use
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedBackward: %d backprop computations and %d views besides %d gathers and %d scatters executed in nominal %d post-batching ops\n",
-                (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBatchedBackpropToViews, (int)m_stats.numBackpropGathers, (int)m_stats.numBackpropScatters, (int)m_stats.numBackpropsToInputs);
+        fprintf(stderr, "BatchedBackward: %d backprop computations and %d views besides %d gathers, %d scatters, %d set-zeroes for %d ops (total %d inputs)\n",
+                (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBatchedBackpropToViews, (int)m_stats.numBackpropGathers, (int)m_stats.numBackpropScatters, (int)m_stats.numBackpropSetZeroes, (int)m_stats.numBackpropsThrough, (int)m_stats.numBackpropsToInputs);
 #endif
     }
 }; // class
