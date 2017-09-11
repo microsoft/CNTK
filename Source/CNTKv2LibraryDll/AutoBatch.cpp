@@ -23,7 +23,7 @@
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
 #define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
-//#define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
+#define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
 
 #ifdef LOG_STATS
 static size_t logMemoizeStatsPeriod = 50;
@@ -2618,7 +2618,8 @@ public:
     // This is the standard path for all unbatched ops.
     // This wraps the PrimitiveFunction's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
     // Note that each input that is lazy should redirect into a slice in its lazy source.
-    void BackpropToUnbatched(const AutoBatchConsumer& fi)
+    // If the target only has one consumer, pass viewAllowed. This will allow views for trivial gradients such as Plus.
+    void BackpropToUnbatched(const AutoBatchConsumer& fi, bool viewAllowed)
     {
         let* f = fi.first;
         let index = fi.second;
@@ -2668,7 +2669,7 @@ public:
             return;
         // fast path: only one input (and not Splice, which we do in bulk)
         if (f->m_inputs.size() == 1)
-            return BackpropToUnbatched({ f, 0 });
+            return BackpropToUnbatched({ f, 0 }, /*viewAllowed=*/false/*TODO: think this through*/);
         // Considerations:
         //  - For now we do optimize for consecutive inputs, because those would not
         //    have been transformed into a Splice operation in auto-batching.
@@ -2682,7 +2683,7 @@ public:
 #if 0
         for (size_t index = 0; index < f->m_inputs.size(); index++)
         {
-            BackpropToUnbatched({ f, index });
+            BackpropToUnbatched({ f, index }, /*viewAllowed=*/false); // (this is a testing path only, so no need to worry about viewAllowed)
             m_stats.numBatchedBackpropToCalls--; // for now fake the call count to see the potentail impact
         }
 #else
@@ -2735,13 +2736,13 @@ public:
     {
 #if 0
         for (auto& c : consumers)
-            BackpropToUnbatched(c);
+            BackpropToUnbatched(c, /*viewAllowed=*/false); // view would not help, so we can pass false at no loss
 #else
         // batch all outGrads, and batch all right inputs
         let numBatchItems = consumers.size();
         if (numBatchItems == 1) // fast path if only one (and the last dim is not guaranteed to be a batch dim)
             // ^^ This comment makes no sense. The batching condition is hosed (too restrictive).
-            return BackpropToUnbatched(consumers.front());
+            return BackpropToUnbatched(consumers.front(), /*viewAllowed=*/false); // view would not help, so we can pass false at no loss
         // We compute
         //  leftGrad += sum_i outGrad_i @ right_i^T
         //            = (concat_i outGrad_i) @ (concat_i right_i)^T
@@ -2877,7 +2878,6 @@ public:
     // Splice op, which produces all inputs' gradients in a single go and must therefore only run once.
     __declspec(noinline) void RAggregateGradientFromAllConsumers(VariableFields& fields)
     {
-        //let& fields = *var.m_dataFields;
         if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
 
@@ -2906,16 +2906,19 @@ public:
         //fail_if(var.Kind() != VariableKind::Parameter && fields.m_gradient, "non-Parameter variable unexpectedly already has a gradient"); // (sanity check; I am not sure actually, maybe too strict)
 
 #ifdef NO_BATCHED_BACKPROP
-        fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
-        {
-            BackpropToUnbatched(fi);
-        });
+        if (fields.m_consumers.size() == 1)
+            BackpropToUnbatched(fields.m_consumers.front, /*viewAllowed=*/true); // only one: allow gradient to be a view, since no aggregation is needed
+        else
+            fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
+            {
+                BackpropToUnbatched(fi, /*viewAllowed=*/false);
+            });
 #else
         // fast path: if only one consumer then there is nothing to batch
         // (with exception of Splice, which has a different optimization)
         if (fields.m_consumers.size() == 1 && fields.m_consumers.front().first->m_op != PrimitiveOpType::Splice)
         {
-            BackpropToUnbatched(fields.m_consumers.front());
+            BackpropToUnbatched(fields.m_consumers.front(), /*viewAllowed=*/true); // viewAllowed because there is only one, no aggregation needed
             return;
         }
 
@@ -2954,7 +2957,7 @@ public:
 
         // others bucket
         for (auto& c : m_otherConsumers)
-            BackpropToUnbatched(c);
+            BackpropToUnbatched(c, /*viewAllowed=*/false);
 #endif
     }
 
