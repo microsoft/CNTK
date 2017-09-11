@@ -7332,12 +7332,12 @@ template <class ElemType>
 int CPUMatrix<ElemType>::Argmax() const
 {
     int maxArg = -1;
-    ElemType maxValue = std::numeric_limits<ElemType>::min();
+    ElemType maxValue = std::numeric_limits<ElemType>::lowest();
 
 #pragma omp parallel 
     {
         int localMaxArg = -1;
-        ElemType localMaxValue = std::numeric_limits<ElemType>::min();
+        ElemType localMaxValue = std::numeric_limits<ElemType>::lowest();
 
 #pragma omp for
         for (int index = 0; index < (int)GetNumElements(); ++index)
