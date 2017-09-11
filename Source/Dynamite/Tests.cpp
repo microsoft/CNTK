@@ -186,6 +186,8 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1); }, "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42 } } },
         { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1); }, "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42, 9, 3 } } },
         // ternary
+#define Func(expr) ([](const vector<Variable>& args) { return expr; })
+        { Op(Clip                 ), Func(CNTK::Clip         (args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
         { Op(Clip                 ), [](const vector<Variable>& args) { return CNTK::Clip         (args[0], args[1], args[2]); }, { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
         { Op(Cond                 ), [](const vector<Variable>& args) { return CNTK::ElementSelect(args[0], args[1], args[2]); }, { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
         // binary
@@ -215,11 +217,12 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         { Op(ExponentialLinearUnit), [](const vector<Variable>& args) { return CNTK::ELU          (args[0]         ); }, { { 13, 42 } } },
         { Op(StableSigmoid        ), [](const vector<Variable>& args) { return CNTK::Sigmoid      (args[0]         ); }, { { 128 } } },
         // reductions
-        { RedOp(Sum,    NDShape({  1     }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(0)); }, { { 13 } } },
-        { RedOp(Sum,    NDShape({ 13,  1 }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(1)); }, { { 13, 42 } } },
-        { RedOp(Sum,    NDShape({  1, 42 }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(0)); }, { { 13, 42 } } },
-        { RedOp(LogSum, NDShape({  1     }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceLogSum(args[0], Axis(0)); }, { { 13 } } },
-        { RedOp(Sum,    NDShape({  1     }), 13), [](const vector<Variable>& args) { return CNTK::ReduceMean  (args[0], Axis(0)); }, { { 13 } } }
+        { RedOp(Sum,    NDShape({  1     }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(0)          ); }, { { 13 } } },
+        { RedOp(Sum,    NDShape({ 13,  1 }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(1)          ); }, { { 13, 42 } } },
+        { RedOp(Sum,    NDShape({ 13     }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis_DropLastAxis); }, { { 13, 42 } } }, // removes the last axis
+        { RedOp(Sum,    NDShape({  1, 42 }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(0)          ); }, { { 13, 42 } } },
+        { RedOp(LogSum, NDShape({  1     }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceLogSum(args[0], Axis(0)          ); }, { { 13 } } },
+        { RedOp(Sum,    NDShape({  1     }), 13), [](const vector<Variable>& args) { return CNTK::ReduceMean  (args[0], Axis(0)          ); }, { { 13 } } }
     };
 
     fprintf(stderr, "\n--- Running tests for batch of %d. %s on %S\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str());
@@ -424,7 +427,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 
 void RunDynamiteTests()
 {
-#if 1
+#if 0
     return; // no tests
 #else
     size_t numFailed = 0;
