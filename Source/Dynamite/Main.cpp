@@ -384,6 +384,6 @@ int main(int argc, char *argv[])
     }
     catch (exception& e)
     {
-        fprintf(stderr, "EXCEPTION caught: %s\n", e.what());
+        fprintf(stderr, "EXCEPTION caught: %s\n", e.what()), fflush(stderr);
     }
 }

@@ -3,6 +3,8 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+// BUGBUG: One gradient test sometimes fails. I think there is a SetValue(0) missing.
+
 // The functions for automatically-batched evaluation of dynamic graphs (forward and backward) are contained here.
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
