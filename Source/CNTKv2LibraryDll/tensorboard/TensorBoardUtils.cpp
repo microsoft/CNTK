@@ -263,6 +263,14 @@ namespace CNTK
         }
 
     #ifndef CNTK_UWP
+
+        // Ensure OpenCV's imgproc library appears as direct dependency at link
+        // time so rpath will apply (Linux). // TODO find a better way
+        void _dummyRefForOpenCVImgProc()
+        {
+            cvThreshHist(0, 0.0);
+        }
+
         void WriteImageToBuffer(void* matrix, int height, int weight, int dataType, std::vector<uchar>& buffer)
         {
             assert(matrix != nullptr);
