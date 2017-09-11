@@ -612,7 +612,10 @@ static Matrix<ElemType>& GatherScatterGetSOBView(const TensorView<ElemType>& ite
     return out;
 }
 
-// TODO: In auto-batch, we know from context that the shapes match. So this check can be bypassed.
+// TODO: In auto-batch, we know from context that the shapes match. So this check could be bypassed.
+//       Potentially if the batching is into a new axis, then it can be bypassed. This would, however,
+//       forbid broadcasting some inputs. Do we want that constraint here? It can be useful to be able
+//       to e.g. augment a tensor with a second plane of zeroes (happens in ResNet).
 template<typename TArrayRef> // (const) TensorView*
 static bool CanGatherScatterBatch(const TensorShape& m_shape, const TArrayRef& inputs, size_t axis)
 {

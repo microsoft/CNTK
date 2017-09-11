@@ -279,14 +279,19 @@ namespace CNTK
         ///
         /// Returns the total size of the rectangular shape that 'this' shape denotes.
         ///
-        size_t TotalSize() const
+        size_t TotalSize(bool check = true) const
         {
-            if (HasUnboundDimension())
+            if (check && HasUnboundDimension())
                 RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension or FreeDimension.", AsString().c_str());
 
-            size_t totalSize = 1;
-            for (auto dim : m_shapeDims)
-                totalSize *= dim;
+            const auto& dims = m_shapeDims;
+            size_t rank = dims.size();
+            if (rank == 0) // this function must be fast
+                return 1;
+            size_t totalSize = dims.front();
+            if (rank > 1)
+                for (size_t k = 1; k < rank; k++)
+                    totalSize *= dims[k];
 
             return totalSize;
         }

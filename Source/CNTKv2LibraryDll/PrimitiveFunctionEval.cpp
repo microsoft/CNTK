@@ -169,7 +169,7 @@ namespace CNTK
                 else if (reductionOpName == PrimitiveFunction::InternalMeanReductionOpName)
                 {
                     reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
-                    alpha = (double)outputShape.TotalSize() / (double)args[0]->Shape().TotalSize();
+                    alpha = (double)outputShape.TotalSize(/*check=*/false) / (double)args[0]->Shape().TotalSize(/*check=*/false);
                 }
                 else
                     //  PrimitiveFunction::InternalMaxReductionOpName
@@ -209,8 +209,8 @@ namespace CNTK
                 let& sigma  = args[7];
                 let& xHat   = args[8]; // (x-mu)/sigma
                 // mu and sigma
-                let mu = NDArrayView::NumericOperation({ x }, (double)bias->Shape().TotalSize() / (double)x->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, redBuf);
-                NDArrayView::NumericOperation({ x, mu }, (double)sigma->Shape().TotalSize() / (double)x->Shape().TotalSize(), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma); // sigma^2
+                let mu = NDArrayView::NumericOperation({ x }, (double)bias->Shape().TotalSize(/*check=*/false) / (double)x->Shape().TotalSize(/*check=*/false), Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, redBuf);
+                NDArrayView::NumericOperation({ x, mu }, (double)sigma->Shape().TotalSize(/*check=*/false) / (double)x->Shape().TotalSize(/*check=*/false), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma); // sigma^2
                 NDArrayView::NumericOperation({ sigma }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma); // sigma (in-place)
                 double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                 if (epsilon > 0) // we add eps to sigma to avoid dividing by 0 or very small estimates
@@ -387,7 +387,7 @@ namespace CNTK
                 else if (reductionOpName == PrimitiveFunction::InternalMeanReductionOpName)
                 {
                     op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
-                    alpha = (double)outputValue->Shape().TotalSize() / (double)inputValues[0]->Shape().TotalSize();
+                    alpha = (double)outputValue->Shape().TotalSize(/*check=*/false) / (double)inputValues[0]->Shape().TotalSize(/*check=*/false);
                 }
                 else
                     //  PrimitiveFunction::InternalMaxReductionOpName
@@ -508,7 +508,7 @@ namespace CNTK
                 // add second term, which is
                 // -(xHat * scaleGradient/N + biasGradient/N)
                 // * (scale / sigma)
-                let oneOverN = (double)redBuf->Shape().TotalSize() / (double)inputValues[0]->Shape().TotalSize();
+                let oneOverN = (double)redBuf->Shape().TotalSize(/*check=*/false) / (double)inputValues[0]->Shape().TotalSize(/*check=*/false);
                 // note: scaleGradientAv and biasGradientAv both share a buffer with mu, since they are not needed at the same time
                 let scaleGradient = NDArrayView::NumericOperation({ outGrad, xHat }, /*alpha=*/1, opElementwiseProduct, redBuf);
                 NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-oneOverN, opAxBxCoverD, gradient, /*beta=*/1.0);

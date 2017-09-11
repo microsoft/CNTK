@@ -661,11 +661,11 @@ public:
     // gradients (of embeddings) that can be kept around across minibatches, and thus not part of batched computation.
     NDArrayViewPtr NewNDArrayView(const NDShape& shape, const DataType& dataType, StorageFormat format, const DeviceDescriptor& device)
     {
-        let numElements = shape.TotalSize();
+        let numElements = shape.TotalSize(/*check=*/false);
         // if too large, or sparse, then plain alloc
         if (numElements > ARENASIZE || format != StorageFormat::Dense)
         {
-            //fprintf(stderr, "allocating %d elements of format %d, outside arena\n", (int)shape.TotalSize(), (int)format);
+            //fprintf(stderr, "allocating %d elements of format %d, outside arena\n", (int)shape.TotalSize(/*check=*/false), (int)format);
             //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"single NewNDArrayView", 3, numElements);
             return make_shared<NDArrayView>(dataType, format, shape, device);
         }
@@ -690,7 +690,7 @@ public:
             {
                 viewPtr = s_recycledArenas.back().release(); // take back ownership
                 s_recycledArenas.pop_back(); // pop empty one
-            //    //fprintf(stderr, "..recycling arena of %d elements\n", (int)viewPtr->Shape().TotalSize());
+            //    //fprintf(stderr, "..recycling arena of %d elements\n", (int)viewPtr->Shape().TotalSize(/*check=*/false));
                 //viewPtr->SetValue(0.0); // BUGBUG: without this, we get funky results
                 delete viewPtr;
             //    viewPtr = new NDArrayView(dataType, StorageFormat::Dense, NDShape{ ARENASIZE }, device);
@@ -702,7 +702,7 @@ public:
             }
             s_currentArena = shared_ptr<NDArrayView>(viewPtr, [](NDArrayView* viewPtr)
             {
-                //fprintf(stderr, "..retiring arena of %d elements\n", (int)viewPtr->Shape().TotalSize());
+                //fprintf(stderr, "..retiring arena of %d elements\n", (int)viewPtr->Shape().TotalSize(/*check=*/false));
                 //delete viewPtr;
                 s_recycledArenas.push_back(unique_ptr<NDArrayView>(viewPtr)); // don't release; rather keep it around
             });
@@ -748,7 +748,8 @@ struct RuntimeStatistics
     size_t numBackpropsToInputs = 0;
     size_t numBackpropGathers = 0;
     size_t numBackpropScatters = 0;
-    size_t numBatchedBackpropToCalls = 0;
+    size_t numBatchedBackpropToViews = 0; // number of gradients that turned out to be views and were short-circuited
+    size_t numBatchedBackpropToCalls = 0; // number of gradients actually computed
 };
 
 // ---------------------------------------------------------------------------
@@ -1491,7 +1492,7 @@ class Variable::AutoBatch
         {
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
             let logAsOp = (f.m_op == PrimitiveOpType::Splice && spliceIsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
-            cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, IsViewOp(f.m_op) ? 2 : hasSparse ? 1 : 0, outputShape.TotalSize(), inputValues[0]->Device());
+            cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, IsViewOp(f.m_op) ? 2 : hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false), inputValues[0]->Device());
         }
         // execute it
         GetOutputFields(&f).m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
@@ -1581,7 +1582,7 @@ class Variable::AutoBatch
                     // (BUGBUG: We skip this for sparse, which will prevent CSE discovery. Needs a solution.)
                     // determine stride
                     let& shape = outFields.m_shape;
-                    let stride = shape.TotalSize() / shape.Dimensions().back(); // BUGBUG: This must use the actual stride from the TensorView; this is a hack.
+                    let stride = shape.TotalSize(/*check=*/false) / shape.Dimensions().back(); // BUGBUG: This must use the actual stride from the TensorView; this is a hack.
                     addrForHash += fields.m_redirection.m_index * stride;
                 }
             }
@@ -2215,7 +2216,7 @@ class Variable::AutoBatch
                     fail_if(!isElementWise, "output shape should only have additional singleton axes for elementwise operations");
                     // insert a Reshape() op to remove the axes
                     let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
-                    fail_if(batchedOutputShape.TotalSize() != batchedOp->m_outputs[0].Shape().TotalSize(), "output shape has unexpected axes that should be singletons but aren't");
+                    fail_if(batchedOutputShape.TotalSize(/*check=*/false) != batchedOp->m_outputs[0].Shape().TotalSize(/*check=*/false), "output shape has unexpected axes that should be singletons but aren't");
 
                     Variable arg = batchedOp->m_outputs[0];
                     arg.m_outputComposite = batchedOp;
@@ -2414,7 +2415,6 @@ public:
     NewGradient CacheAndGetGradientView(const Variable& input, StorageFormat format = StorageFormat::Dense)
     {
         auto& inputFields = GetInputFields(input); // describes the input variable, e.g. shape. May be a redirect
-        auto& gradFields = GetGradientFieldsForBackprop(inputFields); // describes the physical function output. This is where the gradient lives physically.
 
         double beta = 1.0;
 
@@ -2422,14 +2422,16 @@ public:
         if (inputFields.m_gradient)
             return{ inputFields.m_gradient, beta };
 
-        // if we don't even have a physical one, then create the thatone
+        // no cached gradient
+        // if we don't even have a physical one, then create the that one
+        auto& gradFields = GetGradientFieldsForBackprop(inputFields); // describes the physical function output. This is where the gradient lives physically.
         if (!gradFields.m_gradient)
         {
             // create a new one
             // TODO: allocate parameters as separate objects; and allow user to pass buffers in
             gradFields.m_gradient = m_arena.NewNDArrayView(gradFields.m_shape, gradFields.m_dataType, format, gradFields.m_value->Device());
             beta = 0.0; // has not been initialized (random section in arena)
-            // if there is no redirect, then the physical one is the cached one, & done.
+            // if there is no redirect, then writing to the physical one is the same as writing to the cached one. Then we are done.
             if (inputFields.m_gradient)
                 return{ inputFields.m_gradient, beta };
         }
@@ -2614,10 +2616,35 @@ public:
 
     typedef Internal::AutoBatchConsumer AutoBatchConsumer; // TODO: shouldn't this be done with using?
 
+    // check whether an input's gradient is identical to the output's gradient, and can therefore be viewed
+    static bool IsViewableGradient(const PrimitiveOpType op, size_t inputIndex, const VariableFields& outputFields, const Variable& input)
+    {
+        let isPlusOrMinus =
+            op == PrimitiveOpType::Plus ||
+            (op == PrimitiveOpType::Minus && inputIndex == 0);
+        bool doesOpAllowIt =
+            isPlusOrMinus ||
+            op == PrimitiveOpType::Reshape;  // explicit reshape, e.g. generated by auto-batcher  --TODO: change to implicit reshape instead
+        if (doesOpAllowIt)
+        {
+            let& inputFields = GetInputFields(input);
+            // If input is a redirected slice, then necessarily the underlying object (=inputFields.m_redirection.m_function)
+            // must have multiple consumers. Otherwise it would not be part of a batched operation, which is the only way
+            // of creating redirected slices.
+            fail_if(inputFields.m_redirection && inputFields.m_redirection.m_index != SIZE_MAX, "redirected slice has single consumer??");
+            // Verify that the op does not broadcast or reduce, which may happen for Plus or Minus.
+            return
+                !isPlusOrMinus ||                            // no need to check for broadcasting/reduction
+                outputFields.m_shape == inputFields.m_shape; // Plus or Minus: must check
+        }
+        else
+            return false;
+    }
+
     // back-propagate f's outputs' m_gradient to a specified input
     // This is the standard path for all unbatched ops.
     // This wraps the PrimitiveFunction's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
-    // Note that each input that is lazy should redirect into a slice in its lazy source.
+    // Note that each input that is redirected should redirect the gradient into a slice in its lazy source.
     // If the target only has one consumer, pass viewAllowed. This will allow views for trivial gradients such as Plus.
     void BackpropToUnbatched(const AutoBatchConsumer& fi, bool viewAllowed)
     {
@@ -2632,6 +2659,7 @@ public:
         fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
 
         // get the TensorViews for the forward inputs to this function
+        // TODO: Can we know which ones are actually needed? We could save some time. This info would be shared with a memory-sharing mechanism.
         let& inputs = f->m_inputs;
         let numInputs = inputs.size();
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, numInputs);
@@ -2642,12 +2670,34 @@ public:
         // If it was newly created, then gradient.beta will be 0
         let& input = inputs[index];
         fail_if(!GetInputFields(input).m_needsGradient, "function unexpectedly does not need a gradient");
+
+        // optimize for trivial gradients (e.g. Plus)
+        let op = f->m_op;
+        if (viewAllowed && IsViewableGradient(op, index, outputFields, input))
+        {
+            // TODO: Splice can also be viewable, but is tricky, as the Scatter optimization conflicts with it. A Splice gradient is only viewable of all its inputs'
+            //       gradients are viewable; since the Scatter call currently cannot exclude slices.
+            //       Also we need to set up an elaborate view, possibly determine the starting offset.
+            //       Hence, Splice for now does not have a viewable gradient.
+            //       Because of that, the gradient is indeed strictly a view, with possible reshape.
+            auto& inputFields = GetInputFields(input);
+            fail_if(inputFields.m_gradient, "function with viewable gradient unexpectedly already has a gradient");
+            auto grad = outputFields.m_gradient;
+            if (op == PrimitiveOpType::Reshape)
+                grad = grad->AsShape(inputFields.m_shape); // an explicit Reshape (other ops must have the same shape already)
+            inputFields.m_gradient = move(grad);
+            // Note well: This is a little scary. If this condition is not correct, and more gradients get accumulated
+            // into this input, then those will get into the output as well, which would be incorrect. There is no good
+            // way to ensure this.
+            m_stats.numBatchedBackpropToViews++;
+            return;
+        }
         let gradient = CacheAndGetGradientView(input, DetermineGradientStorageType(*f, 0));
 
         // compute gradients for the desired input
         // backprop into the input
         // BUGBUG: (perf) In case of Reshape we currently make a copy, which is not needed --> see-through the op, and backprop through a reshaped view into Reshape's argument gradient?
-        PrimitiveFunction::BackpropTo(outputFields.m_gradient.get()/*incoming*/, index, f->m_op, f->m_attributes, outputFields.m_value.get(), inputValues, gradient.view/*target*/, gradient.beta, *f);
+        PrimitiveFunction::BackpropTo(outputFields.m_gradient.get()/*incoming*/, index, op, f->m_attributes, outputFields.m_value.get(), inputValues, gradient.view/*target*/, gradient.beta, *f);
         m_stats.numBatchedBackpropToCalls++;
 #if 0   // debug the actual values
         fields.m_gradient->LogToFile(L"gradient", stderr);
@@ -2662,7 +2712,7 @@ public:
     // So we must make sure we run this only once.
     // The first time this gradient gets pulled, we do it for all inputs
     // and remember that this has been done.
-    void BackpropToSplice(PrimitiveFunction* f)
+    void BackpropThroughSplice(PrimitiveFunction* f)
     {
         // if we pull this a second time, then don't propagate again
         if (m_visitorTag.Visited(f->m_autoBatchState.m_visitedTag))
@@ -2684,7 +2734,7 @@ public:
         for (size_t index = 0; index < f->m_inputs.size(); index++)
         {
             BackpropToUnbatched({ f, index }, /*viewAllowed=*/false); // (this is a testing path only, so no need to worry about viewAllowed)
-            m_stats.numBatchedBackpropToCalls--; // for now fake the call count to see the potentail impact
+            m_stats.numBatchedBackpropToCalls--; // for now fake the call count to see the potential impact
         }
 #else
 #ifdef LOG_DETAILS
@@ -2790,15 +2840,15 @@ public:
     // This is the second function that does batching.
     // The vectors for building the lists are class members so that we reuse the malloc.
     // This is a subroutine of RAggregateGradientFromAllConsumers().
-    vector<AutoBatchConsumer> m_spliceConsumers;
-    vector<AutoBatchConsumer> m_matrixWeightConsumers;
-    vector<AutoBatchConsumer> m_summandConsumers;
-    vector<AutoBatchConsumer> m_otherConsumers;
+    vector<AutoBatchConsumer> m_spliceConsumers;       // Scatter optimization: backprop to all inputs at once using ScatterBatch
+    vector<AutoBatchConsumer> m_matrixWeightConsumers; // matrix product optimization: sum -> inner dimension
+    vector<AutoBatchConsumer> m_viewableConsumers;     // see-through gradients being aggregated -> Gather and Reduce
+    vector<AutoBatchConsumer> m_otherConsumers;        // remaining incoming gradients for which we have no further optimization
     void ClearBuckets()
     {
         m_spliceConsumers      .clear();
         m_matrixWeightConsumers.clear();
-        m_summandConsumers     .clear();
+        m_viewableConsumers    .clear();
         m_otherConsumers       .clear();
     }
     void DetermineAndAddToBucket (const AutoBatchConsumer& c)
@@ -2856,9 +2906,9 @@ public:
         else if (opClass == OpSpecificConditionKind::MatrixProduct && index == 0 &&
             (m_matrixWeightConsumers.empty() || (IsMatrixGradient0Batchable(*f, *m_matrixWeightConsumers.back().first))))
             m_matrixWeightConsumers.push_back(c);
-        // backprop into either of Plus' arguments
+        // backprop where gradients are just views that we can sum up
         //else if (f->m_op == PrimitiveOpType::Plus)
-        //    return m_summandConsumers;
+        //    return m_viewableConsumers;
         // all other
         else
 #endif
@@ -2907,7 +2957,7 @@ public:
 
 #ifdef NO_BATCHED_BACKPROP
         if (fields.m_consumers.size() == 1)
-            BackpropToUnbatched(fields.m_consumers.front, /*viewAllowed=*/true); // only one: allow gradient to be a view, since no aggregation is needed
+            BackpropToUnbatched(fields.m_consumers.front(), /*viewAllowed=*/true); // only one: allow gradient to be a view, since no aggregation is needed
         else
             fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
             {
@@ -2946,7 +2996,7 @@ public:
 
         // splice bucket
         for (auto& c : m_spliceConsumers)
-            BackpropToSplice(c.first);
+            BackpropThroughSplice(c.first);
 
         // matrix-weight bucket
         if (!m_matrixWeightConsumers.empty())
@@ -3039,8 +3089,8 @@ public:
             kv.second = kv.first.m_dataFields->m_gradient;
         // note: we will leave the m_consumers fields dangling, and reset them upon next use
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedBackward: %d backprop computations besides %d gathers and %d scatters executed in nominal %d post-batching ops\n",
-                (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBackpropGathers, (int)m_stats.numBackpropScatters, (int)m_stats.numBackpropsToInputs);
+        fprintf(stderr, "BatchedBackward: %d backprop computations and %d views besides %d gathers and %d scatters executed in nominal %d post-batching ops\n",
+                (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBatchedBackpropToViews, (int)m_stats.numBackpropGathers, (int)m_stats.numBackpropScatters, (int)m_stats.numBackpropsToInputs);
 #endif
     }
 }; // class
