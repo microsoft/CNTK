@@ -149,12 +149,15 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         return out;
     };
     // definition of all tests
+#define OpExpr(expr) ([&](const vector<NDArrayViewPtr>& argValues) { return expr; })
 #define Op(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode); }, #opCode))
 #define RedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0/denom, L"Copy", make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L#redOpCode); }, "Reduce" #redOpCode))
 #define OpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>([=](const vector<NDArrayViewPtr>& argValues){ return NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum"); }, #opCode "|Reduce"))
+#define FuncExpr(expr) ([](const vector<Variable>& args) { return expr; })
     vector<TensorViewTest> tests =
     {
         // splicing. Uniform splicing along last dimension will use single-kernel Gather; otherwise use multiple copy ops. Test both, also batched.
+        { { OpExpr(doSplice(argValues, 2)), "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(2)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 },{ 2, 3 } } }, // messy shapes, new axis
         { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 2); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(2)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 },{ 2, 3 } } }, // messy shapes, new axis
         { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 0); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(0)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 } } },          // messy shapes -> individual copy ops
         { { [&](const vector<NDArrayViewPtr>& argValues) { return doSplice(argValues, 1); }, "Splice" }, [&](const vector<Variable>& args) { return CNTK::Splice(args, Axis(1)); },{ { 2, 1 },{ 1, 3 },{ 1, 1 } } },          // messy shapes
@@ -162,11 +165,11 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         // BatchNorm. This is tricky, since it only makes sense when batching. Requires some special-casing in the test code below.
         { { [&](const vector<NDArrayViewPtr>& argValues) { return batchNormFwd(argValues); }, "BatchNormalization" }, [&](const vector<Variable>& args) { return CNTK::BatchNormalization(args[0], /*id=*/1, args[1], args[2], bnRunningMean, bnRunningInvStd, bnRunningCount, /*spatial=*/false, 0, 0, 0); },{ BN_SHAPE, BN_SHAPE, BN_SHAPE } },
         // dot product (both explicitly as InnerProduct() as well as composition, to verify the InnerProduct() optimization)
-        { OpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), [](const vector<Variable>& args) { return CNTK::InnerProduct(args[0], args[1], Axis(0)); }, { { 13,    42    }, { 13,    42    } } },
-        { OpWithRed(ElementwiseProduct, NDShape({ 1           })), [](const vector<Variable>& args) { return CNTK::InnerProduct(args[0], args[1], Axis(0)); }, { { 13           }, { 13           } } },
-        { OpWithRed(ElementwiseProduct, NDShape({ 1, 1, 42, 5 })), [](const vector<Variable>& args) { return CNTK::ReduceSum(CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0)), Axis(1)); }, { { 13, 2, 42, 5 }, { 13, 2, 42, 5 } } },
-        { OpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), [](const vector<Variable>& args) { return                 CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0));           }, { { 13,    42    }, { 13,    42    } } },
-        { OpWithRed(ElementwiseProduct, NDShape({ 1           })), [](const vector<Variable>& args) { return                 CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0));           }, { { 13           }, { 13           } } },
+        { OpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), FuncExpr(CNTK::InnerProduct(args[0], args[1], Axis(0))), { { 13,    42    }, { 13,    42    } } },
+        { OpWithRed(ElementwiseProduct, NDShape({ 1           })), FuncExpr(CNTK::InnerProduct(args[0], args[1], Axis(0))), { { 13           }, { 13           } } },
+        { OpWithRed(ElementwiseProduct, NDShape({ 1, 1, 42, 5 })), FuncExpr(CNTK::ReduceSum(CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0)), Axis(1))), { { 13, 2, 42, 5 }, { 13, 2, 42, 5 } } },
+        { OpWithRed(ElementwiseProduct, NDShape({ 1,    42    })), FuncExpr(                CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0))          ), { { 13,    42    }, { 13,    42    } } },
+        { OpWithRed(ElementwiseProduct, NDShape({ 1           })), FuncExpr(                CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0))          ), { { 13           }, { 13           } } },
         // splicing. NDArrayView::Slice() and SliceView() differ in also slicing the matrix or not. Test both.
         // slicing, reshaping   --TODO: reshaping (should be easy)
         { { [&](const vector<NDArrayViewPtr>& argValues) { return argValues[0]->Slice           ({ 0, 3 }, {     13 }); }, "Index" }, [&](const vector<Variable>& args) { return CNTK::Index(args[0], 3); },{ { 13, 42 } } }, // index of rank > 1; also testing SlicedTensorView()
@@ -186,43 +189,42 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1); }, "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42 } } },
         { { [&](const vector<NDArrayViewPtr>& argValues) { return NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1); }, "TransposeTimes" }, [&](const vector<Variable>& args) { return CNTK::TransposeTimes(args[0], args[1]   ); },{ { 42, 13 },{ 42, 9, 3 } } },
         // ternary
-#define Func(expr) ([](const vector<Variable>& args) { return expr; })
-        { Op(Clip                 ), Func(CNTK::Clip         (args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
-        { Op(Clip                 ), [](const vector<Variable>& args) { return CNTK::Clip         (args[0], args[1], args[2]); }, { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
-        { Op(Cond                 ), [](const vector<Variable>& args) { return CNTK::ElementSelect(args[0], args[1], args[2]); }, { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
+        { Op(Clip                 ), FuncExpr(CNTK::Clip         (args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
+        { Op(Clip                 ), FuncExpr(CNTK::Clip         (args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
+        { Op(Cond                 ), FuncExpr(CNTK::ElementSelect(args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
         // binary
-        { Op(Sum                  ), [](const vector<Variable>& args) { return CNTK::Plus         (args[0], args[1]); }, { { 13, 42 }, { 13, 42 } } },
-        { Op(Difference           ), [](const vector<Variable>& args) { return CNTK::Minus        (args[0], args[1]); }, { { 13, 42 }, { 13, 1 } } },
-        { Op(ElementwiseProduct   ), [](const vector<Variable>& args) { return CNTK::ElementTimes (args[0], args[1]); }, { { 13, 42 }, { 13, 1 } } },
-        { Op(LogSum               ), [](const vector<Variable>& args) { return CNTK::LogAddExp    (args[0], args[1]); }, { { 13, 42 }, { 13, 1 } } },
-        { Op(Pow                  ), [](const vector<Variable>& args) { return CNTK::Pow          (args[0], args[1]); }, { { 13, 42, 12 }, { 13, 1 } } },
-        { Op(Equal                ), [](const vector<Variable>& args) { return CNTK::Equal        (args[0], args[1]); }, { { 13, 42 }, { 13, 1 } } },
-        { Op(NotEqual             ), [](const vector<Variable>& args) { return CNTK::NotEqual     (args[0], args[1]); }, { { 13, 42 }, { 13, 42 } } },
-        { Op(Less                 ), [](const vector<Variable>& args) { return CNTK::Less         (args[0], args[1]); }, { { 13, 42 }, { 13, 1 } } },
-        { Op(LessEqual            ), [](const vector<Variable>& args) { return CNTK::LessEqual    (args[0], args[1]); }, { { 13, 42 }, { 13, 1 } } },
-        { Op(Greater              ), [](const vector<Variable>& args) { return CNTK::Greater      (args[0], args[1]); }, { { 13, 42 }, { 13, 1 } } },
-        { Op(GreaterEqual         ), [](const vector<Variable>& args) { return CNTK::GreaterEqual (args[0], args[1]); }, { { 13, 42 }, { 13, 1 } } },
+        { Op(Sum                  ), FuncExpr(CNTK::Plus         (args[0], args[1])), { { 13, 42 }, { 13, 42 } } },
+        { Op(Difference           ), FuncExpr(CNTK::Minus        (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
+        { Op(ElementwiseProduct   ), FuncExpr(CNTK::ElementTimes (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
+        { Op(LogSum               ), FuncExpr(CNTK::LogAddExp    (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
+        { Op(Pow                  ), FuncExpr(CNTK::Pow          (args[0], args[1])), { { 13, 42, 12 }, { 13, 1 } } },
+        { Op(Equal                ), FuncExpr(CNTK::Equal        (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
+        { Op(NotEqual             ), FuncExpr(CNTK::NotEqual     (args[0], args[1])), { { 13, 42 }, { 13, 42 } } },
+        { Op(Less                 ), FuncExpr(CNTK::Less         (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
+        { Op(LessEqual            ), FuncExpr(CNTK::LessEqual    (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
+        { Op(Greater              ), FuncExpr(CNTK::Greater      (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
+        { Op(GreaterEqual         ), FuncExpr(CNTK::GreaterEqual (args[0], args[1])), { { 13, 42 }, { 13, 1 } } },
         // unary
-        { Op(LinearRectifier      ), [](const vector<Variable>& args) { return CNTK::ReLU         (args[0]         ); }, { { 13, 42 } } },
-        { Op(Tanh                 ), [](const vector<Variable>& args) { return CNTK::Tanh         (args[0]         ); }, { { 13 } } },
-        { Op(Log                  ), [](const vector<Variable>& args) { return CNTK::Log          (args[0]         ); }, { { 13, 42 } } },
-        { Op(Exp                  ), [](const vector<Variable>& args) { return CNTK::Exp          (args[0]         ); }, { { 13, 42 } } },
-        { Op(Cosine               ), [](const vector<Variable>& args) { return CNTK::Cos          (args[0]         ); }, { { 13, 42 } } },
-        { Op(Sin                  ), [](const vector<Variable>& args) { return CNTK::Sin          (args[0]         ); }, { { 235, 13, 2 } } },
-        { Op(Negate               ), [](const vector<Variable>& args) { return CNTK::Negate       (args[0]         ); }, { { 13 } } },
-        { Op(Floor                ), [](const vector<Variable>& args) { return CNTK::Floor        (args[0]         ); }, { { 13, 42 } } },
-        { Op(Abs                  ), [](const vector<Variable>& args) { return CNTK::Abs          (args[0]         ); }, { { 13, 42 } } },
-        { Op(Sqrt                 ), [](const vector<Variable>& args) { return CNTK::Sqrt         (args[0]         ); }, { { 13, 42 } } },
-        { Op(Reciprocal           ), [](const vector<Variable>& args) { return CNTK::Reciprocal   (args[0]         ); }, { { 13, 42 } } },
-        { Op(ExponentialLinearUnit), [](const vector<Variable>& args) { return CNTK::ELU          (args[0]         ); }, { { 13, 42 } } },
-        { Op(StableSigmoid        ), [](const vector<Variable>& args) { return CNTK::Sigmoid      (args[0]         ); }, { { 128 } } },
+        { Op(LinearRectifier      ), FuncExpr(CNTK::ReLU      (args[0])), { { 13, 42 } } },
+        { Op(Tanh                 ), FuncExpr(CNTK::Tanh      (args[0])), { { 13 } } },
+        { Op(Log                  ), FuncExpr(CNTK::Log       (args[0])), { { 13, 42 } } },
+        { Op(Exp                  ), FuncExpr(CNTK::Exp       (args[0])), { { 13, 42 } } },
+        { Op(Cosine               ), FuncExpr(CNTK::Cos       (args[0])), { { 13, 42 } } },
+        { Op(Sin                  ), FuncExpr(CNTK::Sin       (args[0])), { { 235, 13, 2 } } },
+        { Op(Negate               ), FuncExpr(CNTK::Negate    (args[0])), { { 13 } } },
+        { Op(Floor                ), FuncExpr(CNTK::Floor     (args[0])), { { 13, 42 } } },
+        { Op(Abs                  ), FuncExpr(CNTK::Abs       (args[0])), { { 13, 42 } } },
+        { Op(Sqrt                 ), FuncExpr(CNTK::Sqrt      (args[0])), { { 13, 42 } } },
+        { Op(Reciprocal           ), FuncExpr(CNTK::Reciprocal(args[0])), { { 13, 42 } } },
+        { Op(ExponentialLinearUnit), FuncExpr(CNTK::ELU       (args[0])), { { 13, 42 } } },
+        { Op(StableSigmoid        ), FuncExpr(CNTK::Sigmoid   (args[0])), { { 128 } } },
         // reductions
-        { RedOp(Sum,    NDShape({  1     }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(0)          ); }, { { 13 } } },
-        { RedOp(Sum,    NDShape({ 13,  1 }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(1)          ); }, { { 13, 42 } } },
-        { RedOp(Sum,    NDShape({ 13     }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis_DropLastAxis); }, { { 13, 42 } } }, // removes the last axis
-        { RedOp(Sum,    NDShape({  1, 42 }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceSum   (args[0], Axis(0)          ); }, { { 13, 42 } } },
-        { RedOp(LogSum, NDShape({  1     }), 1 ), [](const vector<Variable>& args) { return CNTK::ReduceLogSum(args[0], Axis(0)          ); }, { { 13 } } },
-        { RedOp(Sum,    NDShape({  1     }), 13), [](const vector<Variable>& args) { return CNTK::ReduceMean  (args[0], Axis(0)          ); }, { { 13 } } }
+        { RedOp(Sum,    NDShape({  1     }), 1 ), FuncExpr(CNTK::ReduceSum   (args[0], Axis(0)          )), { { 13 } } },
+        { RedOp(Sum,    NDShape({ 13,  1 }), 1 ), FuncExpr(CNTK::ReduceSum   (args[0], Axis(1)          )), { { 13, 42 } } },
+        { RedOp(Sum,    NDShape({ 13     }), 1 ), FuncExpr(CNTK::ReduceSum   (args[0], Axis_DropLastAxis)), { { 13, 42 } } }, // removes the last axis
+        { RedOp(Sum,    NDShape({  1, 42 }), 1 ), FuncExpr(CNTK::ReduceSum   (args[0], Axis(0)          )), { { 13, 42 } } },
+        { RedOp(LogSum, NDShape({  1     }), 1 ), FuncExpr(CNTK::ReduceLogSum(args[0], Axis(0)          )), { { 13 } } },
+        { RedOp(Sum,    NDShape({  1     }), 13), FuncExpr(CNTK::ReduceMean  (args[0], Axis(0)          )), { { 13 } } }
     };
 
     fprintf(stderr, "\n--- Running tests for batch of %d. %s on %S\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str());
