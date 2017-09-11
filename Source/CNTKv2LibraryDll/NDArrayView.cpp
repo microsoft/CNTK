@@ -673,7 +673,7 @@ namespace CNTK
 
     /*static*/ NDArrayViewPtr NDArrayView::GatherBatch(const vector<NDArrayViewPtr>& inputs, size_t axis, NDArrayViewPtr out)
     {
-        if (!out        || true) // keep this for now for testing this
+        if (!out) //        || true) // keep this for now for testing this
         {
             vector<size_t> totalShape(axis+1, 1); // total shape
             // first check all dims and determine the shared shape

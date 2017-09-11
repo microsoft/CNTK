@@ -750,6 +750,7 @@ struct RuntimeStatistics
     size_t numBackpropGathers = 0;
     size_t numBackpropScatters = 0;
     size_t numBackpropSetZeroes = 0; // number of explicit SetValue(0) calls to clear a gradient
+    size_t numAvoidedBackpropToMatrix = 0;
     size_t numBatchedBackpropToViews = 0; // number of gradients that turned out to be views and were short-circuited
     size_t numBatchedBackpropToCalls = 0; // number of gradients actually computed
 };
@@ -1027,9 +1028,9 @@ class Variable::AutoBatch
                 if (aId != bId)
                     return false;
                 // shape of first argument and object identities of all other arguments must match, otherwise it's an error
-                if (a->m_inputs[0].Shape() != b->m_inputs[0].Shape())
+                if (a->m_inputs.front().Shape() != b->m_inputs.front().Shape())
                     InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different shapes %S and %S.",
-                        PrimitiveOpTypeName(op).c_str(), (int)aId, a->m_inputs[0].Shape().AsString().c_str(), b->m_inputs[0].Shape().AsString().c_str());
+                        PrimitiveOpTypeName(op).c_str(), (int)aId, a->m_inputs.front().Shape().AsString().c_str(), b->m_inputs.front().Shape().AsString().c_str());
                 for (size_t i = 1; i < 6; i++)
                 {
                     if (a->m_inputs[i].m_dataFields != b->m_inputs[i].m_dataFields)
@@ -1233,7 +1234,7 @@ class Variable::AutoBatch
                 depthHint = max(depthHint, redirectedFieldsOwner->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
             // TODO: what if input is non-continuous? Then Reshape becomes a copy
             // this is a redirect
-            redirectedFields = redirectedFieldsOwner->m_inputs[0].m_dataFields.get();
+            redirectedFields = redirectedFieldsOwner->m_inputs.front().m_dataFields.get();
         }
         // handle leaves
         // some sanity checks
@@ -1263,7 +1264,7 @@ class Variable::AutoBatch
         // This is mostly so that m_consumers gets set correctly.
         if (redirectedFields != &fields)
         {
-            RBuildForwardGraphAndSchedule(redirectedFieldsOwner->m_outputs[0], depth + 1);
+            RBuildForwardGraphAndSchedule(redirectedFieldsOwner->m_outputs.front(), depth + 1);
             return;
         }
         auto& f = *redirectedFieldsOwner; // == fields.m_redirection.m_function == fields.Owner()
@@ -1322,7 +1323,7 @@ class Variable::AutoBatch
 
     // get the value of an input Variable, with full redirection
     // This will realize any lazy ops (slice, reshape).
-    // A Variable's value is defined by its m_redirection.m_function->m_outputs[0], followed by slice and/or reshape.
+    // A Variable's value is defined by its m_redirection.m_function->m_outputs.front(), followed by slice and/or reshape.
     static const NDArrayViewPtr& CacheAndGetValue(const Variable& v)
     {
         return CacheAndGetValue(GetInputFields(v));
@@ -1372,7 +1373,7 @@ class Variable::AutoBatch
             return fields.m_value.get();
         if (!fields.m_redirection) // redirect to output of function that produces this value
             LogicError("GetValueObject() called where no value object exists (hit a leaf)??");
-        let& output = fields.m_redirection.m_function->m_outputs[0]; // note: may be recursive
+        let& output = fields.m_redirection.m_function->m_outputs.front(); // note: may be recursive
         if (&GetInputFields(output) == &fields)
             LogicError("GetValueObject() called where no value object exists (hit a self-ref)??");
         return GetValueObject(output);
@@ -1389,7 +1390,7 @@ class Variable::AutoBatch
     // This can only be used with functions that are not redirected.
     static VariableFields& GetOutputFields(const PrimitiveFunction* f)
     {
-        auto& fields = *f->m_outputs[0].m_dataFields;
+        auto& fields = *f->m_outputs.front().m_dataFields;
         //fail_if(!fields.m_redirection, "GetOutputFields() called on a function that is see-through or leaf??");
         return fields;
     }
@@ -1397,7 +1398,7 @@ class Variable::AutoBatch
     static void LogFunction(const PrimitiveFunction& f, const wchar_t* prefix = L"", size_t markIndex = SIZE_MAX)
     {
         let& inputs = f.m_inputs;
-        let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
+        let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
         auto uid = f.Uid();
         let& name = f.Name();
@@ -1424,7 +1425,7 @@ class Variable::AutoBatch
             };
             if (fields.m_redirection)
             {
-                let& input1 = fields.m_redirection.m_function->m_outputs[0];
+                let& input1 = fields.m_redirection.m_function->m_outputs.front();
                 fprintf(stderr, "%s%s%S%S[%d]", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input1).c_str(), input1.Shape().AsString().c_str(), (int)fields.m_redirection.m_index);
             }
             else
@@ -1480,7 +1481,7 @@ class Variable::AutoBatch
         for (size_t i = 0; i < inputs.size(); i++)
             inputValues[i] = CacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
         // allocate the output NDArrayViewPtr in the arena
-        let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
+        let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
         // logging
         if (ShouldProfile(&f))
@@ -1796,7 +1797,7 @@ class Variable::AutoBatch
     {
         let p = PrimitiveFunction::RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name);
         // we must initialize the redirect for backprop
-        auto& fields = *p->m_outputs[0].m_dataFields;
+        auto& fields = *p->m_outputs.front().m_dataFields;
         fields.m_redirection.m_function = p.get(); // we are computing stuff ourselves
         fields.m_redirection.m_index = SIZE_MAX; // (indicates that this is not a slice)
         fields.m_redirection.m_depthHint = INT_MAX; // (to indicate an invalid value)
@@ -1889,7 +1890,7 @@ class Variable::AutoBatch
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
         //        isFree ? -1 : (int)m_stats.numBatchedLaunches,
         //        doNaively ? "" : "batch-",
-        //        (int)batchSize, f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str(),
+        //        (int)batchSize, f0.OpName().c_str(), f0.m_outputs.front().Shape().AsString().c_str(),
         //        (int)m_schedule.numBatchableOpsPending());
         if (doNaively)
         {
@@ -1936,7 +1937,7 @@ class Variable::AutoBatch
             //    TODO: Verify that mapRank is never counted from the back.
             //  - For global pooling, we need to watch out. TODO!
             m_batchedInputs.resize(numArgs);
-            let& unbatchedOutputShape = f0.m_outputs[0].Shape();
+            let& unbatchedOutputShape = f0.m_outputs.front().Shape();
             size_t i0;              // index of first batched argument (1 for matrix product; 0 otherwise)
             size_t inputBatchAxis;  // batch axis of all batched args (second arg for matrix product; all args share one new batch axis otherwise)
             size_t outputBatchAxis; // batch axis in output (appended for matrix product; shared with inputs otherwise)
@@ -1973,7 +1974,7 @@ class Variable::AutoBatch
             // Special optimizations are taken if all elements are identical.
             bool anyBatchedInputs = false;
             if (i0 == 1) // Times(): the first arg has already been verified to be identical as part of the batchability condition
-                m_batchedInputs[0] = f0.m_inputs[0];
+                m_batchedInputs[0] = f0.m_inputs.front();
             for (size_t i = i0; i < numArgs; i++)
             {
                 // create splice args for this argument
@@ -2031,7 +2032,7 @@ class Variable::AutoBatch
                 {
                     let& from  = redirection0.m_function;
                     let  begin = redirection0.m_index;
-                    let& output = from->m_outputs[0];
+                    let& output = from->m_outputs.front();
                     fail_if(!GetOutputFields(from).m_value, "value not yet available??");
                     let& fromDims = output.Shape().Dimensions();
                     fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
@@ -2184,7 +2185,7 @@ class Variable::AutoBatch
                 batchedOp = RawPrimitiveFunction(f0.m_op, vector<Variable>(m_batchedInputs), expectedOutputShape, move(attributes), f0.m_name);
                 batchedOp->m_profiler = f0.m_profiler;
                 // Note: We could move(m_batchedInputs), but don't, since then we would have to reallocate m_batchedInputs for the next operation, so makes no difference.
-                fail_if(batchedOp->m_outputs[0].Shape().Rank() != outputBatchAxis + 1, "outputBatchAxis was not predicted right");
+                fail_if(batchedOp->m_outputs.front().Shape().Rank() != outputBatchAxis + 1, "outputBatchAxis was not predicted right");
 #ifdef LOG_DETAILS
                 batchedOp->m_uid = L"*" + f0.Uid();
 #endif
@@ -2195,7 +2196,7 @@ class Variable::AutoBatch
                 // Let's keep this check for now so I can switch CSE on and off easily.
                 //fail_if(true, "CSE missed a batched op with all-identical inputs?");
                 // all inputs identical: compute it only once
-                batchedOp = RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), move(attributes), f0.m_name);
+                batchedOp = RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs.front().Shape(), move(attributes), f0.m_name);
                 batchedOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
                 batchedOp->m_uid = L"." + f0.Uid();
@@ -2219,9 +2220,9 @@ class Variable::AutoBatch
                     fail_if(!isElementWise, "output shape should only have additional singleton axes for elementwise operations");
                     // insert a Reshape() op to remove the axes
                     let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
-                    fail_if(batchedOutputShape.TotalSize(/*check=*/false) != batchedOp->m_outputs[0].Shape().TotalSize(/*check=*/false), "output shape has unexpected axes that should be singletons but aren't");
+                    fail_if(batchedOutputShape.TotalSize(/*check=*/false) != batchedOp->m_outputs.front().Shape().TotalSize(/*check=*/false), "output shape has unexpected axes that should be singletons but aren't");
 
-                    Variable arg = batchedOp->m_outputs[0];
+                    Variable arg = batchedOp->m_outputs.front();
                     arg.m_outputComposite = batchedOp;
 
                     auto additionalProperties = Dictionary(); // create additional arguments
@@ -2310,8 +2311,8 @@ public:
     //    Slice ops here are only generated by the auto-batched, not by the user.
     //  - input Variable = output Variable if no see-through op between them
     //  - mapping from input to the outputs they depend on is done through Variable::m_redirect, wth
-    //    output Variable = input Variable -> m_redirection -> m_function -> m_outputs[0]
-    //    If no see-through ops, then m_outputs[0] points right back to input Variable we came from
+    //    output Variable = input Variable -> m_redirection -> m_function -> m_outputs.front()
+    //    If no see-through ops, then m_outputs.front() points right back to input Variable we came from
     //  - muliple see-through ops can chain as a result of auto-batching
     //     - at most one Slice in a chain, since Slice (into a batched op) is onlty generated on top of a real
     //       CUDA op
@@ -2397,7 +2398,7 @@ public:
         //if (f.m_op == PrimitiveOpType::Times && f.m_inputs[1].Shape()[0] == 2000)
         //    fprintf(stderr, "%S --> %d\n", f.m_inputs[1].Shape().AsString().c_str(), (int)f.m_inputs[1].IsSparse());
         // Special case for DENSE * SPARSE -> DENSE, which leads to a SPARSE gradient for input0 (common for embedding).
-        if (f.m_op == PrimitiveOpType::Times && index == 0 && f.m_inputs[1].IsSparse())
+        if (f.m_op == PrimitiveOpType::Times && index == 0 && f.m_inputs.back().IsSparse())
             return StorageFormat::SparseBlockCol;
         else
             return StorageFormat::Dense;
@@ -2713,8 +2714,6 @@ public:
 #endif
     }
 
-#define DontSeeThroughNoOps // TODO: remove this once backprop works; for now keep as tag
-
     // backprop into all inputs of a splice operation
     // This is done as a single CUDA launch into all inputs.
     // We must make sure we run this only once.
@@ -2800,7 +2799,7 @@ public:
 
     // backprop into weight parameter of a Times op (input 0)
     // This can be batched into a single matrix product.
-    void BackpropToMatrixWeight(vector<pair<PrimitiveFunction*, size_t>>& consumers)
+    void BackpropToMatrixWeight(const vector<pair<PrimitiveFunction*, size_t>>& consumers)
     {
 #if 0
         for (auto& c : consumers)
@@ -2808,44 +2807,44 @@ public:
 #else
         // batch all outGrads, and batch all right inputs
         let numBatchItems = consumers.size();
-        if (numBatchItems == 1) // fast path if only one (and the last dim is not guaranteed to be a batch dim)
-            // ^^ This comment makes no sense. The batching condition is hosed (too restrictive).
+        if (numBatchItems == 1) // fast path if only one
             return BackpropToUnbatched(consumers.front(), /*viewAllowed=*/false); // view would not help, so we can pass false at no loss
         // We compute
         //  leftGrad += sum_i outGrad_i @ right_i^T
         //            = (concat_i outGrad_i) @ (concat_i right_i)^T
         // where concat_i means to concatenate matrices along their trailing (batch) axis.
         // It has already been verified that all i have the same rank and dimensions except for a single reduction dimension.
-        // ^^ This may be bogus.
-        auto& timesOutGrads        = BorrowBuffer(m_inputValuesBuffer,     numBatchItems);
-        auto& timesDataRightInputs = BorrowBuffer(m_outputGradientsBuffer, numBatchItems);
+        auto& timesOutGrads        = BorrowBuffer(m_inputValuesBuffer,  numBatchItems);
+        auto& timesDataRightInputs = BorrowBuffer(m_inputValuesBuffer2, numBatchItems);
         let& f0 = *consumers.front().first;
 #ifdef LOG_DETAILS
         LogFunction(f0, L"bb* ", 0);
 #endif
-        let& input0 = DontSeeThroughNoOps(f0.m_inputs[0]);
+        let& input0 = f0.m_inputs.front(); // all consumers share this weight, so it's OK to just get it from f0
         size_t batchDim = 0;
         for (size_t i = 0; i < numBatchItems; i++)
         {
             let &c = consumers[i];
             fail_if(c.second != 0, "wrong input??");
-            let& outGrad = c.first->m_outputs[0].m_dataFields->m_gradient;
-            let& right = DontSeeThroughNoOps(c.first->m_inputs[1]).m_dataFields->m_value;
-            timesOutGrads       [i] = outGrad;
-            timesDataRightInputs[i] = right;
+            let& f = *c.first;
+            fail_if(&GetInputFields(f.m_inputs.front()) != &GetInputFields(input0), "batched matrix gradients do nto share the matrix??");
+            let& outGrad = GetOutputFields(&f).m_gradient;
+            let& right   = GetInputFields(f.m_inputs.back()).m_value;
+            timesOutGrads       [i] = outGrad; // incoming gradients from top
+            timesDataRightInputs[i] = right;   // second arguments
             let numItems = outGrad->Shape().Dimensions().back();
             fail_if(numItems != right->Shape().Dimensions().back(), "batch dimension of two inputs not the same??");
             batchDim += numItems;
         }
-        auto outGradBatch = GatherBatchInArena(timesOutGrads       , f0.m_outputs[0].Shape().Rank() - 1, batchDim);
-        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, f0.m_inputs[1]. Shape().Rank() - 1, batchDim);
+        auto outGradBatch = GatherBatchInArena(timesOutGrads       , GetOutputFields(&f0)           .m_shape.Rank() - 1, batchDim);
+        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, GetInputFields (f0.m_inputs.back()).m_shape.Rank() - 1, batchDim);
+        m_stats.numAvoidedBackpropToMatrix += batchDim - 1; // these were saved
 
         // backprop into the left input from the batched outGrad and right
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, 2);
         inputValues[0] = nullptr;
         inputValues[1] = rightBatch.get();
         let gradient = CacheAndGetGradientView(input0, DetermineGradientStorageType(f0, 0));
-        // ...CONTINUE HERE
         PrimitiveFunction::BackpropTo(/*outputGradient=*/outGradBatch.get(),      // incoming gradient from top...
                                       /*index=*/0, f0.m_op, f0.m_attributes,      // ...goes through this function...
                                       /*outputValue=*/nullptr, inputValues,       // ...using these values from forward pass...
@@ -2882,17 +2881,17 @@ public:
             return false;
 #else
             // we compute leftGrad += outGrad @ right^T
-            let&   fOutShape = f.m_outputs[0].Shape().Dimensions();
-            let&   gOutShape = g.m_outputs[0].Shape().Dimensions();
-            let& fRightShape = f.m_inputs[1].Shape().Dimensions();
-            let& gRightShape = g.m_inputs[1].Shape().Dimensions();
-            let&   leftShape = f.m_inputs[0].Shape().Dimensions();
+            let&   fOutShape = f.m_outputs.front().Shape().Dimensions();
+            let&   gOutShape = g.m_outputs.front().Shape().Dimensions();
+            let& fRightShape = f.m_inputs .back() .Shape().Dimensions();
+            let& gRightShape = g.m_inputs .back() .Shape().Dimensions();
+            let&   leftShape = f.m_inputs .front().Shape().Dimensions();
             let    outRank =   fOutShape.size();
             let   gOutRank =   gOutShape.size();
             let  rightRank = fRightShape.size();
             let gRightRank = gRightShape.size();
             let   leftRank =   leftShape.size();
-            fail_if(leftShape != g.m_inputs[0].Shape().Dimensions(), "dimensions of matrix gradient don't match??");
+            fail_if(leftShape != g.m_inputs.front().Shape().Dimensions(), "dimensions of matrix gradient don't match??");
             if (outRank != gOutRank || rightRank != gRightRank)
                 return false; // rank not matching: stop batching right here (we could do better)
             // the center 'reductionRank' dimensions get reduced over
@@ -2918,17 +2917,16 @@ public:
         //         User-specified Splice ops might have arguments that receive no gradient, e.g. constants.
         if (opClass == OpSpecificConditionKind::Splice)
             m_spliceConsumers.push_back(c);
-#if 0
-        // matrix product
-        // We only collect matrix products with fully matching dimensions.
+        // backpropagating into the first arg of a matrix product
+        // These are shared.
+        // We only collect matrix products that fully match the first one. --TODO: when do they not fully match?
         else if (opClass == OpSpecificConditionKind::MatrixProduct && index == 0 &&
-            (m_matrixWeightConsumers.empty() || (IsMatrixGradient0Batchable(*f, *m_matrixWeightConsumers.back().first))))
+            (m_matrixWeightConsumers.empty() || (IsMatrixGradient0Batchable(*f, *m_matrixWeightConsumers.front().first))))
             m_matrixWeightConsumers.push_back(c);
         // backprop where gradients are just views that we can sum up
         //else if (f->m_op == PrimitiveOpType::Plus)
         //    return m_viewableConsumers;
         // all other
-#endif
         else
             m_otherConsumers.push_back(c);
     };
@@ -3015,8 +3013,6 @@ public:
         // Instead of producing just this one input's gradient, we use ScatterBatch to fill all of them.
         for (auto& c : m_spliceConsumers)
             BackpropThroughSplice(c.first);
-
-        // ...TODO: CONTINUE HERE
 
         // matrix-weight bucket
         if (!m_matrixWeightConsumers.empty())
@@ -3109,8 +3105,10 @@ public:
             kv.second = kv.first.m_dataFields->m_gradient;
         // note: we will leave the m_consumers fields dangling, and reset them upon next use
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedBackward: %d backprop computations and %d views besides %d gathers, %d scatters, %d set-zeroes for %d ops (total %d inputs)\n",
-                (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBatchedBackpropToViews, (int)m_stats.numBackpropGathers, (int)m_stats.numBackpropScatters, (int)m_stats.numBackpropSetZeroes, (int)m_stats.numBackpropsThrough, (int)m_stats.numBackpropsToInputs);
+        fprintf(stderr, "BatchedBackward: %d backprop computations and %d views besides %d gathers, %d scatters, %d set-zeroes, %d skipped matmuls for %d ops (total %d inputs)\n",
+                (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBatchedBackpropToViews,
+                (int)m_stats.numBackpropGathers, (int)m_stats.numBackpropScatters, (int)m_stats.numBackpropSetZeroes, (int)m_stats.numAvoidedBackpropToMatrix,
+                (int)m_stats.numBackpropsThrough, (int)m_stats.numBackpropsToInputs);
 #endif
     }
 }; // class
@@ -3124,7 +3122,7 @@ public:
 NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 {
     auto autoBatcher = Variable::AutoBatch();
-    return autoBatcher.BatchedForward(m_outputs[0]);
+    return autoBatcher.BatchedForward(m_outputs.front());
 }
 
 // Perform backprop.
@@ -3132,7 +3130,7 @@ NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 void PrimitiveFunction::BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const
 {
     auto autoBatcher = Variable::AutoBatch(); // has some internal state
-    autoBatcher.BatchedBackward(m_outputs[0], gradients);
+    autoBatcher.BatchedBackward(m_outputs.front(), gradients);
 }
 
 // non-batched version of BatchedForward()
@@ -3141,7 +3139,7 @@ void PrimitiveFunction::MemoizeKnowableValue() const
 {
     if (m_outputs.size() != 1)
         LogicError("Variable '%S' Value(): Only Variables with one output can compute their Value for now.", AsString().c_str());
-    const auto& output = m_outputs[0];
+    const auto& output = m_outputs.front();
     if (output.m_dataFields->m_value) // already done
         return;
     // get the input values (recursively compute them if needed)
