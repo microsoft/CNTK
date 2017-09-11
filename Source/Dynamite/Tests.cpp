@@ -435,16 +435,14 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 
 void RunDynamiteTests()
 {
-#if 0
-    return; // no tests
-#else
+#if 0 // (interferes with logging for profiling)
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
     numFailed += DynamiteTest(N, DataType::Double, DeviceDescriptor::GPUDevice(0));
+#if 0 // only do a batched one on the GPU by default
     numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(N, DataType::Double, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(N, DataType::Float,  DeviceDescriptor::GPUDevice(0));
-#if 1 // do this not every time
     numFailed += DynamiteTest(1, DataType::Float,  DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(1, DataType::Float,  DeviceDescriptor::CPUDevice());

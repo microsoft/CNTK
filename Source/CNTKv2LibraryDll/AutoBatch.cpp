@@ -2613,8 +2613,6 @@ public:
         return move(NDArrayView::GatherBatch(inputValues, (int)axis, move(out)));
     }
 
-#define DontSeeThroughNoOps // TODO: remove this once backprop works; for now keep as tag
-
     // back-propagate f's outputs' m_gradient to a specified input
     // This is the standard path for all unbatched ops.
     // This wraps the PrimitiveFunction's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
@@ -2651,6 +2649,8 @@ public:
         fields.m_gradient->LogToFile(L"gradient", stderr);
 #endif
     }
+
+#define DontSeeThroughNoOps // TODO: remove this once backprop works; for now keep as tag
 
     // backprop into an input of a splice operation
     // This is done as a single CUDA launch into all inputs.
