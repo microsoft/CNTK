@@ -870,7 +870,8 @@ namespace CNTK
             PrimitiveFunction* m_link;       // temporary linked list, e.g. for batched operations
             PrimitiveFunction* m_aliasList;  // list of aliases (common subexpression), local to ExecuteBatchedOpAndUpdateSchedule()
             PrimitiveFunction* m_bucketList; // list of hach-table entries (for CSE, local to class DedupSet)
-            size_t m_aliasHash = SIZE_MAX-1; // hash for alias detection (common subexpression elimination)    --set to -1 to detect if we miss to initialize; remove this
+            mutable size_t m_cachedOpHash = SIZE_MAX-1; // hash for batchability check; 0 means not set yet   --set to SIZE_MAX to detect missing initialization
+            //size_t m_aliasHash = SIZE_MAX-1; // hash for alias detection (common subexpression elimination)    --set to SIZE_MAX-1 to detect if we miss to initialize; remove this
             size_t m_depthHint;              // max of depth hints over all inputs
             size_t m_batchNormId = INT_MAX-1; // 0 if none   --TODO: INT_MAX chosen as to cause an access violation if left unchanged
         } m_autoBatchState;

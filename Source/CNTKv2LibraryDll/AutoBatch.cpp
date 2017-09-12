@@ -581,6 +581,7 @@ struct CudaStatsGuard
     CudaStats* cudaStatsPtr;
     template <typename ...CtorArgTypes>
     CudaStatsGuard(CtorArgTypes&& ...ctorArgs) : cudaStatsPtr(BeginCudaStats(std::forward<CtorArgTypes>(ctorArgs)...)) { }
+    void Stop() { EndCudaStats(cudaStatsPtr); cudaStatsPtr = nullptr; } // early stop; destructor does nothing
     ~CudaStatsGuard() { EndCudaStats(cudaStatsPtr); }
 };
 // and this at the end of when you want to dump the log
@@ -1033,6 +1034,61 @@ class Variable::AutoBatch
 
         // make a deep copy, with leaf Placeholders replaced with inputs on the fly
         // ...BUGBUG, need to really understand BlockFunctions, they are not what I think.
+        return nullptr;
+    }
+
+#define hashMultiplier ((size_t)1572869) // 4 1-bits. An arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
+
+#define Incorporate(newVal) (hash = hash * hashMultiplier + (size_t)(newVal))
+#define IncorporateFieldsId(rFields) (Incorporate(((uintptr_t)&(rFields)) >> 6)) /* really want to divide by sizeof(VariableFields) */
+    template<class VEC>
+    static void IncorporateShape(size_t& hash, const VEC& shape)
+    {
+        Incorporate(shape.size());
+        for (let dim : shape)
+            Incorporate(dim);
+    }
+    // shapes and data types must match
+    // BUGBUG: How about strides?
+#define IncorporateType(fields) (IncorporateShape(hash, fields.m_shape.Dimensions()), Incorporate((fields.m_redirection.m_depthHint << 2) + (((size_t)fields.m_dataType) << 1) + (size_t)fields.m_isSparse))
+    static size_t OpHash(const PrimitiveFunction* f)
+    {
+        size_t hash = f->m_autoBatchState.m_cachedOpHash;
+        if (hash == SIZE_MAX)
+        {
+            let op = f->m_op;
+            hash = 0;
+            Incorporate(op);
+            let& inputs = f->m_inputs;
+            Incorporate(inputs.size());
+            // special case BatchNormalization
+            if (op == PrimitiveOpType::BatchNormalization)
+            {
+                // ids must match
+                Incorporate(f->m_autoBatchState.m_batchNormId);
+                fail_if(f->m_autoBatchState.m_batchNormId != f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>(), "m_batchNormId not initialized correctly??"); // TODO: remove once confirmed not flagging for a while
+                // shape of first argument and object identities of all other arguments must match, otherwise it's an error
+                IncorporateType(GetInputFields(inputs.front()));
+                for (size_t i = 1; i < 6; i++)
+                    IncorporateFieldsId(GetInputFields(inputs[i]));
+            }
+            else if (g_oscTable[op] == OpSpecificConditionKind::MatrixProduct) // Times(): first arg must be the same object
+            {
+                IncorporateFieldsId(GetInputFields(inputs.front()));
+                IncorporateType(GetInputFields(inputs.back()));
+            }
+            else // general case: all input dimensions must match (with exception of a few special cases)
+            {
+                for (let& input : inputs)
+                    IncorporateType(GetInputFields(input));
+            }
+            f->m_autoBatchState.m_cachedOpHash = hash;
+            //fprintf(stderr, "computed\n");
+        }
+        else
+            //fprintf(stderr, "retrieved\n");
+        fail_if(hash == SIZE_MAX-1, "forgot to initialize m_cachedOpHash??");
+        return hash;
     }
 
     // class to manage the set of ready operations (the schedule)
@@ -1048,7 +1104,14 @@ class Variable::AutoBatch
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b)
         {
-            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::Equal, L"AreBatchable()", 3);
+            //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::Equal, L"AreBatchable()", 3);
+            // check the hash first
+#if 0
+            if (a->m_op != b->m_op) // first-level hash :)
+                return false;
+            if (OpHash(a) != OpHash(b))
+                return false;
+#endif
             // first it must be the same operation
             let op = a->m_op;
             // free ops always get batched; even if they have different op-codes
@@ -1133,7 +1196,7 @@ class Variable::AutoBatch
         // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
         void Schedule(PrimitiveFunction* f)
         {
-            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ToSequence, L"Schedule()", 3, m_regularOps.size() * m_regularOps.size());
+            //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ToSequence, L"Schedule()", 3, m_regularOps.size() * m_regularOps.size());
             let op = f->m_op;
             // special case BatchNormalization: we must account for all occurences
             if (op == PrimitiveOpType::BatchNormalization)
@@ -1378,6 +1441,7 @@ class Variable::AutoBatch
         // and some more initializations since we are here
         //f.m_autoBatchState.m_aliasHash = SIZE_MAX;        // aliasHash is used for detecting aliases (identical ops) in batched ops
         f.m_autoBatchState.m_depthHint = maxDepthHint;    // this controls batching priority; ops with higher depth hint will be held back longer
+        f.m_autoBatchState.m_cachedOpHash = SIZE_MAX;
         // if none then operation is ready
         if (pendingInputs == 0)
             m_schedule.Schedule(&f); // add to ready set
@@ -1540,6 +1604,7 @@ class Variable::AutoBatch
     {
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
+        CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: prepare", 3, inputs.size());
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
             inputValues[i] = CacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
@@ -1554,6 +1619,7 @@ class Variable::AutoBatch
         auto outValue = isFree
             ? nullptr
             : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
+        cudaStatsGuardPrepare.Stop();
         CudaStats* cudaStatsPtr = nullptr;
         if (ShouldLogMemoizeStats())
         {
@@ -1595,7 +1661,7 @@ class Variable::AutoBatch
     // j = slice index into batched result, or SIZE_MAX (default) if entire tensor
     void FinalizeBatchedOpAndUpdateSchedule(PrimitiveFunction* op, const PrimitiveFunctionPtr& batchedOp, size_t j = SIZE_MAX)
     {
-        CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
+        //CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
         // we remember where we came from for backprop in this case
         auto& fields = GetOutputFields(op);
         fields.m_redirection.m_functionHolder = batchedOp; // hold a ref count, for resource management
@@ -1613,7 +1679,7 @@ class Variable::AutoBatch
     {
         for (auto* f = op->m_autoBatchState.m_aliasList; f; f = f->m_autoBatchState.m_aliasList)
         {
-            CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
+            //CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
             GetOutputFields(f).m_value       = GetOutputFields(op).m_value;
             GetOutputFields(f).m_redirection = GetOutputFields(op).m_redirection;
             NotifyOpsConsumersInputsAvailable(f);
@@ -1631,15 +1697,13 @@ class Variable::AutoBatch
                 (uintptr_t)value->DataBuffer<double>() / sizeof(double);
     }
 
-#define hashMultiplier ((size_t)1572869); // 4 1-bits. An arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
-
     // get an offsettable address of m_value for hashing purposes
     static uintptr_t CacheAndGetValueAddrForHash(/*const*/ VariableFields& fields)
     {
 #if 1   // This version compares object identity (physical fields, index). It is 6+ x faster, and seems to detect CSEs just the same.
         // we hash on object identity of the physical fields plus slice index
-        uintptr_t inputHash = fields.m_valueAddrForHash;
-        if (!inputHash)
+        uintptr_t hash = fields.m_valueAddrForHash;
+        if (!hash)
         {
             // determine the Fields of the physical object and the slice
             auto index = SIZE_MAX;
@@ -1653,13 +1717,14 @@ class Variable::AutoBatch
                     index = pfields->m_redirection.m_index; // note: it is guaranteed that there is only one index in the chain
                 pfields = &outFields;
             }
-            inputHash = ((uintptr_t)pfields) >> 4; // really want to divide by sizeof(VariableFields) or use a unique id
+            hash = 0;
+            IncorporateFieldsId(*pfields);
             index++; // SIZE_MAX -> 0, so we can skip the mul in teh frequent case
             if (index)
-                inputHash += index * hashMultiplier;
-            fields.m_valueAddrForHash = inputHash;
+                hash += index * hashMultiplier;
+            fields.m_valueAddrForHash = hash;
         }
-        return inputHash;
+        return hash;
 #else   // This version compares the starting address in GPU memory, and can therefore detect aliases coming through different routes.
         auto addrForHash = fields.m_valueAddrForHash;
         if (!addrForHash)
@@ -1706,7 +1771,7 @@ class Variable::AutoBatch
         // If we really allow strides in the future, we may include them in the hash.
         let& inputs = f.m_inputs;
         let numInputs = inputs.size();
-        CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ElementTimes, L"ComputeAliasHash()", 3, numInputs);
+        //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ElementTimes, L"ComputeAliasHash()", 3, numInputs);
         for (size_t k = 0; k < numInputs; k++)
         {
             // TODO: just use object identity (follow redirects through m_index=SIZE_MAX) plus index
