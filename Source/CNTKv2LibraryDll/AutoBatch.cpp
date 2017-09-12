@@ -1568,9 +1568,36 @@ class Variable::AutoBatch
                 (uintptr_t)value->DataBuffer<double>() / sizeof(double);
     }
 
+#define hashMultiplier ((size_t)1572869); // 4 1-bits. An arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
+
     // get an offsettable address of m_value for hashing purposes
     static uintptr_t CacheAndGetValueAddrForHash(/*const*/ VariableFields& fields)
     {
+#if 1   // This version compares object identity (physical fields, index). It is 6+ x faster, and seems to detect CSEs just the same.
+        // we hash on object identity of the physical fields plus slice index
+        uintptr_t inputHash = fields.m_valueAddrForHash;
+        if (!inputHash)
+        {
+            // determine the Fields of the physical object and the slice
+            auto index = SIZE_MAX;
+            let* pfields = &fields;
+            while (pfields->m_redirection)
+            {
+                let& outFields = GetOutputFields(pfields->m_redirection.m_function);
+                if (&outFields == pfields)
+                    break;
+                if (index == SIZE_MAX)
+                    index = pfields->m_redirection.m_index; // note: it is guaranteed that there is only one index in the chain
+                pfields = &outFields;
+            }
+            inputHash = ((uintptr_t)pfields) >> 4; // really want to divide by sizeof(VariableFields) or use a unique id
+            index++; // SIZE_MAX -> 0, so we can skip the mul in teh frequent case
+            if (index)
+                inputHash += index * hashMultiplier;
+            fields.m_valueAddrForHash = inputHash;
+        }
+        return inputHash;
+#else   // This version compares the starting address in GPU memory, and can therefore detect aliases coming through different routes.
         auto addrForHash = fields.m_valueAddrForHash;
         if (!addrForHash)
         {
@@ -1598,6 +1625,7 @@ class Variable::AutoBatch
             // Note: ^^ broken for sparse. May miss CSE.
         }
         return addrForHash;
+#endif
     }
 
     // compute a hash value for f
@@ -1613,7 +1641,6 @@ class Variable::AutoBatch
         // we only hash the argument identities; that is, their base pointer
         // We already know that opcode and shapes are identical.
         // If we really allow strides in the future, we may include them in the hash.
-        static const size_t multiplier = 1572869; // 4 1-bits. An arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
         let& inputs = f.m_inputs;
         let numInputs = inputs.size();
         CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ElementTimes, L"ComputeAliasHash()", 3, numInputs);
@@ -1623,7 +1650,7 @@ class Variable::AutoBatch
             let addrForHash = CacheAndGetValueAddrForHash(GetInputFields(inputs[k]));
             hash += (size_t)addrForHash;
             hash += (size_t)(addrForHash >> 8); // also hash the page number, in case allocation is page-aligned
-            hash *= multiplier;
+            hash *= hashMultiplier;
         }
         //f.m_autoBatchState.m_aliasHash = hash;
         return hash;
