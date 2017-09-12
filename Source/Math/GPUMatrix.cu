@@ -3430,29 +3430,21 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope) {
+void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const float annealSlope) {
     a.PrepareDevice();
     if (a.GetComputeDeviceId() != outgrad.GetComputeDeviceId()) // different GPUs
         InvalidArgument("Matrices must be on the same GPU");
     if (a.GetNumRows() != outgrad.GetNumRows() || a.GetNumCols() != outgrad.GetNumCols())
         RuntimeError("Matrices should be in the same shape");
     if (annealSlope < 0.0) RuntimeError("Anneal Rate should be a positive number.");
-    if (RFAdjusted) RuntimeError("not implemented.");
 
     size_t m = a.GetNumRows();
     size_t n = a.GetNumCols();
     CUDA_LONG N = (CUDA_LONG)(m*n);
     size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
-    assert((RFAdjusted || !RFAdjusted) && annealSlope > 0);
-    if (neuronST) {
-        if (passThrough) {
-            _stochasticbinaryBackward_PassThrough<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N);
-        }
-        else {
-            _stochasticbinaryBackward_Anneal<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
-        }
-    }
+
+    _stochasticbinaryBackward_Anneal<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
 
     //ElemType* inputs = new ElemType[N];
     //cudaMemcpy(inputs, a.Data(), N * sizeof(ElemType), cudaMemcpyDeviceToHost);

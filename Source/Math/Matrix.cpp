@@ -4651,10 +4651,10 @@ template <class ElemType>
 }
 
 template <class ElemType>
-void Matrix<ElemType>::StochasticBinaryBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope) {
+void Matrix<ElemType>::StochasticBinaryBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const float annealSlope) {
     if (a.GetDeviceId() < 0) { NOT_IMPLEMENTED; }
     else if (a.GetMatrixType() == MatrixType::SPARSE) { NOT_IMPLEMENTED; }
-    else { GPUMatrix<ElemType>::StochasticBinaryBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix, neuronST, RFAdjusted, passThrough, annealSlope); }
+    else { GPUMatrix<ElemType>::StochasticBinaryBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix, annealSlope); }
 }
 
 

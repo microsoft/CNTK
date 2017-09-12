@@ -577,29 +577,35 @@ template class ClipNode<double>;
 // not been clipped, and 0 if the value has been clipped.
 
 template <class ElemType>
-class StochasticBinaryNode : public ComputationNode<ElemType>, public NumInputs<1>
+class StochasticBinaryPreNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"StochasticBinary"; }
+    static const std::wstring TypeName() { return L"StochasticBinaryPre"; }
 
 public:
-    StochasticBinaryNode(DEVICEID_TYPE deviceId, const wstring& name, bool neuronST = true, bool RFAdjusted = false, const bool passThrough = true, const float annealRate = 1.0)
-        : Base(deviceId, name), m_neuronST(neuronST), m_RFAdjusted(RFAdjusted), m_passThrough(passThrough), m_annealRate(annealRate)
+    StochasticBinaryPreNode(DEVICEID_TYPE deviceId, const wstring& name, const int nMiniBatch = 1000, int nPreTrain = 10, const float annealRate = 1.0)
+        : Base(deviceId, name), m_nMiniBatch(nMiniBatch), m_nPreTrain(nPreTrain), m_annealRate(annealRate)
     {
     }
 
-    StochasticBinaryNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : StochasticBinaryNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"neuronST"), configp->Get(L"RFAdjusted"), configp->Get(L"passThrough"), configp->Get(L"annealRate"))
+    StochasticBinaryPreNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : StochasticBinaryPreNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"nMiniBatch"), configp->Get(L"nPreTrain"), configp->Get(L"annealRate"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        if (!m_passThrough && m_neuronST) m_annealSlope *= m_annealRate;
         Matrix<ElemType> result = ValueFor(fr);
         Matrix<ElemType> inputm = InputRef(0).ValueFor(fr); 
         Matrix<ElemType>::StochasticBinaryForward(inputm, result, m_annealSlope);
+        m_MBCounter++;
+        unsigned long nMBs = ((unsigned long)m_nMiniBatch) * m_nPreTrain;
+        if (m_MBCounter % nMBs == 0) {
+            m_annealSlope *= m_annealRate;
+            m_MBCounter = 0;
+            fprintf(stderr, "m_MBCounter: %d, m_annealSlope: %f.\n", m_MBCounter, m_annealSlope);
+        }
     }
     
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -610,7 +616,7 @@ public:
         Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
 
         Matrix<ElemType> inputGrad = InputRef(inputIndex).GradientFor(fr);
-        Matrix<ElemType>::StochasticBinaryBackward(inputm, output, gradient, inputGrad, m_neuronST, m_RFAdjusted, m_passThrough, m_annealSlope);
+        Matrix<ElemType>::StochasticBinaryBackward(inputm, output, gradient, inputGrad, m_annealSlope);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -622,9 +628,9 @@ public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_neuronST;
-        fstream << m_RFAdjusted;
-        fstream << m_passThrough;
+        fstream << m_MBCounter;
+        fstream << m_nMiniBatch;
+        fstream << m_nPreTrain;
         fstream << m_annealRate;
         fstream << m_annealSlope;
     }
@@ -632,23 +638,23 @@ public:
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        fstream >> m_neuronST;
-        fstream >> m_RFAdjusted;
-        fstream >> m_passThrough;
+        fstream >> m_MBCounter;
+        fstream >> m_nMiniBatch;
+        fstream >> m_nPreTrain;
         fstream >> m_annealRate;
         fstream >> m_annealSlope;
     }
 
 protected:
-    bool m_neuronST = true;
-    bool m_RFAdjusted = false;
-    bool m_passThrough = true; 
+    unsigned int m_MBCounter = 0;
+    int m_nMiniBatch = 1000;
+    int m_nPreTrain = 10;
     float m_annealRate = 1.0;
     float m_annealSlope = 1.0;
 };
 
-template class StochasticBinaryNode<float>;
-template class StochasticBinaryNode<double>;
+template class StochasticBinaryPreNode<float>;
+template class StochasticBinaryPreNode<double>;
 
 
 // -----------------------------------------------------------------------

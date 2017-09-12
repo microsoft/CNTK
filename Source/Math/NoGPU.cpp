@@ -1915,7 +1915,7 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope) {
+void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const float annealSlope) {
 }
 
 #pragma region Static BLAS Functions

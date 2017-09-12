@@ -234,19 +234,18 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.RowRepeat(NULL, num_repeat, name);
         }
     }
-    else if (cnNodeType == OperationNameOf(StochasticBinaryNode))
+    else if (cnNodeType == OperationNameOf(StochasticBinaryPreNode))
     {
         if (parameter.size() != 1)
-            RuntimeError("StochasticBinaryNode Usage: StochasticBinary(NodeName, neuronST=true, RFAdjusted=false, passThrough=true, annealRate=1.0).");
+            RuntimeError("StochasticBinaryPreNode Usage: StochasticBinaryPre(NodeName, nMiniBatch=1000, nPreTrain=10, annealRate=1.0).");
         nodeParamCount = 1;
         nodeParamStart = 0; 
         if (pass == ndlPassInitial)
         {
-            bool t_neuronST = node->GetOptionalParameter("neuronST", "true");
-            bool t_RFAdjusted = node->GetOptionalParameter("RFAdjusted", "false");
-            bool t_passThrough = node->GetOptionalParameter("passThrough", "false");
+            int t_nMiniBatch = node->GetOptionalParameter("nMiniBatch", "1000");
+            int t_nPreTrain = node->GetOptionalParameter("nPreTrain", "10");
             float t_annealRate = node->GetOptionalParameter("annealRate", "1.0");
-            nodePtr = builder.StochasticBinary(NULL, t_neuronST, t_RFAdjusted, t_passThrough, t_annealRate, name);
+            nodePtr = builder.StochasticBinaryPre(NULL, t_nMiniBatch, t_nPreTrain, t_annealRate, name);
         } 
     }
     else if (cnNodeType == OperationNameOf(DiagonalNode))
