@@ -2718,13 +2718,14 @@ namespace CNTK
             // PackedValue should be automatically unpacked when accessing Data() and Mask().
             size_t numOfSequences;
             size_t maxSequenceLen;
-            std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(variable);
+            NDShape actualVariableShape;
+            std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(variable, &actualVariableShape);
 
             std::vector<std::ptrdiff_t> sequenceBeginIndices(numOfSequences, 0);
             std::vector<size_t> sequenceLengths(numOfSequences, maxSequenceLen);
             GetSequenceStartsAndLengths(Mask(), sequenceBeginIndices, sequenceLengths, variable.DynamicAxes().size());
 
-            auto valueShapeWithSequenceAndBatchAxes = variable.Shape().AppendShape(NDShape({ maxSequenceLen , numOfSequences }));
+            auto valueShapeWithSequenceAndBatchAxes = actualVariableShape.AppendShape(NDShape({ maxSequenceLen , numOfSequences }));
             auto valueData = Data()->AsShape(valueShapeWithSequenceAndBatchAxes);
             if (valueData->Device() != device)
                 valueData = valueData->DeepClone(device, valueData->IsReadOnly());

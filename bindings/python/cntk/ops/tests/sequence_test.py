@@ -539,3 +539,33 @@ def test_sequence_unpack_with_convolution(device_id, precision):
     val = np.random.random((2, 3, 20, 20)).astype(dt)
     result = t.eval({x: val}, device=dev)
     assert np.array_equal(result.shape, (2, 4, 20, 20))
+
+def test_sequence_unpack_with_broadcast_as(device_id, precision):
+    x = C.sequence.input_variable(5)
+    a = C.sequence.input_variable(4, sequence_axis=C.Axis('a'))
+    y, mask = C.sequence.unpack(x, 0).outputs
+    bvm = C.sequence.broadcast_as(0 * C.reduce_sum(y) + mask, a)
+
+    x1 = [np.arange(7 * 5).reshape(7, 5).astype('f'), np.arange(3 * 5).reshape(3, 5).astype('f')]
+    a1 = [np.arange(3 * 4).reshape(3, 4).astype('f'), np.arange(6 * 4).reshape(6, 4).astype('f')]
+
+    expected = [np.ones((3, 7), dtype=np.float32), np.ones((6, 7), dtype=np.float32)]
+    expected[1][:,3:] = 0
+
+    actual = bvm.eval({x: x1, a: a1})
+    for actual_i, expected_i in zip(actual, expected):
+        assert np.allclose(actual_i, expected_i)
+
+
+def test_sequence_unpack_without_primary_output(device_id, precision):
+    x = C.sequence.input_variable(5)
+    _, mask = C.sequence.unpack(x, 0).outputs
+    bvm = mask + 0
+
+    x1 = [np.random.randn(7, 5).astype('f'), np.random.randn(3, 5).astype('f')]
+
+    expected = np.array([[ 1.] * 7,
+                         [ 1.] * 3 + [ 0.] * 4], dtype=np.float32)
+
+    actual = bvm.eval({x: x1})
+    assert np.allclose(actual, expected)
