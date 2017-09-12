@@ -21,7 +21,7 @@ downloaders=(
 )
 
 callingDownloaders=(
-  Examples/Image/Detection/FastRCNN/install_fastrcnn.py
+  Examples/Image/Detection/FastRCNN/install_data_and_model.py
   Examples/Image/FeatureExtraction/install_data_and_model.py
   Examples/Image/TransferLearning/install_data_and_model.py
 )
