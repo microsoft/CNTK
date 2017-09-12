@@ -544,7 +544,7 @@ struct CudaStats
 vector<CudaStats> cudaStats;
 // call this at start
 // The interface is quite horrible w.r.t. device. We just need a flag.
-CudaStats* BeginCudaStats(PrimitiveOpType op, const wchar_t* opLabel, size_t category = 0, size_t totalElements = 0, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
+CudaStats* BeginCudaStats(PrimitiveOpType op, const wchar_t* opLabel, size_t category = 0, size_t totalElements = 1, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
 {
     if (!ShouldLogMemoizeStats())
         return nullptr;
@@ -1534,6 +1534,7 @@ class Variable::AutoBatch
     // j = slice index into batched result, or SIZE_MAX (default) if entire tensor
     void FinalizeBatchedOpAndUpdateSchedule(PrimitiveFunction* op, const PrimitiveFunctionPtr& batchedOp, size_t j = SIZE_MAX)
     {
+        CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
         // we remember where we came from for backprop in this case
         auto& fields = GetOutputFields(op);
         fields.m_redirection.m_functionHolder = batchedOp; // hold a ref count, for resource management
@@ -1551,6 +1552,7 @@ class Variable::AutoBatch
     {
         for (auto* f = op->m_autoBatchState.m_aliasList; f; f = f->m_autoBatchState.m_aliasList)
         {
+            CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
             GetOutputFields(f).m_value       = GetOutputFields(op).m_value;
             GetOutputFields(f).m_redirection = GetOutputFields(op).m_redirection;
             NotifyOpsConsumersInputsAvailable(f);
@@ -1847,6 +1849,7 @@ class Variable::AutoBatch
 
     static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name)
     {
+        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Pass, L"RawPrimitiveFunction", 3);
         let p = PrimitiveFunction::RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name);
         // we must initialize the redirect for backprop
         auto& fields = *p->m_outputs.front().m_dataFields;
@@ -2075,8 +2078,6 @@ class Variable::AutoBatch
                     // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
                 }
               }
-                fail_if(j != ops.size(), "bad j??");
-                fail_if(j != batchSize, "badder j??");
                 // and splice
                 if (allSame) // optimized case: all ops share the same operand: no need to batch them
                     // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
@@ -2102,26 +2103,27 @@ class Variable::AutoBatch
                         additionalProperties[PrimitiveFunction::AttributeNameAxis      ] = Axis((int)axis);
                         additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = (int)begin;
                         additionalProperties[PrimitiveFunction::AttributeNameEndIndex  ] = (int)(begin + j);
-                        let spliceOp = RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties), f0.m_name);
+                        let respliceOp = RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties), f0.m_name);
                         // TODO: use Dictionary initializer syntax
                         // TODO: Can this be done by directly messing with the Variable? Make a deep copy of the var object with begin/end slice?
                         //       Would avoid allocating a PrimitiveFunction, and make it easier to be short-circuited directly in backprop.
-                        spliceOp->m_profiler = f0.m_profiler;
+                        respliceOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
                         spliceOp->m_uid = L"#" + gatherInputs[0].Uid();
 #endif
                         // and execute it
-                        let& output = MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/true);
+                        let& output = MemoizeKnowableValueInArena(*respliceOp, /*isFree=*/true);
                         // and that's our input to the batched operation
                         //m_batchedInputs[i] = output.CompositePreservingCopy(spliceOp);
                         m_batchedInputs[i] = output;
-                        m_batchedInputs[i].m_outputComposite = spliceOp;
+                        m_batchedInputs[i].m_outputComposite = respliceOp;
                     }
                     // if this op has a higher inputBatchAxis than the re-batched view, we must move the axis
                     // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
+                    // BUGBUG: This seems never called in the MT case?
                     if (axis != inputBatchAxis)
                     {
-                        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"re-reshape", 3, batchSize);
+                        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, batchSize);
                         // TODO: Any way we can fold the reshape in using m_redirect?
                         let batchedInput = m_batchedInputs[i];
                         vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
@@ -2269,7 +2271,8 @@ class Variable::AutoBatch
             {
                 if (outputBatchAxis != unbatchedOutputShape.Rank())
                 {
-                    // TODO: This should not be necessary anymore, it is automatically hanlded by the redirect.
+                    CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, batchSize);
+                    // TODO: This should not be necessary anymore, we can let this be automatically handled by the redirect.
                     fail_if(!isElementWise, "output shape should only have additional singleton axes for elementwise operations");
                     // insert a Reshape() op to remove the axes
                     let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
@@ -2296,7 +2299,6 @@ class Variable::AutoBatch
             }
 
             // implant all results (all as lazy/virtual references through m_redirection)
-            CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3, batchSize);
             size_t j = anyBatchedInputs ? 0 : SIZE_MAX;
             for (auto op = ops.begin(); op != ops.end(); ++op)
             {
