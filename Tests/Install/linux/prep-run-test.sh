@@ -59,6 +59,10 @@ cntk configFile=lr_bs.cntk deviceId=\$TEST_DEVICE_ID
 cd "$CNTK_DROP/Examples/Image/GettingStarted"
 cntk configFile=01_OneHidden.cntk deviceId=\$TEST_DEVICE_ID
 
+# Exapmle with image deserializer
+cd "$CNTK_DROP/Examples/Image/Regression"
+cntk configFile=RegrSimple_CIFAR10.cntk deviceId=\$TEST_DEVICE_ID
+
 RUNTEST
 
 chmod 755 $RUN_TEST
