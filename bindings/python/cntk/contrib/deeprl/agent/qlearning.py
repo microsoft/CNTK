@@ -97,6 +97,8 @@ class QLearning(AgentBaseClass):
         else:
             self._loss = model['loss']
 
+
+        minibatch_size = int(self._parameters.minibatch_size)
         # If gradient_clipping_threshold_per_sample is inf, gradient clipping
         # will not be performed. Set gradient_clipping_with_truncation to False
         # to clip the norm.
@@ -105,7 +107,7 @@ class QLearning(AgentBaseClass):
             self._q.parameters,
             C.learners.learning_rate_schedule(
                 self._parameters.initial_eta, C.learners.UnitType.sample),
-            use_mean_gradient=True,
+            minibatch_size=minibatch_size,
             momentum=C.learners.momentum_schedule(self._parameters.momentum),
             variance_momentum=C.learners.momentum_schedule(0.999),
             gradient_clipping_threshold_per_sample=

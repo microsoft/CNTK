@@ -62,7 +62,7 @@ namespace CNTK.CSTrainingExamples
             var trainingLoss = CNTKLib.CrossEntropyWithSoftmax(classifierOutput, labelsVar, "lossFunction");
             var prediction = CNTKLib.ClassificationError(classifierOutput, labelsVar, 5, "predictionError");
 
-            var learningRatePerSample = new TrainingParameterPerSampleScheduleDouble(0.0078125);
+            var learningRatePerSample = new TrainingParameterScheduleDouble(0.0078125, 1);
             var trainer = Trainer.CreateTrainer(classifierOutput, trainingLoss, prediction,
                 new List<Learner> { Learner.SGDLearner(classifierOutput.Parameters(), learningRatePerSample) });
 

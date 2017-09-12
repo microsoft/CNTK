@@ -202,7 +202,7 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
         gradientValues[parameter] = NDArrayView::RandomUniform<ElementType>(shape, -0.5, 0.5, numParameters + i, device);
     }
 
-    auto learner1 = SGDLearner(parameters, LearningRatePerSampleSchedule(0.05));
+    auto learner1 = SGDLearner(parameters, LearningRateSchedule(0.05, 1));
 
     learner1->Update(gradientValues, 1);
 
@@ -214,7 +214,7 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
         stream.flush();
     }
 
-    auto learner2 = SGDLearner(parameters, LearningRatePerSampleSchedule( 0.05));
+    auto learner2 = SGDLearner(parameters, LearningRateSchedule( 0.05, 1));
 
     {
         Dictionary checkpoint;
@@ -450,7 +450,7 @@ void TestFunctionSerialization(const DeviceDescriptor& device)
 }
 
 TrainerPtr BuildTrainer(const FunctionPtr& function, const Variable& labels,
-                     LearningRateSchedule lr = LearningRatePerSampleSchedule(0.005),
+                     LearningRateSchedule lr = LearningRateSchedule(0.005, 1),
                      MomentumSchedule m = MomentumAsTimeConstantSchedule(0.0))
 {
     auto trainingLoss = CrossEntropyWithSoftmax(function, labels, L"lossFunction");
@@ -544,8 +544,8 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
     auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
     auto actualMBSize = minibatchData[labelStreamInfo].numberOfSamples;
 
-    LearningRatePerSampleSchedule learningRateSchedule({ { 2, 0.005 }, { 2, 0.0025 }, { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
-    MomentumAsTimeConstantSchedule momentumValues({ { 2, 100 }, { 2, 200 }, { 2, 400 }, { 2, 800 } }, actualMBSize);
+    LearningRateSchedule learningRateSchedule({ { 2, 0.005 }, { 2, 0.0025 }, { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize, 1);
+    MomentumSchedule momentumValues = MomentumAsTimeConstantSchedule({ { 2, 100 }, { 2, 200 }, { 2, 400 }, { 2, 800 } }, actualMBSize);
 
 
     auto trainer1 = BuildTrainer(function1, labels, learningRateSchedule, momentumValues);
@@ -679,7 +679,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
     auto actualMBSize = minibatchData[labelStreamInfo].numberOfSamples;
 
-    LearningRatePerSampleSchedule learningRateSchedule({ { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
+    LearningRateSchedule learningRateSchedule({ { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize, 1);
     auto learner = SGDLearner(classifierOutput->Parameters(), learningRateSchedule);
     auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { learner });
 
@@ -711,8 +711,8 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 
 
-    LearningRatePerSampleSchedule learningRateSchedule2({ { 0.04, 0.02, 0.01, 0.008, 0.004, 0.002, 0.001 } }, actualMBSize);
-    MomentumAsTimeConstantSchedule momentumSchedule({ { 900, 800, 700, 600, 500 } }, actualMBSize);
+    LearningRateSchedule learningRateSchedule2({ { 0.04, 0.02, 0.01, 0.008, 0.004, 0.002, 0.001 } }, actualMBSize, 1);
+    MomentumSchedule momentumSchedule = MomentumAsTimeConstantSchedule({ { 900, 800, 700, 600, 500 } }, actualMBSize);
     auto learner2 = AdamLearner(classifierOutput->Parameters(), learningRateSchedule, momentumSchedule, /*unitGainMomentum = */true);
     auto trainer2 = CreateTrainer(classifierOutput, trainingLoss, prediction, { learner });
 
@@ -1044,7 +1044,7 @@ BOOST_AUTO_TEST_CASE(LearnerSerializationBackcompat)
 {
     auto device = DeviceDescriptor::CPUDevice();
     auto net = BuildLSTMClassifierNet(InputVariable({ 3 }, DataType::Float), 2, device);
-    auto learner = MomentumSGDLearner(net->Parameters(), LearningRatePerSampleSchedule(0.005),
+    auto learner = MomentumSGDLearner(net->Parameters(), LearningRateSchedule(0.005, 1),
         MomentumAsTimeConstantSchedule(900), /*unitGainMomentum = */true);
 
     BOOST_ASSERT(learner->TotalNumberOfSamplesSeen() == 0);

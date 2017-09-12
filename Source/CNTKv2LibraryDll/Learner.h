@@ -45,14 +45,29 @@ namespace CNTK
 
         std::string LearnerType() const;
 
-        // Returns current (per-sample) learning rate.
+        // Returns current learning rate.
         double LearningRate(size_t minibatchSize) const
         {
             auto learningRate = Learner::LearningRate();
-            if (m_learningRateSchedule.Unit() == LearningRateSchedule::UnitType::Minibatch)
+            if (IsCompatibleMode(m_learningRateSchedule))
             {
-                // learning rate needs to be converted to the per-sample value.
-                return (minibatchSize == 0) ? 0.0 : learningRate / minibatchSize;
+                if (IsCompatibleMode())
+                    //learner is in compatible mode, the gradients are already mean gradient so the learning rate are directly applied
+                    return learningRate;
+                else
+                    //learner is not in compatible mode, the gradients are not mean gradient so the learning rate need to be scaled to per sample rate to simulate per minibatch rate
+                    return learningRate / (double)minibatchSize;
+            }
+            else 
+            {
+                std::size_t ref_mbsize = m_learningRateSchedule.GetMinibatchSize();
+                assert(ref_mbsize > 0);
+                if (IsCompatibleMode())
+                    //learner is in compatible mode, the gradients are already mean gradient so the learning rate needs to be scaled to match the encountered minibatch size
+                    return learningRate  * ((double) minibatchSize / (double) ref_mbsize);
+                else
+                    //learner is not in compatible mode, the gradients are not mean gradient so the learning rate need to scaled to per sample rate
+                    return learningRate / ref_mbsize;
             }
 
             return learningRate;
@@ -63,8 +78,6 @@ namespace CNTK
         // A map cointaining hyperparameter names and corresponging values that's used to track and report changes 
         // in hyperparameter values.
         mutable std::map <std::wstring, double> m_trainingParametersMap;
-
-        AdditionalLearningOptions m_additionalOptions;
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
 
@@ -173,6 +186,17 @@ namespace CNTK
         bool UseUnitGainMomentum() const
         {
             return m_unitGain;
+        }
+
+        ///Return the unit gain factor. Note that the unit gain factor should not be scaled according to the minibatch size. See explanation in the Update(...) function.
+        template <typename ElementType>
+        ElementType UnitGainFactor(size_t minibatchSize) const
+        {
+            //TODO: Preliminary study shows that the unitgain factor should use the raw momentum instead of the scaled momentum as the following: 
+            //      ElementType momentum = (ElementType)GetCurrentTrainingParameterValue(m_momentumSchedule);
+            //However, further investigation over the perfs are needed.
+            ElementType momentum = ElementType(MomentumValueForMB(minibatchSize));
+            return UseUnitGainMomentum() ? ElementType(1.0) - momentum : ElementType(1.0);
         }
 
     private:
@@ -307,6 +331,7 @@ namespace CNTK
         // returns current per-minibatch variance momentum value.
         double VarianceMomentumValueForMB(size_t minibatchSize) const
         {
+            //TODO: According to my preliminary analysis, the second momentum variance scaling is different from momentum scaling; need to double check -- yuqing tang
             return MomentumValueForMB(m_varianceMomentumSchedule, minibatchSize);
         }
 

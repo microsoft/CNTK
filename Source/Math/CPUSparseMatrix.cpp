@@ -1147,6 +1147,35 @@ void CPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, co
     }
 }
 
+/// sparse *= alpha
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::Scale(const ElemType alpha, CPUSparseMatrix<ElemType>& rhs)
+{
+    if (rhs.IsEmpty())
+    {
+        LogicError("Scale: the input sparse matrix is empty.");
+    }
+
+    if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC || rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSR)
+    {
+        size_t col_num = (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC) ? rhs.GetNumCols() : rhs.GetNumRows();
+        size_t start = rhs.SecondaryIndexLocation()[0];
+        size_t end = rhs.SecondaryIndexLocation()[col_num];
+        for (size_t p = start; p < end; p++)
+        {
+            rhs.Buffer()[p] *= alpha;
+        }
+    }
+    else if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseBlockCol || rhs.GetFormat() == MatrixFormat::matrixFormatSparseBlockRow)
+    {
+        size_t len = (rhs.GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? rhs.GetNumRows() : rhs.GetNumCols();
+        for (size_t p = 0; p < rhs.GetBlockSize() * len; p++)
+        {
+            rhs.Buffer()[p] *= alpha;
+        }
+    }
+}
+
 // dense += sparse
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, CPUMatrix<ElemType>& rhs)
@@ -1290,10 +1319,8 @@ void CPUSparseMatrix<ElemType>::InnerProduct(const CPUSparseMatrix<ElemType>& a,
 // 2) this = c
 // TODO: NormalGrad is a misnomer here. Come up with a better name.
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum)
+void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum, const ElemType unitGainFactor)
 {
-    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
-
     if (c.IsEmpty())
     {
         c.RequireSize(GetNumRows(), GetNumCols());

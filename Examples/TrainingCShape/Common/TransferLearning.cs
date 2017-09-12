@@ -79,8 +79,8 @@ namespace CNTK.CSTrainingExamples
 
             IList<Learner> parameterLearners = new List<Learner>() {
                 Learner.MomentumSGDLearner(transferLearningModel.Parameters(),
-                new TrainingParameterScheduleDouble(learningRatePerMinibatch, TrainingParameterScheduleDouble.UnitType.Minibatch),
-                new TrainingParameterScheduleDouble(momentumPerMinibatch, TrainingParameterScheduleDouble.UnitType.Minibatch),
+                new TrainingParameterScheduleDouble(learningRatePerMinibatch, 0),
+                new TrainingParameterScheduleDouble(momentumPerMinibatch, 0),
                 true,
                 additionalLearningOptions)};
             var trainer = Trainer.CreateTrainer(transferLearningModel, trainingLoss, predictionError, parameterLearners);
@@ -153,8 +153,8 @@ namespace CNTK.CSTrainingExamples
                 new AdditionalLearningOptions() { l2RegularizationWeight = l2RegularizationWeight };
             IList<Learner> parameterLearners = new List<Learner>() {
                     Learner.MomentumSGDLearner(transferLearningModel.Parameters(),
-                    new TrainingParameterScheduleDouble(learningRatePerMinibatch, TrainingParameterScheduleDouble.UnitType.Minibatch),
-                    new TrainingParameterScheduleDouble(learningmomentumPerMinibatch, TrainingParameterScheduleDouble.UnitType.Minibatch),
+                    new TrainingParameterScheduleDouble(learningRatePerMinibatch, 0),
+                    new TrainingParameterScheduleDouble(learningmomentumPerMinibatch, 0),
                     true,
                     additionalLearningOptions)};
             var trainer = Trainer.CreateTrainer(transferLearningModel, trainingLoss, predictionError, parameterLearners);

@@ -953,7 +953,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAdam, RandomSeedFixture)
     parameters.SetValue(2, 1, paramValues, matrixFormatRowMajor);
     expectedParameters.SetValue(2, 1, expectedValues, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, expectedStateValues, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
@@ -962,7 +962,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAdam, RandomSeedFixture)
     double expectedStateValues2[] = { 2e-05, 0.019, 2e-05, -0.019 };
     expectedParameters.SetValue(2, 1, expectedValues2, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, expectedStateValues2, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
@@ -985,7 +985,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAdamVarEpsilon, RandomSeedFixture)
     parameters.SetValue(2, 1, paramValues, matrixFormatRowMajor);
     expectedParameters.SetValue(2, 1, expectedValues, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, expectedStateValues, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
@@ -994,7 +994,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAdamVarEpsilon, RandomSeedFixture)
     double expectedStateValues2[] = { 2e-05, 0.019, 2e-05, -0.019 };
     expectedParameters.SetValue(2, 1, expectedValues2, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, expectedStateValues2, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
