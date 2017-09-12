@@ -99,7 +99,18 @@ namespace Microsoft.MachineLearning.Cntk
     {
         Convolution2D Convolution2D(Dim2 filterShape, int numFilters, Dim2 strides, Boolean pad, DeviceDescriptor device, string name);
         Dense Dense(int outputClasses, AvtivationFunction activation, DeviceDescriptor device, string name);
+        MaxPooling MaxPooling(Dim2 filterShape, int strides = 1, bool pad = false, string name = "");
+        AveragePooling AveragePooling(Dim2 filterShape, int strides = 1, bool pad = false, string name = "");
         Dropout Dropout(double dropoutRatio, string name);
+        Embedding Embedding(NDShape shape, InitializationFunction init, IList<float> weights = null, string name = "");
+
+        Recurrence Recurrence(Function stepfunction, bool goBackwards = false, float initialState = 0,
+            bool returnFullState = false, string name = "");
+
+        LSTM LSTM(NDShape shape, NDShape cellShape, AvtivationFunction activation,
+            InitializationFunction init, bool usePeepholes = false, float initBias = 0,
+            bool enableSelfStabilization = false, string name = "");
+
         Model this[string name] { get; }
     }
 
@@ -117,6 +128,13 @@ namespace Microsoft.MachineLearning.Cntk
         public Boolean Pad { get; set; }
     }
 
+    public class AveragePooling : ModelImplementation
+    {
+        AveragePooling(Dim2 filterShape, int strides = 1, bool pad = false, string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
     public class MaxPooling : ModelImplementation
     {
         MaxPooling(NDShape filter_shape, int strides = 1, bool pad = false, string name = "")
@@ -156,6 +174,111 @@ namespace Microsoft.MachineLearning.Cntk
 
         }
         public double DropoutRatio { get; set; }
+    }
+
+    public class Embedding : ModelImplementation
+    {
+
+    }
+
+    public class Recurrence : ModelImplementation
+    {
+        public Recurrence(Function stepfunction, bool goBackwards = false, float initialState = 0,
+            bool returnFullState = false, string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class RecurrenceFrom : ModelImplementation
+    {
+        public RecurrenceFrom(Function stepFunction, bool goBackwards = false,
+            bool returnFullState = false, string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class Fold : ModelImplementation
+    {
+        Fold(Function folderFunction, bool goBackwards = false, float initialState = 0,
+                bool returnFullState = false, string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class LSTM : ModelImplementation
+    {
+        public LSTM(NDShape shape, NDShape cellShape, AvtivationFunction activation,
+            InitializationFunction init, bool usePeepholes = false, float initBias = 0, 
+            bool enableSelfStabilization = false, string name = "")
+        {
+
+        }
+    }
+
+    public class GRU : ModelImplementation
+    {
+        GRU(NDShape shape, NDShape cellShape, AvtivationFunction activation,
+            InitializationFunction init,
+            float initBias = 0,
+            bool enableSelfStabilization = false,
+            string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class RNNStep : ModelImplementation
+    {
+        public RNNStep(NDShape shape, NDShape cellShape, AvtivationFunction activation,
+            InitializationFunction init,
+            float init_bias = 0,
+            bool enable_self_stabilization = false,
+            string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class Delay : ModelImplementation
+    {
+        public Delay(int T = 1, float initialState = 0, string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class BatchNormalization : ModelImplementation
+    {
+        public BatchNormalization(int mapRank = 0,
+                       float initScale = 1,
+                       int normalizationTimeConstant = 5000,
+                       int blendTimeConstant = 0,
+                       double epsilon = 0.00001,
+                       bool useCntkEngine = false,
+                       string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class LayerNormalization : ModelImplementation
+    {
+        public LayerNormalization(float initialScale = 1, float initialBias = 0,
+                double epsilon = 0.00001, string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class Stabilizer : ModelImplementation
+    {
+        public Stabilizer(int steepness = 4, bool enableSelfStabilization = true, string name = "")
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class ModelImplementation : Model
