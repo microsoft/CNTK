@@ -26,6 +26,7 @@
 #define LOG_STATS     // if defined, log statistics (#operations)
 //#define NO_BATCHED_FORWARD  // if defined, don't batch forward
 //#define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
+#define DETAILED_STATS
 
 #ifdef LOG_STATS
 static size_t logMemoizeStatsPeriod = 50;
@@ -514,6 +515,7 @@ namespace CNTK
 // cuda stats -- helper for profiling execution cost (CPU, GPU)
 // ---------------------------------------------------------------------------
 
+#ifdef DETAILED_STATS
 class PCTimer // roll our own; high_resolution_timer is reportedly not high-resolution (0.1 us)
 {
     LARGE_INTEGER freq, start;
@@ -617,6 +619,20 @@ void ResetCudaStats()
 {
     cudaStats.clear();
 }
+#else // no DETAILED_STATS. Makes very little runtime difference.
+typedef void CudaStats;
+CudaStats* BeginCudaStats(PrimitiveOpType op, const wchar_t* opLabel, size_t category = 0, size_t totalElements = 1, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice()) { return nullptr; }
+void EndCudaStats(CudaStats* cudaStatsPtr, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice()) { }
+struct CudaStatsGuard
+{
+    template <typename ...CtorArgTypes>
+    CudaStatsGuard(CtorArgTypes&& ...ctorArgs) { }
+    ~CudaStatsGuard() { }
+};
+// and this at the end of when you want to dump the log
+void ShowCudaStats() { }
+void ResetCudaStats() { }
+#endif // DETAILED_STATS
 
 // ---------------------------------------------------------------------------
 // OpSpecificConditionKindTable -- singleton lookup table for the OSC codes
