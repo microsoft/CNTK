@@ -49,8 +49,8 @@ namespace CNTK.CSTrainingExamples
 
             // prepare for training
             TrainingParameterScheduleDouble learningRatePerSample = new TrainingParameterScheduleDouble(
-                0.0005, TrainingParameterScheduleDouble.UnitType.Sample);
-            MomentumAsTimeConstantScheduleCS momentumTimeConstant = new MomentumAsTimeConstantScheduleCS(256);
+                0.0005, 1);
+            TrainingParameterScheduleDouble momentumTimeConstant = CNTKLib.MomentumAsTimeConstantSchedule(256);
             IList<Learner> parameterLearners = new List<Learner>() {
                 Learner.MomentumSGDLearner(classifierOutput.Parameters(), learningRatePerSample, momentumTimeConstant, /*unitGainMomentum = */true)  };
             var trainer = Trainer.CreateTrainer(classifierOutput, trainingLoss, prediction, parameterLearners);

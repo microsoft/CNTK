@@ -240,7 +240,7 @@ class ActorCritic(AgentBaseClass):
                     C.learners.UnitType.sample),
                 momentum=C.learners.momentum_schedule(self._parameters.momentum),
                 variance_momentum=C.learners.momentum_schedule(0.999),
-                use_mean_gradient=True))
+                minibatch_size=C.learners.IGNORE))
 
         print("Parameterized the agent's value function using neural network "
               '"{0}".\n'.format(

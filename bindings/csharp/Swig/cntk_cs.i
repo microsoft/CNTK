@@ -153,6 +153,3 @@
 // before %template instantiation, MomentumAsTimeConstantScheduleCS will be generated
 // without TrainingParameterScheduleDouble being its base class - because TrainingParameterScheduleDouble
 // is not created yet.
-%template(TrainingParameterPerSampleScheduleDouble) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
-
-%include "MomentumAsTimeConstantScheduleCS.h"

@@ -81,7 +81,7 @@ namespace CNTK.CSTrainingExamples
 
             // set per sample learning rate
             CNTK.TrainingParameterScheduleDouble learningRatePerSample = new CNTK.TrainingParameterScheduleDouble(
-                0.003125, TrainingParameterScheduleDouble.UnitType.Sample);
+                0.003125, 1);
 
             IList<Learner> parameterLearners = new List<Learner>() { Learner.SGDLearner(classifierOutput.Parameters(), learningRatePerSample) };
             var trainer = Trainer.CreateTrainer(classifierOutput, trainingLoss, prediction, parameterLearners);
