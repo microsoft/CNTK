@@ -400,6 +400,7 @@ class Test:
         'Quadro K2000' : 3,
         'Quadro M2000M': 5,
         'Quadro M4000': 5,
+        'Tesla M60' : 5,
       }
       cc = sys.maxsize
       try:
