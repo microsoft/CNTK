@@ -1107,7 +1107,7 @@ class Variable::AutoBatch
         // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
         void Schedule(PrimitiveFunction* f)
         {
-            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ToSequence, L"Schedule()", 3, m_regularOps.size());
+            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ToSequence, L"Schedule()", 3, m_regularOps.size() * m_regularOps.size());
             let op = f->m_op;
             // special case BatchNormalization: we must account for all occurences
             if (op == PrimitiveOpType::BatchNormalization)
@@ -1244,6 +1244,19 @@ class Variable::AutoBatch
             }
             redirectedFieldsOwner = redirectedFields->m_ownerFunction.lock().get(); // this is the only place we ever call lock(); after this, we just use the raw pointer (relying on immutability)
             let redirectedOp = redirectedFieldsOwner->m_op;
+            // unroll non-basic BlockFunctions
+            if (redirectedOp == PrimitiveOpType::Block /*&& isBasicBlock*/)
+            {
+                // clone the block's root (PrimitiveFunction graph)  --watch out for loops, use a local Visitor for this
+                // The clone is treated like a see-through op; as if Block was a NoOp with a copy of the Block as its input.
+                // Keep root pointer in m_functionHolder. TODO: Can this be overwritten by further short-circuiting and get lost?
+                // set up redirectedFieldsOwner as the root; so that this Variable gets redireted to the clone
+                // (if the clone itself has a Block at its root, it will get replaced once again; we will lose the m_functionHolder)
+                // The clone we create will have its m_inputs set to the inputs of the blocks' invocation arguments.
+                // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
+                // Besides that, the original Block function will remain unmodified.
+                goto redirectBlock;
+            }
             if (!IsAliasOp(redirectedOp) && redirectedOp != PrimitiveOpType::Reshape)
                 break;
             // if a barrier then record the maximum depth hint encountered
@@ -1252,6 +1265,7 @@ class Variable::AutoBatch
                 depthHint = max(depthHint, redirectedFieldsOwner->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
             // TODO: what if input is non-continuous? Then Reshape becomes a copy
             // this is a redirect
+        redirectBlock:
             redirectedFields = redirectedFieldsOwner->m_inputs.front().m_dataFields.get();
         }
         // handle leaves
@@ -2344,7 +2358,7 @@ public:
     //        - m_shape: the desired shape of this variable, if different from result of op/m_sliceBegin/End
     //     - m_redirection.m_function     -> PrimitiveFunction (nullptr for leaves, that is, Parameter and Constant)
     //     - m_redirection.m_sliceBegin    --if m_sliceEnd not SIZE_MAX, then slice the last dimension with this  --TODO: begin and end?
-    //     - m_depthHint  --this value should only be consumer when thgere is no ready op that consumes a smaller m_depthHint
+    //     - m_depthHint  --this value should only be consumed when there is no ready op that consumes a smaller m_depthHint (0=none specified)
     //  - PrimitiveFunction:
     //     - m_inputs[] -> Variable.m_redirection
     //     - m_output -> Variable.m_value, m_gradient

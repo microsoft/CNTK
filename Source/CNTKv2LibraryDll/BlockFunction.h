@@ -94,7 +94,7 @@ namespace CNTK
     private:
         /*static*/ std::vector<Variable> DetermineInputs(const FunctionPtr& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockName) const
         {
-            std::unordered_map<Variable, Variable> argumentsMappingAsMap;
+            std::unordered_map<Variable, Variable> argumentsMappingAsMap; // [composite's Placeholder] -> actual input it should pretend to be
             for (auto argumentMapping : argumentsMap)
             {
                 auto wasInserted = argumentsMappingAsMap.insert(argumentMapping).second;
@@ -105,7 +105,7 @@ namespace CNTK
             std::vector<Variable> blockFunctionInputs;
             auto compositeInputs = composite->Inputs();
             std::vector<Variable> unmappedArguments;
-            for (auto compositeInput : compositeInputs)
+            for (auto compositeInput : compositeInputs) // compositeInputs includes both Placeholders and enclosed Parameters/Constants
             {
                 assert(!compositeInput.IsOutput());
 
@@ -136,7 +136,7 @@ namespace CNTK
             // instead of the original order they appear in the composite itself
             for (auto argumentMapping : argumentsMap)
             {
-                argumentMapping.first.m_dataFields->m_blockFunctionVariableMapping = argumentMapping.second;
+                argumentMapping.first.m_dataFields->m_blockFunctionVariableMapping = argumentMapping.second; // composite Placeholder remembers its actual input
                 blockFunctionInputs.push_back(argumentMapping.second);
             }
 

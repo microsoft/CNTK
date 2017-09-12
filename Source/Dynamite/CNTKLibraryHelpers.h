@@ -84,6 +84,7 @@ namespace Dynamite {
         for (auto& r : res) // free memory if still held from previous call
             r.clear();
         size_t numSeq = 0;
+        size_t med = SIZE_MAX; // hack
         for (size_t i = 0; i < numArgs; i++)
         {
             // prepare argument i
@@ -101,12 +102,28 @@ namespace Dynamite {
             else if (numSeq != sequences.size())
                 CNTK::LogicError("FromCNTKMB: Streams must all have the same number of sequences.");
             auto hasAxis = variable.DynamicAxes().size() > 1;
+#if 0       // hack to be able to work with totally homogeneous sequence lengths; as the upper bound
+            if (med == SIZE_MAX)
+            {
+                size_t tot = 0;
+                for (size_t s = 0; s < numSeq; s++)
+                    tot += sequences[s]->Shape().Dimensions().back();
+                tot /= sequences.size(); // av len
+                med = 0;
+                for (size_t s = 0; s < numSeq; s++)
+                {
+                    if (abs((int)sequences[s]->Shape().Dimensions().back() - (int)tot) < abs((int)sequences[med]->Shape().Dimensions().back() - (int)tot))
+                        med = s;
+                }
+            }
+#endif
 
             auto& arg = res[i];
             arg.resize(numSeq);   // resulting argument
             for (size_t s = 0; s < numSeq; s++)
             {
-                auto data = sequences[s];      // NDArrayView
+                //auto data = sequences[s];      // NDArrayView
+                auto data = sequences[med != SIZE_MAX ? med : s];      // NDArrayView
 #if 1
                 // BUGBUG: This crashes MT.cpp in CPU mode with an A/V! Yikes!
                 data = data->DeepClone(); // sometimes we get strange objective values; see if this is the cause. This will release the original matrix.
