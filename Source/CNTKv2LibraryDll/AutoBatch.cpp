@@ -1096,7 +1096,7 @@ class Variable::AutoBatch
             // special case BatchNormalization: we must account for all occurences
             if (op == PrimitiveOpType::BatchNormalization)
             {
-                //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::BatchNormalization, L"batchNormId", 3);
+                CudaStatsGuard cudaStatsGuard(PrimitiveOpType::BatchNormalization, L"Schedule(BN)", 3);
                 let bnId = f->m_autoBatchState.m_batchNormId;
                 fail_if(bnId != f->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>(), "m_batchNormId not initialized correctly??"); // TODO: remove once confirmed not flagging for a while
                 fail_if(m_bnPendingCounts[bnId] == 0, "m_bnPendingCounts decreased beyond initial count??");
@@ -1104,14 +1104,14 @@ class Variable::AutoBatch
             }
             // we manage two ready sets, since two common kinds are very simple
             //fail_if (IsBarrier(f), "m_barrierOps.push_back(f) should no longer be done"); // BUGBUG: We never get here since we now see through barriers for efficiency...
-            if (IsViewOp(op))  // note: this, with possibly a few exceptions, Slice()
-                m_viewOps.push_back(f);
+            if (IsViewOp(op))  // note: this is, with possibly a few exceptions, Slice()
+                m_viewOps.push_back(f); // (linked list)
             else
             {
                 // this naive implementation just scans linearly
                 // scan through all op sets to see if one is batchable with 'f'
                 // So far this does not show up in profiling.
-                for (auto iter = m_regularOps.begin(); iter != m_regularOps.end(); iter++)
+                for (auto iter = m_regularOps.begin(); iter != m_regularOps.end(); iter++) // (vector)
                 {
                     if (AreBatchable(f, iter->front()))
                     {
@@ -1121,7 +1121,7 @@ class Variable::AutoBatch
                     }
                 }
                 // none fit: open a new set
-                m_regularOps.push_back(NonOwningFunctionListBuilder(f));
+                m_regularOps.push_back(NonOwningFunctionListBuilder(f)); // (vector)
             }
         }
         // notify a function that an input has become available; schedule it when all inputs are now available
@@ -2247,10 +2247,7 @@ class Variable::AutoBatch
             }
             else
             {
-                // TODO: remove this branch and associated checks once CSE is working fully.
-                // Let's keep this check for now so I can switch CSE on and off easily.
-                //fail_if(true, "CSE missed a batched op with all-identical inputs?");
-                // all inputs identical: compute it only once
+                // all inputs identical: compute it only once (this is the easy case that we don't kick off the CSE machinery for)
                 batchedOp = RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs.front().Shape(), move(attributes), f0.m_name);
                 batchedOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
@@ -2258,6 +2255,7 @@ class Variable::AutoBatch
 #endif
                 // TODO: the following is a little more efficient, but creates a cycle, so we should exclude the lazy index for the first op
                 //batchedOp = f0.shared_from_this();
+                m_stats.numCommonSubexpressionsEliminated += batchSize - 1;
             }
 
             // execute it
