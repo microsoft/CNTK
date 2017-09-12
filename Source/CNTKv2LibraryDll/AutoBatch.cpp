@@ -1743,6 +1743,29 @@ class Variable::AutoBatch
         }
     };
     DedupSet m_dedupSet; // TODO: make this a static thread local, to avoid reallocating the bucket list
+    VisitorTag m_cseVisitorTag; // helper for CSE pre-check
+
+    // pre-check whether the more expensive hash-table based CSE check is needed
+    // If all inputs have either no dups or are all-dups, then there is no need for the more expensive hash-table based check.
+    bool IsShortCircuitingBatchedOpDuplicatesNeeded(NonOwningFunctionList ops)
+    {
+        CudaStatsGuard cudaStatsGuard(PrimitiveOpType::NotEqual, L"CSE pre", 3, ops.size());
+        let& f0 = *ops.front();
+        let numArgs = f0.m_inputs.size();
+        for (size_t i = 0; i < numArgs; i++)
+        {
+            m_cseVisitorTag.Begin();
+            size_t numDups = 0;
+            for (auto iter = ops.begin(); iter != ops.end(); ++iter) // create the batched tensors
+            {
+                if (m_visitorTag.Visited(GetInputFields(iter->m_inputs[i]).m_cseVisitedTag))
+                    numDups++;
+            }
+            if (numDups != 0 && numDups != ops.size() - 1)
+                return true; // pre-check discovered non-trivial duplicates
+        }
+        return false; // pre-check passed: no thorough check needed
+    }
 
     // detect equivalent Functions and uniq them, redirecting dups to the first one
     // Returns a filtered list. Call this at start of batched execution.
@@ -1890,7 +1913,8 @@ class Variable::AutoBatch
         // Those will be removed from the list. The removed ones will have a result value implanted
         // that is a lazy view onto the non-removed one.
         // Batch norm must be excluded  since we must count samples as often as they appear in the batch statistics.
-        if (!isFree && op != PrimitiveOpType::BatchNormalization && ops.size() > 1)
+        // TODO: Merge the pre-check, CSE, and getting the batched args into one big loop.
+        if (!isFree && op != PrimitiveOpType::BatchNormalization && ops.size() > 1 && IsShortCircuitingBatchedOpDuplicatesNeeded(ops))
             ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
         else
             for (auto iter = ops.begin(); iter != ops.end(); ++iter) // create the batched tensors

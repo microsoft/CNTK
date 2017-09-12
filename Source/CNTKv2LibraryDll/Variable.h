@@ -42,6 +42,7 @@ namespace CNTK
         mutable Internal::AutoBatchRedirection m_redirection; // Function redirection, e.g. into batched output
         Internal::AutoBatchConsumers m_consumers; // set of consumers of this value
         mutable size_t m_visitedTag = 0; // used for tree traversal
+        mutable size_t m_cseVisitedTag = 0; // used for common sub-expression elimination
         mutable uintptr_t m_valueAddrForHash = 0; // cached address of m_value[0,...], divided by sizeof. Used as hash.
 
         // lazy initialization
