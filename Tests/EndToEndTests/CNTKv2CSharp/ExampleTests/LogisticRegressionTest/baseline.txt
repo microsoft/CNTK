@@ -1,0 +1,30 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-1650 v4 @ 3.60GHz
+    Hardware threads: 12
+    Total Memory: 16691576 kB
+-------------------------------------------------------------------
+Test CNTKLibraryCSTrainingExamples
+======== Train model using GPU build ========
+======== running LogisticRegression.TrainAndEvaluate using GPU ========
+Minibatch: 0 CrossEntropyLoss = 0.6931471, EvaluationCriterion = 0.5
+Minibatch: 50 CrossEntropyLoss = 21.55996, EvaluationCriterion = 0.5
+Minibatch: 100 CrossEntropyLoss = 5.931237, EvaluationCriterion = 0.4375
+Minibatch: 150 CrossEntropyLoss = 0.1059439, EvaluationCriterion = 0.03125
+Minibatch: 200 CrossEntropyLoss = 0.07103035, EvaluationCriterion = 0.03125
+Minibatch: 250 CrossEntropyLoss = 0.06985503, EvaluationCriterion = 0.015625
+Minibatch: 300 CrossEntropyLoss = 0.06981656, EvaluationCriterion = 0.015625
+Minibatch: 350 CrossEntropyLoss = 0.06978078, EvaluationCriterion = 0.015625
+Minibatch: 400 CrossEntropyLoss = 0.06974529, EvaluationCriterion = 0.015625
+Minibatch: 450 CrossEntropyLoss = 0.06970999, EvaluationCriterion = 0.015625
+Minibatch: 500 CrossEntropyLoss = 0.06967509, EvaluationCriterion = 0.015625
+Minibatch: 550 CrossEntropyLoss = 0.06964055, EvaluationCriterion = 0.015625
+Minibatch: 600 CrossEntropyLoss = 0.06960642, EvaluationCriterion = 0.015625
+Minibatch: 650 CrossEntropyLoss = 0.06957255, EvaluationCriterion = 0.015625
+Minibatch: 700 CrossEntropyLoss = 0.06953903, EvaluationCriterion = 0.015625
+Minibatch: 750 CrossEntropyLoss = 0.06950578, EvaluationCriterion = 0.015625
+Minibatch: 800 CrossEntropyLoss = 0.06947294, EvaluationCriterion = 0.015625
+Minibatch: 850 CrossEntropyLoss = 0.06944047, EvaluationCriterion = 0.015625
+Minibatch: 900 CrossEntropyLoss = 0.06940824, EvaluationCriterion = 0.015625
+Minibatch: 950 CrossEntropyLoss = 0.06937636, EvaluationCriterion = 0.015625
+Validating Model: Total Samples = 100, Misclassify Count = 3
+======== Train completes. ========
