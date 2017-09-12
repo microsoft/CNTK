@@ -26,8 +26,7 @@ namespace CNTK.CSTrainingExamples
             var evalError = CNTKLib.ClassificationError(classifierOutput, labelVariable);
 
             // prepare for training
-            CNTK.TrainingParameterScheduleDouble learningRatePerSample = new CNTK.TrainingParameterScheduleDouble(
-                0.02, TrainingParameterScheduleDouble.UnitType.Sample);
+            CNTK.TrainingParameterScheduleDouble learningRatePerSample = new CNTK.TrainingParameterScheduleDouble(0.02, 1);
             IList<Learner> parameterLearners =
                 new List<Learner>() { Learner.SGDLearner(classifierOutput.Parameters(), learningRatePerSample) };
             var trainer = Trainer.CreateTrainer(classifierOutput, loss, evalError, parameterLearners);
