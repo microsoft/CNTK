@@ -478,12 +478,16 @@ void Train(wstring outputDirectory)
     wstring modelPath = outputDirectory + L"/model.dmf"; // DMF=Dynamite model file
     size_t saveEvery = 100;
     size_t startMbCount = 0;
+    let ModelPath = [&](size_t currentMbCount) // helper to form the model filename
+    {
+        char currentMbCountBuf[20];
+        sprintf(currentMbCountBuf, "%06d", (int)currentMbCount); // append the minibatch index with a fixed width for sorted directory listings
+        return modelPath + L"." + wstring(currentMbCountBuf, currentMbCountBuf + strlen(currentMbCountBuf)); // (simplistic string->wstring converter)
+    };
     if (startMbCount > 0)
     {
         // restarting after crash. Note: not checkpointing the reader yet.
-        char startMbCountBuf[20];
-        sprintf(startMbCountBuf, "%06d", (int)startMbCount); // append the minibatch index with a fixed width for sorted directory listings
-        let path = modelPath + L"." + wstring(startMbCountBuf, startMbCountBuf + strlen(startMbCountBuf)); // (simplistic string->wstring converter)
+        let path = ModelPath(startMbCount);
         fprintf(stderr, "restarting from: %S\n", path.c_str()), fflush(stderr);
         // TODO: The code below is copy-paste from Trainer.cpp, since it is not public. Move this down through the API.
         // TODO: Can we just wrap everything in an actual Trainer instance, and use that?
@@ -541,9 +545,7 @@ void Train(wstring outputDirectory)
         if (mbCount % saveEvery == 0 &&
             (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
         {
-            char startMbCountBuf[20];
-            sprintf(startMbCountBuf, "%06d", (int)startMbCount); // append the minibatch index with a fixed width for sorted directory listings
-            let path = modelPath + L"." + wstring(startMbCountBuf, startMbCountBuf + strlen(startMbCountBuf)); // (simplistic string->wstring converter)
+            let path = ModelPath(mbCount);
             fprintf(stderr, "%ssaving: %S\n", communicator->CurrentWorker().IsMain() ? "" : "not ", path.c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
             //model_fn.SaveParameters(path);
 
