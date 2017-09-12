@@ -103,7 +103,7 @@ namespace CNTK
             }
 
             std::vector<Variable> blockFunctionInputs;
-            auto compositeInputs = composite->Inputs();
+            auto compositeInputs = composite->Inputs(); // (this is an expensive operation for composites, including a full traversal and a copy+shared_ptr of the inputs array)
             std::vector<Variable> unmappedArguments;
             for (auto compositeInput : compositeInputs) // compositeInputs includes both Placeholders and enclosed Parameters/Constants
             {
@@ -147,11 +147,11 @@ namespace CNTK
         {
             // We determine the outputs by replacing the arguments of the composite with new placeholders with updated 
             // shape etc. information matching the corresponding mapped input
-            auto currentArguments = m_composite->Arguments();
+            auto currentArguments = m_composite->Arguments(); // (this is an expensive operation, requiring a full traversal and a full copy+shared_ptr of the inputs array)
             std::unordered_map<Variable, Variable> replacementMap;
             for (auto currentArgument : currentArguments)
             {
-                auto currentArgumentMapping = currentArgument.BlockFunctionVariableMapping();
+                auto currentArgumentMapping = currentArgument.BlockFunctionVariableMapping(); // this was remembered in the constructor
                 auto newArgument = PlaceholderLike(currentArgumentMapping);
                 newArgument.m_dataFields->m_blockFunctionVariableMapping = currentArgumentMapping;
 

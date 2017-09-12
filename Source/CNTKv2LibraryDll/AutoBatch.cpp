@@ -15,6 +15,7 @@
 #include "Variable.h"
 #include "PrimitiveOpType.h"
 #include "PrimitiveFunction.h"
+#include "BlockFunction.h"
 #include "CommonMatrix.h"
 #include "Utils.h"
 
@@ -869,6 +870,9 @@ public:
         tag = m_visitTag;
         return false;
     }
+    // for nesting
+    size_t Save() const { return m_visitTag; }
+    void Restore(size_t tag) { m_visitTag = tag; }
 };
 /*static*/ size_t VisitorTag::s_nextVisitTag = 1;
 
@@ -1007,6 +1011,28 @@ class Variable::AutoBatch
         if (should)
             m_profilersUsed.insert(f->m_profiler);
         return should;
+    }
+
+    // inlining of a BlockFunction
+    // This makes a deep copy of the graph below root.
+    PrimitiveFunctionPtr InlineBlock(PrimitiveFunction& root, const vector<Variable>& inputs)
+    {
+        // The first time this is called, we prepare it:
+        //  - infer all the shapes
+        //  - short-circuit the graph (so we can save a little effort in inlining)
+        // This operation is only done once, and can therefore be slow, using the full power of the API.
+        if (!GetOutputFields(&root).m_redirection)
+        {
+            if (root.m_outputs.size() > 1)
+                InvalidArgument("Dynamic operations cannot have multiple outputs.");
+            let savedVisitorTag = m_visitorTag.Save(); // (InlineBlock() may call the build function recursively)
+            m_visitorTag.Begin();
+            RBuildForwardGraphAndSchedule(root.m_outputs.front(), 0);
+            m_visitorTag.Restore(savedVisitorTag);
+        }
+
+        // make a deep copy, with leaf Placeholders replaced with inputs on the fly
+        // ...BUGBUG, need to really understand BlockFunctions, they are not what I think.
     }
 
     // class to manage the set of ready operations (the schedule)
@@ -1217,6 +1243,7 @@ class Variable::AutoBatch
     // TODO: Once we are in the main build, change all Function to PrimitiveFunction directly.
     // TODO: What to do with multi-valued functions? Which ones are there? What is Combine(), a barrier?
     // Caller must call m_visitorTag.Begin() first.
+    // 'var' is an input; that is, what m_inputs[] points to, not undergone any redirect.
     void RBuildForwardGraphAndSchedule(const Variable& var, size_t depth)
     {
         auto& fields = *var.m_dataFields;
@@ -1245,17 +1272,20 @@ class Variable::AutoBatch
             redirectedFieldsOwner = redirectedFields->m_ownerFunction.lock().get(); // this is the only place we ever call lock(); after this, we just use the raw pointer (relying on immutability)
             let redirectedOp = redirectedFieldsOwner->m_op;
             // unroll non-basic BlockFunctions
-            if (redirectedOp == PrimitiveOpType::Block /*&& isBasicBlock*/)
+            if (redirectedOp == PrimitiveOpType::Block /*&& !isBasicBlock*/)
             {
-                // clone the block's root (PrimitiveFunction graph)  --watch out for loops, use a local Visitor for this
-                // The clone is treated like a see-through op; as if Block was a NoOp with a copy of the Block as its input.
-                // Keep root pointer in m_functionHolder. TODO: Can this be overwritten by further short-circuiting and get lost?
-                // set up redirectedFieldsOwner as the root; so that this Variable gets redireted to the clone
-                // (if the clone itself has a Block at its root, it will get replaced once again; we will lose the m_functionHolder)
-                // The clone we create will have its m_inputs set to the inputs of the blocks' invocation arguments.
+                // make a deep copy of the block's root (PrimitiveFunction graph)
                 // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
                 // Besides that, the original Block function will remain unmodified.
-                goto redirectBlock;
+                let inlinedRoot = InlineBlock(dynamic_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()), redirectedFieldsOwner->m_inputs); // shared_ptr to the deep copy of the root
+                // The Block is treated like a see-through op:
+                //  - a deep copy of the Block is made (inlined), which connects to the Block node's inputs
+                //  - the Block node, like a NoOp, gets its m_redirection set to point to the Block's copy.
+                // For ref-counting, the root pointer of the deep copy is kept in m_functionHolder of the Block's output Variable.
+                // TODO: Check whether this can accidentally be overwritten by further short-circuiting and get lost?
+                redirectedFields->m_redirection.m_functionHolder = inlinedRoot; // remember the inlined root in m_redirection of the Block invocation
+                redirectedFields = &GetOutputFields(inlinedRoot.get());
+                continue;
             }
             if (!IsAliasOp(redirectedOp) && redirectedOp != PrimitiveOpType::Reshape)
                 break;
@@ -1265,7 +1295,6 @@ class Variable::AutoBatch
                 depthHint = max(depthHint, redirectedFieldsOwner->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
             // TODO: what if input is non-continuous? Then Reshape becomes a copy
             // this is a redirect
-        redirectBlock:
             redirectedFields = redirectedFieldsOwner->m_inputs.front().m_dataFields.get();
         }
         // handle leaves
@@ -1294,6 +1323,7 @@ class Variable::AutoBatch
         fields.m_redirection.m_depthHint = depthHint;
         // if redirected then also initialize the producer
         // This is mostly so that m_consumers gets set correctly.
+        // TODO: This is fishy. Is it needed?
         if (redirectedFields != &fields)
         {
             RBuildForwardGraphAndSchedule(redirectedFieldsOwner->m_outputs.front(), depth + 1);
@@ -1307,6 +1337,7 @@ class Variable::AutoBatch
         // We count all occurences during this initial tree traversal.
         // During batched execution, we hold back BatchNorm ops until the batch size equals
         // the number of occurences.
+        // (We also cache the id here, to avoid repeated accesses to the attribute Dictionary.)
         if (f.m_op == PrimitiveOpType::BatchNormalization)
         {
             //if (!f.m_attributes.Contains(PrimitiveFunction::AttributeNameSyncId))
@@ -1382,7 +1413,7 @@ class Variable::AutoBatch
         if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
             outputFields.m_value = from;
         else
-            outputFields.m_value = from->IndexLastAxis(index); // ...TODO: change to slice; also use locally cached vectors for shape info
+            outputFields.m_value = from->IndexLastAxis(index);
         // implicit Reshape()
         if (outputFields.m_shape != outputFields.m_value->Shape())
             outputFields.m_value = outputFields.m_value->AsShape(outputFields.m_shape);
