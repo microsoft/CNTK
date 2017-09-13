@@ -84,8 +84,8 @@ Similar to `learning_rate_schedule`, the arguments are interpreted in the same w
 ## Examples
 ### Object Detection with Fast R-CNN and Faster R-CNN 
 * Support for bounding box regression and VGG model in Fast R-CNN.
-* New tutorial on Faster R-CNN object detection and updated tutorial on Fast R-CNN.
-* Object detection demo script that allows to choose different detectors, base models, and data sets.
+* New tutorial in documentation on [Faster R-CNN object detection](https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Faster-R-CNN) and updated tutorial on [Fast R-CNN](https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN).
+* [Object detection demo script](https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Detection) that allows to choose different detectors, base models, and data sets.
 ### New example for natural language processing (NLP) 
 ### New C++ Eval Examples
 The C++ examples [`CNTKLibraryCPPEvalCPUOnlyExamples`](https://github.com/Microsoft/CNTK/tree/release/2.2/Examples/Evaluation/CNTKLibraryCPPEvalCPUOnlyExamples) and [`CNTKLibraryCPPEvalGPUExamples`](https://github.com/Microsoft/CNTK/tree/release/2.2/Examples/Evaluation/CNTKLibraryCPPEvalGPUExamples) illustrate how to use C++ CNTK Library for model evaluation on CPU and GPU. The [UWPImageRecognition](https://github.com/Microsoft/CNTK/tree/release/2.2/Examples/Evaluation/UWPImageRecognition) contains an example using CNTK UWP library for model evaluation.
