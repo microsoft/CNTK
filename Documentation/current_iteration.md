@@ -87,7 +87,6 @@ Similar to `learning_rate_schedule`, the arguments are interpreted in the same w
 * New tutorial on Faster R-CNN object detection and updated tutorial on Fast R-CNN.
 * Object detection demo script that allows to choose different detectors, base models, and data sets.
 ### New example for natural language processing (NLP) 
-### Semantic segmentation (stretch goal) 
 ### New C++ Eval Examples
 The C++ examples [`CNTKLibraryCPPEvalCPUOnlyExamples`](https://github.com/Microsoft/CNTK/tree/release/2.2/Examples/Evaluation/CNTKLibraryCPPEvalCPUOnlyExamples) and [`CNTKLibraryCPPEvalGPUExamples`](https://github.com/Microsoft/CNTK/tree/release/2.2/Examples/Evaluation/CNTKLibraryCPPEvalGPUExamples) illustrate how to use C++ CNTK Library for model evaluation on CPU and GPU. The [UWPImageRecognition](https://github.com/Microsoft/CNTK/tree/release/2.2/Examples/Evaluation/UWPImageRecognition) contains an example using CNTK UWP library for model evaluation.
 ### Add new C# Eval examples
@@ -135,8 +134,8 @@ Now convolution and convolution_transpose support data without channel or depth 
 ### Dilated convolution 
 Add support to dilation convolution on the GPU, exposed by BrainScript, C++ and Python API. Dilation convolution effectively increase the kernel size, without actually requiring a big kernel. To use dilation convoluton you need at least cuDNN 6.0. 
 ### Free static axes support for convolution 
-* We have added support for free static axes (`FreeDimension`) for convolution. This allows changing the input tensor size from minibatch to minibatch. For example, in case of CNNs this allows each minibatch to potentially have a different underlying image size. Similar support is also been enabled for pooling node.
-* Note that the Faster R-CNN example for object detection do not yet leverage the free static axes support for convolution (i.e., still scales and pads input images to a fixed size). This example is being updated to use free static axes for arbitrary input image size and is targeted for next release.
+* We have added support for free static axes (`FreeDimension`) for convolution. This allows changing the input tensor size from minibatch to minibatch. For example, in case of CNNs this allows each minibatch to potentially have a different underlying image size. Similar support has also been enabled for pooling node.
+* Note that the Faster R-CNN example for object detection does not yet leverage the free static axes support for convolution (i.e., still scales and pads input images to a fixed size). This example is being updated to use free static axes for arbitrary input image sizes, and is targeted for next release.
 ### Deterministic Pooling
 Now call `cntk.debug.force_deterministic()` will make max and average pooling determistic, this behavior depend on cuDNN version 6 or later.
 
