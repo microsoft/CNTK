@@ -95,7 +95,7 @@ class TensorOpsMixin(object):
         Slicing of a Variable. E.g. var[2:3] will translate into slice(var, axis=0, begin_index=2, end_index=3)
         '''
         from . import ops
-        
+
         if hasattr(self, 'outputs') and len(self.outputs) > 1:
             try:
                 return self.outputs[arg]
@@ -107,7 +107,7 @@ class TensorOpsMixin(object):
                 raise KeyError(msg)
 
         # int or slice: normalize into a tuple of int or tuple of slice
-        if not isinstance(arg, tuple): 
+        if not isinstance(arg, tuple):
             arg = (arg,)
         r = self
         axis0 = 0
@@ -231,8 +231,7 @@ class ArrayMixin(object):
             if callable(device):
                 device = device()
 
-            network = _sparse_to_dense_network_cache(ndav.shape[1:], False,
-                                                     device)
+            network = _sparse_to_dense_network_cache(ndav.shape[1:], False)
             warnings.warn('converting Value object to CSR format might be slow')
 
             dense_data = network.eval(self, device=device)
