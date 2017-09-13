@@ -78,6 +78,9 @@ This also leads to substantial speed gains (our CNTK 204 Tutorial now runs more 
 Now convolution and convolution_transpose support data without channel or depth dimension by setting reductionRank to 0 instead of 1.
 ### Dilated convolution 
 Add support to dilation convolution on the GPU, exposed by BrainScript, C++ and Python API. Dilation convolution effectively increase the kernel size, without actually requiring a big kernel. To use dilation convoluton you need at least cuDNN 6.0. 
+### Free static axes support for convolution 
+We have added support for free static axes (`FreeDimension`) for convolution. This allows changing the input tensor size from minibatch to minibatch. For example, in case of CNNs 
+this allows each minibatch to potentially have a different underlying image size. Similar support is also been enabled for pooling node.
 ### Deterministic Pooling
 Now call `cntk.debug.force_deterministic()` will make max and average pooling determistic, this behavior depend on cuDNN version 6 or later.
 
