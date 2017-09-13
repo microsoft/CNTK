@@ -313,19 +313,17 @@ namespace CNTK
 
     FunctionPtr Function::BlockRoot() const
     {
-        if (!IsBlock())
-            InvalidArgument("Function::BlockRoot() called for a Function '%S' which is not a block.", this->AsString().c_str());
-
         auto blockFunction = dynamic_cast<const BlockFunction*>(this);
+        if (!blockFunction)
+            InvalidArgument("Function::BlockRoot() called for a Function '%S' which is not a block.", this->AsString().c_str());
         return blockFunction->Composite()->RootFunction();
     }
 
     std::shared_ptr<std::vector<std::pair<Variable, Variable>>> Function::BlockArgumentsMappingImpl() const
     {
-        if (!IsBlock())
-            InvalidArgument("Function::BlockArgumentsMapping() called for a Function '%S' which is not a block.", this->AsString().c_str());
-
         auto blockFunction = dynamic_cast<const BlockFunction*>(this);
+        if (!blockFunction)
+            InvalidArgument("Function::BlockArgumentsMapping() called for a Function '%S' which is not a block.", this->AsString().c_str());
         return std::shared_ptr<std::vector<std::pair<Variable, Variable>>>(new std::vector<std::pair<Variable, Variable>>(std::move(blockFunction->CompositeArgumentsMap())), [](std::vector<std::pair<Variable, Variable>>* ptr) { delete ptr; });
     }
 

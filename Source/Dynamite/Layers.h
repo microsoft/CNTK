@@ -346,6 +346,24 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     let eps = Constant::Scalar(DTYPE, 1e-16, device);
     let minusHalf = Constant::Scalar(DTYPE, -0.5, device);
     let profiler = Function::CreateDynamicProfiler(1, L"lnorm");
+#if 0
+    // for efficiency, we set this up as a static graph
+    let x = PlaceholderVariable();
+    let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
+    let x0 = x - mean;
+    let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct (but we don't have the dims upfront)
+    auto lengthNormGraph = x0 * invLen * scale;
+    vector<Variable> argBuf(1); // (Invoke requires a vector, even for a single argument. So we preallocate it here, outside of the lambda.)
+    // Note: Arguments() is slow. Don't call this inside graph generation.
+    return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x) mutable
+    {
+        let prevProfiler = Function::SetDynamicProfiler(profiler);
+        argBuf.front() = x; // (avoid the repeated malloc)
+        let res = Invoke(lengthNormGraph, argBuf, /*isBasicBlock=*/true);
+        Function::SetDynamicProfiler(prevProfiler);
+        return res;
+    });
+#else
     return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x)
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler);
@@ -365,6 +383,7 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
         Function::SetDynamicProfiler(prevProfiler);
         return res;
     });
+#endif
 #endif
 }
 

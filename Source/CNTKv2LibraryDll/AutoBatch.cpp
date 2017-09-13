@@ -16,6 +16,7 @@
 #include "PrimitiveOpType.h"
 #include "PrimitiveFunction.h"
 #include "BlockFunction.h"
+#include "CompositeFunction.h"
 #include "CommonMatrix.h"
 #include "Utils.h"
 
@@ -1320,8 +1321,9 @@ class Variable::AutoBatch
         size_t depthHint = 0;
         for (;;)
         {
-            let isLeaf = (redirectedFields->m_value || redirectedFields->m_varKind == VariableKind::Parameter || redirectedFields->m_varKind == VariableKind::Constant);
-            if (isLeaf && !redirectedFields->m_value)
+            let isParameterOrConstant = redirectedFields->m_varKind == VariableKind::Parameter || redirectedFields->m_varKind == VariableKind::Constant;
+            let isLeaf = (redirectedFields->m_value || isParameterOrConstant || redirectedFields->m_varKind == VariableKind::Placeholder);
+            if (isParameterOrConstant)
             {
                 var.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
                 fail_if(!redirectedFields->m_value, "Parameter/Constant has no Value()??");
@@ -1362,8 +1364,9 @@ class Variable::AutoBatch
         }
         // handle leaves
         // some sanity checks
-        if (redirectedFields->m_varKind == VariableKind::Input || redirectedFields->m_varKind == VariableKind::Placeholder)
-            LogicError("Dynamic Value() must not depend on Input or Placeholder.");
+        if (redirectedFields->m_varKind == VariableKind::Input ||
+            (redirectedFields->m_varKind == VariableKind::Placeholder && redirectedFields->m_compositeArgumentIndex == SIZE_MAX)) // (Placeholders as part of Block inlining are OK)
+            InvalidArgument("Dynamic Value() must not depend on Input or Placeholder.");
         // initialize m_consumers chain of function that produces the values
         fields.m_consumers.clear();
         // Leaves are Parameters, Constants, and also nodes that already have a value.
@@ -1372,10 +1375,10 @@ class Variable::AutoBatch
             // m_function has already been set either by default (for Parameters/Constants) or by a previous invocation
             // (for output values that already existed when this was called).
             // Redirect and Parameter/Constant are mutually exclusive.
-            fail_if(!(redirectedFields->m_redirection ^ (redirectedFields->m_varKind == VariableKind::Parameter || redirectedFields->m_varKind == VariableKind::Constant)), "Parameter or Constantun with redirect??");
+            fail_if(!(redirectedFields->m_redirection ^ (redirectedFields->m_varKind == VariableKind::Parameter || redirectedFields->m_varKind == VariableKind::Constant || redirectedFields->m_varKind == VariableKind::Placeholder)), "Parameter/Constant/Placeholder with redirect??");
             // BUGBUG:!!!! How aboud the gradient?? We must know how to find the gradient!
             //        One solution is to redirect to the operation directly on top of the Parameter, not the parameter itself.
-            if (!fields.m_value)
+            if (!fields.m_value && redirectedFields->m_varKind != VariableKind::Placeholder)
                 ComputeVariableValueFrom(fields, redirectedFields->m_value); // set fields.m_value, and we are done with this node
             m_stats.numLeafNodes++;
             return;
@@ -1427,6 +1430,8 @@ class Variable::AutoBatch
             let& inputFields = GetInputFields(input);
             if (!inputFields.m_value) // (if input is a leaf, it has a value)
             {
+                if (inputFields.m_varKind == VariableKind::Placeholder) // Placeholder in Block inlining
+                    continue;
                 fail_if(!inputFields.m_redirection, "input has no value and is not a function either??");
                 auto& outputFields = GetOutputFields(inputFields.m_redirection.m_function);
                 pendingInputs++;
@@ -3314,6 +3319,7 @@ void PrimitiveFunction::BatchedBackward(std::unordered_map<Parameter, NDArrayVie
 
 // non-batched version of BatchedForward()
 // This is actually not used except as a fallback for debugging.
+// TODO: move to -Eval.cpp
 void PrimitiveFunction::MemoizeKnowableValue() const
 {
     if (m_outputs.size() != 1)
@@ -3329,6 +3335,95 @@ void PrimitiveFunction::MemoizeKnowableValue() const
         args[i] = m_inputs[i].Value();
     NDArrayViewPtr out;
     output.m_dataFields->m_value = move(ComputeKnowableValue(m_op, args, m_attributes, output.Shape(), move(out), *this));
+}
+
+// ===========================================================================
+// Invoke() and BlockFunction -- contained here for now
+// ===========================================================================
+
+Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& name /*= std::wstring()*/)
+{
+    let composite = dynamic_pointer_cast<CompositeFunction>(callee);
+    if (!composite)
+        InvalidArgument("Invoke requires the callee to be a CompositeFunction");
+    return MakeSharedObject<BlockFunction>(composite, operands, /*isBasicBlock=*/false, name)->OutputForDynamicInvocation();
+}
+
+// This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
+// It is a valid PrimitiveFunction, but it shares the composite instead of owning it, and therefore not a valid BlockFunction for the static-graph machinery.
+// TODO: Prevent the static machinery from tripping over this.
+// It is a light-weight representation of 'callee' being called with 'operands.'
+// 'Callee' is a BlockFunction holds a composite that represents its expression, where m_inputs consists of placeholders representing its inputs in right order, and m_outputs[0] holds the resulting shape/type.
+// The resulting object is also a BlockFunction that points to the same composite, but m_inputs represents the invocation operands, and m_outputs[0] the result.
+// Unlike a normal BlockFunction, however, it shares the composite (for Dynamite speed) with the callee, which makes it an invalid object for static CNTK.
+// BUGBUG: This is really quite horrible, as it does not work with static graphs. We need a better implementation of this.
+//         The main difference is that invoked blocks physically share their composites, to avoid duplicating them
+//         (since the point of using BlockFunctions is speed). Also, we have quite a bit code dup in this function.
+// A correct implementation could allow BlockFunction to lazily clone the composite (which is what Dynamite does).
+BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& blockName /*= std::wstring()*/)
+    : PrimitiveFunction(PrimitiveOpType::Block, move/*BUGBUG: not actually moving*/(operands), Dictionary(), blockName), m_composite(callee)
+{
+    isBasicBlock; // TODO: remember this somewhere
+    let& compositeOutputs = callee->RawOutputs(); // RawOutputs() forces callee.m_compositeOutputs to be initialized if not yet. It would initialize it to Placeholders, though.
+    if (compositeOutputs.size() != 1)
+        InvalidArgument("Invoke can only be used with BlockFunctions that have a single output (this one has %d).", (int)compositeOutputs.size());
+    if (!compositeOutputs.front().Shape().IsUnknown())
+        return;
+
+    // If this is the first call, then we are not done yet. We must:
+    //  - enumerate all Placeholders and number them
+    //  - infer the shapes, given the first actually supplied arguments
+    // if the composite has no validated shape yet, then do this now
+    // This updates the composite in-place, by replacing its Placeholders with new ones with shapes matching our operands.
+    // Any subsequent invocation of this must have matching dimensions. It will otherwise fail inside Dynamite execution.
+    // This is slow, but that's OK since it is done only once.
+
+    // We determine the compositeOutputs by replacing the arguments of the composite with new placeholders with updated 
+    // shape etc. information matching the corresponding mapped input
+    let argumentsMap = callee->Arguments();
+    if (argumentsMap.size() != m_inputs.size())
+        InvalidArgument("Invoke invoked with wrong (%d) number of arguments, %d expected.", (int)m_inputs.size(), (int)argumentsMap.size());
+
+    std::unordered_map<Variable, Variable> replacementMap;
+    for (size_t i = 0; i < m_inputs.size(); i++)
+    {
+        let& currentArgument = argumentsMap[i]; // Placeholder in the composite
+        if (!currentArgument.IsPlaceholder())
+            InvalidArgument("Invoke requires the block function to have Placeholders as inputs.");
+        let& currentArgumentMapping = m_inputs[i]; // the user-supplied argument. This has the actual type.
+        if (currentArgumentMapping.IsPlaceholder() || currentArgumentMapping.IsInput())
+            InvalidArgument("Invoke requires the operands to be known values, not placeholders.");
+        auto newArgument = PlaceholderLike(currentArgumentMapping); // we replace with a placeholder of the same type. This gives the composite the shape.
+        newArgument.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
+        replacementMap.insert({ currentArgument, newArgument }); // replace with new Placeholder, which has a block mapping implanted
+    }
+
+    callee->ReplacePlaceholders(replacementMap); // This gives the composite the shape.
+    // OUTDATED --The composite args' Placeholders now have a block mapping to the actual inputs.
+    // BUGBUG: That's bad, since they are gone after this. There should be no block mapping.
+
+    if (compositeOutputs.front().Shape().IsUnknown()) // or not?
+        LogicError("Invoke must only be called with inputs with fully specified dimensions.");
+    // Now the composite is fully type-inferred; ready for consumption by Dynamite.
+}
+
+Variable BlockFunction::OutputForDynamicInvocation()
+{
+    // now set up the output variable. Clone the composite's one output Variable, then inject the mapping pointer. This following the pattern of InferOutputs() below.
+    // ...EXCEPT we do not implant a mapping, since the composite is shared. The composite does not know that it is part of a BlockFunction.
+    let& compositeOutput = m_composite->m_outputs.front();
+    auto blockOutput = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), { /*dynamic axes*/ }, compositeOutput.NeedsGradient(), Name());
+    let thisShared = dynamic_pointer_cast<PrimitiveFunction>(shared_from_this());
+    blockOutput.SetOwner(thisShared);
+
+    // implant the block's output Variable
+    m_outputs.resize(1);
+    m_outputs[0] = blockOutput;
+    m_outputInitializingByThreadId = std::thread::id();
+    m_outputsInitFlag = 1;
+
+    return m_outputs.front().CompositePreservingCopy(thisShared);
+    // BUGBUG: We keep a reference to the PrimitiveFunction, although this is meant to be for composites.
 }
 
 } // namespace CNTK

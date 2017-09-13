@@ -16,12 +16,18 @@ namespace CNTK
     class BlockFunction final : public PrimitiveFunction
     {
     public:
-        BlockFunction(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, Dictionary&& attributes,
+        BlockFunction(FunctionPtr&& composite,
+                      const std::vector<std::pair<Variable, Variable>>& argumentsMap, // [composite's Placeholder] -> actual input it should pretend to be
+                      const std::wstring& blockOpName, Dictionary&& attributes,
                       const std::wstring& blockName = L"", const std::wstring& uid = GenerateUid(PrimitiveOpType::Block))
             : PrimitiveFunction(PrimitiveOpType::Block, DetermineInputs(composite, argumentsMap, blockName), std::move(attributes), blockName, uid),
             m_composite(composite), m_blockOpName(blockOpName)
         {
         }
+
+        // special version for InvokeGraph(). Defined in AutoBatch.cpp for now.
+        BlockFunction(const std::shared_ptr<CompositeFunction>& composite, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& blockName = std::wstring());
+        Variable OutputForDynamicInvocation();
 
         virtual const std::wstring& OpName() const override { return m_blockOpName; }
 

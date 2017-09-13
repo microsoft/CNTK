@@ -4467,7 +4467,17 @@ namespace CNTK
     /// Creates a Block Function that encapsulates a composite to create an opaque Function object that
     /// appears as any other primitive Function
     ///
-    CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = L"");
+    CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = std::wstring());
+
+    ///
+    /// Invokes a static CNTK graph (aka composite). Returns the output of a new BlockFunction.
+    /// The number of operands must match composite.Arguments().
+    /// A non-basic block gets inlined on the high level, and is fully batchable.
+    /// A basic block gets batched as one, there is no cross-basic-block batching.
+    /// This is similar to AsBlock(), but unlike AsBlock(), it does not take ownership of the composite.
+    /// This presently only works for Dynamite. For static graphs, use AsBlock().
+    ///
+    CNTK_API Variable Invoke(const FunctionPtr& composite, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& name = std::wstring());
 
     ///
     /// Creates a new Function instance which output its input as it is and previent any gradient contribution from its output. 
