@@ -47,7 +47,7 @@ if [ "\$TEST_DEVICE" = "gpu" ]; then
     # TODO 203 fails when run without GUI?
     # 204: interactive
     if [[ \$f != CNTK_203_Reinforcement_Learning_Basics.ipynb && \$f != CNTK_204_Sequence_To_Sequence.ipynb ]]; then
-      jupyter nbconvert --to notebook --execute --ExecutePreprocessor.kernel_name=python\$(python -c "import sys; print(sys.version_info[0])") --ExecutePreprocessor.timeout=2700 --output \$(basename \$f .ipynb)-out.ipynb \$f
+      jupyter nbconvert --debug --to notebook --execute --ExecutePreprocessor.kernel_name=python\$(python -c "import sys; print(sys.version_info[0])") --ExecutePreprocessor.timeout=2700 --output \$(basename \$f .ipynb)-out.ipynb \$f
     fi
   done
 fi
