@@ -343,7 +343,7 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
     // For latency control BLSTM LC-BLSTM
     if (m_config.m_rightSplice > 0)
     {
-        if (!cross_boundary)
+        if (!cross_boundary && numberOfSamples >= m_config.m_truncationSize)
         {
             slot.m_sampleCursor -= m_config.m_rightSplice;
             slot.m_sampleOffset -= padding;
