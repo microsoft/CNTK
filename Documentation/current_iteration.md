@@ -6,7 +6,7 @@
 ## Documentation
 
 ### Add HTML version of tutorials and manuals so that they can be searchable
-We have added HTML versions of the tutorials and manuals with the [Python documentation](https://cntk.ai/pythondocs/). This makes the [tutorial notebooks](https://www.cntk.ai/pythondocs/tutorials.html) and manuals searchable as well.
+We have added HTML versions of the [tutorials](https://www.cntk.ai/pythondocs/tutorials.html) and [manuals](https://www.cntk.ai/pythondocs/manuals.html) with the [Python documentation](https://www.cntk.ai/pythondocs/). This makes the [tutorial notebooks](https://www.cntk.ai/pythondocs/tutorials.html) and manuals searchable as well.
 
 ### Add missing evaluation documents
 
