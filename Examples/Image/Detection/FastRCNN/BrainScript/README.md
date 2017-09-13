@@ -23,11 +23,11 @@ In this example, we use [AlexNet](../../../../../PretrainedModels) as a pre-trai
 
 ### Getting the data and AlexNet model
 
-We use a toy dataset of images captured from a refrigerator to demonstrate Fast-R-CNN. Both the dataset and the pre-trained AlexNet model can be downloaded by running the following Python command (run from Examples\Image\Detection\FastRCNN folder):
+We use a toy dataset of images captured from a refrigerator to demonstrate Fast-R-CNN. Both the dataset and the pre-trained AlexNet model can be downloaded by running the following Python command (run from Examples/Image/Detection/FastRCNN folder):
 
 `python install_data_and_model.py`
 
-After running the script, the toy dataset will be installed under the `Image/DataSets/Grocery` folder. And the AlexNet model will be downloaded to the `cntk\PretrainedModels` folder. We recommend you to keep the downloaded data in the respective folder while downloading, as the configuration files in this folder assumes that by default.
+After running the script, the toy dataset will be installed under the `Examples/Image/DataSets/Grocery` folder. The AlexNet model will be downloaded to the `PretrainedModels` folder in the root CNTK folder. We recommend you to keep the downloaded data in the respective folder while downloading, as the configuration files in this folder assumes that by default.
 
 ### Setup
 
