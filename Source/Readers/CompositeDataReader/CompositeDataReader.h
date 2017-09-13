@@ -99,6 +99,8 @@ private:
 
     // Truncation length for BPTT mode.
     size_t m_truncationLength;
+    // rightSplice(nr) for LC-BLSTM
+    size_t m_rightSplice;
 };
 
 }}}

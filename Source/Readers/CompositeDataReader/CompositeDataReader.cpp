@@ -68,6 +68,9 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         {
             InvalidArgument("Truncation length cannot be 0.");
         }
+        m_rightSplice = config(L"rightSplice", 0);
+        if (m_rightSplice >= m_truncationLength) 
+            InvalidArgument("rightSplice should be less than truncation length");
     }
     else
     {
@@ -340,6 +343,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg, const std::m
     if (m_packingMode == PackingMode::truncated)
     {
         config.m_truncationSize = m_truncationLength;
+        config.m_rightSplice = m_rightSplice;
     }
 
     ReaderBase::StartEpoch(config, inputDescriptions);
