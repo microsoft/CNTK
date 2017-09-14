@@ -80,8 +80,41 @@ Similar to `learning_rate_schedule`, the arguments are interpreted in the same w
 - With minibatch_size=N, the decay momentum=beta is applied to the mean gradient of every N samples. For example,  minibatches of sizes N, 2N, 3N and kN will have decays of beta, pow(beta, 2), pow(beta, 3) and pow(beta, k) respectively --- the decay is exponential in the proportion of the actual minibatch size to the specified minibatch size.
 
 
-### A C#/.NET API that enables people to build and train networks.
-##### Basic training support is added to C#/.NET API. New training examples include:
+### A C#/.NET API that enables people to build and train networks. 
+
+##### Training Support Is Added To C#/.NET API. 
+With this addition to the existing CNTK C# Evaluation API, DotNet developers can enjoy fully integrated deep learning experience that no other toolkits can offer. A deep neural network can be built, trained, and validated fully in C# while still taking advantage of CNTK performance strength. Users may debug directly into CNTK source code to see how a DNN is trained and evaluated. Production integration has never been as easy as now with CNTK C# API. New features include:
+
+##### Basic C# Training API. 
+Over 100 basic functions to build a computation network. These functions include Sigmoid, Tanh, ReLU, Plus, Minus, Convolution, Pooling, BatchNormalization, to name a few.
+
+As an example, to build a logistic regression loss function:
+***
+```cs
+Function z = CNTKLib.Times(weightParam, input) + biasParam;
+Function loss = CNTKLib.CrossEntropyWithSoftmax(z, labelVariable);
+```
+
+##### CNTK Function As A Primitive Element To Build A DNN
+A DNN is built through basic operation composition. For example, to build a ResNet node:
+***
+```cs
+Function conv = CNTKLib.Pooling(CNTKLib.Convolution(convParam, input),PoolingType.Average, poolingWindowShape);
+Function resNetNode = CNTKLib.ReLU(CNTKLib.Plus(conv, input));
+```
+
+##### Batching Supports
+Provides MinibatchSource and MinibacthData utilities to help efficient data loading and batching.
+
+##### Training Supports
+Supports many Stochastic Gradient Descent optimizers commonly seen in DNN literatures: MomentumSGDLearner, AdamLearner, AdaGradLearner, etc. For example, to train a model with a ADAM Stochastic Optimizer:
+***
+```cs
+var parameterLearners = new List<Learner>() { Learner.AdamLearner(classifierOutput.Parameters(), learningRate, momentum) };
+var trainer = Trainer.CreateTrainer(classifierOutput, trainingLoss, prediction, parameterLearners);
+```
+
+Training examples cover a broad range of DNN use cases:
 ##### 1. A hello-world example to train and evaluate a logistic regression model using C#/API. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCSharp/Common/LogisticRegression.cs)
 ##### 2. Convolution neural network for image classification of the MNIST dataset. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCSharp/Common/MNISTClassifier.cs)
 ##### 3. Build, train, and evaluate a ResNet model with C#/.NET API. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCSharp/Common/CifarResNetClassifier.cs)
