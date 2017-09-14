@@ -602,7 +602,7 @@ static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
     fprintf(stderr, "%s %s", __DATE__, __TIME__); // build time
-    fprintf(stderr, ") on %s at %s\n\n", GetHostName().c_str(), timestamp.c_str());
+    fprintf(stderr, ") at %s\n\n", timestamp.c_str());
     for (int i = 0; i < argc; i++)
         fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
     fprintf(stderr, "\n");

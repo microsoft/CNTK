@@ -60,6 +60,7 @@ void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+MATH_API std::size_t GetCUDNNVersion();
 
 class DataTransferer;
 
