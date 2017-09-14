@@ -1721,27 +1721,23 @@ class Variable::AutoBatch
             m_stats.numDoneOtherOps++;
         return output;
     }
-    // same as MemoizeKnowableValueInArena() but returns the result in the form of a Variable suitable as an input,
+
+    // create a PrimitiveFunction, execute it right away, and prep result as an input
+    // This first executes RawPrimitiveFunction() and MemoizeKnowableValueInArena(),
+    // and then returns the result in the form of a Variable suitable as an input to the next PimitiveFunction
     // by setting its m_acyclicOutputPrimitiveReference field.
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
-    Variable MemoizeKnowableValueInArenaAsInput(const PrimitiveFunctionPtr& f, bool isFree = false, bool spliceIsGather = false)
+    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name,
+                                       const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
+                                       bool isFree = false, bool spliceIsGather = false)
     {
+        let f = RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name, profiler, logPrefix);
         let& output = MemoizeKnowableValueInArena(*f, isFree, spliceIsGather);
         // To make the consumer of this hold a reference to this PrimitiveFunction, inject a strong ref to the copy of its Output.
         //input = output.CompositePreservingCopy(f); // without the acyclic trick, this works as well, but is not quite right since f is not a Composite
         Variable input = output;                     // copy the Variable object
         input.m_acyclicOutputPrimitiveReference = f; // and implant the reference to the Primitive that generated it, for reference countiung
         return input;
-    }
-
-    // combination of RawPrimitiveFunction() and MemoizeKnowableValueInArenaAsInput()
-    // This is a common pattern in auto-batch.
-    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name,
-                                       const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
-                                       bool isFree = false, bool spliceIsGather = false)
-    {
-        let f = RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name, profiler, logPrefix);
-        return MemoizeKnowableValueInArenaAsInput(f, isFree, spliceIsGather);
     }
 
     // notify consumers of 'op' that op's value is now available
