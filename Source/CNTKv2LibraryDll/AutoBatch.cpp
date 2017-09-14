@@ -2407,8 +2407,8 @@ class Variable::AutoBatch
                     //fields.m_consumers.mangle(-5); // (temporarily, so that we can discover if this is ever used)
                     return p; // TODO: change to return Parameter...
                 };
-                m_batchedInputs.push_back(createParameter(                 statShape));
-                m_batchedInputs.push_back(createParameter(                 statShape));
+                m_batchedInputs.push_back(createParameter(               statShape)  );
+                m_batchedInputs.push_back(createParameter(               statShape)  );
                 m_batchedInputs.push_back(createParameter(m_batchedInputs[0].Shape()));
                 anyBatchedInputs = true; // BUGBUG: If all operands are the same, then BatchNorm does not make sense (variance=0). Should we throw an error?
             }
@@ -2417,25 +2417,28 @@ class Variable::AutoBatch
             PrimitiveFunctionPtr batchedOp;
             Dictionary attributes;
             f0.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
-            // This is the actual batched execution of the op.
-            if (anyBatchedInputs)
-            {
-                // create a new PrimitiveFunction for the batched op
-                // This is the actual batched op that we create here.
-                // Batched inputs have been prepared in m_batchedInputs[].
+            //if (anyBatchedInputs)
+            //{
+            // create a new PrimitiveFunction for the batched op
+            // This is the actual batched op that we create here.
+            // Batched inputs have been prepared in m_batchedInputs[].
+            // If all inputs are identical then degrade to computing it only once (this is the easy case that we don't kick off the CSE machinery for).
 
-                let expectedOutputShape = unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize);
-                batchedOp = RawPrimitiveFunction(f0.m_op, vector<Variable>(m_batchedInputs), expectedOutputShape, move(attributes), f0.m_name, f0.m_profiler, L"*"/*f0*/);
-                MemoizeKnowableValueInArena(*batchedOp);
-                // Note: We could move(m_batchedInputs), but don't, since then we would have to reallocate m_batchedInputs for the next operation, so makes no difference.
-            }
-            else
-            {
-                // all inputs identical: compute it only once (this is the easy case that we don't kick off the CSE machinery for)
-                batchedOp = RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs.front().Shape(), move(attributes), f0.m_name, f0.m_profiler, L"."/*f0*/);
-                MemoizeKnowableValueInArena(*batchedOp);
-                // TODO: the following is a little more efficient, but creates a cycle, so we should exclude the lazy index for the first op
-            }
+            //let expectedOutputShape = unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize);
+            // This is the actual batched execution of the op.
+            batchedOp = RawPrimitiveFunction(f0.m_op,
+                                             vector<Variable>(anyBatchedInputs ? m_batchedInputs                                               : f0.m_inputs         ),
+                                             anyBatchedInputs                  ? (unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize)) : unbatchedOutputShape,
+                                             move(attributes), f0.m_name, f0.m_profiler, L"*"/*f0*/);
+            MemoizeKnowableValueInArena(*batchedOp);
+            // Note: We could move(m_batchedInputs), but don't, since then we would have to reallocate m_batchedInputs for the next operation, so makes no difference.
+            //}
+            //else
+            //{
+            //    // all inputs identical: compute it only once (this is the easy case that we don't kick off the CSE machinery for)
+            //    batchedOp = RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs.front().Shape(), move(attributes), f0.m_name, f0.m_profiler, L"."/*f0*/);
+            //    MemoizeKnowableValueInArena(*batchedOp);
+            //}
             if (anyBatchedInputs)
             {
                 m_stats.numCommonSubexpressionsEliminated += batchSize - 1;
