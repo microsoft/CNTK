@@ -1,7 +1,7 @@
 # Aug-Sept 2017 Notes
 
 ## Breaking change
-### This iteration requires CuDNN 6.0 in order to support dilated convolution and deterministic pooling. Please update your CuDNN.
+### This iteration requires cuDNN 6.0 in order to support dilated convolution and deterministic pooling. Please update your cuDNN.
 
 ## Documentation
 
@@ -18,9 +18,9 @@ This work is rolled over into next release due to dependency on test infrastruct
 ### Support for NCCL 2
 Now [NCCL](https://developer.nvidia.com/nccl) can be used across machines. User need to enable NCCL in build configure as [here](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-linux). 
 Note:
-#### After installed the downloaded NCCL 2 package, there are two packages /var/nccl-repo-2.0.4-ga/libnccl2_2.0.4-1+cuda8.0_amd64.deb and /var/nccl-repo-2.0.4-ga/libnccl-dev_2.0.4-1+cuda8.0_amd64.deb. Install both of them for building CNTK with NCCL 2
-#### During execution, user may hit failure in NCCL initialization. To get detailed information about the failure, please set environment variable NCCL_DEBUG=INFO
-##### There are known issues in current release of NCCL 2 on system configured with InfiniBand devices running in mixed IB and IPoIB modes. To use IB mode devices only, please set environment variable NCCL_IB_HCA=<devices running on IB mode, e.g. mlx5_0>[,<more devices if any>]
+1. After installed the downloaded NCCL 2 package, there are two packages /var/nccl-repo-2.0.4-ga/libnccl2_2.0.4-1+cuda8.0_amd64.deb and /var/nccl-repo-2.0.4-ga/libnccl-dev_2.0.4-1+cuda8.0_amd64.deb. Install both of them for building CNTK with NCCL 2
+2. During execution, user may hit failure in NCCL initialization. To get detailed information about the failure, please set environment variable NCCL_DEBUG=INFO
+3. There are known issues in current release of NCCL 2 on system configured with InfiniBand devices running in mixed IB and IPoIB modes. To use IB mode devices only, please set environment variable NCCL_IB_HCA=<devices running on IB mode, e.g. mlx5_0>[,<more devices if any>]
 
 ### Update learner interface to simplify parameter setting and adding new learners
 
