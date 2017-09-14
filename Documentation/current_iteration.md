@@ -83,7 +83,7 @@ Similar to `learning_rate_schedule`, the arguments are interpreted in the same w
 ### A C#/.NET API that enables people to build and train networks.
 ##### Basic training support is added to C#/.NET API. New training examples include:
 ##### 1. A hello-world example to train and evaluate a logistic regression model using C#/API. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCSharp/Common/LogisticRegression.cs)
-##### 2. Convolution neural network for image classification of the MNIST dataset. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCSharp/Common/MNISTClassifier.cs)
+##### 2. Convolution neural network for image classification of the MNIST dataset.(https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCSharp/Common/MNISTClassifier.cs)
 ##### 3. Build, train, and evaluate a ResNet model with C#/.NET API. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCSharp/Common/CifarResNetClassifier.cs)
 ##### 4. Transfer learning with C#/.NET API. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCSharp/Common/TransferLearning.cs)
 ##### 5. Build and train a LSTM sequence classifier with C#/.NET API. (https://github.com/Microsoft/CNTK/tree/master/Examples/TrainingCSharp/Common/LSTMSequenceClassifier.cs)
@@ -134,10 +134,7 @@ and the output is a sequence of vectors of the same dimension as the first argum
 This also leads to substantial speed gains (our CNTK 204 Tutorial now runs more than 2x faster).
 
 ### Aggregation on sparse gradient for embedded layer
-#### This change saves costly conversion from sparse to dense before gradient aggregation when embedding vocabulary size is huge.
-#### It is currently enabled for GPU build when training on GPU with non-quantized data parallel SGD. For other distributed learners and CPU build, it is disabled by default.
-#### It can be manually turned off in python by calling `cntk.cntk_py.use_sparse_gradient_aggregation_in_data_parallel_sgd(False)`
-#### Note that for a rare case of running distributed training with CPU device on a GPU build, you need to manually turn it off to avoid unimplemented exception
+This change saves costly conversion from sparse to dense before gradient aggregation when embedding vocabulary size is huge. It is currently enabled for GPU build when training on GPU with non-quantized data parallel SGD. For other distributed learners and CPU build, it is disabled by default. It can be manually turned off in python by calling `cntk.cntk_py.use_sparse_gradient_aggregation_in_data_parallel_sgd(False)`. Note that for a rare case of running distributed training with CPU device on a GPU build, you need to manually turn it off to avoid unimplemented exception
 ### Gradient as an operator (stretch goal)
 ### Reduced rank for convolution in C++ to enable convolution on 1D data
 Now convolution and convolution_transpose support data without channel or depth dimension by setting reductionRank to 0 instead of 1. The motivation for this change is to add the ability to natively support geometric data without the need to manually reshape it in order to add a dummy channel dimension.
