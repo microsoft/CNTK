@@ -1,7 +1,7 @@
 # Aug-Sept 2017 Notes
 
 ## Breaking change
-### This iteration requires cuDNN 6.0 in order to support dilated convolution and deterministic pooling. Please update your cuDNN.
+### This iteration requires CuDNN 6.0 in order to support dilated convolution and deterministic pooling. Please update your CuDNN.
 
 ## Documentation
 
@@ -13,6 +13,15 @@ We have added HTML versions of the [tutorials](https://www.cntk.ai/pythondocs/tu
 ## System 
 
 ### 16bit support for training on Volta GPU (limited functionality)
+This work is rolled over into next release due to dependency on test infrastructure updates.
+
+### Support for NCCL 2
+Now [NCCL](https://developer.nvidia.com/nccl) can be used across machines. User need to enable NCCL in build configure as [here](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-linux). 
+Note:
+#### After installed the downloaded NCCL 2 package, there are two packages /var/nccl-repo-2.0.4-ga/libnccl2_2.0.4-1+cuda8.0_amd64.deb and /var/nccl-repo-2.0.4-ga/libnccl-dev_2.0.4-1+cuda8.0_amd64.deb. Install both of them for building CNTK with NCCL 2
+#### During execution, user may hit failure in NCCL initialization. To get detailed information about the failure, please set environment variable NCCL_DEBUG=INFO
+##### There are known issues in current release of NCCL 2 on system configured with InfiniBand devices running in mixed IB and IPoIB modes. To use IB mode devices only, please set environment variable NCCL_IB_HCA=<devices running on IB mode, e.g. mlx5_0>[,<more devices if any>]
+
 ### Update learner interface to simplify parameter setting and adding new learners
 
 This update simplifies the learner APIs and deprecates the concepts of unitType.minibatch and UnitType.sample. The purpose of this update is to make the API intuitive to specify the learner hyper-parameters while preserving the unique model update techniques in CNTK --- the mean gradients of every N samples contributes approximately the same to the model updates regardless of the actual data minibatch sizes. Detailed explanation can be found at the manual on [How to Use CNTK Learners](https://github.com/Microsoft/CNTK/blob/master/Manual/Manual_How_to_use_learners.ipynb).
@@ -142,6 +151,7 @@ Now call `cntk.debug.force_deterministic()` will make max and average pooling de
 ## Performance 
 ### Asynchronous evaluation API (Python and C#) 
 ### Intel MKL update to improve inference speed on CPU by around 2x on AlexNet 
+This work is rolled over to next release due to dependency on test infrastructure updates.
 
 ## Keras and Tensorboard 
 ### Example on Keras and SKLearn multi-GPU support on CNTK 
