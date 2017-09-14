@@ -25,6 +25,11 @@ else
   DROP_FILE="$(basename "$DROP_LOCATION")"
 fi
 
+echo 'check_certificate = off' > ~/.wgetrc
+
+mkdir -p ~/.config/pip/
+printf '[install]\ntrusted-host=%s' "$(echo $WHEEL_BASE_URL | awk -F/ '{print $3}')" > ~/.config/pip/pip.conf
+
 tar -xzf "$DROP_FILE"
 test -d cntk
 
