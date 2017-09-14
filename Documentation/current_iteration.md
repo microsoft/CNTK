@@ -158,5 +158,18 @@ This work is rolled over to next release due to dependency on test infrastructur
 ### Provided an example on Keras for multi-GPU support on CNTK. Details are [here](http://docs.microsoft.com/en-us/cognitive-toolkit/Using-CNTK-MultiGPU-Support-with-Keras).
 ### Added Tensorboard image support for CNTK. Now CNTK users can use tensorboard to display images. More details and examples can be found [here](http://docs.microsoft.com/en-us/cognitive-toolkit/Using-TensorBoard-for-Visualization).
 
+### Acknowledgments
+We thank the following community members for their contributions:+
+
+* [@cijianzy](https://github.com/cijianzy)
+* [@FDecaYed](https://github.com/FDecaYed)
+* [@karolzak](https://github.com/karolzak)
+* [@KGWANGMIN](https://github.com/KGWANGMIN)
+* [@ottolu](https://github.com/ottolu)
+* [@StillKeepTry](https://github.com/StillKeepTry)
+* [@taehoonlee](https://github.com/taehoonlee)
+
+We apologize for any community contributions we might have overlooked in these release notes.
+
 ## Others 
 ### Continue work on [Deep Learning Explained](https://www.edx.org/course/deep-learning-explained-microsoft-dat236x) course on edX. 
