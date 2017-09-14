@@ -155,8 +155,13 @@ Now call `cntk.debug.force_deterministic()` will make max and average pooling de
 This work is rolled over to next release due to dependency on test infrastructure updates.
 
 ## Keras and Tensorboard 
-### Provided an example on Keras for multi-GPU support on CNTK. Details are [here](http://docs.microsoft.com/en-us/cognitive-toolkit/Using-CNTK-MultiGPU-Support-with-Keras).
-### Added Tensorboard image support for CNTK. Now CNTK users can use tensorboard to display images. More details and examples can be found [here](http://docs.microsoft.com/en-us/cognitive-toolkit/Using-TensorBoard-for-Visualization).
+### Provided an article on Keras for multi-GPU support on CNTK. 
+
+In this article, we elaborated how to conduct parallel training on CNTK with Keras. Details are [here](http://docs.microsoft.com/en-us/cognitive-toolkit/Using-CNTK-MultiGPU-Support-with-Keras).
+
+### Added Tensorboard image support for CNTK. 
+
+CNTK added the image feature support for TensorBoard. Now CNTK users can use TensorBoard to display images. More details and examples can be found [here](http://docs.microsoft.com/en-us/cognitive-toolkit/Using-TensorBoard-for-Visualization).
 
 ### Acknowledgments
 We thank the following community members for their contributions:+
