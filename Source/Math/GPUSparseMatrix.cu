@@ -857,7 +857,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYP
     if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
     {
         // ColSize doesn't work since it requires NzCount() to be usable (RowSize doesn't, since it's the fixed, compressed,
-        // dimension. Since NzCount is not available (because the sparse indices which is where the NzCount is copmuted from
+        // dimension. Since NzCount is not available (because the sparse indices which is where the NzCount is computed from
         // haven't been copied in yet), we just tell it how many bytes to copy. That is, nz * sizeof(GPUSPARSE_INDEX_TYPE);
         CUDA_CALL(cudaMemcpy(RowLocation(), h_CSRRow, RowSize(), kind));
         CUDA_CALL(cudaMemcpy(ColLocation(), h_Col, nz * sizeof(GPUSPARSE_INDEX_TYPE), kind));
@@ -923,7 +923,10 @@ void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_
 // Set the matrix to the data given by the three arrays, copying the data to the GPU.
 // this version is used from the reader
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
+void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(
+    const CPUSPARSE_INDEX_TYPE* h_CSCCol, // [0..numCols-1] starting index into h_Row
+    const CPUSPARSE_INDEX_TYPE* h_Row,    // [0..nz-1] row of value, order matches h_Val
+    const ElemType* h_Val,                // [0..nz-1] values
     const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/, DataTransferer* transferer /*= nullptr*/)
 {
     VerifyWritable(__FUNCTION__);
@@ -932,14 +935,28 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
         LogicError("SetMatrixFromCSCFormat: nullptr passed in.");
     if (!IsOnDevice && nz != h_CSCCol[numCols] - h_CSCCol[0])
         LogicError("SetMatrixFromCSCFormat: wrong nz value passed in.");
+#if 1 // validate input indices
+    if (!IsOnDevice)
+    {
+        for (size_t j = 0; j < numCols; j++)
+        {
+            if (h_CSCCol[j] < 0 || h_CSCCol[j] > nz)
+                LogicError("SetMatrixFromCSCFormat: h_CSCCol[colIndex=%d] beyond nz=%d", (int)j, (int)nz);
+            if (j > 0 && h_CSCCol[j] < h_CSCCol[j - 1])
+                LogicError("SetMatrixFromCSCFormat: h_CSCCol[] not in ascending order, %d, %d", (int)h_CSCCol[j - 1], (int)h_CSCCol[j]);
+        }
+        for (size_t k = 0; k < nz; k++)
+            if (h_Row[k] < 0 || h_Row[k] >= numRows)
+                LogicError("SetMatrixFromCSCFormat: row index of nz element [%d] out of bounds (%d >= %d)", (int)k, (int)h_Row[k], (int)numRows);
+    }
+#endif
 
     SetComputeDeviceId(PrepareDevice(devId));
     SetFormat(matrixFormatSparseCSC);
-    RequireSizeAndAllocate(numRows, numCols, nz, true, false);
+    RequireSizeAndAllocate(numRows, numCols, nz, /*growOnly=*/true, /*keepExistingValues=*/false);
 
     if (transferer && IsOnDevice)
-        RuntimeError("Currently it is prohibited to copy data asynchronous from device to device.");
-
+        RuntimeError("SetMatrixFromCSCFormat: Currently it is not supported to copy data asynchronously from device to device.");
     // m_nz doesn't exist anymore. How are we going to deal with the NzSize, RowSize, and ColSize? Do it ourselves of course.
 
     // copy the non-zero elements
