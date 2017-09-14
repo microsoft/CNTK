@@ -982,14 +982,14 @@ namespace CNTK
             {
                 int major = 0, minor = 0, patchLevel = 0;
                 ExtractCUDAVersion(cudaVersion, major, minor, patchLevel);
-                LOGPRINTF(stderr, "\t\tCUDA DRIVER VERSION: %d.%d.%d\n", major, minor, patchLevel);
+                LOGPRINTF(stderr, "\t\tCUDA version: %d.%d.%d\n", major, minor, patchLevel);
             }
 #endif
 #ifdef _CUDNN_PATH_
             size_t cudnnVersion = GetCUDNNVersion();
             int cudnnMajor = 0, cudnnMinor = 0, cudnnPatchLevel = 0;
             ExtractCUDAVersion(cudnnVersion, cudnnMajor, cudnnMinor, cudnnPatchLevel);
-            LOGPRINTF(stderr, "\t\tCUDNN VERSION: %d.%d.%d\n", cudnnMajor, cudnnMinor, cudnnPatchLevel);
+            LOGPRINTF(stderr, "\t\tCUDNN version: %d.%d.%d\n", cudnnMajor, cudnnMinor, cudnnPatchLevel);
 #endif
 #ifdef _GIT_EXIST
             LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
