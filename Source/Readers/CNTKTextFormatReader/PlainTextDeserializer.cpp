@@ -219,7 +219,7 @@ public:
             const uint64_t beginOffset; // byte offset of this line in the file
             const size_t numWords;      // number of final word tokens in the line. This includes <s> and </s> if specified to be added.
         };
-        vector<vector<TextLineRef>> m_textLineRefs; // [fileIndex][lineIndex] -> (byte offset of line, #words in this line); has one extra beyond last line to simplify length calculation
+        vector<vector<TextLineRef>> m_textLineRefs; // [fileIndex][lineIndex] -> (byte offset of line, #words in this line); has one extra line beyond last line to simplify length calculation
         size_t m_totalNumWords;  // total word count for this stream
         Vocabulary m_vocabulary; // mapping from word strings to neuron indices
     };
@@ -247,13 +247,13 @@ public:
         // statistics and verify that all files have the same #lines
         m_totalNumLines = 0;
         size_t totalNumSrcWords = 0;
-        let& firstFileTextLineRefs = m_streams[0].m_textLineRefs;
-        for (size_t j = 0; j < firstFileTextLineRefs.size(); j++)
+        let& firstFileTextLineRefs = m_streams[0].m_textLineRefs; // [fileIndex]
+        for (size_t j = 0; j < firstFileTextLineRefs.size(); j++) // compute statistics from first stream
         {
-            m_totalNumLines += firstFileTextLineRefs[j].size() - 1; // -1 because of one extra line at end
+            m_totalNumLines += firstFileTextLineRefs[j].size() - 1; // -1 because m_textLineRefs[fileIndex][*] has one extra entry at end
             totalNumSrcWords += m_streams[0].m_totalNumWords;
         }
-        for (size_t i = 1; i < m_streams.size(); i++)
+        for (size_t i = 1; i < m_streams.size(); i++) // all additional streams must match the first stream's statistics
         {
             let& thisFileTextLineRefs = m_streams[i].m_textLineRefs;
             if (firstFileTextLineRefs.size() != thisFileTextLineRefs.size())
@@ -382,9 +382,9 @@ private:
     struct ChunkRef : public ChunkInfo
     {
         size_t m_size = 0;          // size of this chunk in bytes
-        size_t m_endFileIndex = 0;  // file and line number of ebnd position (and one after last line)
+        size_t m_endFileIndex = 0;  // file and line number of end position (and one after last line)
         size_t m_endLineNo = 0;     // (start position is computed from the previous chunk end when loading the data)
-        size_t m_endSequenceId = 0; // identifier (=global line number) of end entry in this chunk
+        size_t m_endSequenceId = 0; // sequence identifier (=global line number) of end entry in this chunk; that is, the one after the last line
 
         ChunkRef() : ChunkInfo{ 0, 0, 0 } { }
     };
@@ -537,11 +537,11 @@ private:
         }
     private:
         const ChunkRef& m_chunkRef;             // reference to the chunk descriptor that this Chunk represents
-        const PlainTextDeserializerImpl& m_owningDeserializer; // reference to the owningDeserializer PlainTextDeserializer instance
+        const PlainTextDeserializerImpl& m_owningDeserializer; // reference to the owning PlainTextDeserializer instance
         vector<vector<SparseIndexType>> m_data; // [streamIndex][n] concatenated data for all sequences for all streams
-        vector<vector<size_t>> m_endOffsets;    // [streamIndex][lineNo] end offset of line (begin offset taken from lineNo-1)
+        vector<vector<size_t>> m_endOffsets;    // [streamIndex][lineNo] end offset of line (the begin offset is determined from lineNo-1)
         size_t m_firstSequenceId;               // sequence id of first sequence in this chunk
-        vector<float>  m_onesFloatBuffer; // dense data arrays for sparse data; shared across all sequences and streams, hence has length of longest sequence
+        vector<float>  m_onesFloatBuffer; // dense buffer of ones for use as values for the sparse data; used across all sequences and streams, hence has length of longest sequence
         vector<double> m_onesDoubleBuffer;
     };
     friend class PlainTextChunk;
