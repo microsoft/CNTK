@@ -1724,7 +1724,7 @@ class Variable::AutoBatch
     // same as MemoizeKnowableValueInArena() but returns the result in the form of a Variable suitable as an input,
     // by setting its m_acyclicOutputPrimitiveReference field.
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
-    Variable MemoizeKnowableValueInArenaAsInput(const PrimitiveFunctionPtr f, bool isFree = false, bool spliceIsGather = false)
+    Variable MemoizeKnowableValueInArenaAsInput(const PrimitiveFunctionPtr& f, bool isFree = false, bool spliceIsGather = false)
     {
         let& output = MemoizeKnowableValueInArena(*f, isFree, spliceIsGather);
         // To make the consumer of this hold a reference to this PrimitiveFunction, inject a strong ref to the copy of its Output.
@@ -1732,6 +1732,16 @@ class Variable::AutoBatch
         Variable input = output;                     // copy the Variable object
         input.m_acyclicOutputPrimitiveReference = f; // and implant the reference to the Primitive that generated it, for reference countiung
         return input;
+    }
+
+    // combination of RawPrimitiveFunction() and MemoizeKnowableValueInArenaAsInput()
+    // This is a common pattern in auto-batch.
+    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name,
+                                       const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
+                                       bool isFree = false, bool spliceIsGather = false)
+    {
+        let f = RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name, profiler, logPrefix);
+        return MemoizeKnowableValueInArenaAsInput(f, isFree, spliceIsGather);
     }
 
     // notify consumers of 'op' that op's value is now available
@@ -2070,20 +2080,20 @@ class Variable::AutoBatch
                                                      const DynamicProfilerPtr& profiler, const wchar_t* logPrefix)
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Pass, L"RawPrimitiveFunction", 3);
-        let p = PrimitiveFunction::RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name);
-        p->m_profiler = profiler;
+        let f = PrimitiveFunction::RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name);
+        f->m_profiler = profiler;
 #ifdef LOG_DETAILS
         if (logPrefix)
-            p->m_uid = logPrefix + p->m_inputs.front().Uid(); // propagate the name of the first input, for better logging
+            f->m_uid = logPrefix + f->m_inputs.front().Uid(); // propagate the name of the first input, for better logging
         // TODO: this has not been tested after refactoring
         //       Also we are not always using the correct input here. Fix this once I look at this again.
 #endif
         // we must initialize the redirect for backprop
-        auto& fields = *p->m_outputs.front().m_dataFields;
-        fields.m_redirection.m_function = p.get(); // we are computing stuff ourselves
+        auto& fields = *f->m_outputs.front().m_dataFields;
+        fields.m_redirection.m_function = f.get(); // we are computing stuff ourselves
         fields.m_redirection.m_index = SIZE_MAX; // (indicates that this is not a slice)
         fields.m_redirection.m_depthHint = INT_MAX; // (to indicate an invalid value)
-        return p;
+        return f;
     }
 
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
@@ -2326,24 +2336,17 @@ class Variable::AutoBatch
                         // create a new PrimitiveFunction Slice()
                         vector<size_t> outputShape = fromDims; // determine output shape
                         outputShape[axis] = j;
-                        //auto additionalProperties = Dictionary(); // create additional arguments
-                        //additionalProperties[PrimitiveFunction::AttributeNameAxis      ] = Axis((int)axis);
-                        //additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = (int)begin;
-                        //additionalProperties[PrimitiveFunction::AttributeNameEndIndex  ] = (int)(begin + j);
-                        let respliceOp = RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape,
-                                                              Dictionary(
-                                                                  PrimitiveFunction::AttributeNameAxis       , Axis((int)axis) ,
-                                                                  PrimitiveFunction::AttributeNameBeginIndex , (int)begin      ,
-                                                                  PrimitiveFunction::AttributeNameEndIndex   , (int)(begin + j)
-                                                              ),
-                                                              f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/);
-                        // TODO: use Dictionary initializer syntax
+                        m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape,
+                                                                       Dictionary(
+                                                                           PrimitiveFunction::AttributeNameAxis       , Axis((int)axis) ,
+                                                                           PrimitiveFunction::AttributeNameBeginIndex , (int)begin      ,
+                                                                           PrimitiveFunction::AttributeNameEndIndex   , (int)(begin + j)
+                                                                       ),
+                                                                       f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
+                                                                       /*isFree=*/true);
+                        // and that's our input to the batched operation
                         // TODO: Can this be done by directly messing with the Variable? Make a deep copy of the var object with begin/end slice?
                         //       Would avoid allocating a PrimitiveFunction, and make it easier to be short-circuited directly in backprop.
-                        // and execute it
-                        m_batchedInputs[i] = MemoizeKnowableValueInArenaAsInput(respliceOp, /*isFree=*/true);
-                        // and that's our input to the batched operation
-                        fail_if(m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference != respliceOp, "m_acyclicOutputPrimitiveReference not set up correctly??");
                     }
                     // if this op has a higher inputBatchAxis than the re-batched view, we must move the axis
                     // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
@@ -2351,20 +2354,15 @@ class Variable::AutoBatch
                     if (axis != inputBatchAxis)
                     {
                         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, batchSize);
-                        // TODO: Any way we can fold the reshape in using m_redirect?
+                        // TODO: Any way we can fold the reshape in using m_redirection?
                         let batchedInput = m_batchedInputs[i];
                         vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
                         outputShape.insert(outputShape.end() - 1, inputBatchAxis - axis, 1);
                         // insert a Reshape() op
-                        //auto additionalProperties = Dictionary(); // create additional arguments
-                        // Reshape() here does not need the properties at this level anymore; output shape is sufficient
-                        //additionalProperties[PrimitiveFunction::AttributeNameNewShape]  = NDShape(outputShape);
-                        //additionalProperties[PrimitiveFunction::AttributeNameBeginAxis] = Axis((int)0);
-                        //additionalProperties[PrimitiveFunction::AttributeNameEndAxis]   = Axis((int)axis);
-                        let reshapeOp = RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape, Dictionary(), f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/);
-                        m_batchedInputs[i] = MemoizeKnowableValueInArenaAsInput(reshapeOp, /*isFree=*/true);
+                        m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape,
+                                                                       Dictionary(),
+                                                                       f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                         // and that's now really our input to the batched operation
-                        fail_if(m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference != reshapeOp, "m_acyclicOutputPrimitiveReference not set up correctly??");
                     }
                     anyBatchedInputs = true;
                 }
@@ -2378,12 +2376,11 @@ class Variable::AutoBatch
                     //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
                     outputShape.resize(inputBatchAxis, 1);      // pad to inputBatchAxis
                     outputShape.push_back(gatherInputs.size()); // and add the batch axis
-                    let spliceOp = RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape,
-                                                        Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)inputBatchAxis)),
-                                                        f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/);
-                    m_batchedInputs[i] = MemoizeKnowableValueInArenaAsInput(spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
+                    m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape,
+                                                                   Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)inputBatchAxis)),
+                                                                   f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
+                                                                   /*isFree=*/false, /*spliceIsGather=*/true);
                     // and that's our input to the batched operation
-                    fail_if(m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference != spliceOp, "m_acyclicOutputPrimitiveReference not set up correctly??");
                     anyBatchedInputs = true;
                 }
                 // release shared_ptrs asap   --TODO: naw, not needed
@@ -2412,13 +2409,10 @@ class Variable::AutoBatch
                 m_batchedInputs.push_back(createParameter(m_batchedInputs[0].Shape()));
                 anyBatchedInputs = true; // BUGBUG: If all operands are the same, then BatchNorm does not make sense (variance=0). Should we throw an error?
             }
+
             // execute the operation and implant the results
             // BUGBUG: The newly created PrimitiveFunction objects must get their consumer chain set up.
             PrimitiveFunctionPtr batchedOp;
-            Dictionary attributes;
-            f0.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
-            //if (anyBatchedInputs)
-            //{
             // create a new PrimitiveFunction for the batched op
             // This is the actual batched op that we create here.
             // Batched inputs have been prepared in m_batchedInputs[].
@@ -2426,20 +2420,16 @@ class Variable::AutoBatch
 
             //let expectedOutputShape = unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize);
             // This is the actual batched execution of the op.
+            Dictionary attributes;
+            f0.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
             batchedOp = RawPrimitiveFunction(f0.m_op,
                                              vector<Variable>(anyBatchedInputs ? m_batchedInputs                                               : f0.m_inputs         ),
                                              anyBatchedInputs                  ? (unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize)) : unbatchedOutputShape,
                                              move(attributes), f0.m_name, f0.m_profiler, L"*"/*f0*/);
             MemoizeKnowableValueInArena(*batchedOp);
             // Note: We could move(m_batchedInputs), but don't, since then we would have to reallocate m_batchedInputs for the next operation, so makes no difference.
-            //}
-            //else
-            //{
-            //    // all inputs identical: compute it only once (this is the easy case that we don't kick off the CSE machinery for)
-            //    batchedOp = RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs.front().Shape(), move(attributes), f0.m_name, f0.m_profiler, L"."/*f0*/);
-            //    MemoizeKnowableValueInArena(*batchedOp);
-            //}
-            if (anyBatchedInputs)
+
+            if (anyBatchedInputs) // some stats and checks
             {
                 m_stats.numCommonSubexpressionsEliminated += batchSize - 1;
                 fail_if(batchedOp->m_outputs.front().Shape().Rank() != outputBatchAxis + 1, "outputBatchAxis was not predicted right");
@@ -2462,11 +2452,7 @@ class Variable::AutoBatch
                     Variable arg = batchedOp->m_outputs.front();
                     arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
 
-                    //auto additionalProperties = Dictionary(); // create additional arguments
                     // Reshape() here does not need the properties at this level anymore; output shape is sufficient
-                    //additionalProperties[PrimitiveFunction::AttributeNameNewShape]  = NDShape(outputShape);
-                    //additionalProperties[PrimitiveFunction::AttributeNameBeginAxis] = Axis((int)0);
-                    //additionalProperties[PrimitiveFunction::AttributeNameEndAxis]   = Axis((int)axis);
                     let reshapeOp = RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, Dictionary(), f0.m_name, f0.m_profiler, L"*,"/*arg*/);
                     MemoizeKnowableValueInArena(*reshapeOp, /*isFree=*/true);
 
