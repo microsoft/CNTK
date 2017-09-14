@@ -1722,6 +1722,18 @@ class Variable::AutoBatch
             m_stats.numDoneOtherOps++;
         return output;
     }
+    // same as MemoizeKnowableValueInArena() but returns the result in the form of a Variable suitable as an input,
+    // by setting its m_acyclicOutputPrimitiveReference field.
+    // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
+    Variable MemoizeKnowableValueInArenaAsInput(const PrimitiveFunctionPtr f, bool isFree = false, bool spliceIsGather = false)
+    {
+        let& output = MemoizeKnowableValueInArena(*f, isFree, spliceIsGather);
+        // To make the consumer of this hold a reference to this PrimitiveFunction, inject a strong ref to the copy of its Output.
+        //input = output.CompositePreservingCopy(f); // without the acyclic trick, this works as well, but is not quite right since f is not a Composite
+        Variable input = output;                     // copy the Variable object
+        input.m_acyclicOutputPrimitiveReference = f; // and implant the reference to the Primitive that generated it, for reference countiung
+        return input;
+    }
 
     // notify consumers of 'op' that op's value is now available
     void NotifyOpsConsumersInputsAvailable(const PrimitiveFunction* op)
@@ -2320,11 +2332,9 @@ class Variable::AutoBatch
                         spliceOp->m_uid = L"#" + gatherInputs[0].Uid();
 #endif
                         // and execute it
-                        let& output = MemoizeKnowableValueInArena(*respliceOp, /*isFree=*/true);
+                        m_batchedInputs[i] = MemoizeKnowableValueInArenaAsInput(respliceOp, /*isFree=*/true);
                         // and that's our input to the batched operation
-                        //m_batchedInputs[i] = output.CompositePreservingCopy(spliceOp);
-                        m_batchedInputs[i] = output;
-                        m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference = respliceOp;
+                        fail_if(m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference != respliceOp, "m_acyclicOutputPrimitiveReference not set up correctly??");
                     }
                     // if this op has a higher inputBatchAxis than the re-batched view, we must move the axis
                     // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
@@ -2348,11 +2358,9 @@ class Variable::AutoBatch
                         reshapeOp->m_uid = L"#," + gatherInputs[0].Uid();
 #endif
                         // and execute it
-                        let& output = MemoizeKnowableValueInArena(*reshapeOp, /*isFree=*/true);
+                        m_batchedInputs[i] = MemoizeKnowableValueInArenaAsInput(reshapeOp, /*isFree=*/true);
                         // and that's now really our input to the batched operation
-                        //m_batchedInputs[i] = output.CompositePreservingCopy(reshapeOp);
-                        m_batchedInputs[i] = output;
-                        m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference = reshapeOp;
+                        fail_if(m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference != reshapeOp, "m_acyclicOutputPrimitiveReference not set up correctly??");
                     }
                     anyBatchedInputs = true;
                 }
@@ -2366,29 +2374,15 @@ class Variable::AutoBatch
                     //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
                     outputShape.resize(inputBatchAxis, 1);      // pad to inputBatchAxis
                     outputShape.push_back(gatherInputs.size()); // and add the batch axis
-#if 1
                     let spliceOp = RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape, Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)inputBatchAxis)), f0.m_name);
-#else
-                    auto additionalProperties = Dictionary();   // create additional arguments
-                    additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis((int)inputBatchAxis);
-                    let spliceOp = RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape, move(additionalProperties), f0.m_name);
-#endif
                     spliceOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
                     spliceOp->m_uid = L"#" + gatherInputs[0].Uid();
 #endif
                     // and execute it
-                    let& output = MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
-                    // a few more times for reference
-                    //MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
-                    //MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
-                    //MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
+                    m_batchedInputs[i] = MemoizeKnowableValueInArenaAsInput(spliceOp, /*isFree=*/false, /*spliceIsGather=*/true);
                     // and that's our input to the batched operation
-                    // To make sure we hold a reference to this PrimitiveFunction, inject a strong ref to the spliceOp into the copy of its Output.
-                    // Note that we abuse the composite field for a non-composite, which works because it is just a FunctionPtr, and we own it.
-                    //m_batchedInputs[i] = output.CompositePreservingCopy(spliceOp);
-                    m_batchedInputs[i] = output;
-                    m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference = spliceOp;
+                    fail_if(m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference != spliceOp, "m_acyclicOutputPrimitiveReference not set up correctly??");
                     anyBatchedInputs = true;
                 }
                 // release shared_ptrs asap   --TODO: naw, not needed
@@ -2492,7 +2486,7 @@ class Variable::AutoBatch
                     //additionalProperties[PrimitiveFunction::AttributeNameNewShape]  = NDShape(outputShape);
                     //additionalProperties[PrimitiveFunction::AttributeNameBeginAxis] = Axis((int)0);
                     //additionalProperties[PrimitiveFunction::AttributeNameEndAxis]   = Axis((int)axis);
-                    let reshapeOp = RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, move(additionalProperties), f0.m_name);
+                    let reshapeOp = RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, Dictionary(), f0.m_name);
                     reshapeOp->m_profiler = f0.m_profiler;
 #ifdef LOG_DETAILS
                     reshapeOp->m_uid = L"*," + arg.Uid();
