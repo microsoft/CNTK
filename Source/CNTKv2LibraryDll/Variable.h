@@ -45,6 +45,7 @@ namespace CNTK
         mutable size_t m_cseVisitedTag = 0;                   // used for common sub-expression elimination
         mutable uintptr_t m_valueAddrForHash = 0;             // cached address of m_value[0,...], divided by sizeof. Used as hash.
         size_t m_compositeArgumentIndex = SIZE_MAX;           // if this is a Placeholder that is an argument of a dynamically invoked composite, then this its position in the parameter list
+        mutable const VariableFields* m_inlinedAs;            // during inlining, this field holds the first instance of a clone of this
 
         // lazy initialization
         std::unique_ptr<std::once_flag> m_initValueFlag;

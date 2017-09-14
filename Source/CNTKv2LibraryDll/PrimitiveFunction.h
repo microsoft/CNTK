@@ -284,23 +284,37 @@ namespace CNTK
         }
 
     private:
-        // fast alternative constructor private to RawPrimitiveFunction()--not meant for any other use
+        // fast alternative constructor private to RawPrimitiveFunction()--must not be used for anything else. See RawPrimitiveFunction() for any further information.
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, std::wstring&& name)
             : Function(std::move(inputs), std::move(outputs), std::move(functionConfig), nullptr, std::move(name), std::wstring()),
               m_op(op),
               m_profiler(CurrentDynamicProfiler())
         {
+#if 1
             UpdateAcyclicReferences();
+#else
+            // This is used internally by auto-batching, where we cannot have cycles. Hence, the caller must already prepare the inputs' m_acyclicOutputPrimitiveReference fields.
+            assert(m_isKnownToBeAcyclic);
+            for (auto& input : m_inputs)
+            {
+                if (input.IsOutput() && !input.m_acyclicOutputPrimitiveReference)
+                    LogicError("RawPrimitiveFunction: m_acyclicOutputPrimitiveReference must be set up.");
+                else if (input.IsPlaceholder())
+                    LogicError("RawPrimitiveFunction: May not be used with Placeholders.");
+            }
+#endif
         }
 
+        // this function is used from inside the auto-batcher
         static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, std::wstring name = std::wstring())
         {
             std::vector<Variable> output({
                 OutputVariable(shape, inputs[0].GetDataType(), {},
-                               std::any_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.NeedsGradient(); }),
-                               std::all_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.IsSparse(); }),
+                               std::any_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.NeedsGradient(); }), // PERF BUGBUG: caller knows this already; should pass it in
+                               std::all_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.IsSparse(); }), // BUGBUG: This is not generally correct -> Caller knows this, just pass it in.
                                std::wstring())
             });
+            // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
             auto res = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(output), std::move(attributes), std::move(name));
             //std::call_once(m_outputsInitFlag, [this]() {});
             res->m_outputsInitFlag++;

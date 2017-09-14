@@ -865,7 +865,7 @@ public:
         // TODO: to make this thread-safe, use atomic increment
         m_visitTag = s_nextVisitTag++;
     }
-    bool Visited(size_t& tag)
+    bool Visited(size_t& tag) const
     {
         if (tag == m_visitTag)
             return true;
@@ -1015,27 +1015,104 @@ class Variable::AutoBatch
         return should;
     }
 
-    // inlining of a BlockFunction
+    // inlining of a composite
     // This makes a deep copy of the graph below root.
-    PrimitiveFunctionPtr InlineBlock(PrimitiveFunction& root, const vector<Variable>& inputs)
+    // BUGBUG: Currently does not detect cycles in the composite graph (which are possible although not valid for Invoke())
+    Variable RInlineComposite(const Variable& var, const vector<Variable>& invocationArgs) const
+    {
+        let& varFields = GetInputFields(var);
+        // --- case 0: a Variable we already encountered
+        if (m_visitorTag.Visited(varFields.m_visitedTag))
+        {
+            Variable clonedInput;
+            let& inlinedInputFields = *varFields.m_inlinedAs;
+            clonedInput.m_dataFields = const_cast<VariableFields&>(inlinedInputFields).shared_from_this(); // already cloned this: return the clone
+            clonedInput.m_shapeDims = &inlinedInputFields.m_shape.Dimensions();
+            fail_if(varFields.m_inlinedAs != &GetInputFields(clonedInput), "inlinedAs pointer screwed up??");
+            return clonedInput;
+        }
+        // --- case 1: leaf Variables
+        if (!varFields.m_redirection || varFields.m_value)
+        {
+            if (varFields.m_varKind == VariableKind::Placeholder)
+            {
+                // if an input is a Placeholder, then look up its index and use invocationArgs[i] instead
+                let argIndex = varFields.m_compositeArgumentIndex;
+                fail_if(argIndex >= invocationArgs.size(), "no invocation arg lined was up with composite->Arguments[]??");
+                auto& arg = invocationArgs[argIndex];
+                varFields.m_inlinedAs = &GetInputFields(arg);
+                return arg; // use this instead
+            }
+            else
+                return var; // Parameter and Constant are just shared with the composite, as is anything that has a Value (=result of another Dynamite invocation)
+        }
+        let& f = *varFields.m_redirection.m_function;
+        let& outputFields = GetOutputFields(&f);
+
+        // clone f. We we will need it no matter 'var' is a redirect or not.
+        // clone the inputs
+        let& inputs = f.m_inputs;
+        vector<Variable> inlinedInputs(inputs.size());
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            inlinedInputs[i] = RInlineComposite(inputs[i], invocationArgs);
+            fail_if(GetInputFields(inputs[i]).m_inlinedAs != &GetInputFields(inlinedInputs[i]), "inlinedAs pointer screwed up??");
+        }
+        // clone the attributes
+        Dictionary inlinedAttributes;
+        f.m_attributes.ShallowCloneTo(inlinedAttributes); // note: shallow clone will not copy the map, just a shared_ptr
+        // create a new function and set up the outputs
+        let fInlinedPtr = RawPrimitiveFunction(f.m_op, move(inlinedInputs), outputFields.m_shape, move(inlinedAttributes), f.Name());
+        fInlinedPtr->m_profiler = f.m_profiler;   // clone the profiler as well
+        // BUGBUG: RawPrimitiveFunction() has "inferred" isSparse and needsGradient; incorrectly. We should pass those in.
+        // and remember where the output got redirected to
+        outputFields.m_inlinedAs = &GetOutputFields(fInlinedPtr.get());
+
+        // --- case 2: an Output that is a redirect. We must recreate a redirecting wrapper Variable.
+        if (&outputFields != &varFields)
+        {
+            fail_if(&outputFields != &GetOutputFields(outputFields.m_redirection.m_function), "double redirect during composite inlining??"); // (double-short-circuiting not possible before execution)
+            // clone the redirect
+            Variable inlinedVar = OutputVariable(varFields.m_shape, varFields.m_dataType, varFields.m_dynamicAxes/*empty*/, varFields.m_needsGradient, varFields.m_isSparse, varFields.m_name);
+            auto& inlinedVarFields = GetInputFields(inlinedVar);
+            fail_if(varFields.m_redirection.m_index != SIZE_MAX, "sliced redirect during composite inlining??"); // (slices not possible before execution)
+            inlinedVarFields.m_redirection.m_index     = varFields.m_redirection.m_index;
+            inlinedVarFields.m_redirection.m_depthHint = varFields.m_redirection.m_depthHint; // (possible if composite contains a Barrier)
+            // BUGBUG: We leave it without m_ownerFunction. Is that OK? It's for internal use only. Callers never get to traverse the redirects. Owners already got cached nto m_function
+            // and set up the redirection into the clone
+            inlinedVarFields.m_redirection.m_functionHolder = fInlinedPtr;       // hold the ref count somewhere
+            inlinedVarFields.m_redirection.m_function       = fInlinedPtr.get(); // the cloned redirect
+            // and remember where var got redirected to
+            varFields.m_inlinedAs = &GetInputFields(inlinedVar);
+            return inlinedVar;
+        }
+ 
+        // --- case 3: an Output that is a physical output of a function
+        return fInlinedPtr->m_outputs.front();
+    }
+    PrimitiveFunctionPtr InlineComposite(const PrimitiveFunction& root, const vector<Variable>& invocationArgs)
     {
         // The first time this is called, we prepare it:
         //  - infer all the shapes
         //  - short-circuit the graph (so we can save a little effort in inlining)
         // This operation is only done once, and can therefore be slow, using the full power of the API.
-        if (!GetOutputFields(&root).m_redirection)
+        let& rootOutput = root.m_outputs.front();
+        let& rootOutputFields = GetOutputFields(&root);
+        if (!rootOutputFields.m_redirection) // if this is NULL then we have not prepared this (every Output has a m_redirection)
         {
             if (root.m_outputs.size() > 1)
                 InvalidArgument("Dynamic operations cannot have multiple outputs.");
-            let savedVisitorTag = m_visitorTag.Save(); // (InlineBlock() may call the build function recursively)
+            let savedVisitorTag = m_visitorTag.Save(); // (InlineComposite() may call the build function recursively)
             m_visitorTag.Begin();
-            RBuildForwardGraphAndSchedule(root.m_outputs.front(), 0);
+            RBuildForwardGraphAndSchedule(rootOutput, 0);
             m_visitorTag.Restore(savedVisitorTag);
         }
 
         // make a deep copy, with leaf Placeholders replaced with inputs on the fly
-        // ...BUGBUG, need to really understand BlockFunctions, they are not what I think.
-        return nullptr;
+        let inlinedCompositeOutput = RInlineComposite(rootOutput, invocationArgs);
+        let& inlinedCompositeOutputFields = GetInputFields(inlinedCompositeOutput);
+        let* inlinedCompositeOutputOwner = inlinedCompositeOutputFields.m_redirection.m_function;
+        return static_pointer_cast<PrimitiveFunction>(const_cast<PrimitiveFunction*>(inlinedCompositeOutputOwner)->shared_from_this()); // (shared_from_this() gives us a FunctionPtr, not PrimitiveFunctionPtr)
     }
 
 #define hashMultiplier ((size_t)1572869) // 4 1-bits. An arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
@@ -1342,7 +1419,7 @@ class Variable::AutoBatch
                 // make a deep copy of the block's root (PrimitiveFunction graph)
                 // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
                 // Besides that, the original Block function will remain unmodified.
-                let inlinedRoot = InlineBlock(dynamic_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()), redirectedFieldsOwner->m_inputs); // shared_ptr to the deep copy of the root
+                let inlinedRoot = InlineComposite(dynamic_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()), redirectedFieldsOwner->m_inputs); // shared_ptr to the deep copy of the root
                 // The Block is treated like a see-through op:
                 //  - a deep copy of the Block is made (inlined), which connects to the Block node's inputs
                 //  - the Block node, like a NoOp, gets its m_redirection set to point to the Block's copy.
@@ -2247,7 +2324,7 @@ class Variable::AutoBatch
                         // and that's our input to the batched operation
                         //m_batchedInputs[i] = output.CompositePreservingCopy(spliceOp);
                         m_batchedInputs[i] = output;
-                        m_batchedInputs[i].m_outputComposite = respliceOp;
+                        m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference = respliceOp;
                     }
                     // if this op has a higher inputBatchAxis than the re-batched view, we must move the axis
                     // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
@@ -2275,7 +2352,7 @@ class Variable::AutoBatch
                         // and that's now really our input to the batched operation
                         //m_batchedInputs[i] = output.CompositePreservingCopy(reshapeOp);
                         m_batchedInputs[i] = output;
-                        m_batchedInputs[i].m_outputComposite = reshapeOp;
+                        m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference = reshapeOp;
                     }
                     anyBatchedInputs = true;
                 }
@@ -2311,7 +2388,7 @@ class Variable::AutoBatch
                     // Note that we abuse the composite field for a non-composite, which works because it is just a FunctionPtr, and we own it.
                     //m_batchedInputs[i] = output.CompositePreservingCopy(spliceOp);
                     m_batchedInputs[i] = output;
-                    m_batchedInputs[i].m_outputComposite = spliceOp;
+                    m_batchedInputs[i]./*m_outputComposite*/m_acyclicOutputPrimitiveReference = spliceOp;
                     anyBatchedInputs = true;
                 }
                 // release shared_ptrs asap   --TODO: naw, not needed
@@ -2408,7 +2485,7 @@ class Variable::AutoBatch
                     fail_if(batchedOutputShape.TotalSize(/*check=*/false) != batchedOp->m_outputs.front().Shape().TotalSize(/*check=*/false), "output shape has unexpected axes that should be singletons but aren't");
 
                     Variable arg = batchedOp->m_outputs.front();
-                    arg.m_outputComposite = batchedOp;
+                    arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
 
                     auto additionalProperties = Dictionary(); // create additional arguments
                     // Reshape() here does not need the properties at this level anymore; output shape is sufficient

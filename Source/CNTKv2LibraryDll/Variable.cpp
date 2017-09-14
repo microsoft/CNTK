@@ -314,6 +314,7 @@ namespace CNTK
             InvalidArgument("Output variable '%S' cannot be cloned.", AsString().c_str());
 
         // Note: We do not clone m_blockFunctionVariableMapping
+        // TODO: Do VariableFields really need to use MakeSharedObject()? Can they transfer ownership across a DLL boundary?
         auto clone = MakeSharedObject<VariableFields>(m_shape,
             m_varKind,
             m_dataType,
@@ -323,7 +324,7 @@ namespace CNTK
             m_dynamicAxes,
             m_isSparse,
             m_name,
-            Internal::GenerateUid(m_varKind));
+            std::wstring()/*Internal::GenerateUid(m_varKind)*/);
 
         if (m_valueInitializer)
             clone->SetValueInitialization(*m_valueInitializer, *m_valueInitializationDevice);
