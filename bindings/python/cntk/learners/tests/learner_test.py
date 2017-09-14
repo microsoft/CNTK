@@ -138,6 +138,15 @@ def test_learner_init_legacy():
     assert learner.learning_rate() == 0.1
     assert learner.minibatch_size == C.learners.IGNORE  # the learner's reference minibatch size is still 0
 
+    # this will be deprecated in future version: This is logical invalid combination but it was the only way to use mean gradient and set learning rate in the past.
+    learner = sgd(res.parameters, lr=learning_rate_schedule(0.1, UnitType.sample), use_mean_gradient=True)
+    assert learner.is_compatible_mode() == True
+    assert learner.learning_rate() == 0.1
+    #test the override in the new version
+    assert learner._learning_rate_schedule.minibatch_size == C.learners.IGNORE
+    assert learner.minibatch_size == C.learners.IGNORE  # the learner's reference minibatch size is still 0
+
+
     # for backcompatibility test
     # this will be deprecated in future version
     # The UnitType will provide per minibatch instruction for the learner

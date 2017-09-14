@@ -36,7 +36,7 @@ namespace CNTK
     ///
     /// A special value that can be used for the minibatchSize to indicate that the reference minibatch size is not specified.
     ///
-    CNTK_API const size_t Learner::UnspecifiedMinibatchSize = TrainingParameterSchedule<double>::UnspecifiedMinibatchSize;
+    CNTK_API const size_t Learner::IgnoredMinibatchSize = TrainingParameterSchedule<double>::IgnoredMinibatchSize;
 
   
     // This method completely replaces the current schedule with the new schedule. However, since

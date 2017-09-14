@@ -4460,13 +4460,13 @@ namespace CNTK
         ///
         /// A special value that can be used for the minibatchSize to indicate that the reference minibatch size is not specified.
         ///
-        static const size_t UnspecifiedMinibatchSize = 0;
+        static const size_t IgnoredMinibatchSize = 0;
         ///
         /// Create a schedule with a constant parameter value.
         /// @param value a single value to populate the schedule
         /// @param minibatchSize a minibatch size that the @e value specifies for.
         ///
-        CNTK_API TrainingParameterSchedule(T value, size_t minibatchSize = UnspecifiedMinibatchSize);
+        CNTK_API TrainingParameterSchedule(T value, size_t minibatchSize = IgnoredMinibatchSize);
 
 #ifndef SWIG
         ///
@@ -4475,7 +4475,7 @@ namespace CNTK
         /// and so on. The last value is then used repeatedly until the end of training. 
         /// @e minibatchSize is the a minibatch size that each schedule[i] specifies for.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, size_t epochSize = FullDataSweep, size_t minibatchSize = UnspecifiedMinibatchSize);
+        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, size_t epochSize = FullDataSweep, size_t minibatchSize = IgnoredMinibatchSize);
 #endif
 
         ///
@@ -4488,7 +4488,7 @@ namespace CNTK
         /// after which the values is switched to '0.005'.
         /// @e minibatchSize is the a minibatch size that each schedule[i] specifies for.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = FullDataSweep, size_t minibatchSize = UnspecifiedMinibatchSize);
+        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = FullDataSweep, size_t minibatchSize = IgnoredMinibatchSize);
 
 
         ///
@@ -4635,7 +4635,7 @@ namespace CNTK
         ///
         /// A special value that can be used for the minibatchSize to indicate that the reference minibatch size is not specified.
         ///
-        CNTK_API static const size_t UnspecifiedMinibatchSize;
+        CNTK_API static const size_t IgnoredMinibatchSize;
 
     public:
         //
@@ -4717,7 +4717,7 @@ namespace CNTK
         ///setting and be specialized to its own reference minibatch size. However, this is only suggested for advanced
         ///users.
         CNTK_API void SetMinibatchSize(std::size_t minibatchSize) { GetOptions().Add(MinibatchSizeKey, minibatchSize); }
-        CNTK_API std::size_t GetMinibatchSize() const { return GetOptions().GetOrElse(MinibatchSizeKey, UnspecifiedMinibatchSize); }
+        CNTK_API std::size_t GetMinibatchSize() const { return GetOptions().GetOrElse(MinibatchSizeKey, IgnoredMinibatchSize); }
 
         CNTK_API void SetLearningRateSchedule(const LearningRateSchedule& learningRateSchedule) { m_learningRateSchedule = learningRateSchedule; }
         CNTK_API const LearningRateSchedule& GetLearningRateSchedule() const { return m_learningRateSchedule; }
@@ -4726,7 +4726,7 @@ namespace CNTK
         template<typename T>
         static bool IsCompatibleMode(const TrainingParameterSchedule<T>& schedule)
         {
-            return schedule.GetMinibatchSize() == UnspecifiedMinibatchSize;
+            return schedule.GetMinibatchSize() == IgnoredMinibatchSize;
         }
 
         ///
@@ -4737,7 +4737,7 @@ namespace CNTK
         {
             if (GetOptions().Contains(MinibatchSizeKey))
             {
-                return GetMinibatchSize() == UnspecifiedMinibatchSize;
+                return GetMinibatchSize() == IgnoredMinibatchSize;
             }
             else
                 //if the learner minbiatch size is not set, by default it is not in compatible mode.
