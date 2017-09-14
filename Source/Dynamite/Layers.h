@@ -351,8 +351,8 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     let x = PlaceholderVariable();
     let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
     let x0 = x - mean;
-    let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct (but we don't have the dims upfront)
-    auto lengthNormGraph = x0 * invLen * scale;
+    let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
+    auto lengthNormGraph = x0 * (invLen * scale);
     vector<Variable> argBuf(1); // (Invoke requires a vector, even for a single argument. So we preallocate it here, outside of the lambda.)
     // Note: Arguments() is slow. Don't call this inside graph generation.
     return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x) mutable
@@ -379,7 +379,7 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
         //let res = x * (invLen /*+ eps*/) * scale;
         //LOG(scale);
         //LOG(res);
-        let res = x0 * invLen * scale;
+        let res = x0 * (invLen * scale);
         Function::SetDynamicProfiler(prevProfiler);
         return res;
     });
