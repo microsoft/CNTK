@@ -852,7 +852,7 @@ public:
 // VisitorTag -- helper for graph traversal
 //  - call VisitorTag::Begin()
 //  - in traversal: if (VisitorTag::Visited(node.m_visitedTag)) return;
-// This does not nest!
+// If you want this to nest, then remember the return value from Begin() and call End() with it.
 // ---------------------------------------------------------------------------
 
 class VisitorTag
@@ -860,12 +860,14 @@ class VisitorTag
     static size_t s_nextVisitTag; // unique id for a single non-nested visiting process
     size_t m_visitTag;
 public:
-    void Begin() // call this at start
+    size_t Begin() // call this at start
     {
+        let prevVisitTag = m_visitTag;
         // TODO: to make this thread-safe, use atomic increment
         m_visitTag = s_nextVisitTag++;
+        return prevVisitTag;
     }
-    bool Visited(size_t& tag) const
+    bool Visited(size_t& tag) const // first time this is applied to 'tag', it will return false; and true otherwise
     {
         if (tag == m_visitTag)
             return true;
@@ -873,8 +875,7 @@ public:
         return false;
     }
     // for nesting
-    size_t Save() const { return m_visitTag; }
-    void Restore(size_t tag) { m_visitTag = tag; }
+    void End(size_t tag) { m_visitTag = tag; } // restore state before Begin() that returned 'tag'
 };
 /*static*/ size_t VisitorTag::s_nextVisitTag = 1;
 
@@ -1017,11 +1018,28 @@ class Variable::AutoBatch
 
     // inlining of a composite
     // This makes a deep copy of the graph below root.
+    // The returned Variable is meant to be used as an input to another function.
+    // This means that we prepare its m_acyclicOutputPrimitiveReference field where we can, to avoid having to pull it via the OWner() which is expensive.
     // BUGBUG: Currently does not detect cycles in the composite graph (which are possible although not valid for Invoke())
-    Variable RInlineComposite(const Variable& var, const vector<Variable>& invocationArgs) const
+    Variable RInlineComposite(const Variable& varInComposite, const vector<Variable>& invocationArgs) const
     {
-        let& varFields = GetInputFields(var);
-        // --- case 0: a Variable we already encountered
+        let& varFields = GetInputFields(varInComposite);
+
+        // --- case 0: a Variable that already has a value; that is, a Constant, Parameter, or any result of another Dynamite invocation
+        if (varFields.m_value)
+            return varInComposite; // note: any lazy Parameter initialization has already run at this point since we first executed the build function on this composite
+
+        // --- case 1: a Placeholder
+        if (varFields.m_varKind == VariableKind::Placeholder)
+        {
+            // if an input is a Placeholder, then look up its index and use invocationArgs[i] instead
+            let argIndex = varFields.m_compositeArgumentIndex;
+            fail_if(argIndex >= invocationArgs.size(), "no invocation arg lined was up with composite->Arguments[]??");
+            return invocationArgs[argIndex];
+        }
+        fail_if(varFields.m_varKind != VariableKind::Output || !varFields.m_redirection, "RInlineComposite encountered a non-output unexpectedly");
+
+        // --- case 2: an output Variable we already inlined
         if (m_visitorTag.Visited(varFields.m_visitedTag))
         {
             Variable clonedInput;
@@ -1029,22 +1047,9 @@ class Variable::AutoBatch
             clonedInput.m_dataFields = const_cast<VariableFields&>(inlinedInputFields).shared_from_this(); // already cloned this: return the clone
             clonedInput.m_shapeDims = &inlinedInputFields.m_shape.Dimensions();
             fail_if(varFields.m_inlinedAs != &GetInputFields(clonedInput), "inlinedAs pointer screwed up??");
+            // TODO: We should set up m_acyclicOutputPrimitiveReference, but we cannot, because we only know m_dataFields, but not the original input.
+            //       It only needs to be non-NULL and acyclic. We can just use m_function?
             return clonedInput;
-        }
-        // --- case 1: leaf Variables
-        if (!varFields.m_redirection || varFields.m_value)
-        {
-            if (varFields.m_varKind == VariableKind::Placeholder)
-            {
-                // if an input is a Placeholder, then look up its index and use invocationArgs[i] instead
-                let argIndex = varFields.m_compositeArgumentIndex;
-                fail_if(argIndex >= invocationArgs.size(), "no invocation arg lined was up with composite->Arguments[]??");
-                auto& arg = invocationArgs[argIndex];
-                varFields.m_inlinedAs = &GetInputFields(arg);
-                return arg; // use this instead
-            }
-            else
-                return var; // Parameter and Constant are just shared with the composite, as is anything that has a Value (=result of another Dynamite invocation)
         }
         let& f = *varFields.m_redirection.m_function;
         let& outputFields = GetOutputFields(&f);
@@ -1056,7 +1061,8 @@ class Variable::AutoBatch
         for (size_t i = 0; i < inputs.size(); i++)
         {
             inlinedInputs[i] = RInlineComposite(inputs[i], invocationArgs);
-            fail_if(GetInputFields(inputs[i]).m_inlinedAs != &GetInputFields(inlinedInputs[i]), "inlinedAs pointer screwed up??");
+            fail_if(inlinedInputs[i].IsPlaceholder(), "forgot to replace a Placeholder??"); // BUGBUG: This may fail in nested expansion. Which is broken anyway, to be fixed.
+            fail_if(GetInputFields(inputs[i]).m_varKind == VariableKind::Output && GetInputFields(inputs[i]).m_inlinedAs != &GetInputFields(inlinedInputs[i]), "inlinedAs pointer screwed up??");
         }
         // clone the attributes
         Dictionary inlinedAttributes;
@@ -1067,7 +1073,7 @@ class Variable::AutoBatch
         // and remember where the output got redirected to
         outputFields.m_inlinedAs = &GetOutputFields(fInlinedPtr.get());
 
-        // --- case 2: an Output that is a redirect. We must recreate a redirecting wrapper Variable.
+        // --- case 3: an Output that is a redirection to a physical output. We must recreate a redirecting wrapper Variable.
         if (&outputFields != &varFields)
         {
             fail_if(&outputFields != &GetOutputFields(outputFields.m_redirection.m_function), "double redirect during composite inlining??"); // (double-short-circuiting not possible before execution)
@@ -1079,15 +1085,19 @@ class Variable::AutoBatch
             inlinedVarFields.m_redirection.m_depthHint = varFields.m_redirection.m_depthHint; // (possible if composite contains a Barrier)
             // BUGBUG: We leave it without m_ownerFunction. Is that OK? It's for internal use only. Callers never get to traverse the redirects. Owners already got cached nto m_function
             // and set up the redirection into the clone
-            inlinedVarFields.m_redirection.m_functionHolder = fInlinedPtr;       // hold the ref count somewhere
+            inlinedVarFields.m_redirection.m_functionHolder = fInlinedPtr;       // hold the ref count somewhere  --TODO: we also keep it in m_acyclicOutputPrimitiveReference. This needs to be cleaned up systematically.
             inlinedVarFields.m_redirection.m_function       = fInlinedPtr.get(); // the cloned redirect
             // and remember where var got redirected to
             varFields.m_inlinedAs = &GetInputFields(inlinedVar);
+            inlinedVar.m_acyclicOutputPrimitiveReference = fInlinedPtr; // (presence of something here signals that we are acyclic, while avoiding to fetch the Owner which does not exist in this case)
             return inlinedVar;
         }
  
-        // --- case 3: an Output that is a physical output of a function
-        return fInlinedPtr->m_outputs.front();
+        // --- case 4: an Output that is a physical output of a function
+        // We prep it for use as an input by implanting the m_acyclicOutputPrimitiveReference.
+        auto input = fInlinedPtr->m_outputs.front();
+        input.m_acyclicOutputPrimitiveReference = fInlinedPtr;
+        return input;
     }
     PrimitiveFunctionPtr InlineComposite(const PrimitiveFunction& root, const vector<Variable>& invocationArgs)
     {
@@ -1101,14 +1111,15 @@ class Variable::AutoBatch
         {
             if (root.m_outputs.size() > 1)
                 InvalidArgument("Dynamic operations cannot have multiple outputs.");
-            let savedVisitorTag = m_visitorTag.Save(); // (InlineComposite() may call the build function recursively)
-            m_visitorTag.Begin();
+            let savedVisitorTag = m_visitorTag.Begin(); // (InlineComposite() may call the build function recursively)
             RBuildForwardGraphAndSchedule(rootOutput, 0);
-            m_visitorTag.Restore(savedVisitorTag);
+            m_visitorTag.End(savedVisitorTag);
         }
 
         // make a deep copy, with leaf Placeholders replaced with inputs on the fly
+        let savedVisitorTag = m_visitorTag.Begin(); // (InlineComposite() may call the build function recursively)
         let inlinedCompositeOutput = RInlineComposite(rootOutput, invocationArgs);
+        m_visitorTag.End(savedVisitorTag);
         let& inlinedCompositeOutputFields = GetInputFields(inlinedCompositeOutput);
         let* inlinedCompositeOutputOwner = inlinedCompositeOutputFields.m_redirection.m_function;
         return static_pointer_cast<PrimitiveFunction>(const_cast<PrimitiveFunction*>(inlinedCompositeOutputOwner)->shared_from_this()); // (shared_from_this() gives us a FunctionPtr, not PrimitiveFunctionPtr)
