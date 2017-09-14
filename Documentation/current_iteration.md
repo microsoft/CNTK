@@ -162,6 +162,7 @@ This work is rolled over to next release due to dependency on test infrastructur
 We thank the following community members for their contributions:+
 
 * [@cijianzy](https://github.com/cijianzy)
+* [@duli2012](https://github.com/duli2012)
 * [@FDecaYed](https://github.com/FDecaYed)
 * [@karolzak](https://github.com/karolzak)
 * [@KGWANGMIN](https://github.com/KGWANGMIN)
