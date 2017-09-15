@@ -2096,29 +2096,34 @@ class Variable::AutoBatch
     // determine the physical source and slice index of an input
     static const struct { const PrimitiveFunction* originatingFunction; size_t sliceIndex; } LazyPhysicalSlice(const VariableFields& fields)
     {
-        return{ fields.m_redirection.m_function, fields.m_redirection.m_index };
+        auto function = fields.m_redirection.m_function;
+        auto index    = fields.m_redirection.m_index;
+        // case 1: Placeholder or Constant
+        if (!function)
+            goto done;
+        // case 2: one-level redirect
+        let& redirectedFields = GetOutputFields(function);
+        auto redirectedFunction = redirectedFields.m_redirection.m_function;
+        if (redirectedFunction == function) // self: end of chain
+            goto done;
+        // case 3: multi-step redirections (these occur in composite inlining)
+        // TODO: patch up the data structure upon first discovery
+        for (;;)
+        {
+            let redirectedIndex = redirectedFields.m_redirection.m_index;
+            function = redirectedFunction;
+            if (index == SIZE_MAX)
+                index = redirectedIndex;
+            else
+                fail_if(redirectedFields.m_redirection.m_index != SIZE_MAX, "LazyPhysicalSlice: hit a see-through slice??"); // multiple slicing not possible
+            let& redirectedFields = GetOutputFields(function);
+            redirectedFunction = redirectedFields.m_redirection.m_function;
+            if (redirectedFunction == function) // self: end of chain
+                break;
+        }
+    done:
+        return{ function, index };
     }
-#if 0
-    xVariableFields& GetGradientFieldsForBackprop(VariableFields& inputFields, bool firstTime = false)
-    {
-        if (!inputFields.m_redirection) // leaf
-            return inputFields;
-        auto& gradFields = GetOutputFields(inputFields.m_redirection.m_function);
-        fail_if(!gradFields.m_redirection, "output Variable is a leaf??");
-        //if (gradFields.m_redirection.m_function->m_op == PrimitiveOpType::Block)
-        //    BreakPoint;
-        // short-circuit if needed
-        if (ArePhysicalOutputFields(gradFields)) // a physical Variable
-            return gradFields;
-        // if not firstTime then we should not get here
-        fail_if(!firstTime, "GetGradientFieldsForBackprop (not firstTime): hit a see-through slice??");
-        // move up the m_redirection into 'input', overwriting the current one
-        fail_if(inputFields.m_redirection.m_index != SIZE_MAX, "GetGradientFieldsForBackprop (firstTime): short-circuiting a see-through slice??"); // can only handle one slice per chain
-        inputFields.m_redirection = gradFields.m_redirection; // replace current redirect with the down-stream one
-                                                              // and try again
-        return GetGradientFieldsForBackprop(inputFields, firstTime/*=true*/); // (note: tail recursion)
-    }
-#endif
 
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
     vector<Variable> m_batchedInputs;
