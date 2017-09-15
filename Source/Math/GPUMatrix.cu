@@ -1497,7 +1497,7 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
                                     ElemType momentum,
                                     ElemType adaWeight,
                                     ElemType adaMul,
-                                    bool unitGainMomentum)
+                                    ElemType unitGainFactor)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1512,7 +1512,7 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _fsadagrad<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(n, gradients.Data(), Data(), Data()+ n, functionValues.Data(),
-                                                                         learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
+                                                                         learnRatePerSample, momentum, adaWeight, adaMul, unitGainFactor);
 }
 
 template <class ElemType>
@@ -1523,7 +1523,7 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     ElemType adaWeight,
     ElemType adaMul,
     ElemType epsilon,
-    bool unitGainMomentum,
+    ElemType unitGainFactor,
     bool adamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
@@ -1539,7 +1539,7 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _adam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainMomentum, adamax);
+        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainFactor, adamax);
 }
 
 template <class ElemType>

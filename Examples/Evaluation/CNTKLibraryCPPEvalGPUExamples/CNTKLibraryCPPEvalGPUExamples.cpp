@@ -14,6 +14,8 @@ void ParallelEvaluationExample(const wchar_t*, const CNTK::DeviceDescriptor&);
 void EvaluationSingleSequenceUsingOneHot(const wchar_t*, const wchar_t*, const wchar_t*, const CNTK::DeviceDescriptor&);
 void EvaluationBatchOfSequencesUsingOneHot(const wchar_t*, const wchar_t*, const wchar_t*, const CNTK::DeviceDescriptor&);
 void EvaluationSingleSequenceUsingSparse(const wchar_t*, const wchar_t*, const wchar_t*, const CNTK::DeviceDescriptor&);
+void EvaluateIntermediateLayer(const wchar_t*, const CNTK::DeviceDescriptor& device);
+void EvaluateCombinedOutputs(const wchar_t*, const CNTK::DeviceDescriptor& device);
 
 
 int main()
@@ -34,13 +36,13 @@ int main()
 
     printf("\n##### Run CNTKLibraryCPPEvalGPUExamples on CPU. #####\n");
 
-    // Evalaute a single image with reset20_cifar model.
+    // Evaluate a single image with reset20_cifar model.
     EvaluationSingleSampleUsingDense(resnet20Model, CNTK::DeviceDescriptor::CPUDevice());
 
-    // Evalaute batch of images with reset20_cifar model.
+    // Evaluate batch of images with reset20_cifar model.
     EvaluationBatchUsingDense(resnet20Model, CNTK::DeviceDescriptor::CPUDevice());
 
-    // Evalaute users requests in parallel with reset20_cifar model.
+    // Evaluate users requests in parallel with reset20_cifar model.
     ParallelEvaluationExample(resnet20Model, CNTK::DeviceDescriptor::CPUDevice());
 
     // Evaluate a single sequence with ATIS model.
@@ -49,18 +51,18 @@ int main()
     // Evaluate batch of sequences with ATIS model.
     EvaluationBatchOfSequencesUsingOneHot(atisModel, vocabularyFile, labelFile, CNTK::DeviceDescriptor::CPUDevice());
 
-    // Evalaute a sequence using sparse input with ATIS model.
+    // Evaluate a sequence using sparse input with ATIS model.
     EvaluationSingleSequenceUsingSparse(atisModel, vocabularyFile, labelFile, CNTK::DeviceDescriptor::CPUDevice());
 
     printf("\n##### Run CNTKLibraryCPPEvalGPUExamples on GPU. #####\n");
 
-    // Evalaute a single image with reset20_cifar model.
+    // Evaluate a single image with reset20_cifar model.
     EvaluationSingleSampleUsingDense(resnet20Model, CNTK::DeviceDescriptor::GPUDevice(0));
 
-    // Evalaute batch of images with reset20_cifar model.
+    // Evaluate batch of images with reset20_cifar model.
     EvaluationBatchUsingDense(resnet20Model, CNTK::DeviceDescriptor::GPUDevice(0));
 
-    // Evalaute users requests in parallel with reset20_cifar model.
+    // Evaluate users requests in parallel with reset20_cifar model.
     ParallelEvaluationExample(resnet20Model, CNTK::DeviceDescriptor::GPUDevice(0));
 
     // Evaluate a single sequence with ATIS model.
@@ -69,8 +71,14 @@ int main()
     // Evaluate batch of sequences with ATIS model.
     EvaluationBatchOfSequencesUsingOneHot(atisModel, vocabularyFile, labelFile, CNTK::DeviceDescriptor::GPUDevice(0));
 
-    // Evalaute a sequence using sparse input with ATIS model.
+    // Evaluate a sequence using sparse input with ATIS model.
     EvaluationSingleSequenceUsingSparse(atisModel, vocabularyFile, labelFile, CNTK::DeviceDescriptor::GPUDevice(0));
+
+    // Evaluate intermediate layer
+    EvaluateIntermediateLayer(resnet20Model, CNTK::DeviceDescriptor::GPUDevice(0));
+
+    // Evaluate combined outputs
+    EvaluateCombinedOutputs(resnet20Model, CNTK::DeviceDescriptor::GPUDevice(0));
 
     printf("Evaluation complete.\n");
 }

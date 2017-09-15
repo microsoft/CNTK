@@ -345,9 +345,6 @@ namespace CNTK
 
         static NDShape ReshapeOutputShape(const NDShape& operandShape, NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, bool inferDimensions)
         {
-            if (replacementShape.HasFreeDimension())
-                InvalidArgument("Reshape: Replacement shape '%S' must not have a free dimension.", replacementShape.AsString().c_str());
-
             int beginAxisIdx = beginAxis.StaticAxisIndex();
             int endAxisIdx = endAxis.StaticAxisIndex();
 

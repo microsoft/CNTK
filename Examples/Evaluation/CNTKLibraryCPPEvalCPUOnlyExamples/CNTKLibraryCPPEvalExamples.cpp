@@ -553,6 +553,122 @@ void EvaluationSingleSequenceUsingSparse(const wchar_t* modelFile, const wchar_t
     printf("\n");
 }
 
+/// <summary>
+/// The example shows
+/// - how to load a pretrained model and evaluate an intermediate layer of its network.
+/// Note: The example uses the model trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
+/// Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
+/// The parameter 'modelFilePath' specifies the path to the model.
+/// </summary>
+void EvaluateIntermediateLayer(const wchar_t* modelFilePath, const DeviceDescriptor& device)
+{
+    printf("\n===== Evaluate intermediate layer =====\n");
+
+    // Load the model.
+    FunctionPtr rootFunc = Function::Load(modelFilePath, device);
+
+    std::wstring intermediateLayerName = L"final_avg_pooling";
+    FunctionPtr interLayerPrimitiveFunc = rootFunc->FindByName(intermediateLayerName);
+
+    // The Function returned by FindByName is a primitive function.
+    // For evaluation, it is required to create a composite function from the primitive function.
+    FunctionPtr modelFunc = AsComposite(interLayerPrimitiveFunc);
+
+    Variable outputVar = modelFunc->Output();
+    Variable inputVar = modelFunc->Arguments()[0];
+
+    // Prepare input data.
+    // For evaluating an image, you first need to perform some image preprocessing to make sure that the input image has the correct size and layout
+    // that match the model inputs.
+    // Please note that the model used by this example expects the CHW image layout.
+    // inputVar.Shape[0] is image width, inputVar.Shape[1] is image height, and inputVar.Shape[2] is channels.
+    // For simplicity and avoiding external dependencies, we skip the preprocessing step here, and just use some artificially created data as input.
+    std::vector<float> inputData(inputVar.Shape().TotalSize());
+    for (size_t i = 0; i < inputData.size(); ++i)
+    {
+        inputData[i] = static_cast<float>(i % 255);
+    }
+
+    // Create input value and input data map
+    ValuePtr inputVal = Value::CreateBatch(inputVar.Shape(), inputData, device);
+    std::unordered_map<Variable, ValuePtr> inputDataMap = { { inputVar, inputVal } };
+
+    // Create output data map. Using null as Value to indicate using system allocated memory.
+    // Alternatively, create a Value object and add it to the data map.
+    std::unordered_map<Variable, ValuePtr> outputDataMap = { { outputVar, nullptr } };
+
+    // Start evaluation on the device
+    modelFunc->Evaluate(inputDataMap, outputDataMap, device);
+
+    // Get evaluate result as dense output
+    ValuePtr outputVal = outputDataMap[outputVar];
+    std::vector<std::vector<float>> outputData;
+    outputVal->CopyVariableValueTo(outputVar, outputData);
+
+    PrintOutput<float>(outputVar.Shape().TotalSize(), outputData);
+}
+
+/// <summary>
+/// The example shows
+/// - how to load a pretrained model and evaluate several nodes by combining their outputs
+/// Note: The example uses the model trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
+/// Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
+/// The parameter 'modelFilePath' specifies the path to the model.
+/// </summary>
+void EvaluateCombinedOutputs(const wchar_t* modelFilePath, const DeviceDescriptor& device)
+{
+    printf("\n===== Evaluate combined outputs =====\n");
+
+    // Load the model.
+    FunctionPtr modelFunc = Function::Load(modelFilePath, device);
+
+    // Get node of interest
+    std::wstring intermediateLayerName = L"final_avg_pooling";
+    FunctionPtr interLayerPrimitiveFunc = modelFunc->FindByName(intermediateLayerName);
+
+    Variable poolingOutput = interLayerPrimitiveFunc->Output();
+
+    // Create a function which combine outputs from the node "final_avg_polling" and the final layer of the model.
+    FunctionPtr evalFunc = Combine( { modelFunc->Output(), poolingOutput });
+    Variable inputVar = evalFunc->Arguments()[0];
+
+    // Prepare input data.
+    // For evaluating an image, you first need to perform some image preprocessing to make sure that the input image has the correct size and layout
+    // that match the model inputs.
+    // Please note that the model used by this example expects the CHW image layout.
+    // inputVar.Shape[0] is image width, inputVar.Shape[1] is image height, and inputVar.Shape[2] is channels.
+    // For simplicity and avoiding external dependencies, we skip the preprocessing step here, and just use some artificially created data as input.
+    std::vector<float> inputData(inputVar.Shape().TotalSize());
+    for (size_t i = 0; i < inputData.size(); ++i)
+    {
+        inputData[i] = static_cast<float>(i % 255);
+    }
+
+    // Create input value and input data map
+    ValuePtr inputVal = Value::CreateBatch(inputVar.Shape(), inputData, device);
+    std::unordered_map<Variable, ValuePtr> inputDataMap = { { inputVar, inputVal } };
+
+    // Create output data map. Using null as Value to indicate using system allocated memory.
+    // Alternatively, create a Value object and add it to the data map.
+    Variable modelOutput = evalFunc->Outputs()[0];
+    Variable interLayerOutput = evalFunc->Outputs()[1];
+
+    std::unordered_map<Variable, ValuePtr> outputDataMap = { { modelOutput, nullptr }, { interLayerOutput, nullptr } };
+
+    // Start evaluation on the device
+    evalFunc->Evaluate(inputDataMap, outputDataMap, device);
+
+    // Get evaluate result as dense outputs
+    for(auto & outputVariableValuePair : outputDataMap)
+    {
+        auto variable = outputVariableValuePair.first;
+        auto value = outputVariableValuePair.second;
+        std::vector<std::vector<float>> outputData;
+        value->CopyVariableValueTo(variable, outputData);
+        PrintOutput<float>(variable.Shape().TotalSize(), outputData);
+    }
+}
+
 std::shared_ptr<std::fstream> GetIfstream(const wchar_t *filePath)
 {
     const size_t pathBufferLen = 1024;

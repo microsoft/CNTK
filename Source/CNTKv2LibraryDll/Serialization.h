@@ -30,6 +30,7 @@ namespace CNTK
     const std::wstring sampleCountKey = L"sample_count";
     const std::wstring minibatchCountKey = L"minibatchCount"; // TODO: Python-style spelling
     const std::wstring unitKey = L"unit";
+    const std::wstring refMBSizeKey = L"ref_mb_size";
     const std::wstring epochSizeKey = L"epoch_size";
     const std::wstring scheduleKey = L"schedule";
     const std::wstring learningRateScheduleKey = L"learnig_rate_schedule";

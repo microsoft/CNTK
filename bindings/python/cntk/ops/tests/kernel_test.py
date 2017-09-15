@@ -117,6 +117,44 @@ def test_asym_convolution(input_size, conv_size, result, device_id, precision):
                     None, device_id=device_id, precision=precision)
 
 
+SPATIAL_CONVOLUTION_DATA = [
+    ([1, 3, 3], # input_size
+     [2, 2], # convolution size
+     [[[[ 19, 25, 10],
+        [ 37, 43, 16],
+        [ 7, 8, 0]]]]) # result
+]
+# this test handles convolution with reductionRank=0.
+@pytest.mark.parametrize("input_size, conv_size, result", SPATIAL_CONVOLUTION_DATA)
+def test_spatial_convolution(input_size, conv_size, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(total_size, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = C.input_variable(shape=input_operand.shape[1:],
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
+
+    # do the same for convolution kernel
+    total_size = np.prod(conv_size)
+    y = np.arange(total_size, dtype=dt)
+    conv_map = constant(value=y.reshape(conv_size), device=dev)
+
+    from cntk import convolution
+    input_op = convolution(conv_map, a, auto_padding=[True], reduction_rank=0)
+
+    forward_input = {a: input_operand}
+    expected_forward = AA(result)
+
+    unittest_helper(input_op, forward_input, expected_forward,
+                    None, device_id=device_id, precision=precision)
+
 POOLING_GEOMETRY_DATA = [
     ([1, 1, 6, 6], # input_size
      (1, 5, 5), # pooling_window
@@ -542,6 +580,85 @@ def test_convolution_transpose_with_output(input_size, conv_size, result, device
     unittest_helper(input_op, forward_input, expected_forward,
                     None, device_id=device_id, precision=precision)
 
+
+SPATIAL_CONVOLUTION_TRANSPOSE_DATA = [
+    ([1, 3, 3], # input_size
+     [2, 2], # convolution size
+     [[[[ 0, 0, 1, 2],
+        [ 0, 5, 11, 11],
+        [ 6, 23, 29, 23],
+        [ 12, 32, 37, 24]]]]) # result
+]
+# this test handles convolution transpose, without specifying output shape and with reduction_rank=0
+@pytest.mark.parametrize("input_size, conv_size, result", SPATIAL_CONVOLUTION_TRANSPOSE_DATA)
+def test_spatial_convolution_transpose(input_size, conv_size, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(total_size, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = C.input_variable(shape=input_operand.shape[1:],
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
+
+    # do the same for convolution kernel
+    total_size = np.prod(conv_size)
+    y = np.arange(total_size, dtype=dt)
+    conv_map = constant(value=y.reshape(conv_size), device=dev)
+
+    from cntk import convolution_transpose
+    input_op = convolution_transpose(conv_map, a, auto_padding=[False], reduction_rank=0)
+
+    forward_input = {a: input_operand}
+    expected_forward = AA(result)
+
+    unittest_helper(input_op, forward_input, expected_forward,
+                    None, device_id=device_id, precision=precision)
+
+SPATIAL_CONVOLUTION_TRANSPOSE_OUTPUT_DATA = [
+    ([1, 3, 3], # input_size
+     [3, 3], # convolution size
+     [[[[ 0, 3, 4, 11, 8, 10],
+        [ 3, 12, 11, 28, 19, 26],
+        [ 12, 27, 16, 35, 20, 25],
+        [ 27, 60, 35, 76, 43, 56], 
+        [ 24, 51, 28, 59, 32, 40]]]]) # result
+]
+# this test handles convolution transpose, without specifying output shape and with reduction_rank=0
+@pytest.mark.parametrize("input_size, conv_size, result", SPATIAL_CONVOLUTION_TRANSPOSE_OUTPUT_DATA)
+def test_spatial_convolution_transpose_with_output(input_size, conv_size, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(total_size, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = C.input_variable(shape=input_operand.shape[1:],
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
+
+    # do the same for convolution kernel
+    total_size = np.prod(conv_size)
+    y = np.arange(total_size, dtype=dt)
+    conv_map = constant(value=y.reshape(conv_size), device=dev)
+
+    from cntk import convolution_transpose
+    input_op = convolution_transpose(conv_map, a, auto_padding=[True], strides=2, output_shape=(1,5,6), reduction_rank=0)
+
+    forward_input = {a: input_operand}
+    expected_forward = AA(result)
+
+    unittest_helper(input_op, forward_input, expected_forward,
+                    None, device_id=device_id, precision=precision)
 
 def test_conv_incorrect_shapes():
     input = C.input_variable(())

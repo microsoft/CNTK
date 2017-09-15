@@ -1265,10 +1265,8 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
                                     ElemType momentum,
                                     ElemType adaWeight,
                                     ElemType adaMul,
-                                    bool unitGainMomentum)
+                                    ElemType unitGainFactor)
 {
-    auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
-
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
     if (IsEmpty() || (GetNumCols() < numColsNeeded))
@@ -1315,10 +1313,9 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
 
 template <class ElemType>
 void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
+    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
-    auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
 
     if (IsEmpty() || (GetNumCols() < numColsNeeded))
     {
@@ -7332,12 +7329,12 @@ template <class ElemType>
 int CPUMatrix<ElemType>::Argmax() const
 {
     int maxArg = -1;
-    ElemType maxValue = std::numeric_limits<ElemType>::min();
+    ElemType maxValue = std::numeric_limits<ElemType>::lowest();
 
 #pragma omp parallel 
     {
         int localMaxArg = -1;
-        ElemType localMaxValue = std::numeric_limits<ElemType>::min();
+        ElemType localMaxValue = std::numeric_limits<ElemType>::lowest();
 
 #pragma omp for
         for (int index = 0; index < (int)GetNumElements(); ++index)

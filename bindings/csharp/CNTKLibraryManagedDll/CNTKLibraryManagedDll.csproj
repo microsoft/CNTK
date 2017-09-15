@@ -88,7 +88,6 @@
     <Compile Include="SwigProxyClasses\MinibatchInfo.cs" />
     <Compile Include="SwigProxyClasses\MinibatchSource.cs" />
     <Compile Include="SwigProxyClasses\MinibatchSourceConfig.cs" />
-    <Compile Include="SwigProxyClasses\MomentumAsTimeConstantScheduleCS.cs" />
     <Compile Include="SwigProxyClasses\PaddingMode.cs" />
     <Compile Include="SwigProxyClasses\PairDoubleDouble.cs" />
     <Compile Include="SwigProxyClasses\PairFloatFloat.cs" />
@@ -107,7 +106,6 @@
     <Compile Include="SwigProxyClasses\StreamInformation.cs" />
     <Compile Include="SwigProxyClasses\StringVector.cs" />
     <Compile Include="SwigProxyClasses\Trainer.cs" />
-    <Compile Include="SwigProxyClasses\TrainingParameterPerSampleScheduleDouble.cs" />
     <Compile Include="SwigProxyClasses\TrainingParameterScheduleDouble.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapParameterNDArrayViewPtr.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapStreamInformationMinibatchData.cs" />
