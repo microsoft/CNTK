@@ -1699,7 +1699,7 @@ class Variable::AutoBatch
         //if (f.m_op == PrimitiveOpType::ElementTimes)
         //    LogFunction(f, L"bf  ");
         auto outValue = isFree
-            ? nullptr
+            ? NDArrayViewPtr()
             : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
         cudaStatsGuardPrepare.Stop();
         CudaStats* cudaStatsPtr = nullptr;
@@ -2093,6 +2093,33 @@ class Variable::AutoBatch
         return f;
     }
 
+    // determine the physical source and slice index of an input
+    static const struct { const PrimitiveFunction* originatingFunction; size_t sliceIndex; } LazyPhysicalSlice(const VariableFields& fields)
+    {
+        return{ fields.m_redirection.m_function, fields.m_redirection.m_index };
+    }
+#if 0
+    xVariableFields& GetGradientFieldsForBackprop(VariableFields& inputFields, bool firstTime = false)
+    {
+        if (!inputFields.m_redirection) // leaf
+            return inputFields;
+        auto& gradFields = GetOutputFields(inputFields.m_redirection.m_function);
+        fail_if(!gradFields.m_redirection, "output Variable is a leaf??");
+        //if (gradFields.m_redirection.m_function->m_op == PrimitiveOpType::Block)
+        //    BreakPoint;
+        // short-circuit if needed
+        if (ArePhysicalOutputFields(gradFields)) // a physical Variable
+            return gradFields;
+        // if not firstTime then we should not get here
+        fail_if(!firstTime, "GetGradientFieldsForBackprop (not firstTime): hit a see-through slice??");
+        // move up the m_redirection into 'input', overwriting the current one
+        fail_if(inputFields.m_redirection.m_index != SIZE_MAX, "GetGradientFieldsForBackprop (firstTime): short-circuiting a see-through slice??"); // can only handle one slice per chain
+        inputFields.m_redirection = gradFields.m_redirection; // replace current redirect with the down-stream one
+                                                              // and try again
+        return GetGradientFieldsForBackprop(inputFields, firstTime/*=true*/); // (note: tail recursion)
+    }
+#endif
+
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
     vector<Variable> m_batchedInputs;
     vector<Variable> m_gatherArgsBuffer;
@@ -2108,7 +2135,6 @@ class Variable::AutoBatch
     // (but no Splice Function object is used for this).
     void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
     {
-        // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
         auto& f0 = *ops.front();
         let op = f0.m_op;
@@ -2274,33 +2300,33 @@ class Variable::AutoBatch
                 if (gatherInputs.capacity() < batchSize)
                     gatherInputs.reserve(max(batchSize, 2 * gatherInputs.capacity()));
                 // optimization: if all args are consecutive slices, then use a slice view instead
-                let* pfields0 = &GetInputFields(f0.m_inputs[i]);
-                let& redirection0 = pfields0->m_redirection; // for 'allConsecutiveSlices' test
-                let is0Redirected = (bool)redirection0;
+                let& pfields0 = GetInputFields(f0.m_inputs[i]);
+                let redirectionPair0 = LazyPhysicalSlice(pfields0);
+                let is0Redirected = redirectionPair0.originatingFunction != nullptr;
                 // loop over all batched ops
                 bool allSame = true;
-                bool allConsecutiveSlices = is0Redirected && redirection0.m_index != SIZE_MAX; // to be consecutive, it must be a slice to start with
+                bool allConsecutiveSlices = is0Redirected && redirectionPair0.sliceIndex != SIZE_MAX; // to be consecutive, it must be a slice to start with
                 size_t j = 0;
               {
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, batchSize);
                 for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
                     let& input = op->m_inputs[i];
-                    let* pfields = &GetInputFields(input);
-                    let& redirection = pfields->m_redirection;
+                    let& pfields = GetInputFields(input);
+                    let redirectionPair = LazyPhysicalSlice(pfields);
                     // optimization: if all args are the same, then don't batch
                     allSame = allSame &&
-                        (pfields == pfields0 ||                           // same
-                         (is0Redirected && redirection.m_function == redirection0.m_function && redirection.m_index == redirection0.m_index)); // or same view
+                        (&pfields == &pfields0 ||                           // same object
+                         (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceIndex == redirectionPair0.sliceIndex)); // or same view
                     // ^^ we can remove this double check, and just compare m_function abnd m_index
                     // optimization: if all args are consecutive slices, then use a slice view instead
                     if (allConsecutiveSlices)
                     {
                         // optimization: if consecutive slices, then recover the original batched tensor
                         // TODO: Can we directly check the data buffer pointer?
-                        allConsecutiveSlices = allConsecutiveSlices &&
-                            redirection.m_function == redirection0.m_function &&
-                            redirection.m_index    == redirection0.m_index + j;
+                        allConsecutiveSlices =
+                            redirectionPair.originatingFunction == redirectionPair0.originatingFunction && // function that creates the physical output
+                            redirectionPair.sliceIndex          == redirectionPair0.sliceIndex + j;
                         // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
                         // scenario, we will loose entries in the middle. We can allow to keep a few around
                         // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
@@ -2318,21 +2344,21 @@ class Variable::AutoBatch
                     m_batchedInputs[i] = gatherInputs[0];
                 else if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
                 {
-                    let& from  = redirection0.m_function;
-                    let  begin = redirection0.m_index;
+                    let& from  = redirectionPair0.originatingFunction;
+                    let  begin = redirectionPair0.sliceIndex;
                     let& output = from->m_outputs.front();
                     fail_if(!GetOutputFields(from).m_value, "value not yet available??");
                     let& fromDims = output.Shape().Dimensions();
                     fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
                     let axis = fromDims.size() - 1;
-                    if (begin == 0 && j == fromDims[axis]) // full range: just take it
+                    if (begin == 0 && j == fromDims.back()/*[axis]*/) // full range: just take it
                         m_batchedInputs[i] = output; // note: graph already has a strong ref to output elsewhere
                     else // sub-range: splice it by taking a slice view on the previously spliced batch
                     {
                         //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"re-batch", 3, batchSize);
                         // create a new PrimitiveFunction Slice()
                         vector<size_t> outputShape = fromDims; // determine output shape
-                        outputShape[axis] = j;
+                        outputShape.back()/*[axis]*/ = j;
                         m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape,
                                                                        Dictionary(
                                                                            PrimitiveFunction::AttributeNameAxis       , Axis((int)axis) ,
@@ -3465,8 +3491,12 @@ Variable BlockFunction::OutputForDynamicInvocation()
     blockOutput.SetOwner(thisShared);
 
     // implant the block's output Variable
+#if 1
+    m_outputs = vector<Variable>{ blockOutput };
+#else
     m_outputs.resize(1);
-    m_outputs[0] = blockOutput;
+    m_outputs.front() = blockOutput;
+#endif
     m_outputInitializingByThreadId = std::thread::id();
     m_outputsInitFlag = 1;
 
