@@ -895,7 +895,7 @@ namespace CNTK
         static const DynamicProfilerPtr& CurrentDynamicProfiler();
 
         // debugging aid for identifying objects
-        size_t m_uniqueId = GetUniqueId(); static size_t GetUniqueId() { static size_t id = 0; return ++id; }
+        size_t m_uniqueIdForDebugging = GetUniqueId(); static size_t GetUniqueId() { static size_t id = 0; return ++id; }
     }; // end class PrimitiveFunction
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

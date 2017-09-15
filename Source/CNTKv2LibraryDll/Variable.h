@@ -48,7 +48,7 @@ namespace CNTK
         //mutable const VariableFields* m_inlinedAs;  // what this Variable has been cloned to
 
         // debugging aid for identifying objects
-        size_t m_uniqueId = GetUniqueId(); static size_t GetUniqueId() { static size_t id = 0; return ++id; }
+        size_t m_uniqueIdForDebugging = GetUniqueId(); static size_t GetUniqueId() { static size_t id = 0; return ++id; }
 
         // lazy initialization
         std::unique_ptr<std::once_flag> m_initValueFlag;

@@ -2871,7 +2871,7 @@ public:
     {
         let* f = fi.first;
         let index = fi.second;
-        if (f->m_uniqueId == 85394 && index == 1)
+        if (f->m_uniqueIdForDebugging == 85394 && index == 1)
             BreakPoint;
 #ifdef LOG_DETAILS
         LogFunction(*f, L"bb ", index);

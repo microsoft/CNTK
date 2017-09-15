@@ -901,6 +901,12 @@ namespace CNTK
                                       SliceMode sliceMode = SliceMode::View, bool readOnly = false) const;
 
         ///
+        /// Creates a new NDArrayView which is an alias of a slice along the last axis of 'this' view, and reshaped to target.
+        /// This is a fast-path version of a commonly occurring combination of SliceView() and AsShape() where the reshape does not incur extra runtime cost.
+        ///
+        CNTK_API NDArrayViewPtr SliceViewAsShape(size_t beginIndex, size_t endIndex, const NDShape& shape, bool readOnly = false) const;
+
+        ///
         /// Tests if the tensor slice is memory-contiguous (no gaps due to strides).
         /// TODO: Remove again if this is not actually needed.
         ///

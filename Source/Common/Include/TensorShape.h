@@ -712,10 +712,11 @@ public:
     TensorShape& ReshapeInPlace(const DimensionVector& dims) // append trailing singleton dimensions
     {
         VerifyIsDense();
+        let prevNumElements = GetNumElements(); // TODO: since we are dense, we can get numElements from the last dim and stride. Can save a few imuls.
         m_dims.assign(dims.begin(), dims.end());
         let numElements = ComputeStridesDense();
-        if (numElements != GetNumElements())
-            InvalidArgument("ReshapeInPlace: New shape (%d) must have the same number of elements as current (%d).", (int)numElements, (int)GetNumElements());
+        if (numElements != prevNumElements)
+            InvalidArgument("ReshapeInPlace: New shape (%d) must have the same number of elements as current (%d).", (int)numElements, (int)prevNumElements);
         return *this;
     }
 
@@ -827,10 +828,20 @@ private:
     // Returns the total number of elements.
     size_t ComputeStridesDense()
     {
-        m_strides.resize(m_dims.size());
-        for (size_t k = 0; k < m_dims.size(); k++)
-            m_strides[k] = k > 0 ? m_strides[k - 1] * (ptrdiff_t)m_dims[k - 1] : 1;
-        return m_dims.empty() ? 1 : m_dims.back() * (size_t)m_strides.back(); // note: an empty shape means it's a scalar
+        let rank = m_dims.size();
+        m_strides.resize(rank);
+        if (rank == 0)
+            return 1; // note: an empty shape means it's a scalar
+        size_t s = 1;
+        m_strides[0] = s;
+        if (rank == 1)
+            return m_dims.back(); // avoid the imul
+        for (size_t k = 1; k < rank; k++)
+        {
+            s = s * m_dims[k - 1];
+            m_strides[k] = (ptrdiff_t)s;
+        }
+        return m_dims.back() * s; // (if this value is not needed, then the C++ optimizer will skip the last imul)
     }
     // reset m_strides and m_offset to represent a canonical no-strides column-major tensor
     void InitAsNoSlice()

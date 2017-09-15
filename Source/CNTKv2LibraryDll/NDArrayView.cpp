@@ -937,6 +937,40 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(GetDataType(), sliceViewShape, IsReadOnly() || readOnly, matrix);
     }
 
+    NDArrayViewPtr NDArrayView::SliceViewAsShape(size_t beginIndex, size_t endIndex, const NDShape& shape, bool readOnly) const
+    {
+        if (endIndex <= beginIndex)
+            InvalidArgument("NDArrayView::SliceViewAsShape: Invalid index range [%d,%d).", (int)beginIndex, (int)endIndex);
+        let rank = Shape().Rank();
+        if (rank == 0)
+            InvalidArgument("NDArrayView::SliceViewAsShape: Cannot index a scalar.");
+
+        // For sparse input, strided views are not supported in any form.
+        // In this case, we just call Slice() with sliceMode ContiguousView.
+        // TODO: This is defensive, as there is no test for this presently. But is this necessary? Wouldn't the resulting slice still be contiguous?
+        if (IsSparse())
+        {
+            // if the index range is the full axis, then we only need the reshape
+            let& viewDims = m_viewShape.Dimensions();
+            if (beginIndex == 0 && endIndex == viewDims.back())
+                return AsShape(shape);
+
+            std::vector<size_t> startOffset(rank, 0);
+            std::vector<size_t> extent(viewDims);
+            startOffset.back() = beginIndex;
+            extent     .back() = endIndex - beginIndex;
+            return Slice(startOffset, extent, vector<size_t>(), SliceMode::ContiguousView, readOnly)->AsShape(shape);
+        }
+
+        // determine an updated TensorShape object
+        auto tensorShape = GetTensorShape();                  // get current actual TensorShape
+        tensorShape.NarrowTo(rank - 1, beginIndex, endIndex); // narrow it down
+        tensorShape.ReshapeInPlace(shape.Dimensions());       // and implant the shape
+
+        // create a NDArrayView with this new tensor shape onto the existing storage object
+        return MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
+    }
+
     NDArrayViewPtr NDArrayView::IndexLastAxis(size_t index, bool readOnly) const
     {
         let rank = Shape().Rank();
