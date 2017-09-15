@@ -346,7 +346,7 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     let eps = Constant::Scalar(DTYPE, 1e-16, device);
     let minusHalf = Constant::Scalar(DTYPE, -0.5, device);
     let profiler = Function::CreateDynamicProfiler(1, L"lnorm");
-#if 0
+#if 1
     // for efficiency, we set this up as a static graph
     let x = PlaceholderVariable();
     let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors

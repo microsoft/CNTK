@@ -3461,7 +3461,7 @@ Variable BlockFunction::OutputForDynamicInvocation()
     // ...EXCEPT we do not implant a mapping, since the composite is shared. The composite does not know that it is part of a BlockFunction.
     let& compositeOutput = m_composite->m_outputs.front();
     auto blockOutput = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), { /*dynamic axes*/ }, compositeOutput.NeedsGradient(), Name());
-    let thisShared = dynamic_pointer_cast<PrimitiveFunction>(shared_from_this());
+    let thisShared = static_pointer_cast<PrimitiveFunction>(shared_from_this());
     blockOutput.SetOwner(thisShared);
 
     // implant the block's output Variable
