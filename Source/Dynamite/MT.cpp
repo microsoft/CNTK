@@ -676,9 +676,9 @@ void Train(wstring outputDirectory)
         mbLoss.Backward(gradients);
         let timeBackward = partTimer.Elapsed();
         //partTimer.Log("BackProp", numLabels);
-        mbLoss.Value()->AsScalar<float>();
         // note: we must use numScoredLabels here
         let numScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
+        fprintf(stderr, "{%.2f, %d-%d}\n", mbLoss.Value()->AsScalar<float>(), (int)numLabels, (int)numSeq);
         MinibatchInfo info{ /*atEndOfData=*/false, /*sweepEnd=*/false, /*numberOfSamples=*/numScoredLabels, mbLoss.Value(), mbLoss.Value() };
         info.trainingLossValue->AsScalar<float>();
         partTimer.Restart();

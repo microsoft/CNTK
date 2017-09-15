@@ -40,12 +40,15 @@ namespace CNTK
 
         // Dynamite
         mutable Internal::AutoBatchRedirection m_redirection; // Function redirection, e.g. into batched output
-        Internal::AutoBatchConsumers m_consumers;             // set of consumers of this value
+        Internal::AutoBatchConsumers m_consumers;             // set of consumers of this value. Used differently in forward (notification) and backward (inverted graph).
         mutable size_t m_visitedTag = 0;                      // used for tree traversal
         mutable size_t m_cseVisitedTag = 0;                   // used for common sub-expression elimination
         mutable uintptr_t m_valueAddrForHash = 0;             // cached address of m_value[0,...], divided by sizeof. Used as hash.
-        size_t m_compositeArgumentIndex = SIZE_MAX;           // if this is a Placeholder that is an argument of a dynamically invoked composite, then this its position in the parameter list
-        mutable const VariableFields* m_inlinedAs;            // during inlining, this field holds the first instance of a clone of this
+        size_t m_compositeArgumentIndex = SIZE_MAX;           // if this is a Placeholder that is an argument of a dynamically invoked composite, then this its position in the parameter list (otherwise undefined)
+        //mutable const VariableFields* m_inlinedAs;  // what this Variable has been cloned to
+
+        // debugging aid for identifying objects
+        size_t m_uniqueId = GetUniqueId(); static size_t GetUniqueId() { static size_t id = 0; return ++id; }
 
         // lazy initialization
         std::unique_ptr<std::once_flag> m_initValueFlag;

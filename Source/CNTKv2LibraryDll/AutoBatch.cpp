@@ -669,6 +669,14 @@ public:
 // NDArrayViewArena -- helper class that implements efficient arena allocation for NDArrayView objects
 // ---------------------------------------------------------------------------
 
+// helper that is needed at a few places
+// Reshape an NDArrayViewPtr in-place (replace by a new one) if its shape does not match.
+static void ReplaceWithReshapedViewIfNeeded(NDArrayViewPtr& view, const NDShape& shape)
+{
+    if (view->Shape() != shape)
+        view = view->AsShape(shape);
+}
+
 class NDArrayViewArena
 {
     // allocate a new tensor in a large arena
@@ -741,10 +749,8 @@ public:
         //NDArrayViewPtr region = s_currentArena->SliceView(startOffset, extent); // SliceView() adjusts the MatrixView
         NDArrayViewPtr region = s_currentArena->Slice(startOffset, extent);
         s_currentArenaUsed += numElements;
-        if (region->Shape() == shape)
-            return region;
-        else
-            return region->AsShape(shape);
+        ReplaceWithReshapedViewIfNeeded(region, shape);
+        return region;
     }
 };
 
@@ -1452,7 +1458,7 @@ class Variable::AutoBatch
             // BUGBUG:!!!! How aboud the gradient?? We must know how to find the gradient!
             //        One solution is to redirect to the operation directly on top of the Parameter, not the parameter itself.
             if (!fields.m_value /*&& redirectedFields->m_varKind != VariableKind::Placeholder*/)
-                ComputeVariableValueFrom(fields, redirectedFields->m_value); // set fields.m_value, and we are done with this node
+                RealizeVariableAsView(fields, redirectedFields->m_value); // set fields.m_value, and we are done with this node
             m_stats.numLeafNodes++;
             return;
         }
@@ -1542,23 +1548,22 @@ class Variable::AutoBatch
         auto& functionFields = GetOutputFields(fields.m_redirection.m_function);
         fail_if(&fields == &functionFields, "Variable unexpectedly has no value yet"); // avoid infinite recursion
         // function itself may be a redirect (a slice into a batched op)
-        CacheAndGetValue(functionFields);
-        ComputeVariableValueFrom(fields, functionFields.m_value);
+        CacheAndGetValue(functionFields); // (calling ourselves on the source in case of re-redirection)
+        RealizeVariableAsView(fields, functionFields.m_value);
         return fields.m_value;
     }
     // realize the lazy redirected value; that is, do the slice and reshape
-    // inputFields must have m_value already set.
-    static void ComputeVariableValueFrom(VariableFields& outputFields, const NDArrayViewPtr& from)
+    // This sets outputFields.m_value. inputFields must have m_value already set.
+    static void RealizeVariableAsView(VariableFields& outputFields, NDArrayViewPtr from)
     {
         fail_if(!from, "Variable's input unexpectedly has no value yet");
+        // optional implicit index
         let index = outputFields.m_redirection.m_index;
-        if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
-            outputFields.m_value = from;
-        else
-            outputFields.m_value = from->IndexLastAxis(index);
-        // implicit Reshape()
-        if (outputFields.m_shape != outputFields.m_value->Shape())
-            outputFields.m_value = outputFields.m_value->AsShape(outputFields.m_shape);
+        if (index != SIZE_MAX) // special sentinel value that means "don't slice, actually"
+            from = from->IndexLastAxis(index);
+        // optional implicit Reshape()
+        ReplaceWithReshapedViewIfNeeded(from, outputFields.m_shape);
+        outputFields.m_value = move(from);
     }
     // get the value that must already have been cached
     static const NDArrayViewPtr& GetCachedValue(const Variable& v)
@@ -2667,8 +2672,7 @@ public:
             gradient = gradient->IndexLastAxis(index);
         }
         // reshape if needed
-        if (inputFields.m_shape != gradient->Shape())
-            gradient = gradient->AsShape(inputFields.m_shape);
+        ReplaceWithReshapedViewIfNeeded(gradient, inputFields.m_shape);
         // implant the cached gradient
         inputFields.m_gradient = move(gradient);
         return{ inputFields.m_gradient, beta };
@@ -2791,6 +2795,8 @@ public:
             return inputFields;
         auto& gradFields = GetOutputFields(inputFields.m_redirection.m_function);
         fail_if(!gradFields.m_redirection, "output Variable is a leaf??");
+        //if (gradFields.m_redirection.m_function->m_op == PrimitiveOpType::Block)
+        //    BreakPoint;
         // short-circuit if needed
         if (ArePhysicalOutputFields(gradFields)) // a physical Variable
             return gradFields;
@@ -2837,7 +2843,9 @@ public:
     typedef Internal::AutoBatchConsumer AutoBatchConsumer; // TODO: shouldn't this be done with using?
 
     // check whether an input's gradient is identical to the output's gradient, and can therefore be viewed
-    static bool IsViewableGradient(const PrimitiveOpType op, size_t inputIndex, const VariableFields& outputFields, const Variable& input)
+    // This only considers the nature of the operation; that is, its opcode, which input, and whether there's a shape change (indicating broadcasting).
+    // It does not consider whether the gradient is already there.
+    static bool IsOpGradientViewable(const PrimitiveOpType op, size_t inputIndex, const VariableFields& outputFields, const Variable& input)
     {
         let isPlusOrMinus =
             op == PrimitiveOpType::Plus ||
@@ -2846,17 +2854,10 @@ public:
             isPlusOrMinus ||
             op == PrimitiveOpType::Reshape;  // explicit reshape, e.g. generated by auto-batcher  --TODO: change to implicit reshape instead
         if (doesOpAllowIt)
-        {
-            let& inputFields = GetInputFields(input);
-            // If input is a redirected slice, then necessarily the underlying object (=inputFields.m_redirection.m_function)
-            // must have multiple consumers. Otherwise it would not be part of a batched operation, which is the only way
-            // of creating redirected slices.
-            fail_if(inputFields.m_redirection && inputFields.m_redirection.m_index != SIZE_MAX, "redirected slice has single consumer??");
             // Verify that the op does not broadcast or reduce, which may happen for Plus or Minus.
             return
                 !isPlusOrMinus ||                            // no need to check for broadcasting/reduction
-                outputFields.m_shape == inputFields.m_shape; // Plus or Minus: must check
-        }
+                outputFields.m_shape == GetInputFields(input).m_shape; // Plus or Minus: must check
         else
             return false;
     }
@@ -2870,6 +2871,8 @@ public:
     {
         let* f = fi.first;
         let index = fi.second;
+        if (f->m_uniqueId == 85394 && index == 1)
+            BreakPoint;
 #ifdef LOG_DETAILS
         LogFunction(*f, L"bb ", index);
 #endif
@@ -2893,20 +2896,36 @@ public:
 
         // optimize for trivial gradients (e.g. Plus)
         let op = f->m_op;
-        if (viewAllowed && IsViewableGradient(op, index, outputFields, input))
+        if (viewAllowed && IsOpGradientViewable(op, index, outputFields, input))
         {
             // TODO: Splice can also be viewable, but is tricky, as the Scatter optimization conflicts with it. A Splice gradient is only viewable of all its inputs'
             //       gradients are viewable; since the Scatter call currently cannot exclude slices.
             //       Also we need to set up an elaborate view, possibly determine the starting offset.
             //       Hence, Splice for now does not have a viewable gradient.
             //       Because of that, the gradient is indeed strictly a view, with possible reshape.
-            auto& inputFields = GetInputFields(input);
-            fail_if(inputFields.m_gradient, "function with viewable gradient unexpectedly already has a gradient");
-            auto grad = outputFields.m_gradient;
+            // determine where the gradient should go
+            // There are two places it goes: The immediate input's m_gradient (a view); and a potential redirect (to the physical location).
+            // They may be the same pointer, different pointers to the same thing, or one could be a Reshape of the other. No slice possible.
+            auto& inputFields = GetInputFields(input); // immediate input's gradient view
+            auto& redirectedInputFields = inputFields.m_redirection ? GetOutputFields(inputFields.m_redirection.m_function) : inputFields; // physical gradient location
+            fail_if(inputFields.m_gradient || redirectedInputFields.m_gradient, "function with viewable gradient unexpectedly already has a gradient??");
+            auto outputGradientValue = outputFields.m_gradient; // incoming gradient from top. Our gradient is going to be a view of this.
             if (op == PrimitiveOpType::Reshape)
-                grad = grad->AsShape(inputFields.m_shape); // an explicit Reshape (other ops must have the same shape already)
-            inputFields.m_gradient = move(grad);
-            // Note well: This is a little scary. If this condition is not correct, and more gradients get accumulated
+                outputGradientValue = outputGradientValue->AsShape(inputFields.m_shape); // an explicit Reshape (generated by auto-batch; other ops must have the same shape already) --TODO: do not generate this, use implicit reshape
+            // implant the cached gradient into this input
+            inputFields.m_gradient = move(outputGradientValue);
+            // implant it into the redirect
+            if (&inputFields != &redirectedInputFields)
+            {
+                // If input is a redirected slice, then necessarily the underlying object (=inputFields.m_redirection.m_function)
+                // must have multiple consumers. Otherwise it would not be part of a batched operation, which is the only way
+                // of creating redirected slices.
+                fail_if(inputFields.m_redirection.m_index != SIZE_MAX, "redirected slice has single consumer??");
+                auto grad = inputFields.m_gradient;
+                ReplaceWithReshapedViewIfNeeded(grad, redirectedInputFields.m_shape);
+                redirectedInputFields.m_gradient = move(grad); // and the redirected location. If it is the same, then this will do nothing.
+            }
+            // Nota bene: This is a little scary. If this condition is not correct, and more gradients get accumulated
             // into this input, then those will get into the output as well, which would be incorrect. There is no good
             // way to ensure this.
             m_stats.numBatchedBackpropToViews++;
@@ -2994,7 +3013,6 @@ public:
         //       E.g., the first time this is hit, it's for 515 items; that is, 515 CUDA launches (cudaMemsetAsync()).
         if (!inputGradientsToZeroOut.empty())
         {
-            BreakPoint;
             for (let& grad : inputGradientsToZeroOut)
                 grad->SetValue(0.0f);
             m_stats.numBackpropSetZeroes += inputGradientsToZeroOut.size();
@@ -3152,14 +3170,13 @@ public:
     // This uses Variable::m_visitedTag for traversing the consumer tree upwards.
     // It uses PrimitiveFunction::m_visitedTag for bulk gradient of currently the
     // Splice op, which produces all inputs' gradients in a single go and must therefore only run once.
+    // Normally, fields.m_gradient is NULL. The one exception is if the user supplies a buffer for a requested gradient.
     __declspec(noinline) void RAggregateGradientFromAllConsumers(VariableFields& fields)
     {
         if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
 
-        // reached a "leaf" in the inverted backprop graph; i.e. we hit the root
-        if (fields.m_consumers.empty())
-            return;
+        fail_if(fields.m_consumers.empty(), "root gradient not set up??"); // this is the root. It should already have been visited manually.
 
         fail_if(!fields.m_needsGradient, "backprop into variable that does not need gradient");
 
@@ -3183,7 +3200,7 @@ public:
 
 #ifdef NO_BATCHED_BACKPROP
         if (fields.m_consumers.size() == 1)
-            BackpropToUnbatched(fields.m_consumers.front(), /*viewAllowed=*/true); // viewAllowed because there is only one, no aggregation needed
+            BackpropToUnbatched(fields.m_consumers.front(), /*viewAllowed=*/!fields.m_gradient); // viewAllowed because there is only one, no aggregation needed
         else
             fields.m_consumers.ForAll([&](const std::pair<PrimitiveFunction*, size_t>& fi)
             {
@@ -3194,7 +3211,7 @@ public:
         // (with exception of Splice, which has a different optimization)
         if (fields.m_consumers.size() == 1 && fields.m_consumers.front().first->m_op != PrimitiveOpType::Splice)
         {
-            BackpropToUnbatched(fields.m_consumers.front(), /*viewAllowed=*/true); // viewAllowed because there is only one, no aggregation needed
+            BackpropToUnbatched(fields.m_consumers.front(), /*viewAllowed=*/!fields.m_gradient); // viewAllowed because there is only one, no aggregation needed
             return;
         }
 
@@ -3293,6 +3310,7 @@ public:
         }
         // --- Phase 2: backprop through the inverted backprop graph
         //  - perform backprop operation, by depth-first traversal of inverted backprop graph starting from gradients
+        m_visitorTag.Begin();
         // implant the first gradient. This "root: gradient is actually the leaf in the inverted backprop graph.
         // TODO: allow user to pass in the starting value
         // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
@@ -3300,10 +3318,10 @@ public:
         //    LogicError("BatchedBackward: root must be a scalar, or root gradient must have been implanted already");
         rootGradFields.m_gradient = m_arena.NewNDArrayView(root.Shape(), root.GetDataType(), StorageFormat::Dense, root.Value()->Device());
         rootGradFields.m_gradient->SetValue(1.0f);
+        m_visitorTag.Visited(rootGradFields.m_visitedTag); // done with this
         // perform backprop
         // This traverses the tree top-down, where each node pulls gradient(s) from its consumer(s).
         // This way we can optimize operations, such as a matrix product or gradient of GatherBatch().
-        m_visitorTag.Begin();
         for (auto& kv : gradients)
         {
             auto& gradFields = GetGradientFieldsForBackprop(kv.first);
