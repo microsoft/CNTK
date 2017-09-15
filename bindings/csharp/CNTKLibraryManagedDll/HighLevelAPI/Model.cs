@@ -97,51 +97,51 @@ namespace Microsoft.MachineLearning.Cntk
 
     public interface Model
     {
-        Convolution2D Convolution2D(Dim2 filterShape, int numFilters, Dim2 strides, Boolean pad, DeviceDescriptor device, string name);
         Dense Dense(int outputClasses, AvtivationFunction activation, DeviceDescriptor device, string name);
+
+        Convolution2D Convolution2D(Dim2 filterShape, int numFilters, Dim2 strides, Boolean pad, DeviceDescriptor device, string name);
+
         MaxPooling MaxPooling(Dim2 filterShape, int strides = 1, bool pad = false, string name = "");
+
         AveragePooling AveragePooling(Dim2 filterShape, int strides = 1, bool pad = false, string name = "");
+
         Dropout Dropout(double dropoutRatio, string name);
+
         Embedding Embedding(NDShape shape, InitializationFunction init, IList<float> weights = null, string name = "");
 
-        Recurrence Recurrence(Function stepfunction, bool goBackwards = false, float initialState = 0,
-            bool returnFullState = false, string name = "");
+        Recurrence Recurrence(Function stepfunction, bool goBackwards, float initialState,
+            bool returnFullState, string name = "");
 
-        LSTM LSTM(NDShape shape, NDShape cellShape, AvtivationFunction activation,
-            InitializationFunction init, bool usePeepholes = false, float initBias = 0,
+        RecurrenceFrom RecurrenceFrom(Function stepFunction, bool goBackwards, bool returnFullState, string name = "");
+
+        Fold Fold(Function folderFunction, bool goBackwards, float initialState, bool returnFullState, string name = "");
+
+        UnfoldFrom UnfoldFrom(Function generatorFunction, Function ntilPredicate, int lengthIncrease, string name = "");
+
+        LSTM LSTM(NDShape shape, NDShape cellShape, AvtivationFunction activation, 
+            InitializationFunction init, bool usePeepholes, float initBias, 
             bool enableSelfStabilization = false, string name = "");
 
+        GRU GRU(NDShape shape, NDShape cellShape, AvtivationFunction activation,
+            InitializationFunction init, float initBias, bool enableSelfStabilization,
+            string name = "");
+
+        RNNStep RNNStep(NDShape shape, NDShape cellShape, AvtivationFunction activation,
+            InitializationFunction init, float initBias, bool enableSelfStabilization,
+            string name = "");
+
+        Delay Delay(int T, float initialState = 0, string name = "");
+
+        BatchNormalization BatchNormalization(int mapRank, float initScale,
+            int normalizationTimeConstant, int blendTimeConstant, double epsilon,
+            bool useCntkEngine, string name = "");
+
+        LayerNormalization LayerNormalization(float initialScale, float initialBias,
+            double epsilon, string name = "");
+
+        Stabilizer Stabilizer(int steepness, bool enableSelfStabilization, string name = "");
+
         Model this[string name] { get; }
-    }
-
-    public class Convolution2D : ModelImplementation
-    {
-        public Convolution2D(Variable inputVariable, Dim2 filterShape, int numFilters, Dim2 strides, bool pad, DeviceDescriptor device, string name = null)
-        {
-            Parameter convParams = new Parameter((int[])(filterShape.Concat(numFilters)), DataType.Float,
-                Initialization, device);
-            this.Function = CNTKLib.Convolution(convParams, inputVariable, (int[])strides);
-        }
-        public Dim2 FilterShape { get; set; }
-        public int NumFilters { get; set; }
-        public Dim2 Strides { get; set; }
-        public Boolean Pad { get; set; }
-    }
-
-    public class AveragePooling : ModelImplementation
-    {
-        AveragePooling(Dim2 filterShape, int strides = 1, bool pad = false, string name = "")
-        {
-            throw new NotImplementedException();
-        }
-    }
-    public class MaxPooling : ModelImplementation
-    {
-        MaxPooling(NDShape filter_shape, int strides = 1, bool pad = false, string name = "")
-        {
-            throw new NotImplementedException();
-        }
-
     }
 
     public class Dense : ModelImplementation
@@ -167,6 +167,37 @@ namespace Microsoft.MachineLearning.Cntk
         }
         public int OutputClasses { get; set; }
     }
+
+    public class Convolution2D : ModelImplementation
+    {
+        public Convolution2D(Variable inputVariable, Dim2 filterShape, int numFilters, Dim2 strides, bool pad, DeviceDescriptor device, string name = null)
+        {
+            Parameter convParams = new Parameter((int[])(filterShape.Concat(numFilters)), DataType.Float,
+                Initialization, device);
+            this.Function = CNTKLib.Convolution(convParams, inputVariable, (int[])strides);
+        }
+        public Dim2 FilterShape { get; set; }
+        public int NumFilters { get; set; }
+        public Dim2 Strides { get; set; }
+        public Boolean Pad { get; set; }
+    }
+
+    public class MaxPooling : ModelImplementation
+    {
+        public MaxPooling(Dim2 filterShape, int strides = 1, bool pad = false, string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class AveragePooling : ModelImplementation
+    {
+        public AveragePooling(Dim2 filterShape, int strides = 1, bool pad = false, string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     public class Dropout : ModelImplementation
     {
         public Dropout(double dropoutRatio, string name = null)
@@ -178,7 +209,10 @@ namespace Microsoft.MachineLearning.Cntk
 
     public class Embedding : ModelImplementation
     {
-
+        public Embedding(NDShape shape, InitializationFunction init, IList<float> weights = null, string name = "")
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class Recurrence : ModelImplementation
@@ -201,8 +235,16 @@ namespace Microsoft.MachineLearning.Cntk
 
     public class Fold : ModelImplementation
     {
-        Fold(Function folderFunction, bool goBackwards = false, float initialState = 0,
+        public Fold(Function folderFunction, bool goBackwards = false, float initialState = 0,
                 bool returnFullState = false, string name = "")
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class UnfoldFrom : ModelImplementation
+    {
+        public UnfoldFrom(Function generatorFunction, Function ntilPredicate, int lengthIncrease, string name = "")
         {
             throw new NotImplementedException();
         }
@@ -214,13 +256,13 @@ namespace Microsoft.MachineLearning.Cntk
             InitializationFunction init, bool usePeepholes = false, float initBias = 0, 
             bool enableSelfStabilization = false, string name = "")
         {
-
+            throw new NotImplementedException();
         }
     }
 
     public class GRU : ModelImplementation
     {
-        GRU(NDShape shape, NDShape cellShape, AvtivationFunction activation,
+        public GRU(NDShape shape, NDShape cellShape, AvtivationFunction activation,
             InitializationFunction init,
             float initBias = 0,
             bool enableSelfStabilization = false,
@@ -288,22 +330,124 @@ namespace Microsoft.MachineLearning.Cntk
             this.Function = function;
         }
         public ModelImplementation(InitializationFunction init = null, AvtivationFunction activation = null) { }
-        public Convolution2D Convolution2D(Dim2 filterShape, int numFilters, Dim2 strides, Boolean pad, DeviceDescriptor device, string name = null)
-        {
-            var conv = new Convolution2D(this.Function, filterShape, numFilters, strides, pad, device, name);
-            // somehow connect the new node to the existing model
-            return conv;
-        }
+
         public Dense Dense(int outputClasses, AvtivationFunction activation, DeviceDescriptor device, string name = null)
         {
-            var dense = new Dense(this.Function, outputClasses, activation, device, name);
-            // somehow connect the new node to the existing model
-            return dense;
+            return new Dense(this.Function, outputClasses, activation, device, name);
         }
+        public Convolution2D Convolution2D(Dim2 filterShape, int numFilters, Dim2 strides, Boolean pad, DeviceDescriptor device, string name = null)
+        {
+            return new Convolution2D(this.Function, filterShape, numFilters, strides, pad, device, name);
+        }
+
+        public MaxPooling MaxPooling(Dim2 filterShape, int strides = 1, bool pad = false, string name = "")
+        {
+            return new MaxPooling(filterShape, strides = 1, pad, name);
+        }
+
+        public AveragePooling AveragePooling(Dim2 filterShape, int strides = 1, bool pad = false, string name = "")
+        {
+            return new AveragePooling(filterShape, strides, pad, name);
+        }
+
         public Dropout Dropout(double dropoutRatio, string name = null)
         {
-            return null;
+            return new Dropout(dropoutRatio, name);
         }
+
+        public Embedding Embedding(NDShape shape, InitializationFunction init, IList<float> weights = null, string name = "")
+        {
+            return new Embedding(shape, init, weights, name);
+        }
+
+        public Recurrence Recurrence(Function stepfunction, bool goBackwards = false, float initialState = 0,
+            bool returnFullState = false, string name = "")
+        {
+            return new Recurrence(stepfunction, goBackwards, initialState, returnFullState, name);
+        }
+
+        public RecurrenceFrom RecurrenceFrom(Function stepFunction, bool goBackwards = false,
+            bool returnFullState = false, string name = "")
+        {
+            return new RecurrenceFrom(stepFunction, goBackwards, returnFullState, name);
+        }
+
+        public Fold Fold(Function folderFunction, bool goBackwards = false, float initialState = 0, 
+            bool returnFullState = false, string name = "")
+        {
+            return new Fold(folderFunction, goBackwards, initialState, returnFullState, name);
+        }
+
+        public UnfoldFrom UnfoldFrom(Function generatorFunction, Function ntilPredicate, int lengthIncrease, string name = "")
+        {
+            return new UnfoldFrom(generatorFunction, ntilPredicate, lengthIncrease, name);
+        }
+
+        public LSTM LSTM(NDShape shape, NDShape cellShape, AvtivationFunction activation,
+            InitializationFunction init, bool usePeepholes = false, float initBias = 0,
+            bool enableSelfStabilization = false, string name = "")
+        {
+            return new LSTM(shape, cellShape, activation, init, usePeepholes, initBias,
+            enableSelfStabilization, name);
+        }
+
+        public GRU GRU(NDShape shape, NDShape cellShape, AvtivationFunction activation,
+            InitializationFunction init,
+            float initBias = 0,
+            bool enableSelfStabilization = false,
+            string name = "")
+        {
+            return new GRU(shape, cellShape, activation, init,
+                initBias, enableSelfStabilization, name);
+        }
+
+        public RNNStep RNNStep(NDShape shape, NDShape cellShape, AvtivationFunction activation,
+            InitializationFunction init,
+            float init_bias = 0,
+            bool enable_self_stabilization = false,
+            string name = "")
+        {
+            return new RNNStep(shape, cellShape, activation,
+                init, init_bias, enable_self_stabilization, name);
+        }
+
+        public Delay Delay(int T = 1, float initialState = 0, string name = "")
+        {
+            return new Delay(T, initialState, name);
+        }
+
+        public BatchNormalization BatchNormalization(int mapRank = 0,
+                       float initScale = 1,
+                       int normalizationTimeConstant = 5000,
+                       int blendTimeConstant = 0,
+                       double epsilon = 0.00001,
+                       bool useCntkEngine = false,
+                       string name = "")
+        {
+            return new BatchNormalization(mapRank,
+                       initScale,
+                       normalizationTimeConstant,
+                       blendTimeConstant,
+                       epsilon,
+                       useCntkEngine,
+                       name);
+        }
+
+        public LayerNormalization LayerNormalization(float initialScale = 1, float initialBias = 0, 
+            double epsilon = 0.00001, string name = "")
+        {
+            return new LayerNormalization(initialScale, initialBias, epsilon, name);
+        }
+
+        public Stabilizer Stabilizer(int steepness = 4, bool enableSelfStabilization = true, string name = "")
+        {
+            return new Stabilizer(steepness, enableSelfStabilization, name);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+
         public Model ElementWisePlus(Model otherModel)
         {
             return this;
