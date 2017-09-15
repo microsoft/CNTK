@@ -3517,12 +3517,8 @@ Variable BlockFunction::OutputForDynamicInvocation()
     blockOutput.SetOwner(thisShared);
 
     // implant the block's output Variable
-#if 1
-    m_outputs = vector<Variable>{ blockOutput };
-#else
     m_outputs.resize(1);
-    m_outputs.front() = blockOutput;
-#endif
+    m_outputs.front() = move(blockOutput);
     m_outputInitializingByThreadId = std::thread::id();
     m_outputsInitFlag = 1;
 
