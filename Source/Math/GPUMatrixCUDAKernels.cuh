@@ -20,21 +20,8 @@
 #include <assert.h>
 #include <float.h>
 #include "half.hpp"
+#include "fpgeneric.h"
 #pragma pop_macro("TENSOR_OPS_DECL")
-
-// REVIEW alexeyk: disable warnings properly for GCC/clang
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4100) // 'identifier': unreferenced formal parameter
-#pragma warning(disable : 4127) // conditional expression is constant
-#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
-#pragma warning(disable : 4458) // declaration of 'identifier' hides class member
-#pragma warning(disable : 4515) // 'namespace': namespace uses itself
-#endif
-#include <cub/cub.cuh>
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 // We would like to use 64-bit integer to support large matrices. However, CUDA seems to support only 32-bit integer
 // For now, use int32_t to ensure that both Linux and Windows see this as 32 bit integer type.

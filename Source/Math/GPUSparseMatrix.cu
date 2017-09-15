@@ -19,7 +19,6 @@
 #include "CommonMatrix.h"
 #include <iostream> // for cout/cerr
 #include <assert.h>
-#include "fpgeneric.h"
 
 typedef unsigned char byte;
 
