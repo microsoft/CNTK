@@ -20,6 +20,9 @@
 #include <float.h>
 #pragma pop_macro("TENSOR_OPS_DECL")
 
+#include <curand.h>
+#include <curand_kernel.h>
+
 // REVIEW alexeyk: disable warnings properly for GCC/clang
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -644,6 +647,41 @@ __global__ void _scaleAndAddScalar(
         return;
     c[id] = alpha * a[0] + b[id];
 };
+
+template <class ElemType>
+__global__ void _generateRandomNumberNormalDistribution(float* vec, curandState *states, CUDA_LONG N, unsigned long long seed) {
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+	curand_init(seed, id, 0, &states[id]);
+	vec[id] = curand_uniform(&states[id]);
+}
+
+template <class ElemType>
+__global__ void _stochasticbinaryForward(const ElemType* a, ElemType* b, CUDA_LONG N, const float annealSlope) {
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+	b[id] = a[id] <= 0 ? -1 : 1;
+}
+
+template <class ElemType>
+__global__ void _stochasticbinaryBackward_PassThrough(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N) {
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+    ingrad[id] = fabs_(a[id]) <= 1 ? outgrad[id] : 0;
+}
+
+template <class ElemType>
+__global__ void _stochasticbinaryBackward_Anneal(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N, const float annealSlope) {
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+    ElemType tanhx = tanh_(a[id] * annealSlope);
+	ingrad[id] = outgrad[id] * (1 - tanhx * tanhx) * annealSlope;
+}
+
 
 template <class ElemType>
 __global__ void _multiply1x1AndWeightedAdd(

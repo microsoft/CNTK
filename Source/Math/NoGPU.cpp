@@ -2012,6 +2012,14 @@ void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, 
 
 #pragma endregion Other helper functions
 
+template <class ElemType>
+void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope) {
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope) {
+}
+
 #pragma region Static BLAS Functions
 template <class ElemType>
 void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, const bool transposeA, const GPUMatrix<ElemType>& /*b*/, const bool transposeB,
