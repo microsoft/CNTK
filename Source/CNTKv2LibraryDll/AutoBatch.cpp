@@ -3425,7 +3425,28 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variab
     let composite = dynamic_pointer_cast<CompositeFunction>(callee);
     if (!composite)
         InvalidArgument("Invoke requires the callee to be a CompositeFunction");
-    return MakeSharedObject<BlockFunction>(composite, operands, /*isBasicBlock=*/false, name)->OutputForDynamicInvocation();
+    // this can be called in two situations:
+    //  - during static building of a static graph
+    //  - during dynamic imperative code
+    // PERF BUGBUG: This is *not* nice, as we need to check the arguments all the time.
+    if (any_of(operands.begin(), operands.end(), [](const Variable& arg) { return arg.Shape().IsUnknown(); }))
+    {
+        // If any Placeholder inputs, we are in static land -> inline the composite
+        // Note: This will be slow, but it's OK since we are in static pre-processing land, not inside dynamic computation.
+        let compositeArgs = composite->Arguments();
+        if (compositeArgs.size() != operands.size())
+            InvalidArgument("Invoke called with wrong number of operands (%d provided vs. %d expected", (int)operands.size(), (int)compositeArgs.size());
+        unordered_map<Variable, Variable> replacementMap;
+        for (size_t i = 0; i < operands.size(); i++)
+            replacementMap[compositeArgs[i]] = operands[i];
+        let clone = composite->Clone(ParameterCloningMethod::Share, replacementMap);
+        let& outputs = clone->Outputs();
+        if (outputs.size() != 1)
+            InvalidArgument("Invoke can only be used with BlockFunctions that have a single output (this one has %d).", (int)outputs.size());
+        return outputs.front();
+    }
+    else
+        return MakeSharedObject<BlockFunction>(composite, operands, /*isBasicBlock=*/false, name)->OutputForDynamicInvocation();
 }
 
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.

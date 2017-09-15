@@ -463,14 +463,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     let profiler = Function::CreateDynamicProfiler(1, L"GRU");
     let irBarrier = Barrier(2, Named("irBarrier"));
     // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
-    return BinaryModel({ /*W,*/ R, b },
-    {
-        { L"projectInput",  projectInput },
-        //{ L"projectState",  projectState },
-        //{ L"normW",  normW  },
-        { L"normR",  normR  },
-    },
-    [=](const Variable& dh, const Variable& x)
+    let gru = [=](const Variable& dh, const Variable& x)
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // projected contribution from input(s), hidden, and bias
@@ -483,13 +476,13 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         let cx_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("cx_proj"));
         let ch_proj =                                                                              Slice(projdh3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("ch_proj"));
 
-        let i = Sigmoid(irBarrier(i_proj), Named("i"));                  // update gate z(t)  --if 1 then take new input; if 0 then retain state
-        let r = Sigmoid(irBarrier(r_proj), Named("r"));                  // reset gate r(t)   --new input + projected old state mixed in
+        let i = Sigmoid(irBarrier(i_proj), Named("i"));  // update gate z(t)  --if 1 then take new input; if 0 then retain state
+        let r = Sigmoid(irBarrier(r_proj), Named("r"));  // reset gate r(t)   --new input + projected old state mixed in
 
         let c_proj = cx_proj + r * ch_proj;
-        let c = Tanh(c_proj, Named("c"));                     // "cell"
+        let c = Tanh(c_proj, Named("c"));                // "cell"
 
-        let h = dh + i * (c - dh);                // state
+        let h = dh + i * (c - dh);                       // state
         //    = i * c  +  (1 - i) * dh;
 
         //# for comparison: CUDNN_GRU
@@ -500,6 +493,22 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 
         Function::SetDynamicProfiler(prevProfiler);
         return h;
+    };
+    let gruComposite = gru(PlaceholderVariable(), PlaceholderVariable());
+    return BinaryModel({ /*W,*/ R, b },
+    {
+        { L"projectInput",  projectInput },
+        //{ L"projectState",  projectState },
+        //{ L"normW",  normW  },
+        { L"normR",  normR  },
+    },
+    [=](const Variable& dh, const Variable& x)
+    {
+#if 0   // using the composite
+        return Invoke(gruComposite, { dh, x }, /*isBasicBlock=*/false);
+#else   // using imperative code
+        return gru(dh, x);
+#endif
     });
 }
 #endif
