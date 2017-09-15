@@ -95,7 +95,7 @@ Similar to `learning_rate_schedule`, the arguments are interpreted in the same w
 ### A C#/.NET API that enables people to build and train networks.
 
 ##### Training Support Is Added To C#/.NET API.
-With this addition to the existing CNTK C# Evaluation API, .NET developers can enjoy fully integrated deep learning experience that no other toolkits can offer. A deep neural network can be built, trained, and validated fully in C# while still taking advantage of CNTK performance strength. Users may debug directly into CNTK source code to see how a DNN is trained and evaluated. Production integration has never been as easy as now with CNTK C# API. New features include:
+With this addition to the existing CNTK C# Evaluation API, .NET developers can enjoy fully a integrated deep learning experience. A deep neural network can be built, trained, and validated fully in C# while still taking advantage of CNTK performance strength. Users may debug directly into CNTK source code to see how a DNN is trained and evaluated. New features include:
 
 ##### Basic C# Training API.
 Over 100 basic functions are supported to build a computation network. These functions include Sigmoid, Tanh, ReLU, Plus, Minus, Convolution, Pooling, BatchNormalization, to name a few.
@@ -118,7 +118,7 @@ Function resNetNode = CNTKLib.ReLU(CNTKLib.Plus(conv, input));
 We provide MinibatchSource and MinibacthData utilities to help efficient data loading and batching.
 
 ##### Training Support
-We support many Stochastic Gradient Descent optimizers commonly seen in DNN literatures: MomentumSGDLearner, AdamLearner, AdaGradLearner, etc. For example, to train a model with a ADAM Stochastic Optimizer:
+We support many Stochastic Gradient Descent optimizers commonly seen in the DNN literature: MomentumSGDLearner, AdamLearner, AdaGradLearner, etc. For example, to train a model with a ADAM Stochastic Optimizer:
 ```cs
 var parameterLearners = new List<Learner>() { Learner.AdamLearner(classifierOutput.Parameters(),
                                                                   learningRate, momentum) };
