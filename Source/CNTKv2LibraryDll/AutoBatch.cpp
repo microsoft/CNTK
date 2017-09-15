@@ -743,16 +743,7 @@ public:
 #endif
             s_currentArenaUsed = 0;
         }
-#if 1
         auto region = s_currentArena->SliceViewAsShape(s_currentArenaUsed, s_currentArenaUsed + numElements, shape);
-#else
-        //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"arena NewNDArrayView", 3, numElements);
-        vector<size_t> startOffset{ s_currentArenaUsed };
-        vector<size_t> extent{ numElements };
-        //NDArrayViewPtr region = s_currentArena->SliceView(startOffset, extent); // SliceView() adjusts the MatrixView
-        NDArrayViewPtr region = s_currentArena->Slice(startOffset, extent);
-        ReplaceWithReshapedViewIfNeeded(region, shape);
-#endif
         s_currentArenaUsed += numElements;
         return region;
     }
@@ -1561,12 +1552,16 @@ class Variable::AutoBatch
     static void RealizeVariableAsView(VariableFields& outputFields, NDArrayViewPtr from)
     {
         fail_if(!from, "Variable's input unexpectedly has no value yet");
-        // optional implicit index
+        // optional implicit index and reshape
         let index = outputFields.m_redirection.m_index;
         if (index != SIZE_MAX) // special sentinel value that means "don't slice, actually"
+#if 1
+            from = from->SliceViewAsShape(index, index + 1, outputFields.m_shape);
+#else
             from = from->IndexLastAxis(index);
-        // optional implicit Reshape()
-        ReplaceWithReshapedViewIfNeeded(from, outputFields.m_shape);
+#endif
+        else // no slice
+            ReplaceWithReshapedViewIfNeeded(from, outputFields.m_shape);
         outputFields.m_value = move(from);
     }
     // get the value that must already have been cached
@@ -2664,7 +2659,7 @@ public:
         // We must do this backwards. 
         let index = inputFields.m_redirection.m_index;
         auto gradient = gradFields.m_gradient;
-        // slice if needed
+        // slice and reshape if needed
         if (index != SIZE_MAX) // it's a slice: gradient is a slice view into from's output gradient
         {
             if (beta == 0.0) // gradient is fresh: explicitly reset all (since we are slicing into the input gradientm, we cannot use the beta mechanism)
@@ -2673,10 +2668,15 @@ public:
                 m_stats.numBackpropSetZeroes++;
                 beta = 1.0;
             }
+#if 1
+            gradient = gradient->SliceViewAsShape(index, index + 1, inputFields.m_shape);
+#else
             gradient = gradient->IndexLastAxis(index);
+            ReplaceWithReshapedViewIfNeeded(gradient, inputFields.m_shape);
+#endif
         }
-        // reshape if needed
-        ReplaceWithReshapedViewIfNeeded(gradient, inputFields.m_shape);
+        else // no slice
+            ReplaceWithReshapedViewIfNeeded(gradient, inputFields.m_shape);
         // implant the cached gradient
         inputFields.m_gradient = move(gradient);
         return{ inputFields.m_gradient, beta };
