@@ -670,7 +670,8 @@ __global__ void _stochasticbinaryBackward_PassThrough(const ElemType* a, const E
 	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 	if (id >= N)
 		return;
-    ingrad[id] = fabs_(a[id]) <= 1 ? outgrad[id] : 0;
+    //ingrad[id] = fabs_(a[id]) <= 1 ? outgrad[id] : 0;
+    ingrad[id] = 0;
 }
 
 template <class ElemType>
@@ -679,7 +680,8 @@ __global__ void _stochasticbinaryBackward_Anneal(const ElemType* a, const ElemTy
 	if (id >= N)
 		return;
     ElemType tanhx = tanh_(a[id] * annealSlope);
-	ingrad[id] = outgrad[id] * (1 - tanhx * tanhx) * annealSlope;
+	//ingrad[id] = outgrad[id] * (1 - tanhx * tanhx) * annealSlope;
+    ingrad[id] = 0;
 }
 
 
