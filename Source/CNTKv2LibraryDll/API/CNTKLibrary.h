@@ -3798,7 +3798,9 @@ namespace CNTK
         std::wstring m_name;
         mutable std::wstring m_uid;
         Dictionary m_attributes;
-        std::unordered_set<std::wstring> m_dirtyAttributes;
+        //std::unordered_set<std::wstring> m_dirtyAttributes;
+        bool m_dirtyAttributeDropoutRate = false;
+        bool m_dirtyAttributeRngSeed = false;
 
 #ifdef SWIGPYTHON
     public:

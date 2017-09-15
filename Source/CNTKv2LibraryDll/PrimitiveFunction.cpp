@@ -1330,7 +1330,8 @@ namespace CNTK
             LogicError("Cannot set dropout rate on '%S' function.", OpName().c_str());
 
         m_attributes[AttributeNameDropoutRate] = dropoutRate;
-        m_dirtyAttributes.insert(AttributeNameDropoutRate);
+        //m_dirtyAttributes.insert(AttributeNameDropoutRate);
+        m_dirtyAttributeDropoutRate = true;
     }
 
     void PrimitiveFunction::SetRandomSeed(size_t seed)
@@ -1339,6 +1340,7 @@ namespace CNTK
             LogicError("Cannot set random seed on '%S' function.", OpName().c_str());
 
         m_attributes[AttributeNameRngSeed] = seed;
-        m_dirtyAttributes.insert(AttributeNameRngSeed);
+        //m_dirtyAttributes.insert(AttributeNameRngSeed);
+        m_dirtyAttributeRngSeed = true;
     }
 }

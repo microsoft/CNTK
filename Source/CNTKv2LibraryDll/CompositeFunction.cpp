@@ -1963,36 +1963,38 @@ namespace CNTK
 
             auto function = var.OutputOwner();
 
-            if (function->m_dirtyAttributes.empty())
+            if (!function->m_dirtyAttributeDropoutRate && !function->m_dirtyAttributeRngSeed)
+            //if (function->m_dirtyAttributes.empty())
                 continue;
 
             auto node = varNodePair.second;
 
-            for (const wstring& attribute : function->m_dirtyAttributes)
-            {
-                if (attribute == PrimitiveFunction::AttributeNameDropoutRate)
+            //for (const wstring& attribute : function->m_dirtyAttributes)
+            //{
+                if (function->m_dirtyAttributeDropoutRate)//attribute == PrimitiveFunction::AttributeNameDropoutRate)
                 {
-                    auto dropoutRate = function->m_attributes[attribute].Value<double>();
+                    auto dropoutRate = function->m_attributes[PrimitiveFunction::AttributeNameDropoutRate].Value<double>();
                     auto dropoutPtr = dynamic_cast<DropoutNodeBase*>(node.get());
                     assert(dropoutPtr != nullptr);
                     dropoutPtr->SetDropoutRate(dropoutRate);
                 }
-                else if (attribute == PrimitiveFunction::AttributeNameRngSeed) 
+                else if (function->m_dirtyAttributeRngSeed)//attribute == PrimitiveFunction::AttributeNameRngSeed)
                 {
                     auto seed = function->m_attributes[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
                     auto rngUserPtr = dynamic_cast<RngUser*>(node.get());
                     assert(rngUserPtr != nullptr);
                     rngUserPtr->SetRngState(seed);
                 }
-                else 
-                {
-                    // Should never happen.
-                    LogicError("ApplyAttributeUpdates: function '%S' specified an unsupported attribute '%S'.",
-                        function->AsString().c_str(), attribute.c_str());
-                }
-            }
+                //else 
+                //{
+                //    // Should never happen.
+                //    LogicError("ApplyAttributeUpdates: function '%S' specified an unsupported attribute '%S'.",
+                //        function->AsString().c_str(), attribute.c_str());
+                //}
+            //}
 
-            function->m_dirtyAttributes.clear();
+            function->m_dirtyAttributeDropoutRate = function->m_dirtyAttributeRngSeed = false;
+            //function->m_dirtyAttributes.clear();
             node->SetEvalTimeStampOutdatedWrtAll();
         }
     }
