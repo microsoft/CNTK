@@ -881,7 +881,7 @@ namespace CNTK
         friend class NonOwningFunctionListBuilder;
         struct
         {
-            mutable size_t m_visitedTag = 0; // used for tree traversal at various places (currently only in backprop, in two places)
+            mutable size_t m_visitedTag = 0; // used for tree traversal at various places (currently only in backprop, in two places, and in composite inlining)
             size_t m_pendingInputs;          // during batched forward: counter how many inputs have already become available
             PrimitiveFunction* m_link;       // temporary linked list, e.g. for batched operations
             PrimitiveFunction* m_aliasList;  // list of aliases (common subexpression), local to ExecuteBatchedOpAndUpdateSchedule()
