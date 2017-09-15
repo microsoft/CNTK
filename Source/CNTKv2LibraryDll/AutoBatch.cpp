@@ -743,13 +743,17 @@ public:
 #endif
             s_currentArenaUsed = 0;
         }
+#if 1
+        auto region = s_currentArena->SliceViewAsShape(s_currentArenaUsed, s_currentArenaUsed + numElements, shape);
+#else
         //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"arena NewNDArrayView", 3, numElements);
         vector<size_t> startOffset{ s_currentArenaUsed };
         vector<size_t> extent{ numElements };
         //NDArrayViewPtr region = s_currentArena->SliceView(startOffset, extent); // SliceView() adjusts the MatrixView
         NDArrayViewPtr region = s_currentArena->Slice(startOffset, extent);
-        s_currentArenaUsed += numElements;
         ReplaceWithReshapedViewIfNeeded(region, shape);
+#endif
+        s_currentArenaUsed += numElements;
         return region;
     }
 };
