@@ -1362,7 +1362,7 @@ public:
         }
         // check if number of frames is as expected
         if (expectedframes != SIZE_MAX && L.getnumframes() != expectedframes)
-            LogicError("getlattice: number of frames mismatch between numerator lattice and features, %lu vs %lu, in %S", L.getnumframes(), expectedframes, key);
+            LogicError("getlattice: number of frames mismatch between numerator lattice and features, %lu vs %lu, in %ls", L.getnumframes(), expectedframes, key.c_str());
         // remember the latice key for diagnostics messages
         L.key = key;
     };
