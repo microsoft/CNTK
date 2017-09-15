@@ -28,6 +28,7 @@
 #include "CntkBatchNormalization.cuh"
 #include "Convolution.cuh"
 #include "CuDnnRNN.h"
+#include "fpgeneric.h"
 
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
@@ -928,7 +929,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTransposeOf(const GPUMatrix<Elem
     ElemType alpha = 1;
     ElemType beta = 0;
     cublasStatus_t st;
-    st = cublasgeamHelper(cuHandle, transA, transB, m, n, &alpha, a.Data(), n, &beta, a.Data(), n, Data(), (int) m_numRows);
+    st = cublasTransposeHelper(cuHandle, transA, transB, m, n, &alpha, a.Data(), n, &beta, a.Data(), n, Data(), (int) m_numRows);
     if (st != CUBLAS_STATUS_SUCCESS)
         RuntimeError("AssignTransposeOf failed");
     m_numRows = a.m_numCols;
@@ -2472,7 +2473,7 @@ ElemType GPUMatrix<ElemType>::AbsoluteMax() const
     cublasHandle_t cuHandle = GetCublasHandle(GetComputeDeviceId());
     ElemType res;
     int resInd = 0;
-    cublasIamaxHelper(cuHandle, (CUDA_LONG)GetNumElements(), Data(), 1, &resInd);
+    cublasamaxHelper(cuHandle, (CUDA_LONG)GetNumElements(), Data(), 1, &resInd);
     resInd--;
     CUDA_CALL(cudaMemcpy(&res, Data() + resInd, sizeof(ElemType), cudaMemcpyDeviceToHost));
     return res;
@@ -3463,7 +3464,7 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
 #ifdef _MSC_VER
 // half only takes float as input, so suppress the warning about double to float conversion
 #pragma warning(push)
-#pragma warning(disable : 4244) // warning C4244: conversion from 'double' to 'float', possible loss of data 
+#pragma warning(disable : 4244) // warning C4244: conversion from 'double' to 'float', possible loss of data
 #endif
     ElemType mbStatsWeight = (ElemType)(1 - blendFactor); // weight for contribution from actual MB stats (0 if none, e.g. locked BN node)
 #ifdef _MSC_VER
@@ -3502,33 +3503,6 @@ void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, 
 }
 
 #pragma region Static BLAS Functions
-// float/double overloads of cublasSgemm()/cublasDgemm()
-static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float* alpha, const float* A, int lda, const float* B, int ldb, const float* beta, float* C, int ldc)
-{
-    return cublasSgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
-}
-static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const double* alpha, const double* A, int lda, const double* B, int ldb, const double* beta, double* C, int ldc)
-{
-    return cublasDgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
-}
-static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const float* alpha, const float* x, int incx, float* y, int incy)
-{
-    return cublasSaxpy(handle, n, alpha, x, incx, y, incy);
-}
-static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const double* alpha, const double* x, int incx, double* y, int incy)
-{
-    return cublasDaxpy(handle, n, alpha, x, incx, y, incy);
-}
-
-// half overloads
-static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const half* alpha, const half* A, int lda, const half* B, int ldb, const half* beta, half* C, int ldc)
-{
-    return cublasHgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
-}
-static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const half* alpha, const half* x, int incx, half* y, int incy)
-{
-    return cublasAxpyEx(handle, n, (void*)alpha, CUDA_R_16F, (void*)x, CUDA_R_16F, incx, (void*)y, CUDA_R_16F, incy, CUDA_R_32F);
-}
 
 template <class ElemType>
 void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB,
@@ -3555,7 +3529,7 @@ void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix
         RuntimeError("!(m>0 && k>0 && l>0 && n>0)"); // converting from size_t to int may cause overflow
     if (k != l)
         RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
-    CUBLAS_CALL(cublas_gemm(cuHandle, transA, transB, m, n, k, &alpha, a.Data(), (int) a.m_numRows, b.Data(), (int) b.m_numRows, &beta, c.Data(), (int) c.m_numRows));
+    CUBLAS_CALL(cublasgemmHelper(cuHandle, transA, transB, m, n, k, &alpha, a.Data(), (int) a.m_numRows, b.Data(), (int) b.m_numRows, &beta, c.Data(), (int) c.m_numRows));
 }
 
 template <class ElemType>
@@ -3640,7 +3614,7 @@ template <class ElemType>
                 InvalidArgument("dimension of matrix c does not match dimension of matrix a.");
 
             cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
-            CUBLAS_CALL(cublas_axpy(cuHandle, len, &alpha, a.Data(), incx, c.Data(), incy));
+            CUBLAS_CALL(cublasaxpyHelper(cuHandle, len, &alpha, a.Data(), incx, c.Data(), incy));
         }
         else if (a.GetNumElements() == 1)
         {
@@ -3684,7 +3658,7 @@ template <class ElemType>
 
             foreach_row (i, c)
             {
-                CUBLAS_CALL(cublas_axpy(cuHandle, n, &alpha, a.Data(), 1, c.Data()+ i, m));
+                CUBLAS_CALL(cublasaxpyHelper(cuHandle, n, &alpha, a.Data(), 1, c.Data()+ i, m));
             }
         }
         else
@@ -4777,7 +4751,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
         if (op == ElementWiseOperator::opCopy && beta == 0 && alpha == 1)
             return CUDA_CALL(cudaMemcpy(Data()+ offsets[1], a.Data()+ offsets[0], sizeof(ElemType) * regularOpDims[0], cudaMemcpyDeviceToDevice));
         else if (op == ElementWiseOperator::opCopy && beta == 1)
-            return CUBLAS_CALL(cublas_axpy(GetCublasHandle(GetComputeDeviceId()), (int) regularOpDims[0], &alpha, a.Data()+ offsets[0], 1, Data()+ offsets[1], 1));
+            return CUBLAS_CALL(cublasaxpyHelper(GetCublasHandle(GetComputeDeviceId()), (int) regularOpDims[0], &alpha, a.Data()+ offsets[0], 1, Data()+ offsets[1], 1));
         else
             return LaunchUnaryTensorOp<ElemType>(beta, a.Data()+ offsets[0], Data()+ offsets[1], alpha, op, regularOpDims[0]);
     }
@@ -4798,7 +4772,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
         auto ACols = reducingOpDims[0];   // horizontal steps (reduction)
         auto ALd = reducingStrides[0][0]; // horizontal step width through matrix
         cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
-        CUBLAS_CALL(cublas_gemm(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int) /*CRows=*/ARows, /*CCols=*/1, (int) ACols, &alpha,
+        CUBLAS_CALL(cublasgemmHelper(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int) /*CRows=*/ARows, /*CCols=*/1, (int) ACols, &alpha,
                                 /*A00=*/a.Data()+ offsets[0], (int) ALd,
                                 /*B00=*/GetOnesVector<ElemType>(ACols, a.GetComputeDeviceId())->Data(), (int) /*BRows=*/ACols, &beta,
                                 /*C00=*/Data()+ offsets[1], (int) /*CRows=*/ARows));

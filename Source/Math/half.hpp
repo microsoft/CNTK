@@ -65,6 +65,150 @@ public:
     __CUDA_HOSTDEVICE__ operator bool() const { return (__x & 0x7FFF) != 0; }
 };
 
+/* A selector used in kernels to get compute type base on ElemType(storage) */
+/* default case, compute type == ElemType */
+template <typename ElemType>
+struct TypeSelector
+{
+    typedef ElemType comp_t;
+};
+
+/* Specialization for half. Kernels uses this wants io in half while compute in float */
+template <>
+struct TypeSelector<half>
+{
+    typedef float comp_t;
+};
+
+/* Global-space operator functions are only available to nvcc compilation */
+#if defined(__CUDACC__)
+/* Some basic arithmetic operations expected of a builtin */
+__host__ __device__ __forceinline__ half operator+(const half &lh, const half &rh) { return (half)((float)lh + (float)rh); }
+__host__ __device__ __forceinline__ half operator-(const half &lh, const half &rh) { return (half)((float)lh - (float)rh); }
+__host__ __device__ __forceinline__ half operator*(const half &lh, const half &rh) { return (half)((float)lh * (float)rh); }
+__host__ __device__ __forceinline__ half operator/(const half &lh, const half &rh) { return (half)((float)lh / (float)rh); }
+
+__host__ __device__ __forceinline__ half &operator+=(half &lh, const half &rh) { lh = lh + rh; return lh; }
+__host__ __device__ __forceinline__ half &operator-=(half &lh, const half &rh) { lh = lh - rh; return lh; }
+__host__ __device__ __forceinline__ half &operator*=(half &lh, const half &rh) { lh = lh * rh; return lh; }
+__host__ __device__ __forceinline__ half &operator/=(half &lh, const half &rh) { lh = lh / rh; return lh; }
+
+__host__ __device__ __forceinline__ half &operator++(half &h)      { h += half(1.0f); return h; }
+__host__ __device__ __forceinline__ half &operator--(half &h)      { h -= half(1.0f); return h; }
+__host__ __device__ __forceinline__ half  operator++(half &h, int) { half ret = h; h += half(1.0f); return ret; }
+__host__ __device__ __forceinline__ half  operator--(half &h, int) { half ret = h; h -= half(1.0f); return ret; }
+
+/* Unary plus and inverse operators */
+__host__ __device__ __forceinline__ half operator+(const half &h) { return h; }
+__host__ __device__ __forceinline__ half operator-(const half &h) { return half(0.0f) - h; }
+
+/* Some basic comparison operations to make it look like a builtin */
+__host__ __device__ __forceinline__ bool operator==(const half &lh, const half &rh) { return (float)lh == (float)rh; }
+__host__ __device__ __forceinline__ bool operator!=(const half &lh, const half &rh) { return (float)lh != (float)rh; }
+__host__ __device__ __forceinline__ bool operator> (const half &lh, const half &rh) { return (float)lh > (float)rh; }
+__host__ __device__ __forceinline__ bool operator< (const half &lh, const half &rh) { return (float)lh < (float)rh; }
+__host__ __device__ __forceinline__ bool operator>=(const half &lh, const half &rh) { return (float)lh >= (float)rh; }
+__host__ __device__ __forceinline__ bool operator<=(const half &lh, const half &rh) { return (float)lh <= (float)rh; }
+
+// overload binary operators between 'half' and build-in type. TODO: This should be handled in a better way
+// int
+__host__ __device__ __forceinline__ float operator+(const int &lh, const half &rh) { return (float)lh + (float)rh; }
+__host__ __device__ __forceinline__ float operator-(const int &lh, const half &rh) { return (float)lh - (float)rh; }
+__host__ __device__ __forceinline__ float operator*(const int &lh, const half &rh) { return (float)lh * (float)rh; }
+__host__ __device__ __forceinline__ float operator/(const int &lh, const half &rh) { return (float)lh / (float)rh; }
+__host__ __device__ __forceinline__ bool operator==(const int &lh, const half &rh) { return (float)lh == (float)rh; }
+__host__ __device__ __forceinline__ bool operator!=(const int &lh, const half &rh) { return (float)lh != (float)rh; }
+__host__ __device__ __forceinline__ bool operator> (const int &lh, const half &rh) { return (float)lh > (float)rh; }
+__host__ __device__ __forceinline__ bool operator< (const int &lh, const half &rh) { return (float)lh < (float)rh; }
+__host__ __device__ __forceinline__ bool operator>=(const int &lh, const half &rh) { return (float)lh >= (float)rh; }
+__host__ __device__ __forceinline__ bool operator<=(const int &lh, const half &rh) { return (float)lh <= (float)rh; }
+
+__host__ __device__ __forceinline__ float operator+(const half &lh, const int &rh) { return (float)lh + (float)rh; }
+__host__ __device__ __forceinline__ float operator-(const half &lh, const int &rh) { return (float)lh - (float)rh; }
+__host__ __device__ __forceinline__ float operator*(const half &lh, const int &rh) { return (float)lh * (float)rh; }
+__host__ __device__ __forceinline__ float operator/(const half &lh, const int &rh) { return (float)lh / (float)rh; }
+__host__ __device__ __forceinline__ bool operator==(const half &lh, const int &rh) { return (float)lh == (float)rh; }
+__host__ __device__ __forceinline__ bool operator!=(const half &lh, const int &rh) { return (float)lh != (float)rh; }
+__host__ __device__ __forceinline__ bool operator> (const half &lh, const int &rh) { return (float)lh > (float)rh; }
+__host__ __device__ __forceinline__ bool operator< (const half &lh, const int &rh) { return (float)lh < (float)rh; }
+__host__ __device__ __forceinline__ bool operator>=(const half &lh, const int &rh) { return (float)lh >= (float)rh; }
+__host__ __device__ __forceinline__ bool operator<=(const half &lh, const int &rh) { return (float)lh <= (float)rh; }
+
+// double
+__host__ __device__ __forceinline__ double operator+(const double &lh, const half &rh) { return (double)lh + (double)rh; }
+__host__ __device__ __forceinline__ double operator-(const double &lh, const half &rh) { return (double)lh - (double)rh; }
+__host__ __device__ __forceinline__ double operator*(const double &lh, const half &rh) { return (double)lh * (double)rh; }
+__host__ __device__ __forceinline__ double operator/(const double &lh, const half &rh) { return (double)lh / (double)rh; }
+__host__ __device__ __forceinline__ bool operator==(const double &lh, const half &rh) { return (double)lh == (double)rh; }
+__host__ __device__ __forceinline__ bool operator!=(const double &lh, const half &rh) { return (double)lh != (double)rh; }
+__host__ __device__ __forceinline__ bool operator> (const double &lh, const half &rh) { return (double)lh > (double)rh; }
+__host__ __device__ __forceinline__ bool operator< (const double &lh, const half &rh) { return (double)lh < (double)rh; }
+__host__ __device__ __forceinline__ bool operator>=(const double &lh, const half &rh) { return (double)lh >= (double)rh; }
+__host__ __device__ __forceinline__ bool operator<=(const double &lh, const half &rh) { return (double)lh <= (double)rh; }
+
+__host__ __device__ __forceinline__ double operator+(const half &lh, const double &rh) { return (double)lh + (double)rh; }
+__host__ __device__ __forceinline__ double operator-(const half &lh, const double &rh) { return (double)lh - (double)rh; }
+__host__ __device__ __forceinline__ double operator*(const half &lh, const double &rh) { return (double)lh * (double)rh; }
+__host__ __device__ __forceinline__ double operator/(const half &lh, const double &rh) { return (double)lh / (double)rh; }
+__host__ __device__ __forceinline__ bool operator==(const half &lh, const double &rh) { return (double)lh == (double)rh; }
+__host__ __device__ __forceinline__ bool operator!=(const half &lh, const double &rh) { return (double)lh != (double)rh; }
+__host__ __device__ __forceinline__ bool operator> (const half &lh, const double &rh) { return (double)lh > (double)rh; }
+__host__ __device__ __forceinline__ bool operator< (const half &lh, const double &rh) { return (double)lh < (double)rh; }
+__host__ __device__ __forceinline__ bool operator>=(const half &lh, const double &rh) { return (double)lh >= (double)rh; }
+__host__ __device__ __forceinline__ bool operator<=(const half &lh, const double &rh) { return (double)lh <= (double)rh; }
+
+// float
+__host__ __device__ __forceinline__ float operator+(const float &lh, const half &rh) { return (float)lh + (float)rh; }
+__host__ __device__ __forceinline__ float operator-(const float &lh, const half &rh) { return (float)lh - (float)rh; }
+__host__ __device__ __forceinline__ float operator*(const float &lh, const half &rh) { return (float)lh * (float)rh; }
+__host__ __device__ __forceinline__ float operator/(const float &lh, const half &rh) { return (float)lh / (float)rh; }
+__host__ __device__ __forceinline__ bool operator==(const float &lh, const half &rh) { return (float)lh == (float)rh; }
+__host__ __device__ __forceinline__ bool operator!=(const float &lh, const half &rh) { return (float)lh != (float)rh; }
+__host__ __device__ __forceinline__ bool operator> (const float &lh, const half &rh) { return (float)lh > (float)rh; }
+__host__ __device__ __forceinline__ bool operator< (const float &lh, const half &rh) { return (float)lh < (float)rh; }
+__host__ __device__ __forceinline__ bool operator>=(const float &lh, const half &rh) { return (float)lh >= (float)rh; }
+__host__ __device__ __forceinline__ bool operator<=(const float &lh, const half &rh) { return (float)lh <= (float)rh; }
+
+__host__ __device__ __forceinline__ float operator+(const half &lh, const float &rh) { return (float)lh + (float)rh; }
+__host__ __device__ __forceinline__ float operator-(const half &lh, const float &rh) { return (float)lh - (float)rh; }
+__host__ __device__ __forceinline__ float operator*(const half &lh, const float &rh) { return (float)lh * (float)rh; }
+__host__ __device__ __forceinline__ float operator/(const half &lh, const float &rh) { return (float)lh / (float)rh; }
+__host__ __device__ __forceinline__ bool operator==(const half &lh, const float &rh) { return (float)lh == (float)rh; }
+__host__ __device__ __forceinline__ bool operator!=(const half &lh, const float &rh) { return (float)lh != (float)rh; }
+__host__ __device__ __forceinline__ bool operator> (const half &lh, const float &rh) { return (float)lh > (float)rh; }
+__host__ __device__ __forceinline__ bool operator< (const half &lh, const float &rh) { return (float)lh < (float)rh; }
+__host__ __device__ __forceinline__ bool operator>=(const half &lh, const float &rh) { return (float)lh >= (float)rh; }
+__host__ __device__ __forceinline__ bool operator<=(const half &lh, const float &rh) { return (float)lh <= (float)rh; }
+
+// size_t
+__host__ __device__ __forceinline__ float operator+(const size_t &lh, const half &rh) { return (float)lh + (float)rh; }
+__host__ __device__ __forceinline__ float operator-(const size_t &lh, const half &rh) { return (float)lh - (float)rh; }
+__host__ __device__ __forceinline__ float operator*(const size_t &lh, const half &rh) { return (float)lh * (float)rh; }
+__host__ __device__ __forceinline__ float operator/(const size_t &lh, const half &rh) { return (float)lh / (float)rh; }
+__host__ __device__ __forceinline__ bool operator==(const size_t &lh, const half &rh) { return (float)lh == (float)rh; }
+__host__ __device__ __forceinline__ bool operator!=(const size_t &lh, const half &rh) { return (float)lh != (float)rh; }
+__host__ __device__ __forceinline__ bool operator> (const size_t &lh, const half &rh) { return (float)lh > (float)rh; }
+__host__ __device__ __forceinline__ bool operator< (const size_t &lh, const half &rh) { return (float)lh < (float)rh; }
+__host__ __device__ __forceinline__ bool operator>=(const size_t &lh, const half &rh) { return (float)lh >= (float)rh; }
+__host__ __device__ __forceinline__ bool operator<=(const size_t &lh, const half &rh) { return (float)lh <= (float)rh; }
+
+__host__ __device__ __forceinline__ float operator+(const half &lh, const size_t &rh) { return (float)lh + (float)rh; }
+__host__ __device__ __forceinline__ float operator-(const half &lh, const size_t &rh) { return (float)lh - (float)rh; }
+__host__ __device__ __forceinline__ float operator*(const half &lh, const size_t &rh) { return (float)lh * (float)rh; }
+__host__ __device__ __forceinline__ float operator/(const half &lh, const size_t &rh) { return (float)lh / (float)rh; }
+__host__ __device__ __forceinline__ bool operator==(const half &lh, const size_t &rh) { return (float)lh == (float)rh; }
+__host__ __device__ __forceinline__ bool operator!=(const half &lh, const size_t &rh) { return (float)lh != (float)rh; }
+__host__ __device__ __forceinline__ bool operator> (const half &lh, const size_t &rh) { return (float)lh > (float)rh; }
+__host__ __device__ __forceinline__ bool operator< (const half &lh, const size_t &rh) { return (float)lh < (float)rh; }
+__host__ __device__ __forceinline__ bool operator>=(const half &lh, const size_t &rh) { return (float)lh >= (float)rh; }
+__host__ __device__ __forceinline__ bool operator<=(const half &lh, const size_t &rh) { return (float)lh <= (float)rh; }
+
+// LONG64(one place use this)
+__host__ __device__ __forceinline__ bool operator!=(const LONG64 &lh, const half &rh) { return (float)lh != (float)rh; }
+
+#endif /* defined(__CUDACC__) */
+
+
 // Host functions for converting between FP32 and FP16 formats
 
 inline void halfbits2float(const unsigned short* src, float* res)

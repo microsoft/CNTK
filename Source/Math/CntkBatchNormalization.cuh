@@ -18,6 +18,7 @@
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+#include "half.hpp"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

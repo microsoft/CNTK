@@ -19,6 +19,7 @@
 #include "CommonMatrix.h"
 #include <iostream> // for cout/cerr
 #include <assert.h>
+#include "fpgeneric.h"
 
 typedef unsigned char byte;
 
@@ -509,8 +510,8 @@ void GPUSparseMatrix<ElemType>::AdjustCol2BlockId(const GPUSPARSE_INDEX_TYPE* cp
     CUDA_CALL(cudaMemcpy(newCol2BlockId, cpuCol2BlockId, numCols * sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyHostToDevice));
 
     int blocksPerGrid = CeilDiv(numCols, GridDim::maxThreadsPerBlock);
- 
-    // when useBlockId2Col==true, the original col2BlockId is copied to blockId2Col to avoid getting overwritten 
+
+    // when useBlockId2Col==true, the original col2BlockId is copied to blockId2Col to avoid getting overwritten
     // during the inplace aggregation of col2BlockId prior to this
     _adjustCol2BlockId<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (
         numRows,
