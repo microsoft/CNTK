@@ -19,7 +19,7 @@
 #include <cuda_runtime.h>
 #include <assert.h>
 #include <float.h>
-#include "fpgeneric.h"
+#include "half.hpp"
 #pragma pop_macro("TENSOR_OPS_DECL")
 
 // REVIEW alexeyk: disable warnings properly for GCC/clang
