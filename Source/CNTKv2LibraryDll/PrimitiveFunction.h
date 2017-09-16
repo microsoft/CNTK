@@ -282,7 +282,12 @@ namespace CNTK
             // set inputs' acyclic strong references if possible
             UpdateAcyclicReferences();
         }
-
+    public:
+        ~PrimitiveFunction()
+        {
+            //if (m_uniqueIdForDebugging == 152940)
+            //    fprintf(stderr, "");
+        }
     private:
         // fast alternative constructor private to RawPrimitiveFunction()--must not be used for anything else. See RawPrimitiveFunction() for any further information.
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, std::wstring&& name)

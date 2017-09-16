@@ -1421,8 +1421,10 @@ class Variable::AutoBatch
                 //  - a deep copy of the Block is made (inlined), which connects to the Block node's inputs
                 //  - the Block node, like a NoOp, gets its m_redirection set to point to the Block's copy.
                 // For ref-counting, the root pointer of the deep copy is kept in m_functionHolder of the Block's output Variable.
-                // TODO: Check whether this can accidentally be overwritten by further short-circuiting and get lost?
-                redirectedFields->m_redirection.m_functionHolder = inlinedRootPtr; // remember the inlined root in m_redirection of the Block invocation
+                // (If that one is already used, it gets migrated down into the new function.)
+                //if (inlinedRootPtr->m_uniqueIdForDebugging == 519359)
+                //    BreakPoint;
+                HoldFunction(*redirectedFields, inlinedRootPtr);
                 redirectedFields = &GetOutputFields(inlinedRootPtr.get());
                 continue;
             }
@@ -1757,32 +1759,46 @@ class Variable::AutoBatch
         //fields.m_consumers.mangle(-3333); // leave a mark that this was reset nullptr;
     }
 
+    // store a PrimitiveFunctionPtr in VariableFields
+    // If it is already occupied, then migrate the existing value into the function's output.
+    // If that is also occupied, then fail.
+    void HoldFunction(VariableFields& fields, const PrimitiveFunctionPtr& fInlined) const
+    {
+        if (fields.m_redirection.m_functionHolder) // target location already occupied -> migrate that into new function
+        {
+            auto& inlinedOutputFields = GetOutputFields(fInlined.get());
+            fail_if(inlinedOutputFields.m_redirection.m_functionHolder, "HoldFunction: no place to migrate the existing PrimitiveFunctionPtr to???");
+            inlinedOutputFields.m_redirection.m_functionHolder = move(fields.m_redirection.m_functionHolder); // park it here, since we are overwriting it
+        }
+        fields.m_redirection.m_functionHolder = fInlined; // hold a ref count, for resource management
+    }
+
     // implant the the result of a function that was executed as a batched op
     // j = slice index into batched result, or SIZE_MAX (default) if entire tensor
-    void FinalizeBatchedOpAndUpdateSchedule(PrimitiveFunction* op, const PrimitiveFunctionPtr& batchedOp, size_t j = SIZE_MAX)
+    void FinalizeBatchedOpAndUpdateSchedule(PrimitiveFunction* f, const PrimitiveFunctionPtr& batchedOp, size_t j = SIZE_MAX)
     {
         //CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
         // we remember where we came from for backprop in this case
-        auto& fields = GetOutputFields(op);
-        fields.m_redirection.m_functionHolder = batchedOp; // hold a ref count, for resource management
+        auto& fields = GetOutputFields(f);
+        HoldFunction(fields, batchedOp); // hold a ref count
         fields.m_redirection.m_function = batchedOp.get(); // this is the actual pointer used to traverse
         fields.m_redirection.m_index = j;
         // semantically, this will compute as fields.m_value = out->IndexLastAxis(j);
         // but it gets deferred to save effort
         // update all ops' consumers and schedule them when possible
-        NotifyOpsConsumersInputsAvailable(op);
+        NotifyOpsConsumersInputsAvailable(f);
     }
 
     // clone a result into all its aliases (which were determined by ShortCircuitBatchedOpDuplicatesAndUpdateSchedule())
     // TODO: We either duplicate m_value or m_redirection, and we know that upon call time; so split this function.
-    void UpdateDuplicatesAndUpdateSchedule(PrimitiveFunction* op)
+    void UpdateDuplicatesAndUpdateSchedule(PrimitiveFunction* f)
     {
-        for (auto* f = op->m_autoBatchState.m_aliasList; f; f = f->m_autoBatchState.m_aliasList)
+        for (auto* dup = f->m_autoBatchState.m_aliasList; dup; dup = dup->m_autoBatchState.m_aliasList)
         {
             //CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
-            GetOutputFields(f).m_value       = GetOutputFields(op).m_value;
-            GetOutputFields(f).m_redirection = GetOutputFields(op).m_redirection;
-            NotifyOpsConsumersInputsAvailable(f);
+            GetOutputFields(dup).m_value       = GetOutputFields(f).m_value;
+            GetOutputFields(dup).m_redirection = GetOutputFields(f).m_redirection;
+            NotifyOpsConsumersInputsAvailable(dup);
         }
     }
 
