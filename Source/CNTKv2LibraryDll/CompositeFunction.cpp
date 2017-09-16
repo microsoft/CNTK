@@ -1124,12 +1124,12 @@ namespace CNTK
     {
         assert(variable.IsOutput());
 
-        Function* function = variable.OutputOwner().get();
+        PrimitiveFunction* function = variable.OutputOwner().get();
         ComputationNodeBasePtr computationNodePtr;
         auto& functionInputs = function->m_inputs;
 
         DataType nonConstInputDataType = DataType::Unknown;
-        for (auto& inputVar : functionInputs)
+        for (const auto& inputVar : functionInputs)
         {
             if (!inputVar.IsConstant() && (inputVar.GetDataType() != DataType::Unknown))
             {

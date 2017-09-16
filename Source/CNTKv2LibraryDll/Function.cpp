@@ -444,7 +444,7 @@ namespace CNTK
             updated = true;
         }
 
-        if (currentOutputVar.OutputOwner()->IsBlock())
+        if (currentOutputVar.OutputOwner()->IsBlock()) // TODO: missing "&& updated"?
             currentOutputVar.m_dataFields->m_blockFunctionVariableMapping = newOutputVar.BlockFunctionVariableMapping();
 
         return updated;

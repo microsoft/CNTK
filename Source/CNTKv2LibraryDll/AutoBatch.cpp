@@ -3441,6 +3441,7 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variab
     let composite = dynamic_pointer_cast<CompositeFunction>(callee);
     if (!composite)
         InvalidArgument("Invoke requires the callee to be a CompositeFunction");
+#if 0   // This baloney, at least in the case of isBasicBlock.
     // this can be called in two situations:
     //  - during static building of a static graph
     //  - during dynamic imperative code
@@ -3462,6 +3463,7 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variab
         return outputs.front();
     }
     else
+#endif
         return MakeSharedObject<BlockFunction>(composite, operands, /*isBasicBlock=*/false, name)->OutputForDynamicInvocation();
 }
 
@@ -3476,8 +3478,9 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variab
 //         The main difference is that invoked blocks physically share their composites, to avoid duplicating them
 //         (since the point of using BlockFunctions is speed). Also, we have quite a bit code dup in this function.
 // A correct implementation could allow BlockFunction to lazily clone the composite (which is what Dynamite does).
-BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& blockName /*= std::wstring()*/)
-    : PrimitiveFunction(PrimitiveOpType::Block, move/*BUGBUG: not actually moving*/(operands), Dictionary(), blockName), m_composite(callee)
+BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& blockName /*= std::wstring()*/) :
+    PrimitiveFunction(PrimitiveOpType::Block, move/*BUGBUG: not actually moving*/(operands), Dictionary(), blockName), m_composite(callee),
+    m_compositeIsShared(true)
 {
     isBasicBlock; // TODO: remember this somewhere
     let& compositeOutputs = callee->RawOutputs(); // RawOutputs() forces callee.m_compositeOutputs to be initialized if not yet. It would initialize it to Placeholders, though.
@@ -3494,9 +3497,15 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     // Any subsequent invocation of this must have matching dimensions. It will otherwise fail inside Dynamite execution.
     // This is slow, but that's OK since it is done only once.
 
+    // Special case: Invoke() may also be called while building a composite (static graph) that uses another.
+    // In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
+    // is inferred.
+    if (any_of(operands.begin(), operands.end(), [](const Variable& arg) { return arg.Shape().IsUnknown(); }))
+        return;
+
     // We determine the compositeOutputs by replacing the arguments of the composite with new placeholders with updated 
     // shape etc. information matching the corresponding mapped input
-    let argumentsMap = callee->Arguments();
+    let argumentsMap = callee->Arguments(); // note: composite arguments are not ordered
     if (argumentsMap.size() != m_inputs.size())
         InvalidArgument("Invoke invoked with wrong (%d) number of arguments, %d expected.", (int)m_inputs.size(), (int)argumentsMap.size());
 

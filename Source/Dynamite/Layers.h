@@ -352,7 +352,7 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
     let x0 = x - mean;
     let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
-    auto lengthNormGraph = x0 * (invLen * scale);
+    auto lengthNormGraph = Alias(x0 * (invLen * scale), L"lengthNorm");
     vector<Variable> argBuf(1); // (Invoke requires a vector, even for a single argument. So we preallocate it here, outside of the lambda.)
     // Note: Arguments() is slow. Don't call this inside graph generation.
     return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x) mutable
@@ -494,7 +494,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         Function::SetDynamicProfiler(prevProfiler);
         return h;
     };
-    let gruComposite = gru(PlaceholderVariable(), PlaceholderVariable());
+    let gruComposite = Alias(gru(PlaceholderVariable(), PlaceholderVariable()), L"gru");
     return BinaryModel({ /*W,*/ R, b },
     {
         { L"projectInput",  projectInput },
@@ -504,7 +504,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     },
     [=](const Variable& dh, const Variable& x)
     {
-#if 0   // using the composite
+#if 1   // using the composite
         return Invoke(gruComposite, { dh, x }, /*isBasicBlock=*/false);
 #else   // using imperative code
         return gru(dh, x);

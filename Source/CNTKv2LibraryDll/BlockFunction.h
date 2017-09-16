@@ -100,6 +100,7 @@ namespace CNTK
     private:
         /*static*/ std::vector<Variable> DetermineInputs(const FunctionPtr& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockName) const
         {
+            // The m_inputs of a BlockFunction are...
             std::unordered_map<Variable, Variable> argumentsMappingAsMap; // [composite's Placeholder] -> actual input it should pretend to be
             for (auto argumentMapping : argumentsMap)
             {
@@ -108,7 +109,7 @@ namespace CNTK
                     InvalidArgument("Multiple mappings provided for argument '%S' of the Block composite '%S'", argumentMapping.first.AsString().c_str(), composite->AsString().c_str());
             }
 
-            std::vector<Variable> blockFunctionInputs;
+            std::vector<Variable> blockFunctionInputs;  // the return value of this function is built here
             auto compositeInputs = composite->Inputs(); // (this is an expensive operation for composites, including a full traversal and a copy+shared_ptr of the inputs array)
             std::vector<Variable> unmappedArguments;
             for (auto compositeInput : compositeInputs) // compositeInputs includes both Placeholders and enclosed Parameters/Constants
@@ -126,7 +127,7 @@ namespace CNTK
                                         blockName.c_str(), compositeInput.AsString().c_str());
                     }
 
-                    // Verify that a mapping was provided for each argument of the composite
+                    // Verify that a mapping was provided for each Placeholder in the composite
                     if (argumentsMappingAsMap.find(compositeInput) == argumentsMappingAsMap.end())
                         unmappedArguments.push_back(compositeInput);
                 }
@@ -134,7 +135,7 @@ namespace CNTK
 
             if (!unmappedArguments.empty())
             {
-                InvalidArgument("%zu of the arguments '%S' of the underlying composite Function of Block '%S' have not been mapped when encapsulating the composite as a Block.",
+                InvalidArgument("%zu of the Placeholders '%S' of the underlying composite Function of Block '%S' have not been mapped when encapsulating the composite as a Block.",
                                 unmappedArguments.size(), NamedListString(unmappedArguments).c_str(), blockName.c_str());
             }
 
@@ -146,7 +147,7 @@ namespace CNTK
                 blockFunctionInputs.push_back(argumentMapping.second);
             }
 
-            return blockFunctionInputs;
+            return blockFunctionInputs; // this goes into m_inputs
         }
 
         void InferOutputs(std::vector<Variable>& outputs) override
@@ -155,7 +156,7 @@ namespace CNTK
             // shape etc. information matching the corresponding mapped input
             auto currentArguments = m_composite->Arguments(); // (this is an expensive operation, requiring a full traversal and a full copy+shared_ptr of the inputs array)
             std::unordered_map<Variable, Variable> replacementMap;
-            for (auto currentArgument : currentArguments)
+            for (auto currentArgument : currentArguments) // note: it is ensured that currentArguments only includes Placeholders (no Inputs or Outputs)
             {
                 auto currentArgumentMapping = currentArgument.BlockFunctionVariableMapping(); // this was remembered in the constructor
                 auto newArgument = PlaceholderLike(currentArgumentMapping);
@@ -166,6 +167,7 @@ namespace CNTK
 
             m_composite->ReplacePlaceholders(replacementMap);
 
+            assert(outputs.empty());
             auto compositeOutputs = m_composite->RawOutputs();
             for (auto compositeOutput : compositeOutputs)
             {
@@ -179,6 +181,38 @@ namespace CNTK
     private:
         FunctionPtr m_composite;
         std::wstring m_blockOpName;
+
+        // Dynamite:
+        // In BlockFunctions created via Invoke(), the composite is shared across multiple invocations.
+        // Therefore we cannot use Placeholder::m_blockFunctionVariableMapping to store the redirect
+        // to the actual argument to be used in place of the Placeholder.
+        // Instead, we use Placeholder::m_compositeArgumentIndex. The following conceptual equivalence
+        // should hold: plVar->m_blockFunctionVariableMapping === m_inputs[plVar->m_compositeArgumentIndex].
+        // TODO: Can we switch BlockFunction to this at large?
+        bool m_compositeIsShared = false; // true for Dynamite
+
+        // TODO: Use this as a replacement for BlockFunctionVariableMapping() for all applications to Placeholders.
+        Variable GetPlaceholderMapping(const /*Placeholder*/Variable& plVar)
+        {
+            if (!plVar.IsPlaceholder())
+                LogicError("GetPlaceholderMapping can only be used for Placeholders.");
+            if (!m_compositeIsShared)
+            {
+                if (plVar.m_dataFields->m_compositeArgumentIndex != SIZE_MAX)
+                    LogicError("m_compositeArgumentIndex should not be used when !m_compositeIsShared");
+                if (!plVar.BlockFunctionVariableMapping().m_dataFields)
+                    LogicError("m_blockFunctionVariableMapping should be set up when !m_compositeIsShared");
+                return plVar.BlockFunctionVariableMapping();
+            }
+            else
+            {
+                if (plVar.m_dataFields->m_compositeArgumentIndex != SIZE_MAX)
+                    LogicError("m_compositeArgumentIndex should not be used when !m_compositeIsShared");
+                if (!plVar.BlockFunctionVariableMapping().m_dataFields)
+                    LogicError("m_blockFunctionVariableMapping should be set up when !m_compositeIsShared");
+                return m_inputs[plVar.m_dataFields->m_compositeArgumentIndex];
+            }
+        }
 
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
