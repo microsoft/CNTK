@@ -2,6 +2,20 @@
 
 ## Latest news 
 
+***2017-09-15.* CNTK 2.2**  
+Release of Cognitive Toolkit v2.2. 
+
+Hightlights: 
+* NCCL 2 support 
+* New learner interface 
+* A C#/.NET API that enables people to build and train networks 
+* New C++ and C# eval examples 
+* New nodes 
+* Tensorboard image support for CNTK
+
+See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_2_Release_Notes).  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
+
 ***2017-08-04.*** CNTK August interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2194). 
 
 ***2017-07-31.* CNTK 2.1**  
@@ -17,10 +31,6 @@ Highlights:
 
 See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_1_Release_Notes).  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
-***2017-07-26.*** Slides for CNTK tutorial at CVPR 2017 has been posted [here](https://www.cntk.ai/Tutorials/CVPR2017/CVPR_2017_Tutorial_final.pdf). 
-
-***2017-07-07.*** CNTK July interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2064). 
 
 See [all news](https://docs.microsoft.com/en-us/cognitive-toolkit/news)
 
