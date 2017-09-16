@@ -199,6 +199,9 @@ We added support for dilation convolution on the GPU, exposed by BrainScript, C+
 ### Deterministic Pooling
 Now call `cntk.debug.force_deterministic()` will make max and average pooling deterministic, this behavior depend on cuDNN version 6 or later.
 
+### Add Crop Node to Python API
+Motivation in order to support some image segmentation network, we added Crop node to C++ and Python API. Crop node crops its first input along spatial axes so that the result matches the spatial size of its second (reference) input. All non-spatial dimensions are unchanged. Crop offsets can be specified directly, or computed automatically, by traversing the network, and matching centers of receptive fields between activations in the two inputs
+
 ## Performance
 ### Intel MKL update to improve inference speed on CPU by around 2x on AlexNet
 This work is rolled over to next release due to dependency on test infrastructure updates.
@@ -215,14 +218,23 @@ We added the image feature support for TensorBoard. Now CNTK users can use Tenso
 ### Acknowledgments
 We thank the following community members for their contributions:+
 
+* [@arturl](https://github.com/arturl)
+* [@chentaMS](https://github.com/chentaMS)
 * [@cijianzy](https://github.com/cijianzy)
+* [@DaveyBiggers](https://github.com/DaveyBiggers)
 * [@duli2012](https://github.com/duli2012)
+* [@eldakms](https://github.com/eldakms)
 * [@FDecaYed](https://github.com/FDecaYed)
+* [@junjieqian](https://github.com/junjieqian)
 * [@karolzak](https://github.com/karolzak)
 * [@KGWANGMIN](https://github.com/KGWANGMIN)
+* [@mnidza](https://github.com/mnidza)
 * [@ottolu](https://github.com/ottolu)
+* [@raaaar](https://github.com/raaaar)
 * [@StillKeepTry](https://github.com/StillKeepTry)
 * [@taehoonlee](https://github.com/taehoonlee)
+* [@vmazalov](https://github.com/vmazalov)
+
 
 We apologize for any community contributions we might have overlooked in these release notes.
 
