@@ -56,6 +56,11 @@
 #endif
 #include <cblas.h>
 #include <lapacke.h>
+
+#if defined(USE_OPENBLAS)
+extern "C" void openblas_set_num_threads(int num_threads);
+#endif
+
 #endif
 
 #define SWAP(a, b)  \
