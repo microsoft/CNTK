@@ -22,6 +22,7 @@
 #include <mutex>
 #include <future>
 #include <cstddef>
+#include <cmath>
 
 #ifdef SWIG
 #define final
