@@ -81,7 +81,7 @@ namespace CNTK
         {
             if (!argument.IsPlaceholder())
                 LogicError("GetPlaceholderMapping can only be used for Placeholders.");
-            if (!m_compositeIsShared)
+            if (!m_compositeIsShared) // not shared: pretend value is stored in m_blockFunctionVariableMapping
             {
                 if (argument.m_dataFields->m_compositeArgumentIndex != SIZE_MAX)
                     LogicError("m_compositeArgumentIndex should not be used when !m_compositeIsShared");
@@ -89,12 +89,12 @@ namespace CNTK
                     LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
                 return argument.m_dataFields->m_blockFunctionVariableMapping;
             }
-            else
+            else // shared composite: pretend value is found in block's m_inputs, at index m_compositeArgumentIndex
             {
-                if (!argument.m_dataFields->m_blockFunctionVariableMapping.m_dataFields)
-                    LogicError("m_blockFunctionVariableMapping should be set up when !m_compositeIsShared");
+                if (argument.m_dataFields->m_blockFunctionVariableMapping.m_dataFields)
+                    LogicError("m_blockFunctionVariableMapping should not be set when m_compositeIsShared");
                 if (argument.m_dataFields->m_compositeArgumentIndex == SIZE_MAX)
-                    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
+                    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for shared-composite argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
                 if (argument.m_dataFields->m_compositeArgumentIndex >= m_inputs.size())
                     LogicError("m_compositeArgumentIndex out of bounds??");
                 return m_inputs[argument.m_dataFields->m_compositeArgumentIndex];
@@ -121,11 +121,19 @@ namespace CNTK
             std::unordered_map<Variable, Variable> blockCompositePlaceholderReplacements;
             for (auto argument : arguments)
             {
+                // check whether the Variable that this composite Placeholder pretends to be has been replaced
+                // This is a change of the block's m_inputs.
                 if (replacedPlaceholders.find(BlockFunctionPlaceholderMapping(argument)) != replacedPlaceholders.end())
                 {
                     auto replacement = placeholderReplacements.at(BlockFunctionPlaceholderMapping(argument));
                     if (IsArgument(replacement))
-                        argument.m_dataFields->m_blockFunctionVariableMapping = replacement;
+                    {
+                        // It has changed, and not to a Constant or Parameter.
+                        if (!m_compositeIsShared) // (if shared then we only store an index, which does not change)
+                            argument.m_dataFields->m_blockFunctionVariableMapping = replacement;
+                        if (BlockFunctionPlaceholderMapping(argument) == replacement)
+                            LogicError("BlockFunction::OnPlaceholdersReplaced inputs incorrectly updated upon replacing placeholders");
+                    }
                     else
                         blockCompositePlaceholderReplacements.insert({ argument,  replacement });
                 }
@@ -180,7 +188,11 @@ namespace CNTK
             // instead of the original order they appear in the composite itself
             for (auto argumentMapping : argumentsMap)
             {
-                argumentMapping.first.m_dataFields->m_blockFunctionVariableMapping = argumentMapping.second; // composite Placeholder remembers its actual input
+                if (!m_compositeIsShared)
+                    argumentMapping.first.m_dataFields->m_blockFunctionVariableMapping = argumentMapping.second; // composite Placeholder remembers its actual input
+                else
+                    LogicError("DetermineInputs is not supposed to be called when composite is not shared. That'd be a different constructor.");
+                    //argumentMapping.first.m_dataFields->m_compositeArgumentIndex = blockFunctionInputs.size(); // for shared composite (Dynamite), we remember the index instead
                 blockFunctionInputs.push_back(argumentMapping.second);
             }
 
@@ -197,7 +209,8 @@ namespace CNTK
             {
                 auto currentArgumentMapping = BlockFunctionPlaceholderMapping(currentArgument); // this was remembered in the constructor
                 auto newArgument = PlaceholderLike(currentArgumentMapping);
-                newArgument.m_dataFields->m_blockFunctionVariableMapping = currentArgumentMapping;
+                newArgument.m_dataFields->m_blockFunctionVariableMapping = currentArgument.m_dataFields->m_blockFunctionVariableMapping; // == currentArgumentMapping or, if shared composite, null
+                newArgument.m_dataFields->m_compositeArgumentIndex       = currentArgument.m_dataFields->m_compositeArgumentIndex;
 
                 replacementMap.insert({ currentArgument, newArgument });
             }

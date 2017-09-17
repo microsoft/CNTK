@@ -445,10 +445,7 @@ namespace CNTK
         }
 
         if (currentOutputVar.OutputOwner()->IsBlock()) // TODO: missing "&& updated"?
-        {
-            currentOutputVar.m_dataFields->m_blockFunctionVariableMapping = newOutputVar.m_dataFields->m_blockFunctionVariableMapping; // when composite not shared
-            currentOutputVar.m_dataFields->m_compositeArgumentIndex       = newOutputVar.m_dataFields->m_compositeArgumentIndex;       // when composite shared (Dynamite)
-        }
+            currentOutputVar.m_dataFields->m_blockFunctionVariableMapping = newOutputVar.m_dataFields->m_blockFunctionVariableMapping; // composite's output
 
         return updated;
     }

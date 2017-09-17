@@ -1076,6 +1076,9 @@ class Variable::AutoBatch
         if (outputs.size() != 1)
             InvalidArgument("Dynamic operations cannot have multiple outputs.");
         let& output = outputs.front();
+        if (f.m_op == PrimitiveOpType::Block)
+            // CONTINUE HERE: We must clone a Block differently, since it's a different type.
+            BreakPoint;
         let fInlinedPtr = RawPrimitiveFunction(f.m_op, move(inlinedInputs), output.Shape(), move(inlinedAttributes), f.Name(), f.m_profiler, /*logPrefix=*/nullptr);
         // BUGBUG: We must pass sparse adn needsgradient ^^ here
         // and remember where this function got redirected to
@@ -3486,7 +3489,12 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     let& compositeOutputs = callee->RawOutputs(); // RawOutputs() forces callee.m_compositeOutputs to be initialized if not yet. It would initialize it to Placeholders, though.
     if (compositeOutputs.size() != 1)
         InvalidArgument("Invoke can only be used with BlockFunctions that have a single output (this one has %d).", (int)compositeOutputs.size());
-    if (!compositeOutputs.front().Shape().IsUnknown())
+
+    // BUGBUG: The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
+    //         We need a flag to know whether that has been done. We don't want to traverse the whole thing to find those Placeholders.
+
+
+    if (!compositeOutputs.front().Shape().IsUnknown()) // BUGBUG: This test is not sufficient, since nested use may leave it unset. Well, that's static use, so maybe it is OK!
         return;
 
     // If this is the first call, then we are not done yet. We must:
@@ -3497,15 +3505,9 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     // Any subsequent invocation of this must have matching dimensions. It will otherwise fail inside Dynamite execution.
     // This is slow, but that's OK since it is done only once.
 
-    // Special case: Invoke() may also be called while building a composite (static graph) that uses another.
-    // In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
-    // is inferred.
-    if (any_of(operands.begin(), operands.end(), [](const Variable& arg) { return arg.Shape().IsUnknown(); }))
-        return;
-
     // We determine the compositeOutputs by replacing the arguments of the composite with new placeholders with updated 
     // shape etc. information matching the corresponding mapped input
-    let argumentsMap = callee->Arguments(); // note: composite arguments are not ordered
+    let argumentsMap = callee->Arguments(); // BUGBUG: composite arguments are not ordered
     if (argumentsMap.size() != m_inputs.size())
         InvalidArgument("Invoke invoked with wrong (%d) number of arguments, %d expected.", (int)m_inputs.size(), (int)argumentsMap.size());
 
@@ -3526,6 +3528,12 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     callee->ReplacePlaceholders(replacementMap); // This gives the composite the shape.
     // OUTDATED --The composite args' Placeholders now have a block mapping to the actual inputs.
     // BUGBUG: That's bad, since they are gone after this. There should be no block mapping.
+
+    // Special case: Invoke() may also be called while building a composite (static graph) that uses another.
+    // In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
+    // is inferred.
+    if (any_of(operands.begin(), operands.end(), [](const Variable& arg) { return arg.Shape().IsUnknown(); }))
+        return;
 
     if (compositeOutputs.front().Shape().IsUnknown()) // or not?
         LogicError("Invoke must only be called with inputs with fully specified dimensions.");
