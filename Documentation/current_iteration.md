@@ -24,8 +24,8 @@ Note:
 ```
 /var/nccl-repo-2.0.4-ga/libnccl2_2.0.4-1+cuda8.0_amd64.deb
 /var/nccl-repo-2.0.4-ga/libnccl-dev_2.0.4-1+cuda8.0_amd64.deb.
- ```
- Install both of them for building CNTK with NCCL 2.
+```
+Install both of them for building CNTK with NCCL 2.
 * Due to issues in system configuration, user might encounter failure during NCCL initialization. To get detailed information about the failure, please set environment variable `NCCL_DEBUG=INFO`.
 * There are known issues in current release of NCCL 2 on system configured with InfiniBand devices running in mixed IB and IPoIB modes. To use IB mode devices only, please set environment variable `NCCL_IB_HCA=devices` running on IB mode, e.g.:
 ```
@@ -68,7 +68,7 @@ With the new API:
 ```python
 sgd_learner_m = C.sgd(z.parameters, lr = 0.5, minibatch_size = C.learners.IGNORE)
 ```
-note
+Note:
 - To enable CNTK specific techniques which apply the same learning rate to the mean gradient of every N samples regardless of the actual minibatch sizes, we can specify the learner by setting `minibatch_size=N`, e.g. setting `minibatch_size=2`,
 ```python
 sgd_learner_s2 = C.sgd(z.parameters, lr = 0.5, minibatch_size = 2)
@@ -115,7 +115,7 @@ Function resNetNode = CNTKLib.ReLU(CNTKLib.Plus(conv, input));
 ```
 
 ##### Batching Support
-We provide MinibatchSource and MinibacthData utilities to help efficient data loading and batching.
+We provide MinibatchSource and MinibatchData utilities to help efficient data loading and batching.
 
 ##### Training Support
 We support many Stochastic Gradient Descent optimizers commonly seen in the DNN literature: MomentumSGDLearner, AdamLearner, AdaGradLearner, etc. For example, to train a model with a ADAM Stochastic Optimizer:
