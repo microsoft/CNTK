@@ -692,19 +692,7 @@ namespace CNTK
     class Utils
     {
     public:
-        static Axis NewDynamicAxisDerivedFromOperand(const std::wstring& axisNamePrefix, const Variable& operand)
-        {
-            std::function<Variable(const Variable&)> GetActualSourceVariable;
-            GetActualSourceVariable = [&GetActualSourceVariable](const Variable& var) -> Variable {
-                if (var.BlockFunctionVariableMapping() == Variable())
-                    return var;
-                else
-                    return GetActualSourceVariable(var.BlockFunctionVariableMapping());
-            };
-
-            auto whereNodeConditionSourceVar = GetActualSourceVariable(operand);
-            return Axis(axisNamePrefix + whereNodeConditionSourceVar.Uid());
-        }
+        static Axis NewDynamicAxisDerivedFromOperand(const std::wstring& axisNamePrefix, const Variable& operand, const class PrimitiveFunction* owner);
         static void VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape = nullptr);
 
         template <typename ElementType>

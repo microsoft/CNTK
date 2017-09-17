@@ -18,6 +18,7 @@
 #include "RecurrentNodes.h"
 #include "Value.h"
 #include "CompositeFunction.h"
+#include "BlockFunction.h"
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
@@ -545,6 +546,34 @@ namespace CNTK
         }
 
         return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
+    }
+
+    /*static*/ Axis Utils::NewDynamicAxisDerivedFromOperand(const std::wstring& axisNamePrefix, const Variable& operand, const class PrimitiveFunction* owner)
+    {
+        std::function<Variable(const Variable&)> GetActualSourceVariable;
+        GetActualSourceVariable = [&](const Variable& var) -> Variable
+        {
+#if 1
+            if (var.IsPlaceholder() && owner->IsBlock())
+            {
+                return GetActualSourceVariable(dynamic_cast<const BlockFunction*>(owner)->BlockFunctionPlaceholderMapping(var));
+            }
+            else if (var.IsOutput() && var.OutputOwner()->IsBlock())
+            {
+                return GetActualSourceVariable(dynamic_cast<BlockFunction*>(var.OutputOwner().get())->BlockFunctionOutputMapping(var));
+            }
+            else
+                return var;
+#else
+            if (var.BlockFunctionVariableMapping() == Variable())
+                return var;
+            else
+                return GetActualSourceVariable(var.BlockFunctionVariableMapping());
+#endif
+        };
+
+        auto whereNodeConditionSourceVar = GetActualSourceVariable(operand);
+        return Axis(axisNamePrefix + whereNodeConditionSourceVar.Uid());
     }
 
     /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape)

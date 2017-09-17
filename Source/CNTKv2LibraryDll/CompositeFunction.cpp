@@ -1158,9 +1158,9 @@ namespace CNTK
             // of the composite is mapped to.
             auto compositeArguments = blockFunction->Composite()->Arguments();
             for (auto compositeArgument : compositeArguments)
-                variableToNodeMap[compositeArgument] = variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
+                variableToNodeMap[compositeArgument] = variableToNodeMap.at(blockFunction->BlockFunctionPlaceholderMapping(compositeArgument));
 
-            return GetNode(variable.BlockFunctionVariableMapping(), network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor, useMangledNamesForComputationNodes);
+            return GetNode(blockFunction->BlockFunctionOutputMapping(variable), network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor, useMangledNamesForComputationNodes);
         }
         else
             computationNodePtr = CreateComputationNode(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
@@ -1247,12 +1247,12 @@ namespace CNTK
                     auto compositeArguments = blockFunction->Composite()->Arguments();
                     for (auto compositeArgument : compositeArguments)
                     {
-                        auto mappingVarNodeIter = variableToNodeMap.find(compositeArgument.BlockFunctionVariableMapping());
+                        auto mappingVarNodeIter = variableToNodeMap.find(blockFunction->BlockFunctionPlaceholderMapping(compositeArgument));
                         if (mappingVarNodeIter != variableToNodeMap.end())
                             variableToNodeMap[compositeArgument] = mappingVarNodeIter->second;
                     }
 
-                    auto mappingVarNodeIter = variableToNodeMap.find(var.BlockFunctionVariableMapping());
+                    auto mappingVarNodeIter = variableToNodeMap.find(blockFunction->BlockFunctionOutputMapping(var));
                     if (mappingVarNodeIter != variableToNodeMap.end())
                         variableToNodeMap[var] = mappingVarNodeIter->second;
                 }

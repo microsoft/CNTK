@@ -70,10 +70,10 @@ namespace CNTK
         return clonedVariable;
     }
 
-    const Variable& Variable::BlockFunctionVariableMapping() const
-    {
-        return m_dataFields->m_blockFunctionVariableMapping;
-    }
+    //const Variable& Variable::BlockFunctionVariableMapping() const
+    //{
+    //    return m_dataFields->m_blockFunctionVariableMapping;
+    //}
 
     PrimitiveFunctionPtr Variable::OutputOwner() const 
     {

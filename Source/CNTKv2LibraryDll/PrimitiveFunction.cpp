@@ -220,7 +220,7 @@ namespace CNTK
                     else
                     {
                         std::wstring axisNamePrefix = (op == PrimitiveOpType::Where) ? L"whereNodeDynamicAxis_conditionVar_" : functionConfig[PrimitiveFunction::AttributeNameSequenceAxisNamePrefix].Value<std::wstring>();
-                        auto sequenceAxis = Utils::NewDynamicAxisDerivedFromOperand(axisNamePrefix, inputs[0]);
+                        auto sequenceAxis = Utils::NewDynamicAxisDerivedFromOperand(axisNamePrefix, inputs[0], owner);
                         outputDynamicAxes.push_back(sequenceAxis);
                     }
 

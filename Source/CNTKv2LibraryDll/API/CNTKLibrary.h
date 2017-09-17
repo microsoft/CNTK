@@ -2101,7 +2101,7 @@ namespace CNTK
         PrimitiveFunctionPtr OutputOwner() const; // for Outputs only; can never return null
         bool OwnerIs(const Function* f) const; // faster than saying Owner() == ...
 
-        CNTK_API const Variable& BlockFunctionVariableMapping() const;
+        //CNTK_API const Variable& BlockFunctionVariableMapping() const; // [fseide] has been moved to BlockFunction
 
         CNTK_API Variable Clone() const;
 

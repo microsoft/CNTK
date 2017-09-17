@@ -40,10 +40,10 @@ namespace CNTK
             auto arguments = m_composite->Arguments();
             for (auto argument : arguments)
             {
-                if (argument.BlockFunctionVariableMapping() == Variable())
-                    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
+                //if (BlockFunctionPlaceholderMapping(argument) == Variable())
+                //    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
 
-                argumentsMap.push_back({ argument, argument.BlockFunctionVariableMapping() });
+                argumentsMap.push_back({ argument, BlockFunctionPlaceholderMapping(argument) });
             }
 
             // Now sort the mapping by the order of occurence of the argument mapping in the block's inputs
@@ -66,13 +66,50 @@ namespace CNTK
             auto outputs = RawOutputs();
             for (auto output : outputs)
             {
-                if (output.BlockFunctionVariableMapping() == Variable())
-                    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for output '%S'", AsString().c_str(), OpName().c_str(), output.AsString().c_str());
+                //if (BlockFunctionOutputMapping(output) == Variable())
+                //    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for output '%S'", AsString().c_str(), OpName().c_str(), output.AsString().c_str());
 
-                outputsMap[output] = output.BlockFunctionVariableMapping();
+                outputsMap[output] = BlockFunctionOutputMapping(output);
             }
 
             return outputsMap;
+        }
+
+        // determine for a Placeholder in m_composite which actual value (in m_inputs) it should pretend to be
+        // Will fail if no mapping has been set up.
+        const Variable& BlockFunctionPlaceholderMapping(const /*Placeholder*/Variable& argument) const
+        {
+            if (!argument.IsPlaceholder())
+                LogicError("GetPlaceholderMapping can only be used for Placeholders.");
+            if (!m_compositeIsShared)
+            {
+                if (argument.m_dataFields->m_compositeArgumentIndex != SIZE_MAX)
+                    LogicError("m_compositeArgumentIndex should not be used when !m_compositeIsShared");
+                if (!argument.m_dataFields->m_blockFunctionVariableMapping.m_dataFields)
+                    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
+                return argument.m_dataFields->m_blockFunctionVariableMapping;
+            }
+            else
+            {
+                if (!argument.m_dataFields->m_blockFunctionVariableMapping.m_dataFields)
+                    LogicError("m_blockFunctionVariableMapping should be set up when !m_compositeIsShared");
+                if (argument.m_dataFields->m_compositeArgumentIndex == SIZE_MAX)
+                    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
+                if (argument.m_dataFields->m_compositeArgumentIndex >= m_inputs.size())
+                    LogicError("m_compositeArgumentIndex out of bounds??");
+                return m_inputs[argument.m_dataFields->m_compositeArgumentIndex];
+            }
+        }
+
+        // determine for an Output in this->m_outputs which outputs of m_composite it should pretend to be
+        // Will fail if no mapping has been set up.
+        const Variable& BlockFunctionOutputMapping(const /*Output*/Variable& output) const
+        {
+            if (!output.IsOutput())
+                LogicError("BlockFunctionOutputMapping: Must only be called on OutputVariables");
+            if (BlockFunctionOutputMapping(output) == Variable())
+                LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for output '%S'", AsString().c_str(), OpName().c_str(), output.AsString().c_str());
+            return output.m_dataFields->m_blockFunctionVariableMapping;
         }
 
     protected:
@@ -84,9 +121,9 @@ namespace CNTK
             std::unordered_map<Variable, Variable> blockCompositePlaceholderReplacements;
             for (auto argument : arguments)
             {
-                if (replacedPlaceholders.find(argument.BlockFunctionVariableMapping()) != replacedPlaceholders.end())
+                if (replacedPlaceholders.find(BlockFunctionPlaceholderMapping(argument)) != replacedPlaceholders.end())
                 {
-                    auto replacement = placeholderReplacements.at(argument.BlockFunctionVariableMapping());
+                    auto replacement = placeholderReplacements.at(BlockFunctionPlaceholderMapping(argument));
                     if (IsArgument(replacement))
                         argument.m_dataFields->m_blockFunctionVariableMapping = replacement;
                     else
@@ -158,7 +195,7 @@ namespace CNTK
             std::unordered_map<Variable, Variable> replacementMap;
             for (auto currentArgument : currentArguments) // note: it is ensured that currentArguments only includes Placeholders (no Inputs or Outputs)
             {
-                auto currentArgumentMapping = currentArgument.BlockFunctionVariableMapping(); // this was remembered in the constructor
+                auto currentArgumentMapping = BlockFunctionPlaceholderMapping(currentArgument); // this was remembered in the constructor
                 auto newArgument = PlaceholderLike(currentArgumentMapping);
                 newArgument.m_dataFields->m_blockFunctionVariableMapping = currentArgumentMapping;
 
@@ -190,29 +227,6 @@ namespace CNTK
         // should hold: plVar->m_blockFunctionVariableMapping === m_inputs[plVar->m_compositeArgumentIndex].
         // TODO: Can we switch BlockFunction to this at large?
         bool m_compositeIsShared = false; // true for Dynamite
-
-        // TODO: Use this as a replacement for BlockFunctionVariableMapping() for all applications to Placeholders.
-        Variable GetPlaceholderMapping(const /*Placeholder*/Variable& plVar)
-        {
-            if (!plVar.IsPlaceholder())
-                LogicError("GetPlaceholderMapping can only be used for Placeholders.");
-            if (!m_compositeIsShared)
-            {
-                if (plVar.m_dataFields->m_compositeArgumentIndex != SIZE_MAX)
-                    LogicError("m_compositeArgumentIndex should not be used when !m_compositeIsShared");
-                if (!plVar.BlockFunctionVariableMapping().m_dataFields)
-                    LogicError("m_blockFunctionVariableMapping should be set up when !m_compositeIsShared");
-                return plVar.BlockFunctionVariableMapping();
-            }
-            else
-            {
-                if (plVar.m_dataFields->m_compositeArgumentIndex != SIZE_MAX)
-                    LogicError("m_compositeArgumentIndex should not be used when !m_compositeIsShared");
-                if (!plVar.BlockFunctionVariableMapping().m_dataFields)
-                    LogicError("m_blockFunctionVariableMapping should be set up when !m_compositeIsShared");
-                return m_inputs[plVar.m_dataFields->m_compositeArgumentIndex];
-            }
-        }
 
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
