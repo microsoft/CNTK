@@ -2347,8 +2347,8 @@ private:
 // -----------------------------------------------------------------------
 // BatchNormalizationNode (input, scale, bias, runMean, runVariance, runCount,
 //                         spatial, normalizationTimeConstant = 0, blendTimeConstant = 0,
-//                         epsilon = 0.00001,
-//                         useCntkEngine = true, imageLayout = 'cudnn')
+//                         epsilon = 0.00001, useCntkEngine = true, 
+//                         bool disableRegularization, imageLayout = 'cudnn')
 //
 // Implements batch normalization technique as described in:
 // Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift [S. Ioffe, C. Szegedy]
@@ -2404,19 +2404,24 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial = false,
                            double normalizationTimeConstant=0, double blendTimeConstant=0,
-                           double epsilon = 0, bool useCntkEngine = true, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
+                           double epsilon = 0, bool useCntkEngine = true, bool disableRegularization = false, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind),
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_disableRegulariztion(disableRegularization), m_imageLayoutKind(imageLayoutKind),
         m_runCountUntied(0),
-        m_convertRunningVariancePending(false),
-        m_one(1, 1, deviceId)
+        m_one(1, 1, deviceId),
+        m_convertRunningVariancePending(false)
     {
         m_one.SetValue((ElemType)1); // (constant value used for GPU-side update of runCount)
+    
+        if (m_disableRegulariztion)
+        {
+            this->DisableRegInBatchNormalization();
+        }
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
         BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"spatial"),
-                               configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"), 
-                               configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
+                               configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"),
+                               configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"), configp->Get(L"disableRegularization"),
                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         //AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
@@ -2967,6 +2972,8 @@ public:
         let biasNode  = dynamic_pointer_cast<LearnableParameter<ElemType>>(Input(BIAS));
         scaleNode->SetRegMultiplier(0.f);
         biasNode->SetRegMultiplier(0.f);
+
+        fprintf(stdout, "DisableRegInBatchNormalization\n");
     }
     double NormalizationTimeConstant() const { return m_normTimeConst; }
     double BlendTimeConstant() const { return m_blendTimeConst; }
@@ -3019,6 +3026,8 @@ private:
     double m_epsilon;
     // Whether to use CNTK or cuDNN BN implementation.
     bool m_useCntkEngine;
+    // Whether to disable regulararization in Batch Normalization.
+    bool m_disableRegulariztion;
     // Layout (e.g. CHW).
     ImageLayoutKind m_imageLayoutKind;
 
