@@ -2123,14 +2123,17 @@ class Variable::AutoBatch
             InvalidArgument("Dynamic operations cannot have multiple outputs.");
         let& output = outputs.front();
         // clone it
-        let fCloned = PrimitiveFunction::RawPrimitiveFunction(f.m_op, move(newInputs), output.Shape(), move(attributes), f.Name());
+        PrimitiveFunctionPtr fCloned;
+        if (f.m_op == PrimitiveOpType::Block)
+        {
+            let& fAsBlock = static_cast<BlockFunction&>(f);
+            fCloned = BlockFunction::RawSharedBlockFunction(fAsBlock.Composite(),move(newInputs), output.Shape(), move(attributes), fAsBlock.OpName(), f.Name());
+        }
+        else
+            fCloned = PrimitiveFunction::RawPrimitiveFunction(f.m_op, move(newInputs), output.Shape(), move(attributes), f.Name());
         // BUGBUG: We must pass sparse and needsgradient ^^ here
+        // add additional initializations for auto-batch only
         FinishConstructingPrimitiveFunction(*fCloned, f.m_profiler, /*logPrefix=*/nullptr);
-        //let f =
-            //            /*if*/ (f.m_op == PrimitiveOpType::Block) ?
-            //                RawBlockFunction(move(inlinedInputs), output.Shape(), move(inlinedAttributes), f.Name(), f.m_profiler, /*logPrefix=*/nullptr)
-            //            /*else*/:
-            //RawPrimitiveFunction(f.m_op, move(newInputs), outputShape, move(inlinedAttributes), f.Name(), f.m_profiler, /*logPrefix=*/nullptr);
         return fCloned;
     }
 
@@ -3458,7 +3461,7 @@ void PrimitiveFunction::MemoizeKnowableValue() const
 }
 
 // ===========================================================================
-// Invoke() and BlockFunction -- contained here for now
+// Invoke() and our pieces of PrimitiveFunction and BlockFunction -- contained here for now
 // ===========================================================================
 
 Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& name /*= std::wstring()*/)
@@ -3490,6 +3493,43 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variab
     else
 #endif
         return MakeSharedObject<BlockFunction>(composite, operands, /*isBasicBlock=*/false, name)->OutputForDynamicInvocation();
+}
+
+// special short-circuited constructor of PrimitiveFunction that takes everything pre-computed as rvalue refs
+// If no name is passed then this costs only two extra mallocs: m_outputs.data() and m_outputs.front().m_dataFields.
+/*static*/ PrimitiveFunctionPtr PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, std::wstring name /*= std::wstring()*/)
+{
+    // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
+    auto res = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(attributes), std::move(name));
+    // unfortunately output initialization must be separated out since it requires s shared_ptr to res
+    let& resInputs = res->m_inputs;
+    res->InitOutput(OutputVariable(shape, resInputs.front().GetDataType(),{},
+                                   any_of(resInputs.begin(), resInputs.end(), [](const Variable& input) { return input.NeedsGradient(); }), // PERF BUGBUG: caller knows this already; should pass it in
+                                   all_of(resInputs.begin(), resInputs.end(), [](const Variable& input) { return input.IsSparse();      }), // BUGBUG: This is not generally correct -> Caller knows this, just pass it in.
+                                   wstring()));
+    return res;
+}
+
+// special short-circuited version where output is created outside
+void PrimitiveFunction::InitOutput(Variable&& output)
+{
+    //std::call_once(m_outputsInitFlag, [this]() {});
+    fail_if(m_outputsInitFlag || !m_outputs.empty(), "InitOutput called twice??");
+    m_outputsInitFlag++;
+    output.SetOwner(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
+    // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
+    m_outputs.resize(1);
+    m_outputs.front() = move(output);
+}
+
+// special short-circuited version for auto-batcher
+// Definition in AutoBatch.cpp.
+/*static*/ PrimitiveFunctionPtr BlockFunction::RawSharedBlockFunction(const FunctionPtr& composite, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes,
+                                                                      std::wstring blockOpName /*= std::wstring()*/, std::wstring name /*= std::wstring()*/)
+{
+    composite; inputs; shape; attributes; blockOpName; name;
+    // TODO: This is too involved; first refactor more.
+    return nullptr;
 }
 
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.

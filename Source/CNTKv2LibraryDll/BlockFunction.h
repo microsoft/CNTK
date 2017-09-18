@@ -29,6 +29,11 @@ namespace CNTK
         BlockFunction(const std::shared_ptr<CompositeFunction>& composite, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& blockName = std::wstring());
         Variable OutputForDynamicInvocation();
 
+        // special short-circuited version for auto-batcher
+        // Definition in AutoBatch.cpp.
+        static PrimitiveFunctionPtr RawSharedBlockFunction(const FunctionPtr& composite, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes,
+                                                           std::wstring blockOpName = std::wstring(), std::wstring name = std::wstring());
+
         virtual const std::wstring& OpName() const override { return m_blockOpName; }
 
         const FunctionPtr& Composite() const { return m_composite; }

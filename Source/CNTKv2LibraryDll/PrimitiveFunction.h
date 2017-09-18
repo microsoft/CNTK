@@ -289,9 +289,10 @@ namespace CNTK
             //    fprintf(stderr, "");
         }
     private:
-        // fast alternative constructor private to RawPrimitiveFunction()--must not be used for anything else. See RawPrimitiveFunction() for any further information.
-        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, std::wstring&& name)
-            : Function(std::move(inputs), std::move(outputs), std::move(functionConfig), nullptr, std::move(name), std::wstring()),
+        // fast alternative constructor private to RawPrimitiveFunction(), for auto-batched
+        // This must not be used for anything else. See definition of RawPrimitiveFunction() for any further information.
+        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, Dictionary&& functionConfig, std::wstring&& name)
+            : Function(std::move(inputs), std::vector<Variable>(), std::move(functionConfig), nullptr, std::move(name), std::wstring()),
               m_op(op),
               m_profiler(CurrentDynamicProfiler())
         {
@@ -312,23 +313,12 @@ namespace CNTK
 #endif
         }
 
-        // this function is used from inside the auto-batcher
-        static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, std::wstring name = std::wstring())
-        {
-            std::vector<Variable> output({
-                OutputVariable(shape, inputs[0].GetDataType(), {},
-                               std::any_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.NeedsGradient(); }), // PERF BUGBUG: caller knows this already; should pass it in
-                               std::all_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.IsSparse(); }), // BUGBUG: This is not generally correct -> Caller knows this, just pass it in.
-                               std::wstring())
-            });
-            // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
-            auto res = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(output), std::move(attributes), std::move(name));
-            //std::call_once(m_outputsInitFlag, [this]() {});
-            res->m_outputsInitFlag++;
-            res->m_outputs.front().SetOwner(res);
-            // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
-            return res;
-        }
+        // special short-circuited version for auto-batcher
+        // Definition in AutoBatch.cpp.
+        static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, std::wstring name = std::wstring());
+
+        // special short-circuited version for auto-batcher
+        void InitOutput(Variable&& output);
 
         // implant the acyclic strong reference if it is safe
         void UpdateAcyclicReferences()
