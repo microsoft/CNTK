@@ -1382,7 +1382,8 @@ class Variable::AutoBatch
         // if not visited yet then m_redirection is invalid and must be set up
         // see through ops that do nothing
         auto* redirectedFields = &fields;
-        PrimitiveFunction* redirectedFieldsOwner; // redirectedFields->m_ownerFunction.lock().get(), or null in case of leaf
+        PrimitiveFunction* redirectedFieldsOwner;    // redirectedFields->m_ownerFunction.lock().get(), or null in case of leaf
+        PrimitiveFunctionPtr redirectedFieldsHolder; // in case a new object was created--hold it here
         size_t depthHint = 0;
         for (;;)
         {
@@ -1405,18 +1406,22 @@ class Variable::AutoBatch
             if (redirectedOp == PrimitiveOpType::Block /*&& !isBasicBlock*/)
             {
                 // make a deep copy of the block's root (PrimitiveFunction graph)
+                // The Block is treated like a see-through op:
+                //  - a deep copy of the Block is made (inlined), which connects to the Block node's inputs
+                //  - the Block node, like a NoOp, gets its m_redirection set to point to the Block's copy.
                 // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
                 // Besides that, the original Block function will remain unmodified.
                 m_compositeVisitorTag.Begin();
                 let inlinedRootPtr = RInlineComposite(dynamic_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()), 0, redirectedFieldsOwner->m_inputs); // shared_ptr to the deep copy of the root
-                // The Block is treated like a see-through op:
-                //  - a deep copy of the Block is made (inlined), which connects to the Block node's inputs
-                //  - the Block node, like a NoOp, gets its m_redirection set to point to the Block's copy.
-                // For ref-counting, the root pointer of the deep copy is kept in m_functionHolder of the Block's output Variable.
-                // (If that one is already used, it gets migrated down into the new function.)
-                //if (inlinedRootPtr->m_uniqueIdForDebugging == 519359)
-                //    BreakPoint;
-                HoldFunction(*redirectedFields, inlinedRootPtr);
+                redirectedFieldsOwner = inlinedRootPtr.get();
+                redirectedFieldsHolder = inlinedRootPtr; // hold a reference
+                // For ref-counting, the root pointer of the deep copy is kept in redirectedFieldsHolder,
+                // which goes into m_functionHolder of the Block's output Variable.
+                // Note: When we get here, redirectedFieldsHolder may already hold a function.
+                // This happens when an inlined BlockFunction has another BlockFunction at its root.
+                // It is OK to overwrite it, since the raw pointer in redirectedFieldsOwner also got overwritten,
+                // and the original Function (which is a Block pre inlining) can be safely freed since it is
+                // not referenced anymore (anything of interest has been copied in the inlining process).
                 redirectedFields = &GetOutputFields(inlinedRootPtr.get());
                 continue;
             }
@@ -1428,7 +1433,7 @@ class Variable::AutoBatch
                 depthHint = max(depthHint, redirectedFieldsOwner->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
             // TODO: what if input is non-continuous? Then Reshape becomes a copy
             // this is a redirect
-            redirectedFields = redirectedFieldsOwner->m_inputs.front().m_dataFields.get();
+            redirectedFields = &GetInputFields(redirectedFieldsOwner->m_inputs.front());
         }
         // handle leaves
         // some sanity checks
@@ -1452,7 +1457,8 @@ class Variable::AutoBatch
             return;
         }
         // set up linkage in our overlaid structure
-        fields.m_redirection.m_function = redirectedFieldsOwner; // BUGBUG: If null (leaf) then don't touch this field; yet return
+        fields.m_redirection.m_function = redirectedFieldsOwner;
+        fields.m_redirection.m_functionHolder = move(redirectedFieldsHolder); // keep a ref count to a potentially inlined function
         fields.m_redirection.m_index = SIZE_MAX;
         fields.m_redirection.m_depthHint = depthHint;
         // if redirected then also initialize the producer
@@ -1827,17 +1833,17 @@ class Variable::AutoBatch
     // store a PrimitiveFunctionPtr in VariableFields
     // If it is already occupied, then migrate the existing value into the function's output.
     // If that is also occupied, then fail.
-    void HoldFunction(VariableFields& fields, const PrimitiveFunctionPtr& fInlined) const
-    {
-        fail_if(fields.m_redirection.m_functionHolder, "HoldFunction: no place to migrate the existing PrimitiveFunctionPtr to???");
-        if (fields.m_redirection.m_functionHolder) // target location already occupied -> migrate that into new function
-        {
-            auto& inlinedOutputFields = GetOutputFields(fInlined.get());
-            fail_if(inlinedOutputFields.m_redirection.m_functionHolder, "HoldFunction: no place to migrate the existing PrimitiveFunctionPtr to???");
-            inlinedOutputFields.m_redirection.m_functionHolder = move(fields.m_redirection.m_functionHolder); // park it here, since we are overwriting it
-        }
-        fields.m_redirection.m_functionHolder = fInlined; // hold a ref count, for resource management
-    }
+    //void HoldFunction(VariableFields& fields, const PrimitiveFunctionPtr& fInlined) const
+    //{
+    //    fail_if(fields.m_redirection.m_functionHolder, "HoldFunction: no place to migrate the existing PrimitiveFunctionPtr to???");
+    //    if (fields.m_redirection.m_functionHolder) // target location already occupied -> migrate that into new function
+    //    {
+    //        auto& inlinedOutputFields = GetOutputFields(fInlined.get());
+    //        fail_if(inlinedOutputFields.m_redirection.m_functionHolder, "HoldFunction: no place to migrate the existing PrimitiveFunctionPtr to???");
+    //        inlinedOutputFields.m_redirection.m_functionHolder = move(fields.m_redirection.m_functionHolder); // park it here, since we are overwriting it
+    //    }
+    //    fields.m_redirection.m_functionHolder = fInlined; // hold a ref count, for resource management
+    //}
 
     // implant the the result of a function that was executed as a batched op
     // j = slice index into batched result, or SIZE_MAX (default) if entire tensor
@@ -1846,8 +1852,13 @@ class Variable::AutoBatch
         //CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
         // we remember where we came from for backprop in this case
         auto& fields = GetOutputFields(f);
-        HoldFunction(fields, batchedOp); // hold a ref count
+        //HoldFunction(fields, batchedOp); // hold a ref count
         fields.m_redirection.m_function = batchedOp.get(); // this is the actual pointer used to traverse
+        fields.m_redirection.m_functionHolder = batchedOp; // and also keep a ref count, since this may be a new object not referenced anywhere else yet
+        // If m_functionHolder already contains a pointer, then overwriting it may free the object.
+        // That is fine, since the -Holder is only concerned with holdinf a ref count for m_function
+        // in case is it was a new function. Since m_function also gets overwritten, the object it used
+        // to point to is no longer referenced.
         fields.m_redirection.m_index = j;
         // semantically, this will compute as fields.m_value = out->IndexLastAxis(j);
         // but it gets deferred to save effort

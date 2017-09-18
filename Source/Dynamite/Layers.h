@@ -504,7 +504,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     },
     [=](const Variable& dh, const Variable& x)
     {
-#if 0   // using the composite
+#if 1   // using the composite
         return Invoke(gruComposite, { dh, x }, /*isBasicBlock=*/false);
 #else   // using imperative code
         return gru(dh, x);
