@@ -7,6 +7,7 @@ from cntk import Axis, NDArrayView
 from cntk.logging import ProgressPrinter
 from cntk.learners import UserLearner, sgd, learning_rate_schedule, UnitType
 from cntk.layers import Dense, Sequential
+import pytest
 
 
 SEED = 1
@@ -76,8 +77,14 @@ class MySgdFast(UserLearner):
 
         return True
 
+ADDITIONAL_ARGUMENTS = [
+    #(additional learning rate arguments (args), additional learner arguments (kwargs))
+    (C.learning_rate_schedule, [UnitType.minibatch], {'minibatch_size': 0}), #for backward compatible test
+    (C.learning_parameter_schedule, [25], {'minibatch_size': 25}),  # test new API; 25 is the actually minibatch size
+    (C.learning_parameter_schedule, [], {'minibatch_size': 0}),  # test new API
+]
 
-def ffnet(optimizer, num_minibatches_to_train):
+def ffnet(optimizer,  num_minibatches_to_train, learning_rate_func, lr_args, learner_kwargs):
     inputs = 2
     outputs = 2
     hidden_dimension = 50
@@ -97,10 +104,11 @@ def ffnet(optimizer, num_minibatches_to_train):
     pe = C.classification_error(z, label)
 
     # Instantiate the trainer object to drive the model training
-    lr_per_minibatch = learning_rate_schedule(0.125, UnitType.minibatch)
+    lr= learning_rate_func(0.125, *lr_args)
     progress_printer = ProgressPrinter(0)
-    trainer = C.Trainer(z, (ce, pe), [optimizer(
-        z.parameters, lr_per_minibatch)], progress_printer)
+    learner = optimizer(z.parameters, lr) if optimizer != sgd else sgd(z.parameters, lr, **learner_kwargs)
+
+    trainer = C.Trainer(z, (ce, pe), [learner], progress_printer)
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25
@@ -119,22 +127,23 @@ def ffnet(optimizer, num_minibatches_to_train):
     print(' error rate on an unseen minibatch: {}'.format(avg_error))
     return z.parameters
 
-
-def test_user_learner():
+@pytest.mark.parametrize("lr_func, lr_args, learner_kwargs", ADDITIONAL_ARGUMENTS)
+def test_user_learner(lr_func, lr_args, learner_kwargs):
     num_minibatches_to_train = 10
 
     np.random.seed(SEED)
     # sort based on shape (this works because all parameters have different
     # shapes)
-    p1 = sorted([p.value for p in ffnet(sgd, num_minibatches_to_train)], key=lambda x: x.shape)
+    p1 = sorted([p.value for p in ffnet(sgd, num_minibatches_to_train, lr_func, lr_args, learner_kwargs)], key=lambda x: x.shape)
 
     np.random.seed(SEED)
-    p2 = sorted([p.value for p in ffnet(MySgdNaive, num_minibatches_to_train)], key=lambda x: x.shape)
+    p2 = sorted([p.value for p in ffnet(MySgdNaive, num_minibatches_to_train, lr_func, lr_args, learner_kwargs)], key=lambda x: x.shape)
 
     np.random.seed(SEED)
-    p3 = sorted([p.value for p in ffnet(MySgdFast, num_minibatches_to_train)], key=lambda x: x.shape)
+    p3 = sorted([p.value for p in ffnet(MySgdFast, num_minibatches_to_train, lr_func, lr_args, learner_kwargs)], key=lambda x: x.shape)
 
     for a, b, c in zip(p1, p2, p3):
+        assert np.allclose(b, c)
         assert np.allclose(a, b)
         assert np.allclose(a, c)
 

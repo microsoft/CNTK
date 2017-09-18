@@ -78,7 +78,7 @@ def train(nonlinearity, num_hidden_layers, device_id,
     np.random.seed(0)
 
     learning_rate = 0.5
-    lr_schedule = C.learning_rate_schedule(learning_rate, C.UnitType.minibatch)
+    lr_schedule = C.learning_parameter_schedule(learning_rate)
 
     hidden_layers_dim = 50
 
@@ -91,7 +91,7 @@ def train(nonlinearity, num_hidden_layers, device_id,
     loss = C.cross_entropy_with_softmax(z, label)
     eval_error = C.classification_error(z, label)
 
-    learner = C.sgd(z.parameters, lr_schedule)
+    learner = C.sgd(z.parameters, lr_schedule, minibatch_size = 0)
     trainer = C.Trainer(z, (loss, eval_error), [learner])
 
     num_minibatches_to_train = int(num_samples / minibatch_size)
@@ -129,7 +129,7 @@ def mem_leak_check(nonlinearity, num_hidden_layers, device_id,
     np.random.seed(0)
 
     learning_rate = 0.5
-    lr_schedule = C.learning_rate_schedule(learning_rate, C.UnitType.minibatch)
+    lr_schedule = C.learning_rate_schedule(learning_rate)
 
     hidden_layers_dim = 50
 
@@ -142,7 +142,7 @@ def mem_leak_check(nonlinearity, num_hidden_layers, device_id,
     loss = C.cross_entropy_with_softmax(z, label)
     eval_error = C.classification_error(z, label)
 
-    learner = C.sgd(z.parameters, lr_schedule)
+    learner = C.sgd(z.parameters, lr_schedule, minibatch_size = 0)
     trainer = C.Trainer(z, (loss, eval_error), [learner])
 
     num_minibatches_to_train = int(num_samples / minibatch_size)

@@ -220,7 +220,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-                auto_padding=[True], dilation=(1,), max_temp_mem_size_in_samples=0, name=''):
+                auto_padding=[True], dilation=(1,), reduction_rank=1, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -234,7 +234,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     `convolution` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
     ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
     The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
-    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input.
+    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input, which can be ignored if `reduction_rank` is `0`.
     The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
     dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
 
@@ -264,6 +264,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
         dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+        reduction_rank (`int`, default 1): must be 0 or 1, 0 mean no depth or channel dimension in the input and 1 mean the input has channel or depth dimension.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -277,11 +278,11 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
     dilation = sanitize_shape(dilation)
     return convolution(convolution_map, operand, strides, sharing, auto_padding, dilation,
-                       max_temp_mem_size_in_samples, name)
+                       reduction_rank, max_temp_mem_size_in_samples, name)
 
 @typemap
 def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
-                          auto_padding=[True], output_shape=None, dilation=(1,), max_temp_mem_size_in_samples=0, name=''):
+                          auto_padding=[True], output_shape=None, dilation=(1,), reduction_rank=1, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the transposed convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -327,6 +328,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
          the input dimension. The last value that lines up with the number of input channels must be false.
         output_shape: user expected output shape after convolution transpose.
         dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+        reduction_rank (`int`, default 1): must be 0 or 1, 0 mean no depth or channel dimension in the input and 1 mean the input has channel or depth dimension.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -343,7 +345,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     output_shape = sanitize_shape(output_shape)
     dilation = sanitize_shape(dilation)
     return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
-                                 output_shape, dilation, max_temp_mem_size_in_samples, name)
+                                 output_shape, dilation, reduction_rank, max_temp_mem_size_in_samples, name)
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
@@ -2755,7 +2757,7 @@ def random_sample_inclusion_frequency(
     seed = SentinelValueForAutoSelectRandomSeed,
     name=''):
     '''
-    For weighted sampling with the specifed sample size (`num_samples`)
+    For weighted sampling with the specified sample size (`num_samples`)
     this operation computes the expected number of occurrences of each class
     in the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the

@@ -329,8 +329,9 @@ def minibatch_size_schedule(schedule, epoch_size=1):
             raise ValueError('when providing the schedule as a number,'
                              ' epoch_size is ignored')
         return cntk_py.minibatch_size_schedule(schedule)
-
+    from ..learners import _prepare_training_parameter_list
     if isinstance(schedule, list):
+        schedule = _prepare_training_parameter_list(schedule)
         return cntk_py.minibatch_size_schedule(schedule, epoch_size)
 
     raise ValueError(

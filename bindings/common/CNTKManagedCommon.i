@@ -25,9 +25,6 @@
 
 %{
     #include "CNTKLibrary.h"
-#ifdef SWIGCSHARP
-    #include "MomentumAsTimeConstantScheduleCS.h"
-#endif
     #pragma warning(disable : 4100) //unreferenced formal parameter
 %}
 
@@ -210,19 +207,27 @@ IGNORE_FUNCTION CNTK::operator-;
 IGNORE_FUNCTION CNTK::AsBlock;
 IGNORE_FUNCTION CNTK::NCELoss;
 
+
+#ifndef SWIGCSHARP
+IGNORE_CLASS CNTK::TrainingParameterSchedule;
+#else
+%ignore CNTK::TrainingParameterSchedule::TrainingParameterSchedule(TrainingParameterSchedule<T>&&); 
+%ignore CNTK::TrainingParameterSchedule::operator=;
+%ignore CNTK::TrainingParameterSchedule::Transform;
+#endif
+
 IGNORE_CLASS CNTK::TrainingParameterPerMinibatchSchedule;
-IGNORE_CLASS CNTK::LearningRatePerSampleSchedule;
-IGNORE_CLASS CNTK::LearningRatePerMinibatchSchedule;
 IGNORE_CLASS CNTK::MinibatchSizeSchedule;
 IGNORE_CLASS CNTK::LearningRateSchedule;
 IGNORE_CLASS CNTK::MomentumSchedule;
-IGNORE_CLASS CNTK::MomentumPerSampleSchedule;
-IGNORE_CLASS CNTK::MomentumPerMinibatchSchedule;
-IGNORE_CLASS CNTK::MomentumAsTimeConstantSchedule;
 IGNORE_FUNCTION CNTK::DefaultUnitGainValue;
 IGNORE_FUNCTION CNTK::SetDefaultUnitGainValue;
 IGNORE_FUNCTION CNTK::NesterovLearner;
 IGNORE_VARIABLE CNTK::DefaultVarianceMomentum;
+
+IGNORE_FUNCTION CNTK::Learner::GetOptions;
+
+IGNORE_FUNCTION CNTK::UniversalLearner;
 IGNORE_FUNCTION CNTK::Internal::UniversalLearner;
 IGNORE_CLASS CNTK::DistributedLearner;
 IGNORE_FUNCTION CNTK::CreateDataParallelDistributedLearner;
@@ -521,9 +526,8 @@ IGNORE_FUNCTION CNTK::CTFDeserializer;
 IGNORE_FUNCTION CNTK::CBFDeserializer;
 IGNORE_FUNCTION CNTK::HTKFeatureDeserializer;
 IGNORE_FUNCTION CNTK::HTKMLFDeserializer;
+IGNORE_FUNCTION CNTK::MomentumAsTimeConstantSchedule;
 IGNORE_CLASS CNTK::TrainingParameterSchedule;
-IGNORE_CLASS CNTK::TrainingParameterPerUnitSchedule;
-IGNORE_CLASS CNTK::TrainingParameterPerSampleSchedule;
 IGNORE_STRUCT CNTK::AdditionalLearningOptions;
 IGNORE_CLASS CNTK::Learner;
 IGNORE_FUNCTION CNTK::SGDLearner;

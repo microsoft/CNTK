@@ -795,7 +795,7 @@ public:
         // determine nodes to evaluate
         std::vector<ComputationNodeBasePtr> evalNodes;
 
-        set<ComputationNodeBasePtr> criteriaLogged; // (keeps track ot duplicates to avoid we don't double-log critera)
+        set<ComputationNodeBasePtr> criteriaLogged; // (keeps track ot duplicates to avoid we don't double-log criteria)
         if (evalNodeNames.size() == 0)
         {
             fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");

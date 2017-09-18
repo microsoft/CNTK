@@ -14,6 +14,11 @@ MODULE_DIR="$(python -c "import cntk, os, sys; sys.stdout.write(os.path.dirname(
 
 cd ../../../../bindings/python/doc
 
+# Copy the notebooks to the local directory
+cp ../../../Manual/Manual_* .
+cp ../../../Tutorials/CNTK_* .
+rm CNTK_5*.ipynb
+
 if [ "$OS" == "Windows_NT" ]; then
   NORM_PATH="cygpath -aw --file -"
   # In our test env, DOS find.exe may come first in path, make sure we don't use it:
@@ -28,14 +33,23 @@ sphinx-apidoc "$MODULE_DIR" --module-first --separate --no-toc --output-dir=. --
 
 sphinx-build -b html -d _build/doctrees -W -j $(nproc) . _build/html
 
+#Remove the ipynb's
+rm Manual_*.ipynb
+rm CNTK_*.ipynb
+
 # Note: there's currently no way to disable the below checks on a per-instance basis.
 # If they yield false positives, they need to be refined, or disabled if this
 # is not possible.
 
 ERROR=0
 
-# (Using "grep -a" below because of Windows test environment setup.)
+# Exclude the CNTK_*.html and Manual_*.html since the rules below do not apply
+# to content generated from ipynb files (Specifically Object addresses for Matplotlib
+# and back-ticks in the notebook markdown text. 
+rm _build/html/CNTK_*.html
+rm _build/html/Manual_*.html
 
+# (Using "grep -a" below because of Windows test environment setup.)
 if grep -aE " at 0x[0-9a-fA-F]{8}" _build/html/*.html; then
   echo Object addresses leaked into documentation, please fix \(e.g., by
   echo   repeating the signature at the beginning of the docstring\).

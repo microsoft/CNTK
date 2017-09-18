@@ -41,7 +41,7 @@ def run_distributed_training(tmpdir, create_func):
     errs = classification_error(z, labels)
 
     momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
-    lr_per_sample = C.learning_rate_schedule(0.007, C.UnitType.sample)
+    lr_per_sample = C.learning_parameter_schedule(0.007, 1)
     dist_learner = create_func(C.momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True))
 
     communicator = dist_learner.communicator()

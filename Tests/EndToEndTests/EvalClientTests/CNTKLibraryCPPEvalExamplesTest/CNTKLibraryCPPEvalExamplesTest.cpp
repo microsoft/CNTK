@@ -16,6 +16,8 @@ void ParallelEvaluationExample(const wchar_t*, const CNTK::DeviceDescriptor&);
 void EvaluationSingleSequenceUsingOneHot(const wchar_t*, const wchar_t*, const wchar_t*, const CNTK::DeviceDescriptor&);
 void EvaluationBatchOfSequencesUsingOneHot(const wchar_t*, const wchar_t*, const wchar_t*, const CNTK::DeviceDescriptor&);
 void EvaluationSingleSequenceUsingSparse(const wchar_t*, const wchar_t*, const wchar_t*, const CNTK::DeviceDescriptor&);
+void EvaluateIntermediateLayer(const wchar_t*, const CNTK::DeviceDescriptor& device);
+void EvaluateCombinedOutputs(const wchar_t*, const CNTK::DeviceDescriptor& device);
 bool ShouldRunOnCpu();
 bool ShouldRunOnGpu();
 
@@ -39,6 +41,8 @@ int main()
 
         printf("\n##### Test MultiThreadsEvaluation on GPU device. #####\n");
         MultiThreadsEvaluationTests(oneHiddenModel, true);
+        EvaluateIntermediateLayer(resnet20Model, CNTK::DeviceDescriptor::GPUDevice(0));
+        EvaluateCombinedOutputs(resnet20Model, CNTK::DeviceDescriptor::GPUDevice(0));
     }
 
     if (ShouldRunOnCpu())
@@ -53,6 +57,8 @@ int main()
 
         printf("\n##### Test MultiThreadsEvaluation CPU device. #####\n");
         MultiThreadsEvaluationTests(oneHiddenModel, false);
+        EvaluateIntermediateLayer(resnet20Model, CNTK::DeviceDescriptor::CPUDevice());
+        EvaluateCombinedOutputs(resnet20Model, CNTK::DeviceDescriptor::CPUDevice());
     }
 
     printf("Evaluation complete.\n");

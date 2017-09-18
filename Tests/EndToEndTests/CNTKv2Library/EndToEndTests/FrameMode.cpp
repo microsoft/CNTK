@@ -59,7 +59,7 @@ namespace
 
         double learningRatePerSample = 0.02;
 
-        auto trainer = CreateTrainer(classifier.output, classifier.trainingLoss, classifier.prediction, { factory({ SGDLearner(classifier.output->Parameters(), LearningRatePerSampleSchedule(learningRatePerSample)) }) });
+        auto trainer = CreateTrainer(classifier.output, classifier.trainingLoss, classifier.prediction, { factory({ SGDLearner(classifier.output->Parameters(), TrainingParameterPerSampleSchedule(learningRatePerSample)) }) });
         size_t checkpointFrequency = 7000;
 
         TrainingSessionPtr session = CreateTrainingSession(
@@ -178,7 +178,7 @@ void TestDistributedCheckpointing()
                 ReportFailure("Unexpected seed value");
         }
 
-        auto learner = SGDLearner(ff.output->Parameters(), LearningRatePerSampleSchedule(0.02));
+        auto learner = SGDLearner(ff.output->Parameters(), TrainingParameterPerSampleSchedule(0.02));
         auto distributedLearner = CreateDataParallelDistributedLearner(MPICommunicator(), learner, 0);
         auto trainer = CreateTrainer(ff.output, ff.trainingLoss, ff.prediction, { distributedLearner });
 

@@ -190,14 +190,14 @@ def create_criterion(network):
 # return: learners: [sgd, adam, adagrad]
 def create_learner(model):
     '''Create the optimized method'''
-    lr_per_sample = C.learning_rate_schedule(opt.lr, C.UnitType.minibatch)
+    lr_per_minibatch = C.learning_rate_schedule(opt.lr, C.UnitType.minibatch)
     momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
     if opt.optim == 'sgd':
-        return C.sgd(model.parameters, lr=lr_per_sample)
+        return C.sgd(model.parameters, lr=lr_per_minibatch)
     elif opt.optim == 'adam':
-        return C.adam(model.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+        return C.adam(model.parameters, lr=lr_per_minibatch, momentum=momentum_time_constant)
     elif opt.optim == 'adagrad':
-        return C.adagrad(model.parameters, lr=lr_per_sample)
+        return C.adagrad(model.parameters, lr=lr_per_minibatch)
     else:
         raise RuntimeError("Invalid optim method: " + opt.optim)
 
