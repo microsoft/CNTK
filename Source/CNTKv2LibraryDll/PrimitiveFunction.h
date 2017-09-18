@@ -289,8 +289,8 @@ namespace CNTK
             //    fprintf(stderr, "");
         }
     private:
-        // fast alternative constructor private to RawPrimitiveFunction(), for auto-batched
-        // This must not be used for anything else. See definition of RawPrimitiveFunction() for any further information.
+        // special short-circuited constructor private to auto-batcher
+        // This must not be used for anything else.
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, Dictionary&& functionConfig, std::wstring&& name)
             : Function(std::move(inputs), std::vector<Variable>(), std::move(functionConfig), nullptr, std::move(name), std::wstring()),
               m_op(op),
@@ -312,10 +312,6 @@ namespace CNTK
             }
 #endif
         }
-
-        // special short-circuited version for auto-batcher
-        // Definition in AutoBatch.cpp.
-        static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, std::wstring name = std::wstring());
 
         // special short-circuited version for auto-batcher
         void InitOutput(Variable&& output);

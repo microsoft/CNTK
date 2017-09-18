@@ -1702,7 +1702,14 @@ class Variable::AutoBatch
     {
         // create the object
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Pass, L"RawPrimitiveFunction", 3);
-        let f = PrimitiveFunction::RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name);
+        // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
+        auto f = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(attributes), std::move(name));
+        // unfortunately output initialization must be separated out since it requires s shared_ptr to f
+        let& fInputs = f->m_inputs;
+        f->InitOutput(OutputVariable(shape, fInputs.front().GetDataType(), vector<Axis>(),
+                                     any_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.NeedsGradient(); }), // PERF BUGBUG: caller knows this already; should pass it in
+                                     all_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.IsSparse();      }), // BUGBUG: This is not generally correct -> Caller knows this, just pass it in.
+                                     wstring()));
         FinishConstructingPrimitiveFunction(*f, profiler, logPrefix);
         cudaStatsguard.Stop();
 
@@ -1791,8 +1798,11 @@ class Variable::AutoBatch
             fCloned = BlockFunction::RawSharedBlockFunction(fAsBlock.Composite(),move(newInputs), output.Shape(), move(attributes), fAsBlock.OpName(), f.Name());
         }
         else
-            fCloned = PrimitiveFunction::RawPrimitiveFunction(f.m_op, move(newInputs), output.Shape(), move(attributes), f.Name());
-        // BUGBUG: We must pass sparse and needsgradient ^^ here
+            fCloned = MakeSharedObject<PrimitiveFunction>(f.m_op, move(newInputs), move(attributes), f.Name());
+        // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
+        // unfortunately output initialization must be separated out since it requires s shared_ptr to fCloned
+        let& fClonedInputs = fCloned->m_inputs;
+        fCloned->InitOutput(OutputVariable(output.Shape(), fClonedInputs.front().GetDataType(), vector<Axis>(), output.NeedsGradient(), output.IsSparse(), wstring()));
         // add additional initializations for auto-batch only
         FinishConstructingPrimitiveFunction(*fCloned, f.m_profiler, /*logPrefix=*/nullptr);
         return fCloned;
@@ -3500,25 +3510,11 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variab
         return MakeSharedObject<BlockFunction>(composite, operands, /*isBasicBlock=*/false, name)->OutputForDynamicInvocation();
 }
 
-// special short-circuited constructor of PrimitiveFunction that takes everything pre-computed as rvalue refs
-// If no name is passed then this costs only two extra mallocs: m_outputs.data() and m_outputs.front().m_dataFields.
-/*static*/ PrimitiveFunctionPtr PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, std::wstring name /*= std::wstring()*/)
-{
-    // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
-    auto res = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(attributes), std::move(name));
-    // unfortunately output initialization must be separated out since it requires s shared_ptr to res
-    let& resInputs = res->m_inputs;
-    res->InitOutput(OutputVariable(shape, resInputs.front().GetDataType(),{},
-                                   any_of(resInputs.begin(), resInputs.end(), [](const Variable& input) { return input.NeedsGradient(); }), // PERF BUGBUG: caller knows this already; should pass it in
-                                   all_of(resInputs.begin(), resInputs.end(), [](const Variable& input) { return input.IsSparse();      }), // BUGBUG: This is not generally correct -> Caller knows this, just pass it in.
-                                   wstring()));
-    return res;
-}
-
 // special short-circuited version where output is created outside
 void PrimitiveFunction::InitOutput(Variable&& output)
 {
     //std::call_once(m_outputsInitFlag, [this]() {});
+    m_outputInitializingByThreadId = std::thread::id();
     fail_if(m_outputsInitFlag || !m_outputs.empty(), "InitOutput called twice??");
     m_outputsInitFlag++;
     output.SetOwner(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
@@ -3613,6 +3609,10 @@ Variable BlockFunction::OutputForDynamicInvocation()
     // ...EXCEPT we do not implant a mapping, since the composite is shared. The composite does not know that it is part of a BlockFunction.
     let& compositeOutput = m_composite->m_outputs.front();
     auto blockOutput = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), { /*dynamic axes*/ }, compositeOutput.NeedsGradient(), Name());
+
+    //InitOutput(move(blockOutput));
+
+
     let thisShared = static_pointer_cast<PrimitiveFunction>(shared_from_this());
     blockOutput.SetOwner(thisShared);
 
@@ -3625,5 +3625,16 @@ Variable BlockFunction::OutputForDynamicInvocation()
     return m_outputs.front().CompositePreservingCopy(thisShared);
     // BUGBUG: We keep a reference to the PrimitiveFunction, although this is meant to be for composites.
 }
+//void PrimitiveFunction::InitOutput(Variable&& output)
+//{
+//    //std::call_once(m_outputsInitFlag, [this]() {});
+//    m_outputInitializingByThreadId = std::thread::id();
+//    fail_if(m_outputsInitFlag || !m_outputs.empty(), "InitOutput called twice??");
+//    m_outputsInitFlag++;
+//    output.SetOwner(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
+//    // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
+//    m_outputs.resize(1);
+//    m_outputs.front() = move(output);
+//}
 
 } // namespace CNTK
