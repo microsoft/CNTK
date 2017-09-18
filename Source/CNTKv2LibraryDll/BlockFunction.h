@@ -31,10 +31,17 @@ namespace CNTK
 
         // special short-circuited constructor private to auto-batcher
         // This must not be used for anything else.
-        BlockFunction(const FunctionPtr& composite, std::vector<Variable>&& inputs, Dictionary&& functionConfig, std::wstring&& blockOpName, std::wstring&& name) :
-            PrimitiveFunction(PrimitiveOpType::Block, std::move(inputs), std::move(functionConfig), std::move(name)),
-            m_composite(composite), m_blockOpName(move(blockOpName)), m_compositeIsShared(true)
+        BlockFunction(const FunctionPtr& composite, std::vector<Variable>&& inputs, bool isBasicBlock, std::wstring&& blockOpName, std::wstring&& name) :
+            PrimitiveFunction(PrimitiveOpType::Block, std::move(inputs), Dictionary(), std::move(name)),
+            m_composite(composite), m_blockOpName(move(blockOpName)), m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
         {
+        }
+
+        bool IsBasicBlock() const
+        {
+            if (!m_compositeIsShared)
+                LogicError("IsBasicBlock can only be called on a block created by Invoke()");
+            return m_isBasicBlock;
         }
 
         virtual const std::wstring& OpName() const override { return m_blockOpName; }
@@ -248,6 +255,7 @@ namespace CNTK
         // should hold: plVar->m_blockFunctionVariableMapping === m_inputs[plVar->m_compositeArgumentIndex].
         // TODO: Can we switch BlockFunction to this at large?
         bool m_compositeIsShared = false; // true for Dynamite
+        bool m_isBasicBlock = false;      // if true then keep as primitive operation for all batching decisions
 
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 

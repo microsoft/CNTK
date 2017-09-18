@@ -1788,9 +1788,6 @@ class Variable::AutoBatch
     static PrimitiveFunctionPtr ClonePrimitiveFunction(vector<Variable>&& newInputs, PrimitiveFunction& f)
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
-        // clone the attributes
-        Dictionary attributes;
-        f.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
         // get the output shape
         let& outputs = f.m_outputs;
         if (outputs.size() != 1)
@@ -1801,10 +1798,15 @@ class Variable::AutoBatch
         if (f.m_op == PrimitiveOpType::Block)
         {
             let& fAsBlock = static_cast<BlockFunction&>(f);
-            fCloned = MakeSharedObject<BlockFunction>(fAsBlock.Composite(), move(newInputs), move(attributes), wstring(fAsBlock.OpName()), wstring(f.Name()));
+            fCloned = MakeSharedObject<BlockFunction>(fAsBlock.Composite(), move(newInputs), fAsBlock.IsBasicBlock(), wstring(fAsBlock.OpName()), wstring(f.Name()));
         }
         else
+        {
+            // clone the attributes
+            Dictionary attributes;
+            f.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
             fCloned = MakeSharedObject<PrimitiveFunction>(f.m_op, move(newInputs), move(attributes), wstring(f.Name()));
+        }
         // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
         // unfortunately output initialization must be separated out since it requires s shared_ptr to fCloned
         let& fClonedInputs = fCloned->m_inputs;
@@ -3497,7 +3499,9 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variab
     if (!composite)
         InvalidArgument("Invoke requires the callee to be a CompositeFunction");
 #if 0   // This baloney, at least in the case of isBasicBlock.
-    // this can be called in two situations:
+    // TODO: To make use of this if !isBasicBlock, we must make sure that the static cloning machinery understands the shared composite.
+    // BUGBUG: For now, the static support of Invoke is incomplete. Don't actually Clone() one of those babies.
+    // This can be called in two situations:
     //  - during static building of a static graph
     //  - during dynamic imperative code
     // PERF BUGBUG: This is *not* nice, as we need to check the arguments all the time.
@@ -3520,7 +3524,7 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variab
     else
 #endif
     {
-        let f = MakeSharedObject<BlockFunction>(composite, operands, /*isBasicBlock=*/false, name);
+        let f = MakeSharedObject<BlockFunction>(composite, operands, isBasicBlock, name);
         return f->FinalizeInvoke();
     }
 }
@@ -3538,6 +3542,7 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     m_outputs.front() = move(output);
 }
 
+// BUGBUG: We must change the interface of Invoke() from an array to a map, since the composite's args are not ordered.
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
 // It is a valid PrimitiveFunction, but it shares the composite instead of owning it, and therefore not a valid BlockFunction for the static-graph machinery.
 // TODO: Prevent the static machinery from tripping over this.
@@ -3551,18 +3556,16 @@ void PrimitiveFunction::InitOutput(Variable&& output)
 // A correct implementation could allow BlockFunction to lazily clone the composite (which is what Dynamite does).
 BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& blockName /*= std::wstring()*/) :
     PrimitiveFunction(PrimitiveOpType::Block, move/*BUGBUG: not actually moving*/(operands), Dictionary(), blockName), m_composite(callee),
-    m_compositeIsShared(true)
+    m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
 {
-    isBasicBlock; // TODO: remember this somewhere
     let& compositeOutputs = callee->RawOutputs(); // RawOutputs() forces callee.m_compositeOutputs to be initialized if not yet. It would initialize it to Placeholders, though.
     if (compositeOutputs.size() != 1)
         InvalidArgument("Invoke can only be used with BlockFunctions that have a single output (this one has %d).", (int)compositeOutputs.size());
-
-    // BUGBUG: The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
-    //         We need a flag to know whether that has been done. We don't want to traverse the whole thing to find those Placeholders.
-
-
-    if (!compositeOutputs.front().Shape().IsUnknown()) // BUGBUG: This test is not sufficient, since nested use may leave it unset. Well, that's static use, so maybe it is OK!
+    // The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
+    // We use output shape IsUnknown() as the flag to know whether that has been done, so we don't want to traverse the whole thing to find those Placeholders.
+    // BUGBUG: This flag is pessimistic, in that if the block is applied statically (inputs have Placeholders), then
+    //         it does not get set, and this procedure is applied each time. We leave it for now, since it is static use, so only init-time.
+    if (!compositeOutputs.front().Shape().IsUnknown())
         return;
 
     // If this is the first call, then we are not done yet. We must:
@@ -3608,7 +3611,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     // Now the composite is fully type-inferred; ready for consumption by Dynamite.
 }
 
-// ca.l this after construction from Invoke()
+// call this after construction from Invoke()
 Variable BlockFunction::FinalizeInvoke()
 {
     // now set up the output variable. Clone the composite's one output Variable, then inject the mapping pointer. This following the pattern of InferOutputs().
