@@ -90,7 +90,7 @@ namespace CNTK
                 //    outputVar.m_dataFields->m_uid = Uid() + L"_" + VariableKindName(outputVar.Kind()) + L"_" + std::to_wstring(i/*m_outputs.size()*/);
                 //}
 
-                outputVar.m_outputComposite.reset();
+                outputVar.m_outputComposite = FunctionPtr(); // .reset(); Supposedly this is faster
 //#if 1
 //                m_outputs.emplace_back(std::move(outputVar.NonCompositePreservingCopy()));
 //#else
@@ -151,7 +151,7 @@ namespace CNTK
         if (outputs.size() != 1)
             RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
         std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(const_cast<Function*>(this)->shared_from_this()));
-        return outputs[0].CompositePreservingCopy(composite);
+        return outputs.front().CompositePreservingCopy(composite);
     }
 
     std::shared_ptr<std::vector<Variable>> Function::OutputsImpl() const

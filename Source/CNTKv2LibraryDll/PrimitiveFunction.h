@@ -314,6 +314,7 @@ namespace CNTK
         }
 
         // special short-circuited version for auto-batcher
+        friend Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& name /*= std::wstring()*/);
         void InitOutput(Variable&& output);
 
         // implant the acyclic strong reference if it is safe

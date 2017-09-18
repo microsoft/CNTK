@@ -3507,7 +3507,18 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variab
     }
     else
 #endif
-        return MakeSharedObject<BlockFunction>(composite, operands, /*isBasicBlock=*/false, name)->OutputForDynamicInvocation();
+    {
+        let f = MakeSharedObject<BlockFunction>(composite, operands, /*isBasicBlock=*/false, name);
+        // now set up the output variable. Clone the composite's one output Variable, then inject the mapping pointer. This following the pattern of InferOutputs().
+        // ...EXCEPT we do not implant a mapping, since the composite is shared. The composite does not know that it is part of a BlockFunction.
+        //let& compositeOutput = f->Composite()->m_outputs.front();
+        let& compositeOutput = f->Composite()->Output(); // TODO: efficient??
+        auto blockOutput = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), vector<Axis>(), compositeOutput.NeedsGradient(), compositeOutput.IsSparse(), f->Name());
+        f->InitOutput(move(blockOutput));
+        // behave as if this was returning a Composite: implant a ref count. This will be taken over by the next consumer.
+        return f->Output(); // TYODO: efficient?
+        //return f->m_outputs.front().CompositePreservingCopy(f);
+    }
 }
 
 // special short-circuited version where output is created outside
@@ -3603,38 +3614,18 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     // Now the composite is fully type-inferred; ready for consumption by Dynamite.
 }
 
+// TODO: delete
 Variable BlockFunction::OutputForDynamicInvocation()
 {
     // now set up the output variable. Clone the composite's one output Variable, then inject the mapping pointer. This following the pattern of InferOutputs() below.
     // ...EXCEPT we do not implant a mapping, since the composite is shared. The composite does not know that it is part of a BlockFunction.
     let& compositeOutput = m_composite->m_outputs.front();
-    auto blockOutput = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), { /*dynamic axes*/ }, compositeOutput.NeedsGradient(), Name());
+    auto blockOutput = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), vector<Axis>(), compositeOutput.NeedsGradient(), compositeOutput.IsSparse(), Name());
 
-    //InitOutput(move(blockOutput));
+    blockOutput;//InitOutput(move(blockOutput));
 
-
-    let thisShared = static_pointer_cast<PrimitiveFunction>(shared_from_this());
-    blockOutput.SetOwner(thisShared);
-
-    // implant the block's output Variable
-    m_outputs.resize(1);
-    m_outputs.front() = move(blockOutput);
-    m_outputInitializingByThreadId = std::thread::id();
-    m_outputsInitFlag = 1;
-
-    return m_outputs.front().CompositePreservingCopy(thisShared);
+    return m_outputs.front().CompositePreservingCopy(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
     // BUGBUG: We keep a reference to the PrimitiveFunction, although this is meant to be for composites.
 }
-//void PrimitiveFunction::InitOutput(Variable&& output)
-//{
-//    //std::call_once(m_outputsInitFlag, [this]() {});
-//    m_outputInitializingByThreadId = std::thread::id();
-//    fail_if(m_outputsInitFlag || !m_outputs.empty(), "InitOutput called twice??");
-//    m_outputsInitFlag++;
-//    output.SetOwner(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
-//    // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
-//    m_outputs.resize(1);
-//    m_outputs.front() = move(output);
-//}
 
 } // namespace CNTK
