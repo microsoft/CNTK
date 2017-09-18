@@ -29,10 +29,13 @@ namespace CNTK
         BlockFunction(const std::shared_ptr<CompositeFunction>& composite, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& blockName = std::wstring());
         Variable FinalizeInvoke();
 
-        // special short-circuited version for auto-batcher
-        // Definition in AutoBatch.cpp.
-        static PrimitiveFunctionPtr RawSharedBlockFunction(const FunctionPtr& composite, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes,
-                                                           std::wstring blockOpName = std::wstring(), std::wstring name = std::wstring());
+        // special short-circuited constructor private to auto-batcher
+        // This must not be used for anything else.
+        BlockFunction(const FunctionPtr& composite, std::vector<Variable>&& inputs, Dictionary&& functionConfig, std::wstring&& blockOpName, std::wstring&& name) :
+            PrimitiveFunction(PrimitiveOpType::Block, std::move(inputs), std::move(functionConfig), std::move(name)),
+            m_composite(composite), m_blockOpName(move(blockOpName)), m_compositeIsShared(true)
+        {
+        }
 
         virtual const std::wstring& OpName() const override { return m_blockOpName; }
 

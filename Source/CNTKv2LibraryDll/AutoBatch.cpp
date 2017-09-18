@@ -1795,10 +1795,10 @@ class Variable::AutoBatch
         if (f.m_op == PrimitiveOpType::Block)
         {
             let& fAsBlock = static_cast<BlockFunction&>(f);
-            fCloned = BlockFunction::RawSharedBlockFunction(fAsBlock.Composite(),move(newInputs), output.Shape(), move(attributes), fAsBlock.OpName(), f.Name());
+            fCloned = MakeSharedObject<BlockFunction>(fAsBlock.Composite(), move(newInputs), move(attributes), wstring(fAsBlock.OpName()), wstring(f.Name()));
         }
         else
-            fCloned = MakeSharedObject<PrimitiveFunction>(f.m_op, move(newInputs), move(attributes), f.Name());
+            fCloned = MakeSharedObject<PrimitiveFunction>(f.m_op, move(newInputs), move(attributes), wstring(f.Name()));
         // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
         // unfortunately output initialization must be separated out since it requires s shared_ptr to fCloned
         let& fClonedInputs = fCloned->m_inputs;
@@ -1829,6 +1829,7 @@ class Variable::AutoBatch
     // If that is also occupied, then fail.
     void HoldFunction(VariableFields& fields, const PrimitiveFunctionPtr& fInlined) const
     {
+        fail_if(fields.m_redirection.m_functionHolder, "HoldFunction: no place to migrate the existing PrimitiveFunctionPtr to???");
         if (fields.m_redirection.m_functionHolder) // target location already occupied -> migrate that into new function
         {
             auto& inlinedOutputFields = GetOutputFields(fInlined.get());
@@ -3524,16 +3525,6 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
     m_outputs.resize(1);
     m_outputs.front() = move(output);
-}
-
-// special short-circuited version for auto-batcher
-// Definition in AutoBatch.cpp.
-/*static*/ PrimitiveFunctionPtr BlockFunction::RawSharedBlockFunction(const FunctionPtr& composite, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes,
-                                                                      std::wstring blockOpName /*= std::wstring()*/, std::wstring name /*= std::wstring()*/)
-{
-    composite; inputs; shape; attributes; blockOpName; name;
-    // TODO: This is too involved; first refactor more.
-    return nullptr;
 }
 
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.

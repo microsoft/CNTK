@@ -285,8 +285,8 @@ namespace CNTK
     public:
         ~PrimitiveFunction()
         {
-            //if (m_uniqueIdForDebugging == 337410)
-            //    fprintf(stderr, "");
+            if (m_uniqueIdForDebugging == 337410)
+                fprintf(stderr, "");
         }
     protected: // special short-circuited versions private to auto-batcher (also called via BlockFunction(), hence 'protected')
         // This must not be used for anything else.
