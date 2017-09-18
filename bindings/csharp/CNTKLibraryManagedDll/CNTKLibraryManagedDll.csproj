@@ -56,7 +56,6 @@
   <ItemGroup>
     <Compile Include="Helper.cs" />
     <Compile Include="HighLevelAPI\Model.cs" />
-    <Compile Include="HighLevelAPI\Model2.cs" />
     <Compile Include="HighLevelAPI\ModelExample.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShimApiClasses\AxisShim.cs" />
