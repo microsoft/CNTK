@@ -1675,6 +1675,59 @@ class Variable::AutoBatch
         LogFunction(f, profiler ? profiler->Name() : L"-", markIndex);
     }
 
+    // create a PrimitiveFunction, execute it right away, and prep result as an input
+    // This first executes RawPrimitiveFunction() and MemoizeKnowableValueInArena(),
+    // and then returns the result in the form of a Variable suitable as an input to the next PimitiveFunction
+    // by setting its m_acyclicOutputPrimitiveReference field.
+    // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
+    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name,
+                                       const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
+                                       bool isFree = false, bool spliceIsGather = false)
+    {
+        auto f = CreateAndMemoizeOp(op, move(inputs), shape, move(attributes), name, profiler, logPrefix, isFree, spliceIsGather);
+        let& output = f->m_outputs.front();
+        // To make the consumer of this hold a reference to this PrimitiveFunction, inject a strong ref to the copy of its Output.
+        //input = output.CompositePreservingCopy(f); // without the acyclic trick, this works as well, but is not quite right since f is not a Composite
+        Variable input = output;                           // copy the Variable object (which is mostly a shared_ptr tp VariableFields which are not copied but shared)
+        input.m_acyclicOutputPrimitiveReference = move(f); // and implant the reference to the Primitive that generated it, for reference countiung
+        return input;
+    }
+
+    // create a PrimitiveFunction and execute it right away
+    // This executes RawPrimitiveFunction() and MemoizeKnowableValueInArena().
+    // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
+    PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name,
+                                            const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
+                                            bool isFree = false, bool spliceIsGather = false)
+    {
+        // create the object
+        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Pass, L"RawPrimitiveFunction", 3);
+        let f = PrimitiveFunction::RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name);
+        FinishConstructingPrimitiveFunction(*f, profiler, logPrefix);
+        cudaStatsguard.Stop();
+
+        // execute it
+        MemoizeKnowableValueInArena(*f, isFree, spliceIsGather);
+        return f;
+    }
+
+    // call this after constructing a PrimitiveFunction from inside here, to set up the additional fields
+    static void FinishConstructingPrimitiveFunction(PrimitiveFunction& f, const DynamicProfilerPtr& profiler, const wchar_t* logPrefix)
+    {
+        f.m_profiler = profiler;
+#ifdef LOG_DETAILS
+        if (logPrefix)
+            f.m_uid = logPrefix + f.m_inputs.front().Uid(); // propagate the name of the first input, for better logging
+        // TODO: this has not been tested after refactoring
+        //       Also we are not always using the correct input here. Fix this once I look at this again.
+#endif
+        // we must initialize the redirect for backprop
+        auto& fields = *f.m_outputs.front().m_dataFields;
+        fields.m_redirection.m_function = &f;       // we are computing stuff ourselves
+        fields.m_redirection.m_index = SIZE_MAX;    // (indicates that this is not a slice)
+        fields.m_redirection.m_depthHint = INT_MAX; // (to indicate an invalid value)
+    }
+
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool spliceIsGather = false)
     {
@@ -1717,22 +1770,32 @@ class Variable::AutoBatch
         return output;
     }
 
-    // create a PrimitiveFunction, execute it right away, and prep result as an input
-    // This first executes RawPrimitiveFunction() and MemoizeKnowableValueInArena(),
-    // and then returns the result in the form of a Variable suitable as an input to the next PimitiveFunction
-    // by setting its m_acyclicOutputPrimitiveReference field.
-    // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
-    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name,
-                                       const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
-                                       bool isFree = false, bool spliceIsGather = false)
+    // clone a PrimitiveFunction
+    // Special consideration is given to BlockFunction, which derives from PrimitiveFunction.
+    static PrimitiveFunctionPtr ClonePrimitiveFunction(vector<Variable>&& newInputs, PrimitiveFunction& f)
     {
-        let f = RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name, profiler, logPrefix);
-        let& output = MemoizeKnowableValueInArena(*f, isFree, spliceIsGather);
-        // To make the consumer of this hold a reference to this PrimitiveFunction, inject a strong ref to the copy of its Output.
-        //input = output.CompositePreservingCopy(f); // without the acyclic trick, this works as well, but is not quite right since f is not a Composite
-        Variable input = output;                     // copy the Variable object
-        input.m_acyclicOutputPrimitiveReference = f; // and implant the reference to the Primitive that generated it, for reference countiung
-        return input;
+        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
+        // clone the attributes
+        Dictionary attributes;
+        f.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
+        // get the output shape
+        let& outputs = f.m_outputs;
+        if (outputs.size() != 1)
+            InvalidArgument("Dynamic operations cannot have multiple outputs.");
+        let& output = outputs.front();
+        // clone it
+        PrimitiveFunctionPtr fCloned;
+        if (f.m_op == PrimitiveOpType::Block)
+        {
+            let& fAsBlock = static_cast<BlockFunction&>(f);
+            fCloned = BlockFunction::RawSharedBlockFunction(fAsBlock.Composite(),move(newInputs), output.Shape(), move(attributes), fAsBlock.OpName(), f.Name());
+        }
+        else
+            fCloned = PrimitiveFunction::RawPrimitiveFunction(f.m_op, move(newInputs), output.Shape(), move(attributes), f.Name());
+        // BUGBUG: We must pass sparse and needsgradient ^^ here
+        // add additional initializations for auto-batch only
+        FinishConstructingPrimitiveFunction(*fCloned, f.m_profiler, /*logPrefix=*/nullptr);
+        return fCloned;
     }
 
     // notify consumers of 'op' that op's value is now available
@@ -2079,62 +2142,6 @@ class Variable::AutoBatch
         }
         m_dedupSet.Reset(); // clean up after ourselves
         return filteredOps;
-    }
-
-    // wrapper around PrimitiveFunction::RawPrimitiveFunction()
-    // TODO: eliminate this, inline into CreateAndMemoizeOpAsInput()
-    static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name,
-                                                     const DynamicProfilerPtr& profiler, const wchar_t* logPrefix)
-    {
-        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Pass, L"RawPrimitiveFunction", 3);
-        let f = PrimitiveFunction::RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name);
-        FinishConstructingPrimitiveFunction(*f, profiler, logPrefix);
-        return f;
-    }
-
-    // call this after constructing a PrimitiveFunction from inside here, to set up the additional fields
-    static void FinishConstructingPrimitiveFunction(PrimitiveFunction& f, const DynamicProfilerPtr& profiler, const wchar_t* logPrefix)
-    {
-        f.m_profiler = profiler;
-#ifdef LOG_DETAILS
-        if (logPrefix)
-            f.m_uid = logPrefix + f.m_inputs.front().Uid(); // propagate the name of the first input, for better logging
-        // TODO: this has not been tested after refactoring
-        //       Also we are not always using the correct input here. Fix this once I look at this again.
-#endif
-        // we must initialize the redirect for backprop
-        auto& fields = *f.m_outputs.front().m_dataFields;
-        fields.m_redirection.m_function = &f;       // we are computing stuff ourselves
-        fields.m_redirection.m_index = SIZE_MAX;    // (indicates that this is not a slice)
-        fields.m_redirection.m_depthHint = INT_MAX; // (to indicate an invalid value)
-    }
-
-    // clone a PrimitiveFunction
-    // Special consideration is given to BlockFunction, which derives from PrimitiveFunction.
-    static PrimitiveFunctionPtr ClonePrimitiveFunction(vector<Variable>&& newInputs, PrimitiveFunction& f)
-    {
-        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
-        // clone the attributes
-        Dictionary attributes;
-        f.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
-        // get the output shape
-        let& outputs = f.m_outputs;
-        if (outputs.size() != 1)
-            InvalidArgument("Dynamic operations cannot have multiple outputs.");
-        let& output = outputs.front();
-        // clone it
-        PrimitiveFunctionPtr fCloned;
-        if (f.m_op == PrimitiveOpType::Block)
-        {
-            let& fAsBlock = static_cast<BlockFunction&>(f);
-            fCloned = BlockFunction::RawSharedBlockFunction(fAsBlock.Composite(),move(newInputs), output.Shape(), move(attributes), fAsBlock.OpName(), f.Name());
-        }
-        else
-            fCloned = PrimitiveFunction::RawPrimitiveFunction(f.m_op, move(newInputs), output.Shape(), move(attributes), f.Name());
-        // BUGBUG: We must pass sparse and needsgradient ^^ here
-        // add additional initializations for auto-batch only
-        FinishConstructingPrimitiveFunction(*fCloned, f.m_profiler, /*logPrefix=*/nullptr);
-        return fCloned;
     }
 
     // determine the physical source and slice index of an input
@@ -2494,11 +2501,10 @@ class Variable::AutoBatch
             // This is the actual batched execution of the op.
             Dictionary attributes;
             f0.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
-            batchedOp = RawPrimitiveFunction(f0.m_op,
-                                             vector<Variable>(anyBatchedInputs ? m_batchedInputs                                               : f0.m_inputs         ),
-                                             anyBatchedInputs                  ? (unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize)) : unbatchedOutputShape,
-                                             move(attributes), f0.m_name, f0.m_profiler, L"*"/*f0*/);
-            MemoizeKnowableValueInArena(*batchedOp);
+            batchedOp = CreateAndMemoizeOp(f0.m_op,
+                                           vector<Variable>(anyBatchedInputs ? m_batchedInputs                                               : f0.m_inputs         ),
+                                           anyBatchedInputs                  ? (unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize)) : unbatchedOutputShape,
+                                           move(attributes), f0.m_name, f0.m_profiler, L"*"/*f0*/);
             // Note: We could move(m_batchedInputs), but don't, since then we would have to reallocate m_batchedInputs for the next operation, so makes no difference.
 
             if (anyBatchedInputs) // some stats and checks
@@ -2525,8 +2531,7 @@ class Variable::AutoBatch
                     arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
 
                     // Reshape() here does not need the properties at this level anymore; output shape is sufficient
-                    let reshapeOp = RawPrimitiveFunction(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, Dictionary(), f0.m_name, f0.m_profiler, L"*,"/*arg*/);
-                    MemoizeKnowableValueInArena(*reshapeOp, /*isFree=*/true);
+                    let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, Dictionary(), f0.m_name, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
 
                     batchedOp = reshapeOp; // this is the result that we redistribute from to the individual consumers
                 }
