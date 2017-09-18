@@ -313,9 +313,10 @@ namespace CNTK
 #endif
         }
 
-        // special short-circuited version for auto-batcher
-        friend Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& name /*= std::wstring()*/);
+    protected:
+        // special short-circuited version for auto-batcher (also called via BlockFunction(), hence 'protected')
         void InitOutput(Variable&& output);
+    private:
 
         // implant the acyclic strong reference if it is safe
         void UpdateAcyclicReferences()

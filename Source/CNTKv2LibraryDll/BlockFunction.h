@@ -27,7 +27,7 @@ namespace CNTK
 
         // special version for InvokeGraph(). Defined in AutoBatch.cpp for now.
         BlockFunction(const std::shared_ptr<CompositeFunction>& composite, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& blockName = std::wstring());
-        Variable OutputForDynamicInvocation();
+        Variable FinalizeInvoke();
 
         // special short-circuited version for auto-batcher
         // Definition in AutoBatch.cpp.
