@@ -1068,19 +1068,8 @@ class Variable::AutoBatch
                 inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr; // (do this now so that RawPrimitiveFunction does not have to get the Owner again)
             }
         }
-        // clone the attributes
-        Dictionary inlinedAttributes;
-        f.m_attributes.ShallowCloneTo(inlinedAttributes); // note: shallow clone will not copy the map, just a shared_ptr
         // create a new function and set up the outputs
-        let& outputs = f.m_outputs;
-        if (outputs.size() != 1)
-            InvalidArgument("Dynamic operations cannot have multiple outputs.");
-        let& output = outputs.front();
-        if (f.m_op == PrimitiveOpType::Block)
-            // CONTINUE HERE: We must clone a Block differently, since it's a different type.
-            BreakPoint;
-        let fInlinedPtr = RawPrimitiveFunction(f.m_op, move(inlinedInputs), output.Shape(), move(inlinedAttributes), f.Name(), f.m_profiler, /*logPrefix=*/nullptr);
-        // BUGBUG: We must pass sparse adn needsgradient ^^ here
+        let fInlinedPtr = ClonePrimitiveFunction(move(inlinedInputs), f);
         // and remember where this function got redirected to
         f.m_autoBatchState.m_link = fInlinedPtr.get();
         return fInlinedPtr;
@@ -2092,24 +2081,57 @@ class Variable::AutoBatch
         return filteredOps;
     }
 
+    // wrapper around PrimitiveFunction::RawPrimitiveFunction()
+    // TODO: eliminate this, inline into CreateAndMemoizeOpAsInput()
     static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name,
                                                      const DynamicProfilerPtr& profiler, const wchar_t* logPrefix)
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Pass, L"RawPrimitiveFunction", 3);
         let f = PrimitiveFunction::RawPrimitiveFunction(op, move(inputs), shape, move(attributes), name);
-        f->m_profiler = profiler;
+        FinishConstructingPrimitiveFunction(*f, profiler, logPrefix);
+        return f;
+    }
+
+    // call this after constructing a PrimitiveFunction from inside here, to set up the additional fields
+    static void FinishConstructingPrimitiveFunction(PrimitiveFunction& f, const DynamicProfilerPtr& profiler, const wchar_t* logPrefix)
+    {
+        f.m_profiler = profiler;
 #ifdef LOG_DETAILS
         if (logPrefix)
-            f->m_uid = logPrefix + f->m_inputs.front().Uid(); // propagate the name of the first input, for better logging
+            f.m_uid = logPrefix + f.m_inputs.front().Uid(); // propagate the name of the first input, for better logging
         // TODO: this has not been tested after refactoring
         //       Also we are not always using the correct input here. Fix this once I look at this again.
 #endif
         // we must initialize the redirect for backprop
-        auto& fields = *f->m_outputs.front().m_dataFields;
-        fields.m_redirection.m_function = f.get(); // we are computing stuff ourselves
-        fields.m_redirection.m_index = SIZE_MAX; // (indicates that this is not a slice)
+        auto& fields = *f.m_outputs.front().m_dataFields;
+        fields.m_redirection.m_function = &f;       // we are computing stuff ourselves
+        fields.m_redirection.m_index = SIZE_MAX;    // (indicates that this is not a slice)
         fields.m_redirection.m_depthHint = INT_MAX; // (to indicate an invalid value)
-        return f;
+    }
+
+    // clone a PrimitiveFunction
+    // Special consideration is given to BlockFunction, which derives from PrimitiveFunction.
+    static PrimitiveFunctionPtr ClonePrimitiveFunction(vector<Variable>&& newInputs, PrimitiveFunction& f)
+    {
+        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
+        // clone the attributes
+        Dictionary attributes;
+        f.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
+        // get the output shape
+        let& outputs = f.m_outputs;
+        if (outputs.size() != 1)
+            InvalidArgument("Dynamic operations cannot have multiple outputs.");
+        let& output = outputs.front();
+        // clone it
+        let fCloned = PrimitiveFunction::RawPrimitiveFunction(f.m_op, move(newInputs), output.Shape(), move(attributes), f.Name());
+        // BUGBUG: We must pass sparse and needsgradient ^^ here
+        FinishConstructingPrimitiveFunction(*fCloned, f.m_profiler, /*logPrefix=*/nullptr);
+        //let f =
+            //            /*if*/ (f.m_op == PrimitiveOpType::Block) ?
+            //                RawBlockFunction(move(inlinedInputs), output.Shape(), move(inlinedAttributes), f.Name(), f.m_profiler, /*logPrefix=*/nullptr)
+            //            /*else*/:
+            //RawPrimitiveFunction(f.m_op, move(newInputs), outputShape, move(inlinedAttributes), f.Name(), f.m_profiler, /*logPrefix=*/nullptr);
+        return fCloned;
     }
 
     // determine the physical source and slice index of an input
