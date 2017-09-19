@@ -3,4 +3,5 @@
 . $TEST_ROOT_DIR/run-test-common
 . $TEST_DIR/../run-boost-test-common
 
+exit 2
 boosttestrun evaltests
