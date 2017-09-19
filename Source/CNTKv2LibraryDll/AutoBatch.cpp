@@ -211,19 +211,15 @@ namespace CNTK
             PrimitiveOpType::Reshape
         }},
         // 
-        // Conditions:
-        //   All input items must be consecutive in memory.
-        //   All output shapes must match.
-        //   (The input shapes do not need to match. It is already guaranteed that they are all reshapable into the same output shape.)
-        // 
-        // If all items are already consecutive in memory, then we just slice-view and reshape it, and generate the individual lazy slices into that.
-        // (TODO: check that gather does not fail if input shapes do not fullt match.)
-        // This way the reshaped outputs will still be recognizable as consecutive by the next op.
-        // If they are not consecutive, then don't gather them, but instead reshape them individually (i.e. don't consider them batchable).
-        // This is done because reshaping does not involve the GPU, only meta information, and since they are not consecutive,
-        // reshaping them individually will not prevent a consecutive set from being recognized.
-        // 
-        // TODO: Can this be merged with No-ops? Can it be see-through?
+        // Reshape is not a distinct operation, but short-circuited like a see-through op.
+        // Reshape PrimitiveFunctions are skipped in the graph. Because all output shapes
+        // have been inferred on the complete graph including Reshape, skipped Reshapes thus
+        // themselves as operations producing results whose shapes do not match the shape
+        // of the reshaped output. NDArrayView::AsShape() operations are inserted on the fly
+        // where dimensions did not match.
+        // TODO: In two cases in auto-batching, new explicit Reshape PrimitiveFunctions are
+        //       presently created. That is not necessary, and even inefficient in backprop.
+        //       These should be short-circuited as well.
 
         // Binary/ternary element-wise ops
         // -------------------------------
@@ -240,8 +236,10 @@ namespace CNTK
         // Conditions:
         //   Same conditions as for unary element-wise ops must hold for all inputs.
         // 
-        // When batching, all inputs must be padded with singleton dimensions to have the same
-        // rank, so that the batching/stacking dimension is at a matching position.
+        // When batching, all input shapes are, if needed, padded with singleton dimensions to have the same
+        // rank, so that the batching/stacking dimension is at the same position across all inputs
+        // and the output. Likewise, any such added singleton dimensions in the output are, if present,
+        // removed after the op.
 
         // Matrix products
         // ---------------
@@ -302,7 +300,7 @@ namespace CNTK
         // Conditions:
         //   false
         //
-        // Slice() is an actual view, not a copy. Hence, we do not batch it.
+        // Slice() is an actual view, not a copy. Hence, it is not batched.
         // The result of Slice() is smaller than its input, so there is no point in gathering
         // the unsliced inputs, only to put a view on it.
         //
@@ -327,11 +325,13 @@ namespace CNTK
         //   Same as for elementwise ops.
         //
         // A batched Splice first batches all operands, and then splices the batched operands.
-        // The resulting batched Splice op is a strided one. Thus, it cannot be executed by the
-        // one-kernel Gather operation. Instead, one strided copy-kernel (opCopy) per batched input
-        // is needed. Most of the time, we only splice a few items, such as 2; for those, this is certainly fine.
+        // The resulting batched Splice op is a strided one. Thus, it is not executed by the
+        // one-kernel Gather operation (there are some special cases where we could combine
+        // the batching and splicing into a single op). Instead, one strided copy-kernel (opCopy) per batched input
+        // is made. Most of the time, we only splice a few items, such as 2; for those, this is certainly fine.
         // (If the original user-issued Splice consists of arguments of identical shapes, then all
-        // involved Splice operations could be merged into a single one, followed by a reshape.)
+        // involved Splice operations could be merged into a single one, followed by a reshape.
+        // This is not presently done.)
 
         // TransposeAxes()
         // ---------------
@@ -341,10 +341,10 @@ namespace CNTK
         }},
         // 
         // Conditions (batching)):
-        //   All inputs must have matching shapes.
+        //   Same as for elementwise ops.
         // 
         // Conditions (stacking):
-        //   All inputs must have matching shapes except for last axis.
+        //   Same as for elementwise ops.
         //   Must not transpose in stacking dimension.
         // 
         // This is like a unary element-wise op, except that the additional attributes dictionary
@@ -395,6 +395,7 @@ namespace CNTK
         //   Dimensions must match except for the last dimension (=the time axis).
         // 
         // Batching is done according to NVidia's data format.
+        // This is presently not implemented.
 
         // RandomDistribution()
         // --------------------
@@ -419,7 +420,29 @@ namespace CNTK
         // Random numbers cannot be shared across batch items unless users explicitly compute them outside of Batch::Map().
         // The random numbers are lazily computed upon first Value() call, to allow for batching.
         // 
+        // This is presently not implemented.
         // TODO: Does this need to hold on to a RNG state? How to do that?
+
+        //
+        // Invoke(isBasicBlock=true)
+        // -------------------------
+        //
+        { OpSpecificConditionKind::BasicBlockInvocation, {
+            PrimitiveOpType::Block
+        }},
+        //
+        // Condition (batching):
+        //   Like N-nary elementwise ops.
+        //
+        // Condition (stacking):
+        //   False. To allow this, we'd need to analyze the content of the composite to line up the axes.
+        //
+        // Presently, Invoke(composite, isBasicBlock=true) is only allowed for composites that contain only
+        // elementwise operations. That is, e.g. no Times or Convolution. That is because the underlting layer
+        // does not support batch GEMM/batch Convolution at present.
+        //
+        // The inputs of the composite just get the batch axis appended. During computation, the composite is interpreted.
+        // In each step, the batch axis of all inputs and the output are aligned as needed.
 
         // not supported: primitives that involve dynamic axes
         // ---------------------------------------------------
@@ -443,13 +466,6 @@ namespace CNTK
             PrimitiveOpType::Dropout,
             PrimitiveOpType::CrossEntropyWithSoftmax, PrimitiveOpType::ClassificationError, PrimitiveOpType::Logistic,
             PrimitiveOpType::SquaredError, PrimitiveOpType::CosDistance
-        }},
-        //
-        // An Invoke(isBasicBlock=true).
-        // The batch axis is appended where appropriate. It depends on the composite.
-        //
-        { OpSpecificConditionKind::BasicBlockInvocation, {
-            PrimitiveOpType::Block
         }},
         // 
         // These operations exist as CNTK V2 PrimitiveOps, but cannot easily be realized in Dynamite since they
@@ -2352,31 +2368,33 @@ class Variable::AutoBatch
                 // for matrix product, second arg is batched, and batch axes differ for arg and output. Just append one axis, respectively.
                 commonInputBatchAxis = SIZE_MAX; // not shared f0.m_inputs.back().Shape().Rank();
                 outputBatchAxis = unbatchedOutputShape.Rank();
-                i0 = 1; // first arg does not get batched (since that would no longer be a GEMM operation)  --PERF BUGBUG: implement batched GEMM as well!
+                i0 = 1; // first arg does not get batched (since that would no longer be a GEMM operation)  --PERF BUGBUG: implement batched GEMM as well, once we have virtual Gather!
             }
-            else if (opClass == OpSpecificConditionKind::BasicBlockInvocation)
+            else if (isBasicBlock)
             {
                 commonInputBatchAxis = SIZE_MAX; // not shared f0.m_inputs.back().Shape().Rank();
                 outputBatchAxis = unbatchedOutputShape.Rank();
-                i0 = 0;                                        // all args participate in batching  --BUGBUG: This is a problem. How can we know that for block invocation?
+                i0 = 0;                                        // all args participate in batching (non-elementwise ops are forbidden in basic blocks)
                 LogicError("not yet");
             }
-            else if (opClass == OpSpecificConditionKind::Splice)
-            {
-                outputBatchAxis = unbatchedOutputShape.Rank(); // when splicing into a new axis, output shape may have more axes than inputs
-                commonInputBatchAxis = outputBatchAxis;        // splice is like an elementwise op, in that batch axes must be the same for input and output
-                i0 = 0;                                        // all args participate in batching
-            }
+            //else if (opClass == OpSpecificConditionKind::Splice)
+            //{
+            //    outputBatchAxis = unbatchedOutputShape.Rank(); // when splicing into a new axis, output shape may have more axes than inputs. Output shape already reflects that.
+            //    commonInputBatchAxis = outputBatchAxis;        // splice is like an elementwise op, in that batch axes must be the same for input and output
+            //    i0 = 0;                                        // all args participate in batching
+            //}
             else if (isElementWise)
             {
                 // Elementwise ops may remove the last axis (e.g. InnerProduct()), or add axes (see-through Reshape).
                 // So the batch axis must be the max over all inputs' and output's rank.
-                // From the batching condition, we know that all input shapes are the same. So we can look to the first input instead.
-                outputBatchAxis = max(f0.m_inputs.front().Shape().Rank(), unbatchedOutputShape.Rank());
-#if 1
+                // From the batching condition, we know that all input shapes are the same. So we only need to look at the first op instead.
+                // TODO: We could also handle this by an implied AsShape() right before execution.
+                outputBatchAxis = unbatchedOutputShape.Rank();
                 for (let& input : f0.m_inputs)
-                    fail_if(input.Shape().Rank() > outputBatchAxis, "output rank unexpectedly not max over input's ranks");
-#endif
+                {
+                    let& inputRank = input.Shape().Rank();
+                    outputBatchAxis = max(inputRank, outputBatchAxis);
+                }
                 commonInputBatchAxis = outputBatchAxis;        // and the inputs get a new batch axis at the same position as well
                 i0 = 0;                                        // all args participate in batching
             }
