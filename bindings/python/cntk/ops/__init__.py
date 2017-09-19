@@ -220,7 +220,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-                auto_padding=[True], dilation=(1,), reduction_rank=1, max_temp_mem_size_in_samples=0, name=''):
+                auto_padding=[True], dilation=(1,), reduction_rank=1, groups=1, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -265,6 +265,10 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          the input dimension. The last value that lines up with the number of input channels must be false.
         dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
         reduction_rank (`int`, default 1): must be 0 or 1, 0 mean no depth or channel dimension in the input and 1 mean the input has channel or depth dimension.
+        groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+         which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
+         divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
+         Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0. 
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -278,7 +282,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
     dilation = sanitize_shape(dilation)
     return convolution(convolution_map, operand, strides, sharing, auto_padding, dilation,
-                       reduction_rank, max_temp_mem_size_in_samples, name)
+                       reduction_rank, groups, max_temp_mem_size_in_samples, name)
 
 @typemap
 def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
