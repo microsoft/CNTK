@@ -359,7 +359,11 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler);
         argBuf.front() = x; // (avoid the repeated malloc)
+#if 0
         let res = Invoke(lengthNormGraph, argBuf, /*isBasicBlock=*/true);
+#else
+        let res = Invoke(lengthNormGraph, argBuf, /*isBasicBlock=*/false); // FOR NOW, can't handle basic block yet
+#endif
         Function::SetDynamicProfiler(prevProfiler);
         return res;
     });

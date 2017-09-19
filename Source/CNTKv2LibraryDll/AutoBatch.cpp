@@ -155,6 +155,7 @@ namespace CNTK
         Slice, Splice, Transpose,
         MatrixProduct, Convolution,
         Barrier, BatchNormalization, OptimizedRNNStack, RandomDistribution,
+        BasicBlockInvocation,
         NotSupportedDynamicAxis, NotSupportedTempMem, NotSupportedStaticGraph, ToDo, Undefined
     };
     static map<OpSpecificConditionKind, vector<PrimitiveOpType>> opSpecificConditionInitializer
@@ -443,6 +444,13 @@ namespace CNTK
             PrimitiveOpType::CrossEntropyWithSoftmax, PrimitiveOpType::ClassificationError, PrimitiveOpType::Logistic,
             PrimitiveOpType::SquaredError, PrimitiveOpType::CosDistance
         }},
+        //
+        // An Invoke(isBasicBlock=true).
+        // The batch axis is appended where appropriate. It depends on the composite.
+        //
+        { OpSpecificConditionKind::BasicBlockInvocation, {
+            PrimitiveOpType::Block
+        }},
         // 
         // These operations exist as CNTK V2 PrimitiveOps, but cannot easily be realized in Dynamite since they
         // require temporary memory. For example, Softmax requires a temporary buffer, and Dropout requires to store the random mask.
@@ -456,7 +464,7 @@ namespace CNTK
         // ------------------------------------------------------------
         // 
         { OpSpecificConditionKind::NotSupportedStaticGraph, {
-            PrimitiveOpType::Combine, PrimitiveOpType::Block, PrimitiveOpType::Assign
+            PrimitiveOpType::Combine, PrimitiveOpType::Assign
         }},
         // 
         // These are specific to static graphs, and therefore do not apply to Dynamite.
@@ -1402,8 +1410,8 @@ class Variable::AutoBatch
             }
             redirectedFieldsOwner = redirectedFields->m_ownerFunction.lock().get(); // this is the only place we ever call lock(); after this, we just use the raw pointer (relying on immutability)
             let redirectedOp = redirectedFieldsOwner->m_op;
-            // unroll non-basic BlockFunctions
-            if (redirectedOp == PrimitiveOpType::Block /*&& !isBasicBlock*/)
+            // unroll non-basic BlockFunctions (unless it is a basic block; then it is unrolled during execution)
+            if (redirectedOp == PrimitiveOpType::Block && !static_cast<BlockFunction*>(redirectedFieldsOwner)->IsBasicBlock())
             {
                 // make a deep copy of the block's root (PrimitiveFunction graph)
                 // The Block is treated like a see-through op:
@@ -2247,7 +2255,8 @@ class Variable::AutoBatch
         // different operation classes have to be treated differently in various aspects. These are all the special conditions:
         let isFree = IsViewOp(op); // (see-through ops except Slice() should have been short-circuited here except for a few boundary cases)
         let isTimes       = opClass == OpSpecificConditionKind::MatrixProduct; // is special-cased
-        let isElementWise = opClass != OpSpecificConditionKind::MatrixProduct && opClass != OpSpecificConditionKind::Convolution;
+        let isBasicBlock  = opClass == OpSpecificConditionKind::BasicBlockInvocation;
+        let isElementWise = !isTimes && !isBasicBlock && opClass != OpSpecificConditionKind::Convolution;
         // "Element-wise" really means that the inputs and the output all share the same batch axis. Also e.g. for Splice. TODO: Rename?
 
         // common sub-expression elimination (CSE)
@@ -2257,6 +2266,7 @@ class Variable::AutoBatch
         // that is a lazy view onto the non-removed one.
         // Batch norm must be excluded  since we must count samples as often as they appear in the batch statistics.
         // TODO: Merge the pre-check, CSE, and getting the batched args into one big loop.
+        // BUGBUG: This must consider Block functions' composites.
         if (!isFree && op != PrimitiveOpType::BatchNormalization && ops.size() > 1 && IsShortCircuitingBatchedOpDuplicatesNeeded(ops))
             ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
         else
@@ -2334,20 +2344,27 @@ class Variable::AutoBatch
             //  - For global pooling, we need to watch out. TODO!
             m_batchedInputs.resize(numArgs);
             let& unbatchedOutputShape = f0.m_outputs.front().Shape();
-            size_t i0;              // index of first batched argument (1 for matrix product; 0 otherwise)
-            size_t inputBatchAxis;  // batch axis of all batched args (second arg for matrix product; all args share one new batch axis otherwise)
-            size_t outputBatchAxis; // batch axis in output (appended for matrix product; shared with inputs otherwise)
+            size_t i0;                   // index of first batched argument (1 for matrix product; 0 otherwise)
+            size_t commonInputBatchAxis; // batch axis of all batched args if the same (all args share one new batch axis); SIZE_MAX to append
+            size_t outputBatchAxis;      // batch axis in output (appended for matrix product; shared with inputs otherwise)
             if (isTimes)
             {
                 // for matrix product, second arg is batched, and batch axes differ for arg and output. Just append one axis, respectively.
-                inputBatchAxis  = f0.m_inputs.back().Shape().Rank();
+                commonInputBatchAxis = SIZE_MAX; // not shared f0.m_inputs.back().Shape().Rank();
                 outputBatchAxis = unbatchedOutputShape.Rank();
                 i0 = 1; // first arg does not get batched (since that would no longer be a GEMM operation)  --PERF BUGBUG: implement batched GEMM as well!
+            }
+            else if (opClass == OpSpecificConditionKind::BasicBlockInvocation)
+            {
+                commonInputBatchAxis = SIZE_MAX; // not shared f0.m_inputs.back().Shape().Rank();
+                outputBatchAxis = unbatchedOutputShape.Rank();
+                i0 = 0;                                        // all args participate in batching  --BUGBUG: This is a problem. How can we know that for block invocation?
+                LogicError("not yet");
             }
             else if (opClass == OpSpecificConditionKind::Splice)
             {
                 outputBatchAxis = unbatchedOutputShape.Rank(); // when splicing into a new axis, output shape may have more axes than inputs
-                inputBatchAxis = outputBatchAxis;              // splice is like an elementwise op, in that batch axes must be the same for input and output
+                commonInputBatchAxis = outputBatchAxis;        // splice is like an elementwise op, in that batch axes must be the same for input and output
                 i0 = 0;                                        // all args participate in batching
             }
             else if (isElementWise)
@@ -2360,7 +2377,7 @@ class Variable::AutoBatch
                 for (let& input : f0.m_inputs)
                     fail_if(input.Shape().Rank() > outputBatchAxis, "output rank unexpectedly not max over input's ranks");
 #endif
-                inputBatchAxis = outputBatchAxis;              // and the inputs get a new batch axis at the same position as well
+                commonInputBatchAxis = outputBatchAxis;        // and the inputs get a new batch axis at the same position as well
                 i0 = 0;                                        // all args participate in batching
             }
             else
@@ -2451,16 +2468,16 @@ class Variable::AutoBatch
                         // TODO: Can this be done by directly messing with the Variable? Make a deep copy of the var object with begin/end slice?
                         //       Would avoid allocating a PrimitiveFunction, and make it easier to be short-circuited directly in backprop.
                     }
-                    // if this op has a higher inputBatchAxis than the re-batched view, we must move the axis
+                    // if this op has a higher commonInputBatchAxis than the re-batched view, we must move the axis
                     // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
                     // BUGBUG: This seems never called in the MT case?
-                    if (axis != inputBatchAxis)
+                    if (commonInputBatchAxis != SIZE_MAX && axis != commonInputBatchAxis)
                     {
                         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, batchSize);
                         // TODO: Any way we can fold the reshape in using m_redirection?
                         let batchedInput = m_batchedInputs[i];
                         vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
-                        outputShape.insert(outputShape.end() - 1, inputBatchAxis - axis, 1);
+                        outputShape.insert(outputShape.end() - 1, commonInputBatchAxis - axis, 1);
                         // insert a Reshape() op
                         m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape,
                                                                        Dictionary(),
@@ -2472,10 +2489,12 @@ class Variable::AutoBatch
                 else
                 {
                     CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, batchSize);
+                    let& input0Shape = CacheAndGetValue(gatherInputs[0])->Shape();
                     // create a new PrimitiveFunction Splice()
+                    let inputBatchAxis = commonInputBatchAxis != SIZE_MAX ? commonInputBatchAxis : input0Shape.Rank(); // batch into one new axis unless we have a shared axis
                     vector<size_t> outputShape; // determine output shape
                     outputShape.reserve(inputBatchAxis + 1);
-                    outputShape = CacheAndGetValue(gatherInputs[0])->Shape().Dimensions();
+                    outputShape = input0Shape.Dimensions();
                     //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
                     outputShape.resize(inputBatchAxis, 1);      // pad to inputBatchAxis
                     outputShape.push_back(gatherInputs.size()); // and add the batch axis
@@ -2486,7 +2505,7 @@ class Variable::AutoBatch
                     // and that's our input to the batched operation
                     anyBatchedInputs = true;
                 }
-                // release shared_ptrs asap   --TODO: naw, not needed
+                // release shared_ptrs asap, to take advantage of chances of memory reuse
                 gatherInputs.clear();
             }
             // special case: BatchNormalization
@@ -2514,21 +2533,25 @@ class Variable::AutoBatch
             }
 
             // execute the operation and implant the results
-            // BUGBUG: The newly created PrimitiveFunction objects must get their consumer chain set up.
-            PrimitiveFunctionPtr batchedOp;
-            // create a new PrimitiveFunction for the batched op
-            // This is the actual batched op that we create here.
             // Batched inputs have been prepared in m_batchedInputs[].
             // If all inputs are identical then degrade to computing it only once (this is the easy case that we don't kick off the CSE machinery for).
 
-            //let expectedOutputShape = unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize);
-            // This is the actual batched execution of the op.
-            Dictionary attributes;
-            f0.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
-            batchedOp = CreateAndMemoizeOp(f0.m_op,
-                                           vector<Variable>(anyBatchedInputs ? m_batchedInputs                                               : f0.m_inputs         ),
-                                           anyBatchedInputs                  ? (unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize)) : unbatchedOutputShape,
-                                           move(attributes), f0.m_name, f0.m_profiler, L"*"/*f0*/);
+            // This is the actual batched op that we create and execute here.
+            PrimitiveFunctionPtr batchedOp;
+            if (f0.m_op == PrimitiveOpType::Block)
+            {
+                // create a clone of the basic block, with all intermediate steps (needed for backprop)
+                LogicError("can't execute basic blocks yet");
+            }
+            else
+            {
+                Dictionary attributes;
+                f0.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
+                batchedOp = CreateAndMemoizeOp(f0.m_op,
+                                               vector<Variable>(anyBatchedInputs ? m_batchedInputs                                               : f0.m_inputs         ),
+                                               anyBatchedInputs                  ? (unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize)) : unbatchedOutputShape,
+                                               move(attributes), f0.m_name, f0.m_profiler, L"*"/*f0*/);
+            }
             // Note: We could move(m_batchedInputs), but don't, since then we would have to reallocate m_batchedInputs for the next operation, so makes no difference.
 
             if (anyBatchedInputs) // some stats and checks
