@@ -2412,11 +2412,6 @@ public:
         m_convertRunningVariancePending(false)
     {
         m_one.SetValue((ElemType)1); // (constant value used for GPU-side update of runCount)
-    
-        if (m_disableRegulariztion)
-        {
-            this->DisableRegInBatchNormalization();
-        }
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
         BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"spatial"),
@@ -2907,6 +2902,11 @@ public:
                 auto shape = GetSampleLayout();
                 m_bnEng = BatchNormEngine<ElemType>::Create(m_deviceId, shape, m_spatial, m_imageLayoutKind,
                                                             m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn);
+            }
+
+            if (m_disableRegulariztion)
+            {
+                this->DisableRegInBatchNormalization();
             }
         }
     }
