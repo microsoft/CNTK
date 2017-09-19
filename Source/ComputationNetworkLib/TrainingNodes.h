@@ -2972,8 +2972,6 @@ public:
         let biasNode  = dynamic_pointer_cast<LearnableParameter<ElemType>>(Input(BIAS));
         scaleNode->SetRegMultiplier(0.f);
         biasNode->SetRegMultiplier(0.f);
-
-        fprintf(stdout, "DisableRegInBatchNormalization\n");
     }
     double NormalizationTimeConstant() const { return m_normTimeConst; }
     double BlendTimeConstant() const { return m_blendTimeConst; }
