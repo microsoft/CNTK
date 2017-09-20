@@ -1052,12 +1052,11 @@ class Variable::AutoBatch
 
     // inlining of a composite
     // This makes a deep copy of the graph below root.
-    // The returned Variable is meant to be used as an input to another function.
-    // This means that we prepare its m_acyclicOutputPrimitiveReference field where we can, to avoid having to pull it via the OWner() which is expensive.
-    // BUGBUG: Currently does not detect cycles in the composite graph (which are possible although not valid for Invoke())
-    // TODO: Ensure that we always have an acycclic ref in all inputs; and then enforce it in RawPrimitiveFunction().
+    // The actual PrimitiveFunction copy is made via the cloneFn. This way, this function can be used
+    // for both the initial unbatched inlining (no basic block), as well for inlining basic blocks during execution.
     VisitorTag m_compositeVisitorTag; // helper for managing tree traversal through composite (not nested)
-    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, size_t depth, const vector<Variable>& invocationArgs) const
+    template<class F>
+    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, size_t depth, const vector<Variable>& invocationArgs, const F& cloneFn) const
     {
         // if we already cloned this one then just return the clone
         if (m_compositeVisitorTag.Visited(f.m_autoBatchState.m_visitedTag))
@@ -1094,13 +1093,13 @@ class Variable::AutoBatch
             else
             {
                 fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), depth + 1, invocationArgs);
+                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), depth + 1, invocationArgs, cloneFn);
                 inlinedInputs[i] = fInlinedPtr->m_outputs.front();
                 inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr; // (do this now so that RawPrimitiveFunction does not have to get the Owner again)
             }
         }
         // create a new function and set up the outputs
-        let fInlinedPtr = ClonePrimitiveFunction(move(inlinedInputs), f);
+        let fInlinedPtr = cloneFn(f, move(inlinedInputs));
         // and remember where this function got redirected to
         f.m_autoBatchState.m_link = fInlinedPtr.get();
         return fInlinedPtr;
@@ -1453,7 +1452,9 @@ class Variable::AutoBatch
                 // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
                 // Besides that, the original Block function will remain unmodified.
                 m_compositeVisitorTag.Begin();
-                let inlinedRootPtr = RInlineComposite(dynamic_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()), 0, redirectedFieldsOwner->m_inputs); // shared_ptr to the deep copy of the root
+                let inlinedRootPtr = RInlineComposite(dynamic_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()), 0,
+                                                      redirectedFieldsOwner->m_inputs, /*cloneFn=*/ClonePrimitiveFunction);
+                // ^^ returns a shared_ptr to the deep copy of the root
                 redirectedFieldsOwner = inlinedRootPtr.get();
                 redirectedFieldsHolder = inlinedRootPtr; // hold a reference
                 // For ref-counting, the root pointer of the deep copy is kept in redirectedFieldsHolder,
@@ -1723,7 +1724,7 @@ class Variable::AutoBatch
     }
 
     // clone a graph of PrimitiveFunctions of a composite of a basic block, and execute it as we go along
-    // This is used to execute a basic block.
+    // This is used to execute a basic block. It returns a new PrimitiveFunction(-Ptr), which will have its output's m_value set.
     // Logically, we execute the block's composite by replacing its Placeholders (on the fly) with the provided batched blockInputs[].
     // Practically, we completely clone this graph, in order to be able to backprop through it.
     // The clone will have changed dimensions that reflect the additional batch axis. The batch axis is shared across *all* operations,
@@ -1744,9 +1745,18 @@ class Variable::AutoBatch
         let& composite = static_cast<CompositeFunction&>(*block.Composite());
         let& root = static_cast<PrimitiveFunction&>(*composite.RootFunction());
 
-        // ...some recursion here
-        // Problem: How to know what was already cloned?
-        let& f = root;
+        let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
+        let fInlined = RInlineAndMemoizeBatchedBasicBlock(root, blockInputs, batchAxis, batchSize);
+        m_compositeVisitorTag.End(prevVisitorTag); // (restore)
+        return fInlined;
+    }
+
+    // recursively inline FunctionPtrs inside a shared composite held by a Block invocation
+    // This uses m_compositeVisitorTag to detect whether the FunctionPtr has already been expanded.
+    PrimitiveFunctionPtr RInlineAndMemoizeBatchedBasicBlock(const PrimitiveFunction& f/*inside a composite*/, const vector<Variable>& blockInputs, size_t batchAxis/*or SIZE_MAX*/, size_t batchSize)
+    {
+        if (m_compositeVisitorTag.Visited(f.m_autoBatchState.m_visitedTag))
+            return nullptr;// f.m_autoBatchState.m_link->shared_from_this();
 
         // clone and memoize all inputs
         for (auto& input : f.m_inputs)
@@ -1894,7 +1904,7 @@ class Variable::AutoBatch
 
     // clone a PrimitiveFunction
     // Special consideration is given to BlockFunction, which derives from PrimitiveFunction.
-    static PrimitiveFunctionPtr ClonePrimitiveFunction(vector<Variable>&& newInputs, PrimitiveFunction& f)
+    static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& f, vector<Variable>&& newInputs)
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
         // get the output shape

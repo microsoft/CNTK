@@ -872,9 +872,9 @@ namespace CNTK
         {
             mutable size_t m_visitedTag = 0; // used for tree traversal at various places (currently only in backprop, in two places, and in composite inlining)
             size_t m_pendingInputs;          // during batched forward: counter how many inputs have already become available
-            PrimitiveFunction* m_link;       // temporary linked list, e.g. for batched operations
+            PrimitiveFunction* m_link;       // temporary linked list, e.g. for batched operations. In composite inlining, it points to an already inlined clone
             PrimitiveFunction* m_aliasList;  // list of aliases (common subexpression), local to ExecuteBatchedOpAndUpdateSchedule()
-            PrimitiveFunction* m_bucketList; // list of hach-table entries (for CSE, local to class DedupSet)
+            PrimitiveFunction* m_bucketList; // list of hash-table entries (for CSE, local to class DedupSet)
             mutable size_t m_cachedOpHash = SIZE_MAX-1; // hash for batchability check; 0 means not set yet   --set to SIZE_MAX to detect missing initialization
             //size_t m_aliasHash = SIZE_MAX-1; // hash for alias detection (common subexpression elimination)    --set to SIZE_MAX-1 to detect if we miss to initialize; remove this
             size_t m_depthHint;              // max of depth hints over all inputs
