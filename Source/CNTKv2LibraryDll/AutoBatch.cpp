@@ -2224,6 +2224,52 @@ class Variable::AutoBatch
         return{ function, index };
     }
 
+    // subroutine to determine the max Rank() over f's m_inputs
+    // Only use this for element-wise ops (and not, e.g., for Times or Convolution).
+    size_t DetermineMaxElementwiseInputRank(const PrimitiveFunction& f)
+    {
+        let numArgs = f.m_inputs.size();
+        size_t maxInputRank = f.m_inputs.front().Shape().Rank();
+        for (size_t i = 1; i < numArgs; i++)
+            maxInputRank = max(f.m_inputs[1].Shape().Rank(), maxInputRank);
+        return maxInputRank;
+    }
+
+    // helper to determine the max Rank() over all inputs and outputs in composite's m_rootFunction
+    // Auto-batching needs to know a common batch axis it can use throughout the entire BlockFunction.
+    // It is determined as the max rank over all involved inputs and outputs.
+    size_t CacheAndGetBasicBlockBatchAxis(const BlockFunction& blockRoot)
+    {
+        auto& composite = static_cast<CompositeFunction&>(*blockRoot.Composite());
+        // BUGBUG: This will incorrectly also include the weight arg of a MatrixProduct.
+        //         It is not harmful, since in the worst case, the resulting batch axis higher than needed, which does not really cost anything.
+        if (composite.m_basicBlockBatchAxis == SIZE_MAX) // not computed yet (has been reset in Invoke())
+        {
+            // start with the inputs
+            size_t maxRank = DetermineMaxElementwiseInputRank(blockRoot);
+            // now also maximize over all output shapes of all Functions inside the composite graph
+            Function::PreorderTraverseFunctions(composite.RootFunction(), [&](const FunctionPtr& iter) // This is only done once per composite ever (across all minibatches), so it is OK to be slow.
+            {
+                let& f = static_cast<const PrimitiveFunction&>(*iter);
+                if (f.m_op == PrimitiveOpType::Block) // nested block (may be shared, hence the value may already be there)
+                    maxRank = max(maxRank, CacheAndGetBasicBlockBatchAxis(static_cast<const BlockFunction&>(f)));
+                else
+                {
+                    // note: f may be Times or Convolution. Those require special-casing regarding their inputs, but not the output.
+                    let& outputs = f.m_outputs;
+                    if (outputs.size() != 1)
+                        InvalidArgument("Invoke can only be used with composites that have a single output (this one contains a function with %d).", (int)outputs.size());
+                    maxRank = max(maxRank, outputs.front().Shape().Rank());
+                }
+            });
+            composite.m_basicBlockBatchAxis = maxRank;
+        }
+#if 1   // BUGBUG: This uses a hard-coded constant (12) to heuristically detect an uninitialized value. That is not general, so remove this once this stuff works.
+        fail_if(composite.m_basicBlockBatchAxis == 0 || composite.m_basicBlockBatchAxis > 12, "m_basicBlockBatchAxis was not prepared??");
+#endif
+        return composite.m_basicBlockBatchAxis;
+    }
+
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
     vector<Variable> m_batchedInputs;
     vector<Variable> m_gatherArgsBuffer;
@@ -2270,7 +2316,7 @@ class Variable::AutoBatch
         }
         // different operation classes have to be treated differently in various aspects. These are all the special conditions:
         let isFree = IsViewOp(op); // (see-through ops except Slice() should have been short-circuited here except for a few boundary cases)
-        let isTimes       = opClass == OpSpecificConditionKind::MatrixProduct; // is special-cased
+        let isTimes       = opClass == OpSpecificConditionKind::MatrixProduct; // is special-cased  --TODO: Convolution will also fall in this category
         let isBasicBlock  = opClass == OpSpecificConditionKind::BasicBlockInvocation;
         let isElementWise = !isTimes && !isBasicBlock && opClass != OpSpecificConditionKind::Convolution;
         // "Element-wise" really means that the inputs and the output all share the same batch axis. Also e.g. for Splice. TODO: Rename?
@@ -2362,6 +2408,7 @@ class Variable::AutoBatch
             let& unbatchedOutputShape = f0.m_outputs.front().Shape();
             size_t i0;                   // index of first batched argument (1 for matrix product; 0 otherwise)
             size_t commonInputBatchAxis; // batch axis of all batched args if the same (all args share one new batch axis); SIZE_MAX to append
+            // TODO: ^^ we can remove the SIZE_MAX case again for now
             size_t outputBatchAxis;      // batch axis in output (appended for matrix product; shared with inputs otherwise)
             if (isTimes)
             {
@@ -2372,31 +2419,19 @@ class Variable::AutoBatch
             }
             else if (isBasicBlock)
             {
-                commonInputBatchAxis = SIZE_MAX; // not shared f0.m_inputs.back().Shape().Rank();
-                outputBatchAxis = unbatchedOutputShape.Rank();
-                i0 = 0;                                        // all args participate in batching (non-elementwise ops are forbidden in basic blocks)
-                LogicError("not yet");
+                outputBatchAxis = max(unbatchedOutputShape.Rank(), CacheAndGetBasicBlockBatchAxis(static_cast<const BlockFunction&>(f0)));
+                commonInputBatchAxis = outputBatchAxis;
+                i0 = 0; // all args participate in batching (non-elementwise ops are forbidden in basic blocks, with special-casing of Times)
             }
-            //else if (opClass == OpSpecificConditionKind::Splice)
-            //{
-            //    outputBatchAxis = unbatchedOutputShape.Rank(); // when splicing into a new axis, output shape may have more axes than inputs. Output shape already reflects that.
-            //    commonInputBatchAxis = outputBatchAxis;        // splice is like an elementwise op, in that batch axes must be the same for input and output
-            //    i0 = 0;                                        // all args participate in batching
-            //}
             else if (isElementWise)
             {
-                // Elementwise ops may remove the last axis (e.g. InnerProduct()), or add axes (see-through Reshape).
+                // Elementwise ops may remove the last axis (e.g. InnerProduct()), or add axes (Splice, see-through Reshape).
                 // So the batch axis must be the max over all inputs' and output's rank.
                 // From the batching condition, we know that all input shapes are the same. So we only need to look at the first op instead.
                 // TODO: We could also handle this by an implied AsShape() right before execution.
-                outputBatchAxis = unbatchedOutputShape.Rank();
-                for (let& input : f0.m_inputs)
-                {
-                    let& inputRank = input.Shape().Rank();
-                    outputBatchAxis = max(inputRank, outputBatchAxis);
-                }
-                commonInputBatchAxis = outputBatchAxis;        // and the inputs get a new batch axis at the same position as well
-                i0 = 0;                                        // all args participate in batching
+                outputBatchAxis = max(unbatchedOutputShape.Rank(), DetermineMaxElementwiseInputRank(f0));
+                commonInputBatchAxis = outputBatchAxis;
+                i0 = 0;                                 // all args participate in batching
             }
             else
                 fail_if(true, "should not get here");
@@ -3534,7 +3569,7 @@ void PrimitiveFunction::MemoizeKnowableValue() const
 // Invoke() and our pieces of PrimitiveFunction and BlockFunction -- contained here for now
 // ===========================================================================
 
-Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& name /*= std::wstring()*/)
+Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<std::pair<Variable, Variable>>& operands, bool isBasicBlock, const std::wstring& name /*= std::wstring()*/)
 {
     let composite = dynamic_pointer_cast<CompositeFunction>(callee);
     if (!composite)
@@ -3583,7 +3618,18 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     m_outputs.front() = move(output);
 }
 
-// BUGBUG: We must change the interface of Invoke() from an array to a map, since the composite's args are not ordered.
+// form a vector from the .second fields of 'operands' ("map (fun operand -> operand.second) operands")
+template<typename T1, typename T2>
+static vector<T2> GetVectorOfSeconds(const std::vector<std::pair<T1, T2>>& operands)
+{
+    let num = operands.size();
+    vector<Variable> res(num);
+    for (size_t i = 0; i < num; i++)
+        res[i] = operands[i].second;
+    return res;
+}
+
+// BUGBUG: We must complete the change of the interface of Invoke() from an array to a map, since the composite's args are not ordered.
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
 // It is a valid PrimitiveFunction, but it shares the composite instead of owning it, and therefore not a valid BlockFunction for the static-graph machinery.
 // TODO: Prevent the static machinery from tripping over this.
@@ -3593,13 +3639,13 @@ void PrimitiveFunction::InitOutput(Variable&& output)
 // Unlike a normal BlockFunction, however, it shares the composite (for Dynamite speed) with the callee, which makes it an invalid object for static CNTK.
 // BUGBUG: This is really quite horrible, as it does not work with static graphs. We need a better implementation of this.
 //         The main difference is that invoked blocks physically share their composites, to avoid duplicating them
-//         (since the point of using BlockFunctions is speed). Also, we have quite a bit code dup in this function.
+//         (since the point of using Invoke() is speed). Also, we have quite a bit code dup in this function.
 // A correct implementation could allow BlockFunction to lazily clone the composite (which is what Dynamite does).
-BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vector<Variable>& operands, bool isBasicBlock, const std::wstring& blockName /*= std::wstring()*/) :
-    PrimitiveFunction(PrimitiveOpType::Block, move/*BUGBUG: not actually moving*/(operands), Dictionary(), blockName), m_composite(callee),
+BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vector<std::pair<Variable, Variable>>& operands, bool isBasicBlock, const std::wstring& blockName /*= std::wstring()*/) :
+    PrimitiveFunction(PrimitiveOpType::Block, move(GetVectorOfSeconds(operands)), Dictionary(), blockName), m_composite(callee),
     m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
 {
-    let& compositeOutputs = callee->RawOutputs(); // RawOutputs() forces callee.m_compositeOutputs to be initialized if not yet. It would initialize it to Placeholders, though.
+    let& compositeOutputs = callee->RawOutputs(); // RawOutputs() forces callee.m_compositeOutputs to be initialized if not yet. It would initialize it to something is shape IsUnknown, though.
     if (compositeOutputs.size() != 1)
         InvalidArgument("Invoke can only be used with BlockFunctions that have a single output (this one has %d).", (int)compositeOutputs.size());
     // The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
@@ -3610,6 +3656,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
         return;
 
     // If this is the first call, then we are not done yet. We must:
+    //  - initialize (reset) Dynamite-specific fields in the callee
     //  - enumerate all Placeholders and number them
     //  - infer the shapes, given the first actually supplied arguments
     // if the composite has no validated shape yet, then do this now
@@ -3617,16 +3664,22 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     // Any subsequent invocation of this must have matching dimensions. It will otherwise fail inside Dynamite execution.
     // This is slow, but that's OK since it is done only once.
 
+    // reset the cached batch axis (=max over all ranks involved, for batching the composite as elementwise
+    if (isBasicBlock)
+        callee->m_basicBlockBatchAxis = SIZE_MAX;
+
     // We determine the compositeOutputs by replacing the arguments of the composite with new placeholders with updated 
     // shape etc. information matching the corresponding mapped input
     let argumentsMap = callee->Arguments(); // BUGBUG: composite arguments are not ordered
     if (argumentsMap.size() != m_inputs.size())
         InvalidArgument("Invoke invoked with wrong (%d) number of arguments, %d expected.", (int)m_inputs.size(), (int)argumentsMap.size());
 
+    // BUGBUG: Must handle the map here now that we pass it.
+
     std::unordered_map<Variable, Variable> replacementMap;
     for (size_t i = 0; i < m_inputs.size(); i++)
     {
-        let& currentArgument = argumentsMap[i]; // Placeholder in the composite
+        let& currentArgument = argumentsMap[i]; // Placeholder in the composite   --BUGBUG HERE, must determine the position via the map
         if (!currentArgument.IsPlaceholder())
             InvalidArgument("Invoke requires the block function to have Placeholders as inputs.");
         let& currentArgumentMapping = m_inputs[i]; // the user-supplied argument. This has the actual type.
@@ -3644,11 +3697,12 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     // Special case: Invoke() may also be called while building a composite (static graph) that uses another.
     // In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
     // is inferred.
-    if (any_of(operands.begin(), operands.end(), [](const Variable& arg) { return arg.Shape().IsUnknown(); }))
+    if (any_of(operands.begin(), operands.end(), [](const pair<Variable,Variable>& arg) { return arg.second.Shape().IsUnknown(); }))
         return;
 
     if (compositeOutputs.front().Shape().IsUnknown()) // or not?
         LogicError("Invoke must only be called with inputs with fully specified dimensions.");
+
     // Now the composite is fully type-inferred; ready for consumption by Dynamite.
 }
 

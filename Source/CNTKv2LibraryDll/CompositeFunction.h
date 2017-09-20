@@ -458,6 +458,11 @@ namespace CNTK
             return *m_execVars;
         }
 
+        // Dynamite:
+        friend class BlockFunction;
+        friend class Variable::AutoBatch;
+        size_t m_basicBlockBatchAxis; // we cache the batch axis here upon first use (only for composites owned by BlockFunctions with m_isBasicBlock=true)
+
         // Version history:
         // 1 -- initial version.
         // 2 -- add support for stateful functions (with corresponding nodes inheriting from RngUser).

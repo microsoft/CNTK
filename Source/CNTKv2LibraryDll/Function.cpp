@@ -1496,6 +1496,10 @@ namespace CNTK
         Constant onePlusEps = Constant::Scalar(1.0f+1e-6f);
         Constant one = Constant::Scalar(1.0f);
         Constant eps = Constant::Scalar(1e-6f);
+        // -(label * Log(eps + P) + (1 - label) * Log(1 + eps - P))
+        // TODO: for improved stability, like CrossEntropyWithSoftmax(), offer BinaryCrossEntropyWithSigmoid(z, label):
+        // 	bce = -(label * log(sigmoid(z)) + (1 - label) * log(1 - sigmoid(z)))
+        //            -(label * (z – softplus(z)) + (1 - label) * (-z – softplus(-z)))
         auto compositeBinaryCrossEntropy = Negate(Plus(ElementTimes(labelPlaceholder,Log(eps + predictionPlaceholder)), ElementTimes(Minus(one, labelPlaceholder), Log(Minus(onePlusEps, predictionPlaceholder)))));
         return AsBlock(std::move(compositeBinaryCrossEntropy), { { predictionPlaceholder, prediction },{ labelPlaceholder, targets } }, L"BinaryCrossEntropy", name);
     }
