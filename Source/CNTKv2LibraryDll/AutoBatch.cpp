@@ -1722,12 +1722,47 @@ class Variable::AutoBatch
         LogFunction(f, profiler ? profiler->Name() : L"-", markIndex);
     }
 
+    // clone a graph of PrimitiveFunctions of a composite of a basic block, and execute it as we go along
+    // This is used to execute a basic block.
+    // Logically, we execute the block's composite by replacing its Placeholders (on the fly) with the provided batched inputs.
+    // Practically, we completely clone this graph, in order to be able to backprop through it.
+    // The clone will have changed dimensions that reflect the additional batch axis. The batch axis is shared across *all* operations,
+    // and therefore must have been pre-determined to be larger than all ranks of all involved inputs and outputs
+    // (also considering any potentially nested basic blocks).
+    // Any input that does not have this shared batch axis is a non-batched input (all inputs the same).
+    // Any Times operation inside the block requires an unbatched first argument (weight matrix);
+    // therefore we carefully propagate the non-batchedness of intermediate results.
+    // As a special case, execution can also be unbatched. This is indicated by batchAxis==SIZE_MAX.
+    // This function can be seen as a special case of ExecuteBatchedOpAndUpdateSchedule() that assumes
+    // batched inputs and consistent batching for all ops, and therefore does not perform any additional (re-)batching.
+    PrimitiveFunctionPtr InlineAndMemoizeBasicBlock(const BlockFunction& block, const vector<Variable>& inputs, size_t batchAxis/*SIZE_MAX indicates no batching*/)
+    {
+        let& composite = static_cast<CompositeFunction&>(*block.Composite());
+        let& root = static_cast<PrimitiveFunction&>(*composite.RootFunction());
+
+        //...some recursion here
+        let& f = root;
+
+        // clone and memoize all inputs
+
+        // clone and memoize this operation
+        //let& unbatchedOutputShape = f.m_outputs.front().Shape();
+        //let anyBatchedInputs = batchAxis == SIZE_MAX; // ...need to consider the inputs' batchedness as well
+        //let batchSize = 13; // TODO: where does this come from? Can we use 1 for unbatched?
+        //let outputShape = anyBatchedInputs ? (unbatchedOutputShape.AppendAxis(batchAxis, batchSize)) : unbatchedOutputShape,
+
+        f;
+        LogicError("not yet");
+
+        //    f0.m_name, f0.m_profiler, L"*"/*f0*/)
+    }
+
     // create a PrimitiveFunction, execute it right away, and prep result as an input
     // This first executes RawPrimitiveFunction() and MemoizeKnowableValueInArena(),
     // and then returns the result in the form of a Variable suitable as an input to the next PimitiveFunction
     // by setting its m_acyclicOutputPrimitiveReference field.
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
-    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name,
+    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const wstring& name,
                                        const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                        bool isFree = false, bool spliceIsGather = false)
     {
@@ -1742,7 +1777,7 @@ class Variable::AutoBatch
 
     // create a PrimitiveFunction that is a batched version of a given op, and execute it right away
     // This is a wrapper around CreateAndMemoizeOp().
-    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, std::vector<Variable>&& inputs, const NDShape& shape, const wchar_t* logPrefix)
+    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, const vector<Variable>& inputs, const NDShape& shape, const wchar_t* logPrefix)
     {
         Dictionary attributes;
         f.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
@@ -1752,13 +1787,13 @@ class Variable::AutoBatch
             fail_if(inputs.front().Shape() != f.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
         }
 #endif
-        return CreateAndMemoizeOp(f.m_op, move(inputs), shape, move(attributes), f.m_name, f.m_profiler, L"*"/*f*/);
+        return CreateAndMemoizeOp(f.m_op, vector<Variable>(inputs), shape, move(attributes), f.m_name, f.m_profiler, L"*"/*f*/);
     }
 
     // create a PrimitiveFunction and execute it right away
     // This executes RawPrimitiveFunction() and MemoizeKnowableValueInArena().
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
-    PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const std::wstring& name,
+    PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const wstring& name,
                                             const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                             bool isFree = false, bool spliceIsGather = false)
     {
@@ -1887,21 +1922,6 @@ class Variable::AutoBatch
         //fields.m_consumers.clear();
         //fields.m_consumers.mangle(-3333); // leave a mark that this was reset nullptr;
     }
-
-    // store a PrimitiveFunctionPtr in VariableFields
-    // If it is already occupied, then migrate the existing value into the function's output.
-    // If that is also occupied, then fail.
-    //void HoldFunction(VariableFields& fields, const PrimitiveFunctionPtr& fInlined) const
-    //{
-    //    fail_if(fields.m_redirection.m_functionHolder, "HoldFunction: no place to migrate the existing PrimitiveFunctionPtr to???");
-    //    if (fields.m_redirection.m_functionHolder) // target location already occupied -> migrate that into new function
-    //    {
-    //        auto& inlinedOutputFields = GetOutputFields(fInlined.get());
-    //        fail_if(inlinedOutputFields.m_redirection.m_functionHolder, "HoldFunction: no place to migrate the existing PrimitiveFunctionPtr to???");
-    //        inlinedOutputFields.m_redirection.m_functionHolder = move(fields.m_redirection.m_functionHolder); // park it here, since we are overwriting it
-    //    }
-    //    fields.m_redirection.m_functionHolder = fInlined; // hold a ref count, for resource management
-    //}
 
     // implant the the result of a function that was executed as a batched op
     // j = slice index into batched result, or SIZE_MAX (default) if entire tensor
@@ -2270,13 +2290,13 @@ class Variable::AutoBatch
     // helper to determine the max Rank() over all inputs and outputs in composite's m_rootFunction
     // Auto-batching needs to know a common batch axis it can use throughout the entire BlockFunction.
     // It is determined as the max rank over all involved inputs and outputs.
-    size_t CacheAndGetBasicBlockBatchAxis(const BlockFunction& blockRoot)
+    size_t CacheAndGetBasicBlockBatchAxis(const BlockFunction& block)
     {
-        auto& composite = static_cast<CompositeFunction&>(*blockRoot.Composite());
+        auto& composite = static_cast<CompositeFunction&>(*block.Composite());
         if (composite.m_basicBlockBatchAxis == SIZE_MAX) // not computed yet (has been reset in Invoke())
         {
             // start with the inputs
-            size_t maxRank = DetermineMaxElementwiseInputRank(blockRoot);
+            size_t maxRank = DetermineMaxElementwiseInputRank(block);
             // now also maximize over all output shapes of all Functions inside the composite graph
             // BUGBUG: For expedience, we use PreorderTraverseFunctions(). However, this will incorrectly also
             //         traverse the weight arg of a MatrixProduct if it is the result of computation (a Function).
@@ -2398,19 +2418,16 @@ class Variable::AutoBatch
         if (doNaively)
         {
             // for correctness testing of underlying mechanism, compute them without actual batching
-            for (auto op = ops.begin(); op != ops.end(); ++op)
+            for (auto f = ops.begin(); f != ops.end(); ++f) // TODO: can we use : syntax?
             {
                 // execute it
-                MemoizeKnowableValueInArena(*op, isFree);
+                if (f->m_op == PrimitiveOpType::Block)
+                    LogicError("Unbatched basic-block not yet implemented."); // TODO: Maybe it's as easy as just calling the inline function here.
+                MemoizeKnowableValueInArena(*f, isFree);
                 // and notify consumers (which may schedule them)
-                NotifyOpsConsumersInputsAvailable(op);
+                NotifyOpsConsumersInputsAvailable(f);
                 // distribute value to all aliases
-                UpdateDuplicatesAndUpdateSchedule(op);
-                // TODO: realize splice ops that are index ops as a m_redirection at this point
-                //if (f0.m_op == PrimitiveOpType::Slice)
-                //{
-                //    // inject the redirection
-                //}
+                UpdateDuplicatesAndUpdateSchedule(f);
             }
         }
 
@@ -2633,22 +2650,19 @@ class Variable::AutoBatch
                 //    If user code is correct, it will compute the right thing. But we cannot presently check or account for it.
 
                 // create a clone of the basic block, with all intermediate steps (needed for backprop)
-                LogicError("not yet");
-                //batchedOp = InlineAndMemoizeBasicBlock(static_cast<const BlockFunction&>(f0),
-                //                                       vector<Variable>(anyBatchedInputs ? m_batchedInputs                                               : f0.m_inputs         ),
-                //                                       anyBatchedInputs                  ? (unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize)) : unbatchedOutputShape,
-                //                                       outputBatchAxis,
-                //                                       f0.m_name, f0.m_profiler, L"*"/*f0*/);
+                batchedOp = InlineAndMemoizeBasicBlock(static_cast<const BlockFunction&>(f0),
+                                                       anyBatchedInputs ? m_batchedInputs : f0.m_inputs,
+                                                       anyBatchedInputs ? outputBatchAxis : SIZE_MAX/*indicates no batching*/);
             }
             else
             {
-                // PERF BUGBUG: If we degrade to a fully batched op, there is no need to create a new PrimitiveFunction.
+                // PERF BUGBUG: If all args are identical, we can degrade to a single op. Then we should not need to create a new PrimitiveFunction.
+                //              ^^ TODO: This may already be covered by CSE.
                 batchedOp = CreateAndMemoizeBatchedOp(f0,
-                                                      vector<Variable>(anyBatchedInputs ? m_batchedInputs                                               : f0.m_inputs         ),
-                                                      anyBatchedInputs                  ? (unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize)) : unbatchedOutputShape,
+                                                      anyBatchedInputs ? m_batchedInputs                                             : f0.m_inputs,
+                                                      anyBatchedInputs ? unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize) : unbatchedOutputShape,
                                                       L"*"/*f0*/);
             }
-            // Note: We could move(m_batchedInputs), but don't, since then we would have to reallocate m_batchedInputs for the next operation, so makes no difference.
 
             if (anyBatchedInputs) // some stats and checks
             {
@@ -2681,7 +2695,7 @@ class Variable::AutoBatch
             }
 
             // implant all results in the original unbatched operations (all as lazy/virtual references through m_redirection)
-            size_t j = anyBatchedInputs ? 0 : SIZE_MAX;
+            size_t j = anyBatchedInputs ? 0 : SIZE_MAX; // the slice index implanted in the redirection. SIZE_MAX if no need to slice.
             for (auto op = ops.begin(); op != ops.end(); ++op)
             {
                 // TODO: review this w.r.t. multi-output functions
@@ -2693,6 +2707,7 @@ class Variable::AutoBatch
                 if (j != SIZE_MAX) // SIZE_MAX means don't slice
                     j++;
             }
+            // To keep the batchedOp ref count alive, FinalizeBatchedOpAndUpdateSchedule() saves the shared_ptr in all m_redirection.m_functionHolder.
 
             // release the ref counts on the batched inputs; but keep the vector's memory allocated
             m_batchedInputs.clear();
