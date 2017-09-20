@@ -1028,6 +1028,13 @@ class Variable::AutoBatch
         return f->m_op == PrimitiveOpType::BarrierOp && f->m_attributes.Size() > 0;
     }
 
+    // predicate whether an op has an unbatchable first weigth parameter, like Times
+    // TODO: Find a better name that eventually also includes Convolution.
+    static bool IsMatrixProduct(PrimitiveOpType op)
+    {
+        return g_oscTable[op] == OpSpecificConditionKind::MatrixProduct;
+    }
+
     // helper to check whether we should profile this function execution
     set<DynamicProfilerPtr> m_profilersUsed; // all used profilers will be registered for a given batched execution
     bool ShouldProfile(const PrimitiveFunction* f)
@@ -1162,7 +1169,7 @@ class Variable::AutoBatch
                 for (size_t i = 1; i < 6; i++)
                     IncorporateFieldsId(GetInputFields(inputs[i]));
             }
-            else if (g_oscTable[op] == OpSpecificConditionKind::MatrixProduct) // Times(): first arg must be the same object
+            else if (IsMatrixProduct(op)) // Times(): first arg must be the same object
             {
                 IncorporateFieldsId(GetInputFields(inputs.front()));
                 IncorporateType(GetInputFields(inputs.back()));
@@ -1192,7 +1199,7 @@ class Variable::AutoBatch
         vector<size_t> m_bnPendingCounts = vector<size_t>(16, 0);       // [bn id] number of pending (non-ready) BatchNormalization operations. We need 0, so why not allocate a few more already
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
-        static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b)
+        static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b) // TODO: change to & (NULL is not a valid value here)
         {
             //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::Equal, L"AreBatchable()", 3);
             // check the hash first
@@ -1236,9 +1243,19 @@ class Variable::AutoBatch
                 }
                 return true; // these *must* be batched
             }
+            // special case for Block
+            if (op == PrimitiveOpType::Block)
+            {
+                // composites must match (object identity)
+                let& aComposite = static_cast<const BlockFunction&>(*a).Composite();
+                let& bComposite = static_cast<const BlockFunction&>(*b).Composite();
+                if (aComposite != bComposite)
+                    return false;
+            }
             // all input dimensions must match (with exception of a few special cases)
-            let opClass = g_oscTable[op]; // operation-specific auto-batching class
-            let isTimes = opClass == OpSpecificConditionKind::MatrixProduct;
+            //let opClass = g_oscTable[op]; // operation-specific auto-batching class
+            //let isTimes = opClass == OpSpecificConditionKind::MatrixProduct;
+            let isTimes = IsMatrixProduct(op);
             for (size_t i = 0; i < a->m_inputs.size(); i++)
             {
                 let& aFields = GetInputFields(a->m_inputs[i]); // (we don't see through no-ops since the target shape is the right one to test)
@@ -1721,6 +1738,21 @@ class Variable::AutoBatch
         Variable input = output;                           // copy the Variable object (which is mostly a shared_ptr tp VariableFields which are not copied but shared)
         input.m_acyclicOutputPrimitiveReference = move(f); // and implant the reference to the Primitive that generated it, for reference countiung
         return input;
+    }
+
+    // create a PrimitiveFunction that is a batched version of a given op, and execute it right away
+    // This is a wrapper around CreateAndMemoizeOp().
+    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, std::vector<Variable>&& inputs, const NDShape& shape, const wchar_t* logPrefix)
+    {
+        Dictionary attributes;
+        f.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
+#if 1   // a sanity check whether we batched correctly. Can be removed once this stuff works.
+        if (IsMatrixProduct(f.m_op))
+        {
+            fail_if(inputs.front().Shape() != f.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
+        }
+#endif
+        return CreateAndMemoizeOp(f.m_op, move(inputs), shape, move(attributes), f.m_name, f.m_profiler, L"*"/*f*/);
     }
 
     // create a PrimitiveFunction and execute it right away
@@ -2241,13 +2273,16 @@ class Variable::AutoBatch
     size_t CacheAndGetBasicBlockBatchAxis(const BlockFunction& blockRoot)
     {
         auto& composite = static_cast<CompositeFunction&>(*blockRoot.Composite());
-        // BUGBUG: This will incorrectly also include the weight arg of a MatrixProduct.
-        //         It is not harmful, since in the worst case, the resulting batch axis higher than needed, which does not really cost anything.
         if (composite.m_basicBlockBatchAxis == SIZE_MAX) // not computed yet (has been reset in Invoke())
         {
             // start with the inputs
             size_t maxRank = DetermineMaxElementwiseInputRank(blockRoot);
             // now also maximize over all output shapes of all Functions inside the composite graph
+            // BUGBUG: For expedience, we use PreorderTraverseFunctions(). However, this will incorrectly also
+            //         traverse the weight arg of a MatrixProduct if it is the result of computation (a Function).
+            //         For Matrix products whose weights are Parameters, the same error happens by using DetermineMaxElementwiseInputRank(),
+            //         which only looks at the inputs of the composite and does not know whether an input is consumed by a matrix propduct.
+            //         It is not really harmful, since in the worst case, the resulting batch axis higher than needed, which does not really cost anything.
             Function::PreorderTraverseFunctions(composite.RootFunction(), [&](const FunctionPtr& iter) // This is only done once per composite ever (across all minibatches), so it is OK to be slow.
             {
                 let& f = static_cast<const PrimitiveFunction&>(*iter);
@@ -2593,17 +2628,25 @@ class Variable::AutoBatch
             PrimitiveFunctionPtr batchedOp;
             if (f0.m_op == PrimitiveOpType::Block)
             {
+                // BUGBUG:
+                //  - if block contains BatchNorm, then the implied barrier is not accounted for in batching.
+                //    If user code is correct, it will compute the right thing. But we cannot presently check or account for it.
+
                 // create a clone of the basic block, with all intermediate steps (needed for backprop)
-                LogicError("can't execute basic blocks yet");
+                LogicError("not yet");
+                //batchedOp = InlineAndMemoizeBasicBlock(static_cast<const BlockFunction&>(f0),
+                //                                       vector<Variable>(anyBatchedInputs ? m_batchedInputs                                               : f0.m_inputs         ),
+                //                                       anyBatchedInputs                  ? (unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize)) : unbatchedOutputShape,
+                //                                       outputBatchAxis,
+                //                                       f0.m_name, f0.m_profiler, L"*"/*f0*/);
             }
             else
             {
-                Dictionary attributes;
-                f0.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
-                batchedOp = CreateAndMemoizeOp(f0.m_op,
-                                               vector<Variable>(anyBatchedInputs ? m_batchedInputs                                               : f0.m_inputs         ),
-                                               anyBatchedInputs                  ? (unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize)) : unbatchedOutputShape,
-                                               move(attributes), f0.m_name, f0.m_profiler, L"*"/*f0*/);
+                // PERF BUGBUG: If we degrade to a fully batched op, there is no need to create a new PrimitiveFunction.
+                batchedOp = CreateAndMemoizeBatchedOp(f0,
+                                                      vector<Variable>(anyBatchedInputs ? m_batchedInputs                                               : f0.m_inputs         ),
+                                                      anyBatchedInputs                  ? (unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize)) : unbatchedOutputShape,
+                                                      L"*"/*f0*/);
             }
             // Note: We could move(m_batchedInputs), but don't, since then we would have to reallocate m_batchedInputs for the next operation, so makes no difference.
 
@@ -2615,13 +2658,13 @@ class Variable::AutoBatch
 
             // in case of reducing operations (e.g. ReduceSum() and also Index()), additional singleton axes
             // may have been inserted to align the batch axes. Remove these if present.
-            // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
+            // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop   --TODO: does it? Verify.
             if (anyBatchedInputs)
             {
                 if (outputBatchAxis != unbatchedOutputShape.Rank())
                 {
                     CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, batchSize);
-                    // TODO: This should not be necessary anymore, we can let this be automatically handled by the redirect.
+                    // TODO: This should not be necessary anymore, we can let this be implicitly handled by a redirect.
                     fail_if(!isElementWise, "output shape should only have additional singleton axes for elementwise operations");
                     // insert a Reshape() op to remove the axes
                     let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
@@ -2637,7 +2680,7 @@ class Variable::AutoBatch
                 }
             }
 
-            // implant all results (all as lazy/virtual references through m_redirection)
+            // implant all results in the original unbatched operations (all as lazy/virtual references through m_redirection)
             size_t j = anyBatchedInputs ? 0 : SIZE_MAX;
             for (auto op = ops.begin(); op != ops.end(); ++op)
             {
@@ -3323,16 +3366,17 @@ public:
         };
         // Note: This needs to be enabled for column-sparse gradients to work!
         // BUGBUG: (perf) We should also have a special path for Reshape(), as to avoid the memory copy.
-        let opClass = g_oscTable[f->m_op]; // operation-specific auto-batching class
+        //let opClass = g_oscTable[f->m_op]; // operation-specific auto-batching class
         // splice operation should use scatter
         // BUGBUG: Really only true if the Splice originated from a batching operation.
         //         User-specified Splice ops might have arguments that receive no gradient, e.g. constants.
-        if (opClass == OpSpecificConditionKind::Splice)
+        let op = f->m_op;
+        if (op == PrimitiveOpType::Splice)
             m_spliceConsumers.push_back(c);
         // backpropagating into the first arg of a matrix product
         // These are shared.
         // We only collect matrix products that fully match the first one. --TODO: when do they not fully match?
-        else if (opClass == OpSpecificConditionKind::MatrixProduct && index == 0 &&
+        else if (IsMatrixProduct(op) && index == 0 &&
             (m_matrixWeightConsumers.empty() || (IsMatrixGradient0Batchable(*f, *m_matrixWeightConsumers.front().first))))
             m_matrixWeightConsumers.push_back(c);
         // backprop where gradients are just views that we can sum up
