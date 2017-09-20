@@ -20,6 +20,7 @@
 #ifdef LEAKDETECT
 #include <vld.h>
 #endif
+#include "half.hpp"
 
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
@@ -479,7 +480,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoScatterColumnsOf(ElemTyp
     // TODO: Replace with std::exclusive_scan when we switch to C++17
     for (size_t i = 1; i <= GetNumCols(); ++i)
         SecondaryIndexLocation()[i] = SecondaryIndexLocation()[i - 1] + columnElementCounts[i - 1];
-    
+
     size_t offset = a.SecondaryIndexLocation()[0];
     // TODO: Does it make sense to parallelize this?
     for (long j = 0; j < numColsToWrite; j++)
@@ -530,7 +531,7 @@ void CPUSparseMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t /*rowSta
             fprintf(stderr, "\n");
             j++;
         }
-        fprintf(stderr, "%d:%.f ", unCompressedIndex[i], dataBuffer[i]);
+        fprintf(stderr, "%d:%.f ", unCompressedIndex[i], (double)dataBuffer[i]);
     }
     fprintf(stderr, "\n");
 }
@@ -720,7 +721,7 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, c
 template <class ElemType>
 ElemType* CPUSparseMatrix<ElemType>::Data()  const
 {
-    return (Buffer() + 
+    return (Buffer() +
         ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? GetCompIndex()[m_sliceViewOffset] : 0));
 }
 
@@ -809,7 +810,7 @@ template <class ElemType>
 void CPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
     RequireSize(numRows, numCols, numNZElemToReserve, matrixFormat, growOnly);
-    
+
     size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
     bool reallocate = (GetSizeAllocated() < numNZElemToReserve || (GetSizeAllocated() > numNZElemToReserve && !growOnly) || GetCompIndexSize() < newCompIndexSize);
 
@@ -963,7 +964,7 @@ public:
                     else if ( denseTimesSparse &&  transposeA) denseVal = dense(     innerIndex, outerIndexDense);
                     else if (!denseTimesSparse && !transposeB) denseVal = dense(     innerIndex, outerIndexDense);
                     else if (!denseTimesSparse &&  transposeB) denseVal = dense(outerIndexDense,      innerIndex);
-                    
+
 
                     // Update matrix c.
                     if (denseTimesSparse)
@@ -1282,7 +1283,7 @@ void CPUSparseMatrix<ElemType>::InnerProduct(const CPUSparseMatrix<ElemType>& a,
 }
 
 // A helper method used in MomentumSGDUpdate and NesterovAcceleratedMomentumSGDUpdate.
-// Modifies the smoothed gradients "c", as well as the current gradients "this" on which this method is invoked. 
+// Modifies the smoothed gradients "c", as well as the current gradients "this" on which this method is invoked.
 // Classic momentum (unitGainFactor == 1.0):
 // 1) c = momentum * c + this
 // Unit-gain momentum (unitGainFactor == 1.0 - momentum):
@@ -1677,6 +1678,18 @@ ElemType CPUSparseMatrix<ElemType>::SumOfElements() const
     return sum;
 }
 
+// specialization to RunTimeError for now due to omp implementation only support build-in type
+template <>
+half CPUSparseMatrix<half>::FrobeniusNorm() const
+{
+    RuntimeError("half FrobeniusNorm not supported.");
+}
+template <>
+half CPUSparseMatrix<half>::SumOfElements() const
+{
+    RuntimeError("half SumOfElements not supported.");
+}
+
 template <typename ElemType>
 MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
 {
@@ -1774,6 +1787,7 @@ MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
 
 template class CPUSparseMatrix<float>;
 template class CPUSparseMatrix<double>;
+template class CPUSparseMatrix<half>;
 
 // We use Matrix<char> as the backing store for QuantizedMatrix
 // Let's explciitly instantiate the methods we need for that purpose

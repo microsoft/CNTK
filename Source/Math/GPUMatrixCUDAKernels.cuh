@@ -1503,7 +1503,7 @@ inline __device__ ElemType _getvalue4BlockSparseCol(ElemType* v, const GPUSPARSE
     CUDA_LONG col = idx / len;
     CUDA_LONG row = idx - col * len;
     CUDA_LONG blockid = colOrRow2blockId[col];
-    return (blockid == SparseIndex_NotAssigned) ? 0 : v[blockid * len + row];
+    return (blockid == SparseIndex_NotAssigned) ? (ElemType)0 : v[blockid * len + row];
 }
 
 template<class ElemType>
@@ -1695,7 +1695,7 @@ __global__ void _rmsprop4BlockSparseCol(
     else
         steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
 
-    ElemType temp = steps[i] / sqrt(avars[i] + floor);
+    ElemType temp = steps[i] / sqrt_(avars[i] + floor);
     _scalevalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, i, temp);
     signs[i] = grad_sign;
 
@@ -3154,7 +3154,7 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
         }
     }
 
-    c[IDX2C(rowInC, colInC, m * numSteps)] = alpha * s + (beta == 0 ? 0 : beta * c[IDX2C(rowInC, colInC, m * numSteps)]); // If beta is zero then don't lookup c
+    c[IDX2C(rowInC, colInC, m * numSteps)] = alpha * s + (beta == 0 ? (ElemType)0 : beta * c[IDX2C(rowInC, colInC, m * numSteps)]); // If beta is zero then don't lookup c
 }
 
 /// c += alpha * a * b^T

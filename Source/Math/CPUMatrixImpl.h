@@ -111,10 +111,10 @@ static ElemType* NewArray(size_t n)
 {
     // We need to allocate possibly one more element for the following reason.
     // At some point we might want to fill a buffer with the result of a random
-    // number generator. The RNG is oblivious to whether the buffer is on the 
+    // number generator. The RNG is oblivious to whether the buffer is on the
     // CPU or GPU but it needs to keep an accurate tally of how many numbers it
-    // has generated. The trouble stems from the fact that generating an odd 
-    // number gaussians on the GPU is not supported so we must always 
+    // has generated. The trouble stems from the fact that generating an odd
+    // number gaussians on the GPU is not supported so we must always
     // generate an even number. So since we wouldn't know how to update the tally
     // we are making this allocate one more element in the worst case.
     ElemType* p = new ElemType[AsMultipleOf(n, 2)]();
@@ -1115,7 +1115,7 @@ void CPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, con
         ElemType tmp = 0;
         do
             tmp = r(generator);
-        while (tmp < low || tmp > high ); // Rejection sampling is fine here because the acceptance probability is about 0.9545 
+        while (tmp < low || tmp > high ); // Rejection sampling is fine here because the acceptance probability is about 0.9545
         us(i, j) = tmp;
     }
 }
@@ -1176,19 +1176,19 @@ void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
         for (long i = 0; i < (m & ~3); i += 4)
         {
             v = r(cpuRNGHandle->Generator());
-            us(i, j) = v <= maskRate ? 0 : scaleValue;
+            us(i, j) = v <= maskRate ? (ElemType)0 : scaleValue;
             v = r(cpuRNGHandle->Generator());
-            us(i + 1, j) = v <= maskRate ? 0 : scaleValue;
+            us(i + 1, j) = v <= maskRate ? (ElemType)0 : scaleValue;
             v = r(cpuRNGHandle->Generator());
-            us(i + 2, j) = v <= maskRate ? 0 : scaleValue;
+            us(i + 2, j) = v <= maskRate ? (ElemType)0 : scaleValue;
             v = r(cpuRNGHandle->Generator());
-            us(i + 3, j) = v <= maskRate ? 0 : scaleValue;
+            us(i + 3, j) = v <= maskRate ? (ElemType)0 : scaleValue;
         }
         // handle remaining stuffs
         for (long i = m & ~3; i < m; i++)
         {
             v = r(cpuRNGHandle->Generator());
-            us(i, j) = v <= maskRate ? 0 : scaleValue;
+            us(i, j) = v <= maskRate ? (ElemType)0 : scaleValue;
         }
     }
 }
@@ -1347,7 +1347,7 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
             ada = sqrt(adaSqr);
         }
         else
-            ada = smoothAda[i] = std::max(adaWeight * smoothAda[i], abs(g));
+            ada = smoothAda[i] = std::max(adaWeight * smoothAda[i], fabs_(g));
 
         ElemType w = adaMul * (ElemType)( 1.0 / (ada + epsilon));
         g = momentum * smoothMom[i] + unitGainFactor * g;
@@ -3189,7 +3189,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemT
     ElemType* indicesBufPtr = indices.Data();
     ElemType* valueBufPtr = values.Data();
     ElemType* buffer = Data();
-    
+
     ScatterValues(indicesBufPtr, valueBufPtr, buffer, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols());
 
     return *this;
@@ -3390,7 +3390,7 @@ void CPUMatrix<ElemType>::VectorNormInf(CPUMatrix<ElemType>& c, const bool isCol
             ElemType v = 0;
             foreach_row (i, us)
             {
-                v = std::max(v, abs(us(i, j)));
+                v = std::max(v, fabs_(us(i, j)));
             }
             c(0, j) = v;
         }
@@ -3405,7 +3405,7 @@ void CPUMatrix<ElemType>::VectorNormInf(CPUMatrix<ElemType>& c, const bool isCol
             ElemType v = 0;
             foreach_column (j, us)
             {
-                v = std::max(v, abs(us(i, j)));
+                v = std::max(v, fabs_(us(i, j)));
             }
             c(i, 0) = v;
         }
@@ -3598,7 +3598,7 @@ ElemType CPUMatrix<ElemType>::MatrixNormInf() const
     {
 #pragma omp critical
         {
-            v = std::max(v, abs(us(i, j)));
+            v = std::max(v, fabs_(us(i, j)));
         }
     }
     return v;
@@ -3971,7 +3971,7 @@ void CPUMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t rowFirst, ptrd
                 fprintf(stderr, "...\t");
                 j = colRange.skipEnd;
             }
-            fprintf(stderr, "%.10f\t", us(i, j));
+            fprintf(stderr, "%.10f\t", (double)us(i, j));
         }
         if (colRange.end < GetNumCols())    // ... at line end
             fprintf(stderr, "...");
@@ -4597,9 +4597,9 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
                 assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
                 if (in(colBase + dcol, sample) >= m)
                 {
-#pragma omp atomic 
+#pragma omp atomic
                     grad(colBase + dcol, sample) += g;
-                    break; 
+                    break;
                 }
             }
         }
@@ -4613,14 +4613,14 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
 // corresponding to the ROI and which pixels in that subset should go into the
 // output location, then takes the max value over that window.
 // src: Images              [W x H x C x N]
-// roiData: ROIs            [4 x numROIs x N], 
+// roiData: ROIs            [4 x numROIs x N],
 // dst: Pooled ROIs         [PW x PH x C x numROIs x N]
 // argmax: max positions    [PW x PH x C x numROIs x N]
 // spatialScale             ratio of input feature map to the original image.
 // where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
 template <class ElemType>
 void CPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                              const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, 
+                                              const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output,
                                               CPUMatrix<ElemType>& argmax, double spatialScale) const
 {
     size_t roiOutputSize = pooledHeight * pooledWidth * channels;
@@ -4685,7 +4685,7 @@ void CPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_
                         // [W x H x C x R x N]; R = ROIs per image
                         size_t outputIdx = roiIdx * roiOutputSize + outw + outh * pooledWidth + c * pooledHeight * pooledWidth;
                         size_t maxidx = 0;
-                        ElemType maxval = isempty ? (ElemType)0 : -FLT_MAX;
+                        ElemType maxval = isempty ? (ElemType)0 : (ElemType)-FLT_MAX;
                         size_t baseIdx = c * height * width;
 
                         for (size_t h = hstart; h < hend; h++)
@@ -4716,7 +4716,7 @@ void CPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_
 // this pixel location as the maximum. If so, it increments the gradient term for the input location.
 template <class ElemType>
 void CPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                                const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, 
+                                                const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad,
                                                 CPUMatrix<ElemType>& argmax, double spatialScale) const
 {
     // loop over images in the batch.
@@ -4903,7 +4903,7 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
             {
                 int dcol = indices(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
-#pragma omp atomic 
+#pragma omp atomic
                 grad(colBase + dcol, sample) += g;
             }
         }
@@ -5250,7 +5250,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNCEDerivative(const CPUMatrix<El
                 c(0, sample) -= tmp(sample_id, instance_id);
             }
     }
-    else 
+    else
         InvalidArgument("The argument inputIndex must be 1 or 2 or 3.");
     return *this;
 }
@@ -5512,7 +5512,7 @@ void CPUMatrix<ElemType>::AddElementToElement(ElemType beta, const CPUMatrix<Ele
         ci >= c.GetNumRows() || cj >= c.GetNumCols())
         InvalidArgument("AddElementToElement:  index out of range.");
 
-    ElemType us = beta ? beta * c(ci, cj) : 0; // do not multiply if beta is 0, could be a NaN
+    ElemType us = beta ? beta * c(ci, cj) : (ElemType)0; // do not multiply if beta is 0, could be a NaN
     us += a(ai, aj);
     c(ci, cj) = us;
 }
@@ -5829,7 +5829,7 @@ void CPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const CP
         size_t nb = (((t * S + s) * M + m) * K + k) * D + d;   // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
         assert(nb < N);
         // perform the computation
-        ElemType cval = keepWeight ? keepWeight * pb[nb] : 0; // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
+        ElemType cval = keepWeight ? keepWeight * pb[nb] : (ElemType)0; // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
         cval += scaleFactor * pa[na];
         pc[nb] = cval;
     }
@@ -6207,9 +6207,9 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
 // Calculate alpha in forward-backward calculation. equation (6), (7) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
 // prob (input): the posterior output from the network
-// alpha (output): alpha for forward-backward calculation. 
-// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
-// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// alpha (output): alpha for forward-backward calculation.
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance
 // uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
 // uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
 // uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
@@ -7054,7 +7054,7 @@ struct TensorOpIteration<ElemType, OPFN, ReductionOp, N, vectorizable, m, -1>
 };
 
 // perform loop over regular index k and reducing index m for N operands (counting the output), the difference
-// between TensorOpIteration and TensorArgOpIteration, is that the latter store the index of the result, instead of 
+// between TensorOpIteration and TensorArgOpIteration, is that the latter store the index of the result, instead of
 // the result. The reason that they aren't combined is because of performance.
 template <class ElemType, size_t N, int k>
 struct TensorArgOpIteration
@@ -7166,7 +7166,7 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
     const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
     const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
 {
-// BUGBUG: Using always 'double' as type of aggregator even for ElemType==float. Reason: otherwise some e2e test would fail as historically we 
+// BUGBUG: Using always 'double' as type of aggregator even for ElemType==float. Reason: otherwise some e2e test would fail as historically we
 // used double for aggregator of sum. But:
 // * for min and max reductions this is meaningless.
 // * It is not consitent with what we do on GPU, there we aggregate on ElemType.
@@ -7291,7 +7291,7 @@ int CPUMatrix<ElemType>::Argmin() const
     int minArg = -1;
     ElemType minValue = std::numeric_limits<ElemType>::max();
 
-#pragma omp parallel 
+#pragma omp parallel
     {
         int localMinArg = -1;
         ElemType localMinValue = std::numeric_limits<ElemType>::max();
@@ -7334,7 +7334,7 @@ int CPUMatrix<ElemType>::Argmax() const
     int maxArg = -1;
     ElemType maxValue = std::numeric_limits<ElemType>::min();
 
-#pragma omp parallel 
+#pragma omp parallel
     {
         int localMaxArg = -1;
         ElemType localMaxValue = std::numeric_limits<ElemType>::min();
@@ -7445,7 +7445,7 @@ void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, Elem
             //ignore the elements that is not partitioned into this thread
             if (col % nthread != ithread)
                 continue;
-            
+
             if (col >= cols)
                 InvalidArgument("ScatterValues: Indices map out of bounds. %ld >= %ld", (long int)col, (long int)cols);
 
@@ -7503,4 +7503,3 @@ template void CPUMatrix<short>::Reshape(const size_t, const size_t);
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
 
 }}}
-

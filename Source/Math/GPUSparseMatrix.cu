@@ -2212,6 +2212,7 @@ template <class ElemType>
 /*static*/ bool GPUSparseMatrix<ElemType>::AreEqual(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b,
                                                     const ElemType threshold)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     if (a.GetNumNZElements() != b.GetNumNZElements() || a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
         return false;
 
@@ -2227,9 +2228,9 @@ template <class ElemType>
 
     int blocksPerGrid = (int) ceil(1.0 * a.GetNumNZElements() / GridDim::maxThreadsPerBlock);
     _areEqual<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.NzValues(), b.NzValues(), (CUDA_LONG) a.GetNumNZElements(), threshold, d_res);
-    _areEqual<int><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.MajorIndexLocation(), b.MajorIndexLocation(), (CUDA_LONG) a.MajorIndexCount(), (int) threshold, d_res + 1);
+    _areEqual<int><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.MajorIndexLocation(), b.MajorIndexLocation(), (CUDA_LONG) a.MajorIndexCount(), (int)(comp_t) threshold, d_res + 1);
     blocksPerGrid = (int) ceil((1.0 * a.SecondaryIndexCount()) / GridDim::maxThreadsPerBlock);
-    _areEqual<int><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.SecondaryIndexLocation(), b.SecondaryIndexLocation(), (CUDA_LONG) a.SecondaryIndexCount(), (int) threshold, d_res + 2);
+    _areEqual<int><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.SecondaryIndexLocation(), b.SecondaryIndexLocation(), (CUDA_LONG) a.SecondaryIndexCount(), (int)(comp_t) threshold, d_res + 2);
 
     CUDA_CALL(cudaMemcpy(res, d_res, sizeof(long) * 3, cudaMemcpyDeviceToHost));
     if (res[0] * res[1] * res[2] == 1)
@@ -2559,7 +2560,7 @@ ElemType GPUSparseMatrix<ElemType>::FrobeniusNorm() const
     CUDA_CALL(cudaMemcpy(&h_sum, d_sum, sizeof(ElemType), cudaMemcpyDeviceToHost));
     TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), d_sum);
 
-    return std::sqrt(h_sum);
+    return sqrt_(h_sum);
 }
 
 template <class ElemType>
@@ -2959,6 +2960,7 @@ void GPUSparseMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator k
 
 template class MATH_API GPUSparseMatrix<float>;
 template class MATH_API GPUSparseMatrix<double>;
+template class MATH_API GPUSparseMatrix<half>;
 
 // We use Matrix<char> as the backing store for QuantizedMatrix
 // Let's explicitly instantiate the methods we need for that purpose
@@ -3084,6 +3086,7 @@ MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
 
 template MATH_API File& operator>>(File& stream, GPUSparseMatrix<float>& us);
 template MATH_API File& operator>>(File& stream, GPUSparseMatrix<double>& us);
+template MATH_API File& operator>>(File& stream, GPUSparseMatrix<half>& us);
 
 template <class ElemType>
 MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
@@ -3140,8 +3143,66 @@ MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
     return stream;
 }
 
+// specialization because of POD warning
+template <>
+MATH_API File& operator<<(File& stream, const GPUSparseMatrix<half>& us)
+{
+    if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
+        NOT_IMPLEMENTED;
+
+    stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
+    stream << sizeof(half);
+    std::wstring s(L"nnmatrix");
+    stream << s;
+
+    size_t nz = us.GetNumNZElements(), numElemAllocated = us.GetNumElemAllocated(), numRows = us.GetNumRows(), numCols = us.GetNumCols();
+    size_t compressedSize = us.SecondaryIndexCount();
+    int format = us.GetFormat();
+
+    stream << format << nz << numCols << numRows;
+
+    if (nz > 0)
+    {
+        half* dataBuffer = nullptr;
+        CPUSPARSE_INDEX_TYPE* compressedIndex = nullptr;
+        CPUSPARSE_INDEX_TYPE* unCompressedIndex = nullptr;
+
+        if (us.GetFormat() == matrixFormatSparseCSC)
+            us.GetMatrixFromCSCFormat(compressedIndex, unCompressedIndex, dataBuffer, numElemAllocated, nz, numRows, numCols);
+        else if (us.GetFormat() == matrixFormatSparseCSR)
+            us.GetMatrixFromCSRFormat(compressedIndex, unCompressedIndex, dataBuffer, numElemAllocated, nz, numRows, numCols);
+        else
+            NOT_IMPLEMENTED;
+
+        for (size_t i = 0; i < nz; ++i)
+        {
+            stream << *(short*)&dataBuffer[i];
+        }
+        for (size_t i = 0; i < nz; ++i)
+        {
+            size_t val = unCompressedIndex[i];
+            stream << val;
+        }
+        for (size_t i = 0; i < compressedSize; ++i)
+        {
+            size_t val = compressedIndex[i];
+            stream << val;
+        }
+
+        delete[] dataBuffer;
+        delete[] unCompressedIndex;
+        delete[] compressedIndex;
+    }
+
+    stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
+
+    return stream;
+}
+
 template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<float>& us);
 template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<double>& us);
+template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<half>& us);
+
 
 }}}
 
