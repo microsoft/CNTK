@@ -1724,7 +1724,7 @@ class Variable::AutoBatch
 
     // clone a graph of PrimitiveFunctions of a composite of a basic block, and execute it as we go along
     // This is used to execute a basic block.
-    // Logically, we execute the block's composite by replacing its Placeholders (on the fly) with the provided batched inputs.
+    // Logically, we execute the block's composite by replacing its Placeholders (on the fly) with the provided batched blockInputs[].
     // Practically, we completely clone this graph, in order to be able to backprop through it.
     // The clone will have changed dimensions that reflect the additional batch axis. The batch axis is shared across *all* operations,
     // and therefore must have been pre-determined to be larger than all ranks of all involved inputs and outputs
@@ -1733,17 +1733,28 @@ class Variable::AutoBatch
     // Any Times operation inside the block requires an unbatched first argument (weight matrix);
     // therefore we carefully propagate the non-batchedness of intermediate results.
     // As a special case, execution can also be unbatched. This is indicated by batchAxis==SIZE_MAX.
+    // Any nested blocks are executed inside here as well.
     // This function can be seen as a special case of ExecuteBatchedOpAndUpdateSchedule() that assumes
     // batched inputs and consistent batching for all ops, and therefore does not perform any additional (re-)batching.
-    PrimitiveFunctionPtr InlineAndMemoizeBasicBlock(const BlockFunction& block, const vector<Variable>& inputs, size_t batchAxis/*SIZE_MAX indicates no batching*/)
+    PrimitiveFunctionPtr InlineAndMemoizeBatchedBasicBlock(const BlockFunction& block, const vector<Variable>& blockInputs, size_t batchAxis/*or SIZE_MAX*/, size_t batchSize)
     {
+        // BUGBUG:
+        //  - if block contains BatchNorm, then the implied barrier is not accounted for in batching.
+        //    If user code is correct, it will compute the right thing. But we cannot presently check or account for it.
         let& composite = static_cast<CompositeFunction&>(*block.Composite());
         let& root = static_cast<PrimitiveFunction&>(*composite.RootFunction());
 
-        //...some recursion here
+        // ...some recursion here
+        // Problem: How to know what was already cloned?
         let& f = root;
 
         // clone and memoize all inputs
+        for (auto& input : f.m_inputs)
+        {
+            if (input.IsPlaceholder())
+                blockInputs[GetInputFields(input).m_compositeArgumentIndex];
+            // If the inputs themselves come from Functions, then recursively inline and memoize those.
+        }
 
         // clone and memoize this operation
         //let& unbatchedOutputShape = f.m_outputs.front().Shape();
@@ -1751,7 +1762,7 @@ class Variable::AutoBatch
         //let batchSize = 13; // TODO: where does this come from? Can we use 1 for unbatched?
         //let outputShape = anyBatchedInputs ? (unbatchedOutputShape.AppendAxis(batchAxis, batchSize)) : unbatchedOutputShape,
 
-        f;
+        f; batchSize;
         LogicError("not yet");
 
         //    f0.m_name, f0.m_profiler, L"*"/*f0*/)
@@ -1777,8 +1788,14 @@ class Variable::AutoBatch
 
     // create a PrimitiveFunction that is a batched version of a given op, and execute it right away
     // This is a wrapper around CreateAndMemoizeOp().
-    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, const vector<Variable>& inputs, const NDShape& shape, const wchar_t* logPrefix)
+    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, const vector<Variable>& inputs, size_t batchAxis, size_t batchSize, const wchar_t* logPrefix)
     {
+        // special case for basic blocks: need to clone the entire composite (for backprop)
+        if (f.m_op == PrimitiveOpType::Block)
+            return InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(f), m_batchedInputs, batchAxis, batchSize);
+
+        let& unbatchedOutputShape = f.m_outputs.front().Shape();
+        const NDShape& shape = batchAxis != SIZE_MAX ? unbatchedOutputShape.AppendAxis(batchAxis, batchSize) : unbatchedOutputShape;
         Dictionary attributes;
         f.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
 #if 1   // a sanity check whether we batched correctly. Can be removed once this stuff works.
@@ -1833,6 +1850,7 @@ class Variable::AutoBatch
     }
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
+    // The result is stored in f.m_outputs.front()'s m_value.
     const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool spliceIsGather = false)
     {
         // fetch the NDArrayViewPtrs for all inputs
@@ -2490,7 +2508,7 @@ class Variable::AutoBatch
 
             // create all the batched inputs by splicing along the batch axis
             // Special optimizations are taken if all elements are identical.
-            bool anyBatchedInputs = false;
+            bool anyBatchedInputs = false; // stays false if for all arguments, all respective batch-item arguments are identical
             if (i0 == 1) // Times(): the first arg has already been verified to be identical as part of the batchability condition
                 m_batchedInputs[0] = f0.m_inputs.front();
             for (size_t i = i0; i < numArgs; i++)
@@ -2612,7 +2630,9 @@ class Variable::AutoBatch
                 }
                 // release shared_ptrs asap, to take advantage of chances of memory reuse
                 gatherInputs.clear();
-            }
+            } // end for (i=...)
+            // m_batchedInputs[] have been prepared. anyBatchedInputs has remained false if all had identical inputs across all batch items.
+
             // special case: BatchNormalization
             if (op == PrimitiveOpType::BatchNormalization)
             {
@@ -2641,34 +2661,22 @@ class Variable::AutoBatch
             // Batched inputs have been prepared in m_batchedInputs[].
             // If all inputs are identical then degrade to computing it only once (this is the easy case that we don't kick off the CSE machinery for).
 
-            // This is the actual batched op that we create and execute here.
-            PrimitiveFunctionPtr batchedOp;
-            if (f0.m_op == PrimitiveOpType::Block)
-            {
-                // BUGBUG:
-                //  - if block contains BatchNorm, then the implied barrier is not accounted for in batching.
-                //    If user code is correct, it will compute the right thing. But we cannot presently check or account for it.
+            if (!anyBatchedInputs)
+                for (size_t i = 0; i < numArgs; i++)
+                    fail_if(&GetInputFields(m_batchedInputs[i]) != &GetInputFields(f0.m_inputs[i]), "all batch args the same, but not??");
 
-                // create a clone of the basic block, with all intermediate steps (needed for backprop)
-                batchedOp = InlineAndMemoizeBasicBlock(static_cast<const BlockFunction&>(f0),
-                                                       anyBatchedInputs ? m_batchedInputs : f0.m_inputs,
-                                                       anyBatchedInputs ? outputBatchAxis : SIZE_MAX/*indicates no batching*/);
-            }
-            else
-            {
-                // PERF BUGBUG: If all args are identical, we can degrade to a single op. Then we should not need to create a new PrimitiveFunction.
-                //              ^^ TODO: This may already be covered by CSE.
-                batchedOp = CreateAndMemoizeBatchedOp(f0,
-                                                      anyBatchedInputs ? m_batchedInputs                                             : f0.m_inputs,
-                                                      anyBatchedInputs ? unbatchedOutputShape.AppendAxis(outputBatchAxis, batchSize) : unbatchedOutputShape,
-                                                      L"*"/*f0*/);
-            }
+            // >>> This is the actual batched op that we create and execute here. <<<
+            // A new PrimitiveFunction is created for the batched op, so that we can backprop through it.
+            // If f0 is a block, then actually an entire subgraph clone will be created here.
+            // PERF BUGBUG: If all args are identical, we can degrade to a single op. Then we should not need to create a new PrimitiveFunction.
+            //              ^^ TODO: This may already be covered by CSE.
+            auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/);
 
-            if (anyBatchedInputs) // some stats and checks
-            {
+            // some stats and checks
+            if (!anyBatchedInputs)
                 m_stats.numCommonSubexpressionsEliminated += batchSize - 1;
+            if (anyBatchedInputs)
                 fail_if(batchedOp->m_outputs.front().Shape().Rank() != outputBatchAxis + 1, "outputBatchAxis was not predicted right");
-            }
 
             // in case of reducing operations (e.g. ReduceSum() and also Index()), additional singleton axes
             // may have been inserted to align the batch axes. Remove these if present.
