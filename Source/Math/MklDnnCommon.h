@@ -1,6 +1,14 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #pragma once
 
 #ifdef USE_MKL
+#define USE_MKLDNN
+#endif
+
+#ifdef USE_MKLDNN
 
 #include "mkl_dnn.h"
 
@@ -11,7 +19,6 @@ static void CHECK_MKL(dnnError_t err)
     if (err != E_SUCCESS)
         RuntimeError("mkl err (%d)\n", err);
 }
-
 
 // adapter that converts data between user layout and primitive required layout
 class MKLDnnResourceAdapter

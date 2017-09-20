@@ -170,6 +170,7 @@
     <ClInclude Include="CPURNGHandle.h" />
     <ClInclude Include="DataTransferer.h" />
     <ClInclude Include="MatrixQuantizerImpl.h" />
+    <ClInclude Include="MklDnnCommon.h" />
     <ClInclude Include="RNGHandle.h" />
     <ClInclude Include="RNNCommon.h" />
     <ClInclude Include="TensorOps.h" />
