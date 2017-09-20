@@ -1056,7 +1056,7 @@ class Variable::AutoBatch
     // for both the initial unbatched inlining (no basic block), as well for inlining basic blocks during execution.
     VisitorTag m_compositeVisitorTag; // helper for managing tree traversal through composite (not nested)
     template<class F>
-    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, size_t depth, const vector<Variable>& invocationArgs, const F& cloneFn) const
+    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, const vector<Variable>& invocationArgs, const F& cloneFn) const
     {
         // if we already cloned this one then just return the clone
         if (m_compositeVisitorTag.Visited(f.m_autoBatchState.m_visitedTag))
@@ -1066,12 +1066,12 @@ class Variable::AutoBatch
                 InvalidArgument("Invoke() cannot be used on composites with cycles.");
             return static_pointer_cast<PrimitiveFunction>(const_cast<PrimitiveFunction*>(fInlined)->shared_from_this()); // (shared_from_this() gives us a FunctionPtr, not PrimitiveFunctionPtr)
         }
-        f.m_autoBatchState.m_link = nullptr; // Bring into valid state so we can detect cycles. Gets overwritten once we are done cloning f.
+        f.m_autoBatchState.m_link = nullptr; // Bring into valid state so we can detect cycles. Gets overwritten once we are done cloning.
 
         // clone f
-        // clone the inputs
+        // First clone the inputs;
         let& inputs = f.m_inputs;
-        vector<Variable> inlinedInputs(inputs.size()); // (note: one malloc per cloned PrimitiveFunction, which is moved into that function)
+        vector<Variable> inlinedInputs(inputs.size()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
         for (size_t i = 0; i < inputs.size(); i++)
         {
             let& input = inputs[i];
@@ -1093,45 +1093,18 @@ class Variable::AutoBatch
             else
             {
                 fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), depth + 1, invocationArgs, cloneFn);
+                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, cloneFn);
                 inlinedInputs[i] = fInlinedPtr->m_outputs.front();
-                inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr; // (do this now so that RawPrimitiveFunction does not have to get the Owner again)
+                inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
+                // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
             }
         }
-        // create a new function and set up the outputs
+        // now create a new function and set up the outputs;
         let fInlinedPtr = cloneFn(f, move(inlinedInputs));
-        // and remember where this function got redirected to
+        // and finally remember where this function got redirected to.
         f.m_autoBatchState.m_link = fInlinedPtr.get();
         return fInlinedPtr;
     }
-
-#if 0
-    PrimitiveFunctionPtr InlineComposite(PrimitiveFunction& root, const vector<Variable>& invocationArgs)
-    {
-        // The first time this is called, we prepare it:
-        //  - infer all the shapes
-        //  - short-circuit the graph (so we can save a little effort in inlining)
-        // This operation is only done once, and can therefore be slow, using the full power of the API.
-        //let& rootOutput = root.m_outputs.front();
-        // TODO: We currently do NOT preprocess this. Hence, short-circuiting will be done over and over again.
-        //let& rootOutputFields = GetOutputFields(&root);
-        //if (!rootOutputFields.m_redirection) // if this is NULL then we have not prepared this (every Output has a m_redirection)
-        //{
-        //    if (root.m_outputs.size() > 1)
-        //        InvalidArgument("Dynamic operations cannot have multiple outputs.");
-        //    let savedVisitorTag = m_visitorTag.Begin(); // (InlineComposite() may call the build function recursively)
-        //    RBuildForwardGraphAndSchedule(rootOutput, 0);
-        //    m_visitorTag.End(savedVisitorTag);
-        //}
-
-        // make a deep copy, with leaf Placeholders replaced with inputs (based on m_compositeArgumentIndex fields set up by BlockFunction constructor)
-        m_compositeVisitorTag.Begin();
-        return RInlineComposite(root, invocationArgs);
-        //let& inlinedCompositeOutputFields = GetInputFields(inlinedCompositeOutput);
-        //let* inlinedCompositeOutputOwner = inlinedCompositeOutputFields.m_redirection.m_function;
-        //return static_pointer_cast<PrimitiveFunction>(const_cast<PrimitiveFunction*>(inlinedCompositeOutputOwner)->shared_from_this()); // (shared_from_this() gives us a FunctionPtr, not PrimitiveFunctionPtr)
-    }
-#endif
 
 #define hashMultiplier ((size_t)1572869) // 4 1-bits. An arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
 
@@ -1452,7 +1425,7 @@ class Variable::AutoBatch
                 // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
                 // Besides that, the original Block function will remain unmodified.
                 m_compositeVisitorTag.Begin();
-                let inlinedRootPtr = RInlineComposite(dynamic_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()), 0,
+                let inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()),
                                                       redirectedFieldsOwner->m_inputs, /*cloneFn=*/ClonePrimitiveFunction);
                 // ^^ returns a shared_ptr to the deep copy of the root
                 redirectedFieldsOwner = inlinedRootPtr.get();
@@ -1737,45 +1710,37 @@ class Variable::AutoBatch
     // Any nested blocks are executed inside here as well.
     // This function can be seen as a special case of ExecuteBatchedOpAndUpdateSchedule() that assumes
     // batched inputs and consistent batching for all ops, and therefore does not perform any additional (re-)batching.
-    PrimitiveFunctionPtr InlineAndMemoizeBatchedBasicBlock(const BlockFunction& block, const vector<Variable>& blockInputs, size_t batchAxis/*or SIZE_MAX*/, size_t batchSize)
+    PrimitiveFunctionPtr InlineAndMemoizeBatchedBasicBlock(const BlockFunction& block, const vector<Variable>& invocationArgs, size_t batchAxis/*or SIZE_MAX*/, size_t batchSize)
     {
         // BUGBUG:
         //  - if block contains BatchNorm, then the implied barrier is not accounted for in batching.
         //    If user code is correct, it will compute the right thing. But we cannot presently check or account for it.
-        let& composite = static_cast<CompositeFunction&>(*block.Composite());
-        let& root = static_cast<PrimitiveFunction&>(*composite.RootFunction());
 
         let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
-        let fInlined = RInlineAndMemoizeBatchedBasicBlock(root, blockInputs, batchAxis, batchSize);
-        m_compositeVisitorTag.End(prevVisitorTag); // (restore)
-        return fInlined;
-    }
-
-    // recursively inline FunctionPtrs inside a shared composite held by a Block invocation
-    // This uses m_compositeVisitorTag to detect whether the FunctionPtr has already been expanded.
-    PrimitiveFunctionPtr RInlineAndMemoizeBatchedBasicBlock(const PrimitiveFunction& f/*inside a composite*/, const vector<Variable>& blockInputs, size_t batchAxis/*or SIZE_MAX*/, size_t batchSize)
-    {
-        if (m_compositeVisitorTag.Visited(f.m_autoBatchState.m_visitedTag))
-            return nullptr;// f.m_autoBatchState.m_link->shared_from_this();
-
-        // clone and memoize all inputs
-        for (auto& input : f.m_inputs)
+        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs) -> PrimitiveFunctionPtr
         {
-            if (input.IsPlaceholder())
-                blockInputs[GetInputFields(input).m_compositeArgumentIndex];
-            // If the inputs themselves come from Functions, then recursively inline and memoize those.
-        }
+            // This lambda must apply the passed in the composite's PrimitiveFunction 'f' to 'newInputs'.
+            // The newInputs are batched; that is, their shapes may mismatch those of f's inputs in that they may have an additional batch axis.
 
-        // clone and memoize this operation
-        //let& unbatchedOutputShape = f.m_outputs.front().Shape();
-        //let anyBatchedInputs = batchAxis == SIZE_MAX; // ...need to consider the inputs' batchedness as well
-        //let batchSize = 13; // TODO: where does this come from? Can we use 1 for unbatched?
-        //let outputShape = anyBatchedInputs ? (unbatchedOutputShape.AppendAxis(batchAxis, batchSize)) : unbatchedOutputShape,
+            // determine if any of the inputs have a batch axis
+            // If any, then the output will get one as well.
+            let anyBatchedInputs = any_of(newInputs.begin(), newInputs.end(), [batchAxis](const Variable& input) { return input.Shape().Rank() >= batchAxis; });
 
-        f; batchSize;
-        LogicError("not yet");
+            if (IsMatrixProduct(f.m_op) && newInputs.front().Shape().Rank() >= batchAxis)
+                InvalidArgument("Inside a basic block, the first argument of a matrix products cannot have a batch axis.");
 
-        //    f0.m_name, f0.m_profiler, L"*"/*f0*/)
+            // determine the shape of the output
+            // This is the original output shape of the Function in the composite, augmented with the batch axis
+            // (unless none of the inputs has a batch axis).
+            let& unbatchedOutputShape = f.m_outputs.front().Shape();
+            let outputShape = anyBatchedInputs ? (unbatchedOutputShape.AppendAxis(batchAxis, batchSize)) : unbatchedOutputShape;
+
+            // clone and memoize this operation
+            // PERF BUGBUG: newInputs is already a copy that we can just move
+            return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, batchAxis, batchSize, L"()"/*f0*/);
+        });
+        m_compositeVisitorTag.End(prevVisitorTag); // (restore)
+        return fInlinedPtr;
     }
 
     // create a PrimitiveFunction, execute it right away, and prep result as an input
@@ -1797,7 +1762,8 @@ class Variable::AutoBatch
     }
 
     // create a PrimitiveFunction that is a batched version of a given op, and execute it right away
-    // This is a wrapper around CreateAndMemoizeOp().
+    // This is a wrapper around CreateAndMemoizeOp(). If a batchAxis is provided (!= SIZE_MAX), then the output will have that axis.
+    // In that case, all inputs[*], unless not batched, must have the same batch axis (an example of a non-batched arg is the first arg of a matrix product).
     PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, const vector<Variable>& inputs, size_t batchAxis, size_t batchSize, const wchar_t* logPrefix)
     {
         // special case for basic blocks: need to clone the entire composite (for backprop)
@@ -1810,9 +1776,7 @@ class Variable::AutoBatch
         f.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
 #if 1   // a sanity check whether we batched correctly. Can be removed once this stuff works.
         if (IsMatrixProduct(f.m_op))
-        {
             fail_if(inputs.front().Shape() != f.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
-        }
 #endif
         return CreateAndMemoizeOp(f.m_op, vector<Variable>(inputs), shape, move(attributes), f.m_name, f.m_profiler, L"*"/*f*/);
     }
