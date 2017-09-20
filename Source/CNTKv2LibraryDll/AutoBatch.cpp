@@ -983,7 +983,8 @@ class Variable::AutoBatch
     {
         // if really needed, this can be done as a bit-test
         // TODO: The NoOps should never be tested here, right?
-        fail_if(IsAliasOp(op), "IsViewOp should never be asked about a no-op, should be short-circuited before");
+        //fail_if(IsAliasOp(op), "IsViewOp should never be asked about a no-op, should be short-circuited before");
+        // ^^ Yes, they can be tested here while inlining of basic block during execution  --TODO: fix this, those should get short-circuited as well
         return
             op == PrimitiveOpType::StopGradient ||
             op == PrimitiveOpType::Pass         ||
@@ -1050,8 +1051,8 @@ class Variable::AutoBatch
         return should;
     }
 
-    // inlining of a composite
-    // This makes a deep copy of the graph below root.
+    // inlining of a composite 
+    // This makes a deep copy of the graph below 'f', which must live in a composite owned by a BlockFunction; *not* the dynamic graph.
     // The actual PrimitiveFunction copy is made via the cloneFn. This way, this function can be used
     // for both the initial unbatched inlining (no basic block), as well for inlining basic blocks during execution.
     VisitorTag m_compositeVisitorTag; // helper for managing tree traversal through composite (not nested)
@@ -1080,6 +1081,11 @@ class Variable::AutoBatch
             // --- case 0: a Variable that already has a value; that is, a Constant, Parameter, or any result of another Dynamite invocation
             if (inputFields.m_varKind == VariableKind::Constant || inputFields.m_varKind == VariableKind::Parameter || inputFields.m_value)
             {
+                if (!inputFields.m_value)
+                {
+                    input.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
+                    fail_if(!inputFields.m_value, "Parameter/Constant has no Value()??");
+                }
                 inlinedInputs[i] = input;
             }
             // --- case 1: a Placeholder: substitute with invocation arg
@@ -1438,6 +1444,8 @@ class Variable::AutoBatch
                 // and the original Function (which is a Block pre inlining) can be safely freed since it is
                 // not referenced anymore (anything of interest has been copied in the inlining process).
                 redirectedFields = &GetOutputFields(inlinedRootPtr.get());
+                // Proceed with this updated field record. It is possible that this immediately points to a nested
+                // Block invocation, which gets inlined as well next.
                 continue;
             }
             if (!IsAliasOp(redirectedOp) && redirectedOp != PrimitiveOpType::Reshape)
@@ -1446,7 +1454,7 @@ class Variable::AutoBatch
             // Functions consuming this Variable are bound by the barrier (but not the function that produces the original value).
             if (IsBarrier(redirectedFieldsOwner)) // TODO: get this from a different attribute
                 depthHint = max(depthHint, redirectedFieldsOwner->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
-            // TODO: what if input is non-continuous? Then Reshape becomes a copy
+            // TODO: what if input is non-continuous? Then Reshape should become a copy. Does this need to be addressed here?
             // this is a redirect
             redirectedFields = &GetInputFields(redirectedFieldsOwner->m_inputs.front());
         }
@@ -1715,6 +1723,7 @@ class Variable::AutoBatch
         // BUGBUG:
         //  - if block contains BatchNorm, then the implied barrier is not accounted for in batching.
         //    If user code is correct, it will compute the right thing. But we cannot presently check or account for it.
+        //  - this does not short-circuit operations. We need to do the same to the composite as we do to the dynamic graph in forward-graph building.
 
         let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
         let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs) -> PrimitiveFunctionPtr
@@ -1733,7 +1742,9 @@ class Variable::AutoBatch
             // We pass on batchAxis such that the output shape will be that of the original output shape of the Function in the
             // composite, augmented with the batch axis. However, if no input has a batch axis, then the output should have none.
             // PERF BUGBUG: newInputs is already a copy that we can just move
-            return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/);
+            // PERF BUGBUG: We should short-circuit the free ops for composites as well.
+            let isFree = IsViewOp(f.m_op);
+            return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
         });
         m_compositeVisitorTag.End(prevVisitorTag); // (restore)
         return fInlinedPtr;
@@ -1760,7 +1771,7 @@ class Variable::AutoBatch
     // create a PrimitiveFunction that is a batched version of a given op, and execute it right away
     // This is a wrapper around CreateAndMemoizeOp(). If a batchAxis is provided (!= SIZE_MAX), then the output will have that axis.
     // In that case, all inputs[*], unless not batched, must have the same batch axis (an example of a non-batched arg is the first arg of a matrix product).
-    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, const vector<Variable>& inputs, size_t batchAxis, size_t batchSize, const wchar_t* logPrefix)
+    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, const vector<Variable>& inputs, size_t batchAxis, size_t batchSize, const wchar_t* logPrefix, bool isFree)
     {
         // special case for basic blocks: need to clone the entire composite (for backprop)
         if (f.m_op == PrimitiveOpType::Block)
@@ -1774,7 +1785,7 @@ class Variable::AutoBatch
         if (IsMatrixProduct(f.m_op))
             fail_if(inputs.front().Shape() != f.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
 #endif
-        return CreateAndMemoizeOp(f.m_op, vector<Variable>(inputs), shape, move(attributes), f.m_name, f.m_profiler, L"*"/*f*/);
+        return CreateAndMemoizeOp(f.m_op, vector<Variable>(inputs), shape, move(attributes), f.m_name, f.m_profiler, L"*"/*f*/, isFree);
     }
 
     // create a PrimitiveFunction and execute it right away
@@ -2389,7 +2400,8 @@ class Variable::AutoBatch
         // is unbatched actually more expensive than batched?
         // We count CUDA launches, assuming all args are batched and require a Gather launch.
         // If not all args require that, we err on the side of not batching. BatchNorm must always be batched.
-        let worthIt = batchSize/*unbatched launches*/ > (numArgs + 1)/*batched launches*/ || op == PrimitiveOpType::BatchNormalization;
+        let numCUDALaunchesInThisOp = 1; // TODO: for Block invocations, use the #nodes; or pick a number, such as 4
+        let worthIt = batchSize * numCUDALaunchesInThisOp/*unbatched launches*/ > (numArgs + 1)/*batched launches*/ || op == PrimitiveOpType::BatchNormalization;
         //if (batchSize > 1 && !worthIt) // TODO: remove this message once I see it happen
         //    fprintf(stderr, "%S not worth it: %d vs. %d\n", PrimitiveOpTypeName(f0.m_op).c_str(), (int)batchSize, (int)numArgs + 1);
 #ifdef NO_BATCHED_FORWARD
@@ -2412,10 +2424,17 @@ class Variable::AutoBatch
             {
                 // execute it
                 if (f->m_op == PrimitiveOpType::Block)
-                    LogicError("Unbatched basic-block not yet implemented."); // TODO: Maybe it's as easy as just calling the inline function here.
-                MemoizeKnowableValueInArena(*f, isFree);
-                // and notify consumers (which may schedule them)
-                NotifyOpsConsumersInputsAvailable(f);
+                {
+                    let fInlinedPtr = InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(*f), f->m_inputs, /*batchAxis=*/SIZE_MAX, /*batchSize=*/1/*dummy*/);
+                    // implant the result
+                    FinalizeBatchedOpAndUpdateSchedule(f, fInlinedPtr);
+                }
+                else
+                {
+                    MemoizeKnowableValueInArena(*f, isFree);
+                    // and notify consumers (which may schedule them)
+                    NotifyOpsConsumersInputsAvailable(f);
+                }
                 // distribute value to all aliases
                 UpdateDuplicatesAndUpdateSchedule(f);
             }
@@ -2641,8 +2660,8 @@ class Variable::AutoBatch
             // A new PrimitiveFunction is created for the batched op, so that we can backprop through it.
             // If f0 is a block, then actually an entire subgraph clone will be created here.
             // PERF BUGBUG: If all args are identical, we can degrade to a single op. Then we should not need to create a new PrimitiveFunction.
-            //              ^^ TODO: This may already be covered by CSE.
-            auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/);
+            //              Note: This is not covered by CSE, since CSE is only used for complex cases.
+            auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
 
             // some stats and checks
             if (!anyBatchedInputs)
@@ -2676,7 +2695,7 @@ class Variable::AutoBatch
 
             // implant all results in the original unbatched operations (all as lazy/virtual references through m_redirection)
             size_t j = anyBatchedInputs ? 0 : SIZE_MAX; // the slice index implanted in the redirection. SIZE_MAX if no need to slice.
-            for (auto op = ops.begin(); op != ops.end(); ++op)
+            for (auto op = ops.begin(); op != ops.end(); ++op) // TODO: rename op to f if possible; or fIter?
             {
                 // TODO: review this w.r.t. multi-output functions
                 // implant the result
