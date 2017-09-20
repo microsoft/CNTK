@@ -1428,12 +1428,12 @@ class Variable::AutoBatch
                 let inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()),
                                                       redirectedFieldsOwner->m_inputs, /*cloneFn=*/ClonePrimitiveFunction);
                 // ^^ returns a shared_ptr to the deep copy of the root
+                // ^^ This currently does not inline nested blocks. Instead of cloning the BlockFunction, we should just unroll any nested non-basic-block right there.
                 redirectedFieldsOwner = inlinedRootPtr.get();
                 redirectedFieldsHolder = inlinedRootPtr; // hold a reference
                 // For ref-counting, the root pointer of the deep copy is kept in redirectedFieldsHolder,
                 // which goes into m_functionHolder of the Block's output Variable.
                 // Note: When we get here, redirectedFieldsHolder may already hold a function.
-                // This happens when an inlined BlockFunction has another BlockFunction at its root.
                 // It is OK to overwrite it, since the raw pointer in redirectedFieldsOwner also got overwritten,
                 // and the original Function (which is a Block pre inlining) can be safely freed since it is
                 // not referenced anymore (anything of interest has been copied in the inlining process).
@@ -1729,15 +1729,11 @@ class Variable::AutoBatch
             if (IsMatrixProduct(f.m_op) && newInputs.front().Shape().Rank() >= batchAxis)
                 InvalidArgument("Inside a basic block, the first argument of a matrix products cannot have a batch axis.");
 
-            // determine the shape of the output
-            // This is the original output shape of the Function in the composite, augmented with the batch axis
-            // (unless none of the inputs has a batch axis).
-            let& unbatchedOutputShape = f.m_outputs.front().Shape();
-            let outputShape = anyBatchedInputs ? (unbatchedOutputShape.AppendAxis(batchAxis, batchSize)) : unbatchedOutputShape;
-
             // clone and memoize this operation
+            // We pass on batchAxis such that the output shape will be that of the original output shape of the Function in the
+            // composite, augmented with the batch axis. However, if no input has a batch axis, then the output should have none.
             // PERF BUGBUG: newInputs is already a copy that we can just move
-            return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, batchAxis, batchSize, L"()"/*f0*/);
+            return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/);
         });
         m_compositeVisitorTag.End(prevVisitorTag); // (restore)
         return fInlinedPtr;
@@ -1867,7 +1863,8 @@ class Variable::AutoBatch
     }
 
     // clone a PrimitiveFunction
-    // Special consideration is given to BlockFunction, which derives from PrimitiveFunction.
+    // Subroutine of inlining non-basic-block BlockFunctions during forward graph preparation.
+    // Special consideration is given to nested BlockFunctions.
     static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& f, vector<Variable>&& newInputs)
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
@@ -1882,6 +1879,7 @@ class Variable::AutoBatch
         {
             let& fAsBlock = static_cast<BlockFunction&>(f);
             fCloned = MakeSharedObject<BlockFunction>(fAsBlock.Composite(), move(newInputs), fAsBlock.IsBasicBlock(), wstring(fAsBlock.OpName()), wstring(f.Name()));
+            // PERF BUGBUG: (?) If not basic block then we should expand it right here.
         }
         else
         {
@@ -2363,8 +2361,8 @@ class Variable::AutoBatch
         }
         // different operation classes have to be treated differently in various aspects. These are all the special conditions:
         let isFree = IsViewOp(op); // (see-through ops except Slice() should have been short-circuited here except for a few boundary cases)
-        let isTimes       = opClass == OpSpecificConditionKind::MatrixProduct; // is special-cased  --TODO: Convolution will also fall in this category
-        let isBasicBlock  = opClass == OpSpecificConditionKind::BasicBlockInvocation;
+        let isTimes       = opClass == OpSpecificConditionKind::MatrixProduct;        // special case: first arg of matrix product cannot be batched --TODO: support batch GEMM --TODO: Convolution will also fall in this category
+        let isBasicBlock  = opClass == OpSpecificConditionKind::BasicBlockInvocation; // special case: executing a basic block, where all ops are batched in lock-step
         let isElementWise = !isTimes && !isBasicBlock && opClass != OpSpecificConditionKind::Convolution;
         // "Element-wise" really means that the inputs and the output all share the same batch axis. Also e.g. for Splice. TODO: Rename?
 
@@ -3707,7 +3705,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
 
     // reset the cached batch axis (=max over all ranks involved, for batching the composite as elementwise
     if (isBasicBlock)
-        callee->m_basicBlockBatchAxis = SIZE_MAX;
+        callee->m_basicBlockBatchAxis = SIZE_MAX; // SIZE_MAX means value has not yet been determined. Once it is, it is cached here.
 
     // We determine the compositeOutputs by replacing the arguments of the composite with new placeholders with updated 
     // shape etc. information matching the corresponding mapped input
