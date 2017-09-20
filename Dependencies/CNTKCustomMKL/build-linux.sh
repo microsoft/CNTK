@@ -14,7 +14,7 @@ set -e -x
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 # TODO configurable
-MKLROOT=/opt/intel/compilers_and_libraries_2016.2.181/linux/mkl
+MKLROOT=/opt/intel/compilers_and_libraries_2017.4.196/linux/mkl
 MKLBUILDERROOT=$MKLROOT/tools/builder
 CNTKCUSTOMMKLVERSION=$(cat version.txt)
 
