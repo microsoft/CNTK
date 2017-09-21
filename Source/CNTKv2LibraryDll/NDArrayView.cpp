@@ -150,9 +150,10 @@ namespace CNTK
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, const TensorShape& tensorShape, bool readOnly, const shared_ptr<MatrixBase>& sob)
         : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())),
-          m_viewShape(move(tensorShape.GetDimsAsVector())), m_isReadOnly(readOnly),
-          m_tensorViewPtr(NewTensorView(dataType, sob, tensorShape))
-    {}
+          m_viewShape(move(tensorShape.GetDimsAsVector())), m_isReadOnly(readOnly)
+    {
+        m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
+    }
 
     // create a new NDArrayView that subplants the tensorShape
     // TensorShape includes offset and stride info, hence this can be used to implement slices as well.
@@ -194,6 +195,7 @@ namespace CNTK
         return Matrix<float>::SyncDevice(AsCNTKImplDeviceId(device));
     }
 
+    // BUGBUG: This does not honor offsets. Use opConstOne to set it instead.
     void NDArrayView::SetValue(double value)
     {
         if (GetDataType() == DataType::Float && (float)value == value) // useful for setting stuff to 0 or 1
@@ -263,22 +265,22 @@ namespace CNTK
 #if 1
     // -ViewMin2D: use if you interop with V1 code that needs shapes of rank 2 or higher
     // These versions are only ever called by GetMatrix(). We could just inline them here.
+    // Especially that we now no longer have a real shared_ptr to return.
     template <typename ElementType>
     std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> NDArrayView::GetTensorViewMin2D() const
     {
         if (AsDataType<ElementType>() != m_dataType)
             LogicError("NDArrayView::GetTensorViewMin2D: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
 
-        auto tensorView = static_pointer_cast<const TensorView<ElementType>>(m_tensorViewPtr);
+        let& tensorView = NativeTensorView<ElementType>(); // *static_pointer_cast<const TensorView<ElementType>>(m_tensorViewPtr);
 #ifdef LAZY_2D_PADDING
-        const auto& shape = tensorView->GetShape();
+        let& shape = tensorView.GetShape();
         if (shape.size() < 2) // we must pad to at least 2D
-        {
-            auto paddedShape = AsTensorShapeMin2D(shape); // adds 1-dimensions if rank < 2
-            tensorView = make_shared<TensorView<ElementType>>(tensorView->Reviewed(paddedShape));
-        }
+            //auto paddedShape = AsTensorShapeMin2D(shape); // adds 1-dimensions if rank < 2
+            return make_shared<TensorView<ElementType>>(tensorView.Reviewed(AsTensorShapeMin2D(shape)));
 #endif
-        return tensorView;
+        return make_shared<TensorView<ElementType>>(tensorView);
+        //return tensorView;
     }
 
     template <typename ElementType>
@@ -393,23 +395,21 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    static bool AreAliases(const void* av, const void* bv)
+    static bool AreAliases(const TensorView<ElementType>& aView, const TensorView<ElementType>& bView)
     {
-        let* aView = (const TensorView<ElementType>*)av;
-        let* bView = (const TensorView<ElementType>*)bv;
-        let& aTensorShape = aView->GetShape();
-        let& bTensorShape = bView->GetShape();
+        let& aTensorShape = aView.GetShape();
+        let& bTensorShape = bView.GetShape();
         if (aTensorShape.GetDims() != bTensorShape.GetDims()) // shape must be the same. This is silly--the only time we call this, we have already compared the shape.
             return false;
         if (aTensorShape.GetStrides() != bTensorShape.GetStrides()) // strides must be the same
             return false;
-        if (&aView->GetSOB() == &bView->GetSOB() && aTensorShape.GetOffset() == bTensorShape.GetOffset()) // same SOB and same offset: OK
+        if (&aView.GetSOB() == &bView.GetSOB() && aTensorShape.GetOffset() == bTensorShape.GetOffset()) // same SOB and same offset: OK
             return true;
 #if 1   // BUGBUG: The test below does not work for sparse. For now, let's pretend shifted sparse matrices are not the same, which will break CSE.
-        if (aView->GetSOB().GetMatrixType() != MatrixType::DENSE)
+        if (aView.GetSOB().GetMatrixType() != MatrixType::DENSE)
             return false;
 #endif
-        return aView->GetSOB().Data() + aTensorShape.GetOffset() == bView->GetSOB().Data() + bTensorShape.GetOffset(); // otherwise compute buffer address and compare
+        return aView.GetSOB().Data() + aTensorShape.GetOffset() == bView.GetSOB().Data() + bTensorShape.GetOffset(); // otherwise compute buffer address and compare
     }
 
     bool NDArrayView::IsAliasOf(const NDArrayViewPtr& other) const
@@ -423,8 +423,8 @@ namespace CNTK
             return false;
         switch (m_dataType)
         {
-        case DataType::Float:  return AreAliases<float> (this->m_tensorViewPtr.get(), other->m_tensorViewPtr.get());
-        case DataType::Double: return AreAliases<double>(this->m_tensorViewPtr.get(), other->m_tensorViewPtr.get());
+        case DataType::Float:  return AreAliases(NativeTensorView<float> (), other->NativeTensorView<float> ());
+        case DataType::Double: return AreAliases(NativeTensorView<double>(), other->NativeTensorView<double>());
         default: LogicError("NDArrayView::CopyFrom: Unsupported DataType %s", DataTypeName(m_dataType));
         }
     }
@@ -438,25 +438,6 @@ namespace CNTK
     {
         return *(const TensorView<ElementType>*)(m_tensorViewPtr.get());
     }
-
-    //// -ViewPtr: use if you don't care about V1-compatible 2D-padded shape
-    //template <typename ElementType>
-    //const TensorView<ElementType>* NDArrayView::NativeTensorView() const
-    //{
-    //    if (AsDataType<ElementType>() != m_dataType)
-    //        LogicError("NDArrayView::NativeTensorView: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
-    //
-    //    return (const TensorView<ElementType>*)(m_tensorViewPtr.get());
-    //}
-    //
-    //template <typename ElementType>
-    //TensorView<ElementType>* NDArrayView::WritableNativeTensorView()
-    //{
-    //    if (IsReadOnly())
-    //        InvalidArgument("NDArrayView::WritableNativeTensorView: Cannot get a writable TensorView from a read-only NDArrayView.");
-    //
-    //    return const_cast<TensorView<ElementType>*>(NativeTensorView<ElementType>());
-    //}
 
     template <typename ElementType>
     Microsoft::MSR::CNTK::TensorView<ElementType>& NDArrayView::WritableNativeTensorView()
