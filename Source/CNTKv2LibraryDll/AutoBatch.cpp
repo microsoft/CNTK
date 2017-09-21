@@ -3545,7 +3545,7 @@ public:
         {
             let& gradFields = GetGradientFieldsForBackprop(kv.first);
             if (gradFields.m_consumers.empty()) // if gradient's Parameter has no consumers, then it is not part of the root
-                LogicError("BatchedBackward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
+                LogicError("BatchedBackward: requested gradient \"%S\" is not part of root.", kv.first.Name().c_str()); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
             if (!gradFields.m_needsGradient) // (we could also just leave the gradient 0)
                 LogicError("BatchedBackward: cannot compute gradient for variable with m_needsGradient being False."); // such as a Constant. Actually, why? User can certainly get that if desired.
         }

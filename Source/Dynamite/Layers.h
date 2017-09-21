@@ -457,24 +457,20 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 {
     // matrices are stacked in order (i, r, h)
-    //auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
     auto R  = Parameter({ outputDim * 3, outputDim                  }, DTYPE, GlorotUniformInitializer(), device, L"R");
     auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize, device);
     //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, device);
     auto b  = Parameter({ outputDim * 3 }, DTYPE, 0.0f, device, L"b");
-    //let normW = LengthNormalization(device);
     let normR = LengthNormalization(device);
     let stackAxis = Axis(0);
     let stackedDim = (int)outputDim;
     let profiler = Function::CreateDynamicProfiler(1, L"GRU");
     let irBarrier = Barrier(2, Named("irBarrier"));
     // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
-    let gru = [=](const Variable& dh, const Variable& x)
+    let gru3 = [=](const Variable& dh, const Variable& projx3) // note: the input has already been projected. That op is batched more widely.
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // projected contribution from input(s), hidden, and bias
-        //let projx3  = b + normW(Times(W, x));
-        let projx3 = b + /*normW*/(projectInput(x));
         let projdh3 =     normR(Times(R, dh));
         //let projdh3 =     normR(projectState(dh));
         let i_proj  = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ix_proj")) + Slice(projdh3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ih_proj"));
@@ -501,22 +497,22 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         return h;
     };
     vector<pair<Variable, Variable>> gruArgs = { { PlaceholderVariable(), Variable() }, { PlaceholderVariable(), Variable() } };
-    let gruComposite = Alias(gru(gruArgs[0].first, gruArgs[1].first), L"gru");
-    return BinaryModel({ /*W,*/ R, b },
+    let gru3Composite = Alias(gru3(gruArgs[0].first, gruArgs[1].first), L"gru");
+    return BinaryModel({ R, b },
     {
         { L"projectInput",  projectInput },
         //{ L"projectState",  projectState },
-        //{ L"normW",  normW  },
         { L"normR",  normR  },
     },
     [=](const Variable& dh, const Variable& x) mutable
     {
+        let projx3 = b + projectInput(x);
 #if 0   // using the composite
         gruArgs[0].second = dh;
-        gruArgs[1].second = x;
-        return Invoke(gruComposite, gruArgs, /*isBasicBlock=*/false);
+        gruArgs[1].second = projx3;
+        return Invoke(gru3Composite, gruArgs, /*isBasicBlock=*/false);
 #else   // using imperative code
-        return gru(dh, x);
+        return gru3(dh, projx3);
 #endif
     });
 }
