@@ -514,7 +514,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 #if 1   // using the composite
         gruArgs[0].second = dh;
         gruArgs[1].second = projx3;
-        return Invoke(gru3Composite, gruArgs, /*isBasicBlock=*/false);
+        return Invoke(gru3Composite, gruArgs, /*isBasicBlock=*/false); // basic block not working, as it does not know not to batch multiple matrix products
 #else   // using imperative code
         return gru3(dh, projx3);
 #endif

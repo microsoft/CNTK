@@ -1016,10 +1016,10 @@ namespace CNTK
         template<typename ElementType>
         friend class WritableTensorViewPtrArrayRef;
         template <typename ElementType>
-        std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> NativeTensorView() const;
+        const Microsoft::MSR::CNTK::TensorView<ElementType>& NativeTensorView() const;
 
         template <typename ElementType>
-        std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> WritableNativeTensorView();
+        Microsoft::MSR::CNTK::TensorView<ElementType>& WritableNativeTensorView();
 
         const Microsoft::MSR::CNTK::TensorShape& GetTensorShape() const;
 
