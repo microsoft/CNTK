@@ -154,6 +154,21 @@ namespace CNTK
           m_tensorViewPtr(NewTensorView(dataType, sob, tensorShape))
     {}
 
+    // create a new NDArrayView that subplants the tensorShape
+    // TensorShape includes offset and stride info, hence this can be used to implement slices as well.
+    NDArrayViewPtr NDArrayView::Reviewed(const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool readOnly) const
+    {
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            return MakeSharedObject<NDArrayView>(GetDataType(), tensorShape, readOnly, NativeTensorView<float>().GetSOBPtr());
+        case DataType::Double:
+            return MakeSharedObject<NDArrayView>(GetDataType(), tensorShape, readOnly, NativeTensorView<double>().GetSOBPtr());
+        default:
+            LogicError("NDArrayView::GetStorageObjectPtr: Unsupported DataType %s", DataTypeName(m_dataType));
+        }
+    }
+
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)
         : NDArrayView(dataType, viewShape, false, CreateStorageObject(dataType, storageType, viewShape, device))
     {}
@@ -291,18 +306,18 @@ namespace CNTK
     // WARNING! The SOBPtr does not necessarily represent the offset field of the TensorShape.
     // So one should never use the SOB for Matrix operations directly. Use AsMatrix() or TensorView operations instead.
     // TODO: Remove this function altogether; and replace with creating an NDArrayView from a TensorShape and an old NDArrayView.
-    shared_ptr<MatrixBase> NDArrayView::GetStorageObjectPtr() const
-    {
-        switch (m_dataType)
-        {
-        case DataType::Float:
-            return NativeTensorView<float>().GetSOBPtr();
-        case DataType::Double:
-            return NativeTensorView<double>().GetSOBPtr();
-        default:
-            LogicError("NDArrayView::GetStorageObjectPtr: Unsupported DataType %s", DataTypeName(m_dataType));
-        }
-    }
+    //shared_ptr<MatrixBase> NDArrayView::GetStorageObjectPtr() const
+    //{
+    //    switch (m_dataType)
+    //    {
+    //    case DataType::Float:
+    //        return NativeTensorView<float>().GetSOBPtr();
+    //    case DataType::Double:
+    //        return NativeTensorView<double>().GetSOBPtr();
+    //    default:
+    //        LogicError("NDArrayView::GetStorageObjectPtr: Unsupported DataType %s", DataTypeName(m_dataType));
+    //    }
+    //}
 
     NDArrayViewPtr NDArrayView::DeepClone(const DeviceDescriptor& device, bool readOnly/* = false*/) const
     {
@@ -372,7 +387,9 @@ namespace CNTK
         // BUGBUG: We cannot just use the SOBPtr because with Slice(::View), we may have an offset.
         //         Instead, we should just do this the TensorView way.
         //return MakeSharedObject<NDArrayView>(GetDataType(), Shape(), IsReadOnly() || readOnly, GetStorageObjectPtr());
-        return MakeSharedObject<NDArrayView>(GetDataType(), GetTensorShape(), IsReadOnly() || readOnly, GetStorageObjectPtr());
+        //return MakeSharedObject<NDArrayView>(GetDataType(), GetTensorShape(), IsReadOnly() || readOnly, GetStorageObjectPtr());
+        return Reviewed(GetTensorShape(), IsReadOnly() || readOnly);
+        // MakeSharedObject<NDArrayView>(GetDataType(), tensorShape, readOnly, GetStorageObjectPtr());
     }
 
     template <typename ElementType>
@@ -799,7 +816,8 @@ namespace CNTK
                 // create a NDArrayView with this new tensor shape onto the existing storage object
                 // Note that this version may create an NDArrayView with strides, which is not accepted by some operations.
                 // TODO: Check that at least this will be discovered. AsMatrix() checks it. Does that cover all use cases?
-                let view = MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
+                //let view = MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
+                let view = Reviewed(tensorShape, readOnly);
 
                 // View: we are done
                 if (sliceMode == SliceMode::View)
@@ -958,7 +976,8 @@ namespace CNTK
         tensorShape.ReshapeInPlace(shape.Dimensions());       // and implant the shape
 
         // create a NDArrayView with this new tensor shape onto the existing storage object
-        return MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
+        //return MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
+        return Reviewed(tensorShape, readOnly);
     }
 
     NDArrayViewPtr NDArrayView::IndexLastAxis(size_t index, bool readOnly) const
@@ -992,7 +1011,8 @@ namespace CNTK
         // create a NDArrayView with this new tensor shape onto the existing storage object
         // Note that this version may create an NDArrayView with strides, which is not accepted by some operations.
         // TODO: Check that at least this will be discovered. AsMatrix() checks it. Does that cover all use cases?
-        return MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
+        //return MakeSharedObject<NDArrayView>(m_dataType, tensorShape, readOnly, GetStorageObjectPtr());
+        return Reviewed(tensorShape, readOnly);
     }
 
     NDArrayViewPtr NDArrayView::AsShape(const NDShape& newShape) const
@@ -1009,8 +1029,8 @@ namespace CNTK
         //return MakeSharedObject<NDArrayView>(GetDataType(), newShape, IsReadOnly(), GetStorageObjectPtr());
         auto tensorShape = GetTensorShape();
         tensorShape.ReshapeInPlace(newShape.Dimensions());
-        return MakeSharedObject<NDArrayView>(m_dataType, tensorShape, m_isReadOnly, GetStorageObjectPtr());
-        // TODO: A new constructor that takes an NDArrayView. .Reviewed()?
+        //return MakeSharedObject<NDArrayView>(m_dataType, tensorShape, m_isReadOnly, GetStorageObjectPtr());
+        return Reviewed(tensorShape, m_isReadOnly);
     }
 
     // TODO: This could actually be strided?
