@@ -955,7 +955,11 @@ protected:
         void Prepare(size_t batchSize, const ConvolveGeometry* geometry, ContextIndex contextIndex)
         {
             int flag = (1 << contextIndex);
-            if (geometry == m_prevGeometry && batchSize == m_prevBatchSize && !!(m_contextFlags & flag)) return;
+            bool sameGeometryAndBatchSize = (geometry == m_prevGeometry && batchSize == m_prevBatchSize);
+            if (sameGeometryAndBatchSize && !!(m_contextFlags & flag)) return;
+
+            if (!sameGeometryAndBatchSize)
+                m_contextFlags = 0;
 
             if (m_contextFlags)
             {
