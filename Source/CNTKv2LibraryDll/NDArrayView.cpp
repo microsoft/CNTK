@@ -288,25 +288,6 @@ namespace CNTK
         return GetMatrixImpl<ElementType>(*GetWritableTensorViewMin2D<ElementType>(), rowColSplitPoint);
     }
 
-    // -ViewPtr: use if you don't care about V1-compatible 2D-padded shape
-    template <typename ElementType>
-    const TensorView<ElementType>* NDArrayView::GetTensorViewPtr() const
-    {
-        if (AsDataType<ElementType>() != m_dataType)
-            LogicError("NDArrayView::GetTensorViewPtr: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
-
-        return (const TensorView<ElementType>*)(m_tensorViewPtr.get());
-    }
-
-    template <typename ElementType>
-    TensorView<ElementType>* NDArrayView::GetWritableTensorViewPtr()
-    {
-        if (IsReadOnly())
-            InvalidArgument("NDArrayView::GetWritableTensorViewPtr: Cannot get a writable TensorView from a read-only NDArrayView.");
-
-        return const_cast<TensorView<ElementType>*>(GetTensorViewPtr<ElementType>());
-    }
-
     // WARNING! The SOBPtr does not necessarily represent the offset field of the TensorShape.
     // So one should never use the SOB for Matrix operations directly. Use AsMatrix() or TensorView operations instead.
     // TODO: Remove this function altogether; and replace with creating an NDArrayView from a TensorShape and an old NDArrayView.
@@ -315,9 +296,9 @@ namespace CNTK
         switch (m_dataType)
         {
         case DataType::Float:
-            return GetTensorViewPtr<float>()->GetSOBPtr();
+            return NativeTensorView<float>().GetSOBPtr();
         case DataType::Double:
-            return GetTensorViewPtr<double>()->GetSOBPtr();
+            return NativeTensorView<double>().GetSOBPtr();
         default:
             LogicError("NDArrayView::GetStorageObjectPtr: Unsupported DataType %s", DataTypeName(m_dataType));
         }
@@ -438,13 +419,32 @@ namespace CNTK
     template <typename ElementType>
     const Microsoft::MSR::CNTK::TensorView<ElementType>& NDArrayView::NativeTensorView() const
     {
-        return *static_pointer_cast<const TensorView<ElementType>>(m_tensorViewPtr);
+        return *(const TensorView<ElementType>*)(m_tensorViewPtr.get());
     }
+
+    //// -ViewPtr: use if you don't care about V1-compatible 2D-padded shape
+    //template <typename ElementType>
+    //const TensorView<ElementType>* NDArrayView::NativeTensorView() const
+    //{
+    //    if (AsDataType<ElementType>() != m_dataType)
+    //        LogicError("NDArrayView::NativeTensorView: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
+    //
+    //    return (const TensorView<ElementType>*)(m_tensorViewPtr.get());
+    //}
+    //
+    //template <typename ElementType>
+    //TensorView<ElementType>* NDArrayView::WritableNativeTensorView()
+    //{
+    //    if (IsReadOnly())
+    //        InvalidArgument("NDArrayView::WritableNativeTensorView: Cannot get a writable TensorView from a read-only NDArrayView.");
+    //
+    //    return const_cast<TensorView<ElementType>*>(NativeTensorView<ElementType>());
+    //}
 
     template <typename ElementType>
     Microsoft::MSR::CNTK::TensorView<ElementType>& NDArrayView::WritableNativeTensorView()
     {
-        return *static_pointer_cast<TensorView<ElementType>>(m_tensorViewPtr);
+        return *(TensorView<ElementType>*)(m_tensorViewPtr.get());
     }
 
     /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int opInt, NDArrayViewPtr out, double beta, int reductionOpInt)
@@ -639,7 +639,8 @@ namespace CNTK
         TensorViewPtrArrayRef(const vector<NDArrayViewPtr>& inputs) : m_inputs(inputs) { }
         virtual size_t size() const { return m_inputs.size(); }
         virtual TensorView<ElementType> const** data() const { NOT_IMPLEMENTED; }
-        virtual TensorView<ElementType> const* /*const&*/ operator[](size_t i) const { return m_inputs[i]->GetTensorViewPtr<ElementType>(); }
+        // TODO: do we need a check here?
+        virtual TensorView<ElementType> const* /*const&*/ operator[](size_t i) const { return &m_inputs[i]->NativeTensorView<ElementType>(); }
         virtual TensorView<ElementType> const* & operator[](size_t i) { NOT_IMPLEMENTED; }
         virtual TensorView<ElementType> const* const* begin() const { NOT_IMPLEMENTED; }; // TODO: get the const-ness thingy right
         virtual TensorView<ElementType> const* const * end() const { NOT_IMPLEMENTED; }
@@ -653,7 +654,8 @@ namespace CNTK
         WritableTensorViewPtrArrayRef(vector<NDArrayViewPtr>& inputs) : m_inputs(inputs) { }
         virtual size_t size() const { return m_inputs.size(); }
         virtual TensorView<ElementType>** data() const { NOT_IMPLEMENTED; }
-        virtual TensorView<ElementType>* /*const&*/ operator[](size_t i) const { return m_inputs[i]->GetWritableTensorViewPtr<ElementType>(); }
+        // TODO: do we need a check here?
+        virtual TensorView<ElementType>* /*const&*/ operator[](size_t i) const { return &m_inputs[i]->WritableNativeTensorView<ElementType>(); }
         virtual TensorView<ElementType>* & operator[](size_t i) { NOT_IMPLEMENTED; }
         virtual TensorView<ElementType>* const* begin() const { NOT_IMPLEMENTED; }; // TODO: get the const-ness thingy right
         virtual TensorView<ElementType>* const * end() const { NOT_IMPLEMENTED; }
@@ -875,7 +877,7 @@ namespace CNTK
         {
         case DataType::Float:
         {
-            const auto& sob = GetTensorViewPtr<float>()->GetSOBViewPtr();
+            const auto& sob = NativeTensorView<float>().GetSOBViewPtr();
             if (!anyPrevAxisSliced)
                 // Nothing was sliced: current SOB is just fine.
                 matrix = sob;
@@ -897,7 +899,7 @@ namespace CNTK
         }
         case DataType::Double:
         {
-            const auto& sob = GetTensorViewPtr<double>()->GetSOBViewPtr();
+            const auto& sob = NativeTensorView<double>().GetSOBViewPtr();
             if (!anyPrevAxisSliced)
                 // Nothing was sliced: current SOB is just fine.
                 matrix = sob;
@@ -1038,14 +1040,14 @@ namespace CNTK
         // Note: In Dynamite, most NDArrayViews share one underlying big matrix. Those can never be transferred.
         // TODO: Double-check that. Maybe multiple TensorViews pointing to a single SOB can transfer.
         //       That would be a huge perf hit if the entire arena gets transferred.
-        let& tensorView = *GetTensorViewPtr<ElementType>();
+        let& tensorView = NativeTensorView<ElementType>();
         let& sob = tensorView.GetSOB();
         sob.TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
         let* dataBuffer = sob.Data() + tensorView.GetShape().GetOffset();
 #if 1
-        //GetTensorViewPtr<ElementType>()->GetSOBPtr()->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
+        //NativeTensorView<ElementType>().GetSOBPtr()->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
         // the above version is faster; make sure it is correct
-        let* dataBuffer1 = GetTensorViewPtr<ElementType>()->GetSOBViewPtr()->Data();
+        let* dataBuffer1 = NativeTensorView<ElementType>().GetSOBViewPtr()->Data();
         if (dataBuffer1 != dataBuffer)
             LogicError("NDArrayView::DataBuffer: fast and slow way of getting the data buffer give different answers?");
 #endif
@@ -1164,9 +1166,9 @@ namespace CNTK
             LogicError("NDArrayView::AsScalar: The NDArrayView shaped '%S' is not a scalar.", Shape().AsString().c_str());
 
         if (GetDataType() == DataType::Float)
-            return (ElementType)GetTensorViewPtr<float>()->GetSOBViewPtr()->Get00Element();
+            return (ElementType)NativeTensorView<float>().GetSOBViewPtr()->Get00Element();
         else if (GetDataType() == DataType::Double)
-            return (ElementType)GetTensorViewPtr<double>()->GetSOBViewPtr()->Get00Element();
+            return (ElementType)NativeTensorView<double>().GetSOBViewPtr()->Get00Element();
         else
             LogicError("NDArrayView::AsScalar: Unsupported DataType");
 #else
@@ -1211,10 +1213,10 @@ namespace CNTK
         switch (m_dataType)
         {
         case DataType::Float:
-            asString = GetTensorViewPtr<float>()->AsString(maxItems, !Internal::IsReversingTensorShapesInErrorMessagesEnabled());
+            asString = NativeTensorView<float>().AsString(maxItems, !Internal::IsReversingTensorShapesInErrorMessagesEnabled());
             break;
         case DataType::Double:
-            asString = GetTensorViewPtr<double>()->AsString(maxItems, !Internal::IsReversingTensorShapesInErrorMessagesEnabled());
+            asString = NativeTensorView<double>().AsString(maxItems, !Internal::IsReversingTensorShapesInErrorMessagesEnabled());
             break;
         default:
             LogicError("NDArrayView::LogToFile: Unsupported DataType %s", DataTypeName(m_dataType));
