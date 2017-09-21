@@ -347,13 +347,15 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     let minusHalf = Constant::Scalar(DTYPE, -0.5, device);
     let profiler = Function::CreateDynamicProfiler(1, L"lnorm");
 #if 1
+
     // for efficiency, we set this up as a static graph
-    let x = PlaceholderVariable();
+    vector<pair<Variable, Variable>> argBuf{ { PlaceholderVariable(), Variable() } }; // (Invoke requires a vector, even for a single argument. So we preallocate it here, outside of the lambda.)
+    let x = argBuf.front().first;
     let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
     let x0 = x - mean;
     let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
     auto lengthNormGraph = Alias(x0 * (invLen * scale), L"lengthNorm");
-    vector<pair<Variable, Variable>> argBuf{ {x, Variable()} }; // (Invoke requires a vector, even for a single argument. So we preallocate it here, outside of the lambda.)
+
     // Note: Arguments() is slow. Don't call this inside graph generation.
     return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x) mutable
     {
@@ -472,8 +474,8 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // projected contribution from input(s), hidden, and bias
         //let projx3  = b + normW(Times(W, x));
+        let projx3 = b + /*normW*/(projectInput(x));
         let projdh3 =     normR(Times(R, dh));
-        let projx3  = b + /*normW*/(projectInput(x));
         //let projdh3 =     normR(projectState(dh));
         let i_proj  = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ix_proj")) + Slice(projdh3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ih_proj"));
         let r_proj  = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rx_proj")) + Slice(projdh3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rh_proj"));
@@ -509,7 +511,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     },
     [=](const Variable& dh, const Variable& x) mutable
     {
-#if 1   // using the composite
+#if 0   // using the composite
         gruArgs[0].second = dh;
         gruArgs[1].second = x;
         return Invoke(gruComposite, gruArgs, /*isBasicBlock=*/false);
@@ -641,28 +643,17 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
 // Two Dense(ReLU) with skip connection and batch normalization after the matrix product.
 static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescriptor& device)
 {
-    //auto W1 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W1");
-    //auto W2 = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W2");
     let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
     let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
-    // BUGBUG: stabilize and BN together makes no sense, right?
-    //auto scale1 = Parameter({}, DTYPE, 1.0, device, L"Wscale1");
-    //auto scale2 = Parameter({}, DTYPE, 1.0, device, L"Wscale2");
-    //auto b1 = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b1");
-    //auto b2 = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b2");
-    //auto bn1 = BatchNormalization(device, L"bn1");
-    //auto bn2 = BatchNormalization(device, L"bn2");
-    return UnaryModel({ /*W1, W2, scale1, scale2, b1, b2*/ },
+    return UnaryModel({ },
     {
         { L"project1", project1 },
         { L"project2", project2 },
-        //{ L"bn1", bn1 },
-        //{ L"bn2", bn2 }
     },
     [=](const Variable& x)
     {
-        let h = ReLU(/*bn1*/(project1(x /** scale1*/))    , Named("hRes"));
-        let r = ReLU(/*bn2*/(project2(h /** scale2*/)) + x, Named("rRes"));
+        let h = ReLU(project1(x)    , Named("hRes"));
+        let r = ReLU(project2(h) + x, Named("rRes"));
         return r;
     });
 }
