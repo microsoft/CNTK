@@ -50,7 +50,7 @@ using namespace std;
 
 #define let const auto
 #define fail_if(cond, err) (!!(cond) ? (LogicError(__FUNCTION__ ": " err),0) : 0)
-#define BreakPoint fprintf(stderr, "") // use this inside a conditional to be able to set a breakpoint in Release code
+#define Break fprintf(stderr, "") // use this inside a conditional to be able to set a breakpoint in Release code
 
 namespace CNTK
 {
@@ -1427,6 +1427,8 @@ class Variable::AutoBatch
                 //  - the Block node, like a NoOp, gets its m_redirection set to point to the Block's copy.
                 // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
                 // Besides that, the original Block function will remain unmodified.
+                //if (static_cast<BlockFunction&>(*redirectedFieldsOwner).Composite()->m_outputs.front().m_dataFields->m_uniqueIdForDebugging == 288)
+                //    Break;
                 m_compositeVisitorTag.Begin();
                 let inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()),
                                                       redirectedFieldsOwner->m_inputs, /*cloneFn=*/ClonePrimitiveFunction);
@@ -1512,7 +1514,7 @@ class Variable::AutoBatch
 
         // determine how many inputs are pending; and also recurse and set up the consumer list
         //if (redirectedFieldsOwner->Name() == L"as_vector[0]")
-        //    BreakPoint;
+        //    Break;
         size_t pendingInputs = 0;
         size_t maxDepthHint = 0;
         let& inputs = f.m_inputs;
@@ -1722,6 +1724,15 @@ class Variable::AutoBatch
         //    If user code is correct, it will compute the right thing. But we cannot presently check or account for it.
         //  - this does not short-circuit operations. We need to do the same to the composite as we do to the dynamic graph in forward-graph building.
 
+        //if (any_of(block.m_inputs.begin(), block.m_inputs.end(), [](const Variable& arg) { return arg.m_dataFields->m_uniqueIdForDebugging == 243; }))
+        //    Break;
+        //if (block.m_inputs.size() == 4)
+        //    Break;
+        //if (block.m_inputs.size() == 4 && block.m_inputs.back().m_dataFields->m_uniqueIdForDebugging == 243)
+        //    Break;
+        //if (block.Composite()->m_outputs.front().m_dataFields->m_uniqueIdForDebugging == 288)
+        //    Break;
+
         let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
         let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs) -> PrimitiveFunctionPtr
         {
@@ -1802,6 +1813,10 @@ class Variable::AutoBatch
                                         any_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.NeedsGradient(); }), // PERF BUGBUG: caller knows this already; should pass it in
                                         all_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.IsSparse();      }), // BUGBUG: This is not generally correct -> Caller knows this, just pass it in.
                                      wstring()));
+        //if (fPtr->m_uniqueIdForDebugging == 194962)
+        //    Break;
+        //if (!fPtr->m_outputs.front().NeedsGradient())
+        //    Break;
         FinishConstructingPrimitiveFunction(*fPtr, profiler, logPrefix);
         cudaStatsguard.Stop();
 
@@ -1896,6 +1911,8 @@ class Variable::AutoBatch
             f.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
             fCloned = MakeSharedObject<PrimitiveFunction>(f.m_op, move(newInputs), move(attributes), wstring(f.Name()));
         }
+        //if (fCloned->m_uniqueIdForDebugging == 194962)
+        //    Break;
         // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
         // unfortunately output initialization must be separated out since it requires s shared_ptr to fCloned
         let& fClonedInputs = fCloned->m_inputs;
@@ -2976,6 +2993,8 @@ public:
         {
             // this leaf will receive a gradient; zero it out if one is already present (in case user passes in the buffer)
             fail_if(gradFields.m_varKind != VariableKind::Parameter && gradFields.m_varKind != VariableKind::Constant, "backprop through a see-through op??");
+            //if (gradFields.m_uniqueIdForDebugging == 243)
+            //    Break;
             return;
         }
 
@@ -2990,6 +3009,14 @@ public:
         // the same batching that was determined in forward computation. We do not need to rediscover it.
         auto& f = *gradFields.m_redirection.m_function;
 
+        //if (f.m_op == PrimitiveOpType::Block)
+        //    Break;
+        //if (f.m_op == PrimitiveOpType::NoOp)
+        //    fprintf(stderr, "->%d\n", (int)f.m_uniqueIdForDebugging), fflush(stderr);
+        //
+        //if (f.m_uniqueIdForDebugging == 368869)
+        //    Break;
+
         fail_if(&GetOutputFields(f) != &gradFields, "RBuildBackwardGraph called on a redirection??");
         fail_if(!gradFields.m_value, "variable has no value yet??");
 
@@ -3002,12 +3029,16 @@ public:
         for (size_t i = 0; i < inputs.size(); i++)
         {
             auto& inputGradFields = GetGradientFieldsForBackprop(ResetInputGradient(inputs[i]), /*firstTimes=*/true); // this is where the gradient will be held   --TODO: also cache the reshaped/sliced gradient in input fields
+            //if (inputGradFields.m_uniqueIdForDebugging == 243)
+            //    Break;
             if (!inputGradFields.m_needsGradient) // TODO: use our own field for this. Interpret Constant and StopGradient. StopGradient output receives no gradient.
                 continue; // skip inputs that receive no gradients
             // process recursively the inputs
             if (!m_visitorTag.Visited(inputGradFields.m_visitedTag))
                 RBuildBackwardGraph(inputGradFields);
             // record ourselves as a consumer of the arg
+            //if (inputGradFields.m_uniqueIdForDebugging == 243)
+            //    Break;
             inputGradFields.m_consumers.push_back({ &f, i });
             m_stats.numBackpropsToInputs++;
         }
@@ -3036,9 +3067,12 @@ public:
         if (!inputFields.m_redirection) // leaf
             return inputFields;
         auto& gradFields = GetOutputFields(*inputFields.m_redirection.m_function);
+        //if (inputFields.m_redirection.m_function->m_uniqueIdForDebugging == 368869)
+        //    Break;
+        //if (gradFields.m_redirection.m_function->m_uniqueIdForDebugging == 368869)
+        //    Break;
         fail_if(!gradFields.m_redirection, "output Variable is a leaf??");
-        //if (gradFields.m_redirection.m_function->m_op == PrimitiveOpType::Block)
-        //    BreakPoint;
+        fail_if(inputFields.m_redirection.m_function->m_op == PrimitiveOpType::Block, "unexpanded Block invocation??");
         // short-circuit if needed
         if (ArePhysicalOutputFields(gradFields)) // a physical Variable
             return gradFields;
@@ -3500,6 +3534,33 @@ public:
     // BatchedBackward() -- entry point for auto-batched implementation of PrimitiveFunction::Backward()
     // -----------------------------------------------------------------------
 
+#if 0 // helper for debugging, traversing the batched graph
+    static void RCheck(const PrimitiveFunction* f, set<const Function*>& visited, size_t depth)
+    {
+        if (!visited.insert(f).second)
+            return;
+        if (f->m_op == PrimitiveOpType::Block)
+            Break;
+        if (f->m_op == PrimitiveOpType::NoOp)
+            fprintf(stderr, "..%d\n", (int)f->m_uniqueIdForDebugging);
+            //Break;
+        for (let& input : f->m_inputs)
+        {
+            if (input.IsOutput() /*&& input.m_dataFields->m_needsGradient*/)
+                //RCheck(input.OutputOwner().get(), visited, depth+1);
+                RCheck(input.m_dataFields->m_redirection.m_function, visited, depth+1);
+            if (input.m_dataFields->m_uniqueIdForDebugging == 243)
+                Break;
+        }
+    }
+    static void Check(const Variable& root)
+    {
+        set<const Function*> visited;
+        RCheck(root.OutputOwner().get(), visited, 0);
+        fprintf(stderr, "Check: %d Functions\n", (int)visited.size()), fflush(stderr);
+    }
+#endif
+
     // implant gradients into all variables
     // Unlike BatchedForward(), this is eager. If you call it twice, it's a completely new computation.
     // If you need multiple gradients, ask for them in a single go.
@@ -3527,7 +3588,7 @@ public:
         m_visitorTag.Begin();
         // first set it up for the Parameters for which we have requested a gradient
         // This way we won't backprop into gradients of Parameters that we did not ask for.  --TODO: implement this
-        // BUGBUG:
+        // BUGBUG:  --TODO: What did this BUGBUG comment want to tell me?? It's empty!
         for (auto& kv : gradients)
         {
             auto& gradFields = GetGradientFieldsForBackprop(ResetInputGradient(kv.first), /*firstTimes=*/true);
@@ -3536,7 +3597,7 @@ public:
             RBuildBackwardGraph(gradFields, /*userOwnsGradients=*/true);
             // BUGBUG: ^^ userOwnsGradients won't work correctly if one Var in gradients[] is an input to another
         }
-        // now build the graph. We use visited information for the gradients to infer our own needsGradient flag
+        // now build the graph. We use visited information for the gradients to infer our own needsGradient flag  --TODO: No, not done yet.
         auto& rootGradFields = GetGradientFieldsForBackprop(ResetInputGradient(root), /*firstTimes=*/true);
         if (!m_visitorTag.Visited(rootGradFields.m_visitedTag)) // (A crazy user may have passed root itself in gradients[]. That is OK.)
             RBuildBackwardGraph(rootGradFields);
@@ -3590,6 +3651,10 @@ public:
 // Computes lazily the value of a node. Does nothing if called again.
 NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 {
+    //let sthis = dynamic_pointer_cast<PrimitiveFunction>(const_cast<PrimitiveFunction*>(this)->shared_from_this());
+    //let comp = CompositeFunction::Create(sthis);
+    //let res = comp->FilteredInputs<Variable>([](const Variable& v) { return v.m_dataFields->m_uniqueIdForDebugging == 243; });
+    //res;
     auto autoBatcher = Variable::AutoBatch();
     return autoBatcher.BatchedForward(m_outputs.front());
 }
@@ -3686,7 +3751,7 @@ static vector<T2> GetVectorOfSeconds(const std::vector<std::pair<T1, T2>>& opera
     return res;
 }
 
-// BUGBUG: We must complete the change of the interface of Invoke() from an array to a map, since the composite's args are not ordered.
+// TODO: make the interface nicer. The composite should be locked away in a struct Invocable.
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
 // It is a valid PrimitiveFunction, but it shares the composite instead of owning it, and therefore not a valid BlockFunction for the static-graph machinery.
 // TODO: Prevent the static machinery from tripping over this.
@@ -3727,24 +3792,39 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
 
     // We determine the compositeOutputs by replacing the arguments of the composite with new placeholders with updated 
     // shape etc. information matching the corresponding mapped input
-    let argumentsMap = callee->Arguments(); // BUGBUG: composite arguments are not ordered
-    if (argumentsMap.size() != m_inputs.size())
-        InvalidArgument("Invoke invoked with wrong (%d) number of arguments, %d expected.", (int)m_inputs.size(), (int)argumentsMap.size());
+    //let leaves = callee->Inputs();
+    //if (argumentsMap.size() != m_inputs.size())
+    //    InvalidArgument("Invoke invoked with wrong (%d) number of arguments, %d expected.", (int)m_inputs.size(), (int)argumentsMap.size());
 
-    // BUGBUG: Must handle the map here now that we pass it.
+    // BUGBUG: Must handle the map here now that we pass it. Also must verify that the Placeholders are actually in the composite.
 
-    std::unordered_map<Variable, Variable> replacementMap;
+    unordered_map<Variable, Variable> replacementMap;
+    // BUGBUG: Must verify that all Parameters are covered here.
     for (size_t i = 0; i < m_inputs.size(); i++)
     {
-        let& currentArgument = argumentsMap[i]; // Placeholder in the composite   --BUGBUG HERE, must determine the position via the map
-        if (!currentArgument.IsPlaceholder())
-            InvalidArgument("Invoke requires the block function to have Placeholders as inputs.");
-        let& currentArgumentMapping = m_inputs[i]; // the user-supplied argument. This has the actual type.
-        if (currentArgumentMapping.IsPlaceholder() || currentArgumentMapping.IsInput())
-            InvalidArgument("Invoke requires the operands to be known values, not placeholders.");
-        auto newArgument = PlaceholderLike(currentArgumentMapping); // we replace with a placeholder of the same type. This gives the composite the shape.
-        newArgument.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
-        replacementMap.insert({ currentArgument, newArgument }); // replace with new Placeholder, which has a block mapping implanted
+        let& compositeLeaf = operands[i].first; // Placeholder or Parameter in composite
+        let& input = m_inputs[i];               // what they should pretend to be
+        if (compositeLeaf.IsParameter())
+        {
+            // for Parameters, supply an empty Variable
+            if (input != compositeLeaf)
+                InvalidArgument("Invoke: Parameters must be passed themselves.");
+            // That's it. We just keep it in the list so that auto-batch can find them.
+        }
+        else if (compositeLeaf.IsPlaceholder())
+        {
+            // TODO: rethink the logic. If the input's shape IsUnknown, then why not directly return? Why even replace?
+            if (input.IsPlaceholder() || input.IsInput())
+                InvalidArgument("Invoke requires the operands to be known values, not placeholders.");
+            auto updatedCompositePlaceholder = PlaceholderLike(input); // we replace with a placeholder of the same type. This gives the composite the shape.
+            //updatedCompositePlaceholder.m_dataFields->m_needsGradient = input.NeedsGradient(); // Placeholders have no gradient. This would infer a non-gradient section.
+            updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
+            replacementMap.insert({ compositeLeaf, updatedCompositePlaceholder }); // replace with new Placeholder, which has a block mapping implanted
+            // BEGIN HACK  --need to fix the interface!!
+            const_cast<vector<pair<Variable, Variable>>&>(operands)[i].first = updatedCompositePlaceholder;
+        }
+        else
+            InvalidArgument("Invoke: Only Placeholders can be substituted.");
     }
 
     callee->ReplacePlaceholders(replacementMap); // This gives the composite the shape.
@@ -3754,7 +3834,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     // Special case: Invoke() may also be called while building a composite (static graph) that uses another.
     // In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
     // is inferred.
-    if (any_of(operands.begin(), operands.end(), [](const pair<Variable,Variable>& arg) { return arg.second.Shape().IsUnknown(); }))
+    if (any_of(operands.begin(), operands.end(), [](const pair<Variable, Variable>& arg) { return arg.second.Shape().IsUnknown(); }))
         return;
 
     if (compositeOutputs.front().Shape().IsUnknown()) // or not?

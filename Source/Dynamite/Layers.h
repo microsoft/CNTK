@@ -355,6 +355,8 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     let x0 = x - mean;
     let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
     auto lengthNormGraph = Alias(x0 * (invLen * scale), L"lengthNorm");
+    for (let& p : lengthNormGraph->Parameters())
+        argBuf.push_back({ p,p }); // presently also must pass all Parameters
 
     // Note: Arguments() is slow. Don't call this inside graph generation.
     return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x) mutable
@@ -498,6 +500,8 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     };
     vector<pair<Variable, Variable>> gruArgs = { { PlaceholderVariable(), Variable() }, { PlaceholderVariable(), Variable() } };
     let gru3Composite = Alias(gru3(gruArgs[0].first, gruArgs[1].first), L"gru");
+    for (let& p : gru3Composite->Parameters())
+        gruArgs.push_back({ p,p }); // presently also must pass all Parameters
     return BinaryModel({ R, b },
     {
         { L"projectInput",  projectInput },
@@ -507,7 +511,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     [=](const Variable& dh, const Variable& x) mutable
     {
         let projx3 = b + projectInput(x);
-#if 0   // using the composite
+#if 1   // using the composite
         gruArgs[0].second = dh;
         gruArgs[1].second = projx3;
         return Invoke(gru3Composite, gruArgs, /*isBasicBlock=*/false);
@@ -628,6 +632,7 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
     auto runningMean   = Parameter({ NDShape::InferredDimension }, DTYPE, 0.0, device, L"runningMean");
     auto runningInvStd = Parameter({ NDShape::InferredDimension }, DTYPE, 1.0, device, L"runningInvStd");
     auto runningCount  = Parameter({                            }, DTYPE, 0.0, device, L"runningCount");
+    // TODO: figure out this Parameter mess for BN
     return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount }, [=](const Variable& x) -> Variable
     {
         return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);

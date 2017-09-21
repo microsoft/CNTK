@@ -588,7 +588,7 @@ namespace CNTK
 
     inline Variable PlaceholderLike(const Variable& var)
     {
-        return PlaceholderVariable(var.Shape(), var.GetDataType(), var.Name(), var.DynamicAxes());
+        return PlaceholderVariable(var.Shape(), var.GetDataType(), var.Name(), var.DynamicAxes(), var.NeedsGradient(), var.IsSparse());
     }
 
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName);

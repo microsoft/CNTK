@@ -285,7 +285,7 @@ namespace CNTK
     public:
         ~PrimitiveFunction()
         {
-            //if (m_uniqueIdForDebugging == 337410)
+            //if (m_uniqueIdForDebugging == 368869)
             //    fprintf(stderr, "");
         }
     protected: // special short-circuited versions private to auto-batcher (also called via BlockFunction(), hence 'protected')
@@ -883,6 +883,7 @@ namespace CNTK
         mutable DynamicProfilerPtr m_profiler;   // profile using this profiler if set
         static const DynamicProfilerPtr& CurrentDynamicProfiler();
 
+    public:
         // debugging aid for identifying objects
         size_t m_uniqueIdForDebugging = GetUniqueId(); static size_t GetUniqueId() { static size_t id = 0; return ++id; }
     }; // end class PrimitiveFunction
