@@ -64,6 +64,15 @@ namespace CNTK
         {
             if (m_syncPeriodPerWorker == 0)
                 InvalidArgument("Sync period is too small.");
+
+            // Need to allocate memory here to make sure not hitting OOM
+            std::vector<NDArrayViewPtr> parameterValues;
+            GetParameterValues(learner->Parameters(), parameterValues);
+
+            m_blockLevelSmoothedGradient.resize(parameterValues.size());
+            m_prevParameters.resize(parameterValues.size());
+            m_tempBlockGradient.resize(parameterValues.size());
+            Reset(parameterValues);
         }
 
         size_t MinibatchSizeScaleFactor() override
@@ -73,27 +82,33 @@ namespace CNTK
 
         bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& info) override
         {
-            std::vector<Parameter> parameters;
-            parameters.reserve(gradientValues.size());
-            for (auto p : gradientValues)
-                parameters.push_back(p.first);
+            // mark start of block before local update
+            std::vector<NDArrayViewPtr> values;
+            GetParameterValues(m_learner->Parameters(), values);
 
-            std::sort(parameters.begin(), parameters.end(), [](const Parameter& a, const Parameter& b) { return a.Uid() < b.Uid(); });
+            // note this is only for the first update, after that SyncBlock handles the bookkeeping
+            if (!m_prevParamInitialized)
+            {
+                Reset(values);
+                m_prevParamInitialized = true;
+            }
 
-            auto profGradientAgg = Microsoft::MSR::CNTK::ProfilerTimeBegin();
-
-            bool updated = PerformDistributedUpdateIfNeeded(parameters, info);
-
-            Microsoft::MSR::CNTK::ProfilerTimeEnd(profGradientAgg, Microsoft::MSR::CNTK::profilerEvtMainGradient);
-
-            // For block momentum the number of aggreagate/checkpoints should match, so for now we ignore the return value of local learners.
-
-            auto profWeights = Microsoft::MSR::CNTK::ProfilerTimeBegin();
-
+            // do local update first, then block update. Local update would have different gradient for each worker,
+            // and this order is to make sure all workers got the same model after block update
             if (!info.IsEmpty())
+            {
+                // For block momentum the number of aggreagate/checkpoints should match, so for now we ignore the return value of local learners.
+                auto profWeights = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainWeights);
                 m_learner->Update(gradientValues, info.numberOfSamples, info.atEndOfSweep);
 
-            Microsoft::MSR::CNTK::ProfilerTimeEnd(profWeights, Microsoft::MSR::CNTK::profilerEvtMainWeights);
+                // after local update, use the latest model for block update
+                values.clear();
+                GetParameterValues(m_learner->Parameters(), values);
+            }
+
+            auto profGradientAgg = Microsoft::MSR::CNTK::ProfilerTimeBegin();
+            bool updated = PerformDistributedUpdateIfNeeded(values, info);
+            Microsoft::MSR::CNTK::ProfilerTimeEnd(profGradientAgg, Microsoft::MSR::CNTK::profilerEvtMainGradient);
 
             return updated;
         }
@@ -101,11 +116,8 @@ namespace CNTK
         // Optionally overridable method to get checkpoint state associated with this Distributed train method
         Dictionary CreateCheckpoint() override
         {
-            std::vector<Parameter> parameters(m_learner->Parameters());
-            std::sort(parameters.begin(), parameters.end(), [](const Parameter& a, const Parameter& b) { return a.Uid() < b.Uid(); });
-
             std::vector<NDArrayViewPtr> values;
-            GetParameterValues(parameters, values);
+            GetParameterValues(m_learner->Parameters(), values);
 
             // During checkpoint, other workers could be in aggregation state. Let's allow them to finish aggregation.
             Action action;
@@ -119,25 +131,43 @@ namespace CNTK
                     RuntimeError("Unexpected action received.");
             }
 
-            // Always aggregate before the checkpoint
+            // Always aggregate before the checkpoint, so prevParameter and m_numSamplesSeenInCurrentBlock don't need to be saved
             SynchronizeAction(Action::Aggregate);
             AggregateImpl(values);
+            
+            std::vector<DictionaryValue> serializedSmoothedGradients;
+            for (auto sg : m_blockLevelSmoothedGradient)
+            {
+                serializedSmoothedGradients.push_back(*sg);
+            }
 
             Dictionary result;
             result[L"base"] = DistributedLearnerBase::CreateCheckpoint();
             result[L"localTotalNumSamplesSeen"] = m_localTotalNumSamplesSeen;
+            result[L"blockLevelSmoothedGradient"] = serializedSmoothedGradients;
             return result;
         }
 
         void RestoreFromCheckpoint(const Dictionary& checkpoint) override
         {
-            m_localTotalNumSamplesSeen = checkpoint[L"localTotalNumSamplesSeen"].Value<size_t>();
             DistributedLearnerBase::RestoreFromCheckpoint(checkpoint[L"base"].Value<Dictionary>());
+            m_localTotalNumSamplesSeen = checkpoint[L"localTotalNumSamplesSeen"].Value<size_t>();
+            const auto& smoothedGradients = checkpoint[L"blockLevelSmoothedGradient"].Value<std::vector<DictionaryValue>>();
+
+            if (m_blockLevelSmoothedGradient.size() != smoothedGradients.size())
+                RuntimeError("Inconsistent parameter size between learner and checkpoint");
+
+            for (size_t i = 0; i < m_blockLevelSmoothedGradient.size(); i++)
+            {
+                m_blockLevelSmoothedGradient[i]->CopyFrom(smoothedGradients[i].Value<NDArrayView>());
+            }
+
+            m_prevParamInitialized = false;
         }
 
     private:
         // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
-        bool PerformDistributedUpdateIfNeeded(std::vector<Parameter>& parameters, MinibatchInfo& info)
+        bool PerformDistributedUpdateIfNeeded(std::vector<NDArrayViewPtr>& parameterValues, MinibatchInfo& info)
         {
             // If the last minibatch, set the end of data state.
             if (info.atEndOfData)
@@ -157,20 +187,17 @@ namespace CNTK
                 return true;
             }
 
-            std::vector<NDArrayViewPtr> values;
             if (!m_endOfDataReached)
             {
                 m_numSamplesSeenInCurrentBlock += info.numberOfSamples;
                 if (m_numSamplesSeenInCurrentBlock < m_syncPeriodPerWorker)
                     return true;
 
-                GetParameterValues(parameters, values);
-                Aggregate(values);
+                Aggregate(parameterValues);
                 return true;
             }
 
-            GetParameterValues(parameters, values);
-            return Shutdown(values);
+            return Shutdown(parameterValues);
         }
 
         // Before doing any work, the distributed learner synchronizes with other learners to
@@ -283,11 +310,6 @@ namespace CNTK
 
         void AggregateImpl(std::vector<NDArrayViewPtr>& parameters)
         {
-            if (IsResetRequired(parameters))
-                Reset(parameters);
-
-            m_numSamplesSeenInCurrentBlock = 0;
-
             // Let update the weights.
             if (parameters.front()->GetDataType() == DataType::Double)
                 SynchronizeModel<double>(parameters);
@@ -295,6 +317,8 @@ namespace CNTK
                 SynchronizeModel<float>(parameters);
             else
                 RuntimeError("Unsupported type.");
+
+            m_numSamplesSeenInCurrentBlock = 0;
 
             if (m_resetSGDMomentumAfterAggregation)
                 m_learner->ResetSmoothedGradients();
@@ -336,11 +360,8 @@ namespace CNTK
             return false;
         }
 
-        void Reset(std::vector<NDArrayViewPtr>& parameters)
+        void Reset(const std::vector<NDArrayViewPtr>& parameters)
         {
-            m_blockLevelSmoothedGradient.resize(parameters.size());
-            m_prevParameters.resize(parameters.size());
-
             for (size_t i = 0; i < parameters.size(); ++i)
             {
                 auto& p = parameters[i];
@@ -361,16 +382,14 @@ namespace CNTK
             if (!m_blockLevelSmoothedGradient[index])
             {
                 // has not been initialized yet
-                NDShape shape{ data->GetNumRows(), data->GetNumCols() };
-                auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<ElemType>(), shape, AsDeviceDescriptor(data->GetDeviceId()));
+                auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<ElemType>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
                 pSmoothedGrad->SetValue(static_cast<ElemType>(0));
                 m_blockLevelSmoothedGradient[index] = pSmoothedGrad;
             }
 
             if (!m_prevParameters[index])
             {
-                NDShape shape{ data->GetNumRows(), data->GetNumCols() };
-                NDArrayViewPtr newValue = std::make_shared<NDArrayView>(AsDataType<ElemType>(), shape, AsDeviceDescriptor(data->GetDeviceId()));
+                NDArrayViewPtr newValue = std::make_shared<NDArrayView>(AsDataType<ElemType>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
                 std::shared_ptr<Matrix<ElemType>> newData = newValue->GetWritableMatrix<ElemType>();
                 newData->SetValue(*data);
                 m_prevParameters[index] = newValue;
@@ -379,51 +398,48 @@ namespace CNTK
             {
                 m_prevParameters[index]->GetWritableMatrix<ElemType>()->SetValue(*data);
             }
+
+            if (!m_tempBlockGradient[index])
+            {
+                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<ElemType>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+            }
         }
 
         template<class ElemType>
-        void SynchronizeModel(const std::vector<NDArrayViewPtr>& gradientValues)
+        void SynchronizeModel(const std::vector<NDArrayViewPtr>& parameterValues)
         {
-            ElemType blockMomentum = (ElemType)TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_syncPeriodPerWorker);
+            ElemType blockMomentum = (ElemType)TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_numSamplesSeenInCurrentBlock);
 
             // 1. Let's aggregate weights
-            std::vector<std::shared_ptr<Matrix<ElemType>>> aggregatedWeights;
-            std::vector<NDArrayViewPtr> aggregatedWeightsPrepared;
-            for (size_t i = 0; i < gradientValues.size(); ++i)
+            for (size_t i = 0; i < parameterValues.size(); ++i)
             {
                 // Get current model
                 Matrix<ElemType>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<ElemType>();                  // prev model value
-                Matrix<ElemType>& currentWeight = *gradientValues[i]->GetWritableMatrix<ElemType>();
+                Matrix<ElemType>& currentWeight = *parameterValues[i]->GetWritableMatrix<ElemType>();
+                Matrix<ElemType>& blockGrad = *m_tempBlockGradient[i]->GetWritableMatrix<ElemType>();
 
                 // Subtract it from the previous model
-                auto blockGrad = std::make_shared<Matrix<ElemType>>(previousWeight, CPUDEVICE);
-                *blockGrad -= currentWeight;                                              // matW becomes local block gradient (of one worker)
-
-                aggregatedWeights.push_back(blockGrad);
-                NDShape shape{ blockGrad->GetNumElements() };
-                auto data = MakeSharedObject<NDArrayView>(AsDataType<ElemType>(), shape, blockGrad->Data(), blockGrad->GetNumElements() * sizeof(ElemType), AsDeviceDescriptor(blockGrad->GetDeviceId()));
-                aggregatedWeightsPrepared.push_back(data);
+                blockGrad = previousWeight - currentWeight; // matW becomes local block gradient (of one worker)
             }
 
             // Send block gradient over MPI nodes.
-            m_communicator->AggregateInPlace(aggregatedWeightsPrepared, m_communicator->Workers());
+            m_communicator->AggregateInPlace(m_tempBlockGradient, m_communicator->Workers());
 
             // 2. Let's update the model
-            for (size_t i = 0; i < gradientValues.size(); ++i)
+            for (size_t i = 0; i < parameterValues.size(); ++i)
             {
                 // 2 block gradient aggregation
                 // 2.1. get current model
                 Matrix<ElemType>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<ElemType>();                  // prev model value
-                Matrix<ElemType>& currentWeight = *gradientValues[i]->GetWritableMatrix<ElemType>();
-                auto blockGrad = aggregatedWeights[i];
+                Matrix<ElemType>& currentWeight = *parameterValues[i]->GetWritableMatrix<ElemType>();
+                Matrix<ElemType>& blockGrad = *m_tempBlockGradient[i]->GetWritableMatrix<ElemType>();
                 // 2.2. model update 
                 {
                     Matrix<ElemType>& sg = *m_blockLevelSmoothedGradient[i]->GetWritableMatrix<ElemType>();       // smoothed gradient
-                    blockGrad->TransferToDeviceIfNotThere(sg.GetDeviceId());
                     // 2.2.1 update block level smoothed gradient; 
                     // This is essentially a first-order infinite impulse response (IIR) filter with the gain (1 - blockMomentum)*m_blockLearningRate:
                     // smoothedGradient(t)=blockMomentum * smoothedGradients(t-1) + (1 - blockMomentum)*m_blockLearningRate*blockGrad(t)
-                    Matrix<ElemType>::ScaleAndAdd((ElemType)((1 - blockMomentum)*m_blockLearningRate), *blockGrad, (ElemType)blockMomentum, sg);
+                    Matrix<ElemType>::ScaleAndAdd((ElemType)((1 - blockMomentum)*m_blockLearningRate), blockGrad, (ElemType)blockMomentum, sg);
                     // 2.2.2 update parameters; 
                     currentWeight.SetValue(previousWeight);
                     currentWeight -= sg;
@@ -447,7 +463,10 @@ namespace CNTK
 
         static double TimeConstant2Momentum(double timeConstant, size_t syncPeroid)
         {
-            return exp(-((double)syncPeroid) / timeConstant);
+            if (timeConstant == 0)
+                return 0;
+            else
+                return exp(-((double)syncPeroid) / timeConstant);
         }
 
         static double Momentum2TimeConstant(double bm, size_t syncPeroid)
@@ -472,7 +491,12 @@ namespace CNTK
         // parameters at the last model aggregation point
         std::vector<NDArrayViewPtr> m_prevParameters;
         std::vector<NDArrayViewPtr> m_blockLevelSmoothedGradient;
+        std::vector<NDArrayViewPtr> m_tempBlockGradient;
+
+        // temp storage for MPI
         std::vector<NDArrayViewPtr> m_actionBuffer;
+
+        bool m_prevParamInitialized = false;
 
         bool m_endOfDataReached;
 
