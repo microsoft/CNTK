@@ -1033,7 +1033,13 @@ namespace CNTK
         NDShape m_viewShape;
         bool m_isReadOnly;
 
-        std::shared_ptr<void> m_tensorViewPtr; // Microsoft::MSR::CNTK::TensorView<ElemType>*
+        Internal::TensorViewUnion m_tensorViewUnion;
+        //union
+        //{
+        //    TensorView<float>  m_tensorViewFloat;
+        //    TensorView<double> m_tensorViewDouble;
+        //} m_tensorViews;
+        //std::shared_ptr<void> m_tensorViewPtr; // Microsoft::MSR::CNTK::TensorView<ElemType>*
     };
 
     ///

@@ -111,6 +111,52 @@ namespace CNTK
     }
 
     // ElementType-erasing version of new TensorView(sob, shape), based on dataType.
+    static_assert(sizeof(TensorView<float> ) == sizeof(Internal::TensorViewUnion), "TensorViewUnion has wrong size");
+    static_assert(sizeof(TensorView<double>) == sizeof(Internal::TensorViewUnion), "TensorViewUnion has wrong size");
+    static void* ConstructTensorView(Internal::TensorViewUnion& space, CNTK::DataType dataType, const shared_ptr<MatrixBase>& sob, const TensorShape& shape)
+    {
+        // placement-construct it inside m_tensorViewUnion, passed to this function as 'space'
+        switch (dataType)
+        {
+        case DataType::Float:
+        {
+            auto matrix = dynamic_pointer_cast<Matrix<float>>(sob);
+            if (matrix)
+                return new ((TensorView<float>*)&space) TensorView<float>(matrix, shape);
+        }
+        break;
+        case DataType::Double:
+        {
+            auto matrix = dynamic_pointer_cast<Matrix<double>>(sob);
+            if (matrix)
+                return new ((TensorView<double>*)&space) TensorView<double>(matrix, shape);
+                //return shared_ptr<void>(new TensorView<double>(matrix, shape), [](void* p) { delete (const TensorView<double>*)(p); });
+        }
+        break;
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(dataType));
+            break;
+        }
+        LogicError("Storage Object is not of DataType %s", DataTypeName(dataType));
+    }
+    static void DestructTensorView(Internal::TensorViewUnion& space, CNTK::DataType dataType)
+    {
+        // placement-delete
+        switch (dataType)
+        {
+        case DataType::Float:
+           ((TensorView<float>*)&space)->~TensorView<float>();
+           break;
+        case DataType::Double:
+            ((TensorView<double>*)&space)->~TensorView<double>();
+            break;
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(dataType));
+            break;
+        }
+    }
+#if 0
+    // ElementType-erasing version of new TensorView(sob, shape), based on dataType.
     static shared_ptr<void> NewTensorView(CNTK::DataType dataType, const shared_ptr<MatrixBase>& sob, const TensorShape& shape)
     {
         switch (dataType)
@@ -135,6 +181,7 @@ namespace CNTK
         }
         LogicError("Storage Object is not of DataType %s", DataTypeName(dataType));
     }
+#endif
 
 #define LAZY_2D_PADDING // if defined then rank-2 padding of TensorShapes happens upon access, not upon creation
 
@@ -147,7 +194,8 @@ namespace CNTK
 #else
         const auto tensorShape = AsTensorShapeMin2D(viewShape); // not lazy (old version): sdo it here and bake it into teh object
 #endif
-        m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
+        //m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
+        ConstructTensorView(m_tensorViewUnion, dataType, sob, tensorShape);
     }
 
     // constructor optimized for shape passed as TensorShape (allowing strides and offset for slicing)
@@ -155,7 +203,8 @@ namespace CNTK
         : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())),
           m_viewShape(move(tensorShape.GetDimsAsVector())), m_isReadOnly(readOnly)
     {
-        m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
+        //m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
+        ConstructTensorView(m_tensorViewUnion, dataType, sob, tensorShape);
     }
 
     // create a new NDArrayView that subplants the tensorShape
@@ -179,7 +228,9 @@ namespace CNTK
     {}
 
     NDArrayView::~NDArrayView()
-    {}
+    {
+        DestructTensorView(m_tensorViewUnion, m_dataType);
+    }
 
     void NDArrayView::SetValue(float value)
     {
@@ -474,13 +525,17 @@ namespace CNTK
     template <typename ElementType>
     const Microsoft::MSR::CNTK::TensorView<ElementType>& NDArrayView::NativeTensorView() const
     {
-        return *(const TensorView<ElementType>*)(m_tensorViewPtr.get());
+        //return *(const TensorView<ElementType>*)(m_tensorViewPtr.get());
+        return *(const TensorView<ElementType>*)(&m_tensorViewUnion);
     }
 
     template <typename ElementType>
     Microsoft::MSR::CNTK::TensorView<ElementType>& NDArrayView::WritableNativeTensorView()
     {
-        return *(TensorView<ElementType>*)(m_tensorViewPtr.get());
+        let* thisc = const_cast<NDArrayView*>(this);
+        let& vc = thisc->NativeTensorView<ElementType>();
+        return const_cast<TensorView<ElementType>&>(vc);
+        //return *(TensorView<ElementType>*)(m_tensorViewPtr.get());
     }
 
     /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int opInt, NDArrayViewPtr out, double beta, int reductionOpInt)

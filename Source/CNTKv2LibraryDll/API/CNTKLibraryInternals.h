@@ -516,13 +516,24 @@ namespace CNTK
              bool m_initialized { false };
         };
 
+        // space for holding either a TensorView<float> or TensorView<double> (inside NDArrayView)
+        struct TensorViewUnion
+        {
+            char buf[240]; // must be the same size as TensorView<float/double>
+        };
+
         // Dynamite
         struct AutoBatchRedirection // redirect this value to a different owner function. Also allow for lazy Index operation.
         {
+            // There are three cases for m_function and the holder:
+            //  - no redirect:         m_functionHolder == empty  ; m_function == nullptr
+            //  - redirect into owner: m_functionHolder == empty  ; m_function == m_owner
+            //  - redirect elsewhere:  m_functionHolder == object ; m_function == m_functionHolder.get()
+            // I.e. in the 'elsewhere' case, this instance owns m_function, holding the ref-count in m_functionHolder.
             PrimitiveFunction* m_function = nullptr; // function that actually produces the value for this
+            PrimitiveFunctionPtr m_functionHolder;   // holds shared_ptr to owner if it was added by auto-batching
             size_t m_index = SIZE_MAX - 1;           // and we take this slice on the way (SIZE_MAX if none)  --TODO: replace by m_sliceBegin/End
             size_t m_depthHint = 0;                  // this redirection skipped a Barrier with this depthHint
-            PrimitiveFunctionPtr m_functionHolder;   // holds shared_ptr to owner if it was added by auto-batching
             //size_t m_sliceBegin, m_sliceEnd;         // slice out these items (applied to last dimension). Do nothing if m_sliceEnd==SIZE_MAX.  --TODO: think this through more
             operator bool() const { return m_function != nullptr; } // allows for "if (m_redirection)"
         };
