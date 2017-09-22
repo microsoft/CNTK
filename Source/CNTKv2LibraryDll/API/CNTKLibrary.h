@@ -2077,6 +2077,16 @@ namespace CNTK
         /// TODO: Function::grad() allows to pass multiple roots. Does that ever make sense in this context?
         ///
         CNTK_API void Backward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;
+
+        ///
+        /// Index the last axis. This maps to Slice().
+        ///
+        CNTK_API Variable operator[](size_t index) const;
+
+        ///
+        /// Length of the last axis.
+        ///
+        CNTK_API size_t size() const;
     protected:
         class AutoBatch;
     protected:

@@ -932,10 +932,10 @@ static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label
 static inline void as_vector(vector<Variable>& res, const Variable& x)
 {
     // 'x' is an entire sequence; last dimension is length
-    let len = x.Shape().Dimensions().back();
+    let len = x.size();
     res.resize(len);
     for (size_t t = 0; t < len; t++)
-        res[t] = Index(x, (int)t);// , L"as_vector[" + std::to_wstring(t) + L"]");
+        res[t] = x[t];
 }
 
 // TODO: the following are helpers for Static CNTK from C++. Move them out, and don't use Dynamite data types.

@@ -3870,4 +3870,21 @@ Variable BlockFunction::FinalizeInvoke()
     return m_outputs.front().CompositePreservingCopy(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
 }
 
+// helpers to make Variables behave like indexable arrays
+Variable Variable::operator[](size_t index) const
+{
+    // TODO: this can be simplified by short-circuiting the CompositeFunction >> Output, and just returning the Output of the Primitive, like Invoke().
+    return CNTK::Index(*this, index);
+}
+
+size_t Variable::size() const
+{
+    let& shape = Shape();
+    if (shape.Rank() == 0)
+        InvalidArgument("size: Variable is a scalar and thus has no length.");
+    if (shape.IsUnknown())
+        InvalidArgument("size: Variable has no known size yet.");
+    return shape.Dimensions().back();
+}
+
 } // namespace CNTK
