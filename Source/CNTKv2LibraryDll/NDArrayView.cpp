@@ -136,10 +136,12 @@ namespace CNTK
         LogicError("Storage Object is not of DataType %s", DataTypeName(dataType));
     }
 
+#define LAZY_2D_PADDING // if defined then rank-2 padding of TensorShapes happens upon access, not upon creation
+
+    // constructor optimized for shape passed as NDShape (this constructs a dense object)
     NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const shared_ptr<MatrixBase>& sob)
         : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())), m_viewShape(viewShape), m_isReadOnly(readOnly)
     {
-#define LAZY_2D_PADDING // if defined then rank-2 padding of TensorShapes happens upon access, not upon creation
 #ifdef LAZY_2D_PADDING
         const auto tensorShape = AsTensorShape(viewShape);
 #else
@@ -148,6 +150,7 @@ namespace CNTK
         m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
     }
 
+    // constructor optimized for shape passed as TensorShape (allowing strides and offset for slicing)
     NDArrayView::NDArrayView(CNTK::DataType dataType, const TensorShape& tensorShape, bool readOnly, const shared_ptr<MatrixBase>& sob)
         : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())),
           m_viewShape(move(tensorShape.GetDimsAsVector())), m_isReadOnly(readOnly)
@@ -157,6 +160,7 @@ namespace CNTK
 
     // create a new NDArrayView that subplants the tensorShape
     // TensorShape includes offset and stride info, hence this can be used to implement slices as well.
+    // All methods that create a new view onto an existing NDArrayView use this.
     NDArrayViewPtr NDArrayView::Reviewed(const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool readOnly) const
     {
         switch (m_dataType)
@@ -246,23 +250,25 @@ namespace CNTK
         tensorShape.FlattenTo2DInPlace(splitPoint, "NDArrayView::ToMatrixShape");
     }
 
+#if 0
+    // This function is no longer used (inlined into GetMatrix()).
+    // TODO: This processes the TensorShape twice. We should just inline GetMatrixImpl().
     template <typename ElementType>
-    /*static*/ std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(const TensorView<ElementType>& tensorView, size_t rowColSplitPoint)
+    /*static*/ std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(const TensorView<ElementType>& paddedTensorView, size_t rowColSplitPoint)
     {
         // only contiguous tensors can be processed by the Matrix lib
-        tensorView.GetShape().VerifyIsDense();
+        paddedTensorView.GetShape().VerifyIsDense();
 
         // we should always reshape for rank-0, so that batch and sequence axis goes to columns
-        if (tensorView.GetShape().GetRank() <= 1 && rowColSplitPoint != 0)
-            return tensorView.AsMatrix();
+        if (paddedTensorView.GetShape().GetRank() <= 1 && rowColSplitPoint != 0)
+            return paddedTensorView.AsMatrix();
 
-        auto tensorShape = tensorView.GetShape();
+        auto tensorShape = paddedTensorView.GetShape();
         ToMatrixShape(tensorShape, rowColSplitPoint, AutoSelectRowColSplitPoint);
 
-        return tensorView.Reviewed(tensorShape).AsMatrix();
+        return paddedTensorView.Reviewed(tensorShape).AsMatrix();
     }
 
-#if 0
     // -ViewMin2D: use if you interop with V1 code that needs shapes of rank 2 or higher
     // These versions are only ever called by GetMatrix(). We could just inline them here.
     // Especially that we now no longer have a real shared_ptr to return.
@@ -302,11 +308,30 @@ namespace CNTK
         let& tensorView = NativeTensorView<ElementType>(); // *static_pointer_cast<const TensorView<ElementType>>(m_tensorViewPtr);
 #ifdef LAZY_2D_PADDING
         let& shape = tensorView.GetShape();
-        if (shape.size() < 2) // we must pad to at least 2D
-            //auto paddedShape = AsTensorShapeMin2D(shape); // adds 1-dimensions if rank < 2
-            return GetMatrixImpl<ElementType>(tensorView.Reviewed(AsTensorShapeMin2D(shape)), rowColSplitPoint);
+        let& paddedTensorView =
+            /*if*/ (shape.size() >= 2) ?
+                tensorView
+            /*else*/:
+                tensorView.Reviewed(AsTensorShapeMin2D(shape));
+        //if (shape.size() < 2) // we must pad to at least 2D
+        //    auto paddedShape = AsTensorShapeMin2D(shape); // adds 1-dimensions if rank < 2
+        //    return GetMatrixImpl<ElementType>(tensorView.Reviewed(paddedShape), rowColSplitPoint);
+#else
+        let& paddedTensorView = tensorView;
 #endif
-        return GetMatrixImpl<ElementType>(tensorView, rowColSplitPoint);
+        //return GetMatrixImpl<ElementType>(paddedTensorView, rowColSplitPoint);
+
+        // only contiguous tensors can be processed by the Matrix lib
+        paddedTensorView.GetShape().VerifyIsDense();
+
+        // we should always reshape for rank-0, so that batch and sequence axis goes to columns
+        //if (paddedTensorView.GetShape().GetRank() <= 1 && rowColSplitPoint != 0) // BUGBUG: This is never possibl since we pad to rank-2, or is it? Or can we remove the padding above?
+        //    return paddedTensorView.AsMatrix();
+
+        auto tensorShape = paddedTensorView.GetShape();
+        ToMatrixShape(tensorShape, rowColSplitPoint, AutoSelectRowColSplitPoint); // TODO: do the IsDense() check in here
+
+        return paddedTensorView.Reviewed(tensorShape).AsMatrix();
     }
 
     template <typename ElementType>
