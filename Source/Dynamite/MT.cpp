@@ -127,6 +127,12 @@ fun AttentionModelReference(size_t attentionDim1)
     let zBarrier   = Barrier(20, Named("zBarrier"));
     let resBarrier = Barrier(20, Named("resBarrier"));
     vector<Variable> us, ws;
+    StaticModel doToTanh(/*isBasicBlock=*/false, [=](const Variable& h, const Variable& historyProjectedKey)
+    {
+        let hProjected = projectQuery(h); // [A]. Batched.
+        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A]. Batched.
+        return tanh;
+    });
     return QuaternaryModel11NN({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
         [=](const Variable& h,                              // [A] decoder hidden state
             const Variable& historyProjectedKey,            // [A] previous output, embedded
@@ -136,9 +142,9 @@ fun AttentionModelReference(size_t attentionDim1)
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // compute attention weights
-        //let hProjected = Times(H, h, Named("H")); // [A x 1]. Batchable.
-        let hProjected = projectQuery(h); // [A]. Batched.
-        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A]. Batched.
+        //let hProjected = projectQuery(h); // [A]. Batched.
+        //let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A]. Batched.
+        let tanh = doToTanh(h, historyProjectedKey);
 #if 1
         // This is not well-batched yet, I don't know why. This is the solution that should realize maximum parallelization (disregarding Gather steps).
         for (let& k : encodingProjectedKeys)
