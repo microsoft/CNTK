@@ -298,12 +298,10 @@ static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, c
 // TODO: sort these functions vv after Linear()
 static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
-    //auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"E");
-    // BUGBUG: We would not want a bias here, right?
+    // BUGBUG: We would not want a bias here, right? (but BN always comes with one)
     auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
-    return UnaryModel({ /*E*/ }, { { L"embed", embed } }, [=](const Variable& x)
+    return UnaryModel({ }, { { L"embed", embed } }, [=](const Variable& x)
     {
-        //return Times(E, x);// embed(x);
         return embed(x);
     });
 }
@@ -312,8 +310,7 @@ static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescrip
 // create a Barrier function
 static UnaryBroadcastingModel Barrier(size_t depthHint, const wstring& name = wstring())
 {
-    //static size_t id = 0; // unique id
-    //auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
+    // TODO: we can save just a little by wrapping this into a static function. We'd save the attribute Dictionary (which can be shared).
     return UnaryModel([=](const Variable& x) -> Variable
     {
         return BatchSync(x, depthHint, name);
@@ -750,6 +747,12 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
 {
     let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
     let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
+    StaticModel doResidualNet(/*isBasicBlock=*/false, [=](const Variable& x)
+    {
+        let h = ReLU(project1(x)    , Named("hRes"));
+        let r = ReLU(project2(h) + x, Named("rRes"));
+        return r;
+    });
     return UnaryModel({ },
     {
         { L"project1", project1 },
@@ -757,9 +760,7 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
     },
     [=](const Variable& x)
     {
-        let h = ReLU(project1(x)    , Named("hRes"));
-        let r = ReLU(project2(h) + x, Named("rRes"));
-        return r;
+        return doResidualNet(x);
     });
 }
 
