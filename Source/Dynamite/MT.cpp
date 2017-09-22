@@ -225,6 +225,26 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     for (let& resnet : resnets)
         nestedLayers[L"resnet[" + std::to_wstring(nestedLayers.size()) + L"]"] = resnet;
     let profiler = Function::CreateDynamicProfiler(1, L"decode");
+
+#if 1 // this fails because some dimensions are not known yet
+    StaticModel doToOutput(/*isBasicBlock=*/false, [=](const Variable& state, const Variable& attentionContext)
+    {
+        // first one brings it into the right dimension
+        auto state1 = firstHiddenProjection(state);
+        // then a bunch of ResNet layers
+        for (auto& resnet : resnets)
+            state1 = resnet(state1);
+        // one more transform, bringing back the attention context
+        let topHidden = topHiddenProjection(Splice({ state1, attentionContext }, Axis(0)));
+        // ^^ batchable; currently one per target word in MB (e.g. 600); could be one per batch (2 launches)
+        // TODO: dropout layer here
+        dropoutInputKeepProb;
+        // compute output
+        let z = outputProjection(topHidden);
+        return z;
+    });
+#endif
+
     return BinarySequenceModel({ }, nestedLayers,
     [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
     {
@@ -253,6 +273,9 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
             Function::SetDynamicProfiler(prevProfiler);
             // stack of non-recurrent projections
             // vv fully batchable
+#if 1
+            let z = doToOutput(state, attentionContext);
+#else
             auto state1 = firstHiddenProjection(state); // first one brings it into the right dimension
             for (auto& resnet : resnets)                // then a bunch of ResNet layers
                 state1 = resnet(state1);
@@ -263,6 +286,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
             dropoutInputKeepProb;
             // compute output
             let z = outputProjection(topHidden);
+#endif
             res[t] = z;
         }
         encodingProjectedKeys.clear();

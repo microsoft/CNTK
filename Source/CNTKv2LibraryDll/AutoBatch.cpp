@@ -3805,6 +3805,20 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
 
     // BUGBUG: Must handle the map here now that we pass it. Also must verify that the Placeholders are actually in the composite.
 
+    // implant all mappings
+    for (size_t i = 0; i < m_inputs.size(); i++)
+    {
+        let& compositeLeaf = operands[i].first; // Placeholder or Parameter in composite
+        if (compositeLeaf.IsPlaceholder())
+            compositeLeaf.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
+    }
+
+    // Special case: Invoke() may also be called while building a composite (static graph) that uses another.
+    // In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
+    // is inferred.
+    if (any_of(operands.begin(), operands.end(), [](const pair<Variable, Variable>& arg) { return arg.first.IsPlaceholder() && arg.second.Shape().IsUnknown(); }))
+        return; // not all shapes are known--don't attempt to infer anything
+
     unordered_map<Variable, Variable> replacementMap;
     // BUGBUG: Must verify that all Parameters are covered here.
     for (size_t i = 0; i < m_inputs.size(); i++)
@@ -3823,13 +3837,11 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
             // TODO: rethink the logic. If the input's shape IsUnknown, then why not directly return? Why even replace?
             if (input.IsInput())
                 InvalidArgument("Invoke cannot work on Input variables, it is for dynamic networks only.");
-            //if (input.IsPlaceholder() || input.IsInput())
-            //    InvalidArgument("Invoke requires the operands to be known values, not placeholders.");
+            fail_if(input.Shape().IsUnknown(), "unknown input shapes at this point??");
             auto updatedCompositePlaceholder = PlaceholderLike(input); // we replace with a placeholder of the same type. This gives the composite the shape.
-            //updatedCompositePlaceholder.m_dataFields->m_needsGradient = input.NeedsGradient(); // Placeholders have no gradient. This would infer a non-gradient section.
-            updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
+            updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = compositeLeaf.m_dataFields->m_compositeArgumentIndex;
             replacementMap.insert({ compositeLeaf, updatedCompositePlaceholder }); // replace with new Placeholder, which has a block mapping implanted
-            // BEGIN HACK  --need to fix the interface!!
+            // BEGIN HACK  --need to fix the interface!! This should become a private method to Invocable
             const_cast<vector<pair<Variable, Variable>>&>(operands)[i].first = updatedCompositePlaceholder;
         }
         else
@@ -3839,12 +3851,6 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     callee->ReplacePlaceholders(replacementMap); // This gives the composite the shape.
     // OUTDATED --The composite args' Placeholders now have a block mapping to the actual inputs.
     // BUGBUG: That's bad, since they are gone after this. There should be no block mapping.
-
-    // Special case: Invoke() may also be called while building a composite (static graph) that uses another.
-    // In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
-    // is inferred.
-    if (any_of(operands.begin(), operands.end(), [](const pair<Variable, Variable>& arg) { return arg.second.Shape().IsUnknown(); }))
-        return;
 
     if (compositeOutputs.front().Shape().IsUnknown()) // or not?
         LogicError("Invoke must only be called with inputs with fully specified dimensions.");
