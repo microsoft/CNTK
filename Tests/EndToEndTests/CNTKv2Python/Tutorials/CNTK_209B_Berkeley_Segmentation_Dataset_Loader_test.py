@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_209A_Berkeley_Segmentation_Dataset_loader.ipynb")
+notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_209B_Berkeley_Segmentation_Dataset_Loader.ipynb")
 datadir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "DataSets", "BerkeleySegmentationDataset")
 reWeekly = re.compile(r'^weekly\b', re.IGNORECASE)
 
