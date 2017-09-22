@@ -332,6 +332,58 @@ static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
 }
 #endif
 
+// helper to create a unary static lambda by running a lambda over a Placeholder
+class StaticModel
+{
+    const size_t m_arity; // actual number of function arguments. Note: m_argsMap contains additional leaves, so its size() is not sufficient.
+    vector<pair<Variable, Variable>> m_argsMap; // [*].first contains the Variable in the composite; [*].second are overwritten upon each call
+    // ^^ This is not nice. Better: Split into two arrays, one that's constant, and one that is filled in. That second one can use a template function for Invoke().
+    FunctionPtr m_composite; // Note: multiple calls to Invoke() assume that the composite does not change; so encapsulate it here.
+    // TODO: Move this down into the V2 API; and make Invoke() a private function of this class. Invoke() is a brittle API since it requires control of the composite.
+    const bool m_isBasicBlock;
+    void ConstructArgsMap()
+    {
+        // allocate m_argsMap and populate the Placeholder section (later we will add Parameters)
+        m_argsMap.resize(m_arity);
+        for (auto& arg : m_argsMap)
+            arg.first = PlaceholderVariable();
+    }
+    void FinalizeArgsMap()
+    {
+        // complete the m_argsMap pairs by including all learnable Parameters in it as well
+        // This is needed so that the auto-batcher can see all Parameters that are inside, without having to traverse it.
+        for (let& p : m_composite->Parameters())
+            m_argsMap.push_back({ p,p }); // presently also must pass all Parameters
+    }
+    void CheckArity(size_t arity)
+    {
+        if (m_arity != arity)
+            LogicError("StaticModel: It was attempted to invoke a %d-nary function with %d arguments.", (int)m_arity, (int)arity);
+    }
+public:
+    StaticModel(bool isBasicBlock, const function<Variable(const Variable&)>& f, std::wstring name = std::wstring()) :
+        m_isBasicBlock(isBasicBlock), m_arity(1)
+    {
+        ConstructArgsMap();
+        // build the graph by calling the lambda on Placeholders
+        // We must pass in the Placeholders and remember them, since the composite itself will not remember their ordering.
+        m_composite = f(m_argsMap[0].first);
+        if (!name.empty())
+            m_composite = Alias(m_composite, name);
+        FinalizeArgsMap();
+    }
+    Variable operator()(const Variable& x)
+    {
+        CheckArity(1);
+        // To invoke it, we place the argument into the m_argsMap array next to the corresponding Placeholder.
+        // We leave the Parameters in the m_argsMap array untouched (they are at the end).
+        m_argsMap.front().second = x;
+        let res = Invoke(m_composite, m_argsMap, m_isBasicBlock);
+        //m_argsMap.front().second = Variable(); // don't accidentally keep a reference to the argument around
+        return res;
+    }
+};
+
 // layer normalization without bias term (which makes not much sense since we have a bias outside anyway in many cases)
 static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device, const Axis& axis = Axis(0))
 {
@@ -349,28 +401,29 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
 #if 1
 
     // for efficiency, we set this up as a static graph
-    vector<pair<Variable, Variable>> argBuf{ { PlaceholderVariable(), Variable() } }; // (Invoke requires a vector, even for a single argument. So we preallocate it here, outside of the lambda.)
-    let x = argBuf.front().first;
-    let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
-    let x0 = x - mean;
-    //let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
-    let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
-    auto lengthNormGraph = Alias(x0 * (invLen * scale), L"lengthNorm");
-    for (let& p : lengthNormGraph->Parameters())
-        argBuf.push_back({ p,p }); // presently also must pass all Parameters
+    let asBasicBlock = false; // true does not work fully yet
+    StaticModel doLengthNorm(asBasicBlock, [=](const Variable& x) -> Variable
+    {
+        let prevProfiler = Function::SetDynamicProfiler(profiler);
+        let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
+        let x0 = x - mean;
+        //let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
+        let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
+        let res = x0 * (invLen * scale);
+        Function::SetDynamicProfiler(prevProfiler);
+        return res;
+    }, Named("lengthNorm"));
 
     // Note: Arguments() is slow. Don't call this inside graph generation.
     return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x) mutable
     {
-        let prevProfiler = Function::SetDynamicProfiler(profiler);
-        argBuf.front().second = x; // (avoid the repeated malloc)
 #if 1
-        let res = Invoke(lengthNormGraph, argBuf, /*isBasicBlock=*/true);
+        return doLengthNorm(x);
 #else
+        argBuf.front().second = x; // (avoid the repeated malloc)
         let res = Invoke(lengthNormGraph, argBuf, /*isBasicBlock=*/false); // FOR NOW, can't handle basic block yet
-#endif
-        Function::SetDynamicProfiler(prevProfiler);
         return res;
+#endif
     });
 #else
     return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x)

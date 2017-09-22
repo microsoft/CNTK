@@ -172,7 +172,10 @@ namespace CNTK
             std::vector<Variable> blockFunctionInputs;  // the return value of this function is built here
             auto compositeInputs = composite->Inputs(); // (this is an expensive operation for composites, including a full traversal and a copy+shared_ptr of the inputs array)
             std::vector<Variable> unmappedArguments;
-            for (auto compositeInput : compositeInputs) // compositeInputs includes both Placeholders and enclosed Parameters/Constants
+            // compositeInputs includes all leaves. That is, it includes both Placeholders and enclosed Parameters/Constants.
+            // We include Parameters/Constants in the inputs, so that all Parameters/Constants can be found when traversing
+            // a graph, without having to step inside BlockFunctions' composites.
+            for (auto compositeInput : compositeInputs)
             {
                 assert(!compositeInput.IsOutput());
 

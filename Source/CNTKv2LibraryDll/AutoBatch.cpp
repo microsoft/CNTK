@@ -787,6 +787,8 @@ struct RuntimeStatistics
 {
     // forward
     size_t numOpNodes = 0;
+    size_t numInlinedBlocks = 0;
+    size_t numShortCircuitedNodes = 0;
     size_t numLeafNodes = 0;
     size_t numDoneGatherOps = 0;
     size_t numDoneFreeOps = 0;
@@ -1446,10 +1448,12 @@ class Variable::AutoBatch
                 redirectedFields = &GetOutputFields(*inlinedRootPtr);
                 // Proceed with this updated field record. It is possible that this immediately points to a nested
                 // Block invocation, which gets inlined as well next.
+                m_stats.numInlinedBlocks++;
                 continue;
             }
             if (!IsAliasOp(redirectedOp) && redirectedOp != PrimitiveOpType::Reshape)
                 break;
+            m_stats.numShortCircuitedNodes++;
             // if a barrier then record the maximum depth hint encountered
             // Functions consuming this Variable are bound by the barrier (but not the function that produces the original value).
             if (IsBarrier(redirectedFieldsOwner)) // TODO: get this from a different attribute
@@ -2846,8 +2850,10 @@ public:
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
         ShowCudaStats();
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedForward: %d forward ops executed besides %d gathers, %d views, and %d CSEs, in nominally %d PrimitiveFunctions on %d known values\n",
-                (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneGatherOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numCommonSubexpressionsEliminated, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);
+        fprintf(stderr, "BatchedForward: %d forward ops executed besides %d gathers, %d views, and %d CSEs, in nominally %d+%ds+%di PrimitiveFunctions on %d known values\n",
+                (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneGatherOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numCommonSubexpressionsEliminated,
+                (int)m_stats.numOpNodes, (int)m_stats.numShortCircuitedNodes, (int)m_stats.numInlinedBlocks,
+                (int)m_stats.numLeafNodes);
 #endif
 #ifdef LOG_DETAILS
         size_t numOpNodes1 = 0;
