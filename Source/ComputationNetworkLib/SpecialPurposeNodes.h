@@ -458,7 +458,7 @@ public:
     {
     }
 
-    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
+    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // auto t_start_time = Timer::MilliSecondElapsed();
@@ -795,7 +795,7 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
-    // Compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
+    // Compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // Left node must be a scalar

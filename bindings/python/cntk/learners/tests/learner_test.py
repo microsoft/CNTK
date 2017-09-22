@@ -138,6 +138,15 @@ def test_learner_init_legacy():
     assert learner.learning_rate() == 0.1
     assert learner.minibatch_size == C.learners.IGNORE  # the learner's reference minibatch size is still 0
 
+    # this will be deprecated in future version: This is logical invalid combination but it was the only way to use mean gradient and set learning rate in the past.
+    learner = sgd(res.parameters, lr=learning_rate_schedule(0.1, UnitType.sample), use_mean_gradient=True)
+    assert learner.is_compatible_mode() == True
+    assert learner.learning_rate() == 0.1
+    #test the override in the new version
+    assert learner._learning_rate_schedule.minibatch_size == C.learners.IGNORE
+    assert learner.minibatch_size == C.learners.IGNORE  # the learner's reference minibatch size is still 0
+
+
     # for backcompatibility test
     # this will be deprecated in future version
     # The UnitType will provide per minibatch instruction for the learner
@@ -191,17 +200,7 @@ def test_learner_init_legacy():
     lr_per_sample = learning_rate_schedule([0.1, 0.2], unit=UnitType.sample, epoch_size=100)
     C.rmsprop(res.parameters, lr_per_sample, gamma, inc, dec, max, min, True)
 
-    C.set_default_use_mean_gradient_value(False)
-    use_mean_gradient_value = C.default_use_mean_gradient_value()
-    assert not use_mean_gradient_value
-
-    C.adadelta(res.parameters, lr_per_sample)
-
-    C.set_default_use_mean_gradient_value(True)
-    use_mean_gradient_value = C.default_use_mean_gradient_value()
-    assert use_mean_gradient_value
-
-    C.adadelta(res.parameters, lr_per_sample)
+    C.adadelta(res.parameters, lr_per_sample, use_mean_gradient=True)
 
 def test_learner_init():
     i = C.input_variable(shape=(1,), needs_gradient=True, name='a')
@@ -420,16 +419,6 @@ def test_learner_init():
     gamma, inc, dec, max, min = [0.5, 1.2, 0.7, 10, 1e-8]
     lr_per_sample = learning_parameter_schedule([0.1, 0.2], minibatch_size = 1, epoch_size = 100)
     C.rmsprop(res.parameters, lr_per_sample, gamma, inc, dec, max, min, True)
-
-    C.set_default_use_mean_gradient_value(False)
-    use_mean_gradient_value = C.default_use_mean_gradient_value()
-    assert not use_mean_gradient_value
-
-    C.adadelta(res.parameters, lr_per_sample)
-    
-    C.set_default_use_mean_gradient_value(True)
-    use_mean_gradient_value = C.default_use_mean_gradient_value()
-    assert use_mean_gradient_value
 
     C.adadelta(res.parameters, lr_per_sample)
 

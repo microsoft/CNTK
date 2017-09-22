@@ -359,13 +359,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
         super(MinibatchSource, self).restore_from_checkpoint(_py_dict_to_cntk_dict(checkpoint))
 
     @property
-    def is_distributed(self):
-        '''
-        Whether the minibatch source is running distributed
-        '''
-        return super(MinibatchSource, self).is_distributed()
-
-    @property
     def current_position(self):
         '''
         Gets current position in the minibatch source.

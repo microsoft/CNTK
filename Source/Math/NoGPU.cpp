@@ -23,6 +23,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // the reset below are dummy implementations
 
+MATH_API std::size_t GetCUDNNVersion()
+{
+    return 0;
+}
+
 void PrepareDevice(DEVICEID_TYPE deviceId);
 
 template <class ElemType>
