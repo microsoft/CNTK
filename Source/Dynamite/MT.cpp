@@ -294,35 +294,41 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     });
 }
 
-BinarySequenceModel CreateModelFunction()
+BinaryModel CreateModelFunction()
 {
     auto embedFwd = Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedFwd"))*/;
     auto embedBwd = Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedBwd"))*/;
     auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
-    vector<Variable> eFwd,eBwd, h;
-    return BinarySequenceModel({},
+    vector<Variable> x, eFwd, eBwd, h, hist, res;
+    return BinaryModel({},
     {
         { L"embedSourceFwd", embedFwd },
         { L"embedSourceBwd", embedBwd },
         { L"encode",         encode   },
         { L"decode",         decode   }
     },
-    [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& history) mutable
+    [=](const Variable& source, const Variable& history) mutable -> Variable
     {
         // embedding
+        as_vector(x, source);
         embedFwd(eFwd, x);
         embedBwd(eBwd, x);
+        x.clear();
         // encoder
         encode(h, eFwd, eBwd);
         eFwd.clear(); eBwd.clear();
         // decoder (outputting logprobs of words)
-        decode(res, history, h);
-        h.clear();
+        as_vector(hist, history);
+        decode(res, hist, h);
+        hist.clear(); h.clear();
+        let z = Splice(res, Axis::EndStaticAxis());
+        res.clear();
+        return z;
     });
 }
 
-BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
+BinaryFoldingModel CreateCriterionFunction(const BinaryModel& model_fn)
 {
     vector<Variable> features, historyVector, labelsVector, zVector, losses;
     // features and labels are tensors with first dimension being the length
@@ -337,11 +343,7 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
         let history = Slice(target, Axis(-1), 0, (int)target.size() - 1); // history = targets without trailing </s>
         // apply model function
         // returns the sequence of output log probs over words
-        as_vector(features, source);
-        as_vector(historyVector, history);
-        model_fn(zVector, features, historyVector);
-        let z = Splice(zVector, Axis::EndStaticAxis());
-        features.clear(); historyVector.clear(); // free some GPU memory
+        let z = model_fn(source, history);
         // compute loss per word
         let sequenceLoss = Dynamite::Sequence::Map(BinaryModel([](const Variable& zVector, const Variable& label) { return Dynamite::CrossEntropyWithSoftmax(zVector, label); }));
         as_vector(zVector, z);
@@ -424,10 +426,11 @@ void Train(wstring outputDirectory)
     // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep in a single expression
 
     // run something through to get the parameter matrices shaped --ugh!
-    vector<Variable> d1{ Constant({ srcVocabSize }, DTYPE, 0.0, device) };
-    vector<Variable> d2{ Constant({ tgtVocabSize }, DTYPE, 0.0, device) };
-    vector<Variable> d3;
-    model_fn(d3, d1, d2);
+    //vector<Variable> d1{ Constant({ srcVocabSize }, DTYPE, 0.0, device) };
+    //vector<Variable> d2{ Constant({ tgtVocabSize }, DTYPE, 0.0, device) };
+    //vector<Variable> d3;
+    //model_fn(d3, d1, d2);
+    model_fn(Constant({ srcVocabSize, 1 }, DTYPE, 0.0, device), Constant({ tgtVocabSize, 1 }, DTYPE, 0.0, device));
 
     model_fn.LogParameters();
 
