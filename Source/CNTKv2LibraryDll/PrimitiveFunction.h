@@ -64,6 +64,7 @@ namespace CNTK
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::EditDistanceError, L"EditDistanceError" },
+        {PrimitiveOpType::SequenceWithSoftmax, L"SequenceWithSoftmax" },
         {PrimitiveOpType::ForwardBackward, L"ForwardBackward" },
         {PrimitiveOpType::LabelsToGraph, L"LabelsToGraph" },
         {PrimitiveOpType::PastValue, L"PastValue"},

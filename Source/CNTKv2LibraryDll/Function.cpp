@@ -1674,6 +1674,12 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
+    FunctionPtr SequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& loglikelihood, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { labels, prediction, loglikelihood };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::SequenceWithSoftmax, operands, Dictionary(), name), name);
+    }
+
     FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();

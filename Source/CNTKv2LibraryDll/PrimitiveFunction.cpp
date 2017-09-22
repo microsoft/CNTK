@@ -195,6 +195,7 @@ namespace CNTK
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::EditDistanceError) ||
+            (op == PrimitiveOpType::SequenceWithSoftmax) ||
             (op == PrimitiveOpType::ClassificationError) ||
             (op == PrimitiveOpType::ForwardBackward) ||
             (op == PrimitiveOpType::Logistic) ||
@@ -884,12 +885,13 @@ namespace CNTK
                         case PrimitiveOpType::CosDistance:
                         case PrimitiveOpType::SquaredError:
                         case PrimitiveOpType::EditDistanceError:
+                        case PrimitiveOpType::SequenceWithSoftmax:
                         case PrimitiveOpType::ClassificationError:
                         case PrimitiveOpType::NDCG:
                         {
                             if ((m_op == PrimitiveOpType::ClassificationError) || (m_op == PrimitiveOpType::Logistic))
                                 assert(m_inputs.size() >= 2);
-                            else if ((m_op == PrimitiveOpType::LambdaRank) || (m_op == PrimitiveOpType::NDCG))
+                            else if ((m_op == PrimitiveOpType::LambdaRank) || (m_op == PrimitiveOpType::NDCG) || (m_op == PrimitiveOpType::SequenceWithSoftmax))
                                 assert(m_inputs.size() == 3);
                             else
                                 assert(m_inputs.size() == 2);

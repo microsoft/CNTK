@@ -486,6 +486,10 @@ namespace CNTK
 
                     opType = PrimitiveOpType::EditDistanceError;
                 }
+                else if (node->OperationName() == OperationNameOf(SequenceWithSoftmaxNode))
+                {
+                    opType = PrimitiveOpType::SequenceWithSoftmax;
+                }
                 else if (node->OperationName() == OperationNameOf(ForwardBackwardNode))
                 {
                     auto edNode = node->As<ForwardBackwardNode<ElementType>>();
