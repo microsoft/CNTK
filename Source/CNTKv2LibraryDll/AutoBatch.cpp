@@ -624,11 +624,12 @@ void ShowCudaStats()
             fprintf(stderr, "\n");
             for (let& s : cudaStats) if (s.category == category && s.numInvocations > 0)
             {
-                fprintf(stderr, "-> %30S: %7.1f ms + %7.1f ms = (%9.6f + %9.6f) ms/call * %7d calls, %9.1f avsize/call\n", (prefix + s.opLabel).c_str(),
+                fprintf(stderr, "-> %30S: %7.1f ms + %7.1f ms = (%9.6f + %9.6f) ms/call * %7d calls, %9.1f avsize/call -> %5.1f MBf\n", (prefix + s.opLabel).c_str(),
                         1000.0 * s.timerLaunch.Total(), 1000.0 * s.cudaElapsed,
                         1000.0 * s.timerLaunch.Total() / (double)s.numInvocations, 1000.0 * s.cudaElapsed / (double)s.numInvocations,
                         (int)s.numInvocations,
-                        s.totalElements / (double)s.numInvocations);
+                        s.totalElements / (double)s.numInvocations,
+                        s.totalElements * sizeof(float)/ (1024.*1024.));
                 totalLaunch += s.timerLaunch.Total();
                 totalExec += s.cudaElapsed;
             }

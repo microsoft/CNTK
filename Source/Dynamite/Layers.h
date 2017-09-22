@@ -353,7 +353,8 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     let x = argBuf.front().first;
     let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
     let x0 = x - mean;
-    let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
+    //let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
+    let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
     auto lengthNormGraph = Alias(x0 * (invLen * scale), L"lengthNorm");
     for (let& p : lengthNormGraph->Parameters())
         argBuf.push_back({ p,p }); // presently also must pass all Parameters
@@ -379,7 +380,7 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
         let x0 = x - mean;
         //LOG(x0);
         // BUGBUG: Sqrt() seems hosed!!
-        let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct (but we don't have the dims upfront)
+        let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf); // TODO: change to InnerProduct (but we don't have the dims upfront)
         //let invLen = Pow(ReduceMean(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct (but we don't have the dims upfront)
         //LOG(len);
         // Note: ^^ this parallelizes, while this vv does not
@@ -511,7 +512,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     [=](const Variable& dh, const Variable& x) mutable
     {
         let projx3 = b + projectInput(x);
-#if 1   // using the composite
+#if 0   // using the composite
         gruArgs[0].second = dh;
         gruArgs[1].second = projx3;
         return Invoke(gru3Composite, gruArgs, /*isBasicBlock=*/false); // basic block not working, as it does not know not to batch multiple matrix products
