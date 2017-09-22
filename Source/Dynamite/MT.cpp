@@ -324,7 +324,7 @@ BinarySequenceModel CreateModelFunction()
 
 BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
 {
-    vector<Variable> features, historyVector, labelsVector, losses;
+    vector<Variable> features, historyVector, labelsVector, zVector, losses;
     // features and labels are tensors with first dimension being the length
     BinaryModel criterion = [=](const Variable& source, const Variable& target) mutable -> Variable
     {
@@ -333,24 +333,23 @@ BinaryFoldingModel CreateCriterionFunction(const BinarySequenceModel& model_fn)
         //  - features: strip any?
         //  - labels: strip leading <s>
         //  - history: strip training </s>
-        //let labels  = Slice(target, Axis(-1), 1, target.size()    ); // labels  = targets without leading <s>
-        //let history = Slice(target, Axis(-1), 0, target.size() - 1); // history = targets without trailing </s>
-        as_vector(features, source);
-        as_vector(historyVector, target);
-        //as_vector(historyVector, history);
-        //as_vector(labelsVector, labels);
-        labelsVector.assign(historyVector.begin() + 1, historyVector.end()); // make a full copy (of single-word references) without leading <s>
-        historyVector.pop_back(); // remove trailing </s>
+        let labels  = Slice(target, Axis(-1), 1, (int)target.size()    ); // labels  = targets without leading <s>
+        let history = Slice(target, Axis(-1), 0, (int)target.size() - 1); // history = targets without trailing </s>
         // apply model function
         // returns the sequence of output log probs over words
-        vector<Variable> zVector;
+        as_vector(features, source);
+        as_vector(historyVector, history);
         model_fn(zVector, features, historyVector);
+        let z = Splice(zVector, Axis::EndStaticAxis());
         features.clear(); historyVector.clear(); // free some GPU memory
         // compute loss per word
         let sequenceLoss = Dynamite::Sequence::Map(BinaryModel([](const Variable& zVector, const Variable& label) { return Dynamite::CrossEntropyWithSoftmax(zVector, label); }));
+        as_vector(zVector, z);
+        as_vector(labelsVector, labels);
         sequenceLoss(losses, zVector, labelsVector);
+        zVector.clear(); labelsVector.clear();
         let loss = Batch::sum(losses); // TODO: Batch is not the right namespace; but this does the right thing
-        labelsVector.clear(); losses.clear();
+        losses.clear();
         return loss;
     };
     let profiler = Function::CreateDynamicProfiler(1, L"all");
