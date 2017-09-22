@@ -2850,7 +2850,7 @@ public:
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
         ShowCudaStats();
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedForward: %d forward ops executed besides %d gathers, %d views, and %d CSEs, in nominally %d+%ds+%di PrimitiveFunctions on %d known values\n",
+        fprintf(stderr, "BatchedForward: %d forward ops executed besides %d gathers, %d views, and %d CSEs, in nominally %d+%ds ops (%d inlined) on %d known values\n",
                 (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneGatherOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numCommonSubexpressionsEliminated,
                 (int)m_stats.numOpNodes, (int)m_stats.numShortCircuitedNodes, (int)m_stats.numInlinedBlocks,
                 (int)m_stats.numLeafNodes);

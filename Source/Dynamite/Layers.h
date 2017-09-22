@@ -408,7 +408,7 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
         let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
         let x0 = x - mean;
         //let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
-        let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
+        let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf);
         let res = x0 * (invLen * scale);
         Function::SetDynamicProfiler(prevProfiler);
         return res;
@@ -523,12 +523,11 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     let profiler = Function::CreateDynamicProfiler(1, L"GRU");
     let irBarrier = Barrier(2, Named("irBarrier"));
     // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
-    let gru3 = [=](const Variable& dh, const Variable& projx3) // note: the input has already been projected. That op is batched more widely.
+    let gru3 = [=](const Variable& dh, const Variable& projdh3, const Variable& projx3) // note: the input has already been projected. That op is batched more widely.
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // projected contribution from input(s), hidden, and bias
-        let projdh3 =     normR(Times(R, dh));
-        //let projdh3 =     normR(projectState(dh));
+        // BUGBUG: Why can we not project R in here again? It's only one composite instance, there can be no batching.
         let i_proj  = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ix_proj")) + Slice(projdh3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ih_proj"));
         let r_proj  = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rx_proj")) + Slice(projdh3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rh_proj"));
         let cx_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("cx_proj"));
@@ -552,8 +551,8 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         Function::SetDynamicProfiler(prevProfiler);
         return h;
     };
-    vector<pair<Variable, Variable>> gruArgs = { { PlaceholderVariable(), Variable() }, { PlaceholderVariable(), Variable() } };
-    let gru3Composite = Alias(gru3(gruArgs[0].first, gruArgs[1].first), L"gru");
+    vector<pair<Variable, Variable>> gruArgs = { { PlaceholderVariable(), Variable() }, { PlaceholderVariable(), Variable() },{ PlaceholderVariable(), Variable() } };
+    let gru3Composite = Alias(gru3(gruArgs[0].first, gruArgs[1].first, gruArgs[2].first), L"gru");
     for (let& p : gru3Composite->Parameters())
         gruArgs.push_back({ p,p }); // presently also must pass all Parameters
     return BinaryModel({ R, b },
@@ -564,13 +563,15 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     },
     [=](const Variable& dh, const Variable& x) mutable
     {
-        let projx3 = b + projectInput(x);
+        let projx3 = b + projectInput(x); // TODO: fold 'b' into the Linear layer
+        let projdh3 = normR(Times(R, dh));
 #if 0   // using the composite
         gruArgs[0].second = dh;
-        gruArgs[1].second = projx3;
+        gruArgs[1].second = projdh3;
+        gruArgs[2].second = projx3;
         return Invoke(gru3Composite, gruArgs, /*isBasicBlock=*/false); // basic block not working, as it does not know not to batch multiple matrix products
 #else   // using imperative code
-        return gru3(dh, projx3);
+        return gru3(dh, projdh3, projx3);
 #endif
     });
 }
