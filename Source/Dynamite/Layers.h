@@ -335,51 +335,83 @@ static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
 // helper to create a unary static lambda by running a lambda over a Placeholder
 class StaticModel
 {
-    const size_t m_arity; // actual number of function arguments. Note: m_argsMap contains additional leaves, so its size() is not sufficient.
-    vector<pair<Variable, Variable>> m_argsMap; // [*].first contains the Variable in the composite; [*].second are overwritten upon each call
+    size_t m_arity; // actual number of function arguments. Note: m_argsMap contains additional leaves, so its size() is not sufficient.
+    mutable vector<pair<Variable, Variable>> m_argsMap; // [*].first contains the Variable in the composite; [*].second are overwritten upon each call
     // ^^ This is not nice. Better: Split into two arrays, one that's constant, and one that is filled in. That second one can use a template function for Invoke().
     FunctionPtr m_composite; // Note: multiple calls to Invoke() assume that the composite does not change; so encapsulate it here.
     // TODO: Move this down into the V2 API; and make Invoke() a private function of this class. Invoke() is a brittle API since it requires control of the composite.
-    const bool m_isBasicBlock;
-    void ConstructArgsMap()
+    bool m_isBasicBlock;
+    void BeginConstruct(size_t arity, bool isBasicBlock)
     {
+        m_arity = arity;
+        m_isBasicBlock = isBasicBlock;
         // allocate m_argsMap and populate the Placeholder section (later we will add Parameters)
         m_argsMap.resize(m_arity);
         for (auto& arg : m_argsMap)
             arg.first = PlaceholderVariable();
     }
-    void FinalizeArgsMap()
+    void EndConstruct(FunctionPtr&& composite, const std::wstring& name)
     {
+        // note: the graph is built by calling the lambda on Placeholders
+        // We must pass in the Placeholders and remember them, since the composite itself will not remember their ordering.
+        if (!name.empty())
+            composite = Alias(composite, name);
+        m_composite = move(composite);
         // complete the m_argsMap pairs by including all learnable Parameters in it as well
         // This is needed so that the auto-batcher can see all Parameters that are inside, without having to traverse it.
         for (let& p : m_composite->Parameters())
             m_argsMap.push_back({ p,p }); // presently also must pass all Parameters
     }
-    void CheckArity(size_t arity)
+    void CheckArity(size_t arity) const
     {
         if (m_arity != arity)
             LogicError("StaticModel: It was attempted to invoke a %d-nary function with %d arguments.", (int)m_arity, (int)arity);
     }
 public:
-    StaticModel(bool isBasicBlock, const function<Variable(const Variable&)>& f, std::wstring name = std::wstring()) :
-        m_isBasicBlock(isBasicBlock), m_arity(1)
+    StaticModel(bool isBasicBlock, const function<Variable(const Variable&)>& f, std::wstring name = std::wstring())
     {
-        ConstructArgsMap();
-        // build the graph by calling the lambda on Placeholders
-        // We must pass in the Placeholders and remember them, since the composite itself will not remember their ordering.
-        m_composite = f(m_argsMap[0].first);
-        if (!name.empty())
-            m_composite = Alias(m_composite, name);
-        FinalizeArgsMap();
+        BeginConstruct(1, isBasicBlock), EndConstruct(move(f(m_argsMap[0].first)), name);
     }
-    Variable operator()(const Variable& x)
+    StaticModel(bool isBasicBlock, const function<Variable(const Variable&, const Variable&)>& f, std::wstring name = std::wstring())
+    {
+        BeginConstruct(2, isBasicBlock), EndConstruct(move(f(m_argsMap[0].first, m_argsMap[1].first)), name);
+    }
+    StaticModel(bool isBasicBlock, const function<Variable(const Variable&, const Variable&, const Variable&)>& f, std::wstring name = std::wstring())
+    {
+        BeginConstruct(3, isBasicBlock), EndConstruct(move(f(m_argsMap[0].first, m_argsMap[1].first, m_argsMap[2].first)), name);
+    }
+    // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
+    // We leave the Parameters in the m_argsMap array untouched (they are at the end).
+    // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
+    // BUGBUG: ^^ this caused some expired shared_ptr...? Try again and track it down. Is it not keeping some reference in the called function? A composite?
+    Variable operator()(const Variable& x1) const
     {
         CheckArity(1);
-        // To invoke it, we place the argument into the m_argsMap array next to the corresponding Placeholder.
-        // We leave the Parameters in the m_argsMap array untouched (they are at the end).
-        m_argsMap.front().second = x;
+        m_argsMap.front().second = x1;
         let res = Invoke(m_composite, m_argsMap, m_isBasicBlock);
-        //m_argsMap.front().second = Variable(); // don't accidentally keep a reference to the argument around
+        //m_argsMap.front().second = Variable();
+        return res;
+    }
+    Variable operator()(const Variable& x1, const Variable& x2) const
+    {
+        CheckArity(2);
+        m_argsMap[0].second = x1;
+        m_argsMap[1].second = x2;
+        let res = Invoke(m_composite, m_argsMap, m_isBasicBlock);
+        //m_argsMap[0].second = Variable();
+        //m_argsMap[1].second = Variable();
+        return res;
+    }
+    Variable operator()(const Variable& x1, const Variable& x2, const Variable& x3) const
+    {
+        CheckArity(3);
+        m_argsMap[0].second = x1;
+        m_argsMap[1].second = x2;
+        m_argsMap[2].second = x3;
+        let res = Invoke(m_composite, m_argsMap, m_isBasicBlock);
+        //m_argsMap[0].second = Variable();
+        //m_argsMap[1].second = Variable();
+        //m_argsMap[2].second = Variable();
         return res;
     }
 };
@@ -555,6 +587,13 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     let gru3Composite = Alias(gru3(gruArgs[0].first, gruArgs[1].first, gruArgs[2].first), L"gru");
     for (let& p : gru3Composite->Parameters())
         gruArgs.push_back({ p,p }); // presently also must pass all Parameters
+    let gruAsBasicBlock = false;
+    StaticModel doGRU(gruAsBasicBlock, [=](const Variable& dh, const Variable& x)->Variable
+    {
+        let projx3 = b + projectInput(x); // TODO: fold 'b' into the Linear layer
+        let projdh3 = normR(Times(R, dh));
+        return gru3(dh, projdh3, projx3);
+    });
     return BinaryModel({ R, b },
     {
         { L"projectInput",  projectInput },
@@ -563,6 +602,10 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     },
     [=](const Variable& dh, const Variable& x) mutable
     {
+#if 1
+        // TODO: Somehow this increases #nodes from ~300k to ~450k --what's going on?
+        return doGRU(dh, x);
+#else
         let projx3 = b + projectInput(x); // TODO: fold 'b' into the Linear layer
         let projdh3 = normR(Times(R, dh));
 #if 0   // using the composite
@@ -572,6 +615,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         return Invoke(gru3Composite, gruArgs, /*isBasicBlock=*/false); // basic block not working, as it does not know not to batch multiple matrix products
 #else   // using imperative code
         return gru3(dh, projdh3, projx3);
+#endif
 #endif
     });
 }
