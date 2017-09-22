@@ -693,7 +693,16 @@ void Train(wstring outputDirectory)
                 lr0, learner->LearningRate() / lr0);
         // train minibatch
         partTimer.Restart();
-        let mbLoss = criterion_fn(args[0], args[1]);
+        auto mbLoss = criterion_fn(args[0], args[1]);
+        //mbLoss = criterion_fn(args[0], args[1]);
+        //mbLoss = criterion_fn(args[0], args[1]);
+        //mbLoss = criterion_fn(args[0], args[1]);
+        //mbLoss = criterion_fn(args[0], args[1]);
+        //mbLoss = criterion_fn(args[0], args[1]);
+        //mbLoss = criterion_fn(args[0], args[1]);
+        //mbLoss = criterion_fn(args[0], args[1]);
+        //mbLoss = criterion_fn(args[0], args[1]);
+        //mbLoss = criterion_fn(args[0], args[1]);
         let timeBuildGraph = partTimer.Elapsed();
         //partTimer.Log("criterion_fn", numLabels);
         // backprop and model update
