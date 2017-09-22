@@ -3821,8 +3821,10 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
         else if (compositeLeaf.IsPlaceholder())
         {
             // TODO: rethink the logic. If the input's shape IsUnknown, then why not directly return? Why even replace?
-            if (input.IsPlaceholder() || input.IsInput())
-                InvalidArgument("Invoke requires the operands to be known values, not placeholders.");
+            if (input.IsInput())
+                InvalidArgument("Invoke cannot work on Input variables, it is for dynamic networks only.");
+            //if (input.IsPlaceholder() || input.IsInput())
+            //    InvalidArgument("Invoke requires the operands to be known values, not placeholders.");
             auto updatedCompositePlaceholder = PlaceholderLike(input); // we replace with a placeholder of the same type. This gives the composite the shape.
             //updatedCompositePlaceholder.m_dataFields->m_needsGradient = input.NeedsGradient(); // Placeholders have no gradient. This would infer a non-gradient section.
             updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]

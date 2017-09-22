@@ -593,7 +593,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         let projx3 = b + projectInput(x); // TODO: fold 'b' into the Linear layer
         let projdh3 = normR(Times(R, dh));
         return gru3(dh, projdh3, projx3);
-    });
+    }, Named("gru"));
     return BinaryModel({ R, b },
     {
         { L"projectInput",  projectInput },
@@ -670,7 +670,8 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         nested[L"batchNorm"] = batchNorm;
     if (hasLengthNorm)
         nested[L"lengthNorm"] = lengthNorm;
-    return UnaryModel(parameters, nested, [=](const Variable& x)
+    let asBasicBlock = false;
+    StaticModel doDense(asBasicBlock, [=](const Variable& x)->Variable
     {
         auto y = x;
         if (hasScale) // (note: could speed this up by moving this before or after, wherever the dimension is lower)
@@ -695,6 +696,10 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         else if (hasBias)
             y = y + b;
         return activation(y);
+    }, Named("dense"));
+    return UnaryModel(parameters, nested, [=](const Variable& x)
+    {
+        return doDense(x);
     });
 }
 
