@@ -128,7 +128,7 @@ def get_parameters_for_dataset(datasetName=dataset):
         parameters = GroceryParameters(datasetName)
     elif datasetName.startswith("pascalVoc"):
         parameters = PascalParameters(datasetName)
-    elif dataset.Name == "CustomDataset":
+    elif datasetName == "CustomDataset":
         parameters = CustomDataset(datasetName)
     else:
         ERROR
