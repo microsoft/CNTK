@@ -127,6 +127,17 @@ def test_slice_with_inferred_static_axis():
     assert y.shape == (-1, -1, 3)
 
 
+def test_slice_with_free_static_axis():
+    data = np.arange(18).reshape((1, 3, 2, 3))
+    x = C.input_variable(shape=(C.FreeDimension, C.FreeDimension, 3))
+    y = C.slice(x, 0, 0, 2)
+    assert y.shape == (2, C.FreeDimension, 3)
+    assert np.allclose(y.eval({x:data}), np.arange(12).reshape((1, 2, 2, 3)))
+
+    y = C.slice(x, 0, 0, 0, strides=-1)
+    assert y.shape == (C.FreeDimension, C.FreeDimension, 3)
+    assert np.allclose(y.eval({x: data}), np.fliplr(data))
+
 def test_free_dimension_broadcast():
     i0 = C.sequence.input_variable(shape=(5,))
     i0_unpacked, _ = C.sequence.unpack(i0, padding_value=0).outputs
