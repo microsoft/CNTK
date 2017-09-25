@@ -1025,11 +1025,10 @@ class Variable::AutoBatch
             //(op == PrimitiveOpType::Plus && inputIndex == 0);
     }
 
-    // helper to test whether a FunctionPtr is a barrier operation
-    template <typename FunctionPtr> // PrimitiveFunctionPtr or PrimitiveFunction*
-    static bool IsBarrier(const FunctionPtr& f)
+    // helper to test whether a PrimitiveFunction is a barrier operation
+    static bool IsBarrier(const PrimitiveFunction& f)
     {
-        return f->m_op == PrimitiveOpType::BarrierOp && f->m_attributes.Size() > 0;
+        return f.m_op == PrimitiveOpType::BarrierOp && f.m_attributes.Size() > 0;
     }
 
     // predicate whether an op has an unbatchable first weigth parameter, like Times
@@ -1398,107 +1397,119 @@ class Variable::AutoBatch
         // return if this node was already visited
         if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
-        // if not visited yet then m_redirection is invalid and must be set up
-        // see through ops that do nothing
-        auto* redirectedFields = &fields;
-        PrimitiveFunction* redirectedFieldsOwner;    // redirectedFields->m_ownerFunction.lock().get(), or null in case of leaf
-        PrimitiveFunctionPtr redirectedFieldsHolder; // in case a new object was created--hold it here
-        size_t depthHint = 0;
-        for (;;)
-        {
-            let isParameterOrConstant = redirectedFields->m_varKind == VariableKind::Parameter || redirectedFields->m_varKind == VariableKind::Constant;
-            let isLeaf = (redirectedFields->m_value || isParameterOrConstant); // || redirectedFields->m_varKind == VariableKind::Placeholder);
-            if (isParameterOrConstant)
-            {
-                var.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
-                fail_if(!redirectedFields->m_value, "Parameter/Constant has no Value()??");
-            }
-            if (isLeaf)
-            {
-                redirectedFieldsOwner = nullptr; // indicates that this is a leaf
-                assert(fields.m_value); // got set by the call above
-                break;
-            }
-            redirectedFieldsOwner = redirectedFields->m_ownerFunction.lock().get(); // this is the only place we ever call lock(); after this, we just use the raw pointer (relying on immutability)
-            let redirectedOp = redirectedFieldsOwner->m_op;
-            // unroll non-basic BlockFunctions (unless it is a basic block; then it is unrolled during execution)
-            if (redirectedOp == PrimitiveOpType::Block && !static_cast<BlockFunction*>(redirectedFieldsOwner)->IsBasicBlock())
-            {
-                // make a deep copy of the block's root (PrimitiveFunction graph)
-                // The Block is treated like a see-through op:
-                //  - a deep copy of the Block is made (inlined), which connects to the Block node's inputs
-                //  - the Block node, like a NoOp, gets its m_redirection set to point to the Block's copy.
-                // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
-                // Besides that, the original Block function will remain unmodified.
-                //if (static_cast<BlockFunction&>(*redirectedFieldsOwner).Composite()->m_outputs.front().m_dataFields->m_uniqueIdForDebugging == 288)
-                //    Break;
-                m_compositeVisitorTag.Begin();
-                let inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()),
-                                                      redirectedFieldsOwner->m_inputs, /*cloneFn=*/ClonePrimitiveFunction);
-                // ^^ returns a shared_ptr to the deep copy of the root
-                // ^^ This currently does not inline nested blocks. Instead of cloning the BlockFunction, we should just unroll any nested non-basic-block right there.
-                redirectedFieldsOwner = inlinedRootPtr.get();
-                redirectedFieldsHolder = inlinedRootPtr; // hold a reference
-                // For ref-counting, the root pointer of the deep copy is kept in redirectedFieldsHolder,
-                // which goes into m_functionHolder of the Block's output Variable.
-                // Note: When we get here, redirectedFieldsHolder may already hold a function.
-                // It is OK to overwrite it, since the raw pointer in redirectedFieldsOwner also got overwritten,
-                // and the original Function (which is a Block pre inlining) can be safely freed since it is
-                // not referenced anymore (anything of interest has been copied in the inlining process).
-                redirectedFields = &GetOutputFields(*inlinedRootPtr);
-                // Proceed with this updated field record. It is possible that this immediately points to a nested
-                // Block invocation, which gets inlined as well next.
-                m_stats.numInlinedBlocks++;
-                continue;
-            }
-            if (!IsAliasOp(redirectedOp) && redirectedOp != PrimitiveOpType::Reshape)
-                break;
-            m_stats.numShortCircuitedNodes++;
-            // if a barrier then record the maximum depth hint encountered
-            // Functions consuming this Variable are bound by the barrier (but not the function that produces the original value).
-            if (IsBarrier(redirectedFieldsOwner)) // TODO: get this from a different attribute
-                depthHint = max(depthHint, redirectedFieldsOwner->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
-            // TODO: what if input is non-continuous? Then Reshape should become a copy. Does this need to be addressed here?
-            // this is a redirect
-            redirectedFields = &GetInputFields(redirectedFieldsOwner->m_inputs.front());
-        }
-        // handle leaves
-        // some sanity checks
-        if (redirectedFields->m_varKind == VariableKind::Input || redirectedFields->m_varKind == VariableKind::Placeholder)
-            //(redirectedFields->m_varKind == VariableKind::Placeholder && redirectedFields->m_compositeArgumentIndex == SIZE_MAX)) // (Placeholders as part of Block inlining are OK)
-            InvalidArgument("Dynamic Value() must not depend on Input or Placeholder.");
         // initialize m_consumers chain of function that produces the values
         fields.m_consumers.clear();
+        // if not visited yet then m_redirection is invalid and must be set up
+        //fail_if(fields.m_redirection, "redirection set up here twice??"); // OK since ClonePrimitiveFunction initializes m_function to itself
+        // BUGBUG: ^^ This logic is twisted. ClonePrimitiveFunction already "visits" the node. It should do it right and set the visitor flag.
+        //         We should call RBuildForwardGraphAndSchedule() from inside the scheduler. But for that, we must separate out the schedule bit.
+
+        // handle leaves
         // Leaves are Parameters, Constants, and also nodes that already have a value.
-        if (!redirectedFieldsOwner)
+        if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
+            InvalidArgument("Dynamic Value() must not depend on Input or Placeholder.");
+        let isParameterOrConstant = fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant;
+        if (fields.m_value || isParameterOrConstant)
         {
-            // m_function has already been set either by default (for Parameters/Constants) or by a previous invocation
-            // (for output values that already existed when this was called).
-            // Redirect and Parameter/Constant are mutually exclusive.
-            fail_if(!(redirectedFields->m_redirection ^ (redirectedFields->m_varKind == VariableKind::Parameter || redirectedFields->m_varKind == VariableKind::Constant/* || redirectedFields->m_varKind == VariableKind::Placeholder*/)), "Parameter/Constant with redirect??");
-            // BUGBUG:!!!! How aboud the gradient?? We must know how to find the gradient!
-            //        One solution is to redirect to the operation directly on top of the Parameter, not the parameter itself.
-            if (!fields.m_value /*&& redirectedFields->m_varKind != VariableKind::Placeholder*/)
-                RealizeVariableAsView(fields, redirectedFields->m_value); // set fields.m_value, and we are done with this node
+            if (isParameterOrConstant && !fields.m_value)
+            {
+                var.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
+                fail_if(!fields.m_value, "Parameter/Constant has no Value()??");
+            }
+            fields.m_redirection.m_function = nullptr;
+            // and initialize these as well for good measure (not really needed)
+            fields.m_redirection.m_functionHolder.reset();
+            fields.m_redirection.m_index = SIZE_MAX;
+            fields.m_redirection.m_depthHint = 0;
             m_stats.numLeafNodes++;
             return;
         }
-        // set up linkage in our overlaid structure
-        fields.m_redirection.m_function = redirectedFieldsOwner;
-        fields.m_redirection.m_functionHolder = move(redirectedFieldsHolder); // keep a ref count to a potentially inlined function
-        fields.m_redirection.m_index = SIZE_MAX;
-        fields.m_redirection.m_depthHint = depthHint;
-        // if redirected then also initialize the producer
-        // This is mostly so that m_consumers gets set correctly.
-        // TODO: This is fishy. Is it needed?
-        if (redirectedFields != &fields)
+
+        // see through ops that do nothing
+        // TODO: fix the naming; these are just 'f' and 'op'
+        auto* redirectedFieldsOwner = fields.m_ownerFunction.lock().get(); // this is the only place we ever call lock(); after this, we just use the raw pointer (relying on immutability)
+        let redirectedOp = redirectedFieldsOwner->m_op;
+        // unroll non-basic BlockFunctions (unless it is a basic block; then it is unrolled during execution)
+        if (redirectedOp == PrimitiveOpType::Block && !static_cast<BlockFunction*>(redirectedFieldsOwner)->IsBasicBlock())
         {
-            RBuildForwardGraphAndSchedule(redirectedFieldsOwner->m_outputs.front(), depth + 1);
+            // make a deep copy of the block's root (PrimitiveFunction graph)
+            // The Block is treated like a see-through op:
+            //  - a deep copy of the Block is made (inlined), which connects to the Block node's inputs
+            //  - the Block node, like a NoOp, gets its m_redirection set to point to the Block's copy.
+            // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
+            // Besides that, the original Block function will remain unmodified.
+            //if (static_cast<BlockFunction&>(*redirectedFieldsOwner).Composite()->m_outputs.front().m_dataFields->m_uniqueIdForDebugging == 288)
+            //    Break;
+            {
+                let& ow = static_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot());
+                if (ow.Name() == L"gruxyz")
+                {
+                    static int numInvocations = 0;
+                    Break;
+                    numInvocations++;
+                }
+            }
+            m_compositeVisitorTag.Begin();
+            auto inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()),
+                                                   redirectedFieldsOwner->m_inputs, /*cloneFn=*/ClonePrimitiveFunction);
+            // ^^ returns a shared_ptr to the deep copy of the root
+            // ^^ This currently does not inline nested blocks. Instead of cloning the BlockFunction, we should just unroll any nested non-basic-block right there.
+            // prepare graph that we just unrolled
+            // Note: We may just have pointed to yet another nested block, or a see-through op, which must be eliminated right here
+            let& output = inlinedRootPtr->m_outputs.front();
+            RBuildForwardGraphAndSchedule(output, depth + 1);
+            // set up linkage in our overlaid structure
+            fields.m_redirection = GetInputFields(output).m_redirection; // we redirect to whatever the inlined one redirects to
+            // the ref count:
+            //  - If the inlined block root is a redirect that holds a ref count, then that is a redirect itself.
+            //    Hence, the root Function has been short-circuited, and no ref-count should be held to it (it gets freed right here).
+            //  - If the inlined block is not a redirect (that is, m_function points to itself), then we must hold the ref count to it.
+            if (!fields.m_redirection.m_functionHolder)
+                fields.m_redirection.m_functionHolder = move(inlinedRootPtr); // keep a ref count to a potentially inlined function
+            // For ref-counting, the root pointer of the deep copy is kept in redirectedFieldsHolder,
+            // which goes into m_functionHolder of the Block's output Variable.
+            // Note: When we get here, redirectedFieldsHolder may already hold a function.
+            // It is OK to overwrite it, since the raw pointer in redirectedFieldsOwner also got overwritten,
+            // and the original Function (which is a Block pre inlining) can be safely freed since it is
+            // not referenced anymore (anything of interest has been copied in the inlining process).
+            //fields.m_redirection.m_function = inlinedRootPtr.get();
+            //fields.m_redirection.m_index = SIZE_MAX;
+            //fields.m_redirection.m_depthHint = 0;
+            m_stats.numInlinedBlocks++;
             return;
         }
+
+        // short-circuit see-through ops
+        else if (IsAliasOp(redirectedOp) || redirectedOp == PrimitiveOpType::Reshape)
+        {
+            // TODO: what if input is non-continuous? Then Reshape should become a copy. Does this need to be addressed here?
+            m_stats.numShortCircuitedNodes++;
+            let& input = redirectedFieldsOwner->m_inputs.front();
+            RBuildForwardGraphAndSchedule(input, depth + 1);
+            auto& redirectedFields = GetInputFields(input);
+            //fail_if(fields.m_redirection, "redirection set up here twice??");
+            fields.m_redirection = redirectedFields.m_redirection; // we redirect to whatever the input redirects to
+            // BUGBUG:!!!! How aboud the gradient?? We must know how to find the gradient!
+            //        One solution is to redirect to the operation directly on top of the Parameter, not the parameter itself.
+            if (!fields.m_redirection) // redirects to leaves are currently not handled correctly (since redirects are based on Function, not Variable)  --TODO: change that
+                InvalidArgument("Value(): See-through ops on leaves are currently not implemented.");
+            // if a barrier then record the maximum depth hint encountered
+            // Functions consuming this Variable are bound by the barrier (but not the function that produces the original value).
+            if (IsBarrier(*redirectedFieldsOwner)) // TODO: get this from a different attribute
+                fields.m_redirection.m_depthHint = max(fields.m_redirection.m_depthHint, redirectedFieldsOwner->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
+            return;
+        }
+
+        // this op is not getting redirected
         auto& f = *redirectedFieldsOwner; // == fields.m_redirection.m_function == fields.Owner()
         if (f.m_outputs.size() > 1)
             InvalidArgument("Dynamic operations cannot have multiple outputs.");
+
+        // set up linkage in our overlaid structure
+        fields.m_redirection.m_function = redirectedFieldsOwner; // pointer to ourselves
+        fields.m_redirection.m_functionHolder.reset(); // don't hold the ref count to ourselves (would create a cyclic graph)
+        fields.m_redirection.m_index = SIZE_MAX;
+        fields.m_redirection.m_depthHint = 0;
 
         // special case BatchNormalization: we must account for all occurences before normalizing
         // We count all occurences during this initial tree traversal.
@@ -3758,6 +3769,17 @@ static vector<T2> GetVectorOfSeconds(const std::vector<std::pair<T1, T2>>& opera
     return res;
 }
 
+// helper that should one day be hidden inside Invocable
+//void InitArgMapForInvocation(std::vector<std::pair<Variable, Variable>>& operands)
+//{
+//    for (size_t i = 0; i < operands.size(); i++)
+//    {
+//        let& compositeLeaf = operands[i].first; // Placeholder or Parameter in composite
+//        if (compositeLeaf.IsPlaceholder())
+//            compositeLeaf.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
+//    }
+//}
+
 // TODO: make the interface nicer. The composite should be locked away in a struct Invocable.
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
 // It is a valid PrimitiveFunction, but it shares the composite instead of owning it, and therefore not a valid BlockFunction for the static-graph machinery.
@@ -3806,6 +3828,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     // BUGBUG: Must handle the map here now that we pass it. Also must verify that the Placeholders are actually in the composite.
 
     // implant all mappings
+    //InitArgMapForInvocation(operands); // TODO: change to this
     for (size_t i = 0; i < m_inputs.size(); i++)
     {
         let& compositeLeaf = operands[i].first; // Placeholder or Parameter in composite
