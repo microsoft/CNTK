@@ -4613,16 +4613,6 @@ namespace CNTK
     CNTK_API void SetDefaultUnitGainValue(bool value);
 
     ///
-    /// Returns true if by default input gradient to learner is averaged.
-    ///
-    CNTK_API bool DefaultUseMeanGradientValue();
-
-    ///
-    /// Sets globally default useMeanGradient value.
-    ///
-    CNTK_API void SetDefaultUseMeanGradientValue(bool value);
-
-    ///
     /// Abstraction for learning a subset of parameters of a learnable Function using first order gradient values.
     /// For example momentum, AdaGrad, RMSProp, etc. are different types of learners with their own algorithms for
     /// learning parameter values using first order gradients.

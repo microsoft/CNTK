@@ -200,17 +200,7 @@ def test_learner_init_legacy():
     lr_per_sample = learning_rate_schedule([0.1, 0.2], unit=UnitType.sample, epoch_size=100)
     C.rmsprop(res.parameters, lr_per_sample, gamma, inc, dec, max, min, True)
 
-    C.set_default_use_mean_gradient_value(False)
-    use_mean_gradient_value = C.default_use_mean_gradient_value()
-    assert not use_mean_gradient_value
-
-    C.adadelta(res.parameters, lr_per_sample)
-
-    C.set_default_use_mean_gradient_value(True)
-    use_mean_gradient_value = C.default_use_mean_gradient_value()
-    assert use_mean_gradient_value
-
-    C.adadelta(res.parameters, lr_per_sample)
+    C.adadelta(res.parameters, lr_per_sample, use_mean_gradient=True)
 
 def test_learner_init():
     i = C.input_variable(shape=(1,), needs_gradient=True, name='a')
@@ -429,16 +419,6 @@ def test_learner_init():
     gamma, inc, dec, max, min = [0.5, 1.2, 0.7, 10, 1e-8]
     lr_per_sample = learning_parameter_schedule([0.1, 0.2], minibatch_size = 1, epoch_size = 100)
     C.rmsprop(res.parameters, lr_per_sample, gamma, inc, dec, max, min, True)
-
-    C.set_default_use_mean_gradient_value(False)
-    use_mean_gradient_value = C.default_use_mean_gradient_value()
-    assert not use_mean_gradient_value
-
-    C.adadelta(res.parameters, lr_per_sample)
-    
-    C.set_default_use_mean_gradient_value(True)
-    use_mean_gradient_value = C.default_use_mean_gradient_value()
-    assert use_mean_gradient_value
 
     C.adadelta(res.parameters, lr_per_sample)
 

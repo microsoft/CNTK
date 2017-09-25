@@ -704,3 +704,41 @@ def test_no_deadlock_init_outputs():
     from cntk import user_function
     with pytest.raises(RuntimeError):
         s = user_function(FaultyUserFunc(x))
+
+class DummyLayer(UserFunction):
+    def __init__(self, x, y, name='NewLayer'):
+        super(DummyLayer, self).__init__([x, y], name=name)
+
+    def forward(self, arguments, device=None, as_numpy=True):
+        return None, arguments
+
+    def backward(self, state, root_gradients, variables=None, as_numpy=True):
+        return root_gradients
+
+    def infer_outputs(self):
+        outputVar = [C.output_variable(self.inputs[idx].shape, self.inputs[idx].dtype,
+            self.inputs[idx].dynamic_axes, name='outDummyLayer') for idx in range(len(self.inputs))]
+        return outputVar
+
+    def serialize(self):
+        return None
+
+    @staticmethod
+    def deserialize(inputs, name, state):
+        return DummyLayer(inputs, name=name)
+
+def test_udf_in_recurrent_loop():
+    x = C.sequence.input_variable(1)
+
+    name = "NewLayer"
+    @C.layers.blocks.BlockFunction('NewLayer', name)
+    def newFunc(x, y):
+        return C.user_function(DummyLayer(x, y, name=name))
+
+    with C.layers.default_options(initial_state = 0.1):
+        m = C.layers.Recurrence(C.layers.LSTM(5) >> newFunc)(x)
+        m = C.sequence.last(m)
+        m = C.layers.Dense(1)(m)
+
+    with pytest.raises(RuntimeError):
+        m.eval([np.arange(10, dtype=np.float32)])
