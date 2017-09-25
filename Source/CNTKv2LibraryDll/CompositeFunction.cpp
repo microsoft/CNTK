@@ -1388,6 +1388,10 @@ namespace CNTK
                 // This ComputationNode has at least one null input which now needs to be properly attached
                 const PrimitiveFunction* primitiveFunc = dynamic_cast<const PrimitiveFunction*>(currentVar.Owner().get());
 
+                if (primitiveFunc == nullptr) {
+                    LogicError("Non-primitive function '%S' cannot be a part of the CNTK recurrent loop.", currentVar.Owner()->Name().c_str());
+                }
+
                 // Skip block primitives since they do not directly map to a computation node
                 if (primitiveFunc->OpType() == PrimitiveOpType::Block)
                     continue;

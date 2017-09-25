@@ -812,12 +812,23 @@ def test_conv_free_static_and_dynamic_axes(warmup_input_size, free_dimension_inc
     assert np.allclose(output_test, output_ref, atol = 1e-4)
 
 DILATED_CONVOLUTION_DATA = [
+    # Dilation without passing.
     ([1, 1, 5, 5], # input_size
-     [1, 3, 3], # convolution size
-     [[[[624]]]]) # result
+     [1, 3, 3],    # convolution size
+     [[[[624]]]],  # result
+     False),       # Padding 
+     # Dilation with padding
+    ([1, 1, 5, 5],                              # input_size
+     [1, 3, 3],                                 # convolution size
+     [[[[176,  200,  284,  172,  192],
+        [296,  320,  449,  272,  292],
+        [420,  447,  624,  375,  396],
+        [164,  176,  233,  128,  136],
+        [224,  236,  308,  168,  176]]]],       # result
+     True)                                      # Padding 
 ]
-@pytest.mark.parametrize("input_size, conv_size, result", DILATED_CONVOLUTION_DATA)
-def test_convolution_dilated(input_size, conv_size, result, device_id, precision):
+@pytest.mark.parametrize("input_size, conv_size, result, padding", DILATED_CONVOLUTION_DATA)
+def test_convolution_dilated(input_size, conv_size, result, padding, device_id, precision):
     if device_id == -1:
         pytest.skip('Test only runs on GPU')
 
@@ -840,8 +851,8 @@ def test_convolution_dilated(input_size, conv_size, result, device_id, precision
     y = np.arange(total_size, dtype=dt)
     conv_map = constant(value=y.reshape(conv_size), device=dev)
 
-    from cntk.ops import convolution
-    input_op = convolution(conv_map, a, auto_padding=[False], dilation=2)
+    from cntk import convolution
+    input_op = convolution(conv_map, a, auto_padding=[padding], dilation=2)
 
     forward_input = {a: input_operand}
     expected_forward = AA(result)
