@@ -2,6 +2,10 @@
 
 ## Latest news 
 
+***2017-09-25.*** CNTK September interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2410). 
+
+***2017-09-24.*** CNTK R-binding now available [here](https://github.com/Microsoft/CNTK-R). 
+
 ***2017-09-15.* CNTK 2.2**  
 Release of Cognitive Toolkit v2.2. 
 
