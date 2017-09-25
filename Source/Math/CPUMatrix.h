@@ -14,6 +14,7 @@
 #include <ctime>
 #include <limits.h>
 #include "QuantizedOperations.h"
+#include "half.hpp"
 
 //#include "GPUMatrix.h"
 //#include "CPUSparseMatrix.h"
@@ -569,5 +570,6 @@ private:
 
 typedef CPUMatrix<float> CPUSingleMatrix;
 typedef CPUMatrix<double> CPUDoubleMatrix;
+typedef CPUMatrix<half> CPUHalfMatrix;
 
 }}}

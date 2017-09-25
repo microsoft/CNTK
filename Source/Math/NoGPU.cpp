@@ -760,6 +760,7 @@ template class MATH_API GPUSparseMatrix<short>;
 template class MATH_API GPUSparseMatrix<char>;
 template class MATH_API GPUSparseMatrix<float>;
 template class MATH_API GPUSparseMatrix<double>;
+template class MATH_API GPUSparseMatrix<half>;
 template class MATH_API GPUSparseMatrix<int>;
 
 template <typename ElemType>
@@ -770,6 +771,7 @@ MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
 
 template MATH_API File& operator>>(File& stream, GPUSparseMatrix<float>& us);
 template MATH_API File& operator>>(File& stream, GPUSparseMatrix<double>& us);
+template MATH_API File& operator>>(File& stream, GPUSparseMatrix<half>& us);
 
 template <typename ElemType>
 MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
@@ -778,6 +780,7 @@ MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
 }
 template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<float>& us);
 template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<double>& us);
+template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<half>& us);
 
 #pragma region DeviceBoundNumber class
 
@@ -2416,6 +2419,7 @@ template class GPUMatrix<short>;
 template class GPUMatrix<char>;
 template class GPUMatrix<float>;
 template class GPUMatrix<double>;
+template class GPUMatrix<half>;
 template class GPUMatrix<int>;
 template class DeviceBoundNumber<float>;
 template class DeviceBoundNumber<double>;
