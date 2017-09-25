@@ -46,6 +46,9 @@
     <ClCompile Include="CPUMatrixFloat.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
+    <ClCompile Include="CPUMatrixHalf.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />

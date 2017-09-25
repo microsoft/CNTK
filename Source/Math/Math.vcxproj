@@ -200,6 +200,7 @@
     <ClCompile Include="ConvolutionEngine.cpp" />
     <ClCompile Include="CPUMatrixDouble.cpp" />
     <ClCompile Include="CPUMatrixFloat.cpp" />
+    <ClCompile Include="CPUMatrixHalf.cpp" />
     <ClCompile Include="CPURNGHandle.cpp" />
     <ClCompile Include="CPUSparseMatrix.cpp" />
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp" />

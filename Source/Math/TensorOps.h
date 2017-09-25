@@ -6,7 +6,7 @@
 // This implements the elementwise tensor operations, including helper macros and some actual functions.
 //
 
-// TODO_NV: investigate function efficiency, fast_math, fpgeneric selector
+// TODO_NV: investigate function efficiency. Does it make difference to use __half2float?
 
 #pragma once
 
@@ -58,128 +58,128 @@ OverloadUnaryMathFns(acos);
 OverloadUnaryMathFns(sinh);
 OverloadUnaryMathFns(cosh);
 
-#if defined(__CUDACC__)
 // Add overload for half math functions(Assume CUDA 9)
 // Only enable fp16 math for sm_60(P100) and sm_70+(V100)
 // Not using macro above because of unstable/lack of API
-static inline half __device__ exp_(half h) {
+DECL half exp_(half v) {
 #if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
-    return hexp(h);
+    return hexp(v);
 #else
-    return __float2half(expf(__half2float(h)));
+    return half(expf((float)v));
 #endif
 }
 
-static inline half __device__ log_(half v) {
+DECL half log_(half v) {
 #if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
     return hlog(v);
 #else
-    return __float2half(logf(__half2float(v)));
+    return half(logf((float)v));
 #endif
 }
 
-static inline half __device__ tanh_(half v) {
-    return __float2half(tanhf(__half2float(v)));
+DECL half tanh_(half v) {
+    return half(tanhf((float)v));
 }
 
-static inline half __device__ sqrt_(half v) {
+DECL half sqrt_(half v) {
 #if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
     return hsqrt(v);
 #else
-    return __float2half(sqrtf(__half2float(v)));
+    return half(sqrtf((float)v));
 #endif
 }
 
-static inline half __device__ fabs_(half v) {
+DECL half fabs_(half v) {
     short t = *(short*)&v & 0x7FFF;    //TODO: Check this!
     return *(half*)(&t);
 }
 
 // add int version to fabs_ overload
-static inline int __device__ fabs_(int v) {
+DECL int fabs_(int v) {
     return abs(v);
 }
 
-static inline half __device__ cos_(half v) {
+DECL half cos_(half v) {
 #if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
     return hcos(v);
 #else
-    return __float2half(cosf(__half2float(v)));
+    return half(cosf((float)v));
 #endif
 }
 
-static inline half __device__ sin_(half v) {
+DECL half sin_(half v) {
 #if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
     return hsin(v);
 #else
-    return __float2half(sinf(__half2float(v)));
+    return half(sinf((float)v));
 #endif
 }
 
-static inline half __device__ floor_(half v) {
+DECL half floor_(half v) {
 #if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
     return hfloor(v);
 #else
-    return __float2half(floorf(__half2float(v)));
+    return half(floorf((float)v));
 #endif
 }
 
-static inline half __device__ log1p_(half v) {
-    return __float2half(log1pf(__half2float(v)));
-}
-
-static inline half __device__ rsqrt_(half v) {
-#if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
-    return hrsqrt(v);
-#else
-    return __float2half(rsqrtf(__half2float(v)));
-#endif
-}
-
-static inline float __device__ rsqrt_(float v) {
-    return rsqrtf(v);
-}
-static inline double __device__ rsqrt_(double v) {
-    return rsqrt(v);
+DECL half log1p_(half v) {
+    return half(log1pf((float)v));
 }
 
 // isnan
-static inline bool __device__ isnan_(float v) {
-    return ::isnan(v);
+DECL bool isnan_(float v) {
+    return v != v;
 }
-static inline bool __device__ isnan_(double v) {
-    return ::isnan(v);
+DECL bool isnan_(double v) {
+    return v != v;
 }
-static inline bool __device__ isnan_(half v) {
+DECL bool isnan_(half v) {
 #if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
     return __hisnan(v);
 #else
-    return ::isnan(__half2float(v));
+    return v != v;
 #endif
 }
 
 // max/min
-static inline float __host__ __device__ max(float a, float b) {
-    return ::max(a,b);
+DECL float max(float a, float b) {
+    return fmaxf(a,b);
 }
-static inline half __host__ __device__ max(half a, half b) {
+DECL half max(half a, half b) {
     return (float)a > (float)b ? a : b;
 }
-static inline float __host__ __device__ max(float a, half b) {
+DECL float max(float a, half b) {
     return a > (float)b ? a : (float)b;
 }
-static inline float __host__ __device__ max(half a, float b) {
+DECL float max(half a, float b) {
     return (float)a > b ? (float)a : b;
 }
-static inline float __host__ __device__ min(float a, float b) {
-    return ::min(a,b);
+DECL float min(float a, float b) {
+    return fminf(a,b);
 }
-static inline half __host__ __device__ min(half a, half b) {
+DECL half min(half a, half b) {
     return (float)a < (float)b ? a : b;
 }
 
+// overload for CUDA only functions
+#if defined(__CUDACC__)
 
-#endif //(__CUDACC__)
+DECL half rsqrt_(half v) {
+#if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
+    return hrsqrt(v);
+#else
+    return half(rsqrtf((float)v));
+#endif
+}
+DECL float rsqrt_(float v) {
+    return rsqrtf(v);
+}
+DECL double rsqrt_(double v) {
+    return rsqrt(v);
+}
+
+#endif // __CUDACC__
 
 
 #pragma pop_macro("OverloadUnaryMathFns")
@@ -204,11 +204,10 @@ static inline half __host__ __device__ min(half a, half b) {
 // #pragma fast-math pop
 OverloadBinaryMathFns(pow);
 
-#if defined(__CUDACC__)
-static inline half __device__ pow_(half v,  half e) {
-    return __float2half(powf(__half2float(v) , __half2float(e)));     //TODO: Improve efficiency?
+DECL half pow_(half v,  half e) {
+    return half(powf((float)v , (float)e));     //TODO: Improve efficiency?
 }
-#endif //(__CUDACC__)
+
 template<typename T>
 DECL T safepow_(T base, T exponent)
 {

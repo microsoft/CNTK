@@ -4837,11 +4837,12 @@ void GPUMatrix<ElemType>::TensorArgOp(const GPUMatrix<ElemType>& a, ElementWiseO
 // =======================================================================
 // explicit instantiations business
 // =======================================================================
-template class GPUMatrix<half>;
 template class GPUMatrix<float>;
 template class GPUMatrix<double>;
+template class GPUMatrix<half>;
 template class DeviceBoundNumber<float>;
 template class DeviceBoundNumber<double>;
+template class DeviceBoundNumber<half>;
 
 template <class ElemType>
 cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = {0};
@@ -4910,6 +4911,7 @@ template short* TracingGPUMemoryAllocator::Allocate<short>(int, size_t);
 template char* TracingGPUMemoryAllocator::Allocate<char>(int, size_t);
 template float* TracingGPUMemoryAllocator::Allocate<float>(int, size_t);
 template double* TracingGPUMemoryAllocator::Allocate<double>(int, size_t);
+template half* TracingGPUMemoryAllocator::Allocate<half>(int, size_t);
 
 template void TracingGPUMemoryAllocator::Free<int>(int, int*, bool);
 template void TracingGPUMemoryAllocator::Free<size_t>(int, size_t*, bool);
@@ -4917,6 +4919,7 @@ template void TracingGPUMemoryAllocator::Free<short>(int, short*, bool);
 template void TracingGPUMemoryAllocator::Free<char>(int, char*, bool);
 template void TracingGPUMemoryAllocator::Free<float>(int, float*, bool);
 template void TracingGPUMemoryAllocator::Free<double>(int, double*, bool);
+template void TracingGPUMemoryAllocator::Free<half>(int, half*, bool);
 
 }}}
 
