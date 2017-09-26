@@ -1393,10 +1393,11 @@ class Variable::AutoBatch
     // 'var' is an input; that is, what m_inputs[] points to, not undergone any redirect.
     void RBuildForwardGraphAndSchedule(const Variable& var, size_t depth)
     {
-        auto& fields = *var.m_dataFields;
+        auto& fields = GetInputFields(var);
         // return if this node was already visited
         if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
+
         // initialize m_consumers chain of function that produces the values
         fields.m_consumers.clear();
         // if not visited yet then m_redirection is invalid and must be set up
@@ -1426,11 +1427,10 @@ class Variable::AutoBatch
         }
 
         // see through ops that do nothing
-        // TODO: fix the naming; these are just 'f' and 'op'
-        auto* redirectedFieldsOwner = fields.m_ownerFunction.lock().get(); // this is the only place we ever call lock(); after this, we just use the raw pointer (relying on immutability)
-        let redirectedOp = redirectedFieldsOwner->m_op;
+        auto& f = *fields.m_ownerFunction.lock().get(); // this is the only place we ever call lock(); after this, we just use the raw pointer (relying on immutability)
+        let op = f.m_op;
         // unroll non-basic BlockFunctions (unless it is a basic block; then it is unrolled during execution)
-        if (redirectedOp == PrimitiveOpType::Block && !static_cast<BlockFunction*>(redirectedFieldsOwner)->IsBasicBlock())
+        if (op == PrimitiveOpType::Block && !static_cast<BlockFunction&>(f).IsBasicBlock())
         {
             // make a deep copy of the block's root (PrimitiveFunction graph)
             // The Block is treated like a see-through op:
@@ -1438,21 +1438,10 @@ class Variable::AutoBatch
             //  - the Block node, like a NoOp, gets its m_redirection set to point to the Block's copy.
             // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
             // Besides that, the original Block function will remain unmodified.
-            //if (static_cast<BlockFunction&>(*redirectedFieldsOwner).Composite()->m_outputs.front().m_dataFields->m_uniqueIdForDebugging == 288)
-            //    Break;
-            {
-                let& ow = static_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot());
-                if (ow.Name() == L"gruxyz")
-                {
-                    static int numInvocations = 0;
-                    Break;
-                    numInvocations++;
-                }
-            }
             m_compositeVisitorTag.Begin();
-            auto inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*redirectedFieldsOwner->BlockRoot()),
-                                                   redirectedFieldsOwner->m_inputs, /*cloneFn=*/ClonePrimitiveFunction);
-            // ^^ returns a shared_ptr to the deep copy of the root
+            auto inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*f.BlockRoot()),
+                                                   f.m_inputs, /*cloneFn=*/ClonePrimitiveFunction);
+            // This returns a shared_ptr to the deep copy of the root.
             // ^^ This currently does not inline nested blocks. Instead of cloning the BlockFunction, we should just unroll any nested non-basic-block right there.
             // prepare graph that we just unrolled
             // Note: We may just have pointed to yet another nested block, or a see-through op, which must be eliminated right here
@@ -1472,19 +1461,16 @@ class Variable::AutoBatch
             // It is OK to overwrite it, since the raw pointer in redirectedFieldsOwner also got overwritten,
             // and the original Function (which is a Block pre inlining) can be safely freed since it is
             // not referenced anymore (anything of interest has been copied in the inlining process).
-            //fields.m_redirection.m_function = inlinedRootPtr.get();
-            //fields.m_redirection.m_index = SIZE_MAX;
-            //fields.m_redirection.m_depthHint = 0;
             m_stats.numInlinedBlocks++;
             return;
         }
 
         // short-circuit see-through ops
-        else if (IsAliasOp(redirectedOp) || redirectedOp == PrimitiveOpType::Reshape)
+        else if (IsAliasOp(op) || op == PrimitiveOpType::Reshape)
         {
             // TODO: what if input is non-continuous? Then Reshape should become a copy. Does this need to be addressed here?
             m_stats.numShortCircuitedNodes++;
-            let& input = redirectedFieldsOwner->m_inputs.front();
+            let& input = f.m_inputs.front();
             RBuildForwardGraphAndSchedule(input, depth + 1);
             auto& redirectedFields = GetInputFields(input);
             //fail_if(fields.m_redirection, "redirection set up here twice??");
@@ -1495,18 +1481,17 @@ class Variable::AutoBatch
                 InvalidArgument("Value(): See-through ops on leaves are currently not implemented.");
             // if a barrier then record the maximum depth hint encountered
             // Functions consuming this Variable are bound by the barrier (but not the function that produces the original value).
-            if (IsBarrier(*redirectedFieldsOwner)) // TODO: get this from a different attribute
-                fields.m_redirection.m_depthHint = max(fields.m_redirection.m_depthHint, redirectedFieldsOwner->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
+            if (IsBarrier(f)) // TODO: get this from a different attribute
+                fields.m_redirection.m_depthHint = max(fields.m_redirection.m_depthHint, f.m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
             return;
         }
 
         // this op is not getting redirected
-        auto& f = *redirectedFieldsOwner; // == fields.m_redirection.m_function == fields.Owner()
         if (f.m_outputs.size() > 1)
             InvalidArgument("Dynamic operations cannot have multiple outputs.");
 
         // set up linkage in our overlaid structure
-        fields.m_redirection.m_function = redirectedFieldsOwner; // pointer to ourselves
+        fields.m_redirection.m_function = &f;          // pointer to ourselves
         fields.m_redirection.m_functionHolder.reset(); // don't hold the ref count to ourselves (would create a cyclic graph)
         fields.m_redirection.m_index = SIZE_MAX;
         fields.m_redirection.m_depthHint = 0;
@@ -1516,7 +1501,7 @@ class Variable::AutoBatch
         // During batched execution, we hold back BatchNorm ops until the batch size equals
         // the number of occurences.
         // (We also cache the id here, to avoid repeated accesses to the attribute Dictionary.)
-        if (f.m_op == PrimitiveOpType::BatchNormalization)
+        if (op == PrimitiveOpType::BatchNormalization)
         {
             //if (!f.m_attributes.Contains(PrimitiveFunction::AttributeNameSyncId))
             //    InvalidArgument("Primitive op '%S' requires an id parameter. Please use the version that takes an id.",
@@ -1529,8 +1514,6 @@ class Variable::AutoBatch
             f.m_autoBatchState.m_batchNormId = 0;
 
         // determine how many inputs are pending; and also recurse and set up the consumer list
-        //if (redirectedFieldsOwner->Name() == L"as_vector[0]")
-        //    Break;
         size_t pendingInputs = 0;
         size_t maxDepthHint = 0;
         let& inputs = f.m_inputs;
@@ -1549,7 +1532,7 @@ class Variable::AutoBatch
                 pendingInputs++;
                 // record ourselves as a consumer of the input
                 // Note that RBuildForwardGraphAndSchedule() will have reset this upon first visit of 'input'.
-                // The recorded consumer is the function that produces things, not the redirect.
+                // The recorded consumer is the function that physically produces things, not the redirect.
                 outputFields.m_consumers.push_back({ &f, i });
                 maxDepthHint = max(maxDepthHint, inputFields.m_redirection.m_depthHint);
             }
@@ -3090,7 +3073,7 @@ public:
         //if (gradFields.m_redirection.m_function->m_uniqueIdForDebugging == 368869)
         //    Break;
         fail_if(!gradFields.m_redirection, "output Variable is a leaf??");
-        fail_if(inputFields.m_redirection.m_function->m_op == PrimitiveOpType::Block, "unexpanded Block invocation??");
+        //fail_if(inputFields.m_redirection.m_function->m_op == PrimitiveOpType::Block, "unexpanded Block invocation??");
         // short-circuit if needed
         if (ArePhysicalOutputFields(gradFields)) // a physical Variable
             return gradFields;
@@ -3709,7 +3692,27 @@ void PrimitiveFunction::MemoizeKnowableValue() const
 // Invoke() and our pieces of PrimitiveFunction and BlockFunction -- contained here for now
 // ===========================================================================
 
-Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<std::pair<Variable, Variable>>& operands, bool isBasicBlock, const std::wstring& name /*= std::wstring()*/)
+// call this upon creation of the compositer
+// TODO: Encapsulate this into the Invocable class.
+void Function::InitCompositeForInvoke(const vector<Variable>& placeholders)
+{
+    let callee = dynamic_cast<CompositeFunction*>(this);
+    if (!callee)
+        InvalidArgument("InitForInvoke() must only be called on CompositeFunctions.");
+    // implant the redirect into the placeholders
+    for (size_t i = 0; i < placeholders.size(); i++)
+    {
+        let& p = placeholders[i]; // Placeholder or Parameter in callee
+        if (!p.IsPlaceholder())
+            InvalidArgument("InitForInvoke(): All argument items must be Placeholders.");
+        p.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
+    }
+    // reset the cached batch axis (=max over all ranks involved, for batching the composite as elementwise
+    // This is only used if isBasicBlock, but since.
+    callee->m_basicBlockBatchAxis = SIZE_MAX; // SIZE_MAX means value has not yet been determined. Once it is, it is cached here.
+}
+
+Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<std::pair<Variable, Variable>>& operands, bool isBasicBlock, bool determineShapes, const std::wstring& name /*= std::wstring()*/)
 {
     let composite = dynamic_pointer_cast<CompositeFunction>(callee);
     if (!composite)
@@ -3740,7 +3743,7 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<std::p
     else
 #endif
     {
-        let f = MakeSharedObject<BlockFunction>(composite, operands, isBasicBlock, name);
+        let f = MakeSharedObject<BlockFunction>(composite, operands, isBasicBlock, determineShapes, name);
         return f->FinalizeInvoke();
     }
 }
@@ -3769,17 +3772,6 @@ static vector<T2> GetVectorOfSeconds(const std::vector<std::pair<T1, T2>>& opera
     return res;
 }
 
-// helper that should one day be hidden inside Invocable
-//void InitArgMapForInvocation(std::vector<std::pair<Variable, Variable>>& operands)
-//{
-//    for (size_t i = 0; i < operands.size(); i++)
-//    {
-//        let& compositeLeaf = operands[i].first; // Placeholder or Parameter in composite
-//        if (compositeLeaf.IsPlaceholder())
-//            compositeLeaf.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
-//    }
-//}
-
 // TODO: make the interface nicer. The composite should be locked away in a struct Invocable.
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
 // It is a valid PrimitiveFunction, but it shares the composite instead of owning it, and therefore not a valid BlockFunction for the static-graph machinery.
@@ -3792,19 +3784,18 @@ static vector<T2> GetVectorOfSeconds(const std::vector<std::pair<T1, T2>>& opera
 //         The main difference is that invoked blocks physically share their composites, to avoid duplicating them
 //         (since the point of using Invoke() is speed). Also, we have quite a bit code dup in this function.
 // A correct implementation could allow BlockFunction to lazily clone the composite (which is what Dynamite does).
-BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vector<std::pair<Variable, Variable>>& operands, bool isBasicBlock, const std::wstring& blockName /*= std::wstring()*/) :
+BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vector<std::pair<Variable, Variable>>& operands, bool isBasicBlock, bool determineShapes, const std::wstring& blockName /*= std::wstring()*/) :
     PrimitiveFunction(PrimitiveOpType::Block, move(GetVectorOfSeconds(operands)), Dictionary(), blockName), m_composite(callee),
     m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
 {
+    // The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
+    // The caller must pass in this flag. --TODO: encapsulate this in the Invocable class.
+    if (!determineShapes)
+        return;
+
     let& compositeOutputs = callee->RawOutputs(); // RawOutputs() forces callee.m_compositeOutputs to be initialized if not yet. It would initialize it to something is shape IsUnknown, though.
     if (compositeOutputs.size() != 1)
         InvalidArgument("Invoke can only be used with BlockFunctions that have a single output (this one has %d).", (int)compositeOutputs.size());
-    // The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
-    // We use output shape IsUnknown() as the flag to know whether that has been done, so we don't want to traverse the whole thing to find those Placeholders.
-    // BUGBUG: This flag is pessimistic, in that if the block is applied statically (inputs have Placeholders), then
-    //         it does not get set, and this procedure is applied each time. We leave it for now, since it is static use, so only init-time.
-    if (!compositeOutputs.front().Shape().IsUnknown())
-        return;
 
     // If this is the first call, then we are not done yet. We must:
     //  - initialize (reset) Dynamite-specific fields in the callee
@@ -3815,10 +3806,6 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     // Any subsequent invocation of this must have matching dimensions. It will otherwise fail inside Dynamite execution.
     // This is slow, but that's OK since it is done only once.
 
-    // reset the cached batch axis (=max over all ranks involved, for batching the composite as elementwise
-    if (isBasicBlock)
-        callee->m_basicBlockBatchAxis = SIZE_MAX; // SIZE_MAX means value has not yet been determined. Once it is, it is cached here.
-
     // We determine the compositeOutputs by replacing the arguments of the composite with new placeholders with updated 
     // shape etc. information matching the corresponding mapped input
     //let leaves = callee->Inputs();
@@ -3827,20 +3814,21 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
 
     // BUGBUG: Must handle the map here now that we pass it. Also must verify that the Placeholders are actually in the composite.
 
-    // implant all mappings
-    //InitArgMapForInvocation(operands); // TODO: change to this
+    if (any_of(operands.begin(), operands.end(), [](const pair<Variable, Variable>& arg) { return arg.first.m_dataFields->m_uniqueIdForDebugging == 147; }))
+        Break;
+
+    // verify the mappings have been implanted
     for (size_t i = 0; i < m_inputs.size(); i++)
     {
         let& compositeLeaf = operands[i].first; // Placeholder or Parameter in composite
-        if (compositeLeaf.IsPlaceholder())
-            compositeLeaf.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
+        fail_if(compositeLeaf.IsPlaceholder() && compositeLeaf.m_dataFields->m_compositeArgumentIndex != i, "m_compositeArgumentIndex not set up??");     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
     }
 
     // Special case: Invoke() may also be called while building a composite (static graph) that uses another.
     // In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
     // is inferred.
     if (any_of(operands.begin(), operands.end(), [](const pair<Variable, Variable>& arg) { return arg.first.IsPlaceholder() && arg.second.Shape().IsUnknown(); }))
-        return; // not all shapes are known--don't attempt to infer anything
+        LogicError("determineShapes when arguments have unknown shapes??");
 
     unordered_map<Variable, Variable> replacementMap;
     // BUGBUG: Must verify that all Parameters are covered here.
@@ -3875,6 +3863,9 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
     // OUTDATED --The composite args' Placeholders now have a block mapping to the actual inputs.
     // BUGBUG: That's bad, since they are gone after this. There should be no block mapping.
 
+    if (any_of(operands.begin(), operands.end(), [](const pair<Variable, Variable>& arg) { return arg.first.m_dataFields->m_uniqueIdForDebugging == 147; }))
+        Break;
+
     if (compositeOutputs.front().Shape().IsUnknown()) // or not?
         LogicError("Invoke must only be called with inputs with fully specified dimensions.");
 
@@ -3887,7 +3878,12 @@ Variable BlockFunction::FinalizeInvoke()
     // now set up the output variable. Clone the composite's one output Variable, then inject the mapping pointer. This following the pattern of InferOutputs().
     // ...EXCEPT we do not implant a Variable mapping, since the composite is shared. The composite does not know that it is part of a BlockFunction.
     let& compositeOutput = m_composite->m_outputs.front();
-    auto blockOutput = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), vector<Axis>(), compositeOutput.NeedsGradient(), compositeOutput.IsSparse(), Name());
+    // TODO: control this from outside as well
+    Variable blockOutput;
+    if (any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& arg) { return arg.Shape().IsUnknown(); })) // if we are being called while building a static graph
+        blockOutput = OutputVariable(NDShape::Unknown(), DataType::Unknown, vector<Axis>(), Name());
+    else
+        blockOutput = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), vector<Axis>(), compositeOutput.NeedsGradient(), compositeOutput.IsSparse(), Name());
     InitOutput(move(blockOutput));
     // behave as if this was returning a Composite: implant a ref count. This will be taken over by the next consumer.
     return m_outputs.front().CompositePreservingCopy(static_pointer_cast<PrimitiveFunction>(shared_from_this()));

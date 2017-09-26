@@ -3793,9 +3793,10 @@ namespace CNTK
     public:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = std::wstring());
 
-    public:
+    public: // for Dynamite
         CNTK_API static DynamicProfilerPtr CreateDynamicProfiler(int verbosity, const std::wstring& name);
         CNTK_API static DynamicProfilerPtr SetDynamicProfiler(const DynamicProfilerPtr&, bool outer = false);
+        CNTK_API void InitCompositeForInvoke(const std::vector<Variable>& placeholders);
 
     private:
         static UserFunctionFactoryPtr s_userFunctionFactory;
@@ -4502,7 +4503,7 @@ namespace CNTK
     /// This is similar to AsBlock(), but unlike AsBlock(), it does not take ownership of the composite.
     /// This presently only works for Dynamite. For static graphs, use AsBlock().
     ///
-    CNTK_API Variable Invoke(const FunctionPtr& composite, const std::vector<std::pair<Variable, Variable>>& operands, bool isBasicBlock, const std::wstring& name = std::wstring());
+    CNTK_API Variable Invoke(const FunctionPtr& composite, const std::vector<std::pair<Variable, Variable>>& operands, bool isBasicBlock, bool determineShapes, const std::wstring& name = std::wstring());
 
     ///
     /// Creates a new Function instance which output its input as it is and previent any gradient contribution from its output. 

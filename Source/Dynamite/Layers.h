@@ -21,8 +21,8 @@
 //#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling
 
 #define let const auto
-//#define Named(n) (L##n)
-#define Named(n) (std::wstring())
+#define Named(n) (L##n)
+//#define Named(n) (std::wstring())
 
 using namespace CNTK;
 using namespace std;
@@ -338,6 +338,7 @@ class StaticModel
     FunctionPtr m_composite; // Note: multiple calls to Invoke() assume that the composite does not change; so encapsulate it here.
     // TODO: Move this down into the V2 API; and make Invoke() a private function of this class. Invoke() is a brittle API since it requires control of the composite.
     bool m_isBasicBlock;
+    mutable bool m_stillNeedsToInferShapes = true;
     void BeginConstruct(size_t arity, bool isBasicBlock)
     {
         m_arity = arity;
@@ -351,6 +352,10 @@ class StaticModel
     {
         // note: the graph is built by calling the lambda on Placeholders
         // We must pass in the Placeholders and remember them, since the composite itself will not remember their ordering.
+        vector<Variable> invokePlaceholders;
+        for (let& argMap : m_argsMap)
+            invokePlaceholders.push_back(argMap.first);
+        composite->InitCompositeForInvoke(invokePlaceholders);
         if (!name.empty())
             composite = Alias(composite, name);
         m_composite = move(composite);
@@ -363,6 +368,19 @@ class StaticModel
     {
         if (m_arity != arity)
             LogicError("StaticModel: It was attempted to invoke a %d-nary function with %d arguments.", (int)m_arity, (int)arity);
+    }
+    // TODO: move this down to Invoke() itself
+    bool DoWeNeedToInferShapes(const vector<pair<Variable, Variable>>& argsMap) const
+    {
+        // return true until called for the first time with fully known shapes
+        // This returns 'true' only once, and evaluates the IsUnknown test only once for a dynamic invocation
+        // (but multiple times for initial invocations during construction of static graphs).
+        if (m_stillNeedsToInferShapes && all_of(argsMap.begin(), argsMap.end(), [](const pair<Variable, Variable>& arg) { return !arg.second.Shape().IsUnknown(); }))
+        {
+            m_stillNeedsToInferShapes = false;
+            return true;
+        }
+        return false;
     }
 public:
     StaticModel(bool isBasicBlock, const function<Variable(const Variable&)>& f, std::wstring name = std::wstring())
@@ -385,7 +403,7 @@ public:
     {
         CheckArity(1);
         m_argsMap.front().second = x1;
-        let res = Invoke(m_composite, m_argsMap, m_isBasicBlock);
+        let res = Invoke(m_composite, m_argsMap, m_isBasicBlock, DoWeNeedToInferShapes(m_argsMap));
         //m_argsMap.front().second = Variable();
         return res;
     }
@@ -394,7 +412,7 @@ public:
         CheckArity(2);
         m_argsMap[0].second = x1;
         m_argsMap[1].second = x2;
-        let res = Invoke(m_composite, m_argsMap, m_isBasicBlock);
+        let res = Invoke(m_composite, m_argsMap, m_isBasicBlock, DoWeNeedToInferShapes(m_argsMap));
         //m_argsMap[0].second = Variable();
         //m_argsMap[1].second = Variable();
         return res;
@@ -405,7 +423,7 @@ public:
         m_argsMap[0].second = x1;
         m_argsMap[1].second = x2;
         m_argsMap[2].second = x3;
-        let res = Invoke(m_composite, m_argsMap, m_isBasicBlock);
+        let res = Invoke(m_composite, m_argsMap, m_isBasicBlock, DoWeNeedToInferShapes(m_argsMap));
         //m_argsMap[0].second = Variable();
         //m_argsMap[1].second = Variable();
         //m_argsMap[2].second = Variable();
@@ -430,15 +448,30 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
 #if 1
 
     // for efficiency, we set this up as a static graph
-    let asBasicBlock = false; // true does not work fully yet
-    StaticModel doLengthNorm(asBasicBlock, [=](const Variable& x) -> Variable
+    StaticModel doMeanNorm(/*isBasicBlock=*/true, [=](const Variable& x) -> Variable
+    {
+        let mean = ReduceMean(x, axis);
+        return x - mean;
+    }, Named("doMeanNorm"));
+    // for efficiency, we set this up as a static graph
+    StaticModel doGetLength(/*isBasicBlock=*/true, [=](const Variable& x0) -> Variable
+    {
+        let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf);
+        return invLen;
+    }, Named("doGetLength"));
+    StaticModel doLengthNorm(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler);
+#if 1
+        let x0 = doMeanNorm(x);
+        let invLen = doGetLength(x0); // this can be batched totally. But don't force invLen*scale in there
+#else
         let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
         let x0 = x - mean;
         //let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
         let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf);
-        let res = x0 * (invLen * scale);
+#endif
+        let res = x0 * (invLen * scale); // note: (invLen*scale), a scalar product, can be batched across multiple invocations
         Function::SetDynamicProfiler(prevProfiler);
         return res;
     }, Named("lengthNorm"));
@@ -752,7 +785,7 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
         let h = ReLU(project1(x)    , Named("hRes"));
         let r = ReLU(project2(h) + x, Named("rRes"));
         return r;
-    });
+    }, Named("doResidualNet"));
     return UnaryModel({ },
     {
         { L"project1", project1 },
