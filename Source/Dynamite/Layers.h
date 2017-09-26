@@ -625,16 +625,15 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     //let gru3Composite = Alias(gru3(gruArgs[0].first, gruArgs[1].first, gruArgs[2].first), L"gru");
     //for (let& p : gru3Composite->Parameters())
     //    gruArgs.push_back({ p,p }); // presently also must pass all Parameters
-    StaticModel gru3Composite(false, [=](const Variable& dh, const Variable& projdh3, const Variable& projx3)
+    StaticModel gru3Composite(/*isBasicBlock=*/true, [=](const Variable& dh, const Variable& projdh3, const Variable& projx3)
     {
-        return Alias(gru3(dh, projdh3, projx3), L"gru");
-    });
-    let gruAsBasicBlock = false;
-    StaticModel doGRU(gruAsBasicBlock, [=](const Variable& dh, const Variable& x)->Variable
+        return gru3(dh, projdh3, projx3);
+    }, L"gru");
+    StaticModel doGRU(/*isBasicBlock=*/false, [=](const Variable& dh, const Variable& x)->Variable
     {
         let projx3 = b + projectInput(x); // TODO: fold 'b' into the Linear layer
         let projdh3 = normR(Times(R, dh));
-        return gru3(dh, projdh3, projx3);
+        return gru3Composite(dh, projdh3, projx3);
     }, Named("gru"));
     return BinaryModel({ R, b },
     {
