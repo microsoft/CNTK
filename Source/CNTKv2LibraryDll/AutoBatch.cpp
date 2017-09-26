@@ -1069,49 +1069,49 @@ class Variable::AutoBatch
                 InvalidArgument("Invoke() cannot be used on composites with cycles.");
             return static_pointer_cast<PrimitiveFunction>(const_cast<PrimitiveFunction*>(fInlined)->shared_from_this()); // (shared_from_this() gives us a FunctionPtr, not PrimitiveFunctionPtr)
         }
-        f.m_autoBatchState.m_link = nullptr; // Bring into valid state so we can detect cycles. Gets overwritten once we are done cloning.
+f.m_autoBatchState.m_link = nullptr; // Bring into valid state so we can detect cycles. Gets overwritten once we are done cloning.
 
-        // clone f
-        // First clone the inputs;
-        let& inputs = f.m_inputs;
-        vector<Variable> inlinedInputs(inputs.size()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
-        for (size_t i = 0; i < inputs.size(); i++)
+// clone f
+// First clone the inputs;
+let& inputs = f.m_inputs;
+vector<Variable> inlinedInputs(inputs.size()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
+for (size_t i = 0; i < inputs.size(); i++)
+{
+    let& input = inputs[i];
+    let& inputFields = GetInputFields(input);
+
+    // --- case 0: a Variable that already has a value; that is, a Constant, Parameter, or any result of another Dynamite invocation
+    if (inputFields.m_varKind == VariableKind::Constant || inputFields.m_varKind == VariableKind::Parameter || inputFields.m_value)
+    {
+        if (!inputFields.m_value)
         {
-            let& input = inputs[i];
-            let& inputFields = GetInputFields(input);
-
-            // --- case 0: a Variable that already has a value; that is, a Constant, Parameter, or any result of another Dynamite invocation
-            if (inputFields.m_varKind == VariableKind::Constant || inputFields.m_varKind == VariableKind::Parameter || inputFields.m_value)
-            {
-                if (!inputFields.m_value)
-                {
-                    input.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
-                    fail_if(!inputFields.m_value, "Parameter/Constant has no Value()??");
-                }
-                inlinedInputs[i] = input;
-            }
-            // --- case 1: a Placeholder: substitute with invocation arg
-            else if (inputFields.m_varKind == VariableKind::Placeholder)
-            {
-                let argIndex = inputFields.m_compositeArgumentIndex;
-                fail_if(argIndex >= invocationArgs.size(), "no invocation arg lined was up with composite->Arguments[]??");
-                inlinedInputs[i] = invocationArgs[argIndex];
-            }
-            // --- case 2: an Output Variable: clone the Function
-            else
-            {
-                fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, cloneFn);
-                inlinedInputs[i] = fInlinedPtr->m_outputs.front();
-                inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
-                // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
-            }
+            input.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
+            fail_if(!inputFields.m_value, "Parameter/Constant has no Value()??");
         }
-        // now create a new function and set up the outputs;
-        let fInlinedPtr = cloneFn(f, move(inlinedInputs));
-        // and finally remember where this function got redirected to.
-        f.m_autoBatchState.m_link = fInlinedPtr.get();
-        return fInlinedPtr;
+        inlinedInputs[i] = input;
+    }
+    // --- case 1: a Placeholder: substitute with invocation arg
+    else if (inputFields.m_varKind == VariableKind::Placeholder)
+    {
+        let argIndex = inputFields.m_compositeArgumentIndex;
+        fail_if(argIndex >= invocationArgs.size(), "no invocation arg lined was up with composite->Arguments[]??");
+        inlinedInputs[i] = invocationArgs[argIndex];
+    }
+    // --- case 2: an Output Variable: clone the Function
+    else
+    {
+        fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
+        let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, cloneFn);
+        inlinedInputs[i] = fInlinedPtr->m_outputs.front();
+        inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
+        // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
+    }
+}
+// now create a new function and set up the outputs;
+let fInlinedPtr = cloneFn(f, move(inlinedInputs));
+// and finally remember where this function got redirected to.
+f.m_autoBatchState.m_link = fInlinedPtr.get();
+return fInlinedPtr;
     }
 
 #define hashMultiplier ((size_t)1572869) // 4 1-bits. An arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
@@ -1164,7 +1164,7 @@ class Variable::AutoBatch
         }
         else
             //fprintf(stderr, "retrieved\n");
-        fail_if(hash == SIZE_MAX-1, "forgot to initialize m_cachedOpHash??");
+            fail_if(hash == SIZE_MAX - 1, "forgot to initialize m_cachedOpHash??");
         return hash;
     }
 
@@ -1227,7 +1227,8 @@ class Variable::AutoBatch
                 let& aComposite = static_cast<const BlockFunction&>(a).Composite();
                 let& bComposite = static_cast<const BlockFunction&>(b).Composite();
                 if (aComposite != bComposite)
-                    return false;
+                    if (!CompositesAreBatchable(static_cast<const PrimitiveFunction&>(*aComposite->RootFunction()), static_cast<const PrimitiveFunction&>(*bComposite->RootFunction())))
+                        return false;
             }
             // all input dimensions must match (with exception of a few special cases)
             //let opClass = g_oscTable[op]; // operation-specific auto-batching class
@@ -1266,6 +1267,30 @@ class Variable::AutoBatch
             if (a.m_attributes != b.m_attributes) // TODO: this could be an expensive operation; check that
                 return false;
             // all match: we can batch
+            return true;
+        }
+
+        // TODO: This must be cached, ideally across invocations.
+        // BUGBUG: We have a problem with Parameters that are fed to Times().
+        //         For now we can require Parameters to be the same objects. Won't work for scalar scaling.
+        // TODO: We can actually analyze the graph. Why not?
+        static bool CompositesAreBatchable(const PrimitiveFunction& a, const PrimitiveFunction& b)
+        {
+            if (!AreBatchable(a, b))
+                return false;
+            for (size_t i = 0; i < a.m_inputs.size(); i++)
+            {
+                let& aInputFields = GetInputFields(a.m_inputs[i]);
+                let& bInputFields = GetInputFields(b.m_inputs[i]);
+                if (aInputFields.m_redirection != aInputFields.m_redirection)
+                    return false;
+                if (aInputFields.m_redirection)
+                {
+                    // BUGBUG: we retraverse multiple paths for now. This will be rewritten and done properly
+                    if (!AreBatchable(*aInputFields.m_redirection.m_function, *bInputFields.m_redirection.m_function))
+                        return false;
+                }
+            }
             return true;
         }
     public:
