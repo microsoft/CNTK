@@ -4084,26 +4084,22 @@ void GPUMatrix<ElemType>::AddElementToElement(ElemType beta, const GPUMatrix<Ele
 
 // assign the element wise max of matrix a and matrix b to matrix a
 template <class ElemType>
-/*static*/ void GPUMatrix<ElemType>::DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
+/*static*/ void GPUMatrix<ElemType>::DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t InputIndex, const GPUMatrix<ElemType>& nWords)
 {
-    //fprintf(stderr, "A Size: %d %d\n", a.GetNumRows(), a.GetNumCols());
-    //fprintf(stderr, "B Size: %d %d\n", b.GetNumRows(), b.GetNumCols());
-
-
     if (a.GetNumRows() != b.GetNumRows() ||
         a.GetNumCols() != b.GetNumCols())
         InvalidArgument("DoElementMaxOf: the shapes of the input matrixes do not match.");
 
-    a.PrepareDevice();
     CUDA_LONG n = (CUDA_LONG)a.GetNumElements();
+    CUDA_LONG nRows = (CUDA_LONG)a.GetNumRows();
     int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
 
-    _doElementMaxOf<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), b.Data(), n);
+    _doElementMaxOf<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), b.Data(), n, InputIndex, nWords.Data(), nRows);
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient)
+void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient, const size_t InputIndex, const GPUMatrix<ElemType>& nWords)
 {
     if (inputValue.GetNumRows() != outputValue.GetNumRows() ||
         inputValue.GetNumCols() != outputValue.GetNumCols() ||
@@ -4114,10 +4110,11 @@ void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue,
 
     inputValue.PrepareDevice();
     CUDA_LONG n = (CUDA_LONG)inputValue.GetNumElements();
+    CUDA_LONG nRows = (CUDA_LONG)inputValue.GetNumRows();
     int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
 
-    _addElementMaxGradient<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(inputValue.Data(), outputValue.Data(), outputGradient.Data(), Data(), n);
+    _addElementMaxGradient<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(inputValue.Data(), outputValue.Data(), outputGradient.Data(), Data(), n, InputIndex, nWords.Data(), nRows);
 }
 
 template <class ElemType>

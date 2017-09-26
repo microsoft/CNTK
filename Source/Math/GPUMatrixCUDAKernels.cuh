@@ -686,12 +686,20 @@ template <class ElemType>
 __global__ void _doElementMaxOf(
     ElemType *a,
     const ElemType *b,
-    CUDA_LONG N)
+    CUDA_LONG N,
+    const size_t inputindex,
+    const ElemType *nWords,
+    CUDA_LONG nRows)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    a[id] = max(a[id], b[id]);
+
+    const CUDA_LONG iCol = id / nRows;
+    if (inputindex <= nWords[iCol])
+    {
+        a[id] = max(a[id], b[id]);
+    }
 }
 
 template <class ElemType>
@@ -700,19 +708,26 @@ __global__ void _addElementMaxGradient(
     ElemType *outputValue,
     ElemType *outputGradient,
     ElemType *inputGradient,
-    CUDA_LONG N)
+    CUDA_LONG N,
+    const size_t inputindex,
+    const ElemType *nWords,
+    CUDA_LONG nRows)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
 
-    if (inputValue[id] == outputValue[id])
+    const CUDA_LONG iCol = id / nRows;
+    if (inputindex <= nWords[iCol])
     {
-        inputGradient[id] = outputGradient[id];
-    }
-    else
-    {
-        inputGradient[id] = 0;
+        if (inputValue[id] == outputValue[id])
+        {
+            inputGradient[id] = outputGradient[id];
+        }
+        else
+        {
+            inputGradient[id] = 0;
+        }
     }
 }
 

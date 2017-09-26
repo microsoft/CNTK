@@ -683,26 +683,25 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         Matrix<ElemType> result = ValueFor(fr);
-        Matrix<ElemType> input0 = Input(0)->ValueFor(fr);
+        Matrix<ElemType> nWords = Input(0)->ValueFor(fr);
+        result.SetValue((ElemType) -1.e-30);
 
-        result.AssignValuesOf(input0);
-
-        if (GetNumInputs() > 1) {
-            for (size_t inputIndex = 1; inputIndex < GetNumInputs(); inputIndex++)
-            {
-                let input = Input(inputIndex)->ValueFor(fr);
-                Matrix<ElemType>::DoElementMaxOf(result, input);
-            }
+        for (size_t inputIndex = 1; inputIndex < GetNumInputs(); inputIndex++)
+        {
+            let input = Input(inputIndex)->ValueFor(fr);
+            Matrix<ElemType>::DoElementMaxOf(result, input, inputIndex, nWords);
         }
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
+        if (inputIndex == 0) { return; } // does not backpropate to the nWords matrix.
         Matrix<ElemType> outputGradient = GradientFor(fr);
         Matrix<ElemType> outputValue = ValueFor(fr);
         Matrix<ElemType> inputGradient = Input(inputIndex)->GradientFor(fr);
         Matrix<ElemType> inputValue = Input(inputIndex)->ValueFor(fr);
-        inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient);
+        Matrix<ElemType> nWords = Input(0)->ValueFor(fr);
+        inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient, inputIndex, nWords);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -713,7 +712,7 @@ public:
         // the dimension of column must be the same (i.e., the Minibatch size)
         if (isFinalValidationPass)
         {
-            for (int i = 1; i < GetNumInputs(); i++)
+            for (int i = 2; i < GetNumInputs(); i++)
             {
                 //fprintf(stderr, "number of inputs: %d\n", GetNumInputs());
                 // the dimension of column must be the same (i.e., the Minibatch size)
@@ -724,7 +723,7 @@ public:
         }
 
         // calculate the row size of the output matrix
-        auto dims = Input(0)->GetSampleLayout().GetDims();
+        auto dims = Input(1)->GetSampleLayout().GetDims();
         SetDims(TensorShape(dims), HasMBLayout());
     }
 };

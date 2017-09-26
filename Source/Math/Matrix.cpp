@@ -4932,13 +4932,13 @@ void Matrix<ElemType>::StochasticBinaryBackward(const Matrix<ElemType>& a, const
 
 // assign the element wise max of matrix a and matrix b to matrix a
 template <class ElemType>
-/*static*/ void Matrix<ElemType>::DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b)
+/*static*/ void Matrix<ElemType>::DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, const size_t InputIndex, const Matrix<ElemType>& nWords)
 {
-    DecideAndMoveToRightDevice(a, b);
+    DecideAndMoveToRightDevice(a, b, nWords);
 
     if (a.GetMatrixType() == DENSE && b.GetMatrixType() == DENSE)
     {
-        GPUMatrix<ElemType>::DoElementMaxOf(*a.m_GPUMatrix, *b.m_GPUMatrix);
+        GPUMatrix<ElemType>::DoElementMaxOf(*a.m_GPUMatrix, *b.m_GPUMatrix, InputIndex, *nWords.m_GPUMatrix);
     }
     else
     {
@@ -4947,7 +4947,7 @@ template <class ElemType>
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient)
+void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient, const size_t InputIndex, const Matrix<ElemType>& nWords)
 {
     if (this->GetDeviceId() < 0)
     {
@@ -4956,11 +4956,12 @@ void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matri
     else
     {
         DecideAndMoveToRightDevice(*this, inputValue, outputVale, outputGradient);
+        DecideAndMoveToRightDevice(*this, nWords);
 
         if (inputValue.GetMatrixType() == DENSE && outputVale.GetMatrixType() == DENSE &&
             outputVale.GetMatrixType() == DENSE && this->GetMatrixType() == DENSE)
         {
-            m_GPUMatrix->AddElementMaxGradient(*inputValue.m_GPUMatrix, *outputVale.m_GPUMatrix, *outputGradient.m_GPUMatrix);
+            m_GPUMatrix->AddElementMaxGradient(*inputValue.m_GPUMatrix, *outputVale.m_GPUMatrix, *outputGradient.m_GPUMatrix, InputIndex, *nWords.m_GPUMatrix);
         }
         else
         {

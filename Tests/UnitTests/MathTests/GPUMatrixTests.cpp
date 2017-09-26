@@ -799,9 +799,14 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixGatherFromTarget, RandomSeedFixture)
 BOOST_FIXTURE_TEST_CASE(GPUMatrixElementMax, RandomSeedFixture)
 {
     GPUMatrix<float> lhs = GPUMatrix<float>::Eye(4, c_deviceIdZero);
-    GPUMatrix<float> rhs = GPUMatrix<float>::Zeros(4, 4, c_deviceIdZero);
+    GPUMatrix<float> rhs = GPUMatrix<float>::Ones(4, 4, c_deviceIdZero);
+    
+    float data[4] = { 1,2,3,4 };
+    GPUMatrix<float> nWords(1, 4, c_deviceIdZero);
+    nWords.SetValue(1, 4, c_deviceIdZero, data, matrixFormatRowMajor);
 
-    GPUMatrix<float>::DoElementMaxOf(lhs, rhs);
+
+    GPUMatrix<float>::DoElementMaxOf(lhs, rhs, 2, nWords);
 
     float *arr = lhs.CopyToArray();
 
@@ -809,17 +814,17 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixElementMax, RandomSeedFixture)
     BOOST_CHECK_EQUAL(0, arr[1]);
     BOOST_CHECK_EQUAL(0, arr[2]);
     BOOST_CHECK_EQUAL(0, arr[3]);
-    BOOST_CHECK_EQUAL(0, arr[4]);
+    BOOST_CHECK_EQUAL(1, arr[4]);
     BOOST_CHECK_EQUAL(1, arr[5]);
-    BOOST_CHECK_EQUAL(0, arr[6]);
-    BOOST_CHECK_EQUAL(0, arr[7]);
-    BOOST_CHECK_EQUAL(0, arr[8]);
-    BOOST_CHECK_EQUAL(0, arr[9]);
+    BOOST_CHECK_EQUAL(1, arr[6]);
+    BOOST_CHECK_EQUAL(1, arr[7]);
+    BOOST_CHECK_EQUAL(1, arr[8]);
+    BOOST_CHECK_EQUAL(1, arr[9]);
     BOOST_CHECK_EQUAL(1, arr[10]);
-    BOOST_CHECK_EQUAL(0, arr[11]);
-    BOOST_CHECK_EQUAL(0, arr[12]);
-    BOOST_CHECK_EQUAL(0, arr[13]);
-    BOOST_CHECK_EQUAL(0, arr[14]);
+    BOOST_CHECK_EQUAL(1, arr[11]);
+    BOOST_CHECK_EQUAL(1, arr[12]);
+    BOOST_CHECK_EQUAL(1, arr[13]);
+    BOOST_CHECK_EQUAL(1, arr[14]);
     BOOST_CHECK_EQUAL(1, arr[15]);
 
     delete[] arr;
@@ -832,11 +837,15 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixElementMaxGradient, RandomSeedFixture)
     GPUMatrix<float> inputGradient = GPUMatrix<float>::Zeros(4, 4, c_deviceIdZero);
     GPUMatrix<float> outputGradient = GPUMatrix<float>::Ones(4, 4, c_deviceIdZero);
     
-    inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient);
+    float data[4] = { 1,4,3,2 };
+    GPUMatrix<float> nWords(1, 4, c_deviceIdZero);
+    nWords.SetValue(1, 4, c_deviceIdZero, data, matrixFormatRowMajor);
+
+    inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient, 3, nWords);
 
     float *arr = inputGradient.CopyToArray();
 
-    BOOST_CHECK_EQUAL(1, arr[0]);
+    BOOST_CHECK_EQUAL(0, arr[0]);
     BOOST_CHECK_EQUAL(0, arr[1]);
     BOOST_CHECK_EQUAL(0, arr[2]);
     BOOST_CHECK_EQUAL(0, arr[3]);
@@ -851,7 +860,7 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixElementMaxGradient, RandomSeedFixture)
     BOOST_CHECK_EQUAL(0, arr[12]);
     BOOST_CHECK_EQUAL(0, arr[13]);
     BOOST_CHECK_EQUAL(0, arr[14]);
-    BOOST_CHECK_EQUAL(1, arr[15]);
+    BOOST_CHECK_EQUAL(0, arr[15]);
 
     delete[] arr;
 }

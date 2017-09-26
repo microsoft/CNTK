@@ -581,8 +581,8 @@ public:
     static void StochasticBinaryBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope);
 
     // assign the element wise max of matrix a and matrix b to matrix a
-    static void DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b);
-    void AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient);
+    static void DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, const size_t InputIndex, const Matrix<ElemType>& nWords);
+    void AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient, const size_t InputIndex, const Matrix<ElemType>& nWords);
 
 public:
     // static BLAS functions
