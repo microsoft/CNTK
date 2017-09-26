@@ -1269,6 +1269,8 @@ return fInlinedPtr;
             return true;
         }
 
+        // determine and cache a unique id for every basic block composite
+        // such that composites that are equivalent and therefore batchable can be detected easily
         static size_t CacheAndGetBatchableCompositeId(const CompositeFunctionPtr& compositePtr)
         {
             // TODO: move this class out of here
@@ -1277,6 +1279,37 @@ return fInlinedPtr;
                 // using weak_ptr so that we can detect whether a composite has been deleted, and remove it from the list,
                 // and eventually recycle unique ids. TODO.
                 vector<vector<weak_ptr<CompositeFunction>>> allComposites; // [m_batchableCompositeId]
+                // Note: This handles the special case of Times() via AreBatchable().
+                // Any embedded Times() operation must match object identity of the first argument.
+                // That will never match if that argument is computed inside the basic block,
+                // but it will work if it is a Parameter or a value computed outside that is the same object.
+                static bool AreCompositesBatchable(const PrimitiveFunction& a, const PrimitiveFunction& b)
+                {
+                    if (&a == &b)
+                        return true;
+#if 0               // BUGBUG: I noticed a slight loss after I added batching of composites. It is not clear where it is from. Verify this!
+                    return false;
+#else
+                    if (!AreBatchable(a, b))
+                        return false;
+                    for (size_t i = 0; i < a.m_inputs.size(); i++)
+                    {
+                        fail_if(a.m_inputs[i].Shape().IsUnknown(), "AreCompositesBatchable called for unknown shape??");
+                        let& aInputFields = GetInputFields(a.m_inputs[i]);
+                        let& bInputFields = GetInputFields(b.m_inputs[i]);
+                        if (aInputFields.m_redirection != aInputFields.m_redirection)
+                            return false;
+                        if (aInputFields.m_redirection)
+                        {
+                            // BUGBUG: we retraverse multiple paths for now. This will be rewritten and done properly.
+                            // BUGBUG: We also must compare the actual graph link structure, not just the unrolled tree.
+                            if (!AreBatchable(*aInputFields.m_redirection.m_function, *bInputFields.m_redirection.m_function))
+                                return false;
+                        }
+                    }
+                    return true;
+#endif
+                }
             public:
                 size_t MatchAndRememberComposite(const CompositeFunctionPtr& compositePtr)
                 {
@@ -1302,41 +1335,10 @@ return fInlinedPtr;
                     return allComposites.size() - 1;
                  }
             };
-            static BatchableCompositeIdMatcher matcher;
+            static BatchableCompositeIdMatcher matcher; // holding this in a static var, but using weak pointers, so this is lightweight
             if (compositePtr->m_batchableCompositeId == SIZE_MAX)
                 compositePtr->m_batchableCompositeId = matcher.MatchAndRememberComposite(compositePtr);
             return compositePtr->m_batchableCompositeId;
-        }
-        // Note: This handles the special case of Times() via AreBatchable().
-        // Any embedded Times() operation must match object identity of the first argument.
-        // That will never match if that argument is computed inside the basic block,
-        // but it will work if it is a Parameter or a value computed outside that is the same object.
-        static bool AreCompositesBatchable(const PrimitiveFunction& a, const PrimitiveFunction& b)
-        {
-            if (&a == &b)
-                return true;
-#if 0       // BUGBUG: I noticed a slight loss after I added this. It is not clear where it is from. Test this!
-            return false;
-#else
-            if (!AreBatchable(a, b))
-                return false;
-            for (size_t i = 0; i < a.m_inputs.size(); i++)
-            {
-                fail_if(a.m_inputs[i].Shape().IsUnknown(), "AreCompositesBatchable called for unknown shape??");
-                let& aInputFields = GetInputFields(a.m_inputs[i]);
-                let& bInputFields = GetInputFields(b.m_inputs[i]);
-                if (aInputFields.m_redirection != aInputFields.m_redirection)
-                    return false;
-                if (aInputFields.m_redirection)
-                {
-                    // BUGBUG: we retraverse multiple paths for now. This will be rewritten and done properly.
-                    // BUGBUG: We also must compare the actual graph link structure, not just the unrolled tree.
-                    if (!AreBatchable(*aInputFields.m_redirection.m_function, *bInputFields.m_redirection.m_function))
-                        return false;
-                }
-            }
-            return true;
-#endif
         }
     public:
         // count an occurrence of a BatchNormalization with a given id
