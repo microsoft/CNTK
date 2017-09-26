@@ -56,6 +56,10 @@ class Parameters():
         self.cntk_max_epochs = -1                # set per data set below
         self.cntk_momentum_time_constant = -1    # set per data set below
 
+        # for Distributed learner
+        self.num_quantization_bits = 1   # set for distributed learner 
+        self.warm_up = 1                 # set for distributed learner
+
 ############################
 # project-specific parameters
 ############################

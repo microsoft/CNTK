@@ -104,6 +104,16 @@ This python code will start training Fast R-CNN using the [fastrcnn.cntk](./fast
 
 If you carefully examine the [fastrcnn.cntk](./fastrcnn.cntk) file, you would notice we load the pre-trained AlexNet model, clone the network up to the `conv5_y` layer and freeze all bottom layer parameters, and then added pooling and dense layers on the top with trainable parameters. The training will run for 17 epochs, and reaching training error around `1.05%`. The script will also write the network output for the entire train and test dataset.
 
+### Running Fast R-CNN distributed training
+
+The python code `python A2_RunWithPyModel_distributed.py` was prepared for multi-GPU machine.
+Note: This example requires a multi-GPU machine to distribute.
+
+Simple aggregation with a 2-GPU machine:
+`mpiexec -n 2 python A2_RunWithPyModel_distributed.py`
+
+Please check 2 parameters `num_quantization_bits`, `warm_up` in [PARAMETERS.py](./PARAMETERS.py) for distributed learning.
+
 ### Evaluate trained model
 
 One the model has been trained for detection, you may run:
