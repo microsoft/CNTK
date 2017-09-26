@@ -384,6 +384,7 @@ class StaticModel
             }
             return false;
         }
+        Variable noArg; // dummy for clearing out the args map
     public:
         Invocable(bool isBasicBlock, const function<Variable(const Variable&)>& f, std::wstring name)
         {
@@ -397,15 +398,19 @@ class StaticModel
         {
             BeginConstruct(3, isBasicBlock), EndConstruct(move(f(m_argsMap[0].first, m_argsMap[1].first, m_argsMap[2].first)), name);
         }
-        void SetArg(size_t argIndex, const Variable& argVal)
+        void SetArg(size_t argIndex, const Variable& argVal) const
         {
             m_argsMap[argIndex].second = argVal;
         }
         Variable Invoke(size_t arity) const // call SetArg first to set the args
         {
+            // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
+            // We leave the Parameters in the m_argsMap array untouched (they are at the end).
+            // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
             CheckArity(arity);
             return CNTK::Invoke(m_composite, m_argsMap, m_isBasicBlock, DoWeNeedToInferShapes(m_argsMap));
-            //m_argsMap.front().second = Variable(); // clear it out, up to arity
+            for (size_t i = 0; i < arity; i++)
+                SetArg(i, noArg);
         }
     };
     shared_ptr<Invocable> m_invocable; // this is the only member, so that we can copy this with shared state
@@ -415,10 +420,6 @@ public:
         m_invocable(make_shared<Invocable>(isBasicBlock, f, name))
     { }
 
-        // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
-    // We leave the Parameters in the m_argsMap array untouched (they are at the end).
-    // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
-    // BUGBUG: ^^ this caused some expired shared_ptr...? Try again and track it down. Is it not keeping some reference in the called function? A composite?
     Variable operator()(const Variable& x1) const
     {
         m_invocable->SetArg(0, x1);
