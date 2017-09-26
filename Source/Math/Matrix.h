@@ -582,7 +582,7 @@ public:
 
     // assign the element wise max of matrix a and matrix b to matrix a
     static void DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b);
-    void AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient, Matrix<ElemType>& inputSum, Matrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex);
+    void AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient);
 
 public:
     // static BLAS functions

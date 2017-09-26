@@ -694,33 +694,15 @@ public:
                 Matrix<ElemType>::DoElementMaxOf(result, input);
             }
         }
-
-
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        //InvalidArgument("BackpropTo not supported for SparseRowStackNode");
         Matrix<ElemType> outputGradient = GradientFor(fr);
         Matrix<ElemType> outputValue = ValueFor(fr);
         Matrix<ElemType> inputGradient = Input(inputIndex)->GradientFor(fr);
         Matrix<ElemType> inputValue = Input(inputIndex)->ValueFor(fr);
-
-        // Determine if inputs are equal to zero
-        Matrix<ElemType> inputSum = inputValue.DeepClone();
-        Matrix<ElemType> randomSplit = inputValue.DeepClone();
-        for (size_t i = 0; i < GetNumInputs(); i++)
-        {
-            if (i == inputIndex)
-                continue;
-
-            let input = Input(inputIndex)->ValueFor(fr);
-            inputSum += input;
-        }
-
-        randomSplit.SetUniformRandomValue((ElemType)0 /*low*/, (ElemType)GetNumInputs() /*high*/, 0 /*seed*/);
-
-        inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient, inputSum, randomSplit, GetNumInputs(), inputIndex);
+        inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
