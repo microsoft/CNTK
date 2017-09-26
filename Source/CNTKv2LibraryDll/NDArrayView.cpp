@@ -199,9 +199,10 @@ namespace CNTK
     }
 
     // constructor optimized for shape passed as TensorShape (allowing strides and offset for slicing)
-    NDArrayView::NDArrayView(CNTK::DataType dataType, const TensorShape& tensorShape, bool readOnly, const shared_ptr<MatrixBase>& sob)
-        : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())),
-          m_viewShape(move(tensorShape.GetDimsAsVector())), m_isReadOnly(readOnly)
+    NDArrayView::NDArrayView(CNTK::DataType dataType, const TensorShape& tensorShape, bool readOnly, const shared_ptr<MatrixBase>& sob) :
+        m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())),
+        m_viewShape(move(tensorShape.GetDimsAsVector())), // this is a malloc()
+        m_isReadOnly(readOnly)
     {
         //m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
         ConstructTensorView(m_tensorViewUnion, dataType, sob, tensorShape);

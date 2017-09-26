@@ -1884,21 +1884,23 @@ return fInlinedPtr;
             LogFunction(f, f.m_profiler);
         //if (f.m_op == PrimitiveOpType::ElementTimes)
         //    LogFunction(f, L"bf  ");
-        auto outValue = isFree
-            ? NDArrayViewPtr()
-            : m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues[0]->Device());
+        auto outValue =
+            /*if*/ (isFree) ?
+                NDArrayViewPtr()
+            /*else*/:
+                m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
         cudaStatsGuardPrepare.Stop();
         CudaStats* cudaStatsPtr = nullptr;
         if (ShouldLogMemoizeStats())
         {
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
             let logAsOp = (f.m_op == PrimitiveOpType::Splice && spliceIsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
-            cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, IsViewOp(f.m_op) ? 2 : hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false), inputValues[0]->Device());
+            cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, IsViewOp(f.m_op) ? 2 : hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false), inputValues.front()->Device());
         }
         // execute it
         GetOutputFields(f).m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
         // stats
-        EndCudaStats(cudaStatsPtr, inputValues[0]->Device());
+        EndCudaStats(cudaStatsPtr, inputValues.front()->Device());
         let primitiveOp = f.m_op;
         if (isFree) // means we did not pass a data buffer for the result; any one we pass a buffer does actual work
             m_stats.numDoneFreeOps++;
