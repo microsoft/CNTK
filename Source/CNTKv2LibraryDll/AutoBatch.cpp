@@ -1226,9 +1226,8 @@ return fInlinedPtr;
                 // composites must match (object identity)
                 let& aComposite = static_cast<const BlockFunction&>(a).Composite();
                 let& bComposite = static_cast<const BlockFunction&>(b).Composite();
-                if (aComposite != bComposite)
-                    if (!CompositesAreBatchable(static_cast<const PrimitiveFunction&>(*aComposite->RootFunction()), static_cast<const PrimitiveFunction&>(*bComposite->RootFunction())))
-                        return false;
+                if (CacheAndGetBatchableCompositeId(static_pointer_cast<CompositeFunction>(aComposite)) != CacheAndGetBatchableCompositeId(static_pointer_cast<CompositeFunction>(bComposite)))
+                    return false;
             }
             // all input dimensions must match (with exception of a few special cases)
             //let opClass = g_oscTable[op]; // operation-specific auto-batching class
@@ -1270,28 +1269,74 @@ return fInlinedPtr;
             return true;
         }
 
-        // TODO: This must be cached, ideally across invocations.
-        // BUGBUG: We have a problem with Parameters that are fed to Times().
-        //         For now we can require Parameters to be the same objects. Won't work for scalar scaling.
-        // TODO: We can actually analyze the graph. Why not?
-        static bool CompositesAreBatchable(const PrimitiveFunction& a, const PrimitiveFunction& b)
+        static size_t CacheAndGetBatchableCompositeId(const CompositeFunctionPtr& compositePtr)
         {
+            // TODO: move this class out of here
+            class BatchableCompositeIdMatcher
+            {
+                // using weak_ptr so that we can detect whether a composite has been deleted, and remove it from the list,
+                // and eventually recycle unique ids. TODO.
+                vector<vector<weak_ptr<CompositeFunction>>> allComposites; // [m_batchableCompositeId]
+            public:
+                size_t MatchAndRememberComposite(const CompositeFunctionPtr& compositePtr)
+                {
+                    // match new composite against all in the list by deep structure comparison
+                    for (size_t i = 0; i < allComposites.size(); i++)
+                    {
+                        auto& otherList = allComposites[i];
+                        if (otherList.empty()) // TODO: garbage collection and weak_ptr discovery should go in here
+                            continue;
+                        let otherCompositePtr = otherList.front().lock();
+                        if (!otherCompositePtr)
+                            continue; // TODO: keep looking for a non-expired one
+                        let areBatchable = AreCompositesBatchable(static_cast<const PrimitiveFunction&>(*compositePtr->RootFunction()), static_cast<const PrimitiveFunction&>(*otherCompositePtr->RootFunction()));
+                        // found a match
+                        if (areBatchable)
+                        {
+                            otherList.push_back(compositePtr);
+                            return i;
+                        }
+                    }
+                    // none matched: create a new entry
+                    allComposites.push_back(vector<weak_ptr<CompositeFunction>>(1, compositePtr));
+                    return allComposites.size() - 1;
+                 }
+            };
+            static BatchableCompositeIdMatcher matcher;
+            if (compositePtr->m_batchableCompositeId == SIZE_MAX)
+                compositePtr->m_batchableCompositeId = matcher.MatchAndRememberComposite(compositePtr);
+            return compositePtr->m_batchableCompositeId;
+        }
+        // Note: This handles the special case of Times() via AreBatchable().
+        // Any embedded Times() operation must match object identity of the first argument.
+        // That will never match if that argument is computed inside the basic block,
+        // but it will work if it is a Parameter or a value computed outside that is the same object.
+        static bool AreCompositesBatchable(const PrimitiveFunction& a, const PrimitiveFunction& b)
+        {
+            if (&a == &b)
+                return true;
+#if 0       // BUGBUG: I noticed a slight loss after I added this. It is not clear where it is from. Test this!
+            return false;
+#else
             if (!AreBatchable(a, b))
                 return false;
             for (size_t i = 0; i < a.m_inputs.size(); i++)
             {
+                fail_if(a.m_inputs[i].Shape().IsUnknown(), "AreCompositesBatchable called for unknown shape??");
                 let& aInputFields = GetInputFields(a.m_inputs[i]);
                 let& bInputFields = GetInputFields(b.m_inputs[i]);
                 if (aInputFields.m_redirection != aInputFields.m_redirection)
                     return false;
                 if (aInputFields.m_redirection)
                 {
-                    // BUGBUG: we retraverse multiple paths for now. This will be rewritten and done properly
+                    // BUGBUG: we retraverse multiple paths for now. This will be rewritten and done properly.
+                    // BUGBUG: We also must compare the actual graph link structure, not just the unrolled tree.
                     if (!AreBatchable(*aInputFields.m_redirection.m_function, *bInputFields.m_redirection.m_function))
                         return false;
                 }
             }
             return true;
+#endif
         }
     public:
         // count an occurrence of a BatchNormalization with a given id
@@ -3736,7 +3781,9 @@ void Function::InitCompositeForInvoke(const vector<Variable>& placeholders)
     }
     // reset the cached batch axis (=max over all ranks involved, for batching the composite as elementwise
     // This is only used if isBasicBlock, but since.
-    callee->m_basicBlockBatchAxis = SIZE_MAX; // SIZE_MAX means value has not yet been determined. Once it is, it is cached here.
+    callee->m_basicBlockBatchAxis = SIZE_MAX;  // SIZE_MAX means value has not yet been determined. Once it is, it is cached here.
+
+    callee->m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
 }
 
 Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<std::pair<Variable, Variable>>& operands, bool isBasicBlock, bool determineShapes, const std::wstring& name /*= std::wstring()*/)
