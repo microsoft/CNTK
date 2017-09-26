@@ -726,7 +726,9 @@ void Train(wstring outputDirectory)
         //mbLoss = criterion_fn(args[0], args[1]);
         let timeBuildGraph = partTimer.Elapsed();
         let numAPICalls = CountAPICalls(0) - numAPICalls0;
-        fprintf(stderr, "#API calls = %d\n", (int)numAPICalls);
+        numAPICalls;
+        //fprintf(stderr, "#API calls = %d\n", (int)numAPICalls), fflush(stderr);
+        //exit(1);
         //partTimer.Log("criterion_fn", numLabels);
         // backprop and model update
         partTimer.Restart();
