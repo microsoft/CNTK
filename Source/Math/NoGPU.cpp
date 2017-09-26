@@ -2020,6 +2020,16 @@ template <class ElemType>
 void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope) {
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient, GPUMatrix<ElemType>& inputSum, GPUMatrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex)
+{
+}
+
 #pragma region Static BLAS Functions
 template <class ElemType>
 void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, const bool transposeA, const GPUMatrix<ElemType>& /*b*/, const bool transposeB,

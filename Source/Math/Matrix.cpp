@@ -4930,6 +4930,44 @@ void Matrix<ElemType>::StochasticBinaryBackward(const Matrix<ElemType>& a, const
     else { GPUMatrix<ElemType>::StochasticBinaryBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix, neuronST, RFAdjusted, passThrough, annealSlope); }
 }
 
+// assign the element wise max of matrix a and matrix b to matrix a
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b)
+{
+    DecideAndMoveToRightDevice(a, b);
+
+    if (a.GetMatrixType() == DENSE && b.GetMatrixType() == DENSE)
+    {
+        GPUMatrix<ElemType>::DoElementMaxOf(*a.m_GPUMatrix, *b.m_GPUMatrix);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient, Matrix<ElemType>& inputSum, Matrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex)
+{
+    if (this->GetDeviceId() < 0)
+    {
+        NOT_IMPLEMENTED;
+    }
+    else
+    {
+        DecideAndMoveToRightDevice(*this, inputValue, outputVale, outputGradient);
+
+        if (inputValue.GetMatrixType() == DENSE && outputVale.GetMatrixType() == DENSE &&
+            outputVale.GetMatrixType() == DENSE && this->GetMatrixType() == DENSE)
+        {
+            m_GPUMatrix->AddElementMaxGradient(*inputValue.m_GPUMatrix, *outputVale.m_GPUMatrix, *outputGradient.m_GPUMatrix, *inputSum.m_GPUMatrix, *randomSplit.m_GPUMatrix, numInputs, inputIndex);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+}
 
 #pragma region Static BLAS Functions
 
