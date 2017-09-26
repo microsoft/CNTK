@@ -748,8 +748,8 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         nested[L"lengthNorm"] = lengthNorm;
     StaticModel normWeight(/*isBasicBlock=*/true, [=]() -> Variable
     {
-        if (!hasWeightNorm) // TODO: this is a dummy so that we don't reference the weightNormRescale parameter
-            return W;
+        if (!hasWeightNorm)
+            return W; // TODO: this is a dummy so that we don't reference the weightNormRescale parameter
         // pretend W had rows of length 1, by dividing by the row length after the fact
         // Note that this is generated over again, but will be computed only once since it is ready upfront.
         // BUGBUG: Does not work with sparse input, as that implies a sparse gradient, for which we cannot compute the elementwise ops.
@@ -763,7 +763,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         //y = scale1 * y;
     });
     let asBasicBlock = false;
-    StaticModel doDense(asBasicBlock, [=](const Variable& x)->Variable
+    StaticModel doDense(/*isBasicBlock=*/false, [=](const Variable& x)->Variable
     {
         auto y = x;
         CountAPICalls(1);
