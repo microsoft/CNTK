@@ -962,7 +962,7 @@ struct Sequence
         let& shape = z[0].Shape();
         let axis = Axis((int)shape.Rank());
         CountAPICalls(2);
-        auto Z = /*Reshape*/(ReduceLogSum(Splice(z, axis), /*axis*/Axis_DropLastAxis)/*, shape*/); // -> [1]
+        auto Z = ReduceLogSum(Splice(z, axis), /*axis*/Axis_DropLastAxis); // -> [1]
         Z = barrier(Z);
         res.resize(z.size());
         for (size_t t = 0; t < z.size(); t++)
