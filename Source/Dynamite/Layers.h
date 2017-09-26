@@ -399,6 +399,10 @@ class StaticModel
         }
         Variable noArg; // dummy for clearing out the args map
     public:
+        Invocable(bool isBasicBlock, const function<Variable()>& f, std::wstring name)
+        {
+            BeginConstruct(0, isBasicBlock), EndConstruct(move(f()), name);
+        }
         Invocable(bool isBasicBlock, const function<Variable(const Variable&)>& f, std::wstring name)
         {
             BeginConstruct(1, isBasicBlock), EndConstruct(move(f(m_argsMap[0].first)), name);
@@ -436,6 +440,10 @@ public:
         m_invocable(make_shared<Invocable>(isBasicBlock, f, name))
     { }
 
+    Variable operator()() const
+    {
+        return m_invocable->Invoke(0);
+    }
     Variable operator()(const Variable& x1) const
     {
         m_invocable->SetArg(0, x1);
@@ -721,8 +729,8 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         InvalidArgument("Dense: ProjectionOptions::stabilize is not meaningful (will cancel out) with batch or layer normalization");
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
     auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
-    auto scale = Parameter({}, DTYPE, 1.0, device, L"Wscale");
-    auto weightNormRescale = Parameter({ outputDim }, DTYPE, 1.0, device, L"Wscale");
+    auto scale = Parameter({}, DTYPE, 1.0, device, L"scale");
+    auto weightNormRescale = Parameter({ outputDim }, DTYPE, 1.0, device, L"weightNormRescale");
     let weightNormMinusHalf = Constant::Scalar(DTYPE, -0.5, device);
     let batchNorm = hasBatchNorm ? BatchNormalization(device, Named("DenseBN")) : Identity;
     let lengthNorm = hasLengthNorm ? LengthNormalization(device) : Identity;
@@ -738,28 +746,33 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         nested[L"batchNorm"] = batchNorm;
     if (hasLengthNorm)
         nested[L"lengthNorm"] = lengthNorm;
+    StaticModel normWeight(/*isBasicBlock=*/true, [=]() -> Variable
+    {
+        if (!hasWeightNorm) // TODO: this is a dummy so that we don't reference the weightNormRescale parameter
+            return W;
+        // pretend W had rows of length 1, by dividing by the row length after the fact
+        // Note that this is generated over again, but will be computed only once since it is ready upfront.
+        // BUGBUG: Does not work with sparse input, as that implies a sparse gradient, for which we cannot compute the elementwise ops.
+        CountAPICalls(4);
+        let rowNorm = InnerProduct(W, W, /*Axis(1)*/Axis_DropLastAxis);
+        // BUGBUG: ^^ this reduction is wrong if W has more than one input axes, e.g. for image
+        // TODO: need a ReduceToShape operation? Where instead of an axis, the target shape is specified?
+        let invLen = Pow(rowNorm, weightNormMinusHalf);
+        let scale1 = invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
+        return scale1;
+        //y = scale1 * y;
+    });
     let asBasicBlock = false;
     StaticModel doDense(asBasicBlock, [=](const Variable& x)->Variable
     {
         auto y = x;
+        CountAPICalls(1);
+        y = Times(W, y);
         CountAPICalls(hasScale);
         if (hasScale) // (note: could speed this up by moving this before or after, wherever the dimension is lower)
             y = y * scale;
-        CountAPICalls(1);
-        y = Times(W, y);
         if (hasWeightNorm)
-        {
-            // pretend W had rows of length 1, by dividing by the row length after the fact
-            // Note that this is generated over again, but will be computed only once since it is ready upfront.
-            // BUGBUG: Does not work with sparse input, as that implies a sparse gradient, for which we cannot compute the elementwise ops.
-            CountAPICalls(4);
-            let rowNorm = /*Reshape*/(InnerProduct(W, W, /*Axis(1)*/Axis_DropLastAxis)/*, NDShape{ outputDim }*/);
-            // BUGBUG: ^^ this reduction is wrong if W has more than one input axes, e.g. for image
-            // TODO: need a ReduceToShape operation? Where instead of an axis, the target shape is specified?
-            let invLen = Pow(rowNorm, weightNormMinusHalf);
-            let scale1 = invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
-            y = scale1 * y;
-        }
+            y = normWeight() * y;
         if (hasLengthNorm) // note: has no bias
             y = lengthNorm(y);
         CountAPICalls(hasBias && !hasBatchNorm);

@@ -2769,7 +2769,7 @@ return fInlinedPtr;
                 {
                     CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, batchSize);
                     // TODO: This should not be necessary anymore, we can let this be implicitly handled by a redirect.
-                    fail_if(!isElementWise, "output shape should only have additional singleton axes for elementwise operations");
+                    fail_if(!isElementWise && !isBasicBlock, "output shape should only have additional singleton axes for elementwise operations or basic-block invocations");
                     // insert a Reshape() op to remove the axes
                     let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
                     fail_if(batchedOutputShape.TotalSize(/*check=*/false) != batchedOp->m_outputs.front().Shape().TotalSize(/*check=*/false), "output shape has unexpected axes that should be singletons but aren't");
