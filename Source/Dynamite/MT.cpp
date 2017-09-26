@@ -102,15 +102,20 @@ TernaryModel AttentionModelBahdanau(size_t attentionDim1)
     [=](const Variable& query, const Variable& projectedKeys/*keys*/, const Variable& data) -> Variable
     {
         // compute attention weights
+        CountAPICalls(3);
         let projectedQuery = normQ(Times(Q, query, Named("Q"))); // [A x 1]
         let tanh = Tanh((projectedQuery + projectedKeys), Named("attTanh")); // [A x T]
 #if 0
+        CountAPICalls(1);
         let u = InnerProduct(tanh, v, Axis(0), Named("vProj")); // [1 x T] col vector
         let w = Dynamite::Softmax(u, Axis(1));
+        CountAPICalls(2);
         let res = Reshape(InnerProduct(data, w, Axis(1), Named("att")), NDShape{ attentionDim1 }); // [A]
 #else
+        CountAPICalls(1);
         let u = TransposeTimes(tanh, v, Named("vProj")); // [T] col vector
         let w = Dynamite::Softmax(u);
+        CountAPICalls(1);
         let res = Times(data, w, Named("att")); // [A]
 #endif
         return res;
@@ -130,6 +135,7 @@ fun AttentionModelReference(size_t attentionDim1)
     StaticModel doToTanh(/*isBasicBlock=*/false, [=](const Variable& h, const Variable& historyProjectedKey)
     {
         let hProjected = projectQuery(h); // [A]. Batched.
+        CountAPICalls(2);
         let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A]. Batched.
         return tanh;
     });
@@ -147,6 +153,7 @@ fun AttentionModelReference(size_t attentionDim1)
         let tanh = doToTanh(h, historyProjectedKey);
 #if 1
         // This is not well-batched yet, I don't know why. This is the solution that should realize maximum parallelization (disregarding Gather steps).
+        CountAPICalls(encodingProjectedKeys.size());
         for (let& k : encodingProjectedKeys)
             us.push_back(InnerProduct(tanh, k, Axis(0), Named("u"))); // vector<[1]>. Batched.
         // alternative: ^^ compute the inner product elementwise.
@@ -187,22 +194,22 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(600, Named("encBarrier"));
-    //let encoderKeysProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderKeysProjection")); }); // keys projection for attention
-    //let encoderDataProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")) >> UnaryModel([](const Variable& x) { return Tanh(x, Named("tanh_bnEncoderDataProjection")); }); // data projection for attention
-    let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // keys projection for attention
-    let encoderDataProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("encoderDataProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // data projection for attention
+    //let encoderKeysProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")) >> UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("tanh_bnEncoderKeysProjection")); }); // keys projection for attention
+    //let encoderDataProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")) >> UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("tanh_bnEncoderDataProjection")); }); // data projection for attention
+    let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // keys projection for attention
+    let encoderDataProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderDataProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // data projection for attention
     let embedTarget = Barrier(600, Named("embedTargetBarrier")) >> Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedTarget"))*/;     // target embeddding
     let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
-    let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier")) >> Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("initialStateProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
+    let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier")) >> Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("initialStateProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
     let stepBarrier = Barrier(20, Named("stepBarrier"));
     let stepFunction = GRU(decoderRecurrentDim, device);
     //let attentionModel = AttentionModelBahdanau(attentionDim);
     let attentionModel = AttentionModelReference(attentionDim);
-    let firstHiddenProjection = Barrier(600, Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { return ReLU(x, Named("firstHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
+    let firstHiddenProjection = Barrier(600, Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return ReLU(x, Named("firstHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
     vector<UnaryBroadcastingModel> resnets;
     for (size_t n = 0; n < numDecoderResNetProjections; n++)
         resnets.push_back(ResidualNet(decoderProjectionDim, device));
-    let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { return Tanh(x, Named("topHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
+    let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("topHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
     let outputProjection = Linear(tgtVocabSize, ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);  // output layer without non-linearity (no sampling yet)
 
     // buffers
@@ -235,6 +242,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
         for (auto& resnet : resnets)
             state1 = resnet(state1);
         // one more transform, bringing back the attention context
+        CountAPICalls(1);
         let topHidden = topHiddenProjection(Splice({ state1, attentionContext }, Axis(0)));
         // ^^ batchable; currently one per target word in MB (e.g. 600); could be one per batch (2 launches)
         // TODO: dropout layer here
@@ -250,6 +258,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     {
         res.resize(history.size());
         // decoding loop
+        CountAPICalls(1);
         Variable state = Slice(hEncs.front(), Axis(0), encoderRecurrentDim, 2 * encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
         state = initialStateProjection(state);      // match the dimensions
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
@@ -264,6 +273,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
             let historyProjectedKey = embedTarget(history[t]);
             // ^^ fully batched, 1 launch
             let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
+            CountAPICalls(1);
             let input = Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput"));
             state = stepFunction(state, stepBarrier(input));
             // compute attention vector
@@ -322,6 +332,7 @@ BinaryModel CreateModelFunction()
         as_vector(hist, history);
         decode(res, hist, h);
         hist.clear(); h.clear();
+        CountAPICalls(1);
         let z = Splice(res, Axis::EndStaticAxis());
         res.clear();
         return z;
@@ -339,6 +350,7 @@ BinaryFoldingModel CreateCriterionFunction(const BinaryModel& model_fn)
         //  - features: strip any?
         //  - labels: strip leading <s>
         //  - history: strip training </s>
+        CountAPICalls(2);
         let labels  = Slice(target, Axis(-1), 1, (int)target.size()    ); // labels  = targets without leading <s>
         let history = Slice(target, Axis(-1), 0, (int)target.size() - 1); // history = targets without trailing </s>
         // apply model function
@@ -364,8 +376,10 @@ BinaryFoldingModel CreateCriterionFunction(const BinaryModel& model_fn)
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
         batchModel(lossesPerSequence, features, labels);             // batch-compute the criterion
+        CountAPICalls(1);
         let collatedLosses = Splice(lossesPerSequence, Axis(0), Named("seqLosses"));     // collate all seq lossesPerSequence
         // ^^ this is one launch per MB
+        CountAPICalls(1);
         let mbLoss = /*Reshape*/(ReduceSum(collatedLosses, /*Axis(0)*/Axis_DropLastAxis, Named("batchLoss"))/*, NDShape{}*/);  // aggregate over entire minibatch
         lossesPerSequence.clear();
         Function::SetDynamicProfiler(prevProfiler);
@@ -698,6 +712,7 @@ void Train(wstring outputDirectory)
                 (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                 lr0, learner->LearningRate() / lr0);
         // train minibatch
+        let numAPICalls0 = CountAPICalls(0);
         partTimer.Restart();
         auto mbLoss = criterion_fn(args[0], args[1]);
         //mbLoss = criterion_fn(args[0], args[1]);
@@ -710,6 +725,8 @@ void Train(wstring outputDirectory)
         //mbLoss = criterion_fn(args[0], args[1]);
         //mbLoss = criterion_fn(args[0], args[1]);
         let timeBuildGraph = partTimer.Elapsed();
+        let numAPICalls = CountAPICalls(0) - numAPICalls0;
+        fprintf(stderr, "#API calls = %d\n", (int)numAPICalls);
         //partTimer.Log("criterion_fn", numLabels);
         // backprop and model update
         partTimer.Restart();

@@ -33,6 +33,15 @@ using namespace std;
 #pragma warning(push)
 #pragma warning(disable: 4505) // unreferenced function was removed
 
+// helper to count API calls
+// Call with 0 to get the current count.
+__declspec(selectany) size_t g_numAPICallsSoFar = 0;
+static inline size_t CountAPICalls(size_t n = 1)
+{
+    g_numAPICallsSoFar += n;
+    return g_numAPICallsSoFar;
+}
+
 namespace Dynamite {
 
 // debugging helper
@@ -43,11 +52,13 @@ static inline NDArrayViewPtr GetValueAsTensor(const vector<Variable>& vec) { ret
 
 static inline FunctionPtr operator*(const Variable& leftOperand, const Variable& rightOperand)
 {
+    CountAPICalls();
     return ElementTimes(leftOperand, rightOperand);
 }
 
 static inline FunctionPtr operator/(const Variable& leftOperand, const Variable& rightOperand)
 {
+    CountAPICalls();
     return ElementDivide(leftOperand, rightOperand);
 }
 
@@ -232,6 +243,7 @@ struct Batch
     {
         let& shape = batch.front().Shape();
         let axis = (int)shape.Rank(); // add a new axis
+        CountAPICalls(2);
         return /*Reshape*/(ReduceSum(Splice(batch, Axis(axis)), /*Axis(axis)*/Axis_DropLastAxis)/*, shape, Named("sum")*/);
     }
 
@@ -313,6 +325,7 @@ static UnaryBroadcastingModel Barrier(size_t depthHint, const wstring& name = ws
     // TODO: we can save just a little by wrapping this into a static function. We'd save the attribute Dictionary (which can be shared).
     return UnaryModel([=](const Variable& x) -> Variable
     {
+        CountAPICalls();
         return BatchSync(x, depthHint, name);
     });
 }
@@ -408,9 +421,12 @@ class StaticModel
             // We leave the Parameters in the m_argsMap array untouched (they are at the end).
             // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
             CheckArity(arity);
-            return CNTK::Invoke(m_composite, m_argsMap, m_isBasicBlock, DoWeNeedToInferShapes(m_argsMap));
-            for (size_t i = 0; i < arity; i++)
-                SetArg(i, noArg);
+            CountAPICalls();
+            let res = CNTK::Invoke(m_composite, m_argsMap, m_isBasicBlock, DoWeNeedToInferShapes(m_argsMap));
+            // BUGBUG: I get an "unexpectedly expired" weak_ptr when I enable this.
+            //for (size_t i = 0; i < arity; i++)
+            //    SetArg(i, noArg);
+            return res;
         }
     };
     shared_ptr<Invocable> m_invocable; // this is the only member, so that we can copy this with shared state
@@ -459,12 +475,14 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     // for efficiency, we set this up as a static graph
     StaticModel doMeanNorm(/*isBasicBlock=*/true, [=](const Variable& x) -> Variable
     {
+        CountAPICalls(2);
         let mean = ReduceMean(x, axis);
         return x - mean;
     }, Named("doMeanNorm"));
     // for efficiency, we set this up as a static graph
     StaticModel doGetLength(/*isBasicBlock=*/true, [=](const Variable& x0) -> Variable
     {
+        CountAPICalls(3);
         let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf);
         return invLen;
     }, Named("doGetLength"));
@@ -480,6 +498,7 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
         //let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
         let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf);
 #endif
+        CountAPICalls(2);
         let res = x0 * (invLen * scale); // note: (invLen*scale), a scalar product, can be batched across multiple invocations
         Function::SetDynamicProfiler(prevProfiler);
         return res;
@@ -527,6 +546,7 @@ static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
     auto b = Parameter({ outputDim }, DTYPE, 0.0, device, L"b");
     return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
     {
+        CountAPICalls(5);
         return /*Sigmoid*/ReLU(Times(W, input) + b + Times(R, prevOutput), Named("RNNStep.h"));
     });
 }
@@ -599,17 +619,21 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // projected contribution from input(s), hidden, and bias
         // BUGBUG: Why can we not project R in here again? It's only one composite instance, there can be no batching.
+        CountAPICalls(8);
         let i_proj  = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ix_proj")) + Slice(projdh3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ih_proj"));
         let r_proj  = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rx_proj")) + Slice(projdh3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rh_proj"));
         let cx_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("cx_proj"));
         let ch_proj =                                                                              Slice(projdh3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("ch_proj"));
 
+        CountAPICalls(2);
         let i = Sigmoid(irBarrier(i_proj), Named("i"));  // update gate z(t)  --if 1 then take new input; if 0 then retain state
         let r = Sigmoid(irBarrier(r_proj), Named("r"));  // reset gate r(t)   --new input + projected old state mixed in
 
+        CountAPICalls(3);
         let c_proj = cx_proj + r * ch_proj;
         let c = Tanh(c_proj, Named("c"));                // "cell"
 
+        CountAPICalls(3);
         let h = dh + i * (c - dh);                       // state
         //    = i * c  +  (1 - i) * dh;
 
@@ -632,6 +656,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     }, L"gru");
     StaticModel doGRU(/*isBasicBlock=*/false, [=](const Variable& dh, const Variable& x)->Variable
     {
+        CountAPICalls(2);
         let projx3 = b + projectInput(x); // TODO: fold 'b' into the Linear layer
         let projdh3 = normR(Times(R, dh));
         return gru3Composite(dh, projdh3, projx3);
@@ -672,6 +697,7 @@ static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
     {
         // TODO: complete this
         prevC;
+        CountAPICalls(5);
         return ReLU(Times(W, input) + b + Times(R, prevH));
     });
 }
@@ -716,14 +742,17 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     StaticModel doDense(asBasicBlock, [=](const Variable& x)->Variable
     {
         auto y = x;
+        CountAPICalls(hasScale);
         if (hasScale) // (note: could speed this up by moving this before or after, wherever the dimension is lower)
             y = y * scale;
+        CountAPICalls(1);
         y = Times(W, y);
         if (hasWeightNorm)
         {
             // pretend W had rows of length 1, by dividing by the row length after the fact
             // Note that this is generated over again, but will be computed only once since it is ready upfront.
             // BUGBUG: Does not work with sparse input, as that implies a sparse gradient, for which we cannot compute the elementwise ops.
+            CountAPICalls(4);
             let rowNorm = /*Reshape*/(InnerProduct(W, W, /*Axis(1)*/Axis_DropLastAxis)/*, NDShape{ outputDim }*/);
             // BUGBUG: ^^ this reduction is wrong if W has more than one input axes, e.g. for image
             // TODO: need a ReduceToShape operation? Where instead of an axis, the target shape is specified?
@@ -733,6 +762,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         }
         if (hasLengthNorm) // note: has no bias
             y = lengthNorm(y);
+        CountAPICalls(hasBias && !hasBatchNorm);
         if (hasBatchNorm)
             y = batchNorm(y); // note: batchNorm has its own bias
         else if (hasBias)
@@ -781,6 +811,7 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
     // TODO: figure out this Parameter mess for BN
     return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount }, [=](const Variable& x) -> Variable
     {
+        CountAPICalls(1);
         return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
     });
 #endif
@@ -794,6 +825,7 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
     let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
     StaticModel doResidualNet(/*isBasicBlock=*/false, [=](const Variable& x)
     {
+        CountAPICalls(3);
         let h = ReLU(project1(x)    , Named("hRes"));
         let r = ReLU(project2(h) + x, Named("rRes"));
         return r;
@@ -877,7 +909,11 @@ struct Sequence
         let fwd = Recurrence(stepFwd, initialStateFwd);
         let bwd = Recurrence(stepBwd, initialStateBwd, true);
         //let barrier = Barrier(600, Named("BiRecurrence"));
-        let splice = Sequence::Map(BinaryModel([=](const Variable& a, const Variable& b) { return Splice({ /*barrier*/(a), b }, Axis(0), Named("bidi")); }));
+        let splice = Sequence::Map(BinaryModel([=](const Variable& a, const Variable& b)
+        {
+            CountAPICalls(1);
+            return Splice({ /*barrier*/(a), b }, Axis(0), Named("bidi"));
+        }));
         vector<Variable> rFwd, rBwd;
         return BinarySequenceModel({}, { { L"stepFwd", stepFwd },{ L"stepBwd", stepBwd } },
         [=](vector<Variable>& res, const vector<Variable>& inFwd, const vector<Variable>& inBwd) mutable
@@ -912,11 +948,13 @@ struct Sequence
     {
         let& shape = z[0].Shape();
         let axis = Axis((int)shape.Rank());
+        CountAPICalls(2);
         auto Z = /*Reshape*/(ReduceLogSum(Splice(z, axis), /*axis*/Axis_DropLastAxis)/*, shape*/); // -> [1]
         Z = barrier(Z);
         res.resize(z.size());
         for (size_t t = 0; t < z.size(); t++)
             res[t] = Exp(Minus(z[t], Z, Named("vecSoftmaxMinus")));
+        CountAPICalls(2 * z.size());
     }
 
     // InnerProduct over a pair of vectors (dot product over the vector dimension)
@@ -927,8 +965,10 @@ struct Sequence
         let axis = Axis((int)max(xRank, yRank));
         // PERF BUGBUG: malloc. Avoidable?
         vector<Variable> temps(xs.size());
+        CountAPICalls(temps.size());
         for (size_t t = 0; t < temps.size(); t++)
             temps[t] = xs[t] * ys[t]; // Batched
+        CountAPICalls(2);
         let res = /*Reshape*/(ReduceSum(Splice(temps, axis), /*axis*/Axis_DropLastAxis, name)/*, temps[0].Shape(), name*/);
         // TODO: This should be a primitive.
         return res;
@@ -940,6 +980,7 @@ static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStatic
 {
     //LOG(z);
     //LOG(ReduceLogSum(z, axis, L"smLogDenom"));
+    CountAPICalls(2);
     return z - ReduceLogSum(z, axis, name);
 }
 
@@ -947,6 +988,7 @@ static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStatic
 static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring())
 {
     //LOG(LogSoftmax(z, axis));
+    CountAPICalls(1);
     return Exp(LogSoftmax(z, axis, name), name);
 }
 
@@ -954,6 +996,7 @@ static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxe
 static Variable Softplus(const Variable& z, const std::wstring& name)
 {
     // TODO: This will create a Constant object every single time--better create it once. Or pre-define constant 0 and 1.
+    CountAPICalls(2);
     return LogAddExp(z, Constant::Scalar(z.GetDataType(), 0.0), name);
 }
 
@@ -964,6 +1007,7 @@ static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label
 {
     Variable ceLogNumer;
 #if 1
+    CountAPICalls(1);
     ceLogNumer = InnerProduct(label, z, axis, Named("ceLogNumer"));
 #else
     if (label.IsSparse() && label.Shape().Rank() == 1)
@@ -971,6 +1015,7 @@ static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label
     else
         ceLogNumer = ReduceSum(ElementTimes(label, z, Named("ceLabel")), axis, Named("ceLogNumer"));
 #endif
+    CountAPICalls(2);
     return Minus(ReduceLogSum(z, axis, Named("ceLogDenom")), ceLogNumer, Named("ce"));
 }
 
@@ -979,6 +1024,7 @@ static inline void as_vector(vector<Variable>& res, const Variable& x)
     // 'x' is an entire sequence; last dimension is length
     let len = x.size();
     res.resize(len);
+    CountAPICalls(len); // x[t] is a Slice()
     for (size_t t = 0; t < len; t++)
         res[t] = x[t];
 }
