@@ -3790,7 +3790,7 @@ void Function::InitCompositeForInvoke(const vector<Variable>& placeholders)
 
 // argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
 // operands     = what the arguments should prerent to be. Must currently include a copy of Parameters at the end.
-Variable Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argumentList, const vector<Variable>& operands, bool isBasicBlock, bool determineShapes, const std::wstring& name /*= std::wstring()*/)
+Variable Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argumentList, const vector<Variable>& operands, bool isBasicBlock, bool& needToDetermineShapes, const std::wstring& name /*= std::wstring()*/)
 {
     let composite = static_pointer_cast<CompositeFunction>(callee); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
 #if 0   // This baloney, at least in the case of isBasicBlock.
@@ -3819,12 +3819,21 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argume
     else
 #endif
     {
+        // this leaves 'needToDetermineShapes' true until called for the first time with fully known shapes
+        // This returns 'true' only once, and evaluates the IsUnknown test only once for a dynamic invocation
+        // (but multiple times for initial invocations during construction of static graphs).
+        bool determineShapesThisTime;
+        if (needToDetermineShapes && all_of(operands.begin(), operands.end(), [](const Variable& arg) { return !arg.Shape().IsUnknown(); }))
+        {
+            needToDetermineShapes = false;
+            determineShapesThisTime = true;
+        }
+        else
+            determineShapesThisTime = false;
         // BUGBUG: Do we need this? m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy())); for the operands
         // TODO: Since we copy the operands, we could augment the Parameters here as well.
-        if (composite->Name() == L"projectInput")
-            Break;
-        let f = MakeSharedObject<BlockFunction>(composite, argumentList, vector<Variable>(operands), isBasicBlock, determineShapes, wstring(name));
-        return f->FinalizeInvoke();
+        let f = MakeSharedObject<BlockFunction>(composite, argumentList, vector<Variable>(operands), isBasicBlock, determineShapesThisTime, wstring(name));
+        return f->FinalizeInvoke(/*shapeIsKnown=*/!needToDetermineShapes);
     }
 }
 
@@ -3925,17 +3934,16 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
 }
 
 // call this after construction from Invoke()
-Variable BlockFunction::FinalizeInvoke()
+Variable BlockFunction::FinalizeInvoke(bool shapeIsKnown)
 {
     // now set up the output variable. Clone the composite's one output Variable, then inject the mapping pointer. This following the pattern of InferOutputs().
     // ...EXCEPT we do not implant a Variable mapping, since the composite is shared. The composite does not know that it is part of a BlockFunction.
     let& compositeOutput = m_composite->m_outputs.front();
-    // TODO: control this from outside as well
-    Variable blockOutput;
-    if (any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& arg) { return arg.Shape().IsUnknown(); })) // if we are being called while building a static graph
-        blockOutput = OutputVariable(NDShape::Unknown(), DataType::Unknown, vector<Axis>(), Name());
-    else
-        blockOutput = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), vector<Axis>(), compositeOutput.NeedsGradient(), compositeOutput.IsSparse(), Name());
+    Variable blockOutput =
+        /*if*/ (!shapeIsKnown) ? // if we are being called while building a static graph
+            OutputVariable(NDShape::Unknown(), DataType::Unknown, vector<Axis>(), Name())
+        /*else*/:
+            OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), vector<Axis>(), compositeOutput.NeedsGradient(), compositeOutput.IsSparse(), Name());
     InitOutput(move(blockOutput));
     // behave as if this was returning a Composite: implant a ref count. This will be taken over by the next consumer.
     return m_outputs.front().CompositePreservingCopy(static_pointer_cast<PrimitiveFunction>(shared_from_this()));

@@ -4503,7 +4503,7 @@ namespace CNTK
     /// This is similar to AsBlock(), but unlike AsBlock(), it does not take ownership of the composite.
     /// This presently only works for Dynamite. For static graphs, use AsBlock().
     ///
-    CNTK_API Variable Invoke(const FunctionPtr& composite, std::vector<Variable>& argumentList, const std::vector<Variable>& operands, bool isBasicBlock, bool determineShapes, const std::wstring& name = std::wstring());
+    CNTK_API Variable Invoke(const FunctionPtr& composite, std::vector<Variable>& argumentList, const std::vector<Variable>& operands, bool isBasicBlock, bool& determineShapes, const std::wstring& name = std::wstring());
 
     ///
     /// Creates a new Function instance which output its input as it is and previent any gradient contribution from its output. 

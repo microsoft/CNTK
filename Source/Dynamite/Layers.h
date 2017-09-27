@@ -353,11 +353,21 @@ class StaticModel
         mutable vector<Variable> m_argumentList; // contains the Variables in the composite. May be updated upon determining the shapes with PlaceholderLikes.
         mutable vector<Variable> m_operands;     // these are overwritten upon each call
         FunctionPtr m_composite; // Note: multiple calls to Invoke() assume that the composite does not change; so encapsulate it here.
-        mutable bool m_stillNeedsToInferShapes = true;
+        mutable bool m_stillNeedsToInferShapes;
+
+        // for debugging: allow to directly call the lambda, without any Composite involved
+        static const bool m_forceImmediate = false; // for debugging: if true then don't create a composite; but remember the lambda and execute that directly
+        function<Variable(const vector<Variable>&)> m_lambdaRememberedForDebugging;
 
         Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& f, std::wstring name) :
             m_arity(arity), m_isBasicBlock(isBasicBlock)
         {
+            if (m_forceImmediate)
+            {
+                m_operands.resize(m_arity);
+                m_lambdaRememberedForDebugging = f; // just remember the lambda, and done
+                return;
+            }
             // allocate m_argumentList/m_operands and populate the Placeholder section (later we will add Parameters)
             m_argumentList.resize(m_arity);
             m_operands.resize(m_arity);
@@ -377,19 +387,7 @@ class StaticModel
                 m_argumentList.push_back(p); // presently also must pass all Parameters
                 m_operands.push_back(p); // we prepopulate the operands here, these are not changed afterwards
             }
-        }
-        // TODO: move this down to Invoke() itself
-        bool DoWeNeedToInferShapes() const
-        {
-            // return true until called for the first time with fully known shapes
-            // This returns 'true' only once, and evaluates the IsUnknown test only once for a dynamic invocation
-            // (but multiple times for initial invocations during construction of static graphs).
-            if (m_stillNeedsToInferShapes && all_of(m_operands.begin(), m_operands.end(), [](const Variable& arg) { return !arg.Shape().IsUnknown(); }))
-            {
-                m_stillNeedsToInferShapes = false;
-                return true;
-            }
-            return false;
+            m_stillNeedsToInferShapes = true;
         }
         void CheckArity(size_t arity) const
         {
@@ -401,13 +399,18 @@ class StaticModel
             m_operands[argIndex] = argVal;
         }
         Variable noArg; // dummy for clearing out the args map
-        Variable DoInvoke() const // note: caller must call SetArg() first to set the operands
+        Variable DoInvoke() const // note: caller must call SetOperand() first to set the operands
         {
+            if (m_forceImmediate)
+            {
+                return m_lambdaRememberedForDebugging(m_operands);
+            }
+
             // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
             // We leave the Parameters in the m_argsMap array untouched (they are at the end).
             // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
             CountAPICalls();
-            let res = CNTK::Invoke(m_composite, m_argumentList, m_operands, m_isBasicBlock, DoWeNeedToInferShapes());
+            let res = CNTK::Invoke(m_composite, m_argumentList, m_operands, m_isBasicBlock, /*ref*/ m_stillNeedsToInferShapes);
             // BUGBUG: I get an "unexpectedly expired" weak_ptr when I enable this.
             //for (size_t i = 0; i < arity; i++)
             //    SetArg(i, noArg);
