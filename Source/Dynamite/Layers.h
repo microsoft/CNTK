@@ -345,27 +345,25 @@ static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
 // helper to create a unary static lambda by running a lambda over a Placeholder
 class StaticModel
 {
+    // TODO: Move this down into the V2 API; and make Invoke() a private function of this class. Invoke() is a brittle API since it requires control of the composite.
     class Invocable
     {
-        size_t m_arity; // actual number of function arguments. Note: m_argumentList/m_operands contain additional leaves, so its size() is not sufficient.
+        const size_t m_arity; // actual number of function arguments. Note: m_argumentList/m_operands contain additional leaves, so its size() is not sufficient.
+        const bool m_isBasicBlock;
         mutable vector<Variable> m_argumentList; // contains the Variables in the composite. May be updated upon determining the shapes with PlaceholderLikes.
         mutable vector<Variable> m_operands;     // these are overwritten upon each call
         FunctionPtr m_composite; // Note: multiple calls to Invoke() assume that the composite does not change; so encapsulate it here.
-        // TODO: Move this down into the V2 API; and make Invoke() a private function of this class. Invoke() is a brittle API since it requires control of the composite.
-        bool m_isBasicBlock;
         mutable bool m_stillNeedsToInferShapes = true;
-        void BeginConstruct(size_t arity, bool isBasicBlock)
+
+        Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& f, std::wstring name) :
+            m_arity(arity), m_isBasicBlock(isBasicBlock)
         {
-            m_arity = arity;
-            m_isBasicBlock = isBasicBlock;
             // allocate m_argumentList/m_operands and populate the Placeholder section (later we will add Parameters)
             m_argumentList.resize(m_arity);
             m_operands.resize(m_arity);
             for (auto& arg : m_argumentList)
                 arg = PlaceholderVariable(); // TODO: once this becomes an internal API, we can implant the index right here?
-        }
-        void EndConstruct(FunctionPtr&& composite, const std::wstring& name)
-        {
+            FunctionPtr composite = f(m_argumentList);
             // note: the graph is built by calling the lambda on Placeholders
             // We must pass in the Placeholders and remember them, since the composite itself will not remember their ordering.
             if (!name.empty())
@@ -377,7 +375,7 @@ class StaticModel
             for (let& p : m_composite->Parameters())
             {
                 m_argumentList.push_back(p); // presently also must pass all Parameters
-                m_operands    .push_back(p); // we prepopulate the operands here, these are not changed afterwards
+                m_operands.push_back(p); // we prepopulate the operands here, these are not changed afterwards
             }
         }
         // TODO: move this down to Invoke() itself
@@ -393,34 +391,17 @@ class StaticModel
             }
             return false;
         }
-        Variable noArg; // dummy for clearing out the args map
-    public:
-        Invocable(bool isBasicBlock, const function<Variable()>& f, std::wstring name)
-        {
-            BeginConstruct(0, isBasicBlock), EndConstruct(move(f()), name);
-        }
-        Invocable(bool isBasicBlock, const function<Variable(const Variable&)>& f, std::wstring name)
-        {
-            BeginConstruct(1, isBasicBlock), EndConstruct(move(f(m_argumentList[0])), name);
-        }
-        Invocable(bool isBasicBlock, const function<Variable(const Variable&, const Variable&)>& f, std::wstring name)
-        {
-            BeginConstruct(2, isBasicBlock), EndConstruct(move(f(m_argumentList[0], m_argumentList[1])), name);
-        }
-        Invocable(bool isBasicBlock, const function<Variable(const Variable&, const Variable&, const Variable&)>& f, std::wstring name)
-        {
-            BeginConstruct(3, isBasicBlock), EndConstruct(move(f(m_argumentList[0], m_argumentList[1], m_argumentList[2])), name);
-        }
         void CheckArity(size_t arity) const
         {
             if (m_arity != arity)
                 LogicError("Invocable: It was attempted to invoke a %d-nary function with %d arguments.", (int)m_arity, (int)arity);
         }
-        void SetArg(size_t argIndex, const Variable& argVal) const
+        void SetOperand(size_t argIndex, const Variable& argVal) const
         {
             m_operands[argIndex] = argVal;
         }
-        Variable Invoke() const // note: caller must call SetArg() first to set the operands
+        Variable noArg; // dummy for clearing out the args map
+        Variable DoInvoke() const // note: caller must call SetArg() first to set the operands
         {
             // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
             // We leave the Parameters in the m_argsMap array untouched (they are at the end).
@@ -432,6 +413,37 @@ class StaticModel
             //    SetArg(i, noArg);
             return res;
         }
+    public:
+        Invocable(bool isBasicBlock, const function<Variable(                                                 )>& f, std::wstring name) : Invocable(0, isBasicBlock, [=](const vector<Variable>& args) { args; return f(                   ); }, name) { }
+        Invocable(bool isBasicBlock, const function<Variable(const Variable&                                  )>& f, std::wstring name) : Invocable(1, isBasicBlock, [=](const vector<Variable>& args) { return f(args[0]                  ); }, name) { }
+        Invocable(bool isBasicBlock, const function<Variable(const Variable&, const Variable&                 )>& f, std::wstring name) : Invocable(2, isBasicBlock, [=](const vector<Variable>& args) { return f(args[0], args[1]         ); }, name) { }
+        Invocable(bool isBasicBlock, const function<Variable(const Variable&, const Variable&, const Variable&)>& f, std::wstring name) : Invocable(3, isBasicBlock, [=](const vector<Variable>& args) { return f(args[0], args[1], args[2]); }, name) { }
+        Variable operator()() const
+        {
+            CheckArity(0);
+            return DoInvoke();
+        }
+        Variable operator()(const Variable& x1) const
+        {
+            CheckArity(1);
+            SetOperand(0, x1);
+            return DoInvoke();
+        }
+        Variable operator()(const Variable& x1, const Variable& x2) const
+        {
+            CheckArity(2);
+            SetOperand(0, x1);
+            SetOperand(1, x2);
+            return DoInvoke();
+        }
+        Variable operator()(const Variable& x1, const Variable& x2, const Variable& x3) const
+        {
+            CheckArity(3);
+            SetOperand(0, x1);
+            SetOperand(1, x2);
+            SetOperand(2, x3);
+            return DoInvoke();
+        }
     };
     shared_ptr<Invocable> m_invocable; // this is the only member, so that we can copy this with shared state
 public:
@@ -440,32 +452,10 @@ public:
         m_invocable(make_shared<Invocable>(isBasicBlock, f, name))
     { }
 
-    // we can make this a var-args template, and unroll it inside Invocable
-    Variable operator()() const
+    template <typename ...ArgTypes>
+    Variable operator()(ArgTypes&& ...args) const
     {
-        m_invocable->CheckArity(0);
-        return m_invocable->Invoke();
-    }
-    Variable operator()(const Variable& x1) const
-    {
-        m_invocable->CheckArity(1);
-        m_invocable->SetArg(0, x1);
-        return m_invocable->Invoke();
-    }
-    Variable operator()(const Variable& x1, const Variable& x2) const
-    {
-        m_invocable->CheckArity(2);
-        m_invocable->SetArg(0, x1);
-        m_invocable->SetArg(1, x2);
-        return m_invocable->Invoke();
-    }
-    Variable operator()(const Variable& x1, const Variable& x2, const Variable& x3) const
-    {
-        m_invocable->CheckArity(3);
-        m_invocable->SetArg(0, x1);
-        m_invocable->SetArg(1, x2);
-        m_invocable->SetArg(2, x3);
-        return m_invocable->Invoke();
+        return m_invocable->operator()(std::forward<ArgTypes>(args)...);
     }
 };
 
@@ -753,7 +743,8 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         nested[L"lengthNorm"] = lengthNorm;
     // BUGBUG: if isBasicBlock 'true' then this fails with projectInput.weightNormRescale not a parameter
     StaticModel normWeight(/*isBasicBlock=*/false, [=]() -> Variable
-    {        if (!hasWeightNorm)
+    {
+        if (!hasWeightNorm)
             return W; // TODO: this is a dummy so that we don't reference the weightNormRescale parameter
         // pretend W had rows of length 1, by dividing by the row length after the fact
         // Note that this is generated over again, but will be computed only once since it is ready upfront.
