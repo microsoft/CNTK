@@ -3789,8 +3789,8 @@ void Function::InitCompositeForInvoke(const vector<Variable>& placeholders)
 }
 
 // argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
-// operands = what the arguments should prerent to be. Must currently include a copy of Parameters at the end.
-Variable Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argumentList, vector<Variable>&& operands, bool isBasicBlock, bool determineShapes, const std::wstring& name /*= std::wstring()*/)
+// operands     = what the arguments should prerent to be. Must currently include a copy of Parameters at the end.
+Variable Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argumentList, const vector<Variable>& operands, bool isBasicBlock, bool determineShapes, const std::wstring& name /*= std::wstring()*/)
 {
     let composite = static_pointer_cast<CompositeFunction>(callee); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
 #if 0   // This baloney, at least in the case of isBasicBlock.

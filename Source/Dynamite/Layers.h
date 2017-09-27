@@ -752,9 +752,8 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     if (hasLengthNorm)
         nested[L"lengthNorm"] = lengthNorm;
     // BUGBUG: if isBasicBlock 'true' then this fails with projectInput.weightNormRescale not a parameter
-    StaticModel normWeight(/*isBasicBlock=*/true, [=]() -> Variable
-    {
-        if (!hasWeightNorm)
+    StaticModel normWeight(/*isBasicBlock=*/false, [=]() -> Variable
+    {        if (!hasWeightNorm)
             return W; // TODO: this is a dummy so that we don't reference the weightNormRescale parameter
         // pretend W had rows of length 1, by dividing by the row length after the fact
         // Note that this is generated over again, but will be computed only once since it is ready upfront.
