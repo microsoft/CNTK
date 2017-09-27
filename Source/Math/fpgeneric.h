@@ -160,7 +160,8 @@ inline cublasStatus_t cublasaxpyHelper(cublasHandle_t handle, int n, const doubl
 }
 inline cublasStatus_t cublasaxpyHelper(cublasHandle_t handle, int n, const half* alpha, const half* x, int incx, half* y, int incy)
 {
-    return cublasAxpyEx(handle, n, (void*)alpha, CUDA_R_16F, (void*)x, CUDA_R_16F, incx, (void*)y, CUDA_R_16F, incy, CUDA_R_32F);
+    float tmp_alpha = *alpha;
+    return cublasAxpyEx(handle, n, (void*)&tmp_alpha, CUDA_R_32F, (void*)x, CUDA_R_16F, incx, (void*)y, CUDA_R_16F, incy, CUDA_R_32F);
 }
 
 // transpose using geam
@@ -224,6 +225,9 @@ inline cublasStatus_t cublasasumHelper(cublasHandle_t, int n, const half *x, int
     float alpha = 1.0f;
     float beta = 0.0f;
 
+    void *d_res;
+    cudaMalloc(&d_res, sizeof(half));
+
     cudnnReduceTensor(cudnnHandle,
                       reduceTensorDesc,
                       NULL,
@@ -235,12 +239,15 @@ inline cublasStatus_t cublasasumHelper(cublasHandle_t, int n, const half *x, int
                       (void*)x,
                       &beta,
                       dstTensorDesc,
-                      (void*)result);
+                      d_res);
+
+    cudaMemcpy((void *)result, d_res, sizeof(half), cudaMemcpyDeviceToHost);
 
     cudnnDestroyReduceTensorDescriptor(reduceTensorDesc);
     cudnnDestroyTensorDescriptor(srcTensorDesc);
     cudnnDestroyTensorDescriptor(dstTensorDesc);
     cudnnDestroy(cudnnHandle);
+    cudaFree(d_res);
     cudaFree(workspace);
 
     return (cublasStatus_t) 0;
@@ -257,7 +264,7 @@ inline cublasStatus_t cublasamaxHelper(cublasHandle_t handle, int n, const doubl
 }
 inline cublasStatus_t cublasamaxHelper(cublasHandle_t, int n, const half *x, int incx, int *result)
 {
-    unsigned int result_uint = 0;
+    unsigned int h_result_uint = 0;
     // pass in cudnn handle/descriptor to remove overhead?
     cudnnHandle_t cudnnHandle;
     cudnnTensorDescriptor_t srcTensorDesc, dstTensorDesc;
@@ -284,12 +291,15 @@ inline cublasStatus_t cublasamaxHelper(cublasHandle_t, int n, const half *x, int
 
     float alpha = 1.0f;
     float beta = 0.0f;
-    half maxElement = 0;
+    void *d_max;
+    cudaMalloc(&d_max, sizeof(half));
+    void *d_result_uint;
+    cudaMalloc(&d_result_uint, sizeof(unsigned int));
 
     cudnnReduceTensor(cudnnHandle,
                       reduceTensorDesc,
-                      (void*)&result_uint,
-                      4,
+                      d_result_uint,
+                      sizeof(unsigned int),
                       workspace,
                       workspaceSizeInBytes,
                       &alpha,
@@ -297,15 +307,19 @@ inline cublasStatus_t cublasamaxHelper(cublasHandle_t, int n, const half *x, int
                       (void*)x,
                       &beta,
                       dstTensorDesc,
-                      (void*)&maxElement);
+                      d_max);
+
+    cudaMemcpy(&h_result_uint, d_result_uint, sizeof(unsigned int), cudaMemcpyDeviceToHost);
 
     cudnnDestroyReduceTensorDescriptor(reduceTensorDesc);
     cudnnDestroyTensorDescriptor(srcTensorDesc);
     cudnnDestroyTensorDescriptor(dstTensorDesc);
     cudnnDestroy(cudnnHandle);
     cudaFree(workspace);
+    cudaFree(d_max);
+    cudaFree(d_result_uint);
 
-    *result = (int) result_uint;
+    *result = (int) h_result_uint;
     return (cublasStatus_t) 0;
 }
 
@@ -320,7 +334,8 @@ inline cublasStatus_t cublasscalHelper(cublasHandle_t handle, int n, const doubl
 }
 inline cublasStatus_t cublasscalHelper(cublasHandle_t handle, int n, const half *alpha, half *x, int incx)
 {
-    return cublasScalEx(handle, n, (void*)alpha, CUDA_R_16F, (void*)x, CUDA_R_16F, incx, CUDA_R_32F);
+    float tmp_alpha = *alpha;
+    return cublasScalEx(handle, n, (void*)&tmp_alpha, CUDA_R_32F, (void*)x, CUDA_R_16F, incx, CUDA_R_32F);
 }
 inline cublasStatus_t cublasscalHelper(cublasHandle_t,int,const char *,char *, int)
 {
@@ -356,12 +371,13 @@ inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t generator, d
 }
 inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t generator, half *outputPtr, size_t num)
 {
-    curandState devStates;
-    setup_state<<<1,1>>>(&devStates, time(NULL)); // What does curandGenerateUniform actually doing? should also pass in state here
+    curandState *devStates;
+    cudaMalloc((void **)&devStates, sizeof(curandState));
+    setup_state<<<1,1>>>(devStates, time(NULL)); // What does curandGenerateUniform actually doing? should also pass in state here
 
     dim3 dimGrid((num+COPY_BLOCK_DIM-1)/COPY_BLOCK_DIM, 1, 1);
     dim3 dimBlock(COPY_BLOCK_DIM, 1, 1);
-    GenerateUniformHalf<<<dimGrid, dimBlock>>>(&devStates, outputPtr, (int)num);
+    GenerateUniformHalf<<<dimGrid, dimBlock>>>(devStates, outputPtr, (int)num);
 
     return (curandStatus_t) 0;
 }
@@ -376,12 +392,13 @@ inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t generator, do
 }
 inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t, half *outputPtr, size_t n, half mean, half stddev)
 {
-    curandState devStates;
-    setup_state<<<1,1>>>(&devStates, time(NULL)); // What does curandGenerateUniform actually doing? should also pass in state here
+    curandState *devStates;
+    cudaMalloc((void **)&devStates, sizeof(curandState));
+    setup_state<<<1,1>>>(devStates, time(NULL)); // What does curandGenerateUniform actually doing? should also pass in state here
 
     dim3 dimGrid((n+COPY_BLOCK_DIM-1)/COPY_BLOCK_DIM, 1, 1);
     dim3 dimBlock(COPY_BLOCK_DIM, 1, 1);
-    GenerateNormalHalf<<<dimGrid, dimBlock>>>(&devStates, outputPtr, (int)n, mean, stddev);
+    GenerateNormalHalf<<<dimGrid, dimBlock>>>(devStates, outputPtr, (int)n, mean, stddev);
 
     return (curandStatus_t) 0;
 }
