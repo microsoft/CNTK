@@ -356,7 +356,7 @@ class StaticModel
         mutable bool m_stillNeedsToInferShapes;
 
         // for debugging: allow to directly call the lambda, without any Composite involved
-        static const bool m_forceImmediate = false; // for debugging: if true then don't create a composite; but remember the lambda and execute that directly
+        static const bool m_forceImmediate = true;// false; // for debugging: if true then don't create a composite; but remember the lambda and execute that directly
         function<Variable(const vector<Variable>&)> m_lambdaRememberedForDebugging;
 
         Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& f, std::wstring name) :
