@@ -306,12 +306,12 @@ enum ProjectionOptions
 #endif
 };
 static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { return (ProjectionOptions)(((size_t)a) | ((size_t)b)); }
-static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device);
+static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device, const wstring& name = wstring());
 // TODO: sort these functions vv after Linear()
-static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
+static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device, const wstring& name = wstring())
 {
     // BUGBUG: We would not want a bias here, right? (but BN always comes with one)
-    auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
+    auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device, name);
     return UnaryModel({ }, { { L"embed", embed } }, [=](const Variable& x)
     {
         return embed(x);
@@ -347,9 +347,9 @@ class StaticModel
 {
     class Invocable
     {
-        size_t m_arity; // actual number of function arguments. Note: m_argsMap contains additional leaves, so its size() is not sufficient.
-        mutable vector<pair<Variable, Variable>> m_argsMap; // [*].first contains the Variable in the composite; [*].second are overwritten upon each call
-        // ^^ This is not nice. Better: Split into two arrays, one that's constant, and one that is filled in. That second one can use a template function for Invoke().
+        size_t m_arity; // actual number of function arguments. Note: m_argumentList/m_operands contain additional leaves, so its size() is not sufficient.
+        mutable vector<Variable> m_argumentList; // contains the Variables in the composite. May be updated upon determining the shapes with PlaceholderLikes.
+        mutable vector<Variable> m_operands;     // these are overwritten upon each call
         FunctionPtr m_composite; // Note: multiple calls to Invoke() assume that the composite does not change; so encapsulate it here.
         // TODO: Move this down into the V2 API; and make Invoke() a private function of this class. Invoke() is a brittle API since it requires control of the composite.
         bool m_isBasicBlock;
@@ -358,39 +358,35 @@ class StaticModel
         {
             m_arity = arity;
             m_isBasicBlock = isBasicBlock;
-            // allocate m_argsMap and populate the Placeholder section (later we will add Parameters)
-            m_argsMap.resize(m_arity);
-            for (auto& arg : m_argsMap)
-                arg.first = PlaceholderVariable();
+            // allocate m_argumentList/m_operands and populate the Placeholder section (later we will add Parameters)
+            m_argumentList.resize(m_arity);
+            m_operands.resize(m_arity);
+            for (auto& arg : m_argumentList)
+                arg = PlaceholderVariable(); // TODO: once this becomes an internal API, we can implant the index right here?
         }
         void EndConstruct(FunctionPtr&& composite, const std::wstring& name)
         {
             // note: the graph is built by calling the lambda on Placeholders
             // We must pass in the Placeholders and remember them, since the composite itself will not remember their ordering.
-            vector<Variable> invokePlaceholders;
-            for (let& argMap : m_argsMap)
-                invokePlaceholders.push_back(argMap.first);
             if (!name.empty())
                 composite = Alias(composite, name);
-            composite->InitCompositeForInvoke(invokePlaceholders);
+            composite->InitCompositeForInvoke(m_argumentList);
             m_composite = move(composite);
             // complete the m_argsMap pairs by including all learnable Parameters in it as well
             // This is needed so that the auto-batcher can see all Parameters that are inside, without having to traverse it.
             for (let& p : m_composite->Parameters())
-                m_argsMap.push_back({ p,p }); // presently also must pass all Parameters
-        }
-        void CheckArity(size_t arity) const
-        {
-            if (m_arity != arity)
-                LogicError("StaticModel: It was attempted to invoke a %d-nary function with %d arguments.", (int)m_arity, (int)arity);
+            {
+                m_argumentList.push_back(p); // presently also must pass all Parameters
+                m_operands    .push_back(p); // we prepopulate the operands here, these are not changed afterwards
+            }
         }
         // TODO: move this down to Invoke() itself
-        bool DoWeNeedToInferShapes(const vector<pair<Variable, Variable>>& argsMap) const
+        bool DoWeNeedToInferShapes() const
         {
             // return true until called for the first time with fully known shapes
             // This returns 'true' only once, and evaluates the IsUnknown test only once for a dynamic invocation
             // (but multiple times for initial invocations during construction of static graphs).
-            if (m_stillNeedsToInferShapes && all_of(argsMap.begin(), argsMap.end(), [](const pair<Variable, Variable>& arg) { return !arg.second.Shape().IsUnknown(); }))
+            if (m_stillNeedsToInferShapes && all_of(m_operands.begin(), m_operands.end(), [](const Variable& arg) { return !arg.Shape().IsUnknown(); }))
             {
                 m_stillNeedsToInferShapes = false;
                 return true;
@@ -405,28 +401,32 @@ class StaticModel
         }
         Invocable(bool isBasicBlock, const function<Variable(const Variable&)>& f, std::wstring name)
         {
-            BeginConstruct(1, isBasicBlock), EndConstruct(move(f(m_argsMap[0].first)), name);
+            BeginConstruct(1, isBasicBlock), EndConstruct(move(f(m_argumentList[0])), name);
         }
         Invocable(bool isBasicBlock, const function<Variable(const Variable&, const Variable&)>& f, std::wstring name)
         {
-            BeginConstruct(2, isBasicBlock), EndConstruct(move(f(m_argsMap[0].first, m_argsMap[1].first)), name);
+            BeginConstruct(2, isBasicBlock), EndConstruct(move(f(m_argumentList[0], m_argumentList[1])), name);
         }
         Invocable(bool isBasicBlock, const function<Variable(const Variable&, const Variable&, const Variable&)>& f, std::wstring name)
         {
-            BeginConstruct(3, isBasicBlock), EndConstruct(move(f(m_argsMap[0].first, m_argsMap[1].first, m_argsMap[2].first)), name);
+            BeginConstruct(3, isBasicBlock), EndConstruct(move(f(m_argumentList[0], m_argumentList[1], m_argumentList[2])), name);
+        }
+        void CheckArity(size_t arity) const
+        {
+            if (m_arity != arity)
+                LogicError("Invocable: It was attempted to invoke a %d-nary function with %d arguments.", (int)m_arity, (int)arity);
         }
         void SetArg(size_t argIndex, const Variable& argVal) const
         {
-            m_argsMap[argIndex].second = argVal;
+            m_operands[argIndex] = argVal;
         }
-        Variable Invoke(size_t arity) const // call SetArg first to set the args
+        Variable Invoke() const // note: caller must call SetArg() first to set the operands
         {
             // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
             // We leave the Parameters in the m_argsMap array untouched (they are at the end).
             // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
-            CheckArity(arity);
             CountAPICalls();
-            let res = CNTK::Invoke(m_composite, m_argsMap, m_isBasicBlock, DoWeNeedToInferShapes(m_argsMap));
+            let res = CNTK::Invoke(m_composite, m_argumentList, m_operands, m_isBasicBlock, DoWeNeedToInferShapes());
             // BUGBUG: I get an "unexpectedly expired" weak_ptr when I enable this.
             //for (size_t i = 0; i < arity; i++)
             //    SetArg(i, noArg);
@@ -440,27 +440,32 @@ public:
         m_invocable(make_shared<Invocable>(isBasicBlock, f, name))
     { }
 
+    // we can make this a var-args template, and unroll it inside Invocable
     Variable operator()() const
     {
-        return m_invocable->Invoke(0);
+        m_invocable->CheckArity(0);
+        return m_invocable->Invoke();
     }
     Variable operator()(const Variable& x1) const
     {
+        m_invocable->CheckArity(1);
         m_invocable->SetArg(0, x1);
-        return m_invocable->Invoke(1);
+        return m_invocable->Invoke();
     }
     Variable operator()(const Variable& x1, const Variable& x2) const
     {
+        m_invocable->CheckArity(2);
         m_invocable->SetArg(0, x1);
         m_invocable->SetArg(1, x2);
-        return m_invocable->Invoke(2);
+        return m_invocable->Invoke();
     }
     Variable operator()(const Variable& x1, const Variable& x2, const Variable& x3) const
     {
+        m_invocable->CheckArity(3);
         m_invocable->SetArg(0, x1);
         m_invocable->SetArg(1, x2);
         m_invocable->SetArg(2, x3);
-        return m_invocable->Invoke(3);
+        return m_invocable->Invoke();
     }
 };
 
@@ -613,7 +618,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 {
     // matrices are stacked in order (i, r, h)
     auto R  = Parameter({ outputDim * 3, outputDim                  }, DTYPE, GlorotUniformInitializer(), device, L"R");
-    auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize, device);
+    auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize, device, Named("projectInput"));
     //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, device);
     auto b  = Parameter({ outputDim * 3 }, DTYPE, 0.0f, device, L"b");
     let normR = LengthNormalization(device);
@@ -712,7 +717,7 @@ static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
 
 static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const wstring& name = wstring());
 
-static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const DeviceDescriptor& device)
+static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const DeviceDescriptor& device, const wstring& name = wstring())
 {
     let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize )) != 0;
     let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
@@ -746,6 +751,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         nested[L"batchNorm"] = batchNorm;
     if (hasLengthNorm)
         nested[L"lengthNorm"] = lengthNorm;
+    // BUGBUG: if isBasicBlock 'true' then this fails with projectInput.weightNormRescale not a parameter
     StaticModel normWeight(/*isBasicBlock=*/true, [=]() -> Variable
     {
         if (!hasWeightNorm)
@@ -762,7 +768,6 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         return scale1;
         //y = scale1 * y;
     });
-    let asBasicBlock = false;
     StaticModel doDense(/*isBasicBlock=*/false, [=](const Variable& x)->Variable
     {
         auto y = x;
@@ -781,31 +786,17 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         else if (hasBias)
             y = y + b;
         return activation(y);
-    }, Named("dense"));
+    }, name);
     return UnaryModel(parameters, nested, [=](const Variable& x)
     {
         return doDense(x);
     });
 }
 
-// by default we have a bias and weight norm
-//static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, const DeviceDescriptor& device)
-//{
-//    return Dense(outputDim, activation, ProjectionOptions::bias, device);
-//    //return Dense(outputDim, activation, ProjectionOptions::stabilize | ProjectionOptions::bias, device);
-//    //return Dense(outputDim, activation, ProjectionOptions::bias | ProjectionOptions::weightNormalize, device);
-//}
-
-static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device)
+static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device, const wstring& name /*= wstring()*/)
 {
-    return Dense(outputDim, Identity, opts, device);
+    return Dense(outputDim, Identity, opts, device, name);
 }
-
-// by default we have a bias
-//static UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
-//{
-//    return Linear(outputDim, ProjectionOptions::stabilize | ProjectionOptions::bias, device);
-//}
 
 // create a Barrier function
 static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const wstring& name /*= wstring()*/)
@@ -834,8 +825,8 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
 // Two Dense(ReLU) with skip connection and batch normalization after the matrix product.
 static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescriptor& device)
 {
-    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
-    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device);
+    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device, Named("project1"));
+    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device, Named("project2"));
     StaticModel doResidualNet(/*isBasicBlock=*/false, [=](const Variable& x)
     {
         CountAPICalls(3);

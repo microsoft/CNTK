@@ -297,7 +297,7 @@ namespace CNTK
         {
 #if 1
             UpdateAcyclicReferences();
-            if (!m_isKnownToBeAcyclic)
+            if (op != PrimitiveOpType::Block && !m_isKnownToBeAcyclic)
                 LogicError("RawPrimitiveFunction: Somehow a PrimitiveFunction created by the auto-batched ended up as not being known to be acyclic.");
 #else
             // This is used internally by auto-batching, where we cannot have cycles. Hence, the caller must already prepare the inputs' m_acyclicOutputPrimitiveReference fields.

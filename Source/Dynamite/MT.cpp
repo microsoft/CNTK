@@ -140,10 +140,10 @@ fun AttentionModelReference(size_t attentionDim1)
         return tanh;
     });
     return QuaternaryModel11NN({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
-        [=](const Variable& h,                              // [A] decoder hidden state
-            const Variable& historyProjectedKey,            // [A] previous output, embedded
+        [=](const Variable& h,                             // [A] decoder hidden state
+            const Variable& historyProjectedKey,           // [A] previous output, embedded
             const vector<Variable>& encodingProjectedKeys, // [A x T] encoder hidden state seq, projected as key >> tanh
-            const vector<Variable>& encodingProjectedData           // [A x T] encoder hidden state seq, projected as data
+            const vector<Variable>& encodingProjectedData  // [A x T] encoder hidden state seq, projected as data
            ) mutable -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
@@ -194,11 +194,9 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(600, Named("encBarrier"));
-    //let encoderKeysProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderKeysProjection")) >> UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("tanh_bnEncoderKeysProjection")); }); // keys projection for attention
-    //let encoderDataProjection = encBarrier >> Linear(attentionDim, ProjectionOptions::stabilize, device) >> BatchNormalization(device, Named("bnEncoderDataProjection")) >> UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("tanh_bnEncoderDataProjection")); }); // data projection for attention
     let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // keys projection for attention
     let encoderDataProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderDataProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // data projection for attention
-    let embedTarget = Barrier(600, Named("embedTargetBarrier")) >> Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedTarget"))*/;     // target embeddding
+    let embedTarget = Barrier(600, Named("embedTargetBarrier")) >> Embedding(embeddingDim, device, Named("embedTarget"));     // target embeddding
     let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier")) >> Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("initialStateProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
     let stepBarrier = Barrier(20, Named("stepBarrier"));
@@ -306,8 +304,8 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
 
 BinaryModel CreateModelFunction()
 {
-    auto embedFwd = Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedFwd"))*/;
-    auto embedBwd = Embedding(embeddingDim, device) /*>> BatchNormalization(device, Named("bnEmbedBwd"))*/;
+    auto embedFwd = Embedding(embeddingDim, device, Named("embedFwd"));
+    auto embedBwd = Embedding(embeddingDim, device, Named("embedBwd"));
     auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
     vector<Variable> x, eFwd, eBwd, h, hist, res;

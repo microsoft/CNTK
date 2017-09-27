@@ -3788,11 +3788,11 @@ void Function::InitCompositeForInvoke(const vector<Variable>& placeholders)
     callee->m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
 }
 
-Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<std::pair<Variable, Variable>>& operands, bool isBasicBlock, bool determineShapes, const std::wstring& name /*= std::wstring()*/)
+// argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
+// operands = what the arguments should prerent to be. Must currently include a copy of Parameters at the end.
+Variable Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argumentList, vector<Variable>&& operands, bool isBasicBlock, bool determineShapes, const std::wstring& name /*= std::wstring()*/)
 {
-    let composite = dynamic_pointer_cast<CompositeFunction>(callee);
-    if (!composite)
-        InvalidArgument("Invoke requires the callee to be a CompositeFunction");
+    let composite = static_pointer_cast<CompositeFunction>(callee); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
 #if 0   // This baloney, at least in the case of isBasicBlock.
     // TODO: To make use of this if !isBasicBlock, we must make sure that the static cloning machinery understands the shared composite.
     // BUGBUG: For now, the static support of Invoke is incomplete. Don't actually Clone() one of those babies.
@@ -3819,7 +3819,11 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, const std::vector<std::p
     else
 #endif
     {
-        let f = MakeSharedObject<BlockFunction>(composite, operands, isBasicBlock, determineShapes, name);
+        // BUGBUG: Do we need this? m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy())); for the operands
+        // TODO: Since we copy the operands, we could augment the Parameters here as well.
+        if (composite->Name() == L"projectInput")
+            Break;
+        let f = MakeSharedObject<BlockFunction>(composite, argumentList, vector<Variable>(operands), isBasicBlock, determineShapes, wstring(name));
         return f->FinalizeInvoke();
     }
 }
@@ -3837,17 +3841,6 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     m_outputs.front() = move(output);
 }
 
-// form a vector from the .second fields of 'operands' ("map (fun operand -> operand.second) operands")
-template<typename T1, typename T2>
-static vector<T2> GetVectorOfSeconds(const std::vector<std::pair<T1, T2>>& operands)
-{
-    let num = operands.size();
-    vector<Variable> res(num);
-    for (size_t i = 0; i < num; i++)
-        res[i] = operands[i].second;
-    return res;
-}
-
 // TODO: make the interface nicer. The composite should be locked away in a struct Invocable.
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
 // It is a valid PrimitiveFunction, but it shares the composite instead of owning it, and therefore not a valid BlockFunction for the static-graph machinery.
@@ -3860,8 +3853,11 @@ static vector<T2> GetVectorOfSeconds(const std::vector<std::pair<T1, T2>>& opera
 //         The main difference is that invoked blocks physically share their composites, to avoid duplicating them
 //         (since the point of using Invoke() is speed). Also, we have quite a bit code dup in this function.
 // A correct implementation could allow BlockFunction to lazily clone the composite (which is what Dynamite does).
-BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vector<std::pair<Variable, Variable>>& operands, bool isBasicBlock, bool determineShapes, const std::wstring& blockName /*= std::wstring()*/) :
-    PrimitiveFunction(PrimitiveOpType::Block, move(GetVectorOfSeconds(operands)), Dictionary(), blockName), m_composite(callee),
+// Special case: Invoke() may also be called while building a composite (static graph) that uses another.
+// In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
+// is inferred. This is controlled by the determineShapes flag.
+BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Variable>& argumentList, std::vector<Variable>&& operands, bool isBasicBlock, bool determineShapes, wstring&& blockName) :
+    PrimitiveFunction(PrimitiveOpType::Block, move(operands), Dictionary(), move(blockName)), m_composite(callee),
     m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
 {
     // The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
@@ -3884,43 +3880,26 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
 
     // We determine the compositeOutputs by replacing the arguments of the composite with new placeholders with updated 
     // shape etc. information matching the corresponding mapped input
-    //let leaves = callee->Inputs();
-    //if (argumentsMap.size() != m_inputs.size())
-    //    InvalidArgument("Invoke invoked with wrong (%d) number of arguments, %d expected.", (int)m_inputs.size(), (int)argumentsMap.size());
 
     // BUGBUG: Must handle the map here now that we pass it. Also must verify that the Placeholders are actually in the composite.
 
-    if (any_of(operands.begin(), operands.end(), [](const pair<Variable, Variable>& arg) { return arg.first.m_dataFields->m_uniqueIdForDebugging == 147; }))
-        Break;
-
-    // verify the mappings have been implanted
-    for (size_t i = 0; i < m_inputs.size(); i++)
-    {
-        let& compositeLeaf = operands[i].first; // Placeholder or Parameter in composite
-        fail_if(compositeLeaf.IsPlaceholder() && compositeLeaf.m_dataFields->m_compositeArgumentIndex != i, "m_compositeArgumentIndex not set up??");     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
-    }
-
-    // Special case: Invoke() may also be called while building a composite (static graph) that uses another.
-    // In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
-    // is inferred.
-    if (any_of(operands.begin(), operands.end(), [](const pair<Variable, Variable>& arg) { return arg.first.IsPlaceholder() && arg.second.Shape().IsUnknown(); }))
-        LogicError("determineShapes when arguments have unknown shapes??");
-
-    unordered_map<Variable, Variable> replacementMap;
     // BUGBUG: Must verify that all Parameters are covered here.
+    unordered_map<Variable, Variable> replacementMap;
     for (size_t i = 0; i < m_inputs.size(); i++)
     {
-        let& compositeLeaf = operands[i].first; // Placeholder or Parameter in composite
-        let& input = m_inputs[i];               // what they should pretend to be
+        let& compositeLeaf = argumentList[i]; // Placeholder or Parameter in composite
+        let& input = m_inputs[i];             // what they should pretend to be
         if (compositeLeaf.IsParameter())
         {
             // for Parameters, supply an empty Variable
             if (input != compositeLeaf)
-                InvalidArgument("Invoke: Parameters must be passed themselves.");
+                LogicError("Invoke: Parameters should have passed as themselves.");
             // That's it. We just keep it in the list so that auto-batch can find them.
         }
         else if (compositeLeaf.IsPlaceholder())
         {
+            // verify the mappings have been implanted
+            fail_if(compositeLeaf.m_dataFields->m_compositeArgumentIndex != i, "m_compositeArgumentIndex not set up??"); // when dynamically expanding this, we match up this Placeholder with the respective input[i]
             // TODO: rethink the logic. If the input's shape IsUnknown, then why not directly return? Why even replace?
             if (input.IsInput())
                 InvalidArgument("Invoke cannot work on Input variables, it is for dynamic networks only.");
@@ -3928,22 +3907,19 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, const std::vect
             auto updatedCompositePlaceholder = PlaceholderLike(input); // we replace with a placeholder of the same type. This gives the composite the shape.
             updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = compositeLeaf.m_dataFields->m_compositeArgumentIndex;
             replacementMap.insert({ compositeLeaf, updatedCompositePlaceholder }); // replace with new Placeholder, which has a block mapping implanted
-            // BEGIN HACK  --need to fix the interface!! This should become a private method to Invocable
-            const_cast<vector<pair<Variable, Variable>>&>(operands)[i].first = updatedCompositePlaceholder;
+            // TODO: fix the interface. This should become a private method to Invocable
+            argumentList[i] = updatedCompositePlaceholder;
         }
         else
-            InvalidArgument("Invoke: Only Placeholders can be substituted.");
+            InvalidArgument("Invoke: argumentList can only contain Placeholders and Parameters.");
     }
 
     callee->ReplacePlaceholders(replacementMap); // This gives the composite the shape.
     // OUTDATED --The composite args' Placeholders now have a block mapping to the actual inputs.
     // BUGBUG: That's bad, since they are gone after this. There should be no block mapping.
 
-    if (any_of(operands.begin(), operands.end(), [](const pair<Variable, Variable>& arg) { return arg.first.m_dataFields->m_uniqueIdForDebugging == 147; }))
-        Break;
-
     if (compositeOutputs.front().Shape().IsUnknown()) // or not?
-        LogicError("Invoke must only be called with inputs with fully specified dimensions.");
+        LogicError("Invoke with determineShapes=true must only be called with inputs with fully specified dimensions.");
 
     // Now the composite is fully type-inferred; ready for consumption by Dynamite.
 }
