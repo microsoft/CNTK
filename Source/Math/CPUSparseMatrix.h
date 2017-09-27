@@ -272,17 +272,17 @@ public:
             NOT_IMPLEMENTED;
     }
 
-    size_t NzSize() const
+    size_t NzBytes() const // actual number of element bytes in use
     {
         return sizeof(ElemType) * NzCount();
-    } // actual number of element bytes in use
+    }
 
-    void SetBlockSize(size_t newBlockSize)
+    void SetBlockSize(size_t newBlockSize) // block sparse only: number of non-zero columns
     {
         BaseMatrix<ElemType>::SetBlockSize(newBlockSize);
     }
 
-    size_t GetBlockSize() const
+    size_t GetBlockSize() const // block sparse only: number of non-zero columns
     {
         return BaseMatrix<ElemType>::GetBlockSize();
     }

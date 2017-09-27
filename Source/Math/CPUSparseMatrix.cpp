@@ -311,7 +311,7 @@ void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
 
     if (nz > 0)
     {
-        memcpy(NzValues(),    v.NzValues(),    v.NzSize());
+        memcpy(NzValues(),    v.NzValues(),    v.NzBytes());
 
         if ((matrixFormat == matrixFormatSparseCSC) || (matrixFormat == matrixFormatSparseCSR))
         {
@@ -753,7 +753,7 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     SetFormat(matrixFormatSparseCSC);
     RequireSizeAndAllocate(numRows, numCols, nz, true, false);
 
-    // Note: This is a casualty of the switch away from m_nz. RowSize and NzSize depend on ColLocation being correct for format SparseCSC. Thus we must
+    // Note: This is a casualty of the switch away from m_nz. RowSize and NzBytes depend on ColLocation being correct for format SparseCSC. Thus we must
     // copy ColLocation before RowLocation and NzValues. That's ugly and error prone.
     memcpy(ColLocation(), h_CSCCol, sizeof(CPUSPARSE_INDEX_TYPE)*(numCols + 1));
     memcpy(RowLocation(), h_Row, sizeof(CPUSPARSE_INDEX_TYPE)*nz);
@@ -815,7 +815,7 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
             if (keepExistingValues && NzCount() > 0)
             {
                 assert(GetCompIndexSize() > 0 && NzCount() < numNZElemToReserve);
-                memcpy(pArray, Data(), NzSize());
+                memcpy(pArray, Data(), NzBytes());
                 memcpy(unCompIndex, GetUnCompIndex(), MajorIndexSize());
                 memcpy(compIndex, GetCompIndex(), SecondaryIndexSize());
             }
@@ -840,7 +840,7 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
             if (keepExistingValues && GetSizeAllocated() > 0)
             {
                 assert(GetCompIndexSize() > 0 && GetSizeAllocated() < numNZElemToReserve);
-                memcpy(blockVal, Data(), NzSize());
+                memcpy(blockVal, Data(), NzBytes());
                 memcpy(blockIds, GetBlockIds(), sizeof(size_t) * GetCompIndexSize());
             }
 

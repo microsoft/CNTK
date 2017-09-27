@@ -42,8 +42,8 @@
 #endif
 
 // special markers in BlockId2ColOrRow()/ColOrRow2BlockId()
-static const GPUSPARSE_INDEX_TYPE Id_NotAssigned = -1;
-static const GPUSPARSE_INDEX_TYPE Id_Pending = INT_MAX;
+static const GPUSPARSE_INDEX_TYPE Id_NotAssigned = -1;  // this column (or row) is empty
+static const GPUSPARSE_INDEX_TYPE Id_Pending = INT_MAX; // this column (or row) is not empty, but the index is not yet known
 
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 
@@ -3317,11 +3317,11 @@ __global__ void _reshape(
         newColumnIndex[newNumCols] = oldColumnIndex[oldNumCols]; // set end pointer
 }
 
-//called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and
-//what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
-//input: rowIndexes: the row indexes of the CSC sparse matrix to be multiplied with
-//blockIDs: the blockID mapping in the resulting matrix;
-//nnz: number of nonzero value or the size of rowIndexes;
+// called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and
+// what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
+// rowIndexes (in): the row indexes of the CSC sparse matrix to be multiplied with
+// col2BlockIds (out): the blockID mapping in the resulting matrix. This function only changes values to Id_Pending, but does not determine the actual index yet.
+// nnz: number of nonzero value or the size of rowIndexes;
 template <class ElemType>
 __global__ void _findColsWithValues(
     const GPUSPARSE_INDEX_TYPE* rowIndexes, GPUSPARSE_INDEX_TYPE* col2BlockIds, const size_t nnz)
@@ -3331,16 +3331,17 @@ __global__ void _findColsWithValues(
         return;
 
     if (col2BlockIds[rowIndexes[nzIndex]] == Id_NotAssigned)
-        col2BlockIds[rowIndexes[nzIndex]] = Id_Pending; // this row has value.
+        col2BlockIds[rowIndexes[nzIndex]] = Id_Pending; // this input row has value, and therefore so does the result column
+    // Note that this has a race condition, which is fine since we just set the value, and it does not matter
+    // which thread sets it first, as long as it gets set.
 }
 
-//called before _denseMulSparseCSCTransposeToSparseBlockCol and after _findColsWithValuesto determine which columns have values and
-//what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
-//input: rowIndexes: the row indexes of the CSC sparse matrix to be multiplied with
-//blockId2Col: the blockID to colum id mapping in the resulting matrix;
-//col2BlockId: the col2BlockId to blockID mapping in the resulting matrix;
-//numCols: number of columns in the resulting matrix or the size of blockIDs
-//blockSize: return the blockSize with values
+// called before _denseMulSparseCSCTransposeToSparseBlockCol and after _findColsWithValuesto determine which columns have values and
+// what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
+// col2BlockId (in/out): the col2BlockId to blockID mapping in the resulting matrix. Id_Pending values get replaced by actual storage indices.
+// blockId2Col (out): the blockID to colum id mapping in the resulting matrix. Get updated for each Id_Pending value.
+// numCols: number of columns in the resulting matrix or the size of blockIDs
+// blockSize (in/out): number of non-zero columns. Gets incremented here for any Id_Pending value.
 template <class ElemType>
 __global__ void _determineBlockIds(
     GPUSPARSE_INDEX_TYPE* blockId2Col, GPUSPARSE_INDEX_TYPE* col2BlockId, size_t numCols, size_t* blockSize)
@@ -3352,6 +3353,7 @@ __global__ void _determineBlockIds(
     if (col2BlockId[col] == Id_Pending)
     {
         GPUSPARSE_INDEX_TYPE blockIndex = atomicAdd((unsigned int*)blockSize, (unsigned int)1);
+        // Note: Due to the atomicAdd(), the ordering inside the compact storage is non-deterministic.
         col2BlockId[col] = blockIndex;
         blockId2Col[blockIndex] = col;
     }

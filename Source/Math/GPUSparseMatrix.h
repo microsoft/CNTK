@@ -157,7 +157,7 @@ public:
 #endif
     }
 
-    inline size_t NzSize() const { return sizeof(ElemType) * NzCount(); } // actual number of element bytes in use
+    inline size_t NzBytes() const { return sizeof(ElemType) * NzCount(); } // actual number of element bytes in use
 
     inline size_t GetNumNZElements() const { return NzCount(); } // TODO: GetNumNZElements() and NzCount() are redundant. Remove one of the two.
 

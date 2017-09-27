@@ -417,11 +417,10 @@ protected:
     // **************************
     // GPUSparseMatrix variables
     // **************************
-
     size_t m_totalBufferSizeAllocated;
 
     // used by the blockCol and blockRow format
-    size_t m_blockSize;                      // block size
+    size_t m_blockSize; // number of non-zero columns. The compact storage has this many columns.
     mutable GPUSPARSE_INDEX_TYPE* m_tempDeviceBuffer;
     mutable size_t m_tempDeviceBufferSize;
 
@@ -431,7 +430,6 @@ protected:
     // **************************
     // CPUSparseMatrix variables
     // **************************
-
     int m_colIdx; // used to SetValue()
     size_t m_compIndexSize;
     ElemType* m_nzValues;
@@ -442,7 +440,6 @@ protected:
 
     size_t* m_blockIds;    // block ids
     size_t m_blockIdShift; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
-
 };
 
 // -----------------------------------------------------------------------
