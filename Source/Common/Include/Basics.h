@@ -206,6 +206,8 @@ struct _strprintf : public std::basic_string<_T>
         va_list args;
         va_start(args, format);            // varargs stuff
         size_t n = _cprintf(format, args); // num chars excl. '\0'
+        va_end(args);
+        va_start(args, format);
         const int FIXBUF_SIZE = 128; // incl. '\0'
         if (n < FIXBUF_SIZE)
         {
