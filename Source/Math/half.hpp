@@ -8,10 +8,10 @@
 
 #pragma once
 
-#ifndef CPUONLY
+#if !defined(CPUONLY) && !defined(FORCE_CPU_HALF)
 #include <cuda_fp16.h> // ASSUME CUDA9
 #else
-class __half
+class __declspec(align(2)) __half
 {
 protected:
     unsigned short __x;

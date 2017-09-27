@@ -167,11 +167,14 @@
     <CudaMsbuildPath Condition="'$(CudaMsbuildPath)' == ''">$(VCTargetsPath)\BuildCustomizations</CudaMsbuildPath>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+
   <!-- TODO warn if ConfigurationType not (yet) defined -->
 
   <PropertyGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">
     <UseDebugLibraries>$(DebugBuild)</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>$(ReleaseBuild)</WholeProgramOptimization>
     <LinkIncremental>$(DebugBuild)</LinkIncremental>

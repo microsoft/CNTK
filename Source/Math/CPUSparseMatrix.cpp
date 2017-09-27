@@ -1753,7 +1753,9 @@ MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
         // read in the sparse matrix info
         for (size_t i = 0; i < nz; ++i)
         {
-            stream >> dataBuffer[i];
+            double dvalue;
+            stream >> dvalue;
+            dataBuffer[i] = (ElemType)dvalue;
         }
         for (size_t i = 0; i < nz; ++i)
         {
@@ -1796,7 +1798,7 @@ MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
 
         for (size_t i = 0; i < nz; ++i)
         {
-            stream << dataBuffer[i];
+            stream << (double)dataBuffer[i];
         }
         for (size_t i = 0; i < nz; ++i)
         {

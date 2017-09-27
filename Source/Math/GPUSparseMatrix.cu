@@ -3053,7 +3053,9 @@ MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
         // read in the sparse matrix info
         for (size_t i = 0; i < nz; ++i)
         {
-            stream >> dataBuffer[i];
+            double dvalue;
+            stream >> dvalue;
+            dataBuffer[i] = (ElemType)dvalue;
         }
         for (size_t i = 0; i < nz; ++i)
         {
@@ -3119,63 +3121,7 @@ MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
 
         for (size_t i = 0; i < nz; ++i)
         {
-            stream << dataBuffer[i];
-        }
-        for (size_t i = 0; i < nz; ++i)
-        {
-            size_t val = unCompressedIndex[i];
-            stream << val;
-        }
-        for (size_t i = 0; i < compressedSize; ++i)
-        {
-            size_t val = compressedIndex[i];
-            stream << val;
-        }
-
-        delete[] dataBuffer;
-        delete[] unCompressedIndex;
-        delete[] compressedIndex;
-    }
-
-    stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
-
-    return stream;
-}
-
-// specialization because of POD warning
-template <>
-File& operator<<(File& stream, const GPUSparseMatrix<half>& us)
-{
-    if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
-        NOT_IMPLEMENTED;
-
-    stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
-    stream << sizeof(half);
-    std::wstring s(L"nnmatrix");
-    stream << s;
-
-    size_t nz = us.GetNumNZElements(), numElemAllocated = us.GetNumElemAllocated(), numRows = us.GetNumRows(), numCols = us.GetNumCols();
-    size_t compressedSize = us.SecondaryIndexCount();
-    int format = us.GetFormat();
-
-    stream << format << nz << numCols << numRows;
-
-    if (nz > 0)
-    {
-        half* dataBuffer = nullptr;
-        CPUSPARSE_INDEX_TYPE* compressedIndex = nullptr;
-        CPUSPARSE_INDEX_TYPE* unCompressedIndex = nullptr;
-
-        if (us.GetFormat() == matrixFormatSparseCSC)
-            us.GetMatrixFromCSCFormat(compressedIndex, unCompressedIndex, dataBuffer, numElemAllocated, nz, numRows, numCols);
-        else if (us.GetFormat() == matrixFormatSparseCSR)
-            us.GetMatrixFromCSRFormat(compressedIndex, unCompressedIndex, dataBuffer, numElemAllocated, nz, numRows, numCols);
-        else
-            NOT_IMPLEMENTED;
-
-        for (size_t i = 0; i < nz; ++i)
-        {
-            stream << *(short*)&dataBuffer[i];
+            stream << (double)dataBuffer[i];
         }
         for (size_t i = 0; i < nz; ++i)
         {
