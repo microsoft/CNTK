@@ -3317,21 +3317,24 @@ __global__ void _reshape(
         newColumnIndex[newNumCols] = oldColumnIndex[oldNumCols]; // set end pointer
 }
 
-// called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and
-// what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
-// rowIndexes (in): the row indexes of the CSC sparse matrix to be multiplied with
-// col2BlockIds (out): the blockID mapping in the resulting matrix. This function only changes values to Id_Pending, but does not determine the actual index yet.
-// nnz: number of nonzero value or the size of rowIndexes;
+// For sparse-block col format MultiplyAndAdd() only.
+// Called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and
+// what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format.
+//  - rowIndexArray (in): the row indexes of the CSC sparse matrix to be multiplied with
+//  - colOffset0 (in): pointer to the nzIndex of the first element
+//  - col2BlockIds (out): the blockID mapping in the resulting matrix. This function only changes values to Id_Pending, but does not determine the actual index yet.
+//  - nnz: number of nonzero value or the size of rowIndexArray;
 template <class ElemType>
 __global__ void _findColsWithValues(
-    const GPUSPARSE_INDEX_TYPE* rowIndexes, GPUSPARSE_INDEX_TYPE* col2BlockIds, const size_t nnz)
+    const GPUSPARSE_INDEX_TYPE* rowIndexArray, const GPUSPARSE_INDEX_TYPE& colOffset0, GPUSPARSE_INDEX_TYPE* col2BlockIds, const size_t nnz)
 {
-    const size_t nzIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const size_t nzIndex = blockIdx.x * blockDim.x + threadIdx.x; // logical nzIndex (possibly limited to a the slice with slice-view offset)
     if (nzIndex >= nnz)
         return;
 
-    if (col2BlockIds[rowIndexes[nzIndex]] == Id_NotAssigned)
-        col2BlockIds[rowIndexes[nzIndex]] = Id_Pending; // this input row has value, and therefore so does the result column
+    let nzIndexWrtBase = nzIndex + colOffset0; // physical nzIndex after accounting for a slice-view offset
+    if (col2BlockIds[rowIndexArray[nzIndexWrtBase]] == Id_NotAssigned)
+        col2BlockIds[rowIndexArray[nzIndexWrtBase]] = Id_Pending; // this input row has value, and therefore so does the result column
     // Note that this has a race condition, which is fine since we just set the value, and it does not matter
     // which thread sets it first, as long as it gets set.
 }

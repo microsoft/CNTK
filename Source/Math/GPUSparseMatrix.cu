@@ -1331,9 +1331,9 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         RuntimeError("GPUSparseMatrix::MultiplyAndAdd: All matrices must be on the same GPU");
 
     int m = transposeA ? (int) lhs.GetNumCols() : (int) lhs.GetNumRows(); // output dimension
-    int k = transposeA ? (int) lhs.GetNumRows() : (int) lhs.GetNumCols(); // inner dimension
+    int k = transposeA ? (int) lhs.GetNumRows() : (int) lhs.GetNumCols(); // inner dimension (sparse gradient: == number of samples)
     int l = transposeB ? (int) rhs.GetNumCols() : (int) rhs.GetNumRows(); // inner dimension (== k required)
-    int n = transposeB ? (int) rhs.GetNumRows() : (int) rhs.GetNumCols(); // #input items
+    int n = transposeB ? (int) rhs.GetNumRows() : (int) rhs.GetNumCols(); // input dimension
 
     assert(m > 0 && k > 0 && l > 0 && n > 0);
     if (k != l)
@@ -1373,6 +1373,9 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
             // the first time, we allocate space for all entries
             // Initially, all columns are empty. As we keep adding matrix products into it, columns
             // flip from empty to non-empty (but never back to empty).
+            // This resetting is done lazily. Reset() just resets the block size, and this code here picks up on it and finishes the initialization.
+            // Note that this may be expensive, as we initialize the full dimension (which is large, otherwise we wouldn't be using sparse).
+            // We could speed that up by maintaining a dirty range, and only resetting that. Reset() could create a "lazy reset" instruction.
             c.Resize(m, n, 0);
             // Note a small hack: cudaMemset() sets bytes, but we initialize 32-bit ints. Hence, all bytes in Id_NotAssigned must be identical (0xff).
             static_assert(Id_NotAssigned == -1, "Id_NotAssigned must be 0xffffffff");
@@ -1390,9 +1393,11 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         // determine which columns are non-zero -> ColOrRow2BlockId()[colIndex]
         // Some columns may already be non-zero. Those already have a storage index.
         // Columns that were zero before but are no longer get Id_Pending.
+        // This is driven by rhs.RowLocation(); that is, the array of row indices of non-zero elements.
         blocksPerGrid = (int) ceil(((double) rhs_nz) / GridDim::maxThreadsPerBlock);
         _findColsWithValues<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-            /*in*/rhs.RowLocation(), /*out*/c.ColOrRow2BlockId(), rhs_nz);
+            /*in*/rhs.RowLocation(), /*in ref*/rhs.ColLocation()[0], /*out*/c.ColOrRow2BlockId(), rhs_nz);
+        // RowLocation = base of nz row-index array, without potential slice-view offset. Kernel offsets it by ColLocation()[0], which is non-zero in case of a slice view.
         // Now ColOrRow2BlockId()[colIndex] contains an index or Id_Pending for all non-empty columns.
 
         // assign a storage index to any newly added columns
@@ -1411,6 +1416,11 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         // TODO: We could count the number of non-zero rows when transferring from the CPU.
         //       Should we just keep the CPU-side data around? In the one-hot case? Then we can do the mapping CPU-side.
         //       We can then even keep a CPU-side buffer in the weight matrix, for this purpose.
+        // Or:
+        //       We could also operate with an upper bound, which gets updated asynchronously (just fire off the async copy).
+        //       We would then allocate w.r.t. the upper bound (=current + #new samples). At some point in time, the true,
+        //       smaller, value would arrive asynchronously. With proper state tracking, we could avoid to unnecessarily
+        //       initialize newly aded zero-columns, beyond the upper bound.
         size_t blockSizeCurr;
         CUDA_CALL(cudaMemcpy(&blockSizeCurr, pBlockSizeTempGpu, sizeof(size_t), cudaMemcpyDeviceToHost));
         TracingGPUMemoryAllocator::Free<size_t>(lhs.GetComputeDeviceId(), pBlockSizeTempGpu);
@@ -1420,8 +1430,8 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         // if new storage columns have been added, zero them out (after growing the compact storage if needed)
         if (blockSizeCurr > blockSizePrev)
         {
-            //fprintf(stderr, "MultiplyAndAdd: growing #non-zero columns from %d to %d\n", (int)blockSizePrev, (int)blockSizeCurr), fflush(stderr);
-            // zero initialize new blocks
+            fprintf(stderr, "MultiplyAndAdd: growing #non-zero columns from %d to %d, for %d items\n", (int)blockSizePrev, (int)blockSizeCurr, (int)k), fflush(stderr);
+            // zero initialize newly added non-zero columns in the compact storage
             size_t nnz = m * blockSizeCurr;
             c.RequireSizeAndAllocate(m, n, nnz, true, true); // we need to keep the col2blockid and blockid2col info when resizing.
             CUDA_CALL(cudaMemsetAsync(c.Data() + m * blockSizePrev, 0, sizeof(ElemType) * m * (blockSizeCurr - blockSizePrev), t_stream));
@@ -1438,9 +1448,9 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
             m,          // output dimension, height of lhs
             l,          // inner dimension. In the case of the sparse gradient, this is the number of samples.
             // rhs (in)
-            rhs.Data(),        // [nzIndex] rhs nz-element array base, without potential slice-view offset
-            rhs.RowLocation(), // [nzIndex] rhs index array base
-            rhs.ColLocation(), // [colIndex] first nzIndex for a given column. End nzIndex is that of the next column.
+            rhs.Buffer(),      // [nzIndex] rhs nz-element array base, without potential slice-view offset.
+            rhs.RowLocation(), // [nzIndex] rhs index array base, without potential slice-view offset.
+            rhs.ColLocation(), // [colIndex] first nzIndex for a given column, with potential slice-view offset. End nzIndex is that of the next column.
             // result
             c.ColOrRow2BlockId(), // (in) [colIndex] storage index for each non-zero column
             c.Data());            // (in/out) [rowIndex, storageIndex] pointer to compact storage
