@@ -7,15 +7,13 @@
 import os
 import re
 import numpy as np
-import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_209B_Berkeley_Segmentation_Dataset_Loader.ipynb")
+notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_302B_Image_Super-resolution_Using_CNNs_and_GANs.ipynb")
 datadir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "DataSets", "BerkeleySegmentationDataset")
-reWeekly = re.compile(r'^weekly\b', re.IGNORECASE)
 
-# Run this on CPU only
-notebook_deviceIdsToRun = [-1]
+# Run this on GPU only
+notebook_deviceIdsToRun = [0]
 
 @pytest.fixture(scope='module')
 def clean_data(device_id):
@@ -27,7 +25,7 @@ def clean_data(device_id):
 
 @pytest.mark.skipif(not reWeekly.search(os.environ.get('TEST_TAG')),
                     reason="only runs as part of the weekly tests")
-def test_cntk_209a_berkeley_segmentation_dataset_loader_noErrors(clean_data, nb):
+def test_cntk_302b_superresolution_cnns_gans_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []

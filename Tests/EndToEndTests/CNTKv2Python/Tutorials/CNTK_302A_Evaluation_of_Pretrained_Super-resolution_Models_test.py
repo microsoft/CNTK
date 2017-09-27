@@ -9,10 +9,10 @@ import re
 import numpy as np
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_209A_Evaluation_of_Pretrained_Super-resolution_Models.ipynb")
+notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_302A_Evaluation_of_Pretrained_Super-resolution_Models.ipynb")
 datadir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "DataSets", "BerkeleySegmentationDataset")
 
-def test_cntk_103b_mnist_logisticregression_noErrors(nb):
+def test_cntk_302a_evaluation_superresolution_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
