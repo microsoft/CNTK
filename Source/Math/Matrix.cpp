@@ -1844,25 +1844,38 @@ ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
     DecideAndMoveToRightDevice(*this, gradients);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-        { return m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(CPU); },
-        { return m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(GPU); },
+        { auto ret = m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(CPU); return ret; },
+        { auto ret = m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(GPU); return ret; },
         { NOT_IMPLEMENTED; },
-        { return gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(GPU); });
+        { auto ret = gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(GPU); return ret; });
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
 template <class ElemType>
 void Matrix<ElemType>::AdaDeltaUpdate(Matrix<ElemType>& gradients,
     Matrix<ElemType>& functionValues,
-    ElemType learningRate, ElemType rho, ElemType epsilon)
+    ElemType learningRate, ElemType rho, ElemType epsilon,
+    int* timestamps, int currentTimestamp)
 {
     DecideAndMoveToRightDevice(*this, gradients);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-    { return m_CPUMatrix->AdaDelta(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
-    { return m_GPUMatrix->AdaDelta(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); },
-    { return gradients.m_CPUSparseMatrix->AdaDelta(*m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
-    { return gradients.m_GPUSparseMatrix->AdaDelta(*m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); });
+    { m_CPUMatrix->AdaDelta(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
+    { m_GPUMatrix->AdaDelta(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); },
+    { gradients.m_CPUSparseMatrix->AdaDelta(*m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon, timestamps, currentTimestamp); SetDataLocation(CPU); },
+    { gradients.m_GPUSparseMatrix->AdaDelta(*m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon, timestamps, currentTimestamp); SetDataLocation(GPU); });
+}
+
+template <class ElemType>
+void Matrix<ElemType>::AdaDeltaFlushState(size_t cols, ElemType rho, int* timestamps, int currentTimestamp)
+{
+    DecideAndMoveToRightDevice(*this, *this);
+
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+    { m_CPUMatrix->AdaDeltaFlushTimestamps(cols, rho, timestamps, currentTimestamp); SetDataLocation(CPU); },
+    { m_GPUMatrix->AdaDeltaFlushTimestamps(cols, rho, timestamps, currentTimestamp); SetDataLocation(GPU); },
+    { NOT_IMPLEMENTED; },
+    { NOT_IMPLEMENTED; });
 }
 
 template <class ElemType>

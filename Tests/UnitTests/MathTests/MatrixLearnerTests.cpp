@@ -25,6 +25,7 @@ public:
     SingleMatrix matMsparse;
     SingleMatrix matG;
     SingleMatrix matGsparseBSC;
+    SingleMatrix timestamps;
 
     MatrixLearnerFixture() :
         matSG(c_deviceIdZero),
@@ -32,7 +33,8 @@ public:
         matM(c_deviceIdZero),
         matMsparse(c_deviceIdZero),
         matG(c_deviceIdZero),
-        matGsparseBSC(c_deviceIdZero)
+        matGsparseBSC(c_deviceIdZero),
+        timestamps(c_deviceIdZero)
     {
         // smoothed gradient
         matSG = SingleMatrix::RandomGaussian(dim1, dim2, c_deviceIdZero, -1.0f, 1.0f, IncrementCounter());
@@ -55,6 +57,7 @@ public:
 
         matGsparseBSC.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
         SingleMatrix::MultiplyAndAdd(matG2, false, matG1sparseCSC, true, matGsparseBSC);
+        timestamps = SingleMatrix::RandomGaussian(1, dim2, c_deviceIdZero, -1.0f, 1.0f, IncrementCounter());
     }
 
     void RunOnDevices(std::function<void()> func)
@@ -67,6 +70,7 @@ public:
             matMsparse.TransferToDeviceIfNotThere(deviceId, true);
             matG.TransferToDeviceIfNotThere(deviceId, true);
             matGsparseBSC.TransferToDeviceIfNotThere(deviceId, true);
+            timestamps.TransferToDeviceIfNotThere(deviceId, true);
             func();
         }
     }
@@ -106,8 +110,11 @@ BOOST_FIXTURE_TEST_CASE(AdaDeltaSparse, MatrixLearnerFixture)
     // run learner
     RunOnDevices([this]()
     {
-        matSG.AdaDeltaUpdate(matG, matM, 0.5f, 0.95f, 1e-8f);
-        matSGsparse.AdaDeltaUpdate(matGsparseBSC, matMsparse, 0.5f, 0.95f, 1e-8f);
+        timestamps.SetValue(0.0f);
+        auto ts = reinterpret_cast<int*>(timestamps.Data());
+        matSG.AdaDeltaUpdate(matG, matM, 0.5f, 0.95f, 1e-8f, nullptr, 0);
+        matSGsparse.AdaDeltaUpdate(matGsparseBSC, matMsparse, 0.5f, 0.95f, 1e-8f, ts, 1);
+        matSGsparse.AdaDeltaFlushState(matGsparseBSC.GetNumCols(), 0.95f, ts, 1);
 
         BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE4));
         BOOST_CHECK(matM.IsEqualTo(matMsparse, c_epsilonFloatE4));

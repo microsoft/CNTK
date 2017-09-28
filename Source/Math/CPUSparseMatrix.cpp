@@ -1422,7 +1422,7 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
 }
 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
+void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp)
 {
     size_t numColsNeeded = 2 * GetNumCols();
 
@@ -1443,23 +1443,26 @@ void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemT
     ElemType* smoothAda = c.Data();
     ElemType* smoothX2 = c.Data() + n;
     ElemType* val = functionValues.Data();
+    auto rows = GetNumRows();
 
 #pragma omp parallel for
     // TODO: Unroll 4-times for better performance leveraging vectorization
-    for (int j = 0; j < (int)GetBlockSize(); j++)
+    for (auto blockid = 0; blockid < (int)GetBlockSize(); ++blockid)
     {
-        size_t i = GetBlockIds()[j] - GetBlockIdShift();
-        size_t len = GetNumRows();
-        size_t start = j * len;
-        for (size_t p = start; p < start + len; p++)
+        auto col = GetBlockIds()[blockid] - GetBlockIdShift();
+        auto columnOffset = col * rows;
+        auto blockOffset = blockid * rows;
+        auto decay = std::pow(rho, currentTimestamp - 1 - timestamps[col]);
+        timestamps[col] = currentTimestamp;
+        for (auto row = 0; row < rows; ++row)
         {
-            size_t denseIndex = i * len + (p - start);
-            ElemType g = grad[p];
-            ElemType adaSqr = rho * smoothAda[denseIndex] + (1 - rho) * g * g;
+            size_t denseIndex = columnOffset + row;;
+            ElemType g = grad[blockOffset + row];
+            ElemType adaSqr = rho * decay * smoothAda[denseIndex] + (1 - rho) * g * g;
             smoothAda[denseIndex] = adaSqr;
-            ElemType x2 = smoothX2[denseIndex];
+            ElemType x2 = decay * smoothX2[denseIndex];
             ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
-            smoothX2[denseIndex] = rho * smoothX2[denseIndex] + (1 - rho) * deltaX * deltaX;
+            smoothX2[denseIndex] = rho * x2 + (1 - rho) * deltaX * deltaX;
             val[denseIndex] += learningRate * deltaX;
         }
     }
