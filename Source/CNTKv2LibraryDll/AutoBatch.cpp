@@ -1912,9 +1912,6 @@ return fInlinedPtr;
         auto& fields = *f.m_outputs.front().m_dataFields;
         fail_if(fields.m_redirection.m_functionHolder, "shouldn't functionHolder be empty here?");
         fields.m_redirection.reset(&f);         // we are computing stuff ourselves
-        //fields.m_redirection.m_function = &f;         // we are computing stuff ourselves
-        //fields.m_redirection.m_sliceRange.reset(); // (indicates that this is not a slice)
-        //fields.m_redirection.m_depthHint = INT_MAX;   // (to indicate an invalid value)
     }
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
@@ -2024,6 +2021,7 @@ return fInlinedPtr;
         auto& fields = GetOutputFields(f);
 #if 1
         fields.m_redirection.reset(batchedOp, sliceRange);
+        // note: This overwrites depthHint. That's fine since depthHint is only used for scheduling. But this function just got a value, hence will never be scheduled.
 #else
         fields.m_redirection.m_function = batchedOp.get(); // this is the actual pointer used to traverse
         fields.m_redirection.m_functionHolder = batchedOp; // and also keep a ref count, since this may be a new object not referenced anywhere else yet
@@ -2032,8 +2030,8 @@ return fInlinedPtr;
         // in case is it was a new function. Since m_function also gets overwritten, the object it used
         // to point to is no longer referenced.
         fields.m_redirection.m_sliceRange = sliceRange;
-#endif
         // ^^ TODO: use reset() here. But how about depthHint?
+#endif
         // semantically, this will compute as fields.m_value = out->IndexLastAxis(j);
         // but it gets deferred to save effort
         // update all ops' consumers and schedule them when possible
@@ -2618,11 +2616,13 @@ return fInlinedPtr;
                 let redirectionPair0 = LazyPhysicalSlice(pfields0);
                 let is0Redirected = redirectionPair0.originatingFunction != nullptr;
                 // loop over all batched ops
-                bool allSame = true;
-                bool allConsecutiveSlices = is0Redirected && !redirectionPair0.sliceRange.empty(); // to be consecutive, it must be a slice to start with
+                bool allSame = true; // true if all are the same objects
+                bool allConsecutiveIndices = is0Redirected && !redirectionPair0.sliceRange.empty(); // true if all are consecutive index ops into the same batched result
+                // TODO: make sure that LazyPhysicalSlice() never returns a sliceRange if not redirected; then remove the first check
+                //bool allConsecutiveSlices = allConsecutiveIndices; // true if all are consecutive slice ops into the same batched result
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, batchSize);
-                //for (auto op = ops.begin(); op != ops.end(); ++op) // create the batched tensors
-                size_t j = 0; // running index
+                size_t prevSliceEndIndex = 0; // running index
+                // TODO: ^^ change to previous end; replace all uses of 'prevSliceEndIndex' below with batchSize.
                 for (let& f : ops) // create the batched tensors
                 {
                     let& input = f.m_inputs[i];
@@ -2632,16 +2632,16 @@ return fInlinedPtr;
                     allSame = allSame &&
                         (&pfields == &pfields0 ||                           // same object
                          (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
-                    // ^^ we can remove this double check, and just compare m_function abnd m_sliceRange
+                    // ^^ we can remove this double check, and just compare m_function and m_sliceRange
                     // optimization: if all args are consecutive slices, then use a slice view instead
-                    if (allConsecutiveSlices)
+                    if (allConsecutiveIndices)
                     {
                         // optimization: if consecutive slices, then recover the original batched tensor
                         // TODO: Can we directly check the data buffer pointer?
                         fail_if(redirectionPair.sliceRange.IsSlice(), "stacking not yet supported");
-                        allConsecutiveSlices =
+                        allConsecutiveIndices =
                             redirectionPair.originatingFunction     == redirectionPair0.originatingFunction && // function that creates the physical output
-                            redirectionPair.sliceRange.Index() == redirectionPair0.sliceRange.Index() + j;
+                            redirectionPair.sliceRange.Index() == redirectionPair0.sliceRange.Index() + prevSliceEndIndex;
                         // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
                         // scenario, we will loose entries in the middle. We can allow to keep a few around
                         // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
@@ -2651,16 +2651,15 @@ return fInlinedPtr;
                     gatherInputs.push_back(input);
                     // note: Variable is just two shared_ptrs, one being NULL; so this is cheap
                     // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
-                    j++;
+                    prevSliceEndIndex++;
                 }
-                fail_if(j != batchSize, "bad j??");
-                // TODO: change 'j' below to 'batchSize'
+                fail_if(prevSliceEndIndex != batchSize, "bad prevSliceEndIndex??");
                 cudaStatsguard.Stop();
                 // and splice
                 if (allSame) // optimized case: all ops share the same operand: no need to batch them
                     // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
                     m_batchedInputs[i] = gatherInputs[0];
-                else if (allConsecutiveSlices) // they are consecutive slice views: can short-circuit as a slice view
+                else if (allConsecutiveIndices) // they are consecutive slice views: can short-circuit as a slice view
                 {
                     let& from  = redirectionPair0.originatingFunction;
                     fail_if(redirectionPair0.sliceRange.IsSlice(), "stacking not yet supported");
@@ -2670,19 +2669,19 @@ return fInlinedPtr;
                     let& fromDims = output.Shape().Dimensions();
                     fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
                     let axis = fromDims.size() - 1;
-                    if (begin == 0 && j == fromDims.back()/*[axis]*/) // full range: just take it
+                    if (begin == 0 && batchSize == fromDims.back()/*[axis]*/) // full range: just take it
                         m_batchedInputs[i] = output; // note: graph already has a strong ref to output elsewhere
                     else // sub-range: splice it by taking a slice view on the previously spliced batch
                     {
                         //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"re-batch", 3, batchSize);
                         // create a new PrimitiveFunction Slice()
                         vector<size_t> outputShape = fromDims; // determine output shape
-                        outputShape.back()/*[axis]*/ = j;
+                        outputShape.back()/*[axis]*/ = batchSize;
                         m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape,
                                                                        Dictionary(
                                                                            PrimitiveFunction::AttributeNameAxis       , Axis((int)axis) ,
                                                                            PrimitiveFunction::AttributeNameBeginIndex , (int)begin      ,
-                                                                           PrimitiveFunction::AttributeNameEndIndex   , (int)(begin + j)
+                                                                           PrimitiveFunction::AttributeNameEndIndex   , (int)(begin + batchSize)
                                                                        ),
                                                                        f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                                                        /*isFree=*/true);
