@@ -901,8 +901,8 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SparseRowStack(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName)
 {
     vector<ComputationNodeBasePtr> inputs(pinputs.size());
-        for (size_t i = 0; i < inputs.size(); i++)
-	        inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
+    for (size_t i = 0; i < inputs.size(); i++)
+        inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
     return net.AddNodeToNetAndAttachInputs(New<SparseRowStackNode<ElemType>>(net.GetDeviceId(), nodeName), { inputs });
 }
 
