@@ -186,7 +186,7 @@ fun AttentionModelReference(size_t attentionDim1)
 }
 
 // TODO: Break out initial step and recurrent step layers. Decoder will later pull them out frmo here.
-BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
+BinaryModel AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(600, Named("encBarrier"));
@@ -207,7 +207,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     let outputProjection = Linear(tgtVocabSize, ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);  // output layer without non-linearity (no sampling yet)
 
     // buffers
-    vector<Variable> encodingProjectedKeys, encodingProjectedData, attentionContexts;
+    vector<Variable> res, attentionContexts;
 
     // decode from a top layer of an encoder, using history as history
     map<wstring, ModelParametersPtr> nestedLayers =
@@ -247,33 +247,35 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     });
 #endif
 
-    return BinarySequenceModel({ }, nestedLayers,
-    [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
+    return BinaryModel({ }, nestedLayers,
+    [=](const Variable& history, const Variable& hEncs) mutable -> Variable
     {
-        res.resize(history.size());
         //attentionContexts.resize(res.size());
         // decoding loop
-        CountAPICalls(1);
-        Variable state = Slice(hEncs.front(), Axis(0), encoderRecurrentDim, 2 * encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
+        CountAPICalls(2);
+        Variable state = Slice(hEncs[0], Axis(0), encoderRecurrentDim, 2 * encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
         state = initialStateProjection(state);      // match the dimensions
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
         // common subexpression of attention.
         // We pack the result into a dense matrix; but only after the matrix product, to allow for it to be batched.
-        encoderKeysProjection(encodingProjectedKeys, hEncs);
-        encoderDataProjection(encodingProjectedData, hEncs);
-        // ^^ these are 2 x #sequences splices per MB, (40 for 20 seq in MB)
+        let encodingProjectedKeys = encoderKeysProjection(hEncs); // this projects the entire sequence
+        let encodingProjectedData = encoderDataProjection(hEncs);
+        res.resize(history.size()); // we put the time steps here
+        let historyEmbedded = embedTarget(history);
         for (size_t t = 0; t < history.size(); t++)
         {
             // do recurrent step (in inference, history[t] would become res[t-1])
-            let historyProjectedKey = embedTarget(history[t]);
-            // ^^ fully batched, 1 launch
+            let historyProjectedKey = historyEmbedded[t];
             let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
             CountAPICalls(1);
-            let input = Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput"));
-            state = stepFunction(state, stepBarrier(input));
+            let input = stepBarrier(Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput")));
+            state = stepFunction(state, input);
             // compute attention vector
             //attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
-            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeys, encodingProjectedData);
+            vector<Variable> encodingProjectedKeysVec, encodingProjectedDataVec;
+            as_vector(encodingProjectedKeysVec, encodingProjectedKeys);
+            as_vector(encodingProjectedDataVec, encodingProjectedData);
+            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeysVec, encodingProjectedDataVec);
             // ^^ two operations that are per-sequence
             Function::SetDynamicProfiler(prevProfiler);
             // stack of non-recurrent projections
@@ -298,8 +300,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
         }
         //let z = doToOutput(Splice(res/*state*/, Axis::EndStaticAxis()), Splice(attentionContexts, Axis::EndStaticAxis()));
         //as_vector(res, z);
-        encodingProjectedKeys.clear();
-        encodingProjectedData.clear();
+        return Splice(res, Axis::EndStaticAxis());
     });
 }
 
@@ -309,7 +310,7 @@ BinaryModel CreateModelFunction()
     auto embedBwd = Embedding(embeddingDim, device, Named("embedBwd"));
     auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
-    vector<Variable> h, hist, res;
+    vector<Variable> res;
     return BinaryModel({},
     {
         { L"embedSourceFwd", embedFwd },
@@ -325,10 +326,8 @@ BinaryModel CreateModelFunction()
         // encoder
         let hTensor = encode(eFwd, eBwd);
         // decoder (outputting logprobs of words)
-        as_vector(h, hTensor);
-        as_vector(hist, history);
-        decode(res, hist, h);
-        hist.clear(); h.clear();
+        let resTensor = decode(history, hTensor);
+        as_vector(res, resTensor);
         CountAPICalls(1);
         let z = Splice(res, Axis::EndStaticAxis());
         res.clear();
