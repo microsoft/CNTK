@@ -66,7 +66,7 @@ BinaryModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double 
     nested.insert(nested.end(), layers.begin(), layers.end());
     nested.insert(nested.end(), bns.begin(), bns.end());
     vector<Variable> buffer;
-    return BinaryModel(nested,
+    return Dynamite::Model({}, NameNumberedParameters(nested),
     [=](const Variable& xFwd, const Variable& xBwd) mutable -> Variable
     {
         // the first layer has different inputs for forward and backward
@@ -89,12 +89,12 @@ BinaryModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double 
 //  - keys used for the weights
 //  - data gets interpolated
 // Here they are the same.
-TernaryModel AttentionModelBahdanau(size_t attentionDim1)
+fun AttentionModelBahdanau(size_t attentionDim1)
 {
     auto Q = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
     auto v = Parameter({ attentionDim1 }, DTYPE, GlorotUniformInitializer(), device, L"v"); // tanh projection
     let normQ = LengthNormalization(device);
-    return TernaryModel({ Q, /*K,*/ v }, { { L"normQ", normQ } },
+    return Dynamite::Model({ Q, /*K,*/ v }, { { L"normQ", normQ } },
     [=](const Variable& query, const Variable& projectedKeys/*keys*/, const Variable& data) -> Variable
     {
         // compute attention weights
@@ -118,11 +118,19 @@ TernaryModel AttentionModelBahdanau(size_t attentionDim1)
      });
 }
 
+// simple helper for temporary conversions; inefficient
+vector<Variable> AsVector(const Variable& seq)
+{
+    vector<Variable> res;
+    as_vector(res, seq);
+    return res;
+}
+
 // reference attention model
 fun AttentionModelReference(size_t attentionDim1)
 {
     //auto H = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
-    auto projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize, device);
+    let projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize, device);
     let normH = LengthNormalization(device); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
     let zBarrier   = Barrier(20, Named("zBarrier"));
@@ -135,22 +143,22 @@ fun AttentionModelReference(size_t attentionDim1)
         let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A]. Batched.
         return tanh;
     });
-    return QuaternaryModel11NN({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
-        [=](const Variable& h,                             // [A] decoder hidden state
-            const Variable& historyProjectedKey,           // [A] previous output, embedded
-            const vector<Variable>& encodingProjectedKeys, // [A x T] encoder hidden state seq, projected as key >> tanh
-            const vector<Variable>& encodingProjectedData  // [A x T] encoder hidden state seq, projected as data
+    return Dynamite::Model({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
+        [=](const Variable& h,                     // [A] decoder hidden state
+            const Variable& historyProjectedKey,   // [A] previous output, embedded
+            const Variable& encodingProjectedKeys, // [A x T] encoder hidden state seq, projected as key >> tanh
+            const Variable& encodingProjectedData  // [A x T] encoder hidden state seq, projected as data
            ) mutable -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // compute attention weights
         //let hProjected = projectQuery(h); // [A]. Batched.
         //let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A]. Batched.
-        let tanh = doToTanh(h, historyProjectedKey);
+        let tanh = doToTanh(h, historyProjectedKey); // [A]
 #if 1
         // This is not well-batched yet, I don't know why. This is the solution that should realize maximum parallelization (disregarding Gather steps).
         CountAPICalls(encodingProjectedKeys.size());
-        for (let& k : encodingProjectedKeys)
+        for (let& k : AsVector(encodingProjectedKeys))
             us.push_back(InnerProduct(tanh, k, Axis(0), Named("u"))); // vector<[1]>. Batched.
         // alternative: ^^ compute the inner product elementwise.
         //              Will make a broadcast copy of tanh[t] (#copies=mb size), then operate in one go instead of one per sequence
@@ -162,23 +170,22 @@ fun AttentionModelReference(size_t attentionDim1)
         us.clear();
         // alternative: product with encodingProjectedData
         //              Batched: elementwise product -> RAM copy of (encodingProjectedData * u)[t], #items=mb size
-        let res = resBarrier(Dynamite::Sequence::InnerProduct(encodingProjectedData, ws, Named("attContext"))); // inner product over a vectors
+        let res = resBarrier(Dynamite::Sequence::InnerProduct(AsVector(encodingProjectedData), ws, Named("attContext"))); // inner product over a vectors
         ws.clear();
 #else
-        let encodingProjectedKeysTensor = Splice(encodingProjectedKeys, Axis(1), Named("encodingProjectedKeysTensor"));  // [A x T]
-        let u = InnerProduct(tanh, encodingProjectedKeysTensor, Axis(0), Named("u")); // [1 x T] row vector. Batchable by stacking.
-        // alternative: ^^ compute the inner product elementwise.
-        //              Will make a broadcast copy of tanh[t] (#copies=mb size), then operate in one go instead of one per sequence
-        // alternative: softmax denom: splice u, ReduceLogSum, slice up -> sequence
-        //              Batched (#mb size in one go): minus, exp -> w[t]
-        //              Not batched (one launch per sentence: ReduceLogSum)
-        let w = Dynamite::Softmax(u, Axis(1), Named("w")); // [1 x T] ReduceLogSum() not parallelizable. Pad? E.g. bucket-pad?
+        CountAPICalls(1);
+        let uVec = InnerProduct(tanh, encodingProjectedKeys, Axis(0), Named("u")); // [1 x T]
+        let wVec = Dynamite::Softmax(uVec, Axis(1)); // [1 x T]
+        // ^^TODO: put zBarrier inside Softmax
+        //as_vector(us, uVec);
+        //Dynamite::Sequence::Softmax(ws, us, zBarrier); // softmax over a vector
+        // BUGBUG: Somehow the Exp() inside does not get batched, although they are unrolled.
+        //us.clear();
         // alternative: product with encodingProjectedData
         //              Batched: elementwise product -> RAM copy of (encodingProjectedData * u)[t], #items=mb size
-        let encodingProjectedDataTensor = Splice(encodingProjectedData, Axis(1), Named("encodingProjectedDataTensor"));  // [A x T]
-        let res = Reshape(InnerProduct(encodingProjectedDataTensor, w, Axis(1), Named("attContext")), NDShape{ attentionDim1 }); // [A x T] x [1 x T] -> [A x 1] Batchable with bucket-padding.
-        // alternative: reduce over encoding length. Gather the products (another copy #items=mb size)
-        //              Not batched (one launch per sentence): ReduceSum
+        CountAPICalls(1);
+        let res = resBarrier(InnerProduct(encodingProjectedData, wVec, Axis_DropLastAxis, Named("attContext"))); // [.] inner product over a vectors
+        //let res = resBarrier(Dynamite::Sequence::InnerProduct(encodingProjectedData, ws, Named("attContext"))); // inner product over a vectors
 #endif
         Function::SetDynamicProfiler(prevProfiler);
         return res;
@@ -186,7 +193,7 @@ fun AttentionModelReference(size_t attentionDim1)
 }
 
 // TODO: Break out initial step and recurrent step layers. Decoder will later pull them out frmo here.
-BinaryModel AttentionDecoder(double dropoutInputKeepProb)
+fun AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(600, Named("encBarrier"));
@@ -198,7 +205,7 @@ BinaryModel AttentionDecoder(double dropoutInputKeepProb)
     let stepBarrier = Barrier(20, Named("stepBarrier"));
     let stepFunction = GRU(decoderRecurrentDim, device);
     //let attentionModel = AttentionModelBahdanau(attentionDim);
-    let attentionModel = AttentionModelReference(attentionDim);
+    auto attentionModel = AttentionModelReference(attentionDim);
     let firstHiddenProjection = Barrier(600, Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return ReLU(x, Named("firstHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
     vector<UnaryBroadcastingModel> resnets;
     for (size_t n = 0; n < numDecoderResNetProjections; n++)
@@ -207,7 +214,7 @@ BinaryModel AttentionDecoder(double dropoutInputKeepProb)
     let outputProjection = Linear(tgtVocabSize, ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);  // output layer without non-linearity (no sampling yet)
 
     // buffers
-    vector<Variable> res, attentionContexts;
+    vector<Variable> res;
 
     // decode from a top layer of an encoder, using history as history
     map<wstring, ModelParametersPtr> nestedLayers =
@@ -216,7 +223,6 @@ BinaryModel AttentionDecoder(double dropoutInputKeepProb)
         { L"encoderDataProjection",  encoderDataProjection },
         { L"embedTarget",            embedTarget },
         { L"initialStateProjection", initialStateProjection },
-        //{ L"stepBarrier",            stepBarrier },
         { L"stepFunction",           stepFunction },
         { L"attentionModel",         attentionModel },
         { L"firstHiddenProjection",  firstHiddenProjection },
@@ -247,7 +253,7 @@ BinaryModel AttentionDecoder(double dropoutInputKeepProb)
     });
 #endif
 
-    return BinaryModel({ }, nestedLayers,
+    return Dynamite::Model/*BinaryModel*/({ }, nestedLayers,
     [=](const Variable& history, const Variable& hEncs) mutable -> Variable
     {
         //attentionContexts.resize(res.size());
@@ -265,6 +271,7 @@ BinaryModel AttentionDecoder(double dropoutInputKeepProb)
         for (size_t t = 0; t < history.size(); t++)
         {
             // do recurrent step (in inference, history[t] would become res[t-1])
+            CountAPICalls(1);
             let historyProjectedKey = historyEmbedded[t];
             let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
             CountAPICalls(1);
@@ -272,10 +279,7 @@ BinaryModel AttentionDecoder(double dropoutInputKeepProb)
             state = stepFunction(state, input);
             // compute attention vector
             //attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
-            vector<Variable> encodingProjectedKeysVec, encodingProjectedDataVec;
-            as_vector(encodingProjectedKeysVec, encodingProjectedKeys);
-            as_vector(encodingProjectedDataVec, encodingProjectedData);
-            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeysVec, encodingProjectedDataVec);
+            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeys, encodingProjectedData);
             // ^^ two operations that are per-sequence
             Function::SetDynamicProfiler(prevProfiler);
             // stack of non-recurrent projections
@@ -304,11 +308,11 @@ BinaryModel AttentionDecoder(double dropoutInputKeepProb)
     });
 }
 
-BinaryModel CreateModelFunction()
+fun CreateModelFunction()
 {
-    auto embedFwd = Embedding(embeddingDim, device, Named("embedFwd"));
-    auto embedBwd = Embedding(embeddingDim, device, Named("embedBwd"));
-    auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
+    let embedFwd = Embedding(embeddingDim, device, Named("embedFwd"));
+    let embedBwd = Embedding(embeddingDim, device, Named("embedBwd"));
+    let encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
     vector<Variable> res;
     return BinaryModel({},
@@ -335,7 +339,7 @@ BinaryModel CreateModelFunction()
     });
 }
 
-BinaryFoldingModel CreateCriterionFunction(const BinaryModel& model_fn)
+fun CreateCriterionFunction(const BinaryModel& model_fn)
 {
     vector<Variable> features, historyVector, labelsVector, zVector, losses;
     // features and labels are tensors with first dimension being the length
@@ -376,7 +380,7 @@ BinaryFoldingModel CreateCriterionFunction(const BinaryModel& model_fn)
         let collatedLosses = Splice(lossesPerSequence, Axis(0), Named("seqLosses"));     // collate all seq lossesPerSequence
         // ^^ this is one launch per MB
         CountAPICalls(1);
-        let mbLoss = /*Reshape*/(ReduceSum(collatedLosses, /*Axis(0)*/Axis_DropLastAxis, Named("batchLoss"))/*, NDShape{}*/);  // aggregate over entire minibatch
+        let mbLoss = ReduceSum(collatedLosses, Axis_DropLastAxis, Named("batchLoss"));  // aggregate over entire minibatch
         lossesPerSequence.clear();
         Function::SetDynamicProfiler(prevProfiler);
         return mbLoss;
