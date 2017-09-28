@@ -787,7 +787,11 @@ static __declspec(noinline) size_t TensorDataAsString(string& res,
         }
     }
     if (subRank == 0) // scalar: print the item
+    {
         res.append(to_string(*data));
+        if (is_same<ElemType, size_t>())
+            res.append(":1");
+    }
     else
     {
         let axis1 = (rank >= 2 && subRank <= 2 && columnMajor) ? 2 - subRank : subRank - 1; // column major for matrix level
@@ -813,13 +817,25 @@ template <class ElemType>
 string TensorView<ElemType>::AsString(size_t maxItems /*= 6*/, bool columnMajor /*= true*/) const
 {
     let& sobViewPtr = GetSOBViewPtr();
-    unique_ptr<ElemType[]> data(sobViewPtr->CopyToArray());
-    let dims    = m_shape.GetDims();
-    let strides = m_shape.GetStrides();
-    let rank = m_shape.GetRank();
     string res;
-    res.reserve(sobViewPtr->GetNumElements() * 5);
-    TensorDataAsString(res, data.get(), dims, strides, rank, rank, 0, maxItems, columnMajor);
+    unique_ptr<size_t[]> asOneHotPtr(sobViewPtr->TryCopyToArrayAsOneHot()); // only CSC matrices that are one-hot will return non-NULL here
+    if (asOneHotPtr) // special case: one-hot
+    {
+        let numCols = sobViewPtr->GetNumCols(); // this is the size of asOneHotPtr[]
+        res.reserve(numCols * 10);
+        // TODO: We could easily extend this to CSR.
+        // BUGBUG: This does not honor the more complex interpretation as a sparse tensor. OK for now, since this is for debugging.
+        TensorDataAsString(res, asOneHotPtr.get(), /*dims=*/vector<size_t>{ 1, numCols }, /*strides=*/vector<size_t>{ 1, 1 }, /*rank=*/2, 2, 0, maxItems, columnMajor);
+    }
+    else
+    {
+        unique_ptr<ElemType[]> data(sobViewPtr->CopyToArray());
+        let dims    = m_shape.GetDims();
+        let strides = m_shape.GetStrides();
+        let rank = m_shape.GetRank();
+        res.reserve(sobViewPtr->GetNumElements() * 10);
+        TensorDataAsString(res, data.get(), dims, strides, rank, rank, 0, maxItems, columnMajor);
+    }
     return res;
 }
 

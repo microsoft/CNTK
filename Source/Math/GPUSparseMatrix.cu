@@ -315,7 +315,29 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
 template <class ElemType>
 size_t* GPUSparseMatrix<ElemType>::TryCopyToArrayAsOneHot() const
 {
-    return nullptr;
+    if (GetFormat() != MatrixFormat::matrixFormatSparseCSC) // only CSC format for now
+        return nullptr;
+    let n = GetNumCols();
+    if (NzCount() != n) // if not, we know it is not one-hot
+        return nullptr;
+    // all values must be 1
+    vector<ElemType> valBuf(n);
+    CUDA_CALL(cudaMemcpy(valBuf.data(), Data(), valBuf.size() * sizeof(*valBuf.data()), cudaMemcpyDeviceToHost)); // Data() includes slice-view offset
+    if (any_of(valBuf.begin(), valBuf.end(), [](ElemType val) { return val != 1; }))
+        return nullptr;
+    // each column must contain exactly one element
+    vector<GPUSPARSE_INDEX_TYPE> secondaryIndexBuf(n+1);
+    CUDA_CALL(cudaMemcpy(secondaryIndexBuf.data(), SecondaryIndexLocation(), secondaryIndexBuf.size() * sizeof(*secondaryIndexBuf.data()), cudaMemcpyDeviceToHost));
+    for (size_t j = 0; j < n; j++)
+        if (secondaryIndexBuf[j + 1] != secondaryIndexBuf[j] + 1)
+            return nullptr;
+    // OK! We can get the array now
+    vector<GPUSPARSE_INDEX_TYPE> majorIndexBuf(n);
+    CUDA_CALL(cudaMemcpy(majorIndexBuf.data(), MajorIndexLocationWithSliceViewOffset(), majorIndexBuf.size() * sizeof(*majorIndexBuf.data()), cudaMemcpyDeviceToHost)); // note: includes slice-view offset
+    unique_ptr<size_t[]> res(new size_t[n]);
+    for (size_t j = 0; j < n; j++)
+        res[j] = majorIndexBuf[j];
+    return res.release();
 }
 
 template <class ElemType>
@@ -710,7 +732,6 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
     size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, GetFormat());
     bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
 
-    bool reallocate = (growing || (!growOnly && shrinking));
     if (reallocate)
     {
         // Note that we are allocating one buffer for all of our data structures. Thus the ElemType* nzValues array lives directly next to
@@ -1373,8 +1394,8 @@ template <class ElemType>
         // based on the size of m_nz in rhs and numCols in the resulted matrix we use different approaches
         size_t rhs_nz = rhs.NzCount();
 
-        if (rhs.m_sliceViewOffset != 0)
-            fprintf(stderr, "MultiplyAndAdd: rhs has offset %d\n", (int)rhs.m_sliceViewOffset), fflush(stderr);
+        //if (rhs.m_sliceViewOffset != 0)
+        //    fprintf(stderr, "MultiplyAndAdd: rhs has offset %d\n", (int)rhs.m_sliceViewOffset), fflush(stderr);
 
         // Block col storage format (target matrix):
         //  - GetBlockSize()                  :                  number of non-zero columns
@@ -1385,7 +1406,7 @@ template <class ElemType>
         size_t blockSizePrev = c.GetBlockSize(); // number of non-zero columns in target matrix. Compact storage contains this many columns.
         if (blockSizePrev == 0)
         {
-            fprintf(stderr, "MultiplyAndAdd: resetting to %d items\n", (int)n), fflush(stderr);
+            //fprintf(stderr, "MultiplyAndAdd: resetting to %d items\n", (int)n), fflush(stderr);
             // the first time, we allocate space for all entries
             // Initially, all columns are empty. As we keep adding matrix products into it, columns
             // flip from empty to non-empty (but never back to empty).
@@ -1398,17 +1419,14 @@ template <class ElemType>
             if (n > c.GetNumCols())
                 LogicError("MultiplyAndAdd: wrong allocation (primary and secondary indices)?");
             CUDA_CALL(cudaMemsetAsync(c.ColOrRow2BlockId(), 0xff, sizeof(GPUSPARSE_INDEX_TYPE) * n, t_stream));
-CUDA_CALL(cudaDeviceSynchronize());
             // PERF BUGBUG: BlockId2ColOrRow()[*] does not need to be initialized actually, does it?
             CUDA_CALL(cudaMemsetAsync(c.BlockId2ColOrRow(), 0xff, sizeof(GPUSPARSE_INDEX_TYPE) * n, t_stream));
-CUDA_CALL(cudaDeviceSynchronize());
         }
 
         // temp buffer to transfer a single value
         size_t* pBlockSizeTempGpu = TracingGPUMemoryAllocator::Allocate<size_t>(lhs.GetComputeDeviceId(), 1);
         // (perf note: we could use a kernel to set the value, to avoid the GPU sync; but below we copy it back, which cannot be avoided)
         CUDA_CALL(cudaMemcpyAsync(pBlockSizeTempGpu, &blockSizePrev, sizeof(size_t), cudaMemcpyHostToDevice, t_stream));
-CUDA_CALL(cudaDeviceSynchronize());
         // TODO: Can we avoid the memory allocation here?? Just keep around a bunch of general-use buffers?
 
         // determine which columns are non-zero -> ColOrRow2BlockId()[colIndex]
@@ -1420,13 +1438,11 @@ CUDA_CALL(cudaDeviceSynchronize());
             /*in*/rhs.RowLocation(), /*in ref*/rhs.ColLocation()[0], /*out*/c.ColOrRow2BlockId(), rhs_nz);
         // RowLocation = base of nz row-index array, without potential slice-view offset. Kernel offsets it by ColLocation()[0], which is non-zero in case of a slice view.
         // Now ColOrRow2BlockId()[colIndex] contains an index or Id_Pending for all non-empty columns.
-CUDA_CALL(cudaDeviceSynchronize());
 
         // assign a storage index to any newly added columns
         blocksPerGrid = (int) ceil(((double) n) / GridDim::maxThreadsPerBlock);
         _determineBlockIds<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
             c.BlockId2ColOrRow(), c.ColOrRow2BlockId(), n, pBlockSizeTempGpu);
-CUDA_CALL(cudaDeviceSynchronize());
         // Now all Id_Pending values in ColOrRow2BlockId()[colIndex] have been replaced,
         // and BlockId2ColOrRow()[storageIndex] values for those have been placed.
         // *pBlockSizeTempGpu has been incremented accordingly.
@@ -1446,7 +1462,6 @@ CUDA_CALL(cudaDeviceSynchronize());
         //       initialize newly aded zero-columns, beyond the upper bound.
         size_t blockSizeCurr;
         CUDA_CALL(cudaMemcpy(&blockSizeCurr, pBlockSizeTempGpu, sizeof(size_t), cudaMemcpyDeviceToHost));
-CUDA_CALL(cudaDeviceSynchronize());
         TracingGPUMemoryAllocator::Free<size_t>(lhs.GetComputeDeviceId(), pBlockSizeTempGpu);
         c.SetBlockSize(blockSizeCurr);
         // Now GetBlockSize(), ColOrRow2BlockId()[*], and BlockId2ColOrRow()[*] are up to date.
@@ -1458,14 +1473,11 @@ CUDA_CALL(cudaDeviceSynchronize());
             LogicError("MultiplyAndAdd: #non-zero columns became less??");
         if (blockSizeCurr > blockSizePrev)
         {
-            fprintf(stderr, "MultiplyAndAdd: growing #non-zero columns from %d to %d, for %d items\n", (int)blockSizePrev, (int)blockSizeCurr, (int)k), fflush(stderr);
+            //fprintf(stderr, "MultiplyAndAdd: growing #non-zero columns from %d to %d, for %d items\n", (int)blockSizePrev, (int)blockSizeCurr, (int)k), fflush(stderr);
             // zero initialize newly added non-zero columns in the compact storage
             size_t nnz = m * blockSizeCurr;
-            // TODO: if blockSizePrev == 0 then there is no need to keep the values. We can just flatten them again.
             c.RequireSizeAndAllocate(m, n, nnz, true, true); // we need to keep the col2blockid and blockid2col info when resizing.
-CUDA_CALL(cudaDeviceSynchronize());
-            CUDA_CALL(cudaMemsetAsync(c.Data() + m * blockSizePrev, 0, sizeof(ElemType) * m * (blockSizeCurr - blockSizePrev), t_stream));
-CUDA_CALL(cudaDeviceSynchronize());
+            CUDA_CALL(cudaMemsetAsync(c.Buffer() + m * blockSizePrev, 0, sizeof(ElemType) * m * (blockSizeCurr - blockSizePrev), t_stream));
         }
         // Now allocation is up-to-date as well.
 
@@ -1488,7 +1500,6 @@ CUDA_CALL(cudaDeviceSynchronize());
             // result (out)
             /*col2blockIds=*/ c.ColOrRow2BlockId(), // (in) [colIndex] storage index for each non-zero column
             /*resultValues=*/ c.Buffer());          // (in/out) [rowIndex, storageIndex] pointer to compact storage
-CUDA_CALL(cudaDeviceSynchronize());
 
         c.InvalidateCachedNzCount(); // (the cached nzCount value is not used for block-sparse; nzCount = GetBlockSize() * numRows)
     }
