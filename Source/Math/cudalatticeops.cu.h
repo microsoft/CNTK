@@ -270,8 +270,8 @@ void latticefunctionsops::forwardbackwardlattice(const size_t *batchsizeforward,
     size_t startindex = 0;
     for (size_t i = 0; i < numlaunchforward; i++)
     {
-        dim3 b((unsigned int) ((batchsizeforward[i] + tpb - 1) / tpb));
-        forwardlatticej<<<b, t, 0, GetCurrentStream()>>>(batchsizeforward[i], startindex, edgeacscores,
+        dim3 b2((unsigned int) ((batchsizeforward[i] + tpb - 1) / tpb));
+        forwardlatticej<<<b2, t, 0, GetCurrentStream()>>>(batchsizeforward[i], startindex, edgeacscores,
                                                          spalignunitid, silalignunitid, edges, nodes, aligns,
                                                          alignments, aligmentoffsets, logalphas, lmf, wp, amf,
                                                          boostingfactor, uids, senone2classmap, returnEframescorrect,
@@ -291,8 +291,8 @@ void latticefunctionsops::forwardbackwardlattice(const size_t *batchsizeforward,
     startindex = edges.size();
     for (size_t i = 0; i < numlaunchbackward; i++)
     {
-        dim3 b((unsigned int) ((batchsizebackward[i] + tpb - 1) / tpb));
-        backwardlatticej<<<b, t, 0, GetCurrentStream()>>>(batchsizebackward[i], startindex - batchsizebackward[i],
+        dim3 b2((unsigned int) ((batchsizebackward[i] + tpb - 1) / tpb));
+        backwardlatticej<<<b2, t, 0, GetCurrentStream()>>>(batchsizebackward[i], startindex - batchsizebackward[i],
                                                           edgeacscores, spalignunitid, silalignunitid, edges, nodes, aligns,
                                                           totalfwscore, logpps, logalphas, logbetas,
                                                           lmf, wp, amf, boostingfactor, returnEframescorrect, logframescorrectedge,

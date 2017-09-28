@@ -623,7 +623,7 @@ initValueScale
 
 .
  If the model parameters are initialized using the Gaussian distribution,
- the standard deviation will be adjusted to 
+ the standard deviation will be adjusted to
 \begin_inset Formula $0.2\times initValueScale/\sqrt{fanout}$
 \end_inset
 
@@ -1795,7 +1795,7 @@ autoAdjustMinibatch
  Default value is false.
  Adaptive minibatch sizing will begin on epochs starting after user minibatch
  sizes explicitly specified are complete.
-  For example if the userspecifed minibatchSize=256:1024, then 256 and 1024are
+  For example if the userspecified minibatchSize=256:1024, then 256 and 1024are
  used in the first 2 Epochs and adaptive minibatchsizing is used afterwards
  
 \end_layout

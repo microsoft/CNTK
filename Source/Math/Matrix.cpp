@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// Matrix.cpp -- main CPP file that contains all Matrix functions exported by the CNTKMath.dll
+// Matrix.cpp -- main CPP file that contains all Matrix functions exported by the Cntk.Math.dll
 //
 #include "stdafx.h"
 #include "Basics.h"
@@ -16,21 +16,22 @@
 #include <math.h>
 #include "GPUWatcher.h" // bring in this class as well so that it gets exported from this DLL
 #include <memory>
+#include <atomic>
+#include "Quantizers.h"
 #ifndef CPUONLY
-#pragma comment(lib, "MathCUDA.lib") // built by CNTKMathCUDA project
+#define ANAMEFORLIB "Cntk.Math.Cuda-" ## CNTK_COMPONENT_VERSION ## ".lib"
+#pragma comment(lib, ANAMEFORLIB) // built by MathCUDA project
+#undef ANAMEFORLIB
 #endif
 
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 #pragma warning(disable : 4239) // nonstandard extension; triggered by this pattern: "auto& second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;"
 #pragma warning(disable : 4702) // unreachable code; triggered for unknown reasons
 
-#ifndef min
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-#endif
-
 // Helper to dispath matrix calls to the 4 underlying matrix libraries (CPU,GPU) x (DENSE,SPARSE)
 // 'MatrixPointerToCheck' determines where the operation takes place.
 // 'MatrixPointerToSetFlag' is the output. If not null and its location is BOTH, we collapse it to one.
+#pragma warning(disable : 4456) // declaration of curLocation hides previous local declaration
 #define DISPATCH_MATRIX_ON_FLAG(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
     {                                                                                                                   \
         CurrentDataLocation curLocation = (MatrixPointerToCheck)->GetCurrentMatrixLocation();                           \
@@ -145,6 +146,18 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+std::atomic<int> m_mathLibTraceLevel(0);
+
+void SetMathLibTraceLevel(int traceLevel)
+{
+    m_mathLibTraceLevel.store(traceLevel);
+}
+
+int GetMathLibTraceLevel()
+{
+    return m_mathLibTraceLevel.load();
+}
+
 MatrixBase::~MatrixBase() { }
 
 #pragma region Constructors, destructors and other static matrix builders
@@ -156,23 +169,11 @@ MatrixBase::~MatrixBase() { }
 //            { GPU code },
 //            ...
 
-// Initialize all members over virgin memory.
-//This function will only initialize default bland matrix. The actual matrices need to allocated
-//after calling this function and flags need to set correctly by calling SetDataLocation.
-// This clears out the entire object and brings it into destructable state.
-// Note: Keep this in sync with member definition and ShallowCopyFrom().
+// Initialize members 
 template <class ElemType>
 void Matrix<ElemType>::Init(DEVICEID_TYPE deviceId)
 {
-    m_baseMatrix      = nullptr;
-    m_GPUMatrix       = nullptr;
-    m_CPUMatrix       = nullptr;
-    m_GPUSparseMatrix = nullptr;
-    m_CPUSparseMatrix = nullptr;
-
-    m_matrixType          = MatrixType::UNDETERMINED;
-    m_currentDataLocation = CurrentDataLocation::NONE;
-
+    ReleaseMemory();
     m_preferredDeviceId = deviceId;
     m_numTimesDeviceChanged = 0;
     m_numTimesMatrixTypeChanged = 0;
@@ -230,7 +231,7 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     //       -> FORBIDDEN to write into
     //     - CPU or GPU -> BOTH: current state is CPU or GPU
     //       and a view onto it is put into BOTH state
-    //       -> OK but inefficent to read, since this is likely happening over again; but we cannot put all views into BOTH state
+    //       -> OK but inefficient to read, since this is likely happening over again; but we cannot put all views into BOTH state
     //     - BOTH -> BOTH:
     //        - read case: OK
     //        - write case: forbidden to call this function in this way
@@ -272,9 +273,9 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     // set m_baseMatrix (if location is unchanged, this will not change the pointer)
     // Note: m_currentDataLocation may also be CurrentDataLocation::BOTH, in which case the base matrix will be GPU.
     if (m_matrixType == MatrixType::DENSE)
-        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_pointer_cast<BaseMatrix<ElemType>>(m_CPUMatrix) : dynamic_pointer_cast<BaseMatrix<ElemType>>(m_GPUMatrix));
+        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_cast<BaseMatrix<ElemType>*>(m_CPUMatrix.get()) : dynamic_cast<BaseMatrix<ElemType>*>(m_GPUMatrix.get()));
     else if (m_matrixType == MatrixType::SPARSE)
-        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_pointer_cast<BaseMatrix<ElemType>>(m_CPUSparseMatrix) : dynamic_pointer_cast<BaseMatrix<ElemType>>(m_GPUSparseMatrix));
+        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_cast<BaseMatrix<ElemType>*>(m_CPUSparseMatrix.get()) : dynamic_cast<BaseMatrix<ElemType>*>(m_GPUSparseMatrix.get()));
     // Note: Typecasts are necessary since C++ cannot figure out the common base type (probably due to shared_ptr).
     // sanity check
     if (!m_baseMatrix && m_matrixType != MatrixType::UNDETERMINED)
@@ -362,7 +363,7 @@ Matrix<ElemType>::Matrix(shared_ptr<BaseMatrix<ElemType>> baseMatrix, ElemType* 
 #endif
 
 template <class ElemType>
-Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat)
+Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz)
 {
     Init(deviceId);
 
@@ -370,12 +371,12 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TY
     {
         if (m_preferredDeviceId == CPUDEVICE)
         {
-            m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormat, numRows, numCols, 0);
+            m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormat, numRows, numCols, nnz);
             SetDataLocation(CPU, SPARSE);
         }
         else
         {
-            m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(numRows, numCols, 0, m_preferredDeviceId, matrixFormat);
+            m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(numRows, numCols, nnz, m_preferredDeviceId, matrixFormat);
             SetDataLocation(GPU, SPARSE);
         }
     }
@@ -436,11 +437,11 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* p
         }
     }
 
-	// Why is this here??
+    // Why is this here??
     /*
     if (matrixFlagDontOwnBuffer & matrixFlags)
         m_baseMatrix->SetOwnBuffer(false);
-		*/
+        */
 }
 
 //copy constructor, deep copy
@@ -477,7 +478,7 @@ Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE dev
 template <class ElemType>
 Matrix<ElemType>::Matrix(Matrix<ElemType>&& moveFrom)
 {
-    Init((DEVICEID_TYPE) moveFrom.GetDeviceId());
+    Init((DEVICEID_TYPE)moveFrom.GetDeviceId());
 
 #if 1
     operator=(move(moveFrom));
@@ -528,11 +529,17 @@ Matrix<ElemType>& Matrix<ElemType>::operator=(Matrix<ElemType>&& moveFrom)
 template <class ElemType>
 void Matrix<ElemType>::ReleaseMemory()
 {
-    m_CPUMatrix       = nullptr;
-    m_GPUMatrix       = nullptr;
-    m_GPUSparseMatrix = nullptr;
-    m_CPUSparseMatrix = nullptr;
-
+    m_baseMatrix = nullptr;
+    // Perf: Avoid assignments to shared_ptr unless necessary. In certain versions of the standard library
+    // they cause ref counting, and this piece of code is called often..
+    if (m_GPUMatrix.get() != nullptr)
+        m_GPUMatrix = nullptr;
+    if (m_CPUMatrix.get() != nullptr)
+        m_CPUMatrix = nullptr;
+    if (m_GPUSparseMatrix.get() != nullptr)
+        m_GPUSparseMatrix = nullptr;
+    if (m_CPUSparseMatrix.get() != nullptr)
+        m_CPUSparseMatrix = nullptr;
     m_matrixType = MatrixType::UNDETERMINED;
     m_currentDataLocation = CurrentDataLocation::NONE;
 }
@@ -688,8 +695,8 @@ ElemType* Matrix<ElemType>::CopyToArray() const
                             nullptr,
                             return m_CPUMatrix->CopyToArray(),
                             return m_GPUMatrix->CopyToArray(),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+                            { CPUMatrix<ElemType> tmpDense(m_CPUSparseMatrix->GetNumRows(), m_CPUSparseMatrix->GetNumCols()); tmpDense.SetValue((ElemType)0); CPUSparseMatrix<ElemType>::ScaleAndAdd((ElemType)1, *m_CPUSparseMatrix, tmpDense); return tmpDense.CopyToArray(); },
+                            return m_GPUSparseMatrix->CopyToDenseMatrix().CopyToArray());
 }
 
 //memory will be allocated by the callee if not enough but need to be deleted by the caller after it's done
@@ -908,7 +915,7 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
 #define NUM_MATRIXTYPE_CHANGED_WARN 20
     m_numTimesMatrixTypeChanged++;
 
-    if (m_numTimesMatrixTypeChanged == NUM_MATRIXTYPE_CHANGED_WARN)
+    if ((GetMathLibTraceLevel() > 0) && (m_numTimesMatrixTypeChanged == NUM_MATRIXTYPE_CHANGED_WARN))
         fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long) GetNumRows(), (unsigned long) GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
 
     if (GetDeviceId() < 0) // CPU
@@ -1060,11 +1067,27 @@ Matrix<ElemType>& Matrix<ElemType>::DoGatherColumnsOf(ElemType beta, const Matri
 {
     DecideAndMoveToRightDevice(*this, idx, a); // TODO: only move target if beta != 0
 
+    if (a.GetMatrixType() != this->GetMatrixType())
+        RuntimeError("Matrix::DoGatherColumnsOf: The source and target matrices must have same storage type (SPARSE/DENSE).");
+
     DISPATCH_MATRIX_ON_FLAG(&a, this,
         { m_CPUMatrix->DoGatherColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUMatrix, alpha); },
         { m_GPUMatrix->DoGatherColumnsOf(beta, *idx.m_GPUMatrix, *a.m_GPUMatrix, alpha); },
         { m_CPUSparseMatrix->DoGatherColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUSparseMatrix, alpha); },
-        { NOT_IMPLEMENTED; });
+        { 
+            // TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
+
+            Matrix<ElemType> tempIdx(CPUDEVICE); tempIdx.AssignValuesOf(idx);
+
+            CPUSparseMatrix<ElemType> tempA(a.GetFormat(), a.GetNumRows(), a.GetNumCols(), a.m_GPUSparseMatrix->GetNumNZElements());
+            a.m_GPUSparseMatrix->CopyToCPUSparseMatrix(tempA);
+
+            CPUSparseMatrix<ElemType> tempThis(m_GPUSparseMatrix->GetFormat(), m_GPUSparseMatrix->GetNumRows(), m_GPUSparseMatrix->GetNumCols(), m_GPUSparseMatrix->GetNumNZElements());
+            m_GPUSparseMatrix->CopyToCPUSparseMatrix(tempThis);
+
+            tempThis.DoGatherColumnsOf(beta, *tempIdx.m_CPUMatrix, tempA, alpha);
+            m_GPUSparseMatrix->SetValue(tempThis);
+        });
 
     return *this;
 }
@@ -1078,11 +1101,27 @@ Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matr
 {
     DecideAndMoveToRightDevice(*this, idx, a); // TODO: only move target if beta != 0
 
+    if (a.GetMatrixType() != this->GetMatrixType())
+        RuntimeError("Matrix::DoScatterColumnsOf: The source and target matrices must have same storage type (SPARSE/DENSE).");
+
     DISPATCH_MATRIX_ON_FLAG(&a, this,
         { m_CPUMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUMatrix, alpha); },
         { m_GPUMatrix->DoScatterColumnsOf(beta, *idx.m_GPUMatrix, *a.m_GPUMatrix, alpha); },
-        { NOT_IMPLEMENTED; },
-        { NOT_IMPLEMENTED; });
+        { m_CPUSparseMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUSparseMatrix, alpha); },
+        { 
+            // TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
+
+            Matrix<ElemType> tempIdx(CPUDEVICE); tempIdx.AssignValuesOf(idx);
+
+            CPUSparseMatrix<ElemType> tempA(a.GetFormat(), a.GetNumRows(), a.GetNumCols(), a.m_GPUSparseMatrix->GetNumNZElements());
+            a.m_GPUSparseMatrix->CopyToCPUSparseMatrix(tempA);
+
+            CPUSparseMatrix<ElemType> tempThis(m_GPUSparseMatrix->GetFormat(), m_GPUSparseMatrix->GetNumRows(), m_GPUSparseMatrix->GetNumCols(), m_GPUSparseMatrix->GetNumNZElements());
+            m_GPUSparseMatrix->CopyToCPUSparseMatrix(tempThis);
+
+            tempThis.DoScatterColumnsOf(beta, *tempIdx.m_CPUMatrix, tempA, alpha);
+            m_GPUSparseMatrix->SetValue(tempThis);
+        });
 
     return *this;
 }
@@ -1139,13 +1178,18 @@ template <>
 /*static*/ char Matrix<char>::MakeNan(size_t)
 {
     return 0;
-} // (needed for completeness)
+} // (needed for completeness and to pass unit tests)
+template <>
+/*static*/ short Matrix<short>::MakeNan(size_t)
+{
+    return 0;
+} // (needed for completeness and to pass unit tests)
 
 template <class ElemType>
-void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val)
+void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry)
 {
-    if (GetNumCols() != columnsMask.GetNumCols())
-        RuntimeError("MaskColumnsValue: Matrix and column mask must have equal number of columns.");
+    if (GetNumCols() != (columnsMask.GetNumCols() * numColsPerMaskEntry))
+        RuntimeError("MaskColumnsValue: Matrix number of columns must equal [column mask * numColsPerMaskEntry].");
 
     if (GetCurrentMatrixLocation() == CPU && (columnsMask.GetCurrentMatrixLocation() == CPU || columnsMask.GetCurrentMatrixLocation() == BOTH))
         ; // OK
@@ -1153,10 +1197,10 @@ void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemTyp
         RuntimeError("MaskColumnsValue: Matrix and column mask must be on the same device.");
 
     DISPATCH_MATRIX_ON_FLAG(this, this,
-        { m_CPUMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val); },
-        { m_GPUMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val); },
-        { m_CPUSparseMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val); },
-        { m_GPUSparseMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val); });
+        { m_CPUMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val, numColsPerMaskEntry); },
+        { m_GPUMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val, numColsPerMaskEntry); },
+        { m_CPUSparseMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val, numColsPerMaskEntry); },
+        { m_GPUSparseMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val, numColsPerMaskEntry); });
 }
 
 template <class ElemType>
@@ -1219,7 +1263,8 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
 {
     if (this == &deepCopyFrom)
         return;
-    
+
+    // TODO: do we need all these 'this->'?
     DISPATCH_MATRIX_ON_FLAG(this, this,
         { 
             // Set CPUMatrix from:
@@ -1234,8 +1279,12 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
             DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
                 { m_GPUMatrix->SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), this->GetDeviceId(), deepCopyFrom.m_CPUMatrix->Data()); },
                 { m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix); },
-                { LogicError("AssignValuesOf: Assigning a CPUSparseMatrix to a GPUMatrix is not yet implemented."); },//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
-                { LogicError("AssignValuesOf: Assigning a GPUSparseMatrix to a GPUMatrix is not yet implemented."); });//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+                {
+                    CPUMatrix<ElemType> tempCPUDenseMatrix(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols());
+                    deepCopyFrom.m_CPUSparseMatrix->AssignColumnSliceToDense(tempCPUDenseMatrix, 0, deepCopyFrom.GetNumCols());
+                    m_GPUMatrix->SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), this->GetDeviceId(), tempCPUDenseMatrix.Data());
+                },//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
+                { deepCopyFrom.m_GPUSparseMatrix->AssignColumnSliceToDense(*m_GPUMatrix, 0, deepCopyFrom.GetNumCols()); });
         },
         { 
             // Set CPUSparseMatrix from:
@@ -1253,19 +1302,84 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         });
+}
 
+// CastAssignValuesOf() -- assign a matrix with type conversion, needed for feeding 'float' data to 'double' inputs in V2
+// This version is a stop-gap for debugging and testing. If any conversion is done, it will be slow.
+// If this is ever used for something that needs performance, it should not be too hard (but labor) to implement this efficiently.
+static void DoCastAssignValuesOf(Matrix<float>&  target, const Matrix<float>&  other) { target.AssignValuesOf(other); }
+static void DoCastAssignValuesOf(Matrix<double>& target, const Matrix<double>& other) { target.AssignValuesOf(other); }
+template<class ElemType>
+static void CopyToVector(const Matrix<ElemType>& source, vector<ElemType>& sourceData)
+{
+    sourceData.resize(source.GetNumElements());
+    ElemType* datap = sourceData.data();
+    size_t datasz = sourceData.size();
+    source.CopyToArray(datap, datasz);
+    assert(datap == sourceData.data() && datasz == sourceData.size()); // (make sure it used my buffer; a somewhat awkward API)
+}
+
+template<>
+void Matrix<int>::AssignValuesOf(const Matrix<int>&) { NOT_IMPLEMENTED; }
+template<class ElemType, class ElemTypeOther>
+static void DoCastAssignValuesOf(Matrix<ElemType>& target, const Matrix<ElemTypeOther>& source)
+{
+    target; source;
+    // this is implemented in a rather tedious way:
+    //  - copy to a CPU-side STL vector
+    //  - type-cast
+    //  - copy to target
+    vector<ElemTypeOther> sourceData;
+    if (source.GetMatrixType() == MatrixType::SPARSE) // if sparse then convert it over (V2 cannot read sparse data into dense input_variables)
+    {
+        Matrix<ElemTypeOther> temp(source.GetNumRows(), source.GetNumCols(), CPUDEVICE, DENSE);
+        temp.AssignValuesOf(source);
+        CopyToVector(temp, sourceData);
+    }
+    else
+    {
+        CopyToVector(source, sourceData);
+    }
+    // cast all values
+    vector<ElemType> targetData(sourceData.size());
+    transform(sourceData.begin(), sourceData.end(), targetData.begin(), [](ElemTypeOther v){ return (ElemType)v; });
+    // set the target
+    if (target.GetMatrixType() == MatrixType::SPARSE) // if target is sparse then we cannot assign from a vector directly, but we can from a matrix object
+    {
+        Matrix<ElemType> temp(source.GetNumRows(), source.GetNumCols(), targetData.data(), CPUDEVICE);
+        target.AssignValuesOf(temp);
+    }
+    else
+    {
+        target.SetValue(source.GetNumRows(), source.GetNumCols(), target.GetDeviceId(), targetData.data());
+    }
 }
 
 template <class ElemType>
-void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags)
+void Matrix<ElemType>::CastAssignValuesOf(const MatrixBase& other) /*override*/ // allows for mixed assignment with conversion
+{
+    const Matrix<float> * otherf = dynamic_cast<const Matrix<float>*>(&other);
+    if (otherf)
+        return DoCastAssignValuesOf(*this, *otherf);
+    const Matrix<double> * otherd = dynamic_cast<const Matrix<double>*>(&other);
+    if (otherd)
+        return DoCastAssignValuesOf(*this, *otherd);
+    LogicError("CastAssignValuesOf: Only accepts float and double matrices.");
+}
+
+template<>
+void Matrix<int>::SetValue(const size_t, const size_t, int, int*, const size_t, DataTransferer*) { NOT_IMPLEMENTED; }
+template <class ElemType>
+void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags, DataTransferer* transferer)
 {
     if (((numRows * numCols) > 0) && (pArray == nullptr))
         InvalidArgument("Invalid pArray.");
 
+    // Only gpu matrix supports async data transfers, so data transferer passed only to gpu matrix.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
                             m_CPUMatrix->SetValue(numRows, numCols, pArray, matrixFlags),
-                            m_GPUMatrix->SetValue(numRows, numCols, deviceId, pArray, matrixFlags),
+                            m_GPUMatrix->SetValue(numRows, numCols, deviceId, pArray, matrixFlags, transferer),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
@@ -1284,10 +1398,14 @@ void Matrix<ElemType>::SetValue(const size_t rIdx, const size_t cIdx, ElemType v
 // read features
 template <class ElemType>
 void Matrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
-                                              const size_t nz, const size_t numRows, const size_t numCols)
+    const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer)
 {
     // Note: The current implementation uses the xPUSparseMatrix as temporary space. This allows for memory sharing between calls. If
     // xPUSparseMatrix is a view, this code will cause an error during runtime stating that the view is not writable nor resizable.
+
+    // Only gpu matrix supports async data transfers, so data transferer passed only to gpu matrix in case we do not need to reassign to dense.
+    // When we have to reassign sparse to dense we cannot use async operation, because at the time when AssignColumnSliceToDense is called the
+    // data should already be copied to destination.
     DISPATCH_MATRIX_ON_FLAG(this, this,
         {
             if (!m_CPUSparseMatrix) m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nz);
@@ -1300,7 +1418,23 @@ void Matrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCC
             m_GPUSparseMatrix->AssignColumnSliceToDense(*m_GPUMatrix, 0, numCols);
         },
         { m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols); },
-        { m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols); });
+        { m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols, false, -1, transferer); });
+}
+
+///
+/// adjusts the sparse block column matrix with the new Col2BlockId
+/// For each column, if new Col2BlockId contains valid index, a corresponding block exists at the index
+/// if old col2BlockId[i] contains value at that column, it would be copied over; otherwise the block would be filled with zeros
+///
+template <class ElemType>
+void Matrix<ElemType>::AdjustSparseBlockColumn(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col)
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED,
+        m_GPUSparseMatrix->AdjustCol2BlockId(cpuCol2BlockId, numBlocks, useBlockId2Col));
 }
 
 template <class ElemType>
@@ -1347,7 +1481,7 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
                                 SetDiagonalValue(vector.m_GPUMatrix->Get00Element()) // BUGBUG: efficiency
                                 );
     }
-    else if (vector.GetNumRows() != GetNumRows())
+    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != GetNumRows())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
@@ -1378,10 +1512,52 @@ void Matrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType 
 }
 
 template <class ElemType>
+void Matrix<ElemType>::SetUniformRandomValue(RNGHandle& rngHandle, const ElemType low, const ElemType high)
+{
+    if (IsEmpty())
+        return;
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->SetUniformRandomValue(rngHandle, low, high),
+        m_GPUMatrix->SetUniformRandomValue(rngHandle, low, high),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::SetGaussianRandomValue(RNGHandle& rngHandle, const ElemType mean, const ElemType stdev)
+{
+    if (IsEmpty())
+        return;
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->SetGaussianRandomValue(rngHandle, mean, stdev),
+        m_GPUMatrix->SetGaussianRandomValue(rngHandle, mean, stdev),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::SetGumbelRandomValue(RNGHandle& rngHandle, const ElemType loc, const ElemType scale)
+{
+    if (IsEmpty())
+        return;
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->SetGumbelRandomValue(rngHandle, loc, scale),
+        m_GPUMatrix->SetGumbelRandomValue(rngHandle, loc, scale),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
     if (sigma <= 0)
-        InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
+        InvalidArgument("SetGaussianRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
         return;
@@ -1395,10 +1571,27 @@ void Matrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemTyp
 }
 
 template <class ElemType>
+void Matrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+{
+    if (sigma <= 0)
+        InvalidArgument("SetTruncatedNormalRandomValue: sigma must be a positive value.");
+
+    if (IsEmpty())
+        return;
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->SetTruncatedNormalRandomValue(mean, sigma, seed),
+        m_GPUMatrix->SetTruncatedNormalRandomValue(mean, sigma, seed),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
     if (sigma <= 0)
-        InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
+        InvalidArgument("AddGaussianRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
         return;
@@ -1427,70 +1620,133 @@ void Matrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemT
                             NOT_IMPLEMENTED);
 }
 
+// Vanilla SGD update. 
+// Modifies "this" parameter matrix, on which this method is invoked.
 template <class ElemType>
-void Matrix<ElemType>::NormalGrad(Matrix<ElemType>& gradients,
-                                  Matrix<ElemType>& functionValues,
-                                  const ElemType learnRatePerSample,
-                                  const ElemType momentum,
-                                  const bool useNesterovMomentum)
+void Matrix<ElemType>::SGDUpdate(Matrix<ElemType>& gradients, ElemType learnRatePerSample)
 {
-    DecideAndMoveToRightDevice(*this, gradients, functionValues);
+    DecideAndMoveToRightDevice(gradients, *this);
 
-    if (!useNesterovMomentum)
-    {
-        DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
-            { 
-                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                functionValues -= *this;
-            },
-            { 
-                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                functionValues -= *this;
-            },
-            { 
-                if (momentum != 0) gradients.m_CPUSparseMatrix->NormalGrad(*m_CPUMatrix, momentum);
-                ScaleAndAdd(-learnRatePerSample, gradients, functionValues);
-            },
-            { 
-                if (momentum != 0) gradients.m_GPUSparseMatrix->NormalGrad(*m_GPUMatrix, momentum);
-                ScaleAndAdd(-learnRatePerSample, gradients, functionValues);
-            });
-    }
-    else
-    {
-        DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
-            { /* CPU dense */
-                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                ScaleAndAdd(-momentum, *this, functionValues);
-                ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradients, functionValues);
-                // w_t = w_{t-1} - momentum * v_ {t-1} - (1-momentum)*learnRatePerSampele*gardient,
-            },
-            { /* GPU dense */
-                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                ScaleAndAdd(-momentum, *this, functionValues);
-                ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradients, functionValues);
-            },
-            { /* CPU sparse */
-                if (momentum != 0)
-                {
-                    Matrix<ElemType> gradientCache(gradients.GetDeviceId());
-                    gradientCache.AssignValuesOf(gradients);
-                    gradients.m_CPUSparseMatrix->NormalGrad(*m_CPUMatrix, momentum);
-                    ScaleAndAdd(-momentum, *this, functionValues);
-                    ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradientCache, functionValues);
-                }
-            },
-            { /* GPU sparse */
-                if (momentum != 0)
-                {
-                    Matrix<ElemType> gradientCache(gradients.GetDeviceId());
-                    gradientCache.AssignValuesOf(gradients);
-                    gradients.m_GPUSparseMatrix->NormalGrad(*m_GPUMatrix, momentum);
-                    ScaleAndAdd(-momentum, *this, functionValues);
-                    ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradientCache, functionValues);
-                }
-            });
-    }
+    DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
+    { 
+        // w_t = w_{t-1} - learnRatePerSample * g_{t-1},
+        ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this);
+    },
+    { 
+        // BUGBUG: cannot call ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this) here,
+        // it produces different results from the scale and add below.
+        // g'_{t-1} = learnRatePerSample * g_{t-1}
+        // w_t = w_{t-1} - g'_{t-1}
+        Scale(ElemType(learnRatePerSample), gradients);
+        *this -= gradients;
+    },
+    { 
+        ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this);
+    },
+    { 
+        ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this);
+    });
+    
+}
+
+// SGD update with momentum.
+// Modifies "this" parameter matrix, on which this method is invoked.
+template <class ElemType>
+void Matrix<ElemType>::MomentumSGDUpdate(Matrix<ElemType>& gradients,
+                                         Matrix<ElemType>& smoothedGradients,
+                                         ElemType learnRatePerSample,
+                                         ElemType momentum,
+                                         ElemType unitGainFactor)
+{
+    DecideAndMoveToRightDevice(smoothedGradients, gradients, *this);
+
+    DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
+        { 
+            // Classic momentum (unitGainFactor == 1.0):
+            // 1) sg_t = momentum * sg_{t-1} + learnRatePerSample * g_{t-1}
+            // Unit-gain momentum (unitGainFactor == 1.0 - momentum):
+            // 1) sg_t = momentum * sg_{t-1} + learnRatePerSample * (1.0 - momentum) * g_{t-1}
+            // 2) w_t = w_{t-1} - sg_t
+            ScaleAndAdd(unitGainFactor * learnRatePerSample, gradients, momentum, smoothedGradients);
+            *this -= smoothedGradients;
+        },
+        { 
+            ScaleAndAdd(unitGainFactor * learnRatePerSample, gradients, momentum, smoothedGradients);
+            *this -= smoothedGradients;
+        },
+        { 
+            // The sparse update is slightly different from the dense implementation above:
+            // Classic momentum (unitGainFactor == 1.0):
+            // 1) sg_t = momentum * sg_{t-1} + g_{t-1}
+            // Unit-gain momentum (unitGainFactor == 1.0 - momentum):
+            // 1) sg_t = momentum * sg_{t-1} + (1.0 - momentum) * g_{t-1}
+            // 2) g'_{t-1} = sg_t
+            // 3) w_t = w_{t-1} - learnRatePerSample * g'_{t-1}
+            if (momentum != 0)
+            {
+                gradients.m_CPUSparseMatrix->NormalGrad(*smoothedGradients.m_CPUMatrix, momentum, unitGainFactor);
+            }
+            ScaleAndAdd(-learnRatePerSample, gradients, *this);
+        },
+        { 
+            if (momentum != 0)
+            {
+                gradients.m_GPUSparseMatrix->NormalGrad(*smoothedGradients.m_GPUMatrix, momentum, unitGainFactor);
+            }
+            ScaleAndAdd(-learnRatePerSample, gradients, *this);
+        });
+}
+
+// Nesterov accelerated SGD update.
+// Modifies "this" parameter matrix, on which this method is invoked.
+template <class ElemType>
+void Matrix<ElemType>::NesterovAcceleratedMomentumSGDUpdate(Matrix<ElemType>& gradients,
+                                                            Matrix<ElemType>& smoothedGradients,
+                                                            ElemType learnRatePerSample,
+                                                            ElemType momentum,
+                                                            ElemType unitGainFactor)
+{
+    DecideAndMoveToRightDevice(smoothedGradients, gradients, *this);
+
+    DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
+        { /* CPU dense */
+            // 1) sg_t = momentum * sg_{t-1} + learnRatePerSample * unitGainFactor * g_{t-1}
+            // 2) w'_t = w_{t-1} - momentum * sg_t
+            // 3) w_t = w'_t - learnRatePerSample * unitGainFactor * g_{t-1}
+            // The end result:
+            //  w_t = w_{t-1} - momentum^2 * sg_{t-1} - learnRatePerSample * unitGainFactor * (1 + momentum) * g_{t-1}
+            //  sg_t = momentum * sg_{t-1} + learnRatePerSample * unitGainFactor * g_{t-1}
+            ScaleAndAdd( unitGainFactor * learnRatePerSample, gradients, momentum, smoothedGradients);
+            ScaleAndAdd(-momentum, smoothedGradients, *this);
+            ScaleAndAdd(-unitGainFactor * learnRatePerSample, gradients, *this);
+        },
+        { /* GPU dense */
+            ScaleAndAdd(unitGainFactor * learnRatePerSample, gradients, momentum, smoothedGradients);
+            ScaleAndAdd(-momentum, smoothedGradients, *this);
+            ScaleAndAdd(-unitGainFactor * learnRatePerSample, gradients, *this);
+        },
+        { /* CPU sparse */
+            if (momentum != 0)
+            {
+                // Identical to the above, except that as a side effect "NormalGrad" modifies 
+                // gradient values in place, so that gradientCache is needed to store the original values.
+                Matrix<ElemType> gradientCache(gradients.GetDeviceId());
+                gradientCache.AssignValuesOf(gradients);
+                gradients.m_CPUSparseMatrix->NormalGrad(*smoothedGradients.m_CPUMatrix, momentum, unitGainFactor);
+                ScaleAndAdd(-momentum, smoothedGradients, *this);
+                ScaleAndAdd(-unitGainFactor * learnRatePerSample, gradientCache, *this);
+            }
+        },
+        { /* GPU sparse */
+            if (momentum != 0)
+            {
+                Matrix<ElemType> gradientCache(gradients.GetDeviceId());
+                gradientCache.AssignValuesOf(gradients);
+                gradients.m_GPUSparseMatrix->NormalGrad(*smoothedGradients.m_GPUMatrix, momentum, unitGainFactor);
+                ScaleAndAdd(-momentum, smoothedGradients, *this);
+                ScaleAndAdd(-unitGainFactor * learnRatePerSample, gradientCache, *this);
+            }
+        });
 }
 
 // both 'this' and gradients will be changed
@@ -1507,24 +1763,71 @@ ElemType Matrix<ElemType>::Adagrad(Matrix<ElemType>& gradients, const bool needA
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
+// FSAdaGrad update -- Frank's "fix" of AdaGrad, very similar to what became later known as Adam
+// updates
+//  - momentum accumulator
+//  - var momentum accumulator
+//  - denominator
+// then
+//  - the model itself
 template <class ElemType>
-void Matrix<ElemType>::FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum)
+void Matrix<ElemType>::FSAdagradUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
+                                       const double learnRatePerSample, const double meanMomentum, const double varMomentum, ElemType unitGainFactor)
 {
-    // TODO: The values of 'adagradT' and 'targetadagradavdenom' are currently hardcoded constants taken from DBN (empirically determined).
-    // These should be made configurable if needed
-    const size_t adagradT = 2 * 3600 * 100;
-    const ElemType targetadagradavdenom = 0.0025; // 1/400 magic constant
-    const ElemType adagradkeepweight = static_cast<ElemType>(exp(-1.0 * mbSize / adagradT));
+    DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
+        { 
+            m_CPUMatrix->FSAdagrad(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, 
+                                   (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, 
+                                   (ElemType)targetAdagradAvDenom_x_sqrtAdagradSqrFrames, unitGainFactor);
+            SetDataLocation(CPU); 
+        },
+        {
+            m_GPUMatrix->FSAdagrad(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, 
+                                   (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, 
+                                   (ElemType)targetAdagradAvDenom_x_sqrtAdagradSqrFrames, unitGainFactor);
+            SetDataLocation(GPU); 
+        },
+        { NOT_IMPLEMENTED; },
+        {
+            gradients.m_GPUSparseMatrix->FSAdagrad(*m_GPUMatrix, *functionValues.m_GPUMatrix, 
+                                                   (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+                                                   (ElemType)targetAdagradAvDenom_x_sqrtAdagradSqrFrames, unitGainFactor);
+            SetDataLocation(GPU); 
+        });
 
-    static ElemType aggadagradsqrframes = 0;
-    aggadagradsqrframes = adagradkeepweight * aggadagradsqrframes + (1.0f - adagradkeepweight) * mbSize;
-    const ElemType targetadagradavdenom_x_sqrtadagradsqrframes = static_cast<ElemType>(targetadagradavdenom * sqrt(aggadagradsqrframes));
+    // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
+}
+
+///
+// Implement the original adam algorithm according to the paper
+// Ref: ADAM: A METHOD FOR STOCHASTIC OPTIMIZATION, https://arxiv.org/pdf/1412.6980.pdf
+///
+template <class ElemType>
+void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double smoothedCount,
+    const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, ElemType unitGainFactor, bool adamax)
+{
+    // Bias correction
+    let biasCorrection = adamax? (ElemType)(1. / (1- pow(meanMomentum, smoothedCount))) : (ElemType)(sqrt(1- pow(varMomentum, smoothedCount))/(1- pow(meanMomentum, smoothedCount)));
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-        { m_CPUMatrix->FSAdagrad(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learnRatePerSample, momentum, adagradkeepweight, targetadagradavdenom_x_sqrtadagradsqrframes); SetDataLocation(CPU); },
-        { m_GPUMatrix->FSAdagrad(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learnRatePerSample, momentum, adagradkeepweight, targetadagradavdenom_x_sqrtadagradsqrframes); SetDataLocation(GPU); },
-        { NOT_IMPLEMENTED; },
-        { NOT_IMPLEMENTED; });
+    {
+        m_CPUMatrix->Adam(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix,
+        (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+        biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
+        SetDataLocation(CPU);
+    },
+    {
+        m_GPUMatrix->Adam(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix,
+        (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+        biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
+        SetDataLocation(GPU);
+    },
+    { NOT_IMPLEMENTED; },
+    { gradients.m_GPUSparseMatrix->Adam(*m_GPUMatrix, *functionValues.m_GPUMatrix, 
+        (ElemType)learnRatePerSample, (ElemType)meanMomentum, 
+        (ElemType)varMomentum, biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
+        SetDataLocation(GPU); });
+
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
@@ -1535,16 +1838,31 @@ ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
                                    ElemType RMS_WGT_MAX,
                                    ElemType RMS_WGT_DEC,
                                    ElemType RMS_WGT_MIN,
-                                   const bool needAveMultiplier)
+                                   const bool needAveMultiplier,
+                                   const bool initialized)
 {
     DecideAndMoveToRightDevice(*this, gradients);
 
-    DISPATCH_MATRIX_ON_FLAG(this, &gradients,
-        { return m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(CPU); },
-        { return m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(GPU); },
+    DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
+        { return m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(CPU); },
+        { return m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(GPU); },
         { NOT_IMPLEMENTED; },
-        { NOT_IMPLEMENTED; });
+        { return gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(GPU); });
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
+}
+
+template <class ElemType>
+void Matrix<ElemType>::AdaDeltaUpdate(Matrix<ElemType>& gradients,
+    Matrix<ElemType>& functionValues,
+    ElemType learningRate, ElemType rho, ElemType epsilon)
+{
+    DecideAndMoveToRightDevice(*this, gradients);
+
+    DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
+    { return m_CPUMatrix->AdaDelta(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
+    { return m_GPUMatrix->AdaDelta(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); },
+    { return gradients.m_CPUSparseMatrix->AdaDelta(*m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
+    { return gradients.m_GPUSparseMatrix->AdaDelta(*m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); });
 }
 
 template <class ElemType>
@@ -1737,6 +2055,16 @@ Matrix<ElemType> Matrix<ElemType>::operator+(const Matrix<ElemType>& a) const
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignSumOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
 {
+    if (this == &a)
+    {
+        *this += b;
+        return *this;
+    }
+    if (this == &b)
+    {
+        *this += a;
+        return *this;
+    }
     if (a.GetNumElements() == 1)
     {
         SetValue(b);
@@ -2817,6 +3145,138 @@ Matrix<ElemType>& Matrix<ElemType>::AssignNegativeSineOf(const Matrix<ElemType>&
     return *this;
 }
 
+//[this]=acos([this]) element wise
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::InplaceAcos()
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->InplaceAcos(),
+                            m_GPUMatrix->InplaceAcos(),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignAcosOf(const Matrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAcosOf: Matrix a is empty.");
+
+    DecideAndMoveToRightDevice(a, *this);
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            this,
+                            m_CPUMatrix->AssignAcosOf(*a.m_CPUMatrix),
+                            m_GPUMatrix->AssignAcosOf(*a.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+//[this]=asin([this]) element wise
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::InplaceAsin()
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->InplaceAsin(),
+                            m_GPUMatrix->InplaceAsin(),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignAsinOf(const Matrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAsinOf: Matrix a is empty.");
+
+    DecideAndMoveToRightDevice(a, *this);
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            this,
+                            m_CPUMatrix->AssignAsinOf(*a.m_CPUMatrix),
+                            m_GPUMatrix->AssignAsinOf(*a.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+//[this]=cosh([this]) element wise
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::InplaceCosh()
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->InplaceCosh(),
+                            m_GPUMatrix->InplaceCosh(),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignCoshOf(const Matrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignCoshOf: Matrix a is empty.");
+
+    DecideAndMoveToRightDevice(a, *this);
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            this,
+                            m_CPUMatrix->AssignCoshOf(*a.m_CPUMatrix),
+                            m_GPUMatrix->AssignCoshOf(*a.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+//[this]=sinh([this]) element wise
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::InplaceSinh()
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->InplaceSinh(),
+                            m_GPUMatrix->InplaceSinh(),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignSinhOf(const Matrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignSinhOf: Matrix a is empty.");
+
+    DecideAndMoveToRightDevice(a, *this);
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            this,
+                            m_CPUMatrix->AssignSinhOf(*a.m_CPUMatrix),
+                            m_GPUMatrix->AssignSinhOf(*a.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::InplaceTruncate(const ElemType threshold)
 {
@@ -3037,6 +3497,66 @@ ElemType Matrix<ElemType>::SumOfElements() const
                             return m_GPUMatrix->SumOfElements(),
                             return m_CPUSparseMatrix->SumOfElements(),
                             return m_GPUSparseMatrix->SumOfElements());
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, vector<size_t>& shape, size_t axis, bool is_sparse)
+{
+    if (a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
+
+    if (a.GetMatrixType() == SPARSE)
+        NOT_IMPLEMENTED;
+
+    //todo: sparse matrix type
+    if (is_sparse && GetMatrixType() != SPARSE)
+    {
+        SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+    }
+    
+    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this,
+        this,
+        m_CPUMatrix->AssignOneHot(*a.m_CPUMatrix, shape, axis),
+        m_GPUMatrix->AssignOneHot(*a.m_GPUMatrix, shape, axis),
+        m_CPUSparseMatrix->AssignOneHot(*a.m_CPUMatrix, shape, axis),
+        m_GPUSparseMatrix->AssignOneHot(*a.m_GPUMatrix, shape, axis)
+        );
+    
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::GatherFromTarget(const Matrix<ElemType>& indices, const Matrix<ElemType>& target, size_t row_elements)
+{
+    if (indices.IsEmpty() || target.IsEmpty())
+        LogicError("GatherFromTarget: Input matrix is empty.");
+
+    DISPATCH_MATRIX_ON_FLAG(&indices,
+                            this,
+                            m_CPUMatrix->GatherFromTarget(*indices.m_CPUMatrix, *target.m_CPUMatrix, row_elements),
+                            m_GPUMatrix->GatherFromTarget(*indices.m_GPUMatrix, *target.m_GPUMatrix, row_elements),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::ScatterToIndices(const Matrix<ElemType>& values, const Matrix<ElemType>& indices, size_t row_elements)
+{
+    if (indices.IsEmpty() || values.IsEmpty())
+        LogicError("ScatterAccordingIndices: input matrix is empty.");
+    
+    DISPATCH_MATRIX_ON_FLAG(&values,
+                            this,
+                            m_CPUMatrix->ScatterToIndices(*values.m_CPUMatrix, *indices.m_CPUMatrix, row_elements),
+                            m_GPUMatrix->ScatterToIndices(*values.m_GPUMatrix, *indices.m_GPUMatrix, row_elements),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
 }
 
 template <class ElemType>
@@ -3477,6 +3997,18 @@ int Matrix<ElemType>::GetDeviceId() const
         { return m_GPUSparseMatrix->GetComputeDeviceId(); });
 }
 
+template <class ElemType>
+MatrixType Matrix<ElemType>::GetMatrixType() const
+{
+    return m_matrixType;
+}
+
+template <class ElemType>
+MatrixFormat Matrix<ElemType>::GetFormat() const
+{
+    return m_baseMatrix->GetFormat();
+}
+
 // TODO: Comment why we need a second ElemType.
 // TODO: Move the shared core functions to the front of this source file.
 // BUGBUG: This performs a copy operation even for the output matrix that gets overwritten right away.
@@ -3560,7 +4092,7 @@ void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType>& a, con
 template <class ElemType>
 void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& d)
 {
-    // this function is only called for one operator, so for now we keep it imple
+    // this function is only called for one operator, so for now we keep it simple
     DecideAndMoveToRightDevice(a, b, c);
     d._transferToDevice(a.GetDeviceId()); // BUGBUG: Is this correct in case a,b,c share the same preferredDevice?
 }
@@ -3606,7 +4138,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
         else if (m_devicesTransferedTo[0] != to_id)
             m_devicesTransferedTo[1] = to_id;
     }
-    if (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN && m_devicesTransferedTo[1] >= CPUDEVICE)
+    if ((GetMathLibTraceLevel() > 0) && (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN && m_devicesTransferedTo[1] >= CPUDEVICE))
         fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long) GetNumRows(), (unsigned long) GetNumCols(), NUM_DEVICE_CHANGED_WARN);
 
     // do the transfer
@@ -3673,7 +4205,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
         }
     }
     else
-#pragma omp critical
+// #pragma omp critical // causes a build error on gcc; not clear why this is here
     {
         if (from_id == CPUDEVICE) // from CPU to GPU
         {
@@ -4186,7 +4718,7 @@ void Matrix<ElemType>::MaxPoolingForward(const Matrix<int>& mpRowCol, const Matr
 template <class ElemType>
 void Matrix<ElemType>::MaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,
                                           const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices,
-                                          Matrix<ElemType>& grad) const
+                                          Matrix<ElemType>& grad, bool accumulateGradient) const
 {
     assert(mpRowCol.GetNumCols() == 1);
     assert(mpRowIndices.GetNumCols() == 1);
@@ -4199,10 +4731,40 @@ void Matrix<ElemType>::MaxPoolingBackward(const Matrix<ElemType>& out, const Mat
                             this,
                             m_CPUMatrix->MaxPoolingBackward(*(out.m_CPUMatrix), *(in.m_CPUMatrix),
                                                               *(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix),
-                                                              *(grad.m_CPUMatrix)),
+                                                              *(grad.m_CPUMatrix), accumulateGradient),
                             m_GPUMatrix->MaxPoolingBackward(*(out.m_GPUMatrix), *(in.m_GPUMatrix),
                                                               *(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix),
-                                                              *(grad.m_GPUMatrix)),
+                                                              *(grad.m_GPUMatrix), accumulateGradient),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                           const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& output, 
+                                           Matrix<ElemType>& argmax, double spatialScale) const
+{
+    DecideAndMoveToRightDevice(*this, output);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->MaxROIPoolingForward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(output.m_CPUMatrix), *(argmax.m_CPUMatrix), spatialScale),
+                            m_GPUMatrix->MaxROIPoolingForward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(output.m_GPUMatrix), *(argmax.m_GPUMatrix), spatialScale),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                             const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& grad, 
+                                             Matrix<ElemType>& argmax, double spatialScale) const
+{
+    DecideAndMoveToRightDevice(*this, grad);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->MaxROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(grad.m_CPUMatrix), *(argmax.m_CPUMatrix), spatialScale),
+                            m_GPUMatrix->MaxROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(grad.m_GPUMatrix), *(argmax.m_GPUMatrix), spatialScale),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
@@ -4233,7 +4795,7 @@ void Matrix<ElemType>::MaxUnpooling(const Matrix<int>& mpRowCol, const Matrix<in
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const
+void Matrix<ElemType>::AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output, const bool poolIncludePad) const
 {
     assert(mpRowCol.GetNumCols() == 1);
     assert(mpRowIndices.GetNumCols() == 1);
@@ -4244,14 +4806,14 @@ void Matrix<ElemType>::AveragePoolingForward(const Matrix<int>& mpRowCol, const 
     // REVIEW alexeyk: add sparse version.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->AveragePoolingForward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(output.m_CPUMatrix)),
+                            m_CPUMatrix->AveragePoolingForward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(output.m_CPUMatrix), poolIncludePad),
                             m_GPUMatrix->AveragePoolingForward(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(output.m_GPUMatrix)),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad) const
+void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const
 {
     assert(mpRowCol.GetNumCols() == 1);
     assert(mpRowIndices.GetNumCols() == 1);
@@ -4262,15 +4824,15 @@ void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const
     // REVIEW alexeyk: add sparse version.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->AveragePoolingBackward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(grad.m_CPUMatrix)),
-                            m_GPUMatrix->AveragePoolingBackward(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(grad.m_GPUMatrix)),
+                            m_CPUMatrix->AveragePoolingBackward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(grad.m_CPUMatrix), poolIncludePad, accumulateGradient),
+                            m_GPUMatrix->AveragePoolingBackward(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(grad.m_GPUMatrix), accumulateGradient),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
-void Matrix<ElemType>::BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, double expAvgFactor, double blendFactor, 
-                                                 Matrix<ElemType>& runMean, Matrix<ElemType>& runInvStdDev, Matrix<ElemType>& out, double epsilon,
+void Matrix<ElemType>::BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, 
+                                                 Matrix<ElemType>& runMean, Matrix<ElemType>& runVariance, Matrix<ElemType>& out, double epsilon,
                                                  Matrix<ElemType>& saveMean, Matrix<ElemType>& saveInvStdDev) const
 {
     DecideAndMoveToRightDevice(*this, out);
@@ -4278,18 +4840,19 @@ void Matrix<ElemType>::BatchNormalizationForward(const Matrix<ElemType>& scale, 
     // REVIEW alexeyk: add sparse version.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->BatchNormalizationForward(*(scale.m_CPUMatrix), *(bias.m_CPUMatrix), expAvgFactor, blendFactor,
-                                                                   *(runMean.m_CPUMatrix), *(runInvStdDev.m_CPUMatrix),
+                            m_CPUMatrix->BatchNormalizationForward(*(scale.m_CPUMatrix), *(bias.m_CPUMatrix), inferenceOnly, expAvgFactor, blendFactor,
+                                                                   *(runMean.m_CPUMatrix), *(runVariance.m_CPUMatrix),
                                                                    *(out.m_CPUMatrix), epsilon, *(saveMean.m_CPUMatrix), *(saveInvStdDev.m_CPUMatrix)),
-                            m_GPUMatrix->BatchNormalizationForward(*(scale.m_GPUMatrix), *(bias.m_GPUMatrix), expAvgFactor, blendFactor,
-                                                                   *(runMean.m_GPUMatrix), *(runInvStdDev.m_GPUMatrix),
+                            m_GPUMatrix->BatchNormalizationForward(*(scale.m_GPUMatrix), *(bias.m_GPUMatrix), inferenceOnly, expAvgFactor, blendFactor,
+                                                                   *(runMean.m_GPUMatrix), *(runVariance.m_GPUMatrix),
                                                                    *(out.m_GPUMatrix), epsilon, *(saveMean.m_GPUMatrix), *(saveInvStdDev.m_GPUMatrix)),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
-void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
+void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, double blendFactor,
+                                                  const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
                                                   Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const
 {
     DecideAndMoveToRightDevice(*this, grad);
@@ -4297,12 +4860,58 @@ void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Ma
     // REVIEW alexeyk: add sparse version.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->BatchNormalizationBackward(*(in.m_CPUMatrix), *(grad.m_CPUMatrix), *(scale.m_CPUMatrix),
+                            m_CPUMatrix->BatchNormalizationBackward(*(in.m_CPUMatrix), *(grad.m_CPUMatrix), *(scale.m_CPUMatrix), blendFactor,
                                                                     *(saveMean.m_CPUMatrix), *(saveInvStdDev.m_CPUMatrix),
                                                                     *(scaleGrad.m_CPUMatrix), *(biasGrad.m_CPUMatrix)),
-                            m_GPUMatrix->BatchNormalizationBackward(*(in.m_GPUMatrix), *(grad.m_GPUMatrix), *(scale.m_GPUMatrix),
+                            m_GPUMatrix->BatchNormalizationBackward(*(in.m_GPUMatrix), *(grad.m_GPUMatrix), *(scale.m_GPUMatrix), blendFactor,
                                                                     *(saveMean.m_GPUMatrix), *(saveInvStdDev.m_GPUMatrix),
                                                                     *(scaleGrad.m_GPUMatrix), *(biasGrad.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::RNNForward(const Matrix<ElemType> &inputX, const Matrix<ElemType> &paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
+{
+    DecideAndMoveToRightDevice(*this, inputX, paramW);
+    // move reserve/workspace to the consensus device
+    reserve._transferToDevice(GetDeviceId());
+    workspace._transferToDevice(GetDeviceId());
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            NOT_IMPLEMENTED,
+                            m_GPUMatrix->RNNForward(*(inputX.m_GPUMatrix), *(paramW.m_GPUMatrix), xDim, yDim, numSequencesForFrame, rnnAttributes, *(reserve.m_GPUMatrix), *(workspace.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::RNNBackwardData(const Matrix<ElemType>& outputDY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
+{
+    DecideAndMoveToRightDevice(*this, outputDY, paramW, outputDX);
+    // move reserve/workspace to the consensus device
+    reserve._transferToDevice(GetDeviceId());
+    workspace._transferToDevice(GetDeviceId());
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            NOT_IMPLEMENTED,
+                            m_GPUMatrix->RNNBackwardData(*(outputDY.m_GPUMatrix), *(paramW.m_GPUMatrix), *(outputDX.m_GPUMatrix), rnnAttributes, *(reserve.m_GPUMatrix), *(workspace.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::RNNBackwardWeights(const Matrix<ElemType>& inputX, const Matrix<ElemType>& outputY, Matrix<ElemType>& dw, const RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
+{
+    DecideAndMoveToRightDevice(*this, inputX, outputY, dw);
+    // move reserve/workspace to the consensus device
+    reserve._transferToDevice(GetDeviceId());
+    workspace._transferToDevice(GetDeviceId());
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            NOT_IMPLEMENTED,
+                            m_GPUMatrix->RNNBackwardWeights(*(inputX.m_GPUMatrix), *(outputY.m_GPUMatrix), *(dw.m_GPUMatrix), rnnAttributes, *(reserve.m_GPUMatrix), *(workspace.m_GPUMatrix)),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
@@ -4434,81 +5043,107 @@ template <class ElemType>
 /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
 template <class ElemType>
 void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
-                                              ElemType beta, Matrix<ElemType>& c)
+                                              ElemType beta, Matrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier)
 {
     DecideAndMoveToRightDevice(a, b, c);
 
     if (c.GetDeviceId() < 0) // CPU
     {
-        if (a.GetMatrixType() == MatrixType::SPARSE)
-            NOT_IMPLEMENTED;
-        if (b.GetMatrixType() == MatrixType::SPARSE)
+        if (a.GetMatrixType() == MatrixType::SPARSE) // CPU, SPARSE * ANY -> ANY
         {
-            if (c.GetMatrixType() == MatrixType::DENSE)
+            if (b.GetMatrixType() == MatrixType::DENSE      && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * DENSE  -> DENSE
             {
-                CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, beta, *c.m_CPUMatrix);
+                CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUSparseMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
                 c.SetDataLocation(CPU, DENSE);
             }
-            else if (c.GetMatrixType() == MatrixType::SPARSE)
+            else if (b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * SPARSE -> DENSE
             {
-                CPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, *c.m_CPUSparseMatrix);
-                c.SetDataLocation(CPU, SPARSE);
+                NOT_IMPLEMENTED;
+            }
+            else if (b.GetMatrixType() == MatrixType::DENSE  && c.GetMatrixType() == MatrixType::SPARSE)// CPU, SPARSE * DENSE  -> SPARSE
+            {
+                NOT_IMPLEMENTED;
+            }
+            else if (b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::SPARSE)// CPU, SPARSE * SPARSE -> SPARSE
+            {
+                NOT_IMPLEMENTED;
             }
             else
+            {
                 NOT_IMPLEMENTED;
+            }
         }
-        else
+        else  // CPU, DENSE  * ANY -> ANY
         {
-            c.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
-            CPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
-            c.SetDataLocation(CPU, DENSE);
+            if (b.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> ANY
+            {
+                if (c.GetMatrixType() == MatrixType::DENSE) // CPU, DENSE * SPARSE -> DENSE
+                {
+                    CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, beta, *c.m_CPUMatrix);
+                    c.SetDataLocation(CPU, DENSE);
+                }
+                else if (c.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> SPARSE
+                {
+                    if (beta != 0 && beta != 1)
+                    {
+                        NOT_IMPLEMENTED;
+                    }
+                    else
+                    {
+                        if (beta == 0)
+                        {
+                            c.Reset();
+                        }
+                        CPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, *c.m_CPUSparseMatrix);
+                    }
+                    c.SetDataLocation(CPU, SPARSE);
+                }
+                else
+                    NOT_IMPLEMENTED; // CPU, DENSE * SPARSE -> UNDETERMINED ?
+            }
+            else // CPU, DENSE * DENSE -> DENSE (matrix c enforced to be DENSE)
+            {
+                c.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
+                CPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix, pQuantizedMultiplier);
+                c.SetDataLocation(CPU, DENSE);
+            }
         }
     }
     else // GPU operations
     {
-        if (a.m_matrixType == b.m_matrixType && b.m_matrixType == c.m_matrixType && a.m_matrixType == MatrixType::DENSE) // All dense
+        if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * DENSE -> DENSE
         {
             GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, *c.m_GPUMatrix);
             c.SetDataLocation(GPU, DENSE);
         }
-        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == c.m_matrixType && b.m_matrixType == MatrixType::DENSE) // Sparse*Dense+Dense
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * DENSE -> DENSE
         {
             GPUMatrix<ElemType> second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;
             GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, transposeA, second, false, beta, *c.m_GPUMatrix);
             c.SetDataLocation(GPU, DENSE);
         }
-        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // Dense*Sparse + Dense
+        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * SPARSE -> DENSE
         {
-            // if (b.m_GPUSparseMatrix->GetFormat() == MatrixFormat::matrixFormatSparseCSR)
-            // {
             GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix);
-            // }
-            // else
-            // {
-            //    GPUMatrix<ElemType> firstDummy = transposeA ? a.m_GPUMatrix->Transpose()*alpha : (*a.m_GPUMatrix)*alpha;
-            //    GPUMatrix<ElemType> & first= firstDummy;                // GCC does not support mixing refs and non-refs
-            //    GPUSparseMatrix<ElemType> secondDummy = transposeB ? b.m_GPUSparseMatrix->Transpose() : *b.m_GPUSparseMatrix;
-            //    GPUSparseMatrix<ElemType> & second = secondDummy;
-            //    if (beta==0)
-            //    {
-            //        GPUSparseMatrix<ElemType>::Multiply(first,second,*c.m_GPUMatrix);
-            //    }
-            //    else
-            //    {
-            //        Matrix<ElemType> tmp(c.GetNumRows(),c.GetNumCols(),(DEVICEID_TYPE)c.GetDeviceId());
-            //        GPUSparseMatrix<ElemType>::Multiply(first,second,*tmp.m_GPUMatrix);
-            //        c=tmp+c*beta;
-            //    }
-            // }
             c.SetDataLocation(GPU, DENSE);
         }
-        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // h -> u0
+        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // GPU, DENSE * SPARSE -> SPARSE
         {
-            // new GPU sparse matrix code
-            GPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, *c.m_GPUSparseMatrix);
+            if (beta != 0 && beta != 1)
+            {
+                NOT_IMPLEMENTED;
+            }
+            else
+            {
+                if (beta == 0)
+                {
+                    c.Reset();
+                }
+                GPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, *c.m_GPUSparseMatrix);
+            }
             c.SetDataLocation(GPU, SPARSE);
         }
-        else if (a.m_matrixType == b.m_matrixType && b.m_matrixType == c.m_matrixType && a.m_matrixType == MatrixType::SPARSE)
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * SPARSE -> SPARSE
         {
             GPUSparseMatrix<ElemType> firstDummy = alpha == 1 ? *a.m_GPUSparseMatrix : (*a.m_GPUSparseMatrix) * alpha;
             GPUSparseMatrix<ElemType>& first = firstDummy; // By Malcolm.. gcc doesn't support auto
@@ -4525,17 +5160,34 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
                 c.SetDataLocation(GPU, SPARSE);
             }
         }
-        else if (a.m_matrixType == b.m_matrixType && a.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE)
+        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, DENSE * DENSE -> SPARSE
         {
             GPUMatrix<ElemType> tmp(a.m_GPUMatrix->GetComputeDeviceId());
-            GPUSparseMatrix<ElemType> tmpSparse(a.m_GPUMatrix->GetComputeDeviceId());
-            GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, tmp);
-            tmpSparse.SetValue(tmp);
-            *c.m_GPUSparseMatrix = tmpSparse + (*c.m_GPUSparseMatrix) * beta;
+            GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, (ElemType)0.0, tmp);
+            if (beta != 0)
+            {
+                GPUSparseMatrix<ElemType> tmpSparse(a.m_GPUMatrix->GetComputeDeviceId());
+                tmpSparse.SetValue(tmp);
+                *c.m_GPUSparseMatrix = tmpSparse + (*c.m_GPUSparseMatrix) * beta;
+            }
+            else
+            {
+                c.m_GPUSparseMatrix->SetValue(tmp);
+            }
             c.SetDataLocation(GPU, SPARSE);
         }
-        else
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * SPARSE -> DENSE
+        {
             NOT_IMPLEMENTED;
+        }
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * DENSE -> SPARSE
+        {
+            NOT_IMPLEMENTED;
+        }
+        else // No combination left
+        {
+            NOT_IMPLEMENTED;
+        }
     }
 }
 
@@ -4615,6 +5267,25 @@ void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemT
     }
 }
 
+/// <summary>Columnwise scale with col-major matrix and accumulate.</summary>
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="v">Input scale vector for each column of a</param>
+/// <param name="beta">Scalar</param>
+/// <param name="c">Resulting matrix, the same shape as a</param>
+template <class ElemType>
+void Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& v, ElemType beta, Matrix<ElemType>& c)
+{
+    DecideAndMoveToRightDevice(a, v, c);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+        nullptr,
+        CPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_CPUMatrix, *v.m_CPUMatrix, beta, *c.m_CPUMatrix),
+        GPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_GPUMatrix, *v.m_GPUMatrix, beta, *c.m_GPUMatrix),
+        CPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_CPUSparseMatrix, *v.m_CPUMatrix, beta, *c.m_CPUMatrix),
+        GPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, *v.m_GPUMatrix, beta, *c.m_GPUMatrix));
+}
+
 /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>
 /// if a is a column vector, add to all columns of c
 /// if a is a row vector, add to all rows of c
@@ -4679,6 +5350,9 @@ template <class ElemType>
     {
         ScaleAndAdd(alpha / beta, a, c); // c1=alpha/beta * a + c
         Scale(beta, c);                  // c/beta * beta
+        // TODO: two lines above should be changed as follows:
+        // Scale(beta, c);                  // c1 = c * beta
+        // ScaleAndAdd(alpha, a, c); // c=alpha * a + c1 = alpha * a + beta * c
     }
 }
 
@@ -4901,7 +5575,7 @@ void Matrix<ElemType>::Scale(ElemType alpha, Matrix<ElemType>& a)
                                 &a,
                                 CPUMatrix<ElemType>::Scale(alpha, *a.m_CPUMatrix),
                                 GPUMatrix<ElemType>::Scale(alpha, *a.m_GPUMatrix),
-                                NOT_IMPLEMENTED,
+                                CPUSparseMatrix<ElemType>::Scale(alpha, *a.m_CPUSparseMatrix),
                                 GPUSparseMatrix<ElemType>::Scale(alpha, *a.m_GPUSparseMatrix));
 }
 
@@ -4935,17 +5609,18 @@ void Matrix<ElemType>::InnerProduct(const Matrix<ElemType>& a, const Matrix<Elem
 
     DecideAndMoveToRightDevice(a, b, c);
 
-    if (a.GetMatrixType() != b.GetMatrixType())
+    // TODO: consider swapping the arguments in this case
+    if (b.GetMatrixType() != DENSE) // only support a being sparse/dense. Both b and c should be dense
         NOT_IMPLEMENTED;
 
-    c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+    c.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
 
-    DISPATCH_MATRIX_ON_FLAG(&c,
-                            &c,
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            &a,
                             CPUMatrix<ElemType>::InnerProduct(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise),
                             GPUMatrix<ElemType>::InnerProduct(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, isColWise),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+                            CPUSparseMatrix<ElemType>::InnerProduct(*a.m_CPUSparseMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise),
+                            GPUSparseMatrix<ElemType>::InnerProduct(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, isColWise));
 }
 
 template <class ElemType>
@@ -5449,7 +6124,7 @@ void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matri
     {
         DecideAndMoveToRightDevice(*this, inputValue, outputVale, outputGradient);
 
-        if (inputValue.GetMatrixType() == DENSE && outputVale.GetMatrixType() == DENSE && 
+        if (inputValue.GetMatrixType() == DENSE && outputVale.GetMatrixType() == DENSE &&
             outputVale.GetMatrixType() == DENSE && this->GetMatrixType() == DENSE)
         {
             m_GPUMatrix->AddElementMaxGradient(*inputValue.m_GPUMatrix, *outputVale.m_GPUMatrix, *outputGradient.m_GPUMatrix, *inputSum.m_GPUMatrix, *randomSplit.m_GPUMatrix, numInputs, inputIndex);
@@ -5459,6 +6134,50 @@ void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matri
             NOT_IMPLEMENTED;
         }
     }
+}
+// Calculate CTC score
+// prob (input): the posterior output from the network
+// alpha, beta (output): alpha and beta for forward-backward calculation. 
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// totalScore (output): total CTC score
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numParallelSequences (input): num of parallel sequences
+// mbsize (input): the maximum channel frame number
+// blankTokenId (input): id of the CTC blank token
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
+//      delayConstraint=-1 means no constraint
+template<class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+    const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, Matrix<ElemType> &totalScore, const std::vector<size_t> & uttToChanInd,
+    const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum, const std::vector<size_t> & uttPhoneNum,
+    const size_t numParallelSequences, const size_t mbsize, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+{
+    DecideAndMoveToRightDevice(prob, *this);
+    alpha.Resize(phoneSeq.GetNumRows(), prob.GetNumCols());
+    beta.Resize(phoneSeq.GetNumRows(), prob.GetNumCols());
+    Resize(prob.GetNumRows(), prob.GetNumCols());
+
+    alpha.SetValue(LZERO);
+    beta.SetValue(LZERO);
+    SetValue(LZERO);
+    SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&prob,
+        this,
+        this->m_CPUMatrix->AssignCTCScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, *totalScore.m_CPUMatrix,
+            uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, isColWise),
+        this->m_GPUMatrix->AssignCTCScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, *totalScore.m_GPUMatrix,
+            uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, isColWise),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED
+    );
+
+    return *this;
 }
 
 #pragma endregion Static BLAS Functions
@@ -5525,7 +6244,25 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
+template <class ElemType>
+void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
+                                   const array<size_t, 2>& offsets,
+                                   const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                                   const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
+{
+    VerifyIsDense(*this) && VerifyIsDense(a);
 
+    DecideAndMoveToRightDevice(*this, a);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->TensorArgOp(*a.m_CPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+        m_GPUMatrix->TensorArgOp(*a.m_GPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+//template class Matrix<short>;
 template class Matrix<float>;
 template class Matrix<double>;
 
@@ -5533,7 +6270,7 @@ template class Matrix<double>;
 // Let's explicitly instantiate the methods we need for that purpose
 template Matrix<char>::Matrix(DEVICEID_TYPE);
 template Matrix<char>::Matrix(Matrix<char>&&);
-template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
+template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz);
 template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
 template Matrix<char>::~Matrix();
 template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
@@ -5546,14 +6283,41 @@ template void Matrix<char>::TransferToDeviceIfNotThere(int id_to, bool isBeingMo
 template size_t Matrix<char>::GetNumRows() const;
 template size_t Matrix<char>::GetNumCols() const;
 template void Matrix<char>::SetValue(const char);
-template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags);
+template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags, DataTransferer* transferer);
 //template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
 template void Matrix<char>::SetValue(const Matrix<char>&);
-template void Matrix<char>::AssignValuesOf   (const Matrix<char>&);
+template void Matrix<char>::AssignValuesOf(const Matrix<char>&);
+template void Matrix<char>::CastAssignValuesOf(const MatrixBase& other);
 template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
 template void Matrix<char>::Reshape(const size_t, const size_t);
 template char* Matrix<char>::CopyToArray(void) const;
+
+// Matrix<short> methods
+template Matrix<short>::Matrix(DEVICEID_TYPE);
+template Matrix<short>::Matrix(Matrix<short>&&);
+template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz);
+template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, short* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
+template Matrix<short>::~Matrix();
+template Matrix<short>& Matrix<short>::operator=(Matrix<short>&& moveFrom);
+template short* Matrix<short>::Data() const;
+template int Matrix<short>::GetDeviceId() const;
+template size_t Matrix<short>::GetNumElements() const;
+template Matrix<short> Matrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template void Matrix<short>::_transferToDevice(int id_to, bool isBeingMoved, bool emptyTransfer) const;
+template void Matrix<short>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
+template size_t Matrix<short>::GetNumRows() const;
+template size_t Matrix<short>::GetNumCols() const;
+template void Matrix<short>::SetValue(const short);
+template void Matrix<short>::SetValue(size_t numRows, const size_t numCols, int deviceId, short* pArray, size_t matrixFlags, DataTransferer* transferer);
+//template void Matrix<short>::SetValue(const Matrix<short>&, MatrixFormat);
+template void Matrix<short>::SetValue(const Matrix<short>&);
+template void Matrix<short>::AssignValuesOf(const Matrix<short>&);
+template void Matrix<short>::CastAssignValuesOf(const MatrixBase& other);
+template bool Matrix<short>::IsEmpty() const;
+template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
+template void Matrix<short>::Reshape(const size_t, const size_t);
+template short* Matrix<short>::CopyToArray(void) const;
 
 template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
 

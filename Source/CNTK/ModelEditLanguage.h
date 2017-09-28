@@ -180,7 +180,7 @@ public:
                     auto nodePtr = builder.CreateLearnableParameter(name, 1, 1);
                     ndlNode->SetEvalValue(nodePtr.get());
                     ElemType val = ndlNode->GetScalar();
-                    nodePtr->Value().SetValue(val);
+                    cn->InitLearnableParameters(nodePtr, L"fixedValue", val);
                 }
             }
         }

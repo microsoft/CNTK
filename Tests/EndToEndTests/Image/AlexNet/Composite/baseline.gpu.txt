@@ -1,0 +1,442 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU X5680 @ 3.33GHz
+    Hardware threads: 12
+    Total Memory: 33537232 kB
+-------------------------------------------------------------------
+Copying test data to local directory
+=== Running /cygdrive/d/GitHub/CNTK/x64/release/cntk.exe configFile=D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet/AlexNetCommon.cntk currentDirectory=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu\TestData RunDir=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu DataDir=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu\TestData ConfigDir=D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet OutputDir=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu DeviceId=0 timestamping=true configFile=D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet/AlexNetComposite.cntk
+CNTK 2.0rc1+ (HEAD fbb53d, Apr 12 2017 10:40:51) on CHAZHANG at 2017/04/14 03:09:23
+
+D:\GitHub\CNTK\x64\release\cntk.exe  configFile=D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet/AlexNetCommon.cntk  currentDirectory=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu\TestData  RunDir=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu  DataDir=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu\TestData  ConfigDir=D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet  OutputDir=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu  DeviceId=0  timestamping=true  configFile=D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet/AlexNetComposite.cntk
+Changed current directory to C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu\TestData
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Apr 13 2017 18:48:57
+		Last modified date: Wed Apr  5 07:52:19 2017
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: yes
+		With ASGD: yes
+		Math lib: mkl
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+		CUB_PATH: C:\src\cub-1.4.1
+		CUDNN_PATH: C:\local\cudnn-8.0-v5.1\cuda
+		Build Branch: chazhang/asym
+		Build SHA1: 937c03c0f998ee7c913884c3d35647a9bfda2845 (modified)
+		Built by chazhang on CHAZHANG
+		Build Path: D:\GitHub\CNTK\Source\CNTKv2LibraryDll\
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+04/14/2017 03:09:24: -------------------------------------------------------------------
+04/14/2017 03:09:24: GPU info:
+
+04/14/2017 03:09:24: 		Device[0]: cores = 2688; computeCapability = 3.5; type = "GeForce GTX TITAN"; total memory = 6144 MB; free memory = 5210 MB
+04/14/2017 03:09:24: -------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: AlexNetComposite.cntk:AddTop5Eval=[    
+    action=edit
+    CurModel=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu/models/AlexNet
+    NewModel=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu/models/AlexNet.Top5
+    editPath=D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet/add_top5_layer.mel
+]
+
+configparameters: AlexNetComposite.cntk:command=Train:AddTop5Eval:Test
+configparameters: AlexNetComposite.cntk:ConfigDir=D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet
+configparameters: AlexNetComposite.cntk:currentDirectory=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu\TestData
+configparameters: AlexNetComposite.cntk:DataDir=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu\TestData
+configparameters: AlexNetComposite.cntk:deviceId=0
+configparameters: AlexNetComposite.cntk:ModelDir=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu/models
+configparameters: AlexNetComposite.cntk:ndlMacros=D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet/Macros.ndl
+configparameters: AlexNetComposite.cntk:numMBsToShowResult=100
+configparameters: AlexNetComposite.cntk:OutputDir=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu
+configparameters: AlexNetComposite.cntk:parallelTrain=false
+configparameters: AlexNetComposite.cntk:precision=float
+configparameters: AlexNetComposite.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu
+configparameters: AlexNetComposite.cntk:Test=[
+    action=test
+    modelPath=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu/models/AlexNet.Top5
+    minibatchSize=4
+     NDLNetworkBuilder=[
+        networkDescription=D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet/AlexNet.ndl
+    ]
+] [
+    reader = [
+        verbosity = 0
+        randomize = false
+        deserializers = (
+            [
+                type = "ImageDeserializer"
+                module = "ImageReader"
+                file = "D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet/val_map.txt"
+                input = [
+                    features = [
+                        transforms = (
+                            [
+                                type = "Crop"
+                                cropType = "center"
+                            ]:[
+                                type = "Scale"
+                                width = 227
+                                height = 227
+                                channels = 3
+                            ]:[
+                                type = "Transpose"
+                            ]
+                        )
+                    ]
+                    labels = [
+                        labelDim = 1000
+                    ]
+                ]
+            ]
+        )
+    ]        
+]
+
+configparameters: AlexNetComposite.cntk:timestamping=true
+configparameters: AlexNetComposite.cntk:traceLevel=1
+configparameters: AlexNetComposite.cntk:Train=[
+    action=train
+    modelPath=C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu/models/AlexNet
+    NDLNetworkBuilder=[
+        networkDescription=D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet/AlexNet.ndl
+    ]
+    SGD=[
+        epochSize=0
+        minibatchSize=4
+        learningRatesPerMB=0.01*20:0.003*12:0.001*28:0.0003
+        momentumPerMB=0.9
+        maxEpochs=2
+        gradUpdateType=None
+        L2RegWeight=0.0005
+        dropoutRate=0*5:0.5
+        ParallelTrain=[
+            parallelizationMethod=DataParallelSGD
+            distributedMBReading=true
+            parallelizationStartEpoch=1
+            DataParallelSGD=[
+                gradientBits=1
+            ]
+        ]
+        numMBsToShowResult=100
+    ]
+] [
+    reader = [
+        verbosity = 0
+        randomize = true
+        randomizationWindow = 1
+        deserializers = (
+            [   
+                type = "ImageDeserializer"
+                module = "ImageReader"
+                file = "D:\GitHub\CNTK\Tests\EndToEndTests\Image\AlexNet/train_map.txt"
+                input = [
+                    features = [
+                        transforms = (
+                            [
+                                type = "Crop"
+                                cropType = "RandomSide"
+                                sideRatio = 0.875
+                                jitterType = "UniRatio"
+                            ]:[
+                                type = "Scale"
+                                width = 227
+                                height = 227
+                                channels = 3
+                                interpolations = "linear"
+                            ]:[
+                                type = "Transpose"
+                            ]
+                        )
+                    ]
+                    labels = [
+                        labelDim = 1000
+                    ]
+                ]
+            ]
+        )
+    ]    
+]
+
+04/14/2017 03:09:24: Commands: Train AddTop5Eval Test
+04/14/2017 03:09:24: precision = "float"
+
+04/14/2017 03:09:24: ##############################################################################
+04/14/2017 03:09:24: #                                                                            #
+04/14/2017 03:09:24: # Train command (train action)                                               #
+04/14/2017 03:09:24: #                                                                            #
+04/14/2017 03:09:24: ##############################################################################
+
+parallelTrain option is not enabled. ParallelTrain config will be ignored.
+04/14/2017 03:09:24: 
+Creating virgin network.
+NDLBuilder Using GPU 0
+Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetGaussianRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+Node 'h2.W' (LearnableParameter operation): Initializating Parameter[4096 x 0] as gaussian later when dimensions are fully known.
+Node 'OutputNodes.W' (LearnableParameter operation): Initializating Parameter[1000 x 0] as gaussian later when dimensions are fully known.
+Node 'h2.W' (LearnableParameter operation) operation: Tensor shape was inferred as [4096 x 4096].
+Node 'OutputNodes.W' (LearnableParameter operation) operation: Tensor shape was inferred as [1000 x 4096].
+conv1.c: using cuDNN convolution engine for geometry: Input: 227 x 227 x 3, Output: 57 x 57 x 64, Kernel: 11 x 11 x 3, Map: 1 x 1 x 64, Stride: 4 x 4 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool1: using cuDNN convolution engine for geometry: Input: 57 x 57 x 64, Output: 28 x 28 x 64, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+conv2.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 64, Output: 28 x 28 x 192, Kernel: 5 x 5 x 64, Map: 1 x 1 x 192, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool2: using cuDNN convolution engine for geometry: Input: 28 x 28 x 192, Output: 13 x 13 x 192, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+conv3.c: using cuDNN convolution engine for geometry: Input: 13 x 13 x 192, Output: 13 x 13 x 384, Kernel: 3 x 3 x 192, Map: 1 x 1 x 384, Stride: 1 x 1 x 192, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+conv4.c: using cuDNN convolution engine for geometry: Input: 13 x 13 x 384, Output: 13 x 13 x 256, Kernel: 3 x 3 x 384, Map: 1 x 1 x 256, Stride: 1 x 1 x 384, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+conv5.c: using cuDNN convolution engine for geometry: Input: 13 x 13 x 256, Output: 13 x 13 x 256, Kernel: 3 x 3 x 256, Map: 1 x 1 x 256, Stride: 1 x 1 x 256, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool3: using cuDNN convolution engine for geometry: Input: 13 x 13 x 256, Output: 6 x 6 x 256, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+04/14/2017 03:09:24: 
+Model has 48 nodes. Using GPU 0.
+
+04/14/2017 03:09:24: Training criterion:   ce = CrossEntropyWithSoftmax
+04/14/2017 03:09:24: Evaluation criterion: err = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 93 matrices, 65 are shared as 13, and 28 are not shared.
+
+Here are the ones that share memory:
+	{ conv3.W : [384 x 1728] (gradient)
+	  conv4.c : [13 x 13 x 256 x *] (gradient)
+	  conv4.y : [13 x 13 x 256 x *] }
+	{ conv1.W : [64 x 363] (gradient)
+	  conv1.c : [57 x 57 x 64 x *]
+	  conv1.y : [57 x 57 x 64 x *] }
+	{ conv2.W : [192 x 1600] (gradient)
+	  conv2.z : [28 x 28 x 192 x *] (gradient)
+	  conv3.c : [13 x 13 x 384 x *]
+	  conv3.c : [13 x 13 x 384 x *] (gradient)
+	  conv3.y : [13 x 13 x 384 x *] }
+	{ h1.W : [4096 x 6 x 6 x 256] (gradient)
+	  h1.z : [4096 x *]
+	  h1.z : [4096 x *] (gradient)
+	  h1_d : [4096 x *] }
+	{ conv5.W : [256 x 2304] (gradient)
+	  h1.y : [4096 x *] }
+	{ OutputNodes.t : [1000 x *]
+	  OutputNodes.t : [1000 x *] (gradient)
+	  h1.b : [4096] (gradient) }
+	{ conv2.b : [1 x 1 x 192] (gradient)
+	  conv5.z : [13 x 13 x 256 x *] (gradient)
+	  h1.y : [4096 x *] (gradient)
+	  h2.t : [4096 x *] (gradient)
+	  h2.y : [4096 x *]
+	  pool2 : [13 x 13 x 192 x *] (gradient)
+	  pool3 : [6 x 6 x 256 x *] (gradient) }
+	{ conv4.W : [256 x 3456] (gradient)
+	  pool3 : [6 x 6 x 256 x *] }
+	{ conv1.z : [57 x 57 x 64 x *] (gradient)
+	  conv2.c : [28 x 28 x 192 x *]
+	  conv2.c : [28 x 28 x 192 x *] (gradient)
+	  conv2.y : [28 x 28 x 192 x *] }
+	{ h2.b : [4096] (gradient)
+	  h2.z : [4096 x *]
+	  h2_d : [4096 x *] }
+	{ OutputNodes.z : [1000 x *]
+	  h1.t : [4096 x *]
+	  h2.W : [4096 x 4096] (gradient)
+	  h2.t : [4096 x *]
+	  h2.y : [4096 x *] (gradient) }
+	{ conv1.c : [57 x 57 x 64 x *] (gradient)
+	  conv1.y : [57 x 57 x 64 x *] (gradient)
+	  conv1.z : [57 x 57 x 64 x *]
+	  conv2.y : [28 x 28 x 192 x *] (gradient)
+	  conv2.z : [28 x 28 x 192 x *]
+	  conv3.z : [13 x 13 x 384 x *]
+	  conv3.z : [13 x 13 x 384 x *] (gradient)
+	  conv4.c : [13 x 13 x 256 x *]
+	  conv4.y : [13 x 13 x 256 x *] (gradient)
+	  conv5.c : [13 x 13 x 256 x *]
+	  conv5.y : [13 x 13 x 256 x *] }
+	{ OutputNodes.z : [1000 x *] (gradient)
+	  conv1.b : [1 x 1 x 64] (gradient)
+	  conv3.y : [13 x 13 x 384 x *] (gradient)
+	  conv4.z : [13 x 13 x 256 x *]
+	  conv4.z : [13 x 13 x 256 x *] (gradient)
+	  conv5.c : [13 x 13 x 256 x *] (gradient)
+	  conv5.y : [13 x 13 x 256 x *] (gradient)
+	  conv5.z : [13 x 13 x 256 x *]
+	  h1.t : [4096 x *] (gradient)
+	  h1_d : [4096 x *] (gradient)
+	  h2.z : [4096 x *] (gradient)
+	  h2_d : [4096 x *] (gradient)
+	  pool1 : [28 x 28 x 64 x *] (gradient) }
+
+Here are the ones that don't share memory:
+	{features : [227 x 227 x 3 x *]}
+	{h1.b : [4096]}
+	{h1.W : [4096 x 6 x 6 x 256]}
+	{OutputNodes.b : [1000]}
+	{OutputNodes.W : [1000 x 4096]}
+	{h2.W : [4096 x 4096]}
+	{h2.b : [4096]}
+	{conv1.b : [1 x 1 x 64]}
+	{labels : [1000 x *]}
+	{conv1.W : [64 x 363]}
+	{conv3.b : [1 x 1 x 384]}
+	{conv4.W : [256 x 3456]}
+	{conv5.W : [256 x 2304]}
+	{conv2.b : [1 x 1 x 192]}
+	{conv2.W : [192 x 1600]}
+	{conv3.W : [384 x 1728]}
+	{conv4.b : [1 x 1 x 256]}
+	{conv5.b : [1 x 1 x 256]}
+	{err : [1]}
+	{ce : [1]}
+	{OutputNodes.W : [1000 x 4096] (gradient)}
+	{conv3.b : [1 x 1 x 384] (gradient)}
+	{OutputNodes.b : [1000] (gradient)}
+	{conv5.b : [1 x 1 x 256] (gradient)}
+	{ce : [1] (gradient)}
+	{pool1 : [28 x 28 x 64 x *]}
+	{conv4.b : [1 x 1 x 256] (gradient)}
+	{pool2 : [13 x 13 x 192 x *]}
+
+
+04/14/2017 03:09:24: Training 61100840 parameters in 16 out of 16 parameter tensors and 45 nodes with gradient:
+
+04/14/2017 03:09:24: 	Node 'OutputNodes.W' (LearnableParameter operation) : [1000 x 4096]
+04/14/2017 03:09:24: 	Node 'OutputNodes.b' (LearnableParameter operation) : [1000]
+04/14/2017 03:09:24: 	Node 'conv1.W' (LearnableParameter operation) : [64 x 363]
+04/14/2017 03:09:24: 	Node 'conv1.b' (LearnableParameter operation) : [1 x 1 x 64]
+04/14/2017 03:09:24: 	Node 'conv2.W' (LearnableParameter operation) : [192 x 1600]
+04/14/2017 03:09:24: 	Node 'conv2.b' (LearnableParameter operation) : [1 x 1 x 192]
+04/14/2017 03:09:24: 	Node 'conv3.W' (LearnableParameter operation) : [384 x 1728]
+04/14/2017 03:09:24: 	Node 'conv3.b' (LearnableParameter operation) : [1 x 1 x 384]
+04/14/2017 03:09:24: 	Node 'conv4.W' (LearnableParameter operation) : [256 x 3456]
+04/14/2017 03:09:24: 	Node 'conv4.b' (LearnableParameter operation) : [1 x 1 x 256]
+04/14/2017 03:09:24: 	Node 'conv5.W' (LearnableParameter operation) : [256 x 2304]
+04/14/2017 03:09:24: 	Node 'conv5.b' (LearnableParameter operation) : [1 x 1 x 256]
+04/14/2017 03:09:24: 	Node 'h1.W' (LearnableParameter operation) : [4096 x 6 x 6 x 256]
+04/14/2017 03:09:24: 	Node 'h1.b' (LearnableParameter operation) : [4096]
+04/14/2017 03:09:24: 	Node 'h2.W' (LearnableParameter operation) : [4096 x 4096]
+04/14/2017 03:09:24: 	Node 'h2.b' (LearnableParameter operation) : [4096]
+
+04/14/2017 03:09:24: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+04/14/2017 03:09:27: Starting Epoch 1: learning rate per sample = 0.002500  effective momentum = 0.900000  momentum as time constant = 38.0 samples
+
+04/14/2017 03:09:27: Starting minibatch loop.
+04/14/2017 03:09:36:  Epoch[ 1 of 2]-Minibatch[   1- 100]: ce = 7.60002197 * 400; err = 0.99750000 * 400; time = 8.3712s; samplesPerSecond = 47.8
+04/14/2017 03:09:39:  Epoch[ 1 of 2]-Minibatch[ 101- 200]: ce = 7.00891846 * 400; err = 0.99750000 * 400; time = 3.7290s; samplesPerSecond = 107.3
+04/14/2017 03:09:41: Finished Epoch[ 1 of 2]: [Training] ce = 7.22487402 * 1024; err = 0.99707031 * 1024; totalSamplesSeen = 1024; learningRatePerSample = 0.0024999999; epochTime=14.1804s
+04/14/2017 03:09:45: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu/models/AlexNet.1'
+
+04/14/2017 03:09:48: Starting Epoch 2: learning rate per sample = 0.002500  effective momentum = 0.900000  momentum as time constant = 38.0 samples
+
+04/14/2017 03:09:48: Starting minibatch loop.
+04/14/2017 03:09:51:  Epoch[ 2 of 2]-Minibatch[   1- 100, 50.00%]: ce = 6.84987854 * 400; err = 0.99500000 * 400; time = 3.7420s; samplesPerSecond = 106.9
+04/14/2017 03:09:55:  Epoch[ 2 of 2]-Minibatch[ 101- 200, 100.00%]: ce = 6.86631165 * 400; err = 0.99750000 * 400; time = 3.8600s; samplesPerSecond = 103.6
+04/14/2017 03:09:57: Finished Epoch[ 2 of 2]: [Training] ce = 6.86592960 * 1024; err = 0.99707031 * 1024; totalSamplesSeen = 2048; learningRatePerSample = 0.0024999999; epochTime=9.62534s
+04/14/2017 03:10:00: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170413190919.681695\Image\AlexNet_Composite@release_gpu/models/AlexNet'
+
+04/14/2017 03:10:03: Action "train" complete.
+
+
+04/14/2017 03:10:03: ##############################################################################
+04/14/2017 03:10:03: #                                                                            #
+04/14/2017 03:10:03: # AddTop5Eval command (edit action)                                          #
+04/14/2017 03:10:03: #                                                                            #
+04/14/2017 03:10:03: ##############################################################################
+
+conv1.c: using GEMM convolution engine for geometry: Input: 227 x 227 x 3, Output: 57 x 57 x 64, Kernel: 11 x 11 x 3, Map: 1 x 1 x 64, Stride: 4 x 4 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool1: using GEMM convolution engine for geometry: Input: 57 x 57 x 64, Output: 28 x 28 x 64, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+conv2.c: using GEMM convolution engine for geometry: Input: 28 x 28 x 64, Output: 28 x 28 x 192, Kernel: 5 x 5 x 64, Map: 1 x 1 x 192, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool2: using GEMM convolution engine for geometry: Input: 28 x 28 x 192, Output: 13 x 13 x 192, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+conv3.c: using GEMM convolution engine for geometry: Input: 13 x 13 x 192, Output: 13 x 13 x 384, Kernel: 3 x 3 x 192, Map: 1 x 1 x 384, Stride: 1 x 1 x 192, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+conv4.c: using GEMM convolution engine for geometry: Input: 13 x 13 x 384, Output: 13 x 13 x 256, Kernel: 3 x 3 x 384, Map: 1 x 1 x 256, Stride: 1 x 1 x 384, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+conv5.c: using GEMM convolution engine for geometry: Input: 13 x 13 x 256, Output: 13 x 13 x 256, Kernel: 3 x 3 x 256, Map: 1 x 1 x 256, Stride: 1 x 1 x 256, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool3: using GEMM convolution engine for geometry: Input: 13 x 13 x 256, Output: 6 x 6 x 256, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+04/14/2017 03:10:09: Action "edit" complete.
+
+
+04/14/2017 03:10:09: ##############################################################################
+04/14/2017 03:10:09: #                                                                            #
+04/14/2017 03:10:09: # Test command (test action)                                                 #
+04/14/2017 03:10:09: #                                                                            #
+04/14/2017 03:10:09: ##############################################################################
+
+NDLBuilder Using GPU 0
+Node 'h2.W' (LearnableParameter operation): Initializating Parameter[4096 x 0] as gaussian later when dimensions are fully known.
+Node 'OutputNodes.W' (LearnableParameter operation): Initializating Parameter[1000 x 0] as gaussian later when dimensions are fully known.
+Node 'h2.W' (LearnableParameter operation) operation: Tensor shape was inferred as [4096 x 4096].
+Node 'OutputNodes.W' (LearnableParameter operation) operation: Tensor shape was inferred as [1000 x 4096].
+conv1.c: using cuDNN convolution engine for geometry: Input: 227 x 227 x 3, Output: 57 x 57 x 64, Kernel: 11 x 11 x 3, Map: 1 x 1 x 64, Stride: 4 x 4 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool1: using cuDNN convolution engine for geometry: Input: 57 x 57 x 64, Output: 28 x 28 x 64, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+conv2.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 64, Output: 28 x 28 x 192, Kernel: 5 x 5 x 64, Map: 1 x 1 x 192, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool2: using cuDNN convolution engine for geometry: Input: 28 x 28 x 192, Output: 13 x 13 x 192, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+conv3.c: using cuDNN convolution engine for geometry: Input: 13 x 13 x 192, Output: 13 x 13 x 384, Kernel: 3 x 3 x 192, Map: 1 x 1 x 384, Stride: 1 x 1 x 192, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+conv4.c: using cuDNN convolution engine for geometry: Input: 13 x 13 x 384, Output: 13 x 13 x 256, Kernel: 3 x 3 x 384, Map: 1 x 1 x 256, Stride: 1 x 1 x 384, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+conv5.c: using cuDNN convolution engine for geometry: Input: 13 x 13 x 256, Output: 13 x 13 x 256, Kernel: 3 x 3 x 256, Map: 1 x 1 x 256, Stride: 1 x 1 x 256, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool3: using cuDNN convolution engine for geometry: Input: 13 x 13 x 256, Output: 6 x 6 x 256, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 48 matrices, 28 are shared as 3, and 20 are not shared.
+
+Here are the ones that share memory:
+	{ OutputNodes.z : [1000 x *2]
+	  conv1.z : [57 x 57 x 64 x *2]
+	  conv2.c : [28 x 28 x 192 x *2]
+	  conv2.y : [28 x 28 x 192 x *2]
+	  conv3.c : [13 x 13 x 384 x *2]
+	  conv3.y : [13 x 13 x 384 x *2]
+	  conv4.y : [13 x 13 x 256 x *2]
+	  conv5.z : [13 x 13 x 256 x *2]
+	  h1.z : [4096 x *2]
+	  h1_d : [4096 x *2]
+	  h2.z : [4096 x *2]
+	  h2_d : [4096 x *2]
+	  pool3 : [6 x 6 x 256 x *2] }
+	{ OutputNodes.t : [1000 x *2]
+	  conv4.z : [13 x 13 x 256 x *2]
+	  conv5.c : [13 x 13 x 256 x *2]
+	  conv5.y : [13 x 13 x 256 x *2]
+	  h1.t : [4096 x *2]
+	  h1.y : [4096 x *2]
+	  h2.t : [4096 x *2]
+	  h2.y : [4096 x *2]
+	  pool1 : [28 x 28 x 64 x *2]
+	  pool2 : [13 x 13 x 192 x *2] }
+	{ conv1.c : [57 x 57 x 64 x *2]
+	  conv1.y : [57 x 57 x 64 x *2]
+	  conv2.z : [28 x 28 x 192 x *2]
+	  conv3.z : [13 x 13 x 384 x *2]
+	  conv4.c : [13 x 13 x 256 x *2] }
+
+Here are the ones that don't share memory:
+	{conv1.W : [64 x 363]}
+	{features : [227 x 227 x 3 x *2]}
+	{labels : [1000 x *2]}
+	{h2.b : [4096]}
+	{OutputNodes.W : [1000 x 4096]}
+	{h2.W : [4096 x 4096]}
+	{OutputNodes.b : [1000]}
+	{ce : [1]}
+	{err : [1]}
+	{h1.W : [4096 x 6 x 6 x 256]}
+	{h1.b : [4096]}
+	{conv5.b : [1 x 1 x 256]}
+	{conv1.b : [1 x 1 x 64]}
+	{conv2.W : [192 x 1600]}
+	{conv4.b : [1 x 1 x 256]}
+	{conv5.W : [256 x 2304]}
+	{conv4.W : [256 x 3456]}
+	{conv2.b : [1 x 1 x 192]}
+	{conv3.b : [1 x 1 x 384]}
+	{conv3.W : [384 x 1728]}
+
+04/14/2017 03:10:12: Minibatch[1-100]: err = 0.99750000 * 400; ce = 7.32776533 * 400
+04/14/2017 03:10:12: Minibatch[101-125]: err = 1.00000000 * 100; ce = 7.35452381 * 100
+04/14/2017 03:10:12: Final Results: Minibatch[1-125]: err = 0.99800000 * 500; ce = 7.33311702 * 500; perplexity = 1530.14384066
+
+04/14/2017 03:10:12: Action "test" complete.
+
+04/14/2017 03:10:12: __COMPLETED__

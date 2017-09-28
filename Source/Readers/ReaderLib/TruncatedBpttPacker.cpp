@@ -6,11 +6,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 
-#include <deque>
+#include <cmath>
 #include "TruncatedBpttPacker.h"
-#include "ElementTypeUtils.h"
+#include "ReaderUtil.h"
+#include <algorithm>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 using namespace std;
 
@@ -28,6 +29,15 @@ public:
         return m_sequences.empty();
     }
 
+    void Reset() 
+    {
+        m_length = 0;
+        m_sampleCursor = 0;
+        m_sampleOffset = 0;
+        m_sequences.clear();
+        m_endOfSweepFlags.clear();
+    }
+
     // Gets the number of available samples in the slot.
     size_t AvailableNumberOfSamples() const
     {
@@ -37,9 +47,10 @@ public:
     }
 
     // Adds a new sequence to the end of the slot.
-    void PushSequence(SequenceDataPtr s)
+    void PushSequence(SequenceDataPtr s, bool endOfSweep)
     {
         m_sequences.push_back(s);
+        m_endOfSweepFlags.push_back(endOfSweep);
         m_length += s->m_numberOfSamples;
     }
 
@@ -50,13 +61,16 @@ public:
     }
 
     // Pops the front sequence at the beginning of the slot.
-    void PopSequence()
+    bool PopSequence()
     {
         assert(!m_sequences.empty());
         m_sampleCursor = 0;
         m_sampleOffset = 0;
         m_length -= m_sequences.front()->m_numberOfSamples;
         m_sequences.pop_front();
+        bool endOfSweepFlag = m_endOfSweepFlags.front();
+        m_endOfSweepFlags.pop_front();
+        return endOfSweepFlag;
     }
 
     // Contains the current sample cursor in the first sequence(m_sequences.front()) of the slot.
@@ -71,6 +85,10 @@ public:
 private:
     // Prepared sequences.
     deque<SequenceDataPtr> m_sequences;
+    
+    // For each 'in-flight' sequence we keep a flag that indicate whether 
+    // the sequence data comes from an the end of a sweep.
+    std::deque<bool> m_endOfSweepFlags;
 
     // Contains the size of the slot in samples (accumulated over all m_sequences).
     size_t m_length;
@@ -106,13 +124,13 @@ struct SequenceBuffer
 };
 
 TruncatedBPTTPacker::TruncatedBPTTPacker(
-    MemoryProviderPtr memoryProvider,
     SequenceEnumeratorPtr sequenceEnumerator,
-    const vector<StreamDescriptionPtr>& streams)
-    : PackerBase(memoryProvider, sequenceEnumerator, streams),
-    m_truncationSize(0)
+    const vector<StreamInformation>& streams,
+    size_t numberOfBuffers,
+    CorpusDescriptorPtr corpus)
+    : PackerBase(corpus, sequenceEnumerator, streams, numberOfBuffers)
 {
-    auto sparseOutput = find_if(m_outputStreamDescriptions.begin(), m_outputStreamDescriptions.end(), [](const StreamDescriptionPtr& s){ return s->m_storageType == StorageType::sparse_csc; });
+    auto sparseOutput = find_if(m_outputStreamDescriptions.begin(), m_outputStreamDescriptions.end(), [](const StreamInformation& s){ return s.m_storageFormat == StorageFormat::SparseCSC; });
     if (sparseOutput != m_outputStreamDescriptions.end())
     {
         // TODO: add support for sparse.
@@ -126,115 +144,149 @@ TruncatedBPTTPacker::TruncatedBPTTPacker(
         pMBLayout->SetUniqueAxisName(L"TruncatedBPTTPacker");
         m_currentLayouts.push_back(pMBLayout);
     }
+
+    auto shapeUnknown = std::find_if(m_inputStreamDescriptions.begin(), m_inputStreamDescriptions.end(),
+        [](const StreamInformation& s) { return s.m_sampleLayout.IsUnknown(); });
+
+    if (shapeUnknown != m_inputStreamDescriptions.end())
+        RuntimeError("Input streams with unknown sample shape are currently not supported.");
 }
 
-void TruncatedBPTTPacker::StartEpoch(const EpochConfiguration& config)
+void TruncatedBPTTPacker::Reset() 
 {
-    if (m_minibatchSize != config.m_minibatchSizeInSamples ||
-        m_truncationSize != config.m_truncationSize)
+    for (auto& buffer : m_sequenceBufferPerStream) 
     {
-        m_minibatchSize = config.m_minibatchSizeInSamples;
-        m_truncationSize = config.m_truncationSize;
-
-        if (m_minibatchSize == 0)
+        for (auto& slot : buffer->m_slots) 
         {
-            LogicError("Minibatch size cannot be zero.");
+            slot.Reset();
         }
-        if (m_truncationSize == 0)
-        {
-            LogicError("Truncation size cannot be zero.");
-        }
+    }
+}
 
+void TruncatedBPTTPacker::SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
+{
+    auto oldMinibatchSize = m_config.m_minibatchSizeInSamples;
+    auto oldTruncationSize = m_config.m_truncationSize;
+
+    PackerBase::SetConfiguration(config, memoryProviders);
+
+    if (m_config.m_truncationSize == 0)
+        LogicError("Truncation size cannot be zero.");
+
+    if (oldMinibatchSize != m_config.m_minibatchSizeInSamples ||
+        oldTruncationSize != m_config.m_truncationSize)
+    {
         // Estimating the number of parallel sequences to pack (slots) from the minibatch size and truncation size.
-        m_numParallelSequences = max(1, (int)floor(m_minibatchSize / m_truncationSize));
+        m_numParallelSequences = max(1, static_cast<int>(std::floor(m_config.m_minibatchSizeInSamples / m_config.m_truncationSize)));
 
-        if (config.m_numberOfWorkers > m_numParallelSequences)
+        if (m_config.m_numberOfWorkers > m_numParallelSequences)
         {
             InvalidArgument("Too many workers for minibatch size; please increase minibatch size or decrease number of workers.");
         }
 
         m_numParallelSequences =
-            (m_numParallelSequences / config.m_numberOfWorkers) +
-            (config.m_workerRank < (m_numParallelSequences % config.m_numberOfWorkers) ? 1 : 0);
+            (m_numParallelSequences / m_config.m_numberOfWorkers) +
+            (m_config.m_workerRank < (m_numParallelSequences % m_config.m_numberOfWorkers) ? 1 : 0);
 
         m_sequenceBufferPerStream.clear();
 
-        // Preparing the buffers.
-        for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
-        {
-            const auto& stream = m_outputStreamDescriptions[i];
-            auto& buffer = m_streamBuffers[i];
-            buffer.Resize(m_numParallelSequences * m_truncationSize * GetSampleSize(stream));
-            m_sequenceBufferPerStream.push_back(make_shared<SequenceBuffer>(m_numParallelSequences));
-        }
+        // Preparing the buffers. 
+        for (int j = 0; j < m_streamBuffers.size(); ++j)
+            for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
+            {
+                const auto& stream = m_outputStreamDescriptions[i];
+                auto& buffer = m_streamBuffers[j][i];
+                buffer.Resize(m_numParallelSequences * m_config.m_truncationSize * GetSampleSize(stream));
+                m_sequenceBufferPerStream.push_back(make_shared<SequenceBuffer>(m_numParallelSequences));
+            }
     }
-
-    // Filling in the initial set of sequences
-    for (size_t slotIndex = 0; slotIndex < m_numParallelSequences; ++slotIndex)
+    else
     {
-        ReadSequencesToSlot(slotIndex);
+        Reset();
     }
 }
 
 Minibatch TruncatedBPTTPacker::ReadMinibatch()
 {
-    Minibatch result;
+    FillOutAvailableSlots();
 
     // Currently all we expect sequences of identical length between different streams,
     // so it is sufficient to check a single stream only.
     if (m_sequenceBufferPerStream.front()->NothingToPack())
-    {
-        result.m_endOfEpoch = true;
-        return result;
+    {   
+        return Minibatch(/*endOfSweep = */false,/*endOfEpoch = */ true);
     }
 
+    Minibatch result;
+
     // Iterating over the streams/slots and packing them into the minibatch.
+    std::vector<size_t> mbSeqIdToCorpusSeqId;
     for (size_t streamIndex = 0; streamIndex < m_outputStreamDescriptions.size(); ++streamIndex)
     {
-        m_currentLayouts[streamIndex]->Init(m_numParallelSequences, m_truncationSize);
+        // We will take only the last stream, because currently in BPTT 
+        // all mblayouts should  match anyway.
+        mbSeqIdToCorpusSeqId.clear();
+
+        m_currentLayouts[streamIndex]->Init(m_numParallelSequences, m_config.m_truncationSize);
         size_t sequenceId = 0;
         for (size_t slotIndex = 0; slotIndex < m_numParallelSequences; ++slotIndex)
         {
-            PackSlot(streamIndex, slotIndex, sequenceId);
+            result.m_endOfSweep |= PackSlot(streamIndex, slotIndex, sequenceId, mbSeqIdToCorpusSeqId);
         }
 
         StreamMinibatchPtr m = make_shared<StreamMinibatch>();
-        m->m_data = m_streamBuffers[streamIndex].m_data.get();
+        m->m_data = m_streamBuffers[m_currentBufferIndex][streamIndex].m_data.get();
         m->m_layout = m_currentLayouts[streamIndex];
+        m->m_sampleShape = m_outputStreamDescriptions[streamIndex].m_sampleLayout;
         result.m_data.push_back(m);
     }
 
+    m_currentBufferIndex = (m_currentBufferIndex + 1) % m_numberOfBuffers;
+
+    // Eagerly set the end of epoch flag if all the data have been packed.
+    result.m_endOfEpoch = m_sequenceBufferPerStream.front()->NothingToPack();
+
+    // Return mapping between sequence id inside the minibatch layout
+    // and the string representation of the sequence key.
+    if (m_corpus == nullptr)
+        result.m_getKeyById = [](size_t)
+        {
+            RuntimeError("Sequence Id mapping is not available for old style configurations. Please use deserializers.");
+            return "";
+        };
+    else
+        result.m_getKeyById = [mbSeqIdToCorpusSeqId, this](size_t id) { return m_corpus->IdToKey(mbSeqIdToCorpusSeqId[id]); };
     return result;
 }
 
 // Packs a slot of sequences into the minibatch.
-void TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId)
+bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId, std::vector<size_t>& idToKey)
 {
+    bool containsEndOfSweepSequence = false;
     auto& slot = m_sequenceBufferPerStream[streamIndex]->m_slots[slotIndex];
 
-    // Fill free space in the slot.
-    ReadSequencesToSlot(slotIndex);
-
     // Let's see how much samples we need to read.
-    size_t numberOfSamples = min(m_truncationSize, slot.AvailableNumberOfSamples());
+    size_t numberOfSamples = min(m_config.m_truncationSize, slot.AvailableNumberOfSamples());
     if (numberOfSamples == 0)
     {
         // Reached the end of the data, put the corresponding row in the minibatch layout to gap.
-        m_currentLayouts[streamIndex]->AddSequence(GAP_SEQUENCE_ID, slotIndex, 0, m_truncationSize);
+        m_currentLayouts[streamIndex]->AddSequence(GAP_SEQUENCE_ID, slotIndex, 0, m_config.m_truncationSize);
 
         // Check that nothing is in the slot any more.
         assert(slot.IsEmpty());
-        return;
+        return false;
     }
 
     size_t sampleSize = GetSampleSize(m_inputStreamDescriptions[streamIndex]);
-    StorageType storageType = m_inputStreamDescriptions[streamIndex]->m_storageType;
-    size_t elementSize = GetSizeByType(m_inputStreamDescriptions[streamIndex]->m_elementType);
+    StorageFormat storageType = m_inputStreamDescriptions[streamIndex].m_storageFormat;
+    size_t elementSize = DataTypeSize(m_inputStreamDescriptions[streamIndex].m_elementType);
 
     // Distance between two samples of the same sequence in bytes.
     size_t strideSize = m_numParallelSequences * sampleSize;
 
     // Add current sequence to the minibatch layout.
+    idToKey.resize(sequenceId + 1);
+    idToKey[sequenceId] = slot.FrontSequence()->m_key.m_sequence;
     m_currentLayouts[streamIndex]->AddSequence(
         sequenceId++,
         slotIndex,
@@ -248,9 +300,11 @@ void TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
         if (slot.m_sampleCursor >= slot.FrontSequence()->m_numberOfSamples)
         {
             // Starting a new sequence. Have to reset current pointers and add it to the minibatch layout.
-            slot.PopSequence();
+            containsEndOfSweepSequence |= slot.PopSequence();
 
             //Adding next sequence to the minibatch.
+            idToKey.resize(sequenceId + 1);
+            idToKey[sequenceId] = slot.FrontSequence()->m_key.m_sequence;
             m_currentLayouts[streamIndex]->AddSequence(
                 sequenceId++,
                 slotIndex,
@@ -261,13 +315,13 @@ void TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
         // Fill in the data from the first sequence in the slot.
         auto data = slot.FrontSequence();
         // Get buffer destination for the current sample.
-        auto& buffer = m_streamBuffers[streamIndex];
+        auto& buffer = m_streamBuffers[m_currentBufferIndex][streamIndex];
         auto offset = strideSize * currentTimestep + slotIndex * sampleSize;
         assert(offset >= 0 && offset < buffer.m_size);
         char* destination = buffer.m_data.get() + offset;
 
         // Pack the sample.
-        if (storageType == StorageType::dense)
+        if (storageType == StorageFormat::Dense)
         {
             assert(slot.m_sampleOffset == slot.m_sampleCursor * sampleSize);
             PackDenseSample(destination, data, slot.m_sampleOffset, sampleSize);
@@ -275,7 +329,7 @@ void TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
         }
         else
         {
-            assert(storageType == StorageType::sparse_csc);
+            assert(storageType == StorageFormat::SparseCSC);
             // TODO: make type casts members of the SparseSequenceData
             SparseSequenceDataPtr sparseSequence = static_pointer_cast<SparseSequenceData>(data);
             assert(slot.m_sampleCursor < sparseSequence->m_nnzCounts.size());
@@ -291,47 +345,73 @@ void TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
     // Cleaning up the last sequence we have just read if needed.
     if (slot.m_sampleCursor >= slot.FrontSequence()->m_numberOfSamples)
     {
-        slot.PopSequence();
+        containsEndOfSweepSequence |= slot.PopSequence();
     }
 
     // Adding the last gap if there is one.
-    if (numberOfSamples < m_truncationSize)
+    if (numberOfSamples < m_config.m_truncationSize)
     {
         m_currentLayouts[streamIndex]->AddSequence(
             GAP_SEQUENCE_ID,
             slotIndex,
             numberOfSamples,
-            m_truncationSize);
+            m_config.m_truncationSize);
+    }
+
+    return containsEndOfSweepSequence;
+}
+
+void TruncatedBPTTPacker::FillOutAvailableSlots()
+{
+     // Filling out any available spaces
+    for (size_t slotIndex = 0; slotIndex < m_numParallelSequences; ++slotIndex)
+    {
+        ReadSequencesToSlot(slotIndex);
     }
 }
 
 void TruncatedBPTTPacker::ReadSequencesToSlot(size_t slotIndex)
 {
-    const auto& slot = m_sequenceBufferPerStream.front()->m_slots[slotIndex];
-    while (m_truncationSize >= slot.AvailableNumberOfSamples())
+    const auto& firstStreamSlot = m_sequenceBufferPerStream.front()->m_slots[slotIndex];
+    while (m_config.m_truncationSize >= firstStreamSlot.AvailableNumberOfSamples())
     {
         // We need a single sequence, potentially we can request (m_truncationSize - slot.AvailableNumberOfSamples())
         // to be more efficient. In reality the truncation size usually is less the sequence size.
-        auto s = m_sequenceEnumerator->GetNextSequences(1);
-        if (s.m_endOfEpoch)
-        {
-            break;
-        }
+        // Bptt always operates on a local timeline, so we do not limit the global minibatch count.
+        const auto& sequences = m_sequenceEnumerator->GetNextSequences(SIZE_MAX, 1);
+
+        // assert that number of input streams == number of output streams -- 
+        // this does not have to be the case in general, but the current
+        // implementation makes this implicit assumption, so let's make it
+        // explicit instead until we can get rid of it altogether.
+        assert(sequences.m_endOfEpoch || sequences.m_data.size() == m_outputStreamDescriptions.size());
+
+        const auto& data = sequences.m_data;
 
         // Adding sequence to the slot for all streams.
-        for (size_t i = 0; i < s.m_data.size(); ++i)
+        for (size_t streamIndex = 0; streamIndex < data.size(); ++streamIndex)
         {
-            assert(s.m_data[i].size() == 1);
+            assert(data[streamIndex].size() == 1);
+
+            const auto& streamSequenceDataVector = data[streamIndex];
+            auto& slot = m_sequenceBufferPerStream[streamIndex]->m_slots[slotIndex];
 
             // Check that all sequences are of the same length.
-            if (s.m_data.front().front()->m_numberOfSamples != s.m_data[i].front()->m_numberOfSamples)
+            if (data.front().front()->m_numberOfSamples != streamSequenceDataVector.front()->m_numberOfSamples)
             {
                 RuntimeError("For BPTT sequences between different input stream should have the same length.");
             }
+                
+            slot.PushSequence(streamSequenceDataVector.front(), sequences.m_endOfSweep);
 
-            m_sequenceBufferPerStream[i]->m_slots[slotIndex].PushSequence(s.m_data[i].front());
+            assert(firstStreamSlot.AvailableNumberOfSamples() == slot.AvailableNumberOfSamples());
+        }
+
+        if (sequences.m_endOfEpoch)
+        {
+            return;
         }
     }
 }
 
-}}}
+}

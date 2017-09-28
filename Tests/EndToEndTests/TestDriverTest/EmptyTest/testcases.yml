@@ -1,0 +1,10 @@
+dataDir: .
+
+# Note: no tags, so this test is not being picked up by normal test run,
+# instead only by the ./TestDriver test
+tags:
+
+testCases:
+  Must output __COMPLETED__:
+    patterns:
+      - __COMPLETED__

@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <vector>
 #include <algorithm>
+#include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -22,6 +23,41 @@ static inline size_t rand(const size_t begin, const size_t end)
 {
     const size_t randno = ::rand() * RAND_MAX + ::rand(); // BUGBUG: still only covers 32-bit range
     return begin + randno % (end - begin);
+}
+
+// Rand based on Mersenne Twister.
+// We use our own distribution in order to match baselines between different operating systems,
+// because uniform_distribution is not guaranteed to provide the same numbers on different platforms.
+// TODO: Switching to Boost would eliminate this problem.
+static inline size_t RandMT(const size_t begin, const size_t end, std::mt19937_64& rng)
+{
+    const size_t randomNumber = rng();
+    return begin + randomNumber % (end - begin);
+}
+
+// Rand based on Mersenne Twister.
+// We use our own distribution in order to match baselines between different operating systems,
+// instead of using std::shuffle which uses unitform_distribution internally.
+// TODO: Switching to Boost would eliminate this problem.
+template <typename TVector>
+inline void RandomShuffleMT(TVector& v, size_t begin, size_t end, std::mt19937_64& rng)
+{
+    for(size_t i = begin; i < end; ++i)
+    {
+        const size_t randomLocation = RandMT(i, end, rng);
+        std::swap(v[i], v[randomLocation]);
+    }
+}
+
+template <typename TVector>
+inline void RandomShuffleMT(TVector& v, std::mt19937_64& rng)
+{
+    foreach_index(currentLocation, v)
+    {
+        // Pick a random location and swap with current one
+        const size_t randomLocation = RandMT(0, v.size(), rng);
+        std::swap(v[currentLocation], v[randomLocation]);
+    }
 }
 
 class RandomOrdering // note: NOT thread-safe at all
@@ -134,4 +170,5 @@ public:
         return randomizationrange == randomizeDisable;
     }
 };
-} } }
+
+}}}

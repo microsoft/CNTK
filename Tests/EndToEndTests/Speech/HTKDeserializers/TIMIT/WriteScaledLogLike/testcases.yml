@@ -2,7 +2,6 @@ dataDir: ../../../../Speech/Data
 
 tags:
     # TODO not ready yet
-    # - weekly-e (build_sku == 'gpu') and (flavor=='release') and (device=='gpu')
 
 testCases:
   CNTK Run must be completed:
@@ -19,7 +18,7 @@ testCases:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
       - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
-      - EvalErrorPrediction = {{float,tolerance=.1%}}
+      - EvalClassificationError = {{float,tolerance=.1%}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match:
@@ -27,4 +26,4 @@ testCases:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
       - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
-      - EvalErrorPrediction = {{float,tolerance=.1%}}
+      - EvalClassificationError = {{float,tolerance=.1%}}

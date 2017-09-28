@@ -1,0 +1,128 @@
+# CNTK Configuration File for training a simple CIFAR-10 convnet.
+# During the hands-on tutorial, this will be fleshed out into a ResNet-20 model.
+
+command = TrainConvNet:Eval
+
+makeMode = false ; traceLevel = 0 ; deviceId = "auto"
+
+rootDir = "." ; dataDir  = "$rootDir$" ; modelDir = "$rootDir$/Models"
+
+modelPath = "$modelDir$/cifar10.cmf"
+
+# Training action for a convolutional network
+TrainConvNet = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        imageShape = 32:32:3
+        labelDim = 10
+
+        MySubSampleBN (x, depth, stride) =
+        {
+            s = Splice ((MaxPoolingLayer {(1:1), stride=(stride:stride)} (x) : ConstantTensor (0, (1:1:depth/stride))), axis = 3)  # sub-sample and pad: [W x H x depth/2] --> [W/2 x H/2 x depth]
+            b = BatchNormalizationLayer {spatialRank=2} (s)
+        }.b
+        MyConvBN (x, depth, stride) =
+        {
+            c = ConvolutionalLayer {depth, (3:3), pad=true, stride=(stride:stride), bias=false} (x)
+            b = BatchNormalizationLayer {spatialRank=2} (c)
+        }.b
+        ResNetNode (x, depth) =
+        {
+            c1 = MyConvBN (x,  depth, 1)
+            r1 = ReLU (c1)
+            c2 = MyConvBN (r1, depth, 1)
+            r  = ReLU (x + c2)   ##### added skip connection
+        }.r
+        ResNetIncNode (x, depth) =
+        {
+            c1 = MyConvBN (x,  depth, 2)  # note the 2
+            r1 = ReLU (c1)
+            c2 = MyConvBN (r1, depth, 1)
+
+            xs = MySubSampleBN (x, depth, 2)
+
+            r  = ReLU (xs + c2)   ##### added skip connection
+        }.r
+        model (features) =
+        {
+            conv1 = ReLU (MyConvBN (features, 16, 1))
+            rn1   = ResNetNode (ResNetNode (ResNetNode (conv1, 16), 16), 16)
+
+            rn2_1 = ResNetIncNode (rn1, 32)
+            rn2   = ResNetNode (ResNetNode (rn2_1, 32), 32)
+
+            rn3_1 = ResNetIncNode (rn2, 64)
+            rn3   = ResNetNode (ResNetNode (rn3_1, 64), 64)
+
+            pool = AveragePoolingLayer {(8:8)} (rn3)
+
+            z = LinearLayer {labelDim} (pool)
+        }.z
+
+        # inputs
+        features = Input {imageShape}
+        labels   = Input {labelDim}
+
+        # apply model to features
+        z = model (features)
+
+        # connect to system
+        ce       = CrossEntropyWithSoftmax (labels, z)
+        errs     = ClassificationError     (labels, z)
+
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize = 50000
+    
+        maxEpochs = 160 ; minibatchSize = 128
+        learningRatesPerSample = 0.0078125*80:0.00078125*40:0.000078125
+        momentumAsTimeConstant = 1200
+        L2RegWeight = 0.0001
+    
+        firstMBsToShowResult = 10 ; numMBsToShowResult = 500
+    }
+
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$dataDir$/cifar-10-batches-py/train_map.txt"
+            input = {
+                features = { transforms = (
+                    { type = "Crop" ; cropType = "RandomSide" ; sideRatio = 0.8 ; jitterType = "UniRatio" } :
+                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                    { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+}
+
+# Eval action
+Eval = {
+    action = "eval"
+    minibatchSize = 16
+    evalNodeNames = errs
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$dataDir$/cifar-10-batches-py/test_map.txt"
+            input = {
+                features = { transforms = (
+                   { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                   { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+}

@@ -1,0 +1,85 @@
+# Multi-layer perceptron (MLP) on MNIST dataset. 
+
+command = trainNetwork:testNetwork
+
+precision = "float"; traceLevel = 1 ; deviceId = "auto"
+
+rootDir = "../../.." ; dataDir = "$rootDir$/DataSets/MNIST" ;
+outputDir = "./Output" ;
+
+modelPath = "$outputDir$/Models/MLP_MNIST"
+#stderr = "$outputDir$/MLP_MNIST_bs_out"
+
+# TRAINING CONFIG
+trainNetwork = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        imageShape = 28:28:1                        # image dimensions, 1 channel only
+        labelDim = 10                               # number of distinct labels
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
+        
+        model = Sequential (
+            Scale {featScale} :
+            DenseLayer  {768, init="gaussian", initValueScale=1.5} : Dropout: ReLU : 
+            DenseLayer  {512, init="gaussian", initValueScale=1.5} : Dropout: ReLU : 
+            DenseLayer  {256, init="gaussian", initValueScale=1.5} : Dropout: ReLU :  
+            LinearLayer {labelDim}
+        )
+
+        # inputs
+        features = Input {imageShape}
+        labels = Input {labelDim}
+
+        # apply model to features
+        z = model (features)
+
+        # loss and error computation
+        ce   = CrossEntropyWithSoftmax (labels, z)
+        errs = ClassificationError (labels, z)
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize = 60000
+        minibatchSize = 64
+        maxEpochs = 40
+        learningRatesPerSample = 0.001*10:0.0005*10:0.0001
+		dropoutRate = 0.5
+        momentumAsTimeConstant = 600*10:4096
+        
+        numMBsToShowResult = 500
+    }
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        # See ../README.md for details on getting the data (Train-28x28_cntk_text.txt).
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }    
+}
+
+# TEST CONFIG
+testNetwork = {
+    action = test
+    minibatchSize = 1024    # reduce this if you run out of memory
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}

@@ -1,0 +1,114 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v3 @ 2.40GHz
+    Hardware threads: 32
+    Total Memory: 33468508 kB
+-------------------------------------------------------------------
++ [[ -z E:\CNTKTestData ]]
++ [[ ! -d E:\CNTKTestData ]]
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -au 'E:\CNTKTestData'
++ TestDataDir=/cygdrive/e/CNTKTestData
++ ATISDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS
++ DataDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS/Data
++ OutputDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS/Data
++ ConfigDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS
++ DeleteModelsAfterTest=0
++ '[' -f /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS/ATIS.cntk ']'
++ cntkrun ATIS.cntk 'stderr=- command=Train Train=[SGD=[maxEpochs=1]]'
++ configFileName=ATIS.cntk
++ additionalCNTKArgs='stderr=- command=Train Train=[SGD=[maxEpochs=1]]'
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -aw /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS
++ ConfigDir='C:\repos\cntk\Examples\Text\ATIS'
+++ cygpath -aw /tmp/cntk-test-20161108174139.565799/EvalClientTests_CPPEvalExtendedClientTest@release_cpu
++ RunDir='C:\cygwin64\tmp\cntk-test-20161108174139.565799\EvalClientTests_CPPEvalExtendedClientTest@release_cpu'
+++ cygpath -aw /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS/Data
++ DataDir='C:\repos\cntk\Examples\Text\ATIS\Data'
+++ cygpath -aw /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS/Data
++ OutputDir='C:\repos\cntk\Examples\Text\ATIS\Data'
++ CNTKArgs='configFile=C:\repos\cntk\Examples\Text\ATIS/ATIS.cntk currentDirectory=C:\repos\cntk\Examples\Text\ATIS\Data RunDir=C:\cygwin64\tmp\cntk-test-20161108174139.565799\EvalClientTests_CPPEvalExtendedClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Text\ATIS\Data ConfigDir=C:\repos\cntk\Examples\Text\ATIS OutputDir=C:\repos\cntk\Examples\Text\ATIS\Data DeviceId=-1 timestamping=true stderr=- command=Train Train=[SGD=[maxEpochs=1]]'
++ '[' '' '!=' '' ']'
++ modelsDir=/tmp/cntk-test-20161108174139.565799/EvalClientTests_CPPEvalExtendedClientTest@release_cpu/Models
++ [[ 1 == 1 ]]
++ '[' -d /tmp/cntk-test-20161108174139.565799/EvalClientTests_CPPEvalExtendedClientTest@release_cpu/Models ']'
++ mkdir -p /tmp/cntk-test-20161108174139.565799/EvalClientTests_CPPEvalExtendedClientTest@release_cpu/Models
++ [[ 0 == 0 ]]
++ run /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Text\ATIS/ATIS.cntk' 'currentDirectory=C:\repos\cntk\Examples\Text\ATIS\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20161108174139.565799\EvalClientTests_CPPEvalExtendedClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Text\ATIS\Data' 'ConfigDir=C:\repos\cntk\Examples\Text\ATIS' 'OutputDir=C:\repos\cntk\Examples\Text\ATIS\Data' DeviceId=-1 timestamping=true stderr=- command=Train 'Train=[SGD=[maxEpochs=1]]'
++ cmd=/cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe
++ shift
++ '[' '' == 1 ']'
++ echo === Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Text\ATIS/ATIS.cntk' 'currentDirectory=C:\repos\cntk\Examples\Text\ATIS\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20161108174139.565799\EvalClientTests_CPPEvalExtendedClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Text\ATIS\Data' 'ConfigDir=C:\repos\cntk\Examples\Text\ATIS' 'OutputDir=C:\repos\cntk\Examples\Text\ATIS\Data' DeviceId=-1 timestamping=true stderr=- command=Train 'Train=[SGD=[maxEpochs=1]]'
+=== Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe configFile=C:\repos\cntk\Examples\Text\ATIS/ATIS.cntk currentDirectory=C:\repos\cntk\Examples\Text\ATIS\Data RunDir=C:\cygwin64\tmp\cntk-test-20161108174139.565799\EvalClientTests_CPPEvalExtendedClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Text\ATIS\Data ConfigDir=C:\repos\cntk\Examples\Text\ATIS OutputDir=C:\repos\cntk\Examples\Text\ATIS\Data DeviceId=-1 timestamping=true stderr=- command=Train Train=[SGD=[maxEpochs=1]]
++ /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Text\ATIS/ATIS.cntk' 'currentDirectory=C:\repos\cntk\Examples\Text\ATIS\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20161108174139.565799\EvalClientTests_CPPEvalExtendedClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Text\ATIS\Data' 'ConfigDir=C:\repos\cntk\Examples\Text\ATIS' 'OutputDir=C:\repos\cntk\Examples\Text\ATIS\Data' DeviceId=-1 timestamping=true stderr=- command=Train 'Train=[SGD=[maxEpochs=1]]'
+CNTK 2.0.beta2.0+ (zhouwang/pr899 0b1214, Nov  8 2016 17:27:36) on ZHOUWANGDEV4 at 2016/11/08 16:41:40
+
+C:\repos\cntk\x64\release_CpuOnly\cntk.exe  configFile=C:\repos\cntk\Examples\Text\ATIS/ATIS.cntk  currentDirectory=C:\repos\cntk\Examples\Text\ATIS\Data  RunDir=C:\cygwin64\tmp\cntk-test-20161108174139.565799\EvalClientTests_CPPEvalExtendedClientTest@release_cpu  DataDir=C:\repos\cntk\Examples\Text\ATIS\Data  ConfigDir=C:\repos\cntk\Examples\Text\ATIS  OutputDir=C:\repos\cntk\Examples\Text\ATIS\Data  DeviceId=-1  timestamping=true  stderr=-  command=Train  Train=[SGD=[maxEpochs=1]]
+Changed current directory to C:\repos\cntk\Examples\Text\ATIS\Data
+11/08/2016 16:41:40: Redirecting stderr to file -_Train.logrank0
+CNTK 2.0.beta2.0+ (zhouwang/pr899 0b1214, Nov  8 2016 17:27:36) on ZHOUWANGDEV4 at 2016/11/08 16:41:40
+
+C:\repos\cntk\x64\release_CpuOnly\cntk.exe  configFile=C:\repos\cntk\Examples\Text\ATIS/ATIS.cntk  currentDirectory=C:\repos\cntk\Examples\Text\ATIS\Data  RunDir=C:\cygwin64\tmp\cntk-test-20161108174139.565799\EvalClientTests_CPPEvalExtendedClientTest@release_cpu  DataDir=C:\repos\cntk\Examples\Text\ATIS\Data  ConfigDir=C:\repos\cntk\Examples\Text\ATIS  OutputDir=C:\repos\cntk\Examples\Text\ATIS\Data  DeviceId=-1  timestamping=true  stderr=-  command=Train  Train=[SGD=[maxEpochs=1]]
+
+11/08/2016 16:41:40: ##############################################################################
+11/08/2016 16:41:40: #                                                                            #
+11/08/2016 16:41:40: # Train command (train action)                                               #
+11/08/2016 16:41:40: #                                                                            #
+11/08/2016 16:41:40: ##############################################################################
+
+Node 'lstmStack.layers[0].lstmState._.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) operation: Tensor shape was inferred as [300 x 150].
+Node 'lstmStack.layers[0].lstmState._.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) operation: Tensor shape was inferred as [300 x 150].
+Node 'lstmStack.layers[0].lstmState._.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) operation: Tensor shape was inferred as [300 x 150].
+Node 'lstmStack.layers[0].lstmState._.bit.ElementTimesArgs[1].z.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) operation: Tensor shape was inferred as [300 x 150].
+11/08/2016 16:41:40: 
+Model has 61 nodes. Using CPU.
+
+11/08/2016 16:41:40: Training criterion:   cr = CrossEntropyWithSoftmax
+11/08/2016 16:41:40: Evaluation criterion: errs = ClassificationError
+
+11/08/2016 16:41:40: Training 1005127 parameters in 18 parameter tensors.
+
+11/08/2016 16:42:02: Finished Epoch[ 1 of 1]: [Training] cr = 0.40189165 * 36006; errs = 8.254% * 36006; totalSamplesSeen = 36006; learningRatePerSample = 0.0099999998; epochTime=22.2249s
+
+11/08/2016 16:42:02: __COMPLETED__
++ return 0
++ local ExitCode=0
++ [[ 0 == 1 ]]
++ return 0
++ '[' -d 'C:\repos\cntk\Examples\Text\ATIS\Data/work' ']'
++ '[' -d /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS/work ']'
++ mv 'C:\repos\cntk\Examples\Text\ATIS\Data/work' /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS/
++ '[' Windows_NT == Windows_NT ']'
++ /cygdrive/c/repos/cntk/x64/release_CpuOnly/CPPEvalExtendedClientTest.exe
+Input node name: featuresCW
+Input feature dimension: 944
+Input node name: featuresNW
+Input feature dimension: 944
+Input node name: featuresPW
+Input feature dimension: 944
+Slot tag for sentence "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS" is as followings:
+         i -- I-transport_type
+     would -- I-transport_type
+      like -- I-transport_type
+        to -- I-transport_type
+      find -- I-transport_type
+         a -- I-transport_type
+    flight -- I-transport_type
+      from -- I-transport_type
+ charlotte -- B-fromloc.airport_name
+        to -- I-transport_type
+       las -- B-toloc.airport_name
+     vegas -- I-toloc.airport_name
+      that -- I-transport_type
+     makes -- I-transport_type
+         a -- I-transport_type
+      stop -- I-transport_type
+        in -- I-transport_type
+       st. -- B-stoploc.airport_name
+     louis -- I-state_name
+Evaluation complete.
+Output dimension: 127
+Output name: outputs
++ ExitCode=0
++ '[' -d /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS/work ']'
++ rm -rf /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Text/ATIS/work
++ exit 0

@@ -7,6 +7,8 @@
 
 BinaryPath=$TEST_CNTK_BINARY
 
+export V2_LIB_TESTING=1
+
 if [ "$TEST_DEVICE" == "cpu" ]; then
   CNTKDeviceId=-1
 elif [ "$TEST_DEVICE" == "gpu" ]; then

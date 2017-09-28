@@ -882,7 +882,7 @@ PastValue and FutureValue nodes are used in recurrent networks, allow creation o
 
 #### Returns
 
-Eitehr the past or future value of a node
+Either the past or future value of a node
 
 #### Notes
 

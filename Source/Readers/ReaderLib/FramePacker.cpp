@@ -9,8 +9,11 @@
 #include <algorithm>
 #include "FramePacker.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
+using Microsoft::MSR::CNTK::MBLayout;
+using Microsoft::MSR::CNTK::MBLayoutPtr;
+using namespace std;
 
 MBLayoutPtr FramePacker::CreateMBLayout(const StreamBatch& batch)
 {
@@ -26,4 +29,4 @@ MBLayoutPtr FramePacker::CreateMBLayout(const StreamBatch& batch)
     return pMBLayout;
 }
 
-} } }
+}

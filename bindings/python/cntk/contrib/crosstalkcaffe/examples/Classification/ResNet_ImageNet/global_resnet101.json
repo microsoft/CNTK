@@ -1,0 +1,20 @@
+{
+	"SourceSolver" : {
+	    "Source": "Caffe",
+	    "ModelPath": "./Classification/ResNet_ImageNet/ResNet-101-deploy.prototxt",
+	    "WeightsPath": "./Classification/ResNet_ImageNet/ResNet-101-model.caffemodel",
+    	"PHASE": 1
+	},
+    "ModelSolver": {
+    	"CNTKModelPath": "./Classification/ResNet_ImageNet/ResNet101_ImageNet.cntkmodel"
+    },
+    "ValidSolver": {
+		"SavePath": "./Classification/ResNet_ImageNet/Valid",
+		"ValInputs": {
+			"data": [[0, 255], []]
+		},
+		"ValNodes": {
+			"prob": "prob"
+		}
+	}
+}

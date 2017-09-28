@@ -9,9 +9,10 @@
 #define _FILEUTIL_
 
 #include "Basics.h"
-#include <stdio.h>
 #ifdef __WINDOWS__
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif // NOMINMAX
 #include "Windows.h" // for mmreg.h and FILETIME
 #include <mmreg.h>
 #endif
@@ -31,6 +32,8 @@
 #include <string.h>  // for strerror()
 #include <stdexcept> // for exception
 #include <fcntl.h>
+
+#define FCLOSE_SUCCESS 0
 
 // ----------------------------------------------------------------------------
 // fopenOrDie(): like fopen() but terminate with err msg in case of error.
@@ -170,6 +173,13 @@ void unlinkOrDie(const std::wstring& pathname);
 
 void renameOrDie(const std::string& from, const std::string& to);
 void renameOrDie(const std::wstring& from, const std::wstring& to);
+
+// ----------------------------------------------------------------------------
+// copyOrDie(): copy file with error handling.
+// ----------------------------------------------------------------------------
+
+void copyOrDie(const std::string& from, const std::string& to);
+void copyOrDie(const std::wstring& from, const std::wstring& to);
 
 // ----------------------------------------------------------------------------
 // fexists(): test if a file exists
@@ -482,7 +492,7 @@ const wchar_t* GetFormatString(float);
 template <>
 const wchar_t* GetFormatString(double);
 template <>
-const wchar_t* GetFormatString(size_t);
+const wchar_t* GetFormatString(unsigned long long);
 template <>
 const wchar_t* GetFormatString(long long);
 template <>
@@ -520,7 +530,7 @@ const wchar_t* GetScanFormatString(float);
 template <>
 const wchar_t* GetScanFormatString(double);
 template <>
-const wchar_t* GetScanFormatString(size_t);
+const wchar_t* GetScanFormatString(unsigned long long);
 template <>
 const wchar_t* GetScanFormatString(long long);
 
@@ -627,8 +637,10 @@ void expand_wildcards(const std::wstring& path, std::vector<std::wstring>& paths
 namespace msra { namespace files {
 
 void make_intermediate_dirs(const std::wstring& filepath);
-};
-};
+
+std::vector<std::wstring> get_all_files_from_directory(const std::wstring& directory);
+
+}}
 
 // ----------------------------------------------------------------------------
 // fuptodate() -- test whether an output file is at least as new as an input file
@@ -700,18 +712,8 @@ class auto_file_ptr
     {
         if (f && f != stdin && f != stdout && f != stderr)
         {
-            bool readMode = false;
-
-#ifdef _WIN32
-            if ((f->_flag&_IOREAD) == _IOREAD)
-                readMode = true;
-#else
-            int mode = fcntl(fileno(f), F_GETFL);
-            if ((mode & O_ACCMODE) == O_RDONLY)
-                readMode = true;
-#endif
             int rc = ::fclose(f);
-            if (!readMode && (rc != 0) && !std::uncaught_exception())
+            if ((rc != FCLOSE_SUCCESS) && !std::uncaught_exception())
                 RuntimeError("auto_file_ptr: failed to close file: %s", strerror(errno));
 
             f = NULL;

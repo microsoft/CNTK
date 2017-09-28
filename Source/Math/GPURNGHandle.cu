@@ -10,15 +10,19 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-GPURNGHandle::GPURNGHandle(int deviceId, unsigned long seed)
+GPURNGHandle::GPURNGHandle(int deviceId, uint64_t seed, uint64_t offset)
     : RNGHandle(deviceId)
 {
     unsigned long long cudaSeed = seed;
-    fprintf(stderr, "(GPU): creating curand object with seed %llu\n", cudaSeed);
+    if (GetMathLibTraceLevel() > 0)
+    {
+        fprintf(stderr, "(GPU): creating curand object with seed %llu\n", cudaSeed);
+    }
 
     CURAND_CALL(curandCreateGenerator(&m_generator, CURAND_RNG_PSEUDO_XORWOW));
     CURAND_CALL(curandSetPseudoRandomGeneratorSeed(m_generator, cudaSeed));
     CURAND_CALL(curandSetGeneratorOrdering(m_generator, CURAND_ORDERING_PSEUDO_SEEDED));
+    CURAND_CALL(curandSetGeneratorOffset(m_generator, offset));
 }
 
 /*virtual*/ GPURNGHandle::~GPURNGHandle()

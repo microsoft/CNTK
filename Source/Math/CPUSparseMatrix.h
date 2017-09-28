@@ -89,16 +89,18 @@ public:
     void SetValue(const CPUSparseMatrix<ElemType>& /*val*/);
     //void SetValue(const GPUSparseMatrix<ElemType>& /*val*/);
 
-    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
+    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
+
+    CPUSparseMatrix<ElemType>& AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
 
     CPUSparseMatrix<ElemType>& DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha);
+    CPUSparseMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha);
 
     size_t BufferSize() const
     {
         return GetSizeAllocated() * sizeof(ElemType);
     }
     ElemType* Data() const;
-    ElemType* Data();
     inline size_t GetNumElemAllocated() const
     {
         return GetSizeAllocated();
@@ -118,12 +120,23 @@ public:
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
                                 const size_t nz, const size_t numRows, const size_t numCols);
 
+    void SetMatrixFromSBCFormat(const size_t* blockIds, const ElemType* val, const size_t numBlocks, const size_t numRows, const size_t numCols);
+
+    // Dense * Sparse -> Dense
     static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
                                        const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c);
 
+    // Sparse * Dense -> Dense
+    static void MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, const bool transposeA,
+                                       const CPUMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c);
+
+    // Dense * Sparse -> Sparse
     static void MultiplyAndAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
                                const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, CPUSparseMatrix<ElemType>& c);
 
+    static void ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c);
+
+    static void Scale(const ElemType alpha, CPUSparseMatrix<ElemType>& rhs);
     static void ScaleAndAdd(const ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, CPUMatrix<ElemType>& c);
 
     static bool AreEqual(const CPUSparseMatrix<ElemType>& a, const CPUSparseMatrix<ElemType>& b, const ElemType threshold = 1e-8);
@@ -133,6 +146,8 @@ public:
     {
         NOT_IMPLEMENTED;
     }
+
+    static void InnerProduct(const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise);
 
     static void AddScaledDifference(const ElemType /*alpha*/, const CPUSparseMatrix<ElemType>& /*a*/, const CPUMatrix<ElemType>& /*b*/, CPUMatrix<ElemType>& /*c*/,
                                     bool /*bDefaultZero*/)
@@ -152,7 +167,7 @@ public:
 
 
     // Allocate actually allocates the storage space for numNZElemToReserve elements. This is different than resizing, which changes the dimensions of the underlying matrix.
-    // Unfortunately numRows/numCols need to be passed in in the case of various matrix formats (e.g., SparseCSC), because some of the dimensions allocated depend on the
+    // Unfortunately numRows/numCols need to be passed in the case of various matrix formats (e.g., SparseCSC), because some of the dimensions allocated depend on the
     // dimensions of the matrix.
     void Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false); // matrix format will affect the size to allocate
     // RequireSizeAndAllocate is required by SpasreMatrix since resizing the dimensions and allocating storage are different operations. Since a Resize can entail changing
@@ -163,7 +178,11 @@ public:
     // Sparse matrix RequireSize is similar to dense matrix RequireSize in that it will only allocate the minimum amount of storage requried to successfully create the matrix.
     // This is required because some formats (e.g., SparseCSC) require the SecondaryIndexLocation to have valid data in order to compute m_nz. Otherwise this method would not
     // update the storage at all.
-    void RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const bool growOnly = true);
+    void RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat format, const bool growOnly = true);
+    void RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const bool growOnly = true)
+    {
+        return RequireSize(numRows, numCols, 0, format, growOnly);
+    }
     // Allows RequireSize to be called without modifying the MatrixFormat.
     void RequireSize(const size_t numRows, const size_t numCols, const bool growOnly = true);
     // Resizes the dimensions of the underlying sparse matrix object. Since the caller may have a hint for m_nz, we allow that to be passed, but this is terrible design. In the
@@ -195,15 +214,25 @@ public:
 
             return 0;
         }
-        else
+        else if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol)
         {
-            NOT_IMPLEMENTED;
+            for (size_t blockId = 0; blockId < GetBlockSize(); blockId++)
+            {
+                size_t blockCol = GetBlockIds()[blockId] - GetBlockIdShift();
+                if (blockCol == col)
+                {
+                    return ((ElemType*)Buffer())[blockId * GetNumRows() + row];
+                }
+            }
+            return 0;
         }
+        NOT_IMPLEMENTED;
     }
 
 public:
-    void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum);
+    void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum, ElemType unitGainFactor);
     ElemType Adagrad(CPUMatrix<ElemType>& c, const bool needAveMultiplier);
+    void AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 
 public:
     CPUSparseMatrix<ElemType>& InplaceTruncateTop(const ElemType threshold);
@@ -252,6 +281,11 @@ public:
         BaseMatrix<ElemType>::SetBlockSize(newBlockSize);
     }
 
+    size_t GetBlockSize() const
+    {
+        return BaseMatrix<ElemType>::GetBlockSize();
+    }
+
     size_t* BlockIdsLocation() const
     {
         if ((GetFormat() != matrixFormatSparseBlockCol) && (GetFormat() != matrixFormatSparseBlockRow))
@@ -262,21 +296,28 @@ public:
 
     CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const
     {
-        return GetUnCompIndex() + GetCompIndex()[m_sliceViewOffset];
+        return (GetUnCompIndex() + 
+            ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? GetCompIndex()[m_sliceViewOffset] : 0));
     } // this is the major index, row/col ids in CSC/CSR format
+
     size_t MajorIndexCount() const
     {
         return NzCount();
     }
+
     size_t MajorIndexSize() const
     {
         return sizeof(CPUSPARSE_INDEX_TYPE) * MajorIndexCount();
     } // actual number of major index bytes in use
 
+    // Returns the start of the secondary index valid for the slice-view.
+    // Secondary index provides the offset to the data buffer for the values.
+    // E.g. for CSC the first nonzero value of column k is Buffer(SecondaryIndexLocation[k])
     CPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const
     {
         return GetCompIndex() + m_sliceViewOffset;
-    } // this is the compressed index, col/row in CSC/CSR format
+    }
+    
     size_t SecondaryIndexCount() const
     {
         if (GetFormat() & matrixFormatCompressed)
@@ -312,7 +353,6 @@ public:
     {
         return (GetFormat() & matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
     } // actual number of bytes in use
-
 };
 
 typedef CPUSparseMatrix<float> CPUSingleSparseMatrix;

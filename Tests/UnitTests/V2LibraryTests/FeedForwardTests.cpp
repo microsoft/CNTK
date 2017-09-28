@@ -1,36 +1,19 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+#include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
 
 using namespace CNTK;
 
-FunctionPtr FullyConnectedDNNLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity)
-{
-    assert(input.Shape().NumAxes() == 1);
-    size_t inputDim = input.Shape()[0];
+namespace CNTK { namespace Test {
 
-    auto timesParam = Parameter(NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.5, 0.5, 1, device));
-    auto timesFunction = Times(timesParam, input);
+std::wstring s_tempModelPath = L"feedForward.net";
 
-    auto plusParam = Parameter({ outputDim }, 0.0f, device);
-    auto plusFunction = Plus(plusParam, timesFunction);
-
-    return nonLinearity(plusFunction);
-}
-
-FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input, size_t numOutputClasses, size_t hiddenLayerDim, size_t numHiddenLayers, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity)
-{
-    assert(numHiddenLayers >= 1);
-    auto classifierRoot = FullyConnectedDNNLayer(input, hiddenLayerDim, device, nonLinearity);
-    for (size_t i = 1; i < numHiddenLayers; ++i)
-        classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
-
-    auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, 1, device));
-    classifierRoot = Times(outputTimesParam, classifierRoot);
-    return classifierRoot;
-}
-
-void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
+void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSaveAndReLoad)
 {
     using namespace std::placeholders;
 
@@ -39,24 +22,39 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
     const size_t numHiddenLayers = 6;
     const size_t hiddenLayersDim = 2048;
 
-    Variable inputVar({ inputDim }, DataType::Float, L"Features");
-    auto classifierOutputFunction = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, std::bind(Sigmoid, _1, L""));
+    auto inputVarName = L"features";
+    auto inputVar = InputVariable({ inputDim }, DataType::Float, inputVarName);
+    auto classifierOutput = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, std::bind(Sigmoid, _1, L""), L"classifierOutput");
 
-    Variable labelsVar({ numOutputClasses }, DataType::Float, L"Labels");
-    auto trainingLossFunction = CNTK::CrossEntropyWithSoftmax(classifierOutputFunction, labelsVar, L"LossFunction");
-    auto predictionFunction = CNTK::ClassificationError(classifierOutputFunction, labelsVar, L"ClassificationError");
+    auto labelsVarName = L"Labels";
+    auto labelsVar = InputVariable({ numOutputClasses }, DataType::Float, labelsVarName);
+    auto trainingLoss = ReduceSum(CrossEntropyWithSoftmax(classifierOutput, labelsVar), Axis::AllAxes(), L"LossFunction");
+    auto prediction = ReduceSum(ClassificationError(classifierOutput, labelsVar), Axis::AllAxes(), L"ClassificationError");
 
-    auto ffNet = CNTK::Combine({ trainingLossFunction, predictionFunction, classifierOutputFunction }, L"ClassifierModel");
+    auto ffNet = Combine({ trainingLoss, prediction, classifierOutput }, L"ClassifierModel");
 
     // Now test the structure
-    if (ffNet->Parameters().size() != ((numHiddenLayers * 2) + 1))
-        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Parameter count");
+    BOOST_TEST((ffNet->Parameters().size() == ((numHiddenLayers * 2) + 1)), "Function does not have expected Parameter count");
 
-    if (ffNet->Arguments().size() != 2)
-        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Argument count");
+    BOOST_TEST((ffNet->Arguments().size() == 2), "Function does not have expected Argument count");
 
-    if (ffNet->Outputs().size() != 3)
-        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Output count");
+    BOOST_TEST(ffNet->Outputs().size() == 3, "Function does not have expected Output count");
+
+    if (testSaveAndReLoad)
+    {
+        Variable classifierOutputVar = classifierOutput;
+        Variable trainingLossVar = trainingLoss;
+        Variable predictionVar = prediction;
+
+        SaveAndReloadModel<float>(ffNet, { &inputVar, &labelsVar, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        // Make sure that the names of the input variables were properly restored
+        BOOST_TEST(!((inputVar.Name() != inputVarName) || (labelsVar.Name() != labelsVarName)), "One or more input variable names were not properly restored after save and load");
+
+        classifierOutput = classifierOutputVar;
+        trainingLoss = trainingLossVar;
+        prediction = predictionVar;
+    }
 
     // Run Forward and backward a few times
     size_t iterationCount = 4;
@@ -66,33 +64,32 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
     for (size_t i = 0; i < iterationCount; ++i)
     {
         std::vector<float> inputData(inputDim * numSamples);
-        for (size_t i = 0; i < inputData.size(); ++i)
-            inputData[i] = ((float)rand()) / RAND_MAX;
+        for (size_t i2 = 0; i2 < inputData.size(); ++i2)
+            inputData[i2] = ((float)rand()) / RAND_MAX;
 
-        NDShape inputShape = { inputDim, 1, numSamples };
+        NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
         std::vector<float> labelData(numOutputClasses * numSamples, 0);
-        for (size_t i = 0; i < numSamples; ++i)
-            labelData[(i*numOutputClasses) + (rand() % numOutputClasses)] = 1;
+        for (size_t i3 = 0; i3 < numSamples; ++i3)
+            labelData[(i3*numOutputClasses) + (rand() % numOutputClasses)] = 1;
 
-        NDShape labelShape = { numOutputClasses, 1, numSamples };
+        NDShape labelShape = labelsVar.Shape().AppendShape({ 1, numSamples });
         ValuePtr labelValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(labelShape, labelData.data(), labelData.size(), DeviceDescriptor::CPUDevice(), true));
 
         ValuePtr outputValue, predictionErrorValue;
-        std::unordered_map<Variable, ValuePtr> outputs = { { classifierOutputFunction->Output(), outputValue }, { predictionFunction->Output(), predictionErrorValue } };
-        auto backpropState = ffNet->Forward({ { inputVar, inputValue }, { labelsVar, labelValue } }, outputs, device, { trainingLossFunction->Output() });
+        std::unordered_map<Variable, ValuePtr> outputs = { { classifierOutput, outputValue }, { prediction, predictionErrorValue } };
+        auto backpropState = ffNet->Forward({ { inputVar, inputValue }, { labelsVar, labelValue } }, outputs, device, { trainingLoss });
 
         // Perform backprop
-        NDShape outputShape = trainingLossFunction->Output().Shape();
+        NDShape outputShape = trainingLoss->Output().Shape();
         std::vector<float> rootGradientsData(outputShape.TotalSize(), 1);
         ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true));
         std::unordered_map<Variable, ValuePtr> paramGradients;
         auto allParams = ffNet->Parameters();
         for (auto iter = allParams.begin(); iter != allParams.end(); ++iter)
             paramGradients[*iter] = nullptr;
-        
-        ffNet->Backward(backpropState, { { trainingLossFunction->Output(), rootGradientValue } }, paramGradients);
+        ffNet->Backward(backpropState, { { trainingLoss, rootGradientValue } }, paramGradients);
     }
 }
 
@@ -103,14 +100,26 @@ void TestTimesAndPlus(size_t inputDim,
                       const DeviceDescriptor& device,
                       size_t numIterations,
                       bool usePreAllocatedOutputs,
-                      bool outputOnSpecifiedDevice = false,
+                      bool outputOnSpecifiedDevice,
+                      bool testSaveAndReLoad,
                       unsigned int seed = 1)
 {
-    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device));
-    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)1.2, std::initializer_list<size_t>({ outputDim }), device));
+    auto timesParamName = L"timesParameters";
+    auto plusParamName = L"plusParameters";
+    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device), timesParamName);
+    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)1.2, std::initializer_list<size_t>({ outputDim }), device), plusParamName);
 
-    Variable inputVar({ inputDim }, AsDataType<ElementType>(), L"input");
+    auto inputVarName = L"input";
+    auto inputVar = InputVariable({ inputDim }, AsDataType<ElementType>(), inputVarName);
     auto timesAndPlusFunc = Plus(plusParam, Times(timesParam, inputVar));
+
+    if (testSaveAndReLoad)
+    {
+        SaveAndReloadModel<ElementType>(timesAndPlusFunc, { &inputVar, &timesParam, &plusParam }, device);
+
+        // Make sure that the names of the input variables were properly restored
+        BOOST_TEST(!((inputVar.Name() != inputVarName) || (timesParam.Name() != timesParamName) || (plusParam.Name() != plusParamName)), "One or more input variable names were not properly restored after save and load");
+    }
 
     srand(seed);
     for (size_t iterIdx = 0; iterIdx < numIterations; ++iterIdx)
@@ -119,10 +128,10 @@ void TestTimesAndPlus(size_t inputDim,
         for (size_t i = 0; i < inputData.size(); ++i)
             inputData[i] = ((ElementType)rand()) / RAND_MAX;
 
-        NDShape inputShape = { inputDim, 1, numSamples };
+        NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
-        NDShape outputShape = { outputDim, 1, numSamples };
+        NDShape outputShape = timesAndPlusFunc->Output().Shape().AppendShape({ 1, numSamples });
         std::vector<ElementType> outputData(outputShape.TotalSize());
         ValuePtr outputValue;
         if (usePreAllocatedOutputs)
@@ -198,7 +207,7 @@ void TestTimesAndPlus(size_t inputDim,
                 expectedOutputValues[i * outputDim + j] = expectedVal;
         }
 
-        FloatingPointVectorCompare(outputData, expectedOutputValues, "TestTimesAndPlus: Forward prop results do not match expected results");
+        FloatingPointVectorCompare(outputData, expectedOutputValues, "Forward prop results do not match expected results");
 
         // Verify backward prop results
         if (device.Type() != DeviceKind::CPU)
@@ -216,7 +225,7 @@ void TestTimesAndPlus(size_t inputDim,
 
         for (size_t i = 0; i < outputDim; ++i)
             if (plusParameterGradientData[i] != numSamples)
-                throw std::runtime_error("TestTimesAndPlus: Backprop prop results do not match expected results for Plus params gradients");
+                BOOST_ERROR("Backprop prop results do not match expected results for Plus params gradients");
 
         std::vector<ElementType> expectedTimesParamsGradientValues(timesParam.Shape().TotalSize());
         for (size_t i = 0; i < inputDim; ++i)
@@ -229,18 +238,278 @@ void TestTimesAndPlus(size_t inputDim,
                 expectedTimesParamsGradientValues[i * outputDim + j] = expectedVal;
         }
 
-        FloatingPointVectorCompare(timesParameterGradientData, expectedTimesParamsGradientValues, "TestTimesAndPlus: Backprop prop results do not match expected results for Times params gradients");
+        FloatingPointVectorCompare(timesParameterGradientData, expectedTimesParamsGradientValues, "Backprop prop results do not match expected results for Times params gradients");
     }
 }
 
-void FeedForwardTests()
+template <typename ElementType>
+void TestReduceableTransposeTimes(size_t inputDim,
+    size_t numSamples,
+    const DeviceDescriptor& device,
+    size_t numIterations,
+    unsigned int seed = 1)
 {
-    TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true);
-#ifndef CPUONLY
-    TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false);
-    TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false);
+    auto timesParamName = L"timesParameters";
+    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({inputDim}), device), timesParamName);
 
-    TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0));
-#endif
-    TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice());
+    auto inputVarName = L"input";
+    auto inputVar = InputVariable({ inputDim }, AsDataType<ElementType>(), inputVarName);
+    auto dotFunc = TransposeTimes(ElementTimes(timesParam, inputVar), inputVar + Constant({}, 0.0f, device));
+
+    srand(seed);
+    for (size_t iterIdx = 0; iterIdx < numIterations; ++iterIdx)
+    {
+        std::vector<ElementType> inputData(inputDim * numSamples);
+        for (size_t i = 0; i < inputData.size(); ++i)
+            inputData[i] = ((ElementType)rand()) / RAND_MAX;
+
+        NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
+        ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
+
+        NDShape outputShape = dotFunc->Output().Shape().AppendShape({ 1, numSamples });
+        std::vector<ElementType> outputData(outputShape.TotalSize());
+        ValuePtr outputValue;
+
+        std::unordered_map<Variable, ValuePtr> outputs = { { dotFunc->Output(), outputValue } };
+        auto backpropState = dotFunc->Forward({ { inputVar, inputValue } }, outputs, device, { dotFunc->Output() });
+
+        outputValue = outputs[dotFunc->Output()];
+
+        // Perform backprop
+        std::vector<ElementType> rootGradientsData(outputShape.TotalSize(), 1);
+        ValuePtr rootGradientValue;
+        if (device.Type() == DeviceKind::CPU)
+            rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), device, true));
+        else
+        {
+            NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true);
+            NDArrayViewPtr gpuArrayView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), outputShape, device);
+            gpuArrayView->CopyFrom(*cpuArrayView);
+            rootGradientValue = MakeSharedObject<Value>(gpuArrayView);
+        }
+
+        ValuePtr timesParamGradientValue;
+        std::vector<ElementType> timesParamGradientData(inputVar.Shape().TotalSize(), std::numeric_limits<ElementType>::quiet_NaN());
+        if (device.Type() == DeviceKind::CPU)
+        {
+            timesParamGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputVar.Shape(), timesParamGradientData.data(), timesParamGradientData.size(), device));
+        }
+        else
+        {
+            NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(inputVar.Shape(), timesParamGradientData.data(), timesParamGradientData.size(), DeviceDescriptor::CPUDevice());
+            NDArrayViewPtr gpuArrayView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), inputVar.Shape(), device);
+            gpuArrayView->CopyFrom(*cpuArrayView);
+            timesParamGradientValue = MakeSharedObject<Value>(gpuArrayView);
+        }
+        std::unordered_map<Variable, ValuePtr> paramGradients = { { timesParam, timesParamGradientValue } };
+        dotFunc->Backward(backpropState, { { dotFunc->Output(), rootGradientValue } }, paramGradients);
+
+        if (device.Type() == DeviceKind::CPU)
+        {
+            const ElementType* p = timesParamGradientValue->Data()->DataBuffer<ElementType>();
+            for (int i = 0; i < inputDim; i++)
+            {
+                if (std::isnan(p[i])) ReportFailure("Found NaN in gradient!");
+            }
+        }
+        else
+        {
+            NDArrayViewPtr cpuView = timesParamGradientValue->Data()->DeepClone(DeviceDescriptor::CPUDevice());
+            const ElementType* p = cpuView->DataBuffer<ElementType>();
+            for (int i = 0; i < inputDim; i++)
+            {
+                if (std::isnan(p[i])) ReportFailure("Found NaN in gradient!");
+            }
+        }
+    }
 }
+
+template <typename ElementType>
+void TestTimesReduceSequenceAxis(
+    size_t inputDimM,
+    size_t inputDimK,
+    bool isLeftSparse,
+    bool isRightSparse,
+    const std::vector<size_t>& sequencesLength,
+    const DeviceDescriptor& device,
+    unsigned int seed = 1)
+{
+    const int NumInputs = 2;
+
+    enum class FuncType : int
+    {
+        Times_ReduceSequenceAxis = 0,
+        ReduceSumTimes,
+        TotalTypes,
+    };
+
+    Variable inputVar[NumInputs] = 
+    {
+        inputDimK > 1 ?
+            InputVariable({ inputDimM, inputDimK }, isLeftSparse, AsDataType<ElementType>(), /*needsGradient*/ !isLeftSparse, L"inputLeft") :
+            InputVariable({ inputDimM }, isLeftSparse, AsDataType<ElementType>(), /*needsGradient*/ !isLeftSparse, L"inputLeft"),
+        InputVariable({ inputDimK }, isRightSparse, AsDataType<ElementType>(), /*needsGradient*/ !isRightSparse, L"inputRight")
+    };
+
+    FunctionPtr funcs[(int)FuncType::TotalTypes]=
+    {
+        Times(inputVar[0], inputVar[1], 1, TimesReduceSequenceAxisWithoutInferredInputRank),
+        Sequence::ReduceSum(Times(inputVar[0], inputVar[1]))
+    };
+
+    size_t maxTimestepsPerSequence = 0;
+    for (auto s : sequencesLength)
+    {
+        maxTimestepsPerSequence = std::max(maxTimestepsPerSequence, s);
+    }
+    size_t numSequences = sequencesLength.size();
+
+    ValuePtr inputValue[NumInputs];
+    NDShape  inputShape[NumInputs];
+    bool     inputSparse[NumInputs] = {isLeftSparse, isRightSparse};
+    srand(seed);
+    for(int inputIndex = 0; inputIndex < NumInputs; ++inputIndex)
+    {
+        auto inputVarShape = inputVar[inputIndex].Shape();
+        inputShape[inputIndex] = inputVarShape.AppendShape({maxTimestepsPerSequence, numSequences});
+        inputValue[inputIndex] = GenerateSequences<ElementType>(sequencesLength, inputVarShape, DeviceDescriptor::CPUDevice(), inputSparse[inputIndex]);
+    }
+
+    std::unordered_map<Variable, ValuePtr> inputMap = { { inputVar[0], inputValue[0] },{ inputVar[1], inputValue[1] } };
+
+    std::vector<ElementType> outputData[(int)FuncType::TotalTypes];
+    ValuePtr outputValue[(int)FuncType::TotalTypes];
+    NDShape outputShape = funcs[0]->Output().Shape().AppendShape({ numSequences });
+
+    std::vector<ElementType> inputGradientData[(int)FuncType::TotalTypes][NumInputs];
+    ValuePtr inputGradientValue[(int)FuncType::TotalTypes][NumInputs];
+
+    std::vector<ElementType> rootGradientsData(outputShape.TotalSize(), 1);
+    ValuePtr rootGradientValue;
+    if (device.Type() == DeviceKind::CPU)
+        rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), device, true));
+    else
+    {
+        NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true);
+        NDArrayViewPtr gpuArrayView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), outputShape, device);
+        gpuArrayView->CopyFrom(*cpuArrayView);
+        rootGradientValue = MakeSharedObject<Value>(gpuArrayView);
+    }
+
+    for(int f = 0; f < (int)FuncType::TotalTypes; ++f)
+    {
+        outputData[f] = std::vector<ElementType>(outputShape.TotalSize());
+        outputValue[f] = 
+            MakeSharedObject<Value>(
+                MakeSharedObject<NDArrayView>(
+                    outputShape, outputData[f].data(),
+                    outputShape.TotalSize(),
+                    DeviceDescriptor::CPUDevice()));
+
+        // forward
+        std::unordered_map<Variable, ValuePtr> outputMap = { { funcs[f]->Output(), outputValue[f] } };
+        auto backpropState =
+            funcs[f]->Forward(
+                inputMap,
+                outputMap,
+                device,
+                { funcs[f]->Output() });
+
+        // backward
+        for(int inputIndex = 0; inputIndex < NumInputs; ++inputIndex)
+        {
+            inputGradientData[f][inputIndex] = std::vector<ElementType>(inputVar[inputIndex].Shape().TotalSize() * maxTimestepsPerSequence * numSequences, std::numeric_limits<ElementType>::quiet_NaN());
+            if (device.Type() == DeviceKind::CPU)
+            {
+                inputGradientValue[f][inputIndex] = MakeSharedObject<Value>(
+                    MakeSharedObject<NDArrayView>(inputShape[inputIndex], inputGradientData[f][inputIndex].data(), inputGradientData[f][inputIndex].size(), device),
+                    inputValue[inputIndex]->Mask());
+            }
+            else
+            {
+                NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(inputShape[inputIndex], inputGradientData[f][inputIndex].data(), inputGradientData[f][inputIndex].size(), DeviceDescriptor::CPUDevice());
+                NDArrayViewPtr gpuArrayView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), inputShape[inputIndex], device);
+                gpuArrayView->CopyFrom(*cpuArrayView);
+                inputGradientValue[f][inputIndex] = MakeSharedObject<Value>(
+                    gpuArrayView,
+                    inputValue[inputIndex]->Mask());
+            }
+        }
+        std::unordered_map<Variable, ValuePtr> gradientMap;
+        if (!isLeftSparse) gradientMap.insert(std::make_pair(inputVar[0], inputGradientValue[f][0]));
+        if (!isRightSparse) gradientMap.insert(std::make_pair(inputVar[1], inputGradientValue[f][1]));
+        funcs[f]->Backward(backpropState, { { funcs[f]->Output(), rootGradientValue } }, gradientMap);
+    }
+
+    FloatingPointVectorCompare(outputData[(int)FuncType::Times_ReduceSequenceAxis], outputData[(int)FuncType::ReduceSumTimes], "Forward results do not match expected results for Sequence::ReduceSum(Times())");
+
+    for (int inputIndex = 0; inputIndex < NumInputs; ++inputIndex)
+    {
+        if (inputSparse[inputIndex]) continue;
+        FloatingPointVectorCompare(inputGradientData[(int)FuncType::Times_ReduceSequenceAxis][inputIndex], inputGradientData[(int)FuncType::ReduceSumTimes][inputIndex], "Backprop results do not match expected results for Sequence::ReduceSum(Times())");
+    }
+}
+
+BOOST_AUTO_TEST_SUITE(FeedForwardSuite)
+
+BOOST_AUTO_TEST_CASE(FFTimesAndPlusInCPU)
+{
+    TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true, true);
+}
+
+BOOST_AUTO_TEST_CASE(ReduceableTransposeTimesInCPU)
+{
+    TestReduceableTransposeTimes<double>(4, 5, DeviceDescriptor::CPUDevice(), 3);
+}
+
+BOOST_AUTO_TEST_CASE(TimesReduceSequenceAxis)
+{
+    if (ShouldRunOnGpu())
+    {
+        TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20, 7, 8 }, DeviceDescriptor::GPUDevice(0));
+        TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20 }, DeviceDescriptor::GPUDevice(0));
+        TestTimesReduceSequenceAxis<double>(345, 1, false, false, { 7, 8 }, DeviceDescriptor::GPUDevice(0));
+        TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7, 8 }, DeviceDescriptor::GPUDevice(0));
+        TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7 }, DeviceDescriptor::GPUDevice(0));
+    }
+
+    if (ShouldRunOnCpu())
+    {
+        TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20, 7, 8 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(345, 1, false, false, { 7, 8 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7, 8 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7 }, DeviceDescriptor::CPUDevice());
+    }
+}
+
+BOOST_AUTO_TEST_CASE(FFTimesAndPlusInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, true);
+        TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, false);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(FFNetworkCreationInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), true);
+        TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), false);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(FFNetworkCreationInCPU)
+{
+    if (ShouldRunOnCpu())
+    {
+        TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), false);
+        TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), true);
+    }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

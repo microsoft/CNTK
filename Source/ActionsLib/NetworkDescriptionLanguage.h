@@ -57,7 +57,7 @@ class NDLScript;
 template <typename ElemType>
 class NDLNode;
 
-// NDLNodeEvaluator - Node evaluaton interface
+// NDLNodeEvaluator - Node evaluation interface
 // implemented by execution engines to convert script to approriate internal formats
 template <typename ElemType>
 class NDLNodeEvaluator
@@ -75,7 +75,7 @@ public:
     virtual NDLNode<ElemType>* EvaluateParameter(NDLNode<ElemType>* node, NDLNode<ElemType>* nodeParam, const std::wstring& baseName, const NDLPass pass) = 0;
 
     // EvaluateParameters - Evaluate the parameters of a call
-    // node - NDLNode we are evaluating paramters for
+    // node - NDLNode we are evaluating parameters for
     // baseName - baseName for the current node
     // nodeParamStart - starting parameter that contains a node
     // nodeParamCount - ending parameter that contains a node
@@ -762,10 +762,10 @@ public:
         // next try the globals, this includes macros and global constants
         if (!localOnly)
         {
-            auto found = s_global.FindSymbol(name);
-            if (found != NULL)
+            auto found2 = s_global.FindSymbol(name);
+            if (found2 != NULL)
             {
-                NDLNode<ElemType>* node = found;
+                NDLNode<ElemType>* node = found2;
                 if (node->GetType() == ndlTypeMacro)
                 {
                     // if we are calling a macro we need to keep track of formal parameters,

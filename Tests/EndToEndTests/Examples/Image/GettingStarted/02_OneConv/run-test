@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. $TEST_DIR/../run-test-common
+
+cntkrun 02_OneConv.cntk "forceDeterministicAlgorithms=true stderr=- trainNetwork=[SGD=[maxEpochs=3]]"

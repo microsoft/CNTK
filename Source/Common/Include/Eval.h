@@ -97,6 +97,9 @@ public:
     //
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
 
+    //
+    // Reset initial state of all Recurrence loops (RNNs) in the model.
+    //
     virtual void ResetState() = 0;
 };
 
@@ -145,7 +148,7 @@ public:
     virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup);
 
     // StartEvaluateMinibatchLoop - Prepare network for Evaluate() calls.
-    // ouputNodeName - name of node that will be evaluated
+    // outputNodeName - name of node that will be evaluated
     virtual void StartEvaluateMinibatchLoop(const std::wstring& outputNodeName);
 
     // Evaluate - Evaluate using the model with the given inputs and outputs
@@ -184,7 +187,7 @@ struct ValueBuffer
 {
     //
     // All elements of a sequence, concatenated.
-    // For dense inputs, the number of samples is given by the the length of
+    // For dense inputs, the number of samples is given by the length of
     // this vector / product of tensor dimensions. E.g. for a tensor of dimension
     // [2,2] and 12 elements in the buffer, the number of samples is 3.
     // For sparse inputs, the number of samples is indicated by the m_colIndices field.
@@ -336,10 +339,22 @@ public:
     virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output) = 0;
 
     //
+    // Same as above, and
+    // resetRNN - flags whether to reset memory cells of RNN. 
+    //
+    virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output, bool resetRNN) = 0;
+
+    //
     // Same as above, but takes references to static arrays instead of std::vector 
     // (e.g. when vectors are manages by .net)
     // 
     virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output) = 0;
+
+    //
+    // Same as above, and
+    // resetRNN - flags whether to reset memory cells of RNN. 
+    //
+    virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output, bool resetRNN) = 0;
 };
 
 template <typename ElemType>

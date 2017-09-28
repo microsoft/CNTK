@@ -5,12 +5,49 @@
 #pragma once
 
 #include <boost/test/unit_test.hpp>
-#include "boost/filesystem.hpp"
+#include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
 #include "DataReader.h"
 
-using namespace Microsoft::MSR::CNTK;
-
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
+
+const double relError = 1e-5f;
+
+// identical to 'sort -o filename filename'
+inline void SortLinesInFile(string filename, size_t expectedNumLines = 1)
+{
+    vector<string> content;
+    content.reserve(expectedNumLines);
+    ifstream ifstream(filename);
+
+    string line;
+    while (getline(ifstream, line))
+    {
+        content.push_back(line);
+    }
+
+    ifstream.close();
+
+    sort(content.begin(), content.end());
+
+    ofstream ofstream(filename);
+
+    copy(content.begin(), content.end(), ostream_iterator<string>(ofstream, "\n"));
+
+    ofstream.close();
+}
+
+inline void RemoveIndexCacheFiles()
+{
+    const auto& pwd = boost::filesystem::current_path();
+    for (boost::filesystem::directory_iterator itr(pwd); itr != boost::filesystem::directory_iterator(); ++itr)
+    {
+        if (is_regular_file(itr->status()) && itr->path().extension() == ".cache")
+        {
+            boost::filesystem::remove(itr->path());
+        }
+    }
+}
 
 struct ReaderFixture
 {
@@ -20,6 +57,13 @@ struct ReaderFixture
     ReaderFixture(string subPath = "", string envVariableErrorMessage = "")
     {
         BOOST_TEST_MESSAGE("Setup fixture");
+#ifdef _WIN32
+#if (_MSC_VER <= 1800) // Note: this does not trigger if loaded in vs2013 mode in vs2015!
+        BOOST_TEST_MESSAGE("Set two-digit format of exponent number");
+        // Todo: According to MSDN, the following function is obsolete and not available in the CRT from VS2015. 
+        _set_output_format(_TWO_DIGIT_EXPONENT);
+#endif
+#endif
         m_initialWorkingPath = boost::filesystem::current_path().generic_string();
         BOOST_TEST_MESSAGE("Current working directory: " + m_initialWorkingPath);
         fprintf(stderr, "Current working directory: %s\n", m_initialWorkingPath.c_str());
@@ -28,7 +72,13 @@ struct ReaderFixture
         m_parentPath = boost::filesystem::canonical(path.parent_path()).generic_string();
         fprintf(stderr, "Executable path: %s\n", m_parentPath.c_str());
 
-        m_testDataPath = m_parentPath + "/../../../Tests/UnitTests/ReaderTests";
+#ifdef _WIN32
+        // The executable path on Windows is e.g. <cntk>/x64/Debug/
+        m_testDataPath = m_parentPath + "/../../Tests/UnitTests/ReaderTests";
+#else
+        // The executable path on Linux is e.g. <cntk>/build/cpu/release/bin/
+        m_testDataPath = m_parentPath + "/../../../../Tests/UnitTests/ReaderTests";
+#endif
         boost::filesystem::path absTestPath(m_testDataPath);
         absTestPath = boost::filesystem::canonical(absTestPath);
         m_testDataPath = absTestPath.generic_string();
@@ -91,6 +141,9 @@ struct ReaderFixture
     ~ReaderFixture()
     {
         BOOST_TEST_MESSAGE("Teardown fixture");
+        BOOST_TEST_MESSAGE("Removing index cache files");
+        RemoveIndexCacheFiles();
+
         BOOST_TEST_MESSAGE("Reverting current path to: " + m_initialWorkingPath);
         fprintf(stderr, "Set current path to: %s\n", m_initialWorkingPath.c_str());
         boost::filesystem::current_path(m_initialWorkingPath);
@@ -102,7 +155,7 @@ struct ReaderFixture
     string m_initialWorkingPath;
     string m_testDataPath;
     string m_parentPath;
-
+   
     string initialPath()
     {
         return m_initialWorkingPath;
@@ -153,21 +206,33 @@ struct ReaderFixture
     }
 
     // Helper function to compare files and verify that they are equivalent content-wise 
-    // (identical character content ignoring differences in white spaces).
+    // if allowTolerace is false, character based comparison ignoring differences in white spaces.
+    // if allowTolerance is true, the content is treated as a sequence of double, and tolerance is allowed when comparing content.
     void CheckFilesEquivalent(
         string filename1,
-        string filename2)
+        string filename2,
+        bool allowTolerance = false)
     {
         std::ifstream ifstream1(filename1);
         std::ifstream ifstream2(filename2);
 
-        std::istream_iterator<string> beginStream1(ifstream1), endStream1;
-        std::istream_iterator<string> beginStream2(ifstream2), endStream2;
+        std::istream_iterator<string> beginStream1(ifstream1), endStream1, it1;
+        std::istream_iterator<string> beginStream2(ifstream2), endStream2, it2;
 
-        BOOST_CHECK_EQUAL_COLLECTIONS(beginStream1, endStream1, beginStream2, endStream2);
+        if (allowTolerance)
+        {
+            for (it1 = beginStream1, it2 = beginStream2; it1 != endStream1 && it2 != endStream2; it1++, it2++)
+            {
+                BOOST_REQUIRE_CLOSE_FRACTION(boost::lexical_cast<double>(*it1), boost::lexical_cast<double>(*it2), relError);
+            }
+
+            BOOST_REQUIRE_MESSAGE(it1 == endStream1 && it2 == endStream2, "Different number of elements in file " << filename1 << " and " << filename2);
+        }
+        else
+        {
+            BOOST_REQUIRE_EQUAL_COLLECTIONS(beginStream1, endStream1, beginStream2, endStream2);
+        }
     }
-
-
 
     // Helper function to write the Reader's content to a file.
     // testDataFilePath     : the file path for writing the minibatch data (used for comparing against control data)
@@ -201,11 +266,11 @@ struct ReaderFixture
         {
             if (numSubsets == 1)
             {
-                dataReader.StartMinibatchLoop(mbSize, epoch, epochSize);
+                dataReader.StartMinibatchLoop(mbSize, epoch, map.GetStreamDescriptions(), epochSize);
             }
             else
             {
-                dataReader.StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, epochSize);
+                dataReader.StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, map.GetStreamDescriptions(), epochSize);
             }
 
             for (auto cnt = 0; dataReader.GetMinibatch(map) && cnt < m_maxMiniBatchCount; cnt++)
@@ -255,9 +320,15 @@ struct ReaderFixture
         // TODO: add an option to create per-input layouts (once we have test-cases with different layouts)
         MBLayoutPtr pMBLayout = make_shared<MBLayout>(1, 0, L"X");
 
+#ifdef CPUONLY
+        int deviceId = -1;
+#else
+        int deviceId = 0;
+#endif
+
         for (auto i = 0; i < numFeatureInputs; i++)
         {
-            features.push_back(make_shared<Matrix<ElemType>>(0));
+            features.push_back(make_shared<Matrix<ElemType>>(deviceId));
             if (sparseFeatures)
             {
                 features.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
@@ -272,7 +343,7 @@ struct ReaderFixture
 
         for (auto i = 0; i < numLabelInputs; i++)
         {
-            labels.push_back(make_shared<Matrix<ElemType>>(0));
+            labels.push_back(make_shared<Matrix<ElemType>>(deviceId));
             if (sparseLabels)
             {
                 labels.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
@@ -381,6 +452,7 @@ struct ReaderFixture
     // sparseFeatures       : indicates whether the corresponding matrix type should be set to sparse or not
     // sparseLabels         : same as above, but for labels
     // useSharedLayout      : if false, an individual layout is created for each input
+    // allowTolerance       : if true, a predefined tolerance is allowed when comparing results
 
     template <class ElemType>
     void HelperRunReaderTest(
@@ -398,14 +470,16 @@ struct ReaderFixture
         size_t numSubsets,
         bool sparseFeatures = false,
         bool sparseLabels = false,
-        bool useSharedLayout = true,
-        std::vector<std::wstring> additionalConfigParameters = {})
+        bool useSharedLayout = true,        
+        std::vector<std::wstring> additionalConfigParameters = {},
+        bool allowTolerance = false)
     {
         HelperReadInAndWriteOut<ElemType>(configFileName, testDataFilePath, testSectionName, readerSectionName,
             epochSize, mbSize, epochs, numFeatureFiles, numLabelFiles, subsetNum,numSubsets,
             sparseFeatures, sparseLabels, useSharedLayout, additionalConfigParameters);
 
-        CheckFilesEquivalent(controlDataFilePath, testDataFilePath);
+        CheckFilesEquivalent(controlDataFilePath, testDataFilePath, allowTolerance);       
+        
     }
 
     // Helper function to run a Reader test and catch an expected exception.

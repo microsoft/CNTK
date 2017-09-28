@@ -1,0 +1,1 @@
+do = Parameter(13,42) * Input(42) + Parameter(13,1)

@@ -12,9 +12,10 @@
 #include "DataReader.h"
 #include "CompositeDataReader.h"
 #include "ReaderShim.h"
-#include "HeapMemoryProvider.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 template<class ElemType>
 class CompositeReaderShim : public ReaderShim<ElemType>
@@ -32,7 +33,7 @@ public:
 
 auto factory = [](const ConfigParameters& parameters) -> ReaderPtr
 {
-    return std::make_shared<CompositeDataReader>(parameters, std::make_shared<HeapMemoryProvider>());
+    return std::make_shared<CompositeDataReader>(parameters);
 };
 
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)
@@ -45,4 +46,9 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
     *preader = new CompositeReaderShim<double>(factory);
 }
 
-}}}
+extern "C" DATAREADER_API Reader* CreateCompositeDataReader(const ConfigParameters* parameters)
+{
+    return new CompositeDataReader(*parameters);
+}
+
+}

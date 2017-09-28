@@ -15,3 +15,4 @@ cblas_snrm2
 dgesvd
 sgesvd
 MKL_Set_Num_Threads
+MKL_CBWR_Set

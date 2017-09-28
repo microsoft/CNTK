@@ -30,5 +30,8 @@
     <ClCompile Include="EvalExtendedWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="EvalWrapperAssemblyInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

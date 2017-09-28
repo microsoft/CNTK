@@ -3,84 +3,99 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#pragma once
+
 #include "stdafx.h"
 #include "CNTKLibrary.h"
+#include <numeric>
+#include <functional>
 
 namespace CNTK 
 {
-    // A collection of additional options that are applicable for all standard learners 
-    // (after these options are set, they retain their value for the entire lifespan of a learner).
-    struct AdditionalLearningOptions
-    {
-        double l1RegularizationWeight = 0.0;
-        double l2RegularizationWeight = 0.0;
-        double gaussianNoiseInjectionStdDev = 0.0;
-        bool gradientClippingWithTruncation = false;
-        double gradientClippingThresholdPerSample = 0.0;
-        std::unordered_map<Variable, double> learningRateMultipliers;
-    };
-
     // An abstract base class at the root of the standard learners hierarchy
     // It implements most of the learner functionality, except for the actual update function,
     // and adds a few pre-/postprocessing methods (which are invoked before and after the update).
     class LearnerBase : public Learner
     {
     public:
+        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
 
-        CNTK_API virtual bool Update(const std::unordered_map<Variable, ValuePtr>& parameterValues,
-                                     const std::unordered_map<Variable, const ValuePtr>& gradientValues,
-                                     size_t trainingSampleCount) override final;
+        virtual Dictionary CreateCheckpoint() override;
 
-        CNTK_API virtual Dictionary GetCheckpointState() const override;
+        virtual size_t CurrentVersion() const override final { return s_serializationVersion; }
 
-        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
 
-        CNTK_API void SetAdditionalOptions(const AdditionalLearningOptions& additionalOptions)
-        {
-            m_additionalOptions = additionalOptions;
-        }
-
-        // TODO: should this be called ResetMomentum?
-        // needed for BlockMomemtumSGD to reset SGD momentum after aggregation.
-        CNTK_API void ResetSmoothedGradients();
-
-        // TODO: move learning rate and momentum scheduling and adjustment functionality 
-        // inside the learner and drop these setters.
-        void SetLearningRate(double value) { m_learningRatePerSample = value; }
+        virtual void ResetSmoothedGradients() override;
 
     protected:
-        LearnerBase(const std::unordered_set<Variable>& parameters,
-                    const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+        // allocateSmoothGradients flag specifies whether NDArrayViews for smoothed gradients can be allocated 
+        // in the base class constructor (in which case they are allocated with the shapes identical to the shapes of
+        // the corresponding parameters) or if the allocation should be deferred to the subclass constructor (which
+        // performs allocation that is specific to the particular learner, see FSAdaGrad and RMSProp).
+        LearnerBase(const std::vector<Parameter>& parameters,
+            const LearningRateSchedule& learningRateSchedule,
+            AdditionalLearningOptions additionalOptions,
+            bool allocateSmoothGradients = true);
 
-        virtual void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const = 0;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const = 0;
 
-        double ParameterDependentLearningRate(const Variable& parameter) const
-        {
-            return m_learningRatePerSample * m_additionalOptions.learningRateMultipliers.at(parameter);
-        }
+        // Allows derived class may override this to perform per-minibatch update actions
+        virtual void UpdateOnMinibatch(size_t /*trainingSampleCount*/) {}
 
         std::string LearnerType() const;
 
-        double m_learningRatePerSample;
+        // Returns current learning rate.
+        double LearningRate(size_t minibatchSize) const
+        {
+            auto learningRate = Learner::LearningRate();
+            if (IsCompatibleMode(m_learningRateSchedule))
+            {
+                if (IsCompatibleMode())
+                    //learner is in compatible mode, the gradients are already mean gradient so the learning rate are directly applied
+                    return learningRate;
+                else
+                    //learner is not in compatible mode, the gradients are not mean gradient so the learning rate need to be scaled to per sample rate to simulate per minibatch rate
+                    return learningRate / (double)minibatchSize;
+            }
+            else 
+            {
+                std::size_t ref_mbsize = m_learningRateSchedule.GetMinibatchSize();
+                assert(ref_mbsize > 0);
+                if (IsCompatibleMode())
+                    //learner is in compatible mode, the gradients are already mean gradient so the learning rate needs to be scaled to match the encountered minibatch size
+                    return learningRate  * ((double) minibatchSize / (double) ref_mbsize);
+                else
+                    //learner is not in compatible mode, the gradients are not mean gradient so the learning rate need to scaled to per sample rate
+                    return learningRate / ref_mbsize;
+            }
 
-        AdditionalLearningOptions m_additionalOptions;
+            return learningRate;
+        }
 
-        std::unordered_map<Variable, ValuePtr> m_smoothedGradientValues;
+        void ReportTrainingParameterValue(const TrainingParameterSchedule<double>& schedule, const std::wstring& name) const;
+
+        // A map cointaining hyperparameter names and corresponging values that's used to track and report changes 
+        // in hyperparameter values.
+        mutable std::map <std::wstring, double> m_trainingParametersMap;
+
+        std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
+
+        mutable size_t m_noiseInjectionSeed;
 
         // The following four static protected methods expose private methods of NDArrayView class
         // (which declares LearnerBase as friend class), so that they are available to subclasses.
         template <typename ElementType>
-        static std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(const NDArrayViewPtr arrayView);
+        static std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(const NDArrayViewPtr& arrayView);
 
         template <typename ElementType>
-        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(NDArrayViewPtr arrayView);
+        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(const NDArrayViewPtr& arrayView);
 
         template <typename ElementType>
-        static const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView(const NDArrayViewPtr arrayView);
+        static const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView(const NDArrayViewPtr& arrayView);
 
         template <typename ElementType>
-        static Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorView(NDArrayViewPtr arrayView);
+        static Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorView(const NDArrayViewPtr& arrayView);
 
         template <typename ElementType>
         void ClipGradient(Microsoft::MSR::CNTK::Matrix<ElementType>& gradient, size_t actualMBSize) const;
@@ -88,122 +103,259 @@ namespace CNTK
         // Performs additional preprocessing before calling the update method 
         // (gradient clipping and L2 regularization depending on the additional learning parameters).
         template <typename ElementType>
-        void PreProcess(const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t actualMBSize) const;
+        void PreProcess(const NDArrayViewPtr& parameterValue, const NDArrayViewPtr& gradientValue, size_t actualMBSize) const;
 
         // Performs additional postprocessing after the update method has been executed
         // (noise injection and L1 regularization specified by the additional learning parameters).
         template <typename ElementType>
-        void PostProcess(const Variable& parameter, const ValuePtr& gradientValue,
-                         const ValuePtr& parameterValue, size_t actualMBSize) const;
+        void PostProcess(const Parameter& parameter, const NDArrayViewPtr& gradientValue, size_t actualMBSize) const;
+
+        // Returns an NDArrayView with the required shape, with the same data type as parameter value
+        // and allocated on the same device.
+        static NDArrayViewPtr AllocateNDArrayView(const Parameter& parameter, const NDShape& shape);
+
+        // Retrieves the shape of the matrix corresponding to the parameter value.
+        static NDShape GetMatrixShape(const Parameter& parameter);
+
     private:
         // Templatized update function, it invokes preprocess and postprocess using the provided
         // template parameter and also invokes virtual Update method implemented in one of the subclasses.
         template <typename ElementType>
-        void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                    const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
 
         // TODO: make these functions friends of NDViewArray and move to Utils?
-        static bool HasNan(const ValuePtr& value, const char* name);
-        static void Print(const ValuePtr& value, const char* msg);
+        static bool HasNan(const NDArrayViewPtr& value, const char* name);
+        static void Print(const NDArrayViewPtr& value, const char* msg);
 
-        size_t m_sampleCount;
+        // Version history:
+        // 1 -- initial version.
+        // 2 -- instead of storing smoothed gradients as a map<parameter_uid, smoothed_grad_value>,
+        // save them as a vector in the same order as the order of parameters this learner is responsible for.
+        static const size_t s_serializationVersion = 2;
     };
 
     // Vanilla gradient descent optimization algorithm.
-    class LearnerSGD : public LearnerBase
+    class LearnerSGD final : public LearnerBase
     {
     public:
-
-        LearnerSGD(const std::unordered_set<Variable>& parameters,
-                   const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice())
-                   : LearnerBase(parameters, device),
-                   m_momentumPerSample(0.0),
-                   m_useNesterovAcceleration(false)
-        {
-        }
+        LearnerSGD(const std::vector<Parameter>& parameters,
+                   const LearningRateSchedule& learningRateSchedule,
+                   AdditionalLearningOptions additionalOptions,
+                   bool allocateSmoothGradients = false);
 
     protected:
 
-        virtual void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
 
         template <typename ElementType>
-        void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                    const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
-
-        double m_momentumPerSample;
-        bool m_useNesterovAcceleration;
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
     };
 
     // SGD optimization with momentum. 
-    class LearnerMomentumSGD : public LearnerSGD
+    class LearnerMomentumSGD : public LearnerBase
     {
     public:
+        LearnerMomentumSGD(const std::vector<Parameter>& parameters,
+                           const LearningRateSchedule& learningRateSchedule,
+                           const MomentumSchedule& momentumSchedule,
+                           bool unitGain,
+                           AdditionalLearningOptions additionalOptions,
+                           bool allocateSmoothGradients = true)
+                           : LearnerBase(parameters, learningRateSchedule, additionalOptions, allocateSmoothGradients),
+                           m_momentumSchedule(momentumSchedule), 
+                           m_unitGain(unitGain)
+        { }
 
-        LearnerMomentumSGD(const std::unordered_set<Variable>& parameters,
-                           const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice())
-                           : LearnerSGD(parameters, device)
+        // returns current per-minibatch momentum value.
+        virtual double MomentumValueForMB(size_t minibatchSize) const
         {
+            return MomentumValueForMB(m_momentumSchedule, minibatchSize);
         }
 
-        void SetMomentum(double value) { m_momentumPerSample = value; }
+    protected:
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+
+        template <typename ElementType>
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+
+        // returns current per-minibatch momentum value from the provided schedule.
+        double MomentumValueForMB(const MomentumSchedule& schedule, size_t minibatchSize) const;
+
+        // Return true if the update should use classic momentum and 
+        // false if the unit-gain momentum should be used instead.
+        bool UseUnitGainMomentum() const
+        {
+            return m_unitGain;
+        }
+
+        ///Return the unit gain factor. Note that the unit gain factor should not be scaled according to the minibatch size. See explanation in the Update(...) function.
+        template <typename ElementType>
+        ElementType UnitGainFactor(size_t minibatchSize) const
+        {
+            //TODO: Preliminary study shows that the unitgain factor should use the raw momentum instead of the scaled momentum as the following: 
+            //      ElementType momentum = (ElementType)GetCurrentTrainingParameterValue(m_momentumSchedule);
+            //However, further investigation over the perfs are needed.
+            ElementType momentum = ElementType(MomentumValueForMB(minibatchSize));
+            return UseUnitGainMomentum() ? ElementType(1.0) - momentum : ElementType(1.0);
+        }
+
+    private:
+        MomentumSchedule m_momentumSchedule;
+        bool m_unitGain;
     };
 
     // Nesterov's accelerated SGDLearnerBase descent. 
-    class LearnerNesterov : public LearnerSGD
+    class LearnerNesterov : public LearnerMomentumSGD
     {
     public:
 
-        LearnerNesterov(const std::unordered_set<Variable>& parameters,
-                        const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice())
-                        : LearnerSGD(parameters, device)
-        {
-            m_useNesterovAcceleration = true;
-        }
+        LearnerNesterov(const std::vector<Parameter>& parameters,
+                        const LearningRateSchedule& learningRateSchedule,
+                        const MomentumSchedule& momentumSchedule,
+                        bool unitGain,
+                        AdditionalLearningOptions additionalOptions)
+                        : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions, /*allocateSmoothGradients*/ true)
+        {}
+
+    protected:
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+
+        template <typename ElementType>
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
     };
 
     class LearnerAdaGrad : public LearnerBase
     {
     public:
-
-        LearnerAdaGrad(const std::unordered_set<Variable>& parameters, bool needAveMultiplier,
-                       const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+        LearnerAdaGrad(const std::vector<Parameter>& parameters,
+                       const LearningRateSchedule& learningRateSchedule,
+                       bool needAveMultiplier,
+                       AdditionalLearningOptions additionalOptions);
 
     protected:
         bool m_needAveMultiplier;
 
-        virtual void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
 
         template <typename ElementType>
-        void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                    const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+    };
+
+    class LearnerAdaDelta : public LearnerBase
+    {
+    public:
+        LearnerAdaDelta(
+            const std::vector<Parameter>& parameters,
+            const LearningRateSchedule& learningRateSchedule,
+            double rho, double epsilon,
+            AdditionalLearningOptions additionalOptions);
+
+    protected:
+        double m_rho;
+        double m_epsilon;
+
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+
+        template <typename ElementType>
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
     };
 
     class LearnerFSAdaGrad : public LearnerMomentumSGD
     {
     public:
 
-        LearnerFSAdaGrad(const std::unordered_set<Variable>& parameters,
-                         const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+        LearnerFSAdaGrad(const std::vector<Parameter>& parameters,
+                         const LearningRateSchedule& learningRateSchedule,
+                         const MomentumSchedule& momentumSchedule,
+                         bool unitGain,
+                         const MomentumSchedule& varianceMomentumSchedule,
+                         AdditionalLearningOptions additionalOptions);
+
+        virtual Dictionary CreateCheckpoint() override;
+
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
+
+        virtual void ResetSmoothedGradients() override;
 
     protected:
 
-        virtual void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void UpdateOnMinibatch(size_t trainingSampleCount) override;
 
         template <typename ElementType>
-        void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                    const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+
+    private:
+        static const double s_targetAdagradAvDenom;
+        double m_targetAdagradAvDenom_x_sqrtAdagradSqrFrames;
+
+        // returns current per-minibatch variance momentum value.
+        double VarianceMomentumValueForMB(size_t minibatchSize) const
+        {
+            return MomentumValueForMB(m_varianceMomentumSchedule, minibatchSize);
+        }
+
+        double m_smoothedCount;
+        MomentumSchedule m_varianceMomentumSchedule;
+    };
+
+    class LearnerAdam : public LearnerMomentumSGD
+    {
+    public:
+
+        LearnerAdam(const std::vector<Parameter>& parameters,
+            const LearningRateSchedule& learningRateSchedule,
+            const MomentumSchedule& momentumSchedule,
+            bool unitGain,
+            const MomentumSchedule& varianceMomentumSchedule,
+            double epsilon,
+            bool adamax,
+            AdditionalLearningOptions additionalOptions);
+
+        virtual Dictionary CreateCheckpoint() override;
+
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
+
+        virtual void ResetSmoothedGradients() override;
+
+    protected:
+
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void UpdateOnMinibatch(size_t trainingSampleCount) override;
+
+        template <typename ElementType>
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+
+    private:
+
+        // returns current per-minibatch variance momentum value.
+        double VarianceMomentumValueForMB(size_t minibatchSize) const
+        {
+            //TODO: According to my preliminary analysis, the second momentum variance scaling is different from momentum scaling; need to double check -- yuqing tang
+            return MomentumValueForMB(m_varianceMomentumSchedule, minibatchSize);
+        }
+
+        double m_smoothedCount;
+        MomentumSchedule m_varianceMomentumSchedule;
+        double m_epsilon;
+        bool m_adamax;
     };
 
     class LearnerRMSProp : public LearnerBase
     {
     public:
 
-        LearnerRMSProp(const std::unordered_set<Variable>& parameters,
-                       double gamma, double inc, double dec, double max, double min, bool needAveMultiplier,
-                       const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+        LearnerRMSProp(const std::vector<Parameter>& parameters,
+                       const LearningRateSchedule& learningRateSchedule,
+                       double gamma, double inc, double dec, double max, double min,
+                       bool needAveMultiplier,
+                       AdditionalLearningOptions additionalOptions);
+
+        virtual Dictionary CreateCheckpoint() override;
+
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
+
+        virtual void ResetSmoothedGradients() override;
 
     protected:
 
@@ -213,12 +365,42 @@ namespace CNTK
         double m_max;
         double m_min;
         bool m_needAveMultiplier;
+        double m_smoothedCount;
 
-        virtual void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void UpdateOnMinibatch(size_t trainingSampleCount) override;
 
         template <typename ElementType>
-        void Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                    const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const;
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+    };
+
+
+    class LearnerUniversal : public LearnerBase
+    {
+        std::unordered_map<Parameter, Variable> m_parameter_gradient_map;
+        FunctionPtr m_update_func;
+
+    public:
+        LearnerUniversal(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
+
+        LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
+    
+        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
+
+    private:
+        void AllocateDummySmoothedGradients(const std::vector<Parameter>& parameters)
+        {
+            for (const auto& parameter : parameters)
+            {
+                m_smoothedGradientValues.emplace(parameter, AllocateNDArrayView(parameter, {}));
+            }
+        }
+
+        void ValidateInput(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
+
+
+    protected:
+
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
     };
 }

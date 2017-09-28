@@ -141,7 +141,7 @@ static void augmentneighbors(const MATRIX& frames, const std::vector<char>& boun
             if (boundaryflags[t2] != 1)
                 t2++; // because that's the start/end of the utterance
         }
-        copytosubvector(frames[t2], rightextent + n, v);
+        copytosubvector(frames[t2], leftextent + n, v);
     }
 }
 

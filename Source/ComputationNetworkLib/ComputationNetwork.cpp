@@ -12,12 +12,14 @@
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
+#include "RNNNodes.h"
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
 #include "TrainingNodes.h"
 #include "PreComputeNodes.h"
 #include "EvaluationNodes.h"
 #include "SpecialPurposeNodes.h"
+#include "DeprecatedNodes.h" // (for SaveToDbnFile(), which is also deprecated)
 #include "MPIWrapper.h" // TODO: does not belong here
 #include <string>
 #include <vector>
@@ -34,15 +36,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <>
-vector<shared_ptr<Matrix<float>>>& MatrixPool::GetReleasedMatrices<float>()
+vector<MemRequestInfo<float>>& MatrixPool::GetMemRequestInfoVec<float>()
 {
-    return m_releasedFloatMatrices;
+    return m_memRequestInfoFloatVec;
 }
 
 template <>
-vector<shared_ptr<Matrix<double>>>& MatrixPool::GetReleasedMatrices<double>()
+vector<MemRequestInfo<double>>& MatrixPool::GetMemRequestInfoVec<double>()
 {
-    return m_releasedDoubleMatrices;
+    return m_memRequestInfoDoubleVec;
 }
 
 // -----------------------------------------------------------------------
@@ -82,7 +84,7 @@ void ComputationNetwork::ClearNetwork()
 // serialization
 // -----------------------------------------------------------------------
 
-// after after editing--network is possibly not validated/compiled
+// after editing--network is possibly not validated/compiled
 void ComputationNetwork::SaveEdited(const wstring& fileName, const FileOptions fileFormat)
 {
     if (!IsCompiled())
@@ -104,6 +106,8 @@ void ComputationNetwork::Save(const wstring& fileName, const FileOptions fileFor
 void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptions fileFormat) const
 {
     File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
+    // Buffer writes in memory then flush to filesystem, which reduces number of small writes
+    fstream.Setvbuf();
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
     // model version
@@ -192,11 +196,8 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
     fstream.Flush();
 }
 
-// load the section of nodes that contain persistable parameters
-// This is also used for reloading a model without recreating it, e.g. during training.
-// TODO: Why not just reload it? Because SGD::Train() holds pointers to the parameters directly? That should be fixed.
-template <class ElemType> // ElemType is the default for models prior to CNTK_MODEL_VERSION_7; after that, it is serialized, and ElemType is ignored
-void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
+
+size_t ComputationNetwork::GetModelVersion(File& fstream) 
 {
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
@@ -209,7 +210,16 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
     }
     if (modelVersion > CURRENT_CNTK_MODEL_VERSION)
         InvalidArgument("Read: The model file has a newer format version (%d) than this CNTK version can handle (%d).", (int)modelVersion, (int)CURRENT_CNTK_MODEL_VERSION);
+    
+    return modelVersion;
+}
 
+// load the section of nodes that contain persistable parameters
+// This is also used for reloading a model without recreating it, e.g. during training.
+// TODO: Why not just reload it? Because SGD::Train() holds pointers to the parameters directly? That should be fixed.
+template <class ElemType> // ElemType is the default for models prior to CNTK_MODEL_VERSION_7; after that, it is serialized, and ElemType is ignored
+void ComputationNetwork::ReadPersistableParameters(size_t modelVersion, File& fstream, bool create)
+{
     size_t numNodes;
     fstream >> numNodes;
 
@@ -266,7 +276,9 @@ void ComputationNetwork::Read(const wstring& fileName)
 
     File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
 
-    ReadPersistableParameters<ElemType>(fstream, true);
+    auto modelVersion = GetModelVersion(fstream);
+
+    ReadPersistableParameters<ElemType>(modelVersion, fstream, true);
 
     size_t numNodes = m_nameToNodeMap.size();
 
@@ -290,6 +302,15 @@ void ComputationNetwork::Read(const wstring& fileName)
             childrenNodes.resize(numChildren);
             for (int j = 0; j < numChildren; j++)
                 childrenNodes[j] = GetNodeFromName(childrenNames[j]);
+
+            if (modelVersion < CNTK_MODEL_VERSION_19 && nodePtr->OperationName() == OperationNameOf(BatchNormalizationNode)) 
+            {
+                ComputationNodeBasePtr runSampleCount = New<LearnableParameter<ElemType>>(m_deviceId, nodeName + L".run_sample_count", TensorShape(1));
+                runSampleCount->SetLearningRateMultiplier(0);
+                AddNodeToNet(runSampleCount);
+                InitLearnableParameters(runSampleCount, L"fixedValue", 0);
+                childrenNodes.push_back(runSampleCount);
+            }
 
             nodePtr->AttachInputs(childrenNodes);
         }
@@ -391,13 +412,45 @@ void ComputationNetwork::Read(const wstring& fileName)
 // node construction
 // -----------------------------------------------------------------------
 
-// non-static version needed because it accesses m_randomSeedOffset
-// Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
-template <class ElemType>
-void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly)
+// helper of InitLearnableParameters()
+// Note: This should really be done through an interface without <ElemType> that LearnableParameter would derive from.
+// However, this is only for NDL (which is deprecated), so I rather not pollute the code with more interfaces just for a deprecated cause.
+template<class ElemType>
+static bool TryPostInitParameters(const ComputationNodeBasePtr& node, const wchar_t* initString, double initValue, unsigned long randomSeed, bool initOnCPUOnly)
 {
     auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
-    learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
+    if (!learnableParameterNode)
+        return false;
+    learnableParameterNode->PostInitParameters(initString, (ElemType) initValue, randomSeed, initOnCPUOnly);
+    return true;
+}
+
+// non-static version needed because it accesses m_randomSeedOffset
+void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr& node,
+                                                 const wchar_t* initString, // "uniform"|"gaussian"|"fixedValue"
+                                                 double initValue,        //  scale   | scale    | value
+                                                 unsigned long randomSeed /*= 0*/,
+                                                 bool initOnCPUOnly /*= false*/) const
+{
+    randomSeed += GetRandomSeedOffset();
+    if (TryPostInitParameters<float> (node, initString, initValue, randomSeed, initOnCPUOnly) ||
+        TryPostInitParameters<double>(node, initString, initValue, randomSeed, initOnCPUOnly))
+        return;
+    LogicError("InitLearnableParameters: Input node is not a LearnableParameter<float or double>");
+}
+
+// non-static version needed because it accesses m_randomSeedOffset
+// Legacy version that is for random only.
+void ComputationNetwork::RandomInitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly) const
+{
+    InitLearnableParameters(node, uniformInit ? L"uniform" : L"gaussian", initValueScale, randomSeed, initOnCPUOnly);
+}
+
+template <class ElemType>
+void ComputationNetwork::InitLearnableParametersWithBilinearFill(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight)
+{
+    auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+    learnableParameterNode->InitBilinear(kernelWidth, kernelHeight);
 }
 
 bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
@@ -409,7 +462,8 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
         nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
-        nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||
+        nodePtr->OperationName() == OperationNameOf(ClassificationErrorNode) ||
+        nodePtr->OperationName() == OperationNameOf(ForwardBackwardNode) ||
 #ifdef COMING_SOON
         nodePtr->OperationName() == OperationNameOf(CRFNode) ||
 #endif
@@ -489,31 +543,42 @@ void ComputationNetwork::CollectInputAndLearnableParametersRec(const Computation
     }
 }
 
-template <class ElemType>
-/*static*/ void ComputationNetwork::SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase)
+/*static*/ void ComputationNetwork::SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate)
 {
     list<ComputationNodeBasePtr> dropoutNodes = net->GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
     if (dropoutRate != prevDropoutRate)
     {
         fprintf(stderr, "Setting dropout rate to %.8g.\n", dropoutRate);
-        // TODO: Change this to use an interface that is independent of <ElemType>.
         if (dropoutNodes.size() == 0 && dropoutRate > 0)
             fprintf(stderr, "WARNING: Attempting to set dropout rate, but there is no dropout node in the network.\n");
     }
 
-    // Each dropout node gets a distinct seed. The actual seed for each dropout node is computed as follows:
-    // seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * dropoutNodes.size()) + dropoutNodeIdx
-    size_t randSeed = randSeedBase * dropoutNodes.size();
     for (auto& nodeIter : dropoutNodes)
     {
-        auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeIter);
+        auto node = dynamic_pointer_cast<DropoutNodeBase>(nodeIter);
         if (dropoutRate != prevDropoutRate)
             node->SetDropoutRate(dropoutRate);
-        node->SetRandomSeed(randSeed);
-        randSeed++;
     }
 
     prevDropoutRate = dropoutRate;
+}
+
+/* static */ void ComputationNetwork::SetIRngUserSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& node, size_t randSeedBase)
+{
+    // Predicate checking if the node is derived from IRngUser
+    function<bool(const ComputationNodeBasePtr&)> nodeIsIRngUser = [](const ComputationNodeBasePtr& p) { return dynamic_pointer_cast<IRngUser>(p) != nullptr; };
+
+    list<ComputationNodeBasePtr> rngUserNodes = net->GetNodesWhere(nodeIsIRngUser, node);
+
+    // Each IRngUser gets a distinct seed. This seed is computed as follows:
+    // seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * rngUserNodes.size()) + dropoutNodeIdx.
+    size_t randSeed = randSeedBase * rngUserNodes.size();
+    for (auto& nodeIter : rngUserNodes)
+    {
+        auto rngUser = dynamic_pointer_cast<IRngUser>(nodeIter);
+        rngUser->SetRngState(randSeed);
+        randSeed++;
+    }
 }
 
 template <class ElemType>
@@ -584,7 +649,7 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
 /*static*/ void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples)
 {
     if (maxTempMemSizeInSamples > 0)
-        fprintf(stderr, "Setting max temp memory size for Convolution operations to %lu samples.\n", maxTempMemSizeInSamples);
+        fprintf(stderr, "Setting max temp memory size for Convolution operations to %lu samples.\n", (unsigned long)maxTempMemSizeInSamples);
     list<ComputationNodeBasePtr> convolutionNodes = net->GetNodesWithType(OperationNameOf(ConvolutionNode), criterionNode);
     if (convolutionNodes.size() == 0 && maxTempMemSizeInSamples != 0)
     {
@@ -714,35 +779,22 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
 
     File fstream(outFile, FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
-    // get precompute node
-    vector<ComputationNodeBasePtr> PreComputedNodes;
+    vector<ComputationNodeBasePtr> preComputedNodes;
+    vector<ComputationNodeBasePtr> pastValueNodes;
+    vector<ComputationNodeBasePtr> futureValueNodes;
+    vector<ComputationNodeBasePtr> learnableParameters;
     vector<ComputationNodeBasePtr> allnodes = GetAllNodes();
     for (const auto& n : allnodes)
     {
         if (n->RequiresPreCompute())
-            PreComputedNodes.push_back(n);
-    }
+            preComputedNodes.push_back(n);
 
-    // get PastValue node
-    vector<ComputationNodeBasePtr> pastValueNodes;
-    for (const auto& n : allnodes)
-    {
-        if (n->OperationName() == OperationNameOf(PastValueNode) || n->OperationName() == L"Delay")
+        const auto operationName = n->OperationName();
+        if (operationName == OperationNameOf(PastValueNode) || operationName == L"Delay"/*legacy*/) 
             pastValueNodes.push_back(n);
-    }
-
-    // get FuturetValue node
-    vector<ComputationNodeBasePtr> futureValueNodes;
-    for (const auto& n : allnodes)
-    {
-        if (n->OperationName() == OperationNameOf(FutureValueNode))
+        else if (operationName == OperationNameOf(FutureValueNode))
             futureValueNodes.push_back(n);
-    }
-    // get learnableParameters
-    vector<ComputationNodeBasePtr> learnableParameters;
-    for (const auto& n : allnodes)
-    {
-        if (n->OperationName() == OperationNameOf(LearnableParameter))
+        else if (operationName == OperationNameOf(LearnableParameter))
             learnableParameters.push_back(n);
     }
 
@@ -760,10 +812,10 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     fstream << FormSpecialNodes(dotcfg.m_featuresStyle, m_featureNodes);
     // labels
     fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labelNodes);
-    // critera
+    // criteria
     fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_criterionNodes);
     // pre-compute nodes
-    fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
+    fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, preComputedNodes);
     // PastValue nodes
     fstream << FormSpecialNodes(dotcfg.m_pastValueNodeStyle, pastValueNodes);
     // FutureValue nodes
@@ -945,7 +997,7 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
         {
             if (!regex_match(n->first, nameFilter))
             {
-                // if regexStr is not empty and the the node does not match with the regexStr
+                // if regexStr is not empty and the node does not match with the regexStr
                 continue;
             }
 
@@ -1062,10 +1114,12 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             wstring rightChildName = name + L"_V";
             shared_ptr<ComputationNode<ElemType>> pLeft = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName, m, r));
             shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));
+            InitLearnableParameters(pLeft,  L"fixedValue", 0); // follow the protocol; otherwise deferred initialization will overwrite the SVD values in validation
+            InitLearnableParameters(pRight, L"fixedValue", 0);
 
             // TODO: We should be able to move instead of copy but it currently isn't straightforward
             // due to redU and redVT being slices
-            pLeft->ValueAsMatrix() = redU.DeepClone();
+            pLeft->ValueAsMatrix()  = redU.DeepClone();
             pRight->ValueAsMatrix() = redVT.DeepClone();
 
             // Step 3. Change the network hierachy to include the SVD nodes
@@ -1111,7 +1165,7 @@ public:
     ~DbnLayer() {};
 };
 
-// Save network in the format of the Microsoft-internal legacy "DBN.exe" tool (this function is not useful outside of Microsoft)
+// Save network in the format of the Microsoft-internal legacy "DBN.exe" tool (this function is not useful outside of Microsoft).
 template <class ElemType>
 void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const 
 {
@@ -1213,7 +1267,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     };
 
     // Get output node
-    std::list<ComputationNodeBasePtr> outputNodes = net->GetNodesWithType(OperationNameOf(ErrorPredictionNode));
+    std::list<ComputationNodeBasePtr> outputNodes = net->GetNodesWithType(OperationNameOf(ClassificationErrorNode));
     ComputationNodeBasePtr outputNode = GetFirstNodeWithDifferentType(outputNodes.front()->GetInputs(), OperationNameOf(InputValue));
 
     if (outputNode == nullptr)
@@ -1463,21 +1517,19 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     PutTag("EDBN");
 }
 
-template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
+template void ComputationNetwork::InitLearnableParametersWithBilinearFill<float>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
 template void ComputationNetwork::Read<float>(const wstring& fileName);
-template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
+template void ComputationNetwork::ReadPersistableParameters<float>(size_t modelVersion, File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
-template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
-template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
+template void ComputationNetwork::InitLearnableParametersWithBilinearFill<double>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
 template void ComputationNetwork::Read<double>(const wstring& fileName);
-template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
+template void ComputationNetwork::ReadPersistableParameters<double>(size_t modelVersion, File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
-template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);

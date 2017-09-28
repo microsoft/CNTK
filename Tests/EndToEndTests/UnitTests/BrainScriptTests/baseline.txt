@@ -1,0 +1,151 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-1650 0 @ 3.20GHz
+    Hardware threads: 12
+    Total Memory: 32874316 kB
+-------------------------------------------------------------------
+Test 1...
+Test 2...
+Test 3...
+Test 4...
+Test 5...
+Test 6...
+Test 7...
+Test 8...
+Test 9...
+Test 10...
+Test 11...
+Test 12...
+Test 13...
+Test 14...
+Test 15...
+Test 16...
+Test 17...
+Test 18...
+Test 19...
+Test 20...
+Model path: /home/mahilleb/CNTK/Tests/UnitTests/BrainScriptTests/Data/ComputationNetwork/LR_reg.dnn
+
+Post-processing network...
+
+3 roots:
+	err = SquareError()
+	lr = Logistic()
+	p = Sigmoid()
+
+Validating network. 9 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [1 x *]
+Validating --> w = LearnableParameter() :  -> [1 x 2]
+Validating --> features = InputValue() :  -> [2 x *]
+Validating --> p._.PlusArgs[0] = Times (w, features) : [1 x 2], [2 x *] -> [1 x *]
+Validating --> b = LearnableParameter() :  -> [1 x 1]
+Validating --> p._ = Plus (p._.PlusArgs[0], b) : [1 x *], [1 x 1] -> [1 x 1 x *]
+Validating --> p = Sigmoid (p._) : [1 x 1 x *] -> [1 x 1 x *]
+Validating --> err = SquareError (labels, p) : [1 x *], [1 x 1 x *] -> [1]
+Validating --> lr = Logistic (labels, p) : [1 x *], [1 x 1 x *] -> [1]
+
+Validating network. 5 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+4 out of 9 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+Warning: node name '' does not exist in the network. dumping all nodes instead.
+Model path: /home/mahilleb/CNTK/Tests/UnitTests/BrainScriptTests/Data/ComputationNetwork/01_OneHidden.dnn
+
+Post-processing network...
+
+4 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	top5Errs = ClassificationError()
+	z.z = Plus()
+
+Validating network. 17 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> z.W = LearnableParameter() :  -> [10 x 200]
+Validating --> h1._.W = LearnableParameter() :  -> [200 x 784]
+Validating --> featScaled.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [784 x *1]
+Validating --> featScaled = ElementTimes (featScaled.ElementTimesArgs[0], features) : [1 x 1], [784 x *1] -> [784 x 1 x *1]
+Validating --> h1._.z.PlusArgs[0] = Times (h1._.W, featScaled) : [200 x 784], [784 x 1 x *1] -> [200 x 1 x *1]
+Validating --> h1._.b = LearnableParameter() :  -> [200 x 1]
+Validating --> h1._.z = Plus (h1._.z.PlusArgs[0], h1._.b) : [200 x 1 x *1], [200 x 1] -> [200 x 1 x *1]
+Validating --> h1 = Sigmoid (h1._.z) : [200 x 1 x *1] -> [200 x 1 x *1]
+Validating --> z.z.PlusArgs[0] = Times (z.W, h1) : [10 x 200], [200 x 1 x *1] -> [10 x 1 x *1]
+Validating --> z.b = LearnableParameter() :  -> [10 x 1]
+Validating --> z.z = Plus (z.z.PlusArgs[0], z.b) : [10 x 1 x *1], [10 x 1] -> [10 x 1 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, z.z) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> errs = ClassificationError (labels, z.z) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> inputs[2] = LearnableParameter() :  -> [1 x 1]
+Validating --> top5Errs = ClassificationError (labels, z.z, inputs[2]) : [10 x *1], [10 x 1 x *1], [1 x 1] -> [1]
+
+Validating network. 9 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+9 out of 17 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+Warning: node name '' does not exist in the network. dumping all nodes instead.
+Model path: /home/mahilleb/CNTK/Tests/UnitTests/BrainScriptTests/Data/ComputationNetwork/MC.dnn
+
+Post-processing network...
+
+3 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	z = Plus()
+
+Validating network. 8 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [3 x *2]
+Validating --> w = LearnableParameter() :  -> [3 x 2]
+Validating --> features = InputValue() :  -> [2 x *2]
+Validating --> z.PlusArgs[0] = Times (w, features) : [3 x 2], [2 x *2] -> [3 x *2]
+Validating --> b = LearnableParameter() :  -> [3 x 1]
+Validating --> z = Plus (z.PlusArgs[0], b) : [3 x *2], [3 x 1] -> [3 x 1 x *2]
+Validating --> ce = CrossEntropyWithSoftmax (labels, z) : [3 x *2], [3 x 1 x *2] -> [1]
+Validating --> errs = ClassificationError (labels, z) : [3 x *2], [3 x 1 x *2] -> [1]
+
+Validating network. 4 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+4 out of 8 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+Warning: node name '' does not exist in the network. dumping all nodes instead.
+Running 2 test cases...
+
+Test module "BrainScriptTests" has passed with:
+  2 test cases out of 2 passed
+  23 assertions out of 23 passed
+
+  Test suite "ParserSuite" has passed with:
+    1 test case out of 1 passed
+    20 assertions out of 20 passed
+
+    Test case "ParserSuite/ParseExpressionsAndCompareTree" has passed with:
+      20 assertions out of 20 passed
+
+  Test suite "ComputationNetworkSuite" has passed with:
+    1 test case out of 1 passed
+    3 assertions out of 3 passed
+
+    Test case "ComputationNetworkSuite/CompareNetworkStructureFromModel" has passed with:
+      3 assertions out of 3 passed

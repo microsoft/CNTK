@@ -37,7 +37,7 @@ ComputationNodeBasePtr ComputationNetwork::CopyNode(const ComputationNetwork& fr
     ComputationNodeBasePtr pFromNode = fromNet.GetNodeFromName(fromName);
     ComputationNodeBasePtr pToNode;
 
-    // don't allow cross network child copy unless caller explicity handles children fixup
+    // don't allow cross network child copy unless caller explicitly handles children fixup
     if ((flags & CopyNodeFlags::copyNodeInputLinks) &&
         this != &fromNet && !(flags & CopyNodeFlags::copyNodeAcrossNetworks))
     {
@@ -75,6 +75,9 @@ void ComputationNetwork::CopySubTree(const ComputationNetwork& fromNet,
         LogicError("CopySubTree: you cannot copy a tree without copying the node values.");
 
     ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
+
+    if (!fromNet.EvalOrderExists(fromRoot))
+        const_cast<ComputationNetwork&>(fromNet).FormEvalOrder(fromRoot);
 
     for (const auto& fromNode : fromNet.GetEvalOrder(fromRoot)) // BUGBUG: This probably will fail because the precomputed eval orders are invalid at this point.
     {
@@ -165,7 +168,9 @@ void ComputationNetwork::DeleteNode(const std::wstring& nodeName)
 }
 
 // replace a named node by newNode of the same type under the same name, including moving over all network links
-// This is used in the KL-reg based adaptation to reduce feature copy
+// This is used in 
+// 1. Update nodes to quantized versions.
+// 2. The KL-reg based adaptation to reduce feature copy (deprecated)
 // need to update all the mappings as well childrens.
 void ComputationNetwork::ReplaceNode(wstring nodeName, ComputationNodeBasePtr newNode)
 {
@@ -173,8 +178,6 @@ void ComputationNetwork::ReplaceNode(wstring nodeName, ComputationNodeBasePtr ne
 
     if (newNode->NodeName() != nodeName) // TODO: This was not tested for earlier; I hope no code depends on this.
         InvalidArgument("ChangeNode: newNode must have the same name as the old node.");
-    if (oldNode->OperationName() != newNode->OperationName())
-        InvalidArgument("ReplaceNode: newNode must have the same type as the old node.");
 
     InvalidateCompiledNetwork();
 
@@ -353,6 +356,9 @@ void ComputationNetwork::SetLearnableNodesBelowLearningRateMultiplier(const floa
     else
     {
         // for calculating a specific node
+        if (!EvalOrderExists(rootNode))
+            const_cast<ComputationNetwork&>(*this).FormEvalOrder(rootNode);
+
         for (const auto& node : GetAllNodesForRoot(rootNode))
         {
             if (node->OperationName() == OperationNameOf(LearnableParameter))

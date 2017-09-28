@@ -514,7 +514,7 @@ Simple_Demo=[
 
 \begin_layout Plain Layout
 
-        evalCriterion="ErrorPrediction"
+        evalCriterion="ClassificationError"
 \end_layout
 
 \begin_layout Plain Layout

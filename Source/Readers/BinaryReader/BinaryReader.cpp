@@ -13,6 +13,8 @@
 #include <vld.h> // leak detection
 #endif
 
+#define FCLOSE_SUCCESS 0
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Destroy - cleanup and remove this class
@@ -179,10 +181,14 @@ BinaryReader<ElemType>::~BinaryReader()
     }
     m_secFiles.clear();
 
+    int rc = 0;
     for (size_t i = 0; i < m_fStream.size(); i++)
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
-        fclose(m_fStream[i]);
+        rc = fclose(m_fStream[i]);
+        if ((rc != FCLOSE_SUCCESS) && !std::uncaught_exception())
+        {
+            RuntimeError("BinaryReader: failed to close stream %zu", i);
+        }
     }
 }
 
@@ -243,7 +249,7 @@ bool BinaryReader<ElemType>::CheckEndDataset(size_t actualmbsize)
 // GetMinibatch - Get the next minibatch (features and labels)
 // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
 //             [out] each matrix resized if necessary containing data.
-// returns - true if there are more minibatches, false if no more minibatchs remain
+// returns - true if there are more minibatches, false if no more minibatches remain
 template <class ElemType>
 bool BinaryReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {

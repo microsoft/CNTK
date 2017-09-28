@@ -14,39 +14,56 @@
 #include "ReaderShim.h"
 #include "HTKMLFReader.h"
 #include "HeapMemoryProvider.h"
-#include "HTKDataDeserializer.h"
-#include "MLFDataDeserializer.h"
+#include "HTKDeserializer.h"
+#include "MLFDeserializer.h"
 #include "StringUtil.h"
+#include "V2Dependencies.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
+
+// For old config, we have to emulate the same behavior as the old reader.
+template<class ElemType>
+class HTKMLFReaderShim : public ReaderShim<ElemType>
+{
+public:
+    explicit HTKMLFReaderShim(ReaderFactory f) : ReaderShim<ElemType>(f) {}
+
+    bool IsLegacyReader() const override
+    {
+        return true;
+    }
+};
+
 
 // Factory methods for the reader.
 // TODO: Must be removed when SGD is moved to an untyped matrix.
 auto factory = [](const ConfigParameters& parameters) -> ReaderPtr
 {
-    return std::make_shared<HTKMLFReader>(std::make_shared<HeapMemoryProvider>(), parameters);
+    return std::make_shared<HTKMLFReader>(parameters);
 };
 
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)
 {
-    *preader = new ReaderShim<float>(factory);
+    *preader = new HTKMLFReaderShim<float>(factory);
 }
 
 extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 {
-    *preader = new ReaderShim<double>(factory);
+    *preader = new HTKMLFReaderShim<double>(factory);
 }
 
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
-extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus,  bool primary)
+extern "C" DATAREADER_API bool CreateDeserializer(DataDeserializerPtr& deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus,  bool primary)
 {
     if (type == L"HTKFeatureDeserializer")
     {
-        *deserializer = new HTKDataDeserializer(corpus, deserializerConfig, primary);
+        deserializer = make_shared<HTKDeserializer>(corpus, deserializerConfig, primary);
     }
     else if (type == L"HTKMLFDeserializer")
     {
-        *deserializer = new MLFDataDeserializer(corpus, deserializerConfig, primary);
+        deserializer = make_shared<MLFDeserializer>(corpus, deserializerConfig, primary);
     }
     else
     {
@@ -58,4 +75,4 @@ extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializ
     return true;
 }
 
-}}}
+}

@@ -1,0 +1,240 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU W3565 @ 3.20GHz
+    Hardware threads: 8
+    Total Memory: 12580436 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\NonSpatial/01_OneHidden.cntk currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu\TestData RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu\TestData ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\NonSpatial OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu DeviceId=0 timestamping=true batchNormalizationEngine=cudnn
+CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:29:34) on cntk-muc01 at 2016/12/15 08:27:27
+
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\NonSpatial/01_OneHidden.cntk  currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu\TestData  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu  DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu\TestData  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\NonSpatial  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu  DeviceId=0  timestamping=true  batchNormalizationEngine=cudnn
+Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu\TestData
+12/15/2016 08:27:27: -------------------------------------------------------------------
+12/15/2016 08:27:27: Build info: 
+
+12/15/2016 08:27:27: 		Built time: Dec 15 2016 06:29:34
+12/15/2016 08:27:27: 		Last modified date: Wed Dec 14 12:53:20 2016
+12/15/2016 08:27:27: 		Build type: Release
+12/15/2016 08:27:27: 		Build target: GPU
+12/15/2016 08:27:27: 		With 1bit-SGD: no
+12/15/2016 08:27:27: 		With ASGD: yes
+12/15/2016 08:27:27: 		Math lib: mkl
+12/15/2016 08:27:27: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+12/15/2016 08:27:27: 		CUB_PATH: c:\src\cub-1.4.1
+12/15/2016 08:27:27: 		CUDNN_PATH: C:\local\cudnn-8.0-windows10-x64-v5.1
+12/15/2016 08:27:27: 		Build Branch: HEAD
+12/15/2016 08:27:27: 		Build SHA1: 5f1fabfe95e68af0787193f8849159f824d914d5 (modified)
+12/15/2016 08:27:27: 		Built by svcphil on liana-08-w
+12/15/2016 08:27:27: 		Build Path: C:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+12/15/2016 08:27:27: -------------------------------------------------------------------
+12/15/2016 08:27:28: -------------------------------------------------------------------
+12/15/2016 08:27:28: GPU info:
+
+12/15/2016 08:27:28: 		Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB
+12/15/2016 08:27:28: -------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: 01_OneHidden.cntk:batchNormalizationEngine=cudnn
+configparameters: 01_OneHidden.cntk:command=train:test
+configparameters: 01_OneHidden.cntk:configDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\NonSpatial
+configparameters: 01_OneHidden.cntk:currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu\TestData
+configparameters: 01_OneHidden.cntk:dataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu\TestData
+configparameters: 01_OneHidden.cntk:deviceId=0
+configparameters: 01_OneHidden.cntk:modelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu/Models
+configparameters: 01_OneHidden.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu/Models/01_OneHidden
+configparameters: 01_OneHidden.cntk:numMBsToShowResult=500
+configparameters: 01_OneHidden.cntk:outputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu
+configparameters: 01_OneHidden.cntk:precision=float
+configparameters: 01_OneHidden.cntk:rootDir=..
+configparameters: 01_OneHidden.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu
+configparameters: 01_OneHidden.cntk:test=[
+    action = "test"
+minibatchSize = 1024    
+    evalNodeNames = ce:errs:top5Errs
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu\TestData/Test-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+configparameters: 01_OneHidden.cntk:timestamping=true
+configparameters: 01_OneHidden.cntk:traceLevel=1
+configparameters: 01_OneHidden.cntk:train=[
+    action = "train"
+    NDLNetworkBuilder = [
+        initOnCPUOnly = true
+        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\NonSpatial/01_OneHidden.ndl"
+    ]
+    SGD = [
+        epochSize = 60000
+        minibatchSize = 32
+        learningRatesPerSample = 0.003125
+        momentumAsTimeConstant = 0
+        maxEpochs = 3
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu\TestData/Train-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]   
+]
+
+12/15/2016 08:27:28: Commands: train test
+12/15/2016 08:27:28: precision = "float"
+
+12/15/2016 08:27:28: ##############################################################################
+12/15/2016 08:27:28: #                                                                            #
+12/15/2016 08:27:28: # train command (train action)                                               #
+12/15/2016 08:27:28: #                                                                            #
+12/15/2016 08:27:28: ##############################################################################
+
+12/15/2016 08:27:28: 
+Creating virgin network.
+NDLBuilder Using GPU 0
+Using cuDNN batch normalization engine.
+12/15/2016 08:27:29: 
+Model has 21 nodes. Using GPU 0.
+
+12/15/2016 08:27:29: Training criterion:   ce = CrossEntropyWithSoftmax
+
+12/15/2016 08:27:29: Evaluation criteria:
+12/15/2016 08:27:29: 	top5Errs = ClassificationError
+12/15/2016 08:27:29: 	errs = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 33 matrices, 8 are shared as 4, and 25 are not shared.
+
+	{ ol.W : [10 x 200] (gradient)
+	  ol.z : [10 x 1 x *] (gradient) }
+	{ ol.t : [10 x 1 x *] (gradient)
+	  sc : [200 x 1] (gradient) }
+	{ h1.z : [200 x 1 x *] (gradient)
+	  ol.t : [10 x 1 x *] }
+	{ h1.W : [200 x 784] (gradient)
+	  h1.z : [200 x 1 x *] }
+
+
+12/15/2016 08:27:29: Training 159410 parameters in 6 out of 6 parameter tensors and 12 nodes with gradient:
+
+12/15/2016 08:27:29: 	Node 'b' (LearnableParameter operation) : [200 x 1]
+12/15/2016 08:27:29: 	Node 'h1.W' (LearnableParameter operation) : [200 x 784]
+12/15/2016 08:27:29: 	Node 'h1.b' (LearnableParameter operation) : [200 x 1]
+12/15/2016 08:27:29: 	Node 'ol.W' (LearnableParameter operation) : [10 x 200]
+12/15/2016 08:27:29: 	Node 'ol.b' (LearnableParameter operation) : [10 x 1]
+12/15/2016 08:27:29: 	Node 'sc' (LearnableParameter operation) : [200 x 1]
+
+12/15/2016 08:27:29: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+12/15/2016 08:27:29: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+12/15/2016 08:27:29: Starting minibatch loop.
+12/15/2016 08:27:31:  Epoch[ 1 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.46954208 * 16000; top5Errs = 1.306% * 16000; errs = 13.719% * 16000; time = 2.3884s; samplesPerSecond = 6698.9
+12/15/2016 08:27:32:  Epoch[ 1 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.40629935 * 16000; top5Errs = 0.869% * 16000; errs = 11.800% * 16000; time = 0.9766s; samplesPerSecond = 16384.1
+12/15/2016 08:27:33:  Epoch[ 1 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.36484326 * 16000; top5Errs = 0.725% * 16000; errs = 10.700% * 16000; time = 0.9721s; samplesPerSecond = 16458.4
+12/15/2016 08:27:34: Finished Epoch[ 1 of 3]: [Training] ce = 0.40319505 * 60000; top5Errs = 0.928% * 60000; errs = 11.752% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.003125; epochTime=5.09913s
+12/15/2016 08:27:34: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu/Models/01_OneHidden.1'
+
+12/15/2016 08:27:34: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+12/15/2016 08:27:34: Starting minibatch loop.
+12/15/2016 08:27:35:  Epoch[ 2 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.34741147 * 16000; top5Errs = 0.606% * 16000; errs = 10.075% * 16000; time = 0.9530s; samplesPerSecond = 16789.1
+12/15/2016 08:27:36:  Epoch[ 2 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.33650119 * 16000; top5Errs = 0.550% * 16000; errs = 9.863% * 16000; time = 0.9839s; samplesPerSecond = 16261.8
+12/15/2016 08:27:37:  Epoch[ 2 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.34222223 * 16000; top5Errs = 0.688% * 16000; errs = 10.125% * 16000; time = 0.9952s; samplesPerSecond = 16077.3
+12/15/2016 08:27:38: Finished Epoch[ 2 of 3]: [Training] ce = 0.34630986 * 60000; top5Errs = 0.638% * 60000; errs = 10.132% * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.003125; epochTime=3.68216s
+12/15/2016 08:27:38: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu/Models/01_OneHidden.2'
+
+12/15/2016 08:27:38: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+12/15/2016 08:27:38: Starting minibatch loop.
+12/15/2016 08:27:39:  Epoch[ 3 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.34093686 * 16000; top5Errs = 0.581% * 16000; errs = 9.994% * 16000; time = 0.9894s; samplesPerSecond = 16170.8
+12/15/2016 08:27:40:  Epoch[ 3 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.33047696 * 16000; top5Errs = 0.600% * 16000; errs = 9.319% * 16000; time = 0.9754s; samplesPerSecond = 16404.3
+12/15/2016 08:27:41:  Epoch[ 3 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.33348969 * 16000; top5Errs = 0.600% * 16000; errs = 9.575% * 16000; time = 0.9662s; samplesPerSecond = 16559.7
+12/15/2016 08:27:42: Finished Epoch[ 3 of 3]: [Training] ce = 0.33080459 * 60000; top5Errs = 0.563% * 60000; errs = 9.542% * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.003125; epochTime=3.67833s
+12/15/2016 08:27:42: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\BatchNormalization\NonSpatial_CuDNN@release_gpu/Models/01_OneHidden'
+
+12/15/2016 08:27:42: Action "train" complete.
+
+
+12/15/2016 08:27:42: ##############################################################################
+12/15/2016 08:27:42: #                                                                            #
+12/15/2016 08:27:42: # test command (test action)                                                 #
+12/15/2016 08:27:42: #                                                                            #
+12/15/2016 08:27:42: ##############################################################################
+
+
+Post-processing network...
+
+3 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	top5Errs = ClassificationError()
+
+Validating network. 21 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 200]
+Validating --> h1.W = LearnableParameter() :  -> [200 x 784]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [784 x *1]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [784 x *1] -> [784 x 1 x *1]
+Validating --> h1.t = Times (h1.W, featScaled) : [200 x 784], [784 x 1 x *1] -> [200 x 1 x *1]
+Validating --> h1.b = LearnableParameter() :  -> [200 x 1]
+Validating --> h1.z = Plus (h1.t, h1.b) : [200 x 1 x *1], [200 x 1] -> [200 x 1 x *1]
+Validating --> sc = LearnableParameter() :  -> [200 x 1]
+Validating --> b = LearnableParameter() :  -> [200 x 1]
+Validating --> m = LearnableParameter() :  -> [200 x 1]
+Validating --> v = LearnableParameter() :  -> [200 x 1]
+Validating --> y = BatchNormalization (h1.z, sc, b, m, v) : [200 x 1 x *1], [200 x 1], [200 x 1], [200 x 1], [200 x 1] -> [200 x 1 x *1]
+Validating --> ol.t = Times (ol.W, y) : [10 x 200], [200 x 1 x *1] -> [10 x 1 x *1]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *1], [10 x 1] -> [10 x 1 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> errs = ClassificationError (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> unnamed32 = LearnableParameter() :  -> [1 x 1]
+Validating --> top5Errs = ClassificationError (labels, ol.z, unnamed32) : [10 x *1], [10 x 1 x *1], [1 x 1] -> [1]
+
+Validating network. 9 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+Using cuDNN batch normalization engine.
+
+
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 21 matrices, 0 are shared as 0, and 21 are not shared.
+
+
+12/15/2016 08:27:42: Minibatch[1-10]: ce = 0.29395443 * 10000; errs = 8.440% * 10000; top5Errs = 0.560% * 10000
+12/15/2016 08:27:42: Final Results: Minibatch[1-10]: ce = 0.29395443 * 10000; perplexity = 1.34172276; errs = 8.440% * 10000; top5Errs = 0.560% * 10000
+
+12/15/2016 08:27:42: Action "test" complete.
+
+12/15/2016 08:27:42: __COMPLETED__

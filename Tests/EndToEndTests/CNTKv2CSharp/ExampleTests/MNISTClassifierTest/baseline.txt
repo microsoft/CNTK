@@ -1,0 +1,16 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-1650 v4 @ 3.60GHz
+    Hardware threads: 12
+    Total Memory: 16691576 kB
+-------------------------------------------------------------------
+Test CNTKLibraryCSTrainingExamples
+======== Train model using CPUOnly build ========
+======== running MNISTClassifierTest.TrainAndEvaluate with Convnet using CPU ========
+Minibatch: 0 CrossEntropyLoss = 2.307698, EvaluationCriterion = 0.875
+Minibatch: 20 CrossEntropyLoss = 2.279837, EvaluationCriterion = 0.921875
+Minibatch: 40 CrossEntropyLoss = 1.563468, EvaluationCriterion = 0.40625
+Minibatch: 60 CrossEntropyLoss = 0.01381622, EvaluationCriterion = 0
+Validating Model: Total Samples = 50, Misclassify Count = 0
+Validating Model: Total Samples = 100, Misclassify Count = 0
+Model Validation Error = 0
+======== Train completes. ========

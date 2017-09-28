@@ -1,0 +1,101 @@
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
+#       Please find updated samples on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+# configuration file for one layer LSTM training on TIMIT
+
+ExpFolder= # your exp root path
+ConfigFolder=..\..\..\..\ExampleSetups\ASR\TIMIT\config # your ndl file
+DataFolder= # your data path
+
+stderr=$ExpFolder$
+command=speechTrainNDL
+
+precision=float
+
+#######################################
+#  TRAINING CONFIG (NDL, Fixed LR) #
+#######################################
+speechTrainNDL=[
+    action=trainRNN
+    modelPath=$ExpFolder$\LSTM_CPU\cntkSpeech.dnn
+
+    # deviceId=-1 for CPU, >=0 for GPU devices 
+    deviceId=-1
+
+    traceLevel=1
+
+    NDLNetworkBuilder=[
+        networkDescription=$ConfigFolder$\LSTM_1layer.ndl
+    ]
+
+
+    SGD=[
+        epochSize=1124823         
+        minibatchSize=10
+        learningRatesPerMB=0.01:0.1
+        momentumPerMB=0:0.9
+        dropoutRate=0.0
+        maxEpochs=50
+        #numMBsToShowResult=100
+    
+
+        #settings for Auto Adjust Learning Rate
+        AutoAdjust=[
+            reduceLearnRateIfImproveLessThan=0
+            loadBestModel=true
+            increaseLearnRateIfImproveMoreThan=1000000000
+            learnRateDecreaseFactor=0.5
+            autoAdjustLR=AdjustAfterEpoch
+        ]
+
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+
+    ]
+       
+    # Parameter values for the reader
+    reader=[
+      # reader to use
+      readerType=HTKMLFReader
+      readMethod=blockRandomize
+      frameMode=false
+      Truncated=true
+      nbruttsineachrecurrentiter=10
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+		dim=123
+	    scpFile=$DataFolder$\timit_train.scp.fbank.fullpath.rnn
+
+      ]
+
+      labels=[
+	    mlfFile=$DataFolder$\trans_align_state.mlf.dbn
+        #labelMappingFile=<statelist path goes here>
+        labelDim=183
+    	labelType=Category
+      ]
+    ]
+    cvReader=[
+      # reader to use
+      readerType=HTKMLFReader
+      readMethod=blockRandomize
+      frameMode=false
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+		dim=123
+	    scpFile=$DataFolder$\timit_dev.scp.fbank.fullpath.rnn
+      ]
+
+      labels=[
+        mlfFile=$DataFolder$\trans_eval_align_state.mlf.dbn
+        labelDim=183
+    	labelType=Category
+      ]
+    ]
+
+]

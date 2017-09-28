@@ -10,16 +10,18 @@
 #include "DataReader.h"
 #include "ReaderShim.h"
 #include "CNTKTextFormatReader.h"
-#include "HeapMemoryProvider.h"
 #include "StringUtil.h"
+#include "V2Dependencies.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 // TODO: Memory provider should be injected by SGD.
 
 auto factory = [](const ConfigParameters& parameters) -> ReaderPtr
 {
-    return std::make_shared<CNTKTextFormatReader>(std::make_shared<HeapMemoryProvider>(), parameters);
+    return std::make_shared<CNTKTextFormatReader>(parameters);
 };
 
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)
@@ -34,7 +36,7 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
 // A factory method for creating text deserializers.
-extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool)
+extern "C" DATAREADER_API bool CreateDeserializer(DataDeserializerPtr& deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool primary)
 {
     string precision = deserializerConfig.Find("precision", "float");
     if (!AreEqualIgnoreCase(precision, "float") && !AreEqualIgnoreCase(precision, "double"))
@@ -46,9 +48,9 @@ extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializ
     if (type == L"CNTKTextFormatDeserializer")
     {
         if (precision == "float")
-            *deserializer = new TextParser<float>(corpus, TextConfigHelper(deserializerConfig));
+            deserializer = make_shared<TextParser<float>>(corpus, TextConfigHelper(deserializerConfig), primary);
         else // double
-            *deserializer = new TextParser<double>(corpus, TextConfigHelper(deserializerConfig));
+            deserializer = make_shared<TextParser<double>>(corpus, TextConfigHelper(deserializerConfig), primary);
     }
     else
         InvalidArgument("Unknown deserializer type '%ls'", type.c_str());
@@ -58,4 +60,4 @@ extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializ
 }
 
 
-}}}
+}

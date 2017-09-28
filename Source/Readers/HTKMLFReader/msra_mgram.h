@@ -92,7 +92,7 @@ static inline double invertlogprob(double logP)
 // compare function to allow char* as keys (without, unordered_map will correctly
 // compute a hash key from the actual strings, but then compare the pointers
 // -- duh!)
-struct less_strcmp : public binary_function<const char *, const char *, bool>
+struct less_strcmp : public std::binary_function<const char *, const char *, bool>
 { // this implements operator<
     bool operator()(const char *const &_Left, const char *const &_Right) const
     {
@@ -102,7 +102,7 @@ struct less_strcmp : public binary_function<const char *, const char *, bool>
 
 class CSymbolSet : public std::unordered_map<const char *, int, std::hash<const char *>, less_strcmp>
 {
-    vector<const char *> symbols; // the symbols
+    std::vector<const char *> symbols; // the symbols
 
     CSymbolSet(const CSymbolSet &);
     CSymbolSet &operator=(const CSymbolSet &);
@@ -149,7 +149,7 @@ public:
         {
             int id = (int) symbols.size();
             symbols.push_back(p); // we own the memory--remember to free it
-            insert(make_pair(p, id));
+            insert(std::make_pair(p, id));
             return id;
         }
         catch (...)
@@ -167,11 +167,11 @@ public:
     }
 
     // overloads to be compatible with C++ strings and CSymMap
-    int sym2existingId(const string &key) const
+    int sym2existingId(const std::string &key) const
     {
         return (*this)[key.c_str()];
     }
-    int sym2id(const string &key)
+    int sym2id(const std::string &key)
     {
         return (*this)[key.c_str()];
     }
@@ -387,7 +387,7 @@ class mgram_map
         {
             if (id < 0)
                 return nindex;
-            index_t i;
+
             if (level1nonsparse)
                 i = (index_t) id;
             else // sparse: use a look-up table
@@ -404,7 +404,7 @@ class mgram_map
         const int24_vector &ids_m1 = ids[m + 1];
         while (beg < end)
         {
-            index_t i = (beg + end) / 2;
+            i = (beg + end) / 2;
             int v = ids_m1[i];
             if (id == v)
                 return i; // found it
@@ -475,14 +475,14 @@ public:
     // swap --used e.g. in merging
     void swap(mgram_map &other)
     {
-        ::swap(M, other.M);
+        std::swap(M, other.M);
         firsts.swap(other.firsts);
         ids.swap(other.ids);
-        ::swap(level1nonsparse, other.level1nonsparse);
+        std::swap(level1nonsparse, other.level1nonsparse);
         level1lookup.swap(other.level1lookup);
         w2id.swap(other.w2id);
         id2w.swap(other.id2w);
-        ::swap(idmax, other.idmax);
+        std::swap(idmax, other.idmax);
     }
 
     // --- id mapping
@@ -836,11 +836,11 @@ public:
     {
         const std::vector<int> &wrank;             // assigns a rank to each w
         const char *i;                             // hide coord::i against accidental access
-        std::vector<std::vector<index_t>> indexes; // coord::i <- indexes[m][this->i]
-        std::vector<index_t> indexbase;            // indexes[m] is indexbase[m]-based
-        inline index_t &index_at(int m, index_t i)
+        std::vector<std::vector<index_t>> indexes; // coord::i <- indexes[m2][this->i]
+        std::vector<index_t> indexbase;            // indexes[m2] is indexbase[m2]-based
+        inline index_t &index_at(int m2, index_t i2)
         {
-            return indexes[m][i - indexbase[m]];
+            return indexes[m2][i2 - indexbase[m2]];
         }
         std::vector<std::pair<int, int>> sortTemp; // temp for creating indexes
         void operator=(const reordering_iterator &);
@@ -881,10 +881,10 @@ public:
                 sortTemp.resize(end - beg);
                 foreach_index (k, sortTemp)
                 {
-                    index_t i = beg + k;
-                    int id = map.ids[m][i];
+                    index_t i2 = beg + k;
+                    int id = map.ids[m][i2];
                     int w = map.id2w[id];
-                    sortTemp[k] = std::make_pair(wrank[w], i);
+                    sortTemp[k] = std::make_pair(wrank[w], i2);
                 }
                 std::sort(sortTemp.begin(), sortTemp.end());
                 // remember sorted i's
@@ -1022,7 +1022,7 @@ public:
         }
         // id mapping
         // user-provided w->id map
-        ::swap(w2id, userToLMSymMap);
+        std::swap(w2id, userToLMSymMap);
         // reverse map
         id2w.assign(maxid() + 1, nindex);
         foreach_index (w, w2id)
@@ -1268,7 +1268,7 @@ private:
     std::wstring filename; // input filename
     struct SYMBOL
     {
-        string symbol; // token
+        std::string symbol; // token
         int id;        // numeric id in LM space (index of word read)
         bool operator<(const SYMBOL &other) const
         {
@@ -1318,7 +1318,7 @@ private:
     {
         return p;
     }
-    static const char *const_char_ptr(const string &s)
+    static const char *const_char_ptr(const std::string &s)
     {
         return s.c_str();
     }
@@ -1536,9 +1536,9 @@ public:
                 double thisLogP = scoreVal * ln10xLMF; // convert to natural log
 
                 bool skipEntry = false;
-                for (int n = 1; n <= m; n++)
+                for (int n2 = 1; n2 <= m; n2++)
                 {
-                    const char *tok = tokens[n];
+                    const char *tok = tokens[n2];
                     // map to id
                     int id;
                     if (m == 1) // unigram: build vocab table
@@ -1557,8 +1557,8 @@ public:
                     }
                     else // mgram: look up word in vocabulary
                     {
-                        if (prevmgram[n] >= 0 && strcmp(idToSymbol(prevmgram[n]), tok) == 0)
-                            id = prevmgram[n]; // optimization: most of the time, it's the same
+                        if (prevmgram[n2] >= 0 && strcmp(idToSymbol(prevmgram[n2]), tok) == 0)
+                            id = prevmgram[n2]; // optimization: most of the time, it's the same
                         else
                         {
                             id = symbolToId(tok);
@@ -1566,7 +1566,7 @@ public:
                                 RuntimeError("read: mal-formed LM file, m-gram contains unknown word (%d): %ls", lineNo, pathname.c_str());
                         }
                     }
-                    mgram[n] = id;             // that's our id
+                    mgram[n2] = id;             // that's our id
                     skipEntry |= skipWord[id]; // skip entry if any token is unknown
                 }
 
@@ -1599,7 +1599,7 @@ public:
 
             skipMGram:
                 // remember current mgram for next iteration
-                ::swap(mgram, prevmgram);
+                std::swap(mgram, prevmgram);
             }
 
             // fix the symbol set -- now we can binary-search in them with symbolToId()
@@ -1710,7 +1710,7 @@ public:
     {
         // deterine sort order
         // Note: This code copies all strings twice.
-        std::vector<pair<std::string, int>> sortTemp(userSymMap.size()); // (string, w)
+        std::vector<std::pair<std::string, int>> sortTemp(userSymMap.size()); // (string, w)
         foreach_index (w, sortTemp)
             sortTemp[w] = make_pair(userSymMap[w], w);
         std::sort(sortTemp.begin(), sortTemp.end());
@@ -1955,9 +1955,9 @@ public:
     {
         return lm.logB[c];
     }
-    msra::lm::mgram_map::coord locate(const int *mgram, int m) const
+    msra::lm::mgram_map::coord locate(const int *mgram, int m2) const
     {
-        msra::lm::mgram_map::foundcoord c = lm.map[msra::lm::mgram_map::key(mgram, m)];
+        msra::lm::mgram_map::foundcoord c = lm.map[msra::lm::mgram_map::key(mgram, m2)];
         if (!c.valid_w())
             LogicError("locate: attempting to locate a non-existing history");
         return c;

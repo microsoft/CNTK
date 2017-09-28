@@ -17,8 +17,9 @@ RANDOM_OUTPUT=0
 CODE_COVERAGE=no
 FLAVORS="debug:release"
 TARGETS="cpu:gpu"
-MATH_LIBRARY="acml"
+MATH_LIBRARY="mkl"
 TESTTARGETS="cpu:gpu"
+EXTRA_CONFIGURE_OPTIONS=
 
 # parsing command line arguments:
 while [[ $# > 0 ]]
@@ -41,6 +42,7 @@ case $key in
     echo "  -cba|--clean-build-after - clean up the enlistment binaries after build"
     echo "  -rnd|--random-output-suffix - add random suffix to output directory"
     echo "  -o|--output-directory <output_dir> - specify output directory to use (by default those will be in <cntk_root>.run-<operating_system>)"
+    echo "  -x|--extra-configure-options <options> - extra options to pass to configure"
     echo "The root directory used to build and run CNTK is hosts the Scripts directory that contains this script"
     exit 1
     ;;
@@ -76,9 +78,6 @@ case $key in
     ;;
     -m|--math-library)
     case ${2,,} in
-        acml)
-        MATH_LIBRARY_OPTION="--with-acml=$ACML_PATH"
-        ;;
         mkl)
         MATH_LIBRARY_OPTION="--with-mkl=$MKL_PATH"
         ;;
@@ -98,6 +97,10 @@ case $key in
     ;;
     -cc|--code-coverage)
     CODE_COVERAGE=yes
+    ;;
+    -x|--extra-configure-options)
+    EXTRA_CONFIGURE_OPTIONS="$2"
+    shift # past argument
     ;;
     -o|--output-directory)
     OUTPUT_DIR="$2"
@@ -128,15 +131,9 @@ if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
     BIN_NAME=CNTK.exe
     BUILD_OS="windows"
 
-    if [[ $VS120COMNTOOLS == "" ]]; then
-        echo "============ Visual Studio 12.0 environment not properly setup or VS not installed ============"
+    if [[ $VS140COMNTOOLS == "" ]]; then
+        echo "============ Visual Studio 14.0 environment not properly setup or VS not installed ============"
         echo "============ Please find and run the appropriate vcvarsall.bat script ============"
-        exit 1
-    fi
-
-    if [[ $ACML_PATH == "" ]]; then
-        echo "============ ACML path not set  ============"
-        echo "============ ACML libraries are needed to successfully build CNTK ============"
         exit 1
     fi
 
@@ -179,7 +176,7 @@ fi
 echo "============ Creating CNTK temp directory in $OUTPUT_DIR ============"
 mkdir -p $OUTPUT_DIR || exit $?
 
-CONF_FILE="$OUTPUT_DIR/Simple.cntk"
+CONF_FILE="$OUTPUT_DIR/OneHidden.cntk"
 BUILD_FILE="$OUTPUT_DIR/Build"
 RUN_FILE="$OUTPUT_DIR/Result"
 
@@ -191,7 +188,7 @@ fi
 cd $CNTK_ROOT
 
 if ! [[ -f $CONF_FILE ]]; then
-    cp Examples/Other/Simple2d/Config/Simple.cntk $CONF_FILE || exit $?
+    cp Tests/EndToEndTests/Simple2d/OneHidden.cntk $CONF_FILE || exit $?
 
     # This chmod is necessary due to restrictive Cygwin interpretation of Windows permissions.
     # Cygwin interprets Windows permissions as ----rwx---, which lacks read permissions for user.
@@ -252,7 +249,7 @@ if [[ $BUILD == 1 ]]; then
                         OneBitSGDOPT=yes
                     fi
                 fi
-                ./configure --with-build-top=$BUILD_DIR ${MATH_LIBRARY_OPTION} --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --1bitsgd=$OneBitSGDOPT
+                ./configure --with-build-top=$BUILD_DIR ${MATH_LIBRARY_OPTION} --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --1bitsgd=$OneBitSGDOPT $EXTRA_CONFIGURE_OPTIONS
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
                 fi
@@ -270,8 +267,8 @@ fi
 if [[ $RUN == 1 ]]; then
 
     cd $PREFIX_DIR
-    echo "============ cp Examples/Other/Simple2d/Config/Simple.cntk $CONF_FILE  ============"
-    echo "============ cd $CNTK_ROOT/Examples/Other/Simple2d/Data  ============"
+    echo "============ cp Tests/EndToEndTests/Simple2d/OneHidden.cntk $CONF_FILE  ============"
+    echo "============ cd $CNTK_ROOT/Tests/EndToEndTests/Simple2d/Data  ============"
 
     for FLAVOR in "${flavorArray[@]}"
     do
@@ -319,7 +316,7 @@ if [[ $RUN == 1 ]]; then
                     echo "============ Running $BIN_PATH configFile=$CONF_FILE for $TARGET/$FLAVOR (on $TESTTARGET) ============"
                 fi
                 echo "============ output in ($OUT_FILE) ============"
-                cd $CNTK_ROOT/Examples/Other/Simple2d/Data
+                cd $CNTK_ROOT/Tests/EndToEndTests/Simple2d/Data
                 rm -rf "$OUTPUT_DIR/Models"
                 if [[ $OS == "Windows_NT" ]]; then
                     # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.

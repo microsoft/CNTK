@@ -33,15 +33,15 @@ public:
     virtual void UnquantizeAsync(QuantizedMatrix<ElemType>& inQMatrix, Matrix<ElemType>& outMatrix, bool add = false) = 0;
     virtual void WaitUnquantizeAsyncDone() = 0;
 
+    int GetDeviceId() const
+    {
+        return m_deviceId;
+    }
+
 protected:
     MatrixQuantizerImpl(int deviceId)
         : m_deviceId(deviceId)
     {
-    }
-
-    int GetDeviceId() const
-    {
-        return m_deviceId;
     }
 
 private:

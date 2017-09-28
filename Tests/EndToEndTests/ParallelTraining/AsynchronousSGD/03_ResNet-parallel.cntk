@@ -1,0 +1,145 @@
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
+#       Please find updated samples on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+makeMode = true
+RootDir = "."
+
+configName = "asgd"
+minibatch = 128
+epochSize = 5
+parallelizationMethod = "DataParallelASGD"
+asyncBuffer = "true"
+
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$"
+OutputDir = "$RootDir$/Output-$configName$"
+ModelDir = "$OutputDir$/Models"
+
+ndlMacros = "$ConfigDir$/Macros.ndl"
+
+precision = "float"
+DeviceId = 0
+# To run against multiple GPUs use this:
+# Device = "auto"
+imageLayout = "cudnn"
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
+prefetch = "true"
+parallelTrain = "false"
+
+command = Train
+
+stderr = "$OutputDir$/Asgd_ResNet"
+traceLevel = 1
+
+Proj16to32Filename = "$ConfigDir$/16to32.txt"
+Proj32to64Filename = "$ConfigDir$/32to64.txt"
+
+Train = [
+    action = "train"
+    modelPath = "$ModelDir$/ASGD_Resnet.model"
+
+     NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/03_ResNet.ndl"
+    ]
+    
+    SGD = [
+        epochSize = 0
+        minibatchSize = $minibatch$
+        # Note that learning rates are 10x more than in the paper due to a different
+        # momentum update rule in CNTK: v{t + 1} = lr*(1 - momentum)*g{t + 1} + momentum*v{t}
+        learningRatesPerSample = 0.004*80:0.0004*40:0.00004
+        momentumPerMB = 0
+        maxEpochs = $epochsize$
+        L2RegWeight = 0.0001
+        dropoutRate = 0
+        perfTraceLevel = 0
+        
+        firstMBsToShowResult = 1
+        numMBsToShowResult = 10
+
+        ParallelTrain = [
+            parallelizationMethod = $parallelizationMethod$
+            distributedMBReading = "true"
+            parallelizationStartEpoch = 1
+            DataParallelSGD = [
+                gradientBits = 32
+                useBufferedAsyncGradientAggregation = $asyncBuffer$
+            ]
+            ModelAveragingSGD = [
+                blockSizePerWorker = 128
+            ]
+            DataParallelASGD = [
+                syncPeriod = 128
+                usePipeline = $asyncBuffer$
+            ]
+        ]
+    ]
+    
+    reader = [
+        readerType = "ImageReader"
+        file = "$DataDir$/train_map.txt"
+        randomize = "auto"
+        features = [
+            width = 32
+            height = 32
+            channels = 3
+            cropType = "RandomSide"
+            sideRatio = 0.8
+            jitterType = "UniRatio"
+            interpolations = "linear"
+            meanFile = "$DataDir$/CIFAR-10_mean.xml"
+        ]
+        labels = [
+            labelDim = 10
+        ]
+    ]
+
+    cvReader = [
+        readerType = "ImageReader"
+        file = "$DataDir$/test_map.txt"
+        randomize = "none"
+        features = [
+            width = 32
+            height = 32
+            channels = 3
+            cropType = "Center"
+            sideRatio = 1
+            jitterType = "UniRatio"
+            interpolations = "linear"
+            meanFile = "$DataDir$/CIFAR-10_mean.xml"
+        ]
+        labels = [
+            labelDim = 10
+        ]
+    ]    
+]
+
+Test = [
+    action = "test"
+    modelPath = "$ModelDir$/03_ResNet"
+    # Set minibatch size for testing.
+    minibatchSize = 256
+
+    reader = [
+        readerType = "ImageReader"
+        file = "$DataDir$/cifar-10-batches-py/test_map.txt"
+        randomize = "none"
+        features = [
+            width = 32
+            height = 32
+            channels = 3
+            cropType = "Center"
+            sideRatio = 1
+            jitterType = "UniRatio"
+            interpolations = "linear"
+            meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
+        ]
+        labels = [
+            labelDim = 10
+        ]
+    ]    
+]

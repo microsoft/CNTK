@@ -11,7 +11,12 @@
 #include <intrin.h> // for intrinsics
 #endif
 #ifdef __unix__
+#if !defined(__aarch64__)
 #include <x86intrin.h>
+#else
+#define _mm_free(p) free(p)
+#define _mm_malloc(a, b) malloc(a)
+#endif
 #endif
 
 namespace msra { namespace math {
@@ -26,6 +31,155 @@ namespace msra { namespace math {
 // load/store: (add this)
 // newer ones: (seems no single list available)
 // ===========================================================================
+
+// The code in this file implements a float4 vector based on the SSE intrinsics available on Intel platforms.
+// Since we don't have SSE on ARM64 (NEON has similar functionality but is not identical) we cannot
+// use the SSE implementation on ARM64.
+// TODO: In the future, we should provide a NEON based implementation instead.
+#if defined(__aarch64__)
+typedef struct __m128_t
+{
+    float f[4];
+}__m128;
+
+static __m128 ZERO_M128 = {0,0,0,0};
+
+static __m128 _mm_setzero_ps()
+{
+    return ZERO_M128;
+}
+static void _mm_store_ss(float *a, const __m128 &b)
+{
+    *a = b.f[0];
+}
+static __m128 _mm_load1_ps(const float *a)
+{
+    __m128 result = {(float)*a, (float)*a, (float)*a, (float)*a};
+    return result;
+}
+static __m128 _mm_sub_ps(const __m128 &a, const __m128 &b)
+{
+    __m128 result =  {
+      a.f[0] - b.f[0],
+      a.f[1] - b.f[1],
+      a.f[2] - b.f[2],
+      a.f[3] - b.f[3] };
+
+    return result;
+}
+static __m128 _mm_and_ps(const __m128 &a, const __m128 &b)
+{
+    __m128 result =  {
+      (float)((int)(a.f[0]) & (int)(b.f[0])),
+      (float)((int)(a.f[1]) & (int)(b.f[1])),
+      (float)((int)(a.f[2]) & (int)(b.f[2])),
+      (float)((int)(a.f[3]) & (int)(b.f[3])) };
+
+    return result;
+}
+static __m128 _mm_or_ps(const __m128 &a, const __m128 &b)
+{
+    __m128 result =  {
+      (float)((int)(a.f[0]) | (int)(b.f[0])),
+      (float)((int)(a.f[1]) | (int)(b.f[1])),
+      (float)((int)(a.f[2]) | (int)(b.f[2])),
+      (float)((int)(a.f[3]) | (int)(b.f[3])) };
+
+    return result;
+}
+static __m128 _mm_add_ps(const __m128 &a, const __m128 &b)
+{
+    __m128 result =  {
+      a.f[0] + b.f[0],
+      a.f[1] + b.f[1],
+      a.f[2] + b.f[2],
+      a.f[3] + b.f[3] };
+
+    return result;
+}
+static __m128 _mm_mul_ps(const __m128 &a, const __m128 &b)
+{
+    __m128 result =  {
+      a.f[0] * b.f[0],
+      a.f[1] * b.f[1],
+      a.f[2] * b.f[2],
+      a.f[3] * b.f[3] };
+
+    return result;
+}
+static __m128 _mm_div_ps(const __m128 &a, const __m128 &b)
+{
+    __m128 result =  {
+      a.f[0] / b.f[0],
+      a.f[1] / b.f[1],
+      a.f[2] / b.f[2],
+      a.f[3] / b.f[3] };
+
+    return result;
+}
+static __m128 _mm_hadd_ps(const __m128 &a, const __m128 &b)
+{
+    __m128 result =  {
+      a.f[0] + a.f[1],
+      a.f[2] + a.f[3],
+      b.f[0] + b.f[1],
+      b.f[2] + b.f[3] };
+
+    return result;
+}
+static __m128 _mm_cmpge_ps(const __m128 &a, const __m128 &b)
+{
+    __m128 result =  {
+      a.f[0] >= b.f[0] ? 1.0f : 0.0f,
+      a.f[1] >= b.f[1] ? 1.0f : 0.0f,
+      a.f[2] >= b.f[2] ? 1.0f : 0.0f,
+      a.f[3] >= b.f[3] ? 1.0f : 0.0f };
+
+    return result;
+}
+static __m128 _mm_cmple_ps(const __m128 &a, const __m128 &b)
+{
+    __m128 result =  {
+      a.f[0] <= b.f[0] ? 1.0f : 0.0f,
+      a.f[1] <= b.f[1] ? 1.0f : 0.0f,
+      a.f[2] <= b.f[2] ? 1.0f : 0.0f,
+      a.f[3] <= b.f[3] ? 1.0f : 0.0f };
+
+    return result;
+}
+
+#define _MM_TRANSPOSE4_PS( c1, c2, c3, c4 ) \
+{ \
+    float4 t1, t2, t3, t4; \
+ \
+    t1.v.f[0] = c1.v.f[0]; \
+    t1.v.f[1] = c2.v.f[0]; \
+    t1.v.f[2] = c3.v.f[0]; \
+    t1.v.f[3] = c4.v.f[0]; \
+ \
+    t2.v.f[0] = c1.v.f[1]; \
+    t2.v.f[1] = c2.v.f[1]; \
+    t2.v.f[2] = c3.v.f[1]; \
+    t2.v.f[3] = c4.v.f[1]; \
+ \
+    t3.v.f[0] = c1.v.f[2]; \
+    t3.v.f[1] = c2.v.f[2]; \
+    t3.v.f[2] = c3.v.f[2]; \
+    t3.v.f[3] = c4.v.f[2]; \
+ \
+    t4.v.f[0] = c1.v.f[3]; \
+    t4.v.f[1] = c2.v.f[3]; \
+    t4.v.f[2] = c3.v.f[3]; \
+    t4.v.f[3] = c4.v.f[3]; \
+ \
+    c1 = t1; \
+    c2 = t2; \
+    c3 = t3; \
+    c4 = t4; \
+}
+
+#define _mm_prefetch(a, b) 
+#endif
 
 class float4
 {

@@ -1,0 +1,39 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# Copy the test data to the test run directory
+TestDataDir=$TEST_RUN_DIR/TestData
+mkdir $TestDataDir
+cp -R $TEST_DIR/../../../../Tests/EndToEndTests/Simple2d/Data/SimpleDataTrain_cntk_text.txt $TestDataDir || exit $?
+
+# Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
+[ "$TEST_DEVICE" == "cpu" ] && export CUDA_VISIBLE_DEVICES=-1
+
+pushd $TestDataDir
+
+if [ "$OS" == "Windows_NT" ]; then
+    RunDir=$(cygpath -aw $RunDir)
+fi 
+
+LogPath=$RunDir/v2library.log
+Instances=2
+
+if [ "$OS" == "Windows_NT" ]; then
+  TestBinaryPath=$(cygpath -aw $TEST_BIN_DIR/V2LibraryEndToEndTests.exe)
+  run "$MPI_BINARY" -n $Instances -l $TestBinaryPath Distribution $LogPath
+else
+  TestBinaryPath=$TEST_BIN_DIR/V2LibraryEndToEndTests
+  run "$MPI_BINARY" -n $Instances $TestBinaryPath Distribution $LogPath
+fi
+
+sed 's/^/MPI Rank 0: /' "$LogPath"0
+sed 's/^/MPI Rank 1: /' "$LogPath"1
+
+ExitCode=$?
+
+# Delete the test data
+popd
+rm -rf $TestDataDir
+
+exit $ExitCode

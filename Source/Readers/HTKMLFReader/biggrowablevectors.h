@@ -137,9 +137,9 @@ public:
         return this->getblock(t)[this->getblockt(t)];
     } // get an element
 
-    void resize(const size_t n)
+    void resize(const size_t n2)
     {
-        this->resize_without_commit(n);
+        this->resize_without_commit(n2);
         foreach_index (i, this->blocks)
             if (this->blocks[i].get() == NULL)
                 this->blocks[i].reset(new std::vector<ELEMTYPE>(this->elementsperblock));

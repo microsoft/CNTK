@@ -1,0 +1,322 @@
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
+#       Please find updated samples on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+NdlDir=$ExpDir$/ndl
+DeviceNumber=$DeviceNumber$
+stderr=$ExpDir$/log/$logFile$
+command=$action$
+
+precision=float
+
+TrainDNN=[
+    action=trainRNN
+    modelPath=$ExpDir$/$modelName$
+
+    # deviceId=-1 for CPU, >=0 for GPU devices 
+    deviceId=$DeviceNumber$
+    traceLevel=1
+
+    NDLNetworkBuilder=[
+        ndlMacros=$NdlDir$/default_macros.ndl	
+        networkDescription=$ndlfile$
+    ]
+
+
+    SGD=[
+        epochSize=0         
+        minibatchSize=256
+        #learningRatesPerMB=0.1:1
+        learningRatesPerMB=0.1:1
+        momentumPerMB=0:0.9
+        dropoutRate=0.0
+        maxEpochs=30
+        numMBsToShowResult=100
+    
+
+        #settings for Auto Adjust Learning Rate
+        AutoAdjust=[
+            reduceLearnRateIfImproveLessThan=0
+            loadBestModel=true
+            increaseLearnRateIfImproveMoreThan=1000000000
+            learnRateDecreaseFactor=0.5
+            autoAdjustLR=AdjustAfterEpoch
+            learnRateAdjustInterval=1
+        ]
+
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+
+    ]
+       
+    # Parameter values for the reader
+    reader=[
+      # reader to use
+      readerType=HTKMLFReader
+      readMethod=blockRandomize
+      frameMode=true
+      Truncated=false
+      nbruttsineachrecurrentiter=1
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+    	dim=$featDim$
+        scpFile=$inputFeat$
+      ]
+
+      labels=[
+     	mlfFile=$trainMLF$
+        labelDim=$labelDim$
+	    labelMappingFile=$labelMapping$
+      ]
+    ]
+    cvReader=[
+      # reader to use
+      readerType=HTKMLFReader
+      readMethod=blockRandomize
+      frameMode=true
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+    	dim=$featDim$
+	    scpFile=$cvInputFeat$
+      ]
+
+      labels=[
+     	mlfFile=$trainMLF$
+        labelDim=$labelDim$
+
+    	labelMappingFile=$labelMapping$
+      ]
+    ]
+
+]
+
+TrainLSTM=[
+    action=trainRNN
+    modelPath=$ExpDir$/$modelName$
+
+    # deviceId=-1 for CPU, >=0 for GPU devices 
+    deviceId=$DeviceNumber$
+    traceLevel=1
+    NDLNetworkBuilder=[
+        ndlMacros=$NdlDir$/default_macros.ndl	
+        networkDescription=$ndlfile$
+    ]
+
+
+    SGD=[
+        epochSize=0         
+        minibatchSize=10
+        #learningRatesPerMB=0.1:1
+        learningRatesPerMB=0.1:1
+        momentumPerMB=0:0.9
+        dropoutRate=0.0
+        maxEpochs=30
+        numMBsToShowResult=100
+    
+
+        #settings for Auto Adjust Learning Rate
+        AutoAdjust=[
+            reduceLearnRateIfImproveLessThan=0
+            loadBestModel=true
+            increaseLearnRateIfImproveMoreThan=1000000000
+            learnRateDecreaseFactor=0.5
+            autoAdjustLR=AdjustAfterEpoch
+            learnRateAdjustInterval=1
+        ]
+
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+
+    ]
+       
+    # Parameter values for the reader
+    reader=[
+      # reader to use
+      readerType=HTKMLFReader
+      readMethod=blockRandomize
+      frameMode=false
+      Truncated=true
+      nbruttsineachrecurrentiter=10
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+    	dim=$featDim$
+        scpFile=$inputFeat$
+      ]
+
+      labels=[
+     	mlfFile=$trainMLF$
+        labelDim=$labelDim$
+	    labelMappingFile=$labelMapping$
+      ]
+    ]
+    cvReader=[
+      # reader to use
+      readerType=HTKMLFReader
+      readMethod=blockRandomize
+      frameMode=false
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+    	dim=$featDim$
+	    scpFile=$cvInputFeat$
+      ]
+
+      labels=[
+     	mlfFile=$trainMLF$
+        labelDim=$labelDim$
+
+    	labelMappingFile=$labelMapping$
+      ]
+    ]
+
+]
+
+TrainPACRNN=[
+    action=trainRNN
+    modelPath=$ExpDir$/$modelName$
+
+    # deviceId=-1 for CPU, >=0 for GPU devices 
+    deviceId=$DeviceNumber$
+    traceLevel=1
+
+    NDLNetworkBuilder=[
+#        ndlMacros=$NdlDir$/default_macros.ndl	
+        networkDescription=$ndlfile$
+    ]
+
+
+    SGD=[
+        epochSize=0         
+        minibatchSize=20
+        #learningRatesPerMB=0.1:1
+        learningRatesPerMB=0.5:0.5
+        momentumPerMB=0.0:0.9
+        dropoutRate=0.0
+        maxEpochs=30
+        numMBsToShowResult=100
+    
+
+        #settings for Auto Adjust Learning Rate
+        AutoAdjust=[
+            reduceLearnRateIfImproveLessThan=0
+            loadBestModel=true
+            increaseLearnRateIfImproveMoreThan=1000000000
+            learnRateDecreaseFactor=0.5
+            autoAdjustLR=AdjustAfterEpoch
+            learnRateAdjustInterval=1
+        ]
+
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+
+    ]
+       
+    # Parameter values for the reader
+    reader=[
+      # reader to use
+      readerType=HTKMLFReader
+      readMethod=blockRandomize
+      frameMode=false
+      Truncated=true
+      nbruttsineachrecurrentiter=10
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+	    dim=$featDim$
+        scpFile=$inputFeat$
+      ]
+
+      labels=[
+     	mlfFile=$trainMLF$
+        labelDim=$labelDim$
+	    labelMappingFile=$labelMapping$
+      ]
+      statelabels=[
+	    mlfFile=$phnLabel$
+        labelMappingFile=$phnMapping$
+        labelDim=$phnDim$
+    	labelType=Category
+      ]
+
+    ]
+    cvReader=[
+      # reader to use
+      readerType=HTKMLFReader
+      readMethod=blockRandomize
+      frameMode=false
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+    	dim=$featDim$
+	    scpFile=$cvInputFeat$
+      ]
+
+      labels=[
+     	mlfFile=$trainMLF$
+        labelDim=$labelDim$
+
+    	labelMappingFile=$labelMapping$
+      ]
+      statelabels=[
+	    mlfFile=$phnLabel$
+        labelMappingFile=$phnMapping$
+        labelDim=$phnDim$
+    	labelType=Category
+      ]
+
+
+    ]
+
+]
+
+
+write=[
+    action=write
+    modelPath=$modelName$
+    outputNodeNames=ScaledLogLikelihood
+
+    # deviceId=-1 for CPU, >=0 for GPU devices 
+    deviceId=$DeviceNumber$
+    traceLevel=1
+
+    printValues=true
+      
+    reader=[
+      # reader to use
+      readerType=KaldiReader
+      readMethod=blockRandomize
+      frameMode=false
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+	    dim=$featDim$
+	    scpFile=$inputSCP$
+      ]
+
+    ]
+    writer=[
+      # reader to use
+      writerType=KaldiWriter
+      readMethod=blockRandomize
+      frameMode=false
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      ScaledLogLikelihood=[
+        dim=$labelDim$
+        Kaldicmd="ark:-"
+	    scpFile=$outputSCP$
+      ]
+    ]
+
+]

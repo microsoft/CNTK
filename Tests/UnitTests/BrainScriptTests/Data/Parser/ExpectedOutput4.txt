@@ -1,0 +1,25 @@
+ []
+ do =
+  (
+   Print
+   ()
+    new StringFunction
+     []
+      arg =
+       *
+        x
+        y
+
+      how =
+       '.2'
+      what =
+       'Format'
+      x =
+       13
+      y =
+       42
+
+
+
+
+

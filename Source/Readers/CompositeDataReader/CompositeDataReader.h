@@ -9,14 +9,14 @@
 #include <string>
 #include <future>
 #include "DataReader.h"
-#include "Reader.h"
+#include "ReaderBase.h"
 #include "Transformer.h"
 #include "TransformController.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
-class IDataDeserializer;
-typedef std::shared_ptr<IDataDeserializer> IDataDeserializerPtr;
+class DataDeserializer;
+typedef std::shared_ptr<DataDeserializer> DataDeserializerPtr;
 
 class Transformer;
 typedef std::shared_ptr<Transformer> TransformerPtr;
@@ -29,9 +29,6 @@ typedef std::shared_ptr<MemoryProvider> MemoryProviderPtr;
 
 class CorpusDescriptor;
 typedef std::shared_ptr<CorpusDescriptor> CorpusDescriptorPtr;
-
-struct StreamDescription;
-typedef std::shared_ptr<StreamDescription> StreamDescriptionPtr;
 
 struct EpochConfiguration;
 struct Minibatch;
@@ -52,27 +49,25 @@ struct Minibatch;
 // to external developers. The actual "reader developer" now has to provide deserializer(s) only.
 // TODO: Implement proper corpus descriptor.
 // TODO: Change this interface when SGD is changed.
-class CompositeDataReader : public Reader, protected Plugin
+class CompositeDataReader : public ReaderBase, protected Microsoft::MSR::CNTK::Plugin
 {
 public:
-    CompositeDataReader(const ConfigParameters& parameters, MemoryProviderPtr provider);
+    CompositeDataReader(const Microsoft::MSR::CNTK::ConfigParameters& parameters);
 
     // Describes the streams this reader produces.
-    std::vector<StreamDescriptionPtr> GetStreamDescriptions() override;
+    std::vector<StreamInformation> GetStreamDescriptions() override;
 
     // Starts a new epoch with the provided configuration
-    void StartEpoch(const EpochConfiguration& config) override;
-
-    // Reads a minibatch that contains data across all streams.
-    Minibatch ReadMinibatch() override;
+    void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) override;
 
 private:
-    void CreateDeserializers(const ConfigParameters& readerConfig);
-    void CreateTransforms(const ConfigParameters& deserializerConfig);
+    bool CreateDeserializers(const Microsoft::MSR::CNTK::ConfigParameters& readerConfig);
+    void CreateTransforms(const Microsoft::MSR::CNTK::ConfigParameters& deserializerConfig);
 
-    IDataDeserializerPtr CreateDeserializer(const ConfigParameters& readerConfig, bool primary);
-    TransformerPtr CreateTransformer(const ConfigParameters& config, const std::string& defaultModule);
+    DataDeserializerPtr CreateDeserializer(const Microsoft::MSR::CNTK::ConfigParameters& readerConfig, bool primary);
+    TransformerPtr CreateTransformer(const Microsoft::MSR::CNTK::ConfigParameters& config, const std::string& defaultModule, const std::wstring& transformerType);
 
+    bool ContainsDeserializer(const Microsoft::MSR::CNTK::ConfigParameters& readerConfig, const wstring& type);
 
     enum class PackingMode
     {
@@ -84,43 +79,14 @@ private:
     // Packing mode.
     PackingMode m_packingMode;
 
-    // Pre-fetch task.
-    std::future<Minibatch> m_prefetchTask;
-
-    // Launch type of prefetch - async or sync.
-    launch m_launchType;
-
-    // Flag indicating end of the epoch.
-    bool m_endOfEpoch;
-
-    // MBLayout of the reader. 
-    // TODO: Will be taken from the StreamMinibatchInputs.
-    MBLayoutPtr m_layout;
-
-    // Stream name to id mapping.
-    std::map<std::wstring, size_t> m_nameToStreamId;
-
-    // All streams this reader provides.
-    std::vector<StreamDescriptionPtr> m_streams;
-
     // A list of deserializers.
-    std::vector<IDataDeserializerPtr> m_deserializers;
+    std::vector<DataDeserializerPtr> m_deserializers;
 
     // A list of transformers.
     std::vector<Transformation> m_transforms;
 
-    // Sequence provider.
-    SequenceEnumeratorPtr m_sequenceEnumerator;
-
-    // TODO: Should be removed. We already have matrices on this level.
-    // Should just get the corresponding pinned memory.
-    MemoryProviderPtr m_provider;
-
     // Corpus descriptor that is shared between deserializers.
     CorpusDescriptorPtr m_corpus;
-
-    // Packer.
-    PackerPtr m_packer;
 
     // Precision - "float" or "double".
     std::string m_precision;
@@ -129,4 +95,4 @@ private:
     size_t m_truncationLength;
 };
 
-}}}
+}

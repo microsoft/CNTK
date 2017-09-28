@@ -1,0 +1,90 @@
+# ConvNet on MNIST dataset. 
+
+command = trainNetwork:testNetwork
+
+precision = "float"; traceLevel = 1 ; deviceId = "auto"
+
+rootDir = "../../.." ; dataDir = "$rootDir$/DataSets/MNIST" ;
+outputDir = "./Output" ;
+
+modelPath = "$outputDir$/Models/ConvNet_MNIST"
+#stderr = "$outputDir$/ConvNet_MNIST_bs_out"
+
+# TRAINING CONFIG
+trainNetwork = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        imageShape = 28:28:1                        # image dimensions, 1 channel only
+        labelDim = 10                               # number of distinct labels
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
+        
+        model = Sequential (
+            Scale {featScale} :
+            ConvolutionalLayer {32, (5:5), pad = true} : ReLU : 
+            MaxPoolingLayer    {(3:3), stride=(2:2)} :
+            ConvolutionalLayer {48, (3:3), pad = false} : ReLU : 
+            MaxPoolingLayer    {(3:3), stride=(2:2)} :
+            ConvolutionalLayer {64, (3:3), pad = false} : ReLU : 
+            DenseLayer         {96} : Dropout : ReLU :  
+            LinearLayer        {labelDim}
+        )
+
+        # inputs
+        features = Input {imageShape}
+        labels = Input {labelDim}
+
+        # apply model to features
+        ol = model (features)
+
+        # loss and error computation
+        ce   = CrossEntropyWithSoftmax (labels, ol)
+        errs = ClassificationError (labels, ol)
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (ol)
+    }
+
+    SGD = {
+        epochSize = 60000
+        minibatchSize = 64
+        maxEpochs = 40
+        learningRatesPerSample = 0.001*10:0.0005*10:0.0001
+        dropoutRate = 0.5
+        momentumAsTimeConstant = 0*5:1024
+        
+        numMBsToShowResult = 500
+    }
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        # See ../README.md for details on getting the data (Train-28x28_cntk_text.txt).
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        randomize = true
+        keepDataInMemory = true
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }    
+}
+
+# TEST CONFIG
+testNetwork = {
+    action = test
+    minibatchSize = 1024    # reduce this if you run out of memory
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}

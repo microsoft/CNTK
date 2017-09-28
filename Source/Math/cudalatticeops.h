@@ -29,7 +29,7 @@ namespace msra { namespace cuda {
 
 // The XXXvectorops classes must derive from vectorref<XXX>.
 
-class latticefunctionsops : protected vectorref<empty>
+class latticefunctionsops : protected vectorref<msra::lattices::empty>
 {
 protected:
     void edgealignment(const vectorref<lrhmmdef>& hmms, const vectorref<lr3transP>& transPs, const size_t spalignunitid,

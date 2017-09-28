@@ -237,8 +237,8 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         break;
     case sectionTypeLabel: // label data
     {
-        size_t elementSize = sizeof(LabelIdType);
-        dataSize = records * elementSize + sectionHeaderMin;
+        size_t elementSize2 = sizeof(LabelIdType);
+        dataSize = records * elementSize2 + sectionHeaderMin;
         auto sectionLabel = new SectionLabel(file, parentSection, filePositionNext, mappingMain, dataSize);
         SectionData dataType = sectionDataInt;
         LabelKind labelKind = labelCategory; // default
@@ -246,7 +246,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         {
             labelKind = labelRegression;
             dataType = sectionDataFloat;
-            elementSize = sizeof(ElemType);
+            elementSize2 = sizeof(ElemType);
         }
         else if (config.Match(L"labelType", L"Category"))
         {
@@ -258,7 +258,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         }
 
         // initialize the section header
-        sectionLabel->InitHeader(sectionTypeLabel, sectionName + ":Labels", dataType, (WORD) elementSize);
+        sectionLabel->InitHeader(sectionTypeLabel, sectionName + ":Labels", dataType, (WORD) elementSize2);
 
         // initialize the special label header items
         sectionLabel->SetLabelKind(labelKind);

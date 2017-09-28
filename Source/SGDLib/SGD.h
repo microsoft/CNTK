@@ -19,15 +19,23 @@
 #include <random>
 #include "Profiler.h"
 #include "MASGD.h"
-
+#include "ASGDHelper.h"
+#include <map>
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 #define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
-#define CNTK_CHECKPOINT_VERSION_2 2     
+#define CNTK_CHECKPOINT_VERSION_2 2      
 #define CURRENT_CNTK_CHECKPOINT_VERSION CNTK_CHECKPOINT_VERSION_2
 
+namespace CNTK { namespace Internal {
+    // Forward declarations.
+    class TensorBoardFileWriter;
+    typedef std::shared_ptr<TensorBoardFileWriter> TensorBoardFileWriterPtr;
+}}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+struct BestEpoch;
 
 enum class LearningRateSearchAlgorithm : int
 {
@@ -60,6 +68,7 @@ enum class ParallelizationMethod : int
     dataParallelSGD = 1,
     modelAveragingSGD = 2,
     blockMomentumSGD = 3,
+    dataParallelASGD = 4,
     modelParallelSGD = (1 << 8) // Currently unsupported
 };
 
@@ -84,14 +93,18 @@ struct RMSPropInfo
 
 struct GradientUpdateInfo
 {
-    GradientsUpdateType mType;
-    float mGaussianNoiseInjectStd;
+    GradientsUpdateType type = GradientsUpdateType::AdaGrad;
+    float gaussianNoiseInjectStd = 0.0075f;
 
-    GradientUpdateInfo()
-    {
-        mType = GradientsUpdateType::AdaGrad;
-        mGaussianNoiseInjectStd = 0.0075f;
-    }
+    // for FSAdaGrad:
+    double targetAdagradAvDenom = 1;
+    size_t varianceTimeConstant = 2 * 3600 * 100; // originally was: 2h of speech
+};
+
+struct BestEpoch
+{
+    double criterionMinValue = numeric_limits<double>::max();
+    int32_t epochIndex = -1;
 };
 
 // ---------------------------------------------------------------------------
@@ -109,6 +122,8 @@ struct SGDParams : public ScriptableObjects::Object
     SGDParams(const ScriptableObjects::IConfigRecordPtr configp);
 
     // SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
+
+    size_t GetMaxEpochs() { return m_maxEpochs; }
 
 protected:
     // learning rate per sample provided outside
@@ -179,7 +194,7 @@ protected:
     // Due to the GPU memory limitations, it is sometime not possible to hold the m_mbSize in RAM.
     // To mitigate this issue, we adopt the sub-minibatch implementation, where
     // each m_mbSize[epoch] is divided by a few sub-minibatch of which size will be no more than m_maxSamplesInRAM
-    // a forward-backward is performed for each sub-minibathch; a model update is performed after each minibatch
+    // a forward-backward is performed for each sub-minibatch; a model update is performed after each minibatch
     size_t m_numSubminiBatches;
     // alternative method to specify how to split minibatches into subminibatches
     // default is 1, which means no subminibatch is used
@@ -196,8 +211,11 @@ protected:
     bool m_gradientClippingWithTruncation;
     double m_clippingThresholdPerSample;
 
-    intargvector m_numMiniBatch4LRSearch;
+    intargvector m_numSamples4Search;
     size_t m_numBestSearchEpoch;
+
+    // Threshold size in bytes for single gradient to do packing
+    size_t m_packThresholdSizeInBytes;
 
     LearningRateSearchAlgorithm m_autoLearnRateSearchType;
 
@@ -241,6 +259,9 @@ protected:
     size_t m_firstMBsToShowResult = 0;
     int m_numMBsToCUDAProfile;
 
+    std::wstring m_tensorBoardLogDir;
+    size_t m_tensorBoardNumMBsToLogResult;
+
     bool m_doGradientCheck;
     double m_gradientCheckSigDigit;
 
@@ -253,6 +274,13 @@ protected:
 
     ParallelizationMethod m_parallelizationMethod;
     bool m_enableDistributedMBReading;
+    // indicates if we're using default value of the m_enableDistributedMBReading flag
+    // (in which case, it can potentially be overriden).
+    // This flag is only relevant for the new (V2) readers. It exist because of
+    // a shortcoming in DecimateMinibatchInPlace, which does not yet work when inputs 
+    // in the same minibatch have different layouts, which is something only V2 readers can
+    // produce. 
+    bool m_enableDistributedMBReadingNotSpecified; 
     int m_parallelizationStartEpochNum;
 
     // decide if/how often we measure and show sync performance stats (seconds spend on sync, seconds since last sync etc.) ?
@@ -262,7 +290,7 @@ protected:
     int m_syncStatsTrace;
 
     // Data parallel SGD training parameters
-    int m_numGradientBits;
+    intargvector m_numGradientBits;
     bool m_bufferedAsyncGradientAggregation;
     bool m_zeroThresholdFor1Bit;
 
@@ -277,6 +305,14 @@ protected:
     double m_L2RegWeight;
     double m_L1RegWeight;
 
+    // Parallel training related with ASGD 
+    intargvector m_nSyncSamplesPerWorker;
+    bool m_isAsyncBufferEnabled;
+    bool m_isSimulateMA;
+    AdjustLearningRateAtBeginning m_adjustLearningRateAtBeginning;
+    double m_adjustCoefficient;
+    size_t m_adjustPerMinibatches;
+
     // sequence training
     double m_hSmoothingWeight;
     double m_frameDropThresh;
@@ -286,6 +322,11 @@ protected:
     double m_seqGammarCalcWP;
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
+    
+    // decide whether should apply regularization into BatchNormalizationNode
+    // true: disable Regularization
+    // false: enable Regularization (default)
+    bool m_disableRegInBatchNormalization;
 };
 
 template <class ElemType>
@@ -312,6 +353,7 @@ public:
           // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
           m_modelPath((const wstring&) configSGD(L"modelPath")),
           m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
+          m_saveBestModelPerCriterion(configSGD(L"saveBestModelPerCriterion", false)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
           m_evalCriterionNodeName ((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
           m_traceNodeNamesReal    (configSGD(L"traceNodeNamesReal",     ConfigRecordType::Array(stringargvector()))),
@@ -338,12 +380,11 @@ public:
 
         if (m_mpi == nullptr)
             m_parallelizationMethod = ParallelizationMethod::none;
-    }
+        }
 
-    void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
+    void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
-               IDataReader* validationSetDataReader,
-               const bool makeMode = true);
+               IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint);
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader* trainSetDataReader,
                IDataReader* validationSetDataReader,
@@ -382,7 +423,7 @@ protected:
                                   const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                   StreamMinibatchInputs* inputMatrices,
                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                  std::list<Matrix<ElemType>>& smoothedGradients,
+                                  std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                   const bool learnRateInitialized,
                                   const double largestPrevLearnRatePerSample);
 
@@ -398,10 +439,11 @@ protected:
                                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                          StreamMinibatchInputs* inputMatrices,
                                          const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                         std::list<Matrix<ElemType>>& smoothedGradients,
+                                         std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                          /*out*/ EpochCriterion& epochCriterion,
                                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
-                                         std::string prefixMsg = "");
+                                         std::string prefixMsg,
+                                         const size_t maxNumOfSamples);
 
     size_t AdaptiveMinibatchSizing(ComputationNetworkPtr net,
                                    ComputationNetworkPtr refNet,
@@ -417,7 +459,7 @@ protected:
                                    const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                    StreamMinibatchInputs* inputMatrices,
                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                   std::list<Matrix<ElemType>>& smoothedGradients,
+                                   std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                    const double learningRateAdjustmentFactor);
 
     // uses a small percentage of training data of minibatch to
@@ -435,7 +477,7 @@ protected:
                                       const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                       StreamMinibatchInputs* inputMatrices,
                                       const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                      std::list<Matrix<ElemType>>& smoothedGradients,
+                                      std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize);
 
     // Attemps to compute the error signal for the whole utterance, which will
@@ -462,42 +504,38 @@ protected:
                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                          StreamMinibatchInputs* inputMatrices,
                          const std::list<ComputationNodeBasePtr>& learnableNodes,
-                         std::list<Matrix<ElemType>>& smoothedGradients,
+                         std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double>& smoothedCounts,
                          /*out*/ EpochCriterion& epochCriterion,
                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
-                         const std::string& prefixMsg = "");
+                         const std::string& prefixMsg = "",
+                         const size_t maxNumberOfSamples = SIZE_MAX,
+                         const size_t totalMBsSeenBefore = 0,
+                         ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr,
+                         const int startEpoch = 0);
 
-    void InitDistGradAgg(int numEvalNodes, int traceLevel);
+    void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
-    // UpdateWeightsS - static version of UpdateWeights()
-    static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
-                               Matrix<ElemType>& gradientValues,
-                               Matrix<ElemType>& smoothedGradient,
-                               const double learnRatePerSample,
-                               const double momentumPerSample,
-                               size_t actualMBSize,
-                               const double L2RegWeight,
-                               const double L1RegWeight,
-                               const bool needAveMultiplier,
-                               const bool useNesterovMomentum);
-
-protected:
-    // UpdateWeights - update the weights in
-    void UpdateWeights(const ComputationNodeBasePtr& node,
-                       Matrix<ElemType>& smoothedGradient,
-                       const double learnRatePerSample,
-                       const double momentumPerSample,
-                       const size_t actualMBSize,
+    // UpdateWeights() - actual weight update, implementing various update rules
+    void UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
+                       Matrix<ElemType>& smoothedGradient, double& smoothedCount,
+                       const double learnRatePerSample, const double momentumPerSample,
+                       size_t actualMBSize,
                        const double L2RegWeight, const double L1RegWeight,
                        const bool needAveMultiplier,
                        const bool useNesterovMomentum) const;
+    // return -1 if nothing exists
+    int DetermineStartEpoch(const bool makeMode);
 
+    wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false) const;
+
+protected:
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 
     void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen, // TODO: combine totalSamplesSeen and prevCriterion into a EpochCriterion type
                             const double learnRatePerSample,
                             const std::list<Matrix<ElemType>>& smoothedGradients,
+                            const std::vector<double>& smoothedCounts,
                             const double prevCriterion,
                             const size_t minibatchSize);
 
@@ -505,28 +543,26 @@ protected:
                                /*out*/ size_t& totalSamplesSeen,
                                /*out*/ double& learnRatePerSample,
                                std::list<Matrix<ElemType>>& smoothedGradients,
+                               std::vector<double>& smoothedCounts,
                                /*out*/ double& prevCriterion,
                                /*out*/ size_t& minibatchSize);
     void LoadCheckPointInfo(const size_t epochNumber,
                             /*out*/ size_t& totalSamplesSeen,
                             /*out*/ double& learnRatePerSample,
                             std::list<Matrix<ElemType>>& smoothedGradients,
+                            std::vector<double>& smoothedCounts,
                             /*out*/ double& prevCriterion,
                             /*out*/ size_t& minibatchSize);
 
     wstring GetCheckPointFileNameForEpoch(const int epoch);
-    wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
-
-    // return -1 if nothing exists
-    int DetermineStartEpoch(const bool makeMode);
 
     GradientsUpdateType GradUpdateType() const
     {
-        return m_gradType.mType;
+        return m_gradType.type;
     }
     double GradientUpdateNoiseStd() const
     {
-        return m_gradType.mGaussianNoiseInjectStd;
+        return m_gradType.gaussianNoiseInjectStd;
     }
 
 public:
@@ -540,6 +576,9 @@ public:
 protected:
     std::wstring m_modelPath;
     bool m_keepCheckPointFiles;
+    bool m_saveBestModelPerCriterion;
+    // Mapping from criterion to the best epoch on validation data set.
+    std::map<std::wstring, BestEpoch> m_criteriaBestEpoch;
 
     std::wstring m_trainCriterionNodeName;
     std::wstring m_evalCriterionNodeName;
@@ -559,20 +598,41 @@ protected:
 
 private:
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
+    std::shared_ptr<ASGDHelper<ElemType>> m_pASGDHelper;
 
     bool UsingGradientAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
     }
+
     bool UsingModelAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
                  GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
                 (epochNumber >= m_parallelizationStartEpochNum));
     }
-    bool UsingParallelTrain(size_t epochNumber) const
+
+    bool UsingAsyncGradientAggregation(size_t epochNumber)
     {
-        return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber);
+        return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD) && (epochNumber >= m_parallelizationStartEpochNum));
+    }
+
+    bool UsingParallelTrain(size_t epochNumber)
+    {
+        return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber) || UsingAsyncGradientAggregation(epochNumber);
+    }
+
+    void SynchronizeWorkers()
+    {
+        if (m_mpi != nullptr && GetParallelizationMethod() != ParallelizationMethod::dataParallelASGD)
+        {
+            m_mpi->WaitAll();
+        }
+        if (m_mpi != nullptr && GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD)
+        {
+            m_pASGDHelper->WaitAll();
+        }
+        return;
     }
 };
 

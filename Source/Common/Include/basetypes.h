@@ -31,7 +31,9 @@
 #include <mutex>
 #include <memory>
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif // NOMINMAX
 #include "Windows.h" // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
 #endif
 #if __unix__
@@ -42,8 +44,6 @@
 #include <sys/time.h>
 typedef unsigned char byte;
 #endif
-
-using namespace std; // Ugh!
 
 static inline wchar_t *GetWC(const char *c)
 {
@@ -284,10 +284,10 @@ public:
     {
         resize(n, m);
     }
-    void resize(size_t n, size_t m)
+    void resize(size_t n2, size_t m)
     {
         numcols = m;
-        fixed_vector<T>::resize(n * m);
+        fixed_vector<T>::resize(n2 * m);
     }
     size_t cols() const
     {
@@ -325,10 +325,6 @@ inline void swap(matrix<_T> &L, matrix<_T> &R) throw()
     L.swap(R);
 }
 
-// TODO: get rid of these
-typedef std::string STRING;
-typedef std::wstring WSTRING;
-typedef std::basic_string<TCHAR> TSTRING; // wide/narrow character string
 #endif
 
 // derive from this for noncopyable classes (will get you private unimplemented copy constructors)
@@ -398,7 +394,7 @@ static inline void bytereverse(T &v) throw()
     char *p = (char *) &v;
     const size_t elemsize = sizeof(v);
     for (int k = 0; k < elemsize / 2; k++) // swap individual bytes
-        swap(p[k], p[elemsize - 1 - k]);
+        std::swap(p[k], p[elemsize - 1 - k]);
 }
 
 // byte-swap an entire array

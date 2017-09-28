@@ -24,7 +24,8 @@ public:
                         : Base(deviceId, inOutT, spatial, imageLayout),
                         m_cudnn(CuDnn::Instance()),
                         m_inOutCuDnnT(GetInOutTensor(inOutT), CuDnnTensor::GetDataType<ElemType>()),
-                        m_scaleBiasCuDnnT(GetScaleBiasTensor(inOutT, spatial), CuDnnTensor::GetDataType<ElemType>())
+                        m_scaleBiasCuDnnT(GetScaleBiasTensor(inOutT, spatial), CuDnnTensor::GetDataType<ElemType>()),
+                        m_cudnnEpsilon(CUDNN_BN_MIN_EPSILON)
     {
     }
 
@@ -42,9 +43,11 @@ protected:
             InvalidArgument("cuDNN batch normalization supports tensors of max 4 dimensions.");
     }
 
-    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
-                     Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
+    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
+                     Mat& out, double epsilon, Mat& savedMean, Mat& savedInvStdDev) override
     {
+        // TODO batchSize == 1
+
         // REVIEW alexeyk: there might be a way to do this in cuDNN.
         if (blendFactor != 0 && (blendFactor != 1 || expAvgFactor > 0))
             InvalidArgument("cuDNN batch normalization engine currently supports blendTimeConstant of 0 or 1 only.");
@@ -52,34 +55,35 @@ protected:
         m_inOutCuDnnT.UpdateBatchSize(in.GetNumCols());
         cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
         // cuDNN will fail with BAD_PARAM if epsilon < CUDNN_BN_MIN_EPSILON.
-        epsilon = max(epsilon, CUDNN_BN_MIN_EPSILON);
-        // expAvgFactor == 0 && blendFactor == 1 means we are in eval mode.
-        if (expAvgFactor == 0 && blendFactor == 1)
+        m_cudnnEpsilon = max(epsilon, CUDNN_BN_MIN_EPSILON);
+        if (inferenceOnly)
         {
-            CUDNN_CALL(cudnnBatchNormalizationForwardInference(*m_cudnn, mode, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(out),
-                m_scaleBiasCuDnnT, ptr(scale), ptr(bias), ptr(runMean), ptr(runInvStdDev), epsilon));
+            assert(expAvgFactor == 0 && blendFactor == 1);
+            savedMean.Resize(0, 0);      // (these are not produced in this case)
+            savedInvStdDev.Resize(0, 0);
+            CUDNN_CALL2(cudnnBatchNormalizationForwardInference(*m_cudnn, mode, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(out),
+                                                                  m_scaleBiasCuDnnT, ptr(scale), ptr(bias), ptr(runMean), ptr(runVariance), m_cudnnEpsilon),
+                        "\nProbably hitting cuDNN limit on batch size, try reducing minibatch size");
         }
         else
         {
+            savedMean.Resize(runMean);
+            savedInvStdDev.Resize(runMean);
             CUDNN_CALL(cudnnBatchNormalizationForwardTraining(*m_cudnn, mode, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in),
-                m_inOutCuDnnT, ptr(out), m_scaleBiasCuDnnT, ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runInvStdDev),
-                epsilon, ptr(saveMean), ptr(saveInvStdDev)));
+                                                              m_inOutCuDnnT, ptr(out), m_scaleBiasCuDnnT, ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runVariance),
+                                                              m_cudnnEpsilon, ptr(savedMean), ptr(savedInvStdDev)));
         }
     }
 
-    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, const Mat& saveMean, const Mat& saveInvStdDev,
-                      Mat& scaleGrad, Mat& biasGrad) override
+    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& savedMean, const Mat& savedInvStdDev,
+                      Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad) override
     {
+        UNUSED(blendFactor);  // BUGBUG: It should be used.
         m_inOutCuDnnT.UpdateBatchSize(srcGrad.GetNumCols());
         cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
-        // REVIEW alexeyk: remove once Philly is upgraded to prod version. Also change betaParamDiff to 1 and update CNTK BN engine.
-#if CUDNN_MAJOR >= 5 || (CUDNN_MAJOR == 4 && CUDNN_PATCHLEVEL >= 7)
-        CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, &C::One, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
-            m_scaleBiasCuDnnT, ptr(scale), ptr(scaleGrad), ptr(biasGrad), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
-#else
-        CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, &C::One, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
-            m_scaleBiasCuDnnT, ptr(scale), ptr(scaleGrad), ptr(biasGrad), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
-#endif
+        // REVIEW alexeyk: change betaParamDiff to 1 and update CNTK BN engine.
+        CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, accumulateDataGrad ? &C::One : &C::Zero, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
+                                                   m_scaleBiasCuDnnT, ptr(scale), ptr(scaleGrad), ptr(biasGrad), m_cudnnEpsilon, ptr(savedMean), ptr(savedInvStdDev)));
     }
 
 private:
@@ -98,9 +102,12 @@ private:
         // even for non-spatial inputs so expand the tensor if needed.
         if (inOutT.GetRank() > 2)
             return inOutT;
-        SmallVector<size_t> v(std::max(inOutT.GetRank(), (size_t)3), 1);
-        for (size_t i = 0; i < inOutT.GetRank(); i++)
-            v[i] = inOutT[i];
+
+        const size_t outRank = 3;
+        SmallVector<size_t> v(std::max(inOutT.GetRank(), outRank), 1);
+        for (size_t i = outRank - inOutT.GetRank(), j = 0; i < outRank; i++, j++)
+            v[i] = inOutT[j];
+
         return TensorShape(v);
     }
 
@@ -121,6 +128,7 @@ private:
     CuDnn::ptr_t m_cudnn;
     CuDnnTensor m_inOutCuDnnT;
     CuDnnTensor m_scaleBiasCuDnnT;
+    double m_cudnnEpsilon;
 };
 
 template class CuDnnBatchNormEngine<float>;

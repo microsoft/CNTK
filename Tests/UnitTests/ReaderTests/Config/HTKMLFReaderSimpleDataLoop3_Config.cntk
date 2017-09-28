@@ -10,6 +10,7 @@ Simple_Test = [
     action = "write"
 
     reader = [
+        useMersenneTwisterRand = true
         readerType = "HTKMLFReader"
         readMethod = "blockRandomize"
         miniBatchMode = "partial"

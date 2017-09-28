@@ -59,7 +59,8 @@ enum MELProperty
     melPropFinalCriterion,
     melPropEvaluation,
     melPropOutput,
-    melPropRecurrent
+    melPropRecurrent,
+    melPropFreezeParameters
 };
 
 // SetGroupTag - Set the group tag on a node
@@ -316,11 +317,11 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             RuntimeError("CopyInputs requires two symbols from the same network, %s and %s belong to different networks", params[0].c_str(), params[1].c_str());
 
         ProcessNDLScript(netNdlFrom, ndlPassAll);
-        for (GenNameValue name : names)
+        for (GenNameValue name2 : names)
         {
-            auto& node = name.first;
+            auto& node = name2.first;
             std::wstring nodeName = node->NodeName();
-            std::wstring toNodeName = name.second;
+            std::wstring toNodeName = name2.second;
 
             netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName, toNodeName, CopyNodeFlags::copyNodeInputLinks);
         }
@@ -395,8 +396,16 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         MELProperty prop = melPropNull;
 #if 1   // legacy
         // legacy names for some properties
-        if      (EqualInsensitive(propName, "finalCriterion", "Criteria")) propName = "criterion";
-        else if (EqualInsensitive(propName, "eval"))                       propName = "evaluation";
+        if (EqualInsensitive(propName, "finalCriterion", "Criteria"))
+        {
+            propName = "criterion";
+            prop = melPropFinalCriterion;
+        }
+        else if (EqualInsensitive(propName, "eval"))
+        {
+            propName = "evaluation";
+            prop = melPropEvaluation;
+        }
         // legacy property that now works differently
         else if (EqualInsensitive(propName, "needGradient", "needsGradient") || EqualInsensitive(propName, "computeGradient"))
             prop = melPropParameterUpdateRequired;  // for backward compatibility
@@ -412,6 +421,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         else if (EqualInsensitive(propName, "learningRateMultiplier")) prop = melPropLearningRateMultiplier;
         else if (EqualInsensitive(propName, "output"))                 prop = melPropOutput;
         else if (EqualInsensitive(propName, "recurrent"))              prop = melPropRecurrent;
+        else if (EqualInsensitive(propName, "freezeParameters"))       prop = melPropFreezeParameters;
         else InvalidArgument("Invalid property, %s, is not supported", propName.c_str());
 
         // get the nodes
@@ -469,6 +479,18 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             case melPropRecurrent:
             {
                 // what to do here?
+                break;
+            }
+            case melPropFreezeParameters:
+            {
+                bool freeze = params[2];
+                auto freezableNode = dynamic_pointer_cast<IFreezable>(node);
+                if (freezableNode == nullptr)
+                    InvalidArgument("%ls (%ls) is not freezable.", node->GetName().c_str(), node->OperationName().c_str());
+                if (freeze)
+                {
+                    freezableNode->FreezeParameters();
+                }
                 break;
             }
             default:
@@ -591,7 +613,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::string paramPath = params[1];
 
         NetNdl<ElemType>* netNdl;
-        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(nodeName, netNdl);
 
         for (auto& pNodes : nodes)
         {

@@ -9,9 +9,10 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <deque>
 #include "Basics.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // This class represents a string registry pattern to share strings between different deserializers if needed.
 // It associates a unique key for a given string.
@@ -25,11 +26,10 @@ public:
     {}
 
     // Adds string value to the registry.
-    size_t AddValue(const TString& value)
+    void AddValue(const TString& value)
     {
         auto iter = m_values.insert(std::make_pair(value, m_indexedValues.size()));
         m_indexedValues.push_back(&((iter.first)->first));
-        return m_indexedValues.size() - 1;
     }
 
     // Tries to get a value by id.
@@ -48,12 +48,13 @@ public:
     }
 
     // Get integer id for the string value, adding if not exists.
-    size_t operator[](const TString& value)
+    size_t AddIfNotExists(const TString& value)
     {
         const auto& it = m_values.find(value);
         if (it == m_values.end())
         {
-            return AddValue(value);
+            AddValue(value);
+            return m_values[value];
         }
         return it->second;
     }
@@ -69,7 +70,8 @@ public:
     // Get string value by its integer id.
     const TString& operator[](size_t id) const
     {
-        assert(id < m_indexedValues.size());
+        if (id >= m_indexedValues.size())
+            RuntimeError("Unknown id requested");
         return *m_indexedValues[id];
     }
 
@@ -84,10 +86,10 @@ private:
     DISABLE_COPY_AND_MOVE(TStringToIdMap);
 
     std::map<TString, size_t> m_values;
-    std::vector<const TString*> m_indexedValues;
+    std::deque<const TString*> m_indexedValues;
 };
 
 typedef TStringToIdMap<std::wstring> WStringToIdMap;
 typedef TStringToIdMap<std::string> StringToIdMap;
 
-}}}
+}

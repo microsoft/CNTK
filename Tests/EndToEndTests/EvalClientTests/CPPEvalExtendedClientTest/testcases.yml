@@ -1,0 +1,93 @@
+dataDir: .
+
+tags:  
+  - bvt-i (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu')) and (flavor == 'release')
+  # This test also runs in debug mode, as the debug version of EvalDll is also included in the NuGet package.
+  - nightly-i (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu'))
+  - weekly-i (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu'))
+
+testCases:
+   Test run must be completed:
+    patterns:
+      - Evaluation complete
+
+   # Due to time limitation, the test can only train the model with 1 Epoch, so the
+   # model is not accurate enough to create correct results under some build flavors.
+   # Disable to check results for now.
+
+   #Test results Line 1:
+   #patterns:
+   # - i -- I-transport_type
+        
+   #Test results Line 2:
+   # patterns:
+   # - would -- I-transport_type
+           
+   #Test results Line 3:
+   # patterns:
+   # - like -- I-transport_type
+           
+   #Test results Line 4:
+   # patterns:
+   # - to -- I-transport_type
+           
+   #Test results Line 5:
+   # patterns:
+   # - find -- I-transport_type
+           
+   #Test results Line 6:
+   # patterns:
+   # - a -- I-transport_type
+           
+   #Test results Line 7:
+   # patterns:
+   # - flight -- I-transport_type
+           
+   #Test results Line 8:
+   # patterns:
+   # - from -- I-transport_type
+           
+   #Test results Line 9:
+   # patterns:
+   # - charlotte -- B-fromloc.airport_name
+           
+   #Test results Line 10:
+   # patterns:
+   # - to -- I-transport_type
+           
+   #Test results Line 11:
+   # patterns:
+   # - las -- B-toloc.airport_name
+           
+   #Test results Line 12:
+   # patterns:
+   # - vegas -- I-toloc.airport_name
+           
+   #Test results Line 13:
+   # patterns:
+   # - that -- I-transport_type
+           
+   #Test results Line 14:
+   # patterns:
+   # - makes -- I-transport_type
+           
+   #Test results Line 15:
+   # patterns:
+   # - a -- I-transport_type
+           
+   #Test results Line 16:
+   # patterns:
+   # - stop -- I-transport_type
+           
+   #Test results Line 17:
+   # patterns:
+   # - in -- I-transport_type
+           
+   #Test results Line 18:
+   # patterns:
+   # - st. -- B-stoploc.airport_name
+           
+   #Test results Line 19:
+   # patterns:
+   # - louis -- I-state_name
+

@@ -1,0 +1,76 @@
+# macros to include
+load = ndlMnistMacros
+
+# the actual NDL that defines the network
+run = DNN
+
+ndlMnistMacros = [
+    imageW = 28
+    imageH = 28
+    labelDim = 10
+
+    features = ImageInput(imageW, imageH, 1, imageLayout=$imageLayout$)
+    featScale = Constant(0.00390625)
+    featScaled = Scale(featScale, features)
+    labels = InputValue(labelDim)
+
+    scValue = 1
+    # Batch normalization time constant (normalizationTimeConstant). blendTimeConstant is set through .cntk file.
+    bnTimeConst = 1024
+    
+    convWScale = 10
+    convBValue = 0
+]
+
+DNN = [
+    # conv1
+    kW1 = 5
+    kH1 = 5
+    cMap1 = 16
+    hStride1 = 1
+    vStride1 = 1
+    # weight[cMap1, kW1 * kH1 * inputChannels]
+    # ConvBNReLULayer is defined in Macros.ndl
+    conv1 = ConvBNReLULayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, convWScale, convBValue, scValue, bnTimeConst)
+
+    # pool1
+    pool1W = 2
+    pool1H = 2
+    pool1hStride = 2
+    pool1vStride = 2
+    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout=$imageLayout$)
+
+    # conv2
+    kW2 = 5
+    kH2 = 5
+    cMap2 = 32
+    hStride2 = 1
+    vStride2 = 1
+    # weight[cMap2, kW2 * kH2 * cMap1]
+    conv2 = ConvBNReLULayer(pool1, cMap2, 400, kW2, kH2, hStride2, vStride2, convWScale, convBValue, scValue, bnTimeConst)
+
+    # pool2
+    pool2W = 2
+    pool2H = 2
+    pool2hStride = 2
+    pool2vStride = 2
+    pool2 = MaxPooling(conv2, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout=$imageLayout$)
+
+    h1Dim = 128
+    fcWScale = 1
+    fcBValue = 0
+    # DnnBNReLULayer is defined in Macros.ndl
+    h1 = DnnBNReLULayer(1568, h1Dim, pool2, fcWScale, fcBValue, scValue, bnTimeConst)
+    ol = DNNLayer(h1Dim, labelDim, h1, 1)
+    
+    ce = CrossEntropyWithSoftmax(labels, ol)
+    errs = ClassificationError(labels, ol)
+    
+    # Special Nodes
+    FeatureNodes = (features)
+    LabelNodes = (labels)
+    CriterionNodes = (ce)
+    EvalNodes = (errs)
+    OutputNodes = (ol)
+]
+

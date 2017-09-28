@@ -5,68 +5,101 @@
 
 #pragma once
 
-#include "StringToIdMap.h"
-#include <set>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+#include "StringToIdMap.h"
+
+namespace CNTK {
 
 // Represents a full corpus.
 // Defines which sequences should participate in the reading.
 // TODO: Extract an interface.
 class CorpusDescriptor
 {
-    bool m_includeAll;
-    std::set<size_t> m_sequenceIds;
+    // Defines which sequences should participate in the reading,
+    // djb2 algorithm from http://www.cse.yorku.ca/~oz/hash.html
+    size_t Hash(const std::string& key)
+    {
+        size_t result = 5381;
+        for (const auto& c : key)
+            result = ((result << 5) + result) ^ c;
+        return result;
+    }
 
 public:
-    CorpusDescriptor(const std::wstring& file) : m_includeAll(false)
+    bool IsNumericSequenceKeys() const
     {
-        // Add all sequence ids.
-        for (msra::files::textreader r(file); r;)
-        {
-            m_sequenceIds.insert(m_stringRegistry[r.getline()]);
-        }
+        return m_numericSequenceKeys;
     }
+
+    bool IsHashingEnabled() const
+    {
+        return m_useHash;
+    }
+
+    // Should be incremented each time the Hash() function above is modified.
+    static constexpr size_t s_hashVersion = 1;
 
     // By default include all sequences.
-    CorpusDescriptor() : m_includeAll(true)
-    {}
-
-    // Checks if the specified sequence should be used for reading.
-    bool IsIncluded(const std::string& sequenceKey)
+    CorpusDescriptor(bool numericSequenceKeys, bool useHash = false)
+        : m_numericSequenceKeys(numericSequenceKeys), m_useHash(useHash)
     {
-        if (m_includeAll)
+        if (numericSequenceKeys)
         {
-            return true;
-        }
+            if (m_useHash)
+                RuntimeError("Hashing should not be used with numeric sequence keys.");
 
-        size_t id;
-        if(!m_stringRegistry.TryGet(sequenceKey, id))
+            KeyToId = [](const std::string& key)
+            {
+                size_t id = 0;
+                int converted = sscanf_s(key.c_str(), "%" PRIu64, &id);
+                if (converted != 1)
+                    RuntimeError("Invalid numeric sequence id '%s'", key.c_str());
+                return id;
+            };
+
+            IdToKey = [](size_t id)
+            {
+                return std::to_string(id);
+            };
+        }
+        else
         {
-            return false;
+            KeyToId = [this](const std::string& key)
+            {
+                if (m_useHash)
+                    return Hash(key);
+
+                // The function has to provide a size_t unique "hash" for the input key
+                // If we see the key for the first time, we add it to the registry.
+                // Otherwise we retrieve the hash value for the key from the registry.
+                return m_keyToIdMap.AddIfNotExists(key);
+            };
+
+            IdToKey = [this](size_t id)
+            {
+                if (m_useHash)
+                    RuntimeError("Retrieving original sequence key is not supported."
+                        " Please disable hashing in configuration.");
+
+                // This will throw if the id is not present.
+                return m_keyToIdMap[id];
+            };
         }
-
-        return m_sequenceIds.find(id) != m_sequenceIds.end();
     }
 
-    // Gets the string registry
-    StringToIdMap& GetStringRegistry()
-    {
-        return m_stringRegistry;
-    }
-
-    // Gets the string registry
-    const StringToIdMap& GetStringRegistry() const
-    {
-        return m_stringRegistry;
-    }
+    std::function<size_t(const std::string&)> KeyToId;
+    std::function<std::string(size_t)> IdToKey;
 
 private:
     DISABLE_COPY_AND_MOVE(CorpusDescriptor);
+    bool m_numericSequenceKeys;
+    bool m_useHash;
 
-    StringToIdMap m_stringRegistry;
+    StringToIdMap m_keyToIdMap;
 };
 
 typedef std::shared_ptr<CorpusDescriptor> CorpusDescriptorPtr;
 
-}}}
+}

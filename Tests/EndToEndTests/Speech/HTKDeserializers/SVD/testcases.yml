@@ -1,9 +1,8 @@
 dataDir: ../../Data
 tags:
-     # running on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
-     # - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
-     # running unconditionally on every Nightly job in 'S' leg
+     # - bvt-s  (build_sku == 'gpu') and ((flavor == 'debug') ^ (device == 'cpu'))
      - nightly-s (build_sku == 'gpu')
+     - weekly-s (build_sku == 'gpu')
 
 testCases:
   CNTK Run must be completed:
@@ -20,7 +19,7 @@ testCases:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
       - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
-      - EvalErrorPrediction = {{float,tolerance=.1%}}
+      - EvalClassificationError = {{float,tolerance=.1%}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
   Per-minibatch training results must match:
@@ -28,7 +27,7 @@ testCases:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
       - CrossEntropyWithSoftmax = {{float,tolerance=.1%}}
-      - EvalErrorPrediction = {{float,tolerance=.1%}}
+      - EvalClassificationError = {{float,tolerance=.1%}}
 
   SVD decomposition output messages should match:
     patterns:

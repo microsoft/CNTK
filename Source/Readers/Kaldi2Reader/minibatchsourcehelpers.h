@@ -40,9 +40,9 @@ static size_t augmentationextent(size_t featdim /*augment from*/, size_t modeldi
     const size_t extent = windowframes / 2;         // extend each side by this
 
     if (modeldim % featdim != 0)
-        throw runtime_error("augmentationextent: model vector size not multiple of input features");
+        throw std::runtime_error("augmentationextent: model vector size not multiple of input features");
     if (windowframes % 2 == 0)
-        throw runtime_error(msra::strfun::strprintf("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowframes));
+        throw std::runtime_error(msra::strfun::strprintf("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowframes));
 
     return extent;
 }
@@ -140,7 +140,7 @@ static void augmentneighbors(const MATRIX& frames, const std::vector<char>& boun
             if (boundaryflags[t2] != 1)
                 t2++; // because that's the start/end of the utterance
         }
-        copytosubvector(frames[t2], rightextent + n, v);
+        copytosubvector(frames[t2], leftextent + n, v);
     }
 }
 

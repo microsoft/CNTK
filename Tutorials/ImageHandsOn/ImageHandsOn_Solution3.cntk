@@ -1,0 +1,105 @@
+# CNTK Configuration File for training a simple CIFAR-10 convnet.
+# During the hands-on tutorial, this will be fleshed out into a ResNet-20 model.
+
+command = TrainConvNet:Eval
+
+makeMode = false ; traceLevel = 0 ; deviceId = "auto"
+
+rootDir = "." ; dataDir  = "$rootDir$" ; modelDir = "$rootDir$/Models"
+
+modelPath = "$modelDir$/cifar10.cmf"
+
+# Training action for a convolutional network
+TrainConvNet = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        imageShape = 32:32:3
+        labelDim = 10
+
+        model (features) = {
+            MyLayer (x, depth, initValueScale) =
+            {
+                c = ConvolutionalLayer {depth, (5:5), pad=true,  ##### no activation=ReLU
+                                        initValueScale=initValueScale} (x)
+                b = BatchNormalizationLayer {spatialRank = 2} (c)
+                r = ReLU (b)   ##### now called explicitly
+                p = MaxPoolingLayer {(3:3), stride = (2:2)} (r)
+            }.p
+            featNorm = features - 128
+            p1 = MyLayer (featNorm, 32, 0.1557/256)
+            p2 = MyLayer (p1,       32, 0.2)
+            p3 = MyLayer (p2,       64, 0.2)
+            d1 = DenseLayer {64, initValueScale=1.697} (p3)
+            d1_bnr = ReLU (BatchNormalizationLayer {} (d1))  ##### added BN and explicit ReLU
+            d1_d = Dropout (d1_bnr)                          ##### d1 -> d1_bnr
+            z  = LinearLayer {10, initValueScale = 0.212} (d1_d)
+        }.z
+
+        # inputs
+        features = Input {imageShape}
+        labels   = Input {labelDim}
+
+        # apply model to features
+        z = model (features)
+
+        # connect to system
+        ce       = CrossEntropyWithSoftmax (labels, z)
+        errs     = ClassificationError     (labels, z)
+
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize = 50000
+
+        maxEpochs = 10 ; minibatchSize = 64
+        learningRatesPerSample = 0.00046875*7:0.00015625*10:0.000046875*10:0.000015625
+        momentumAsTimeConstant = 0
+        L2RegWeight = 0
+        dropoutRate = 0*1:0.5
+
+        firstMBsToShowResult = 10 ; numMBsToShowResult = 100
+    }
+
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$dataDir$/cifar-10-batches-py/train_map.txt"
+            input = {
+                features = { transforms = (
+                    { type = "Crop" ; cropType = "RandomSide" ; sideRatio = 0.8 ; jitterType = "UniRatio" } :
+                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                    { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+}
+
+# Eval action
+Eval = {
+    action = "eval"
+    minibatchSize = 16
+    evalNodeNames = errs
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$dataDir$/cifar-10-batches-py/test_map.txt"
+            input = {
+                features = { transforms = (
+                   { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                   { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+}

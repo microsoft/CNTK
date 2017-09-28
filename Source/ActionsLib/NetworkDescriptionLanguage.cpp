@@ -11,6 +11,7 @@
 #include "NDLNetworkBuilder.h"
 
 #include "ConvolutionalNodes.h"
+#include "RNNNodes.h"
 #include "DeprecatedNodes.h"
 #include "EvaluationNodes.h"
 #include "InputAndParamNodes.h"
@@ -152,23 +153,32 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     wstring nodeType = msra::strfun::utf16(p_nodeType);
     bool ret = false;
          if (EqualInsensitive(nodeType, OperationNameOf(AbsNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AcosNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AsinNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode))) ret = true;
 #ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(EqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(GreaterEqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(GreaterNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(LessEqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(LessNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(NotEqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ClassificationErrorNode), L"ErrorPrediction")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(EditDistanceErrorNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(EqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(GreaterEqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(GreaterNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ForwardBackwardNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LabelsToGraphNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LessEqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LessNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(NotEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClipNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ConvolutionNode), L"Convolve")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(CropNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(PassNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceNode), L"CosDist")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceWithNegativeSamplesNode), L"CosWithNegSamples")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(CoshNode), L"Cosh")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosineNode), L"Cos")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyWithSoftmaxNode), L"CEWithSM")) ret = true;
@@ -177,7 +187,6 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(DropoutNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(DummyCriterionNode), L"DummyCriterion")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ElementTimesNode))) ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ErrorPredictionNode), L"ClassificationError")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ExpNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(FloorNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(FutureValueNode))) ret = true;
@@ -207,8 +216,10 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarNormalizationNode), L"PerDimMVNorm")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PlusNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ReciprocalNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ReconcileDynamicAxisNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RectifiedLinearNode), L"ReLU")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ReshapeNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ROIPoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowRepeatNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowStackNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseRowStackNode))) ret = true;
@@ -218,6 +229,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SinhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SinNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput")) ret = true;
@@ -265,4 +277,5 @@ template class NDLNode<double>;
 
 template class NDLScript<float>;
 template class NDLScript<double>;
-} } }
+
+}}}

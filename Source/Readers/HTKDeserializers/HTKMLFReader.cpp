@@ -6,8 +6,8 @@
 #include "stdafx.h"
 #include "HTKMLFReader.h"
 #include "Config.h"
-#include "HTKDataDeserializer.h"
-#include "MLFDataDeserializer.h"
+#include "HTKDeserializer.h"
+#include "MLFDeserializer.h"
 #include "ConfigHelper.h"
 #include "Bundler.h"
 #include "StringUtil.h"
@@ -17,9 +17,10 @@
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+using namespace Microsoft::MSR::CNTK;
 
-std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& readerConfig)
+std::vector<DataDeserializerPtr> CreateDeserializers(const ConfigParameters& readerConfig)
 {
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
@@ -32,38 +33,38 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
         InvalidArgument("Network needs at least 1 feature specified.");
     }
 
-    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>();
+    bool useNumericSequenceKeys = readerConfig(L"useNumericSequenceKeys", false);
+    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
 
-    std::vector<IDataDeserializerPtr> featureDeserializers;
-    std::vector<IDataDeserializerPtr> labelDeserializers;
+    std::vector<DataDeserializerPtr> featureDeserializers;
+    std::vector<DataDeserializerPtr> labelDeserializers;
 
     bool primary = true;
     // The first deserializer is the driving one, it defines chunking.
     // TODO: should we make this explicit configuration parameter
     for (const auto& featureName : featureNames)
     {
-        auto deserializer = std::make_shared<HTKDataDeserializer>(corpus, readerConfig(featureName), featureName, primary);
+        auto deserializer = std::make_shared<HTKDeserializer>(corpus, readerConfig(featureName), featureName, primary);
         primary = false;
         featureDeserializers.push_back(deserializer);
     }
 
     for (const auto& labelName : labelNames)
     {
-        auto deserializer = std::make_shared<MLFDataDeserializer>(corpus, readerConfig(labelName), labelName);
+        auto deserializer = std::make_shared<MLFDeserializer>(corpus, readerConfig(labelName), labelName);
 
         labelDeserializers.push_back(deserializer);
     }
 
-    std::vector<IDataDeserializerPtr> deserializers;
+    std::vector<DataDeserializerPtr> deserializers;
     deserializers.insert(deserializers.end(), featureDeserializers.begin(), featureDeserializers.end());
     deserializers.insert(deserializers.end(), labelDeserializers.begin(), labelDeserializers.end());
 
     return deserializers;
 }
 
-HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
-    const ConfigParameters& readerConfig)
-    : m_seed(0), m_provider(provider)
+HTKMLFReader::HTKMLFReader(const ConfigParameters& readerConfig)
+    : m_seed(0)
 {
     // TODO: deserializers and transformers will be dynamically loaded
     // from external libraries based on the configuration/brain script.
@@ -105,7 +106,7 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
         LogicError("Please specify at least a single input stream.");
     }
 
-    bool cleanse = readerConfig(L"checkData", false);
+    bool cleanse = readerConfig(L"checkData", true);
     auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, cleanse);
     int verbosity = readerConfig(L"verbosity", 0);
     std::wstring readMethod = config.GetRandomizer();
@@ -113,11 +114,16 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     // TODO: this should be bool. Change when config per deserializer is allowed.
     if (AreEqualIgnoreCase(readMethod, std::wstring(L"blockRandomize")))
     {
-        m_randomizer = std::make_shared<BlockRandomizer>(verbosity, window, bundler, BlockRandomizer::DecimationMode::chunk, true /* useLegacyRandomization */);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, window, bundler, 
+            /*shouldPrefetch =*/ true,
+            /*multithreadedGetNextSequences =*/ false, // default
+            /*maxNumberOfInvalidSequences =*/ 0, // default
+            /*sampleBasedRandomizationWindow =*/ true, // default
+            GetRandomSeed(readerConfig));
     }
     else if (AreEqualIgnoreCase(readMethod, std::wstring(L"none")))
     {
-        m_randomizer = std::make_shared<NoRandomizer>(bundler);
+        m_sequenceEnumerator = std::make_shared<NoRandomizer>(bundler);
     }
     else
     {
@@ -127,11 +133,15 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     // Create output stream descriptions (all dense)
     for (auto d : deserializers)
     {
-        for (auto i : d->GetStreamDescriptions())
+        for (auto stream : d->StreamInfos())
         {
-            StreamDescriptionPtr stream = std::make_shared<StreamDescription>(*i);
-            stream->m_storageType = StorageType::dense;
-            stream->m_id = m_streams.size();
+            if (m_packingMode == PackingMode::truncated)
+            {
+                // TODO: Currently BPTT does not support sparse format as output.
+                // We always require dense.
+                stream.m_storageFormat = StorageFormat::Dense;
+            }
+            stream.m_id = m_streams.size();
             m_streams.push_back(stream);
         }
     }
@@ -147,34 +157,28 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     switch (m_packingMode)
     {
     case PackingMode::sample:
-        m_packer = std::make_shared<FramePacker>(m_provider, m_randomizer, m_streams);
+        m_packer = std::make_shared<FramePacker>(m_sequenceEnumerator, m_streams);
         break;
     case PackingMode::sequence:
-        m_packer = std::make_shared<SequencePacker>(m_provider, m_randomizer, m_streams);
+        m_packer = std::make_shared<SequencePacker>(m_sequenceEnumerator, m_streams);
         break;
     case PackingMode::truncated:
-        m_packer = std::make_shared<TruncatedBPTTPacker>(m_provider, m_randomizer, m_streams);
+        m_packer = std::make_shared<TruncatedBPTTPacker>(m_sequenceEnumerator, m_streams);
         break;
     default:
         LogicError("Unsupported type of packer '%d'.", (int)m_packingMode);
     }
 }
 
-std::vector<StreamDescriptionPtr> HTKMLFReader::GetStreamDescriptions()
+std::vector<StreamInformation> HTKMLFReader::GetStreamDescriptions()
 {
     assert(!m_streams.empty());
     return m_streams;
 }
 
-void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
+void HTKMLFReader::StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& requiredStreams)
 {
-    if (config.m_totalEpochSizeInSamples == 0)
-    {
-        RuntimeError("Epoch size cannot be 0.");
-    }
-
-
-
+    EpochConfiguration cfg = config;
     if (m_packingMode == PackingMode::truncated)
     {
         size_t minibatchSize = config.m_minibatchSizeInSamples;
@@ -189,29 +193,12 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
             size_t numParallelSequences = m_numParallelSequencesForAllEpochs[config.m_epochIndex];
             minibatchSize = numParallelSequences * truncationLength;
         }
-        
-        EpochConfiguration bpttConfig;
-        bpttConfig.m_numberOfWorkers = config.m_numberOfWorkers;
-        bpttConfig.m_workerRank = config.m_workerRank;
-        bpttConfig.m_totalEpochSizeInSamples = config.m_totalEpochSizeInSamples;
-        bpttConfig.m_epochIndex = config.m_epochIndex;
-        bpttConfig.m_minibatchSizeInSamples = minibatchSize;
-        bpttConfig.m_truncationSize = truncationLength;
 
-        m_randomizer->StartEpoch(bpttConfig);
-        m_packer->StartEpoch(bpttConfig);
+        cfg.m_minibatchSizeInSamples = minibatchSize;
+        cfg.m_truncationSize = truncationLength;
     }
-    else
-    {
-        m_randomizer->StartEpoch(config);
-        m_packer->StartEpoch(config);
-    }
+
+    ReaderBase::StartEpoch(cfg, requiredStreams);
 }
 
-Minibatch HTKMLFReader::ReadMinibatch()
-{
-    assert(m_packer != nullptr);
-    return m_packer->ReadMinibatch();
 }
-
-}}}

@@ -1,8 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
@@ -27,13 +31,11 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup>
-    <HasBoost>false</HasBoost>
-    <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
     <ImageReaderDefine Condition="$(HasOpenCv)">ENABLE_IMAGEREADER_TESTS</ImageReaderDefine>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
@@ -52,14 +54,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(OutDir)\UnitTests\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Source\Readers\CNTKTextFormatReader;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\Readers\ReaderLib;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)\Source\Readers\CNTKBinaryReader;$(SolutionDir)\Source\Readers\CNTKTextFormatReader;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\Readers\ReaderLib;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(OutDir);$(OutDir)..;$(BOOST_LIB_PATH)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);$(OutDir);$(BOOST_LIB_PATH)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
@@ -74,7 +75,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>htkmlfreader.lib;HTKDeserializers.lib;Math.lib;Common.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ReaderLibs);Cntk.Reader.HTKMLF-$(CntkComponentVersion).lib;Cntk.Deserializers.HTK-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
@@ -104,19 +105,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Common\ReaderTestHelper.h" />
+    <ClInclude Include="SequentialDeserializer.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CNTKBinaryReaderTests.cpp" />
     <ClCompile Include="CNTKTextFormatReaderTests.cpp" />
     <ClCompile Include="HTKLMFReaderTests.cpp" />
     <ClCompile Include="ImageReaderTests.cpp" />
     <ClCompile Include="ReaderLibTests.cpp" />
+    <ClCompile Include="ReaderUtilTests.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="UCIFastReaderTests.cpp" />
-    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\Indexer.cpp" />
     <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\TextParser.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -142,6 +144,10 @@
     <Text Include="Config\HTKMLFReaderSimpleDataLoop9_Config.cntk" />
     <Text Include="Config\ImageReaderSimple_Config.cntk" />
     <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.cntk" />
+    <Text Include="Control\CNTKBinaryReader\Simple_dense.txt" />
+    <Text Include="Control\CNTKBinaryReader\Simple_dense_312.txt" />
+    <Text Include="Control\CNTKBinaryReader\Simple_sparse.txt" />
+    <Text Include="Control\CNTKBinaryReader\Simple_sparse_seq.txt" />
     <Text Include="Control\CNTKTextFormatReader\100x100x3_jagged_sequences_dense_sorted.txt" />
     <Text Include="Control\CNTKTextFormatReader\100x1_1_dense.txt" />
     <Text Include="Control\CNTKTextFormatReader\100x1_2_dense.txt" />
@@ -195,6 +201,8 @@
     <Text Include="Data\CNTKTextFormatReader\MNIST_dense.txt" />
     <Text Include="Data\CNTKTextFormatReader\missing_trailing_newline.txt" />
     <Text Include="Data\CNTKTextFormatReader\Simple_dense.txt" />
+    <Text Include="Data\ImageAndTextReaderSimple_labels.txt" />
+    <Text Include="Data\ImageAndTextReaderSimple_map.txt" />
     <Text Include="Data\ImageReaderBadLabel_map.txt" />
     <Text Include="Data\ImageReaderBadMap_map.txt" />
     <Text Include="Data\ImageReaderGrayscale_map.txt" />
@@ -215,6 +223,7 @@
     <Image Include="Data\images\red.jpg" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Config\CNTKBinaryReader\test.cntk" />
     <None Include="Config\CNTKTextFormatReader\dense.cntk" />
     <None Include="Config\CNTKTextFormatReader\edge_cases.cntk" />
     <None Include="Config\CNTKTextFormatReader\sparse.cntk" />
@@ -231,6 +240,8 @@
     <None Include="Config\HTKDeserializersSimpleDataLoop8_Config.cntk" />
     <None Include="Config\HTKDeserializersSimpleDataLoop9_Config.cntk" />
     <None Include="Config\ImageAndTextReaderSimple_Config.cntk" />
+    <None Include="Config\ImageDeserializers.cntk" />
+    <None Include="Config\ImageTransforms_Config.cntk" />
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
     <None Include="Config\ImageReaderColorTransform_Config.cntk" />
@@ -239,6 +250,9 @@
     <None Include="Config\ImageReaderLabelOutOfRange_Config.cntk" />
     <None Include="Config\ImageReaderMultiView_Config.cntk" />
     <None Include="Config\ImageReaderZip_Config.cntk" />
+    <None Include="Data\CNTKBinaryReader\simple.bin" />
+    <None Include="Data\CNTKBinaryReader\sparseoutput.bin" />
+    <None Include="Data\CNTKBinaryReader\sparseseqoutput.bin" />
     <None Include="Data\images\chunk0.zip" />
     <None Include="Data\images\chunk1.zip" />
     <None Include="Data\images\simple.zip" />
@@ -250,18 +264,6 @@
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasBoost)" Text="ReaderTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
-  </Target>
-  <PropertyGroup Condition="$(HasOpenCv)">
-    <ImageReaderDependencies>$(OutDir)..\ImageReader.dll;$(OpenCvBinPath)\$(OpenCvWorld).dll</ImageReaderDependencies>
-    <ImageReaderDependencies Condition="$(UseZip)">$(ImageReaderDependencies);$(OutDir)..\zip.dll;$(OutDir)..\zlib1.dll</ImageReaderDependencies>
-  </PropertyGroup>
-  <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
-    <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\cntktextformatreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\HTKDeserializers.dll;$(OutDir)..\compositedatareader.dll;$(UnitTestDlls);$(ImageReaderDependencies);" />
-    </ItemGroup>
-    <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
-      <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
-    </Copy>
+    <Error Condition="!$(HasBoost)" Text="ReaderTests requires the Boost library to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
 </Project>

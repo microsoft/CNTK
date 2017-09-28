@@ -1,0 +1,98 @@
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+
+command = trainNetwork:testNetwork
+
+precision = "float"; traceLevel = 1 ; deviceId = "auto"
+
+rootDir = ".." ; dataDir = "$rootDir$/DataSets/MNIST" ;
+outputDir = "./Output" ;
+
+modelPath = "$outputDir$/Models/04_OneConvBN"
+#stderr = "$outputDir$/04_OneConvBN_bs_out"
+
+# TRAINING CONFIG
+trainNetwork = {
+    action = "train"
+    
+    BrainScriptNetworkBuilder = {
+        imageShape = 28:28:1                        # image dimensions, 1 channel only
+        labelDim = 10                               # number of distinct labels
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
+        
+        # define a custom layer with 5x5 convolution, batch norm, relu and 2x2 max pooling
+        ConvBnReluPoolLayer {outChannels, filterShape} = Sequential (
+            ConvolutionalLayer      {outChannels, filterShape, pad=true, bias=false} :
+            BatchNormalizationLayer {spatialRank = 2} :
+            ReLU :
+            MaxPoolingLayer         {(2:2), stride = (2:2)} 
+        )
+
+        DenseBnReluLayer {outDim} = Sequential (
+            LinearLayer             {outDim} :   
+            BatchNormalizationLayer {spatialRank = 0} : ReLU
+        )
+		
+        model = Sequential (
+            Scale {featScale} : 
+            ConvBnReluPoolLayer {16, (5:5)} : 
+            DenseBnReluLayer {64} : 
+            LinearLayer {labelDim}
+        )
+        
+        # inputs
+        features = Input {imageShape}
+        labels = Input {labelDim}
+
+        # apply model to features
+        ol = model (features)
+
+        # loss and error computation
+        ce   = CrossEntropyWithSoftmax (labels, ol)
+        errs = ClassificationError (labels, ol)
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (ol)
+    }
+
+    SGD = {
+        epochSize = 60000
+        minibatchSize = 64
+        maxEpochs = 10
+        learningRatesPerSample = 0.01*5:0.001
+        momentumAsTimeConstant = 0
+        numMBsToShowResult = 500
+    }
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        # See ../README.md for details on getting the data (Train-28x28_cntk_text.txt).
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }   
+}
+
+# TEST CONFIG
+testNetwork = {
+    action = "test"
+    minibatchSize = 1024    # reduce this if you run out of memory
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}

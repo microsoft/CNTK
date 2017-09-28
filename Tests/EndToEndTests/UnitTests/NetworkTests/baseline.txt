@@ -1,0 +1,87 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 24
+    Total Memory: 264172964 kB
+-------------------------------------------------------------------
+Running 7 test cases...
+
+About to throw exception 'Input is small to be cropped along x dimension in crop node.'
+
+About to throw exception 'Input is small to be cropped along y dimension in crop node.'
+
+About to throw exception 'Input is small to be cropped along x dimension in crop node.'
+
+About to throw exception 'Input is small to be cropped along y dimension in crop node.'
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/NetworkTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/NetworkTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/NetworkTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/NetworkTests/Data
+NDLBuilder Using CPU
+Minibatch[0]: ActualMBSize = 1
+Written to ../Output/out.txt*
+Total Samples Evaluated = 1
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/NetworkTests
+Running 4 test cases...
+
+Test module "NetworkTests" has passed with:
+  13 test cases out of 13 passed
+  75 assertions out of 75 passed
+
+  Test suite "EpochAccumulatorNodeTestSuite" has passed with:
+    3 test cases out of 3 passed
+    10 assertions out of 10 passed
+
+    Test case "EpochAccumulatorNodeTestSuite/EpochAccumulatorNodeForwardTest" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "EpochAccumulatorNodeTestSuite/EpochAccumulatorNodeMultipleForwardTest" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "EpochAccumulatorNodeTestSuite/EpochAccumulatorNodeMultipleForwardWithEpochResetTest" has passed with:
+      4 assertions out of 4 passed
+
+  Test suite "BatchNormTestSuite" has passed with:
+    5 test cases out of 5 passed
+    10 assertions out of 10 passed
+
+    Test case "BatchNormTestSuite/TestLoadingNetworkFromLegacyNDLConfig" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "BatchNormTestSuite/TestLoadingNetworkFromUpdatedNDLConfig" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "BatchNormTestSuite/TestLoadingNetworkFromLegacyLegacyNDLModel" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "BatchNormTestSuite/TestLoadingNetworkFromLegacyBSConfig" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "BatchNormTestSuite/TestLoadingNetworkFromLegacyLegacyBSModel" has passed with:
+      2 assertions out of 2 passed
+
+  Test suite "CropNodeTestSuite" has passed with:
+    3 test cases out of 3 passed
+    54 assertions out of 54 passed
+
+    Test case "CropNodeTestSuite/CropNodeValidateTest" has passed with:
+      6 assertions out of 6 passed
+
+    Test case "CropNodeTestSuite/CropNodeForwardTest" has passed with:
+      8 assertions out of 8 passed
+
+    Test case "CropNodeTestSuite/CropNodeBackwardTest" has passed with:
+      40 assertions out of 40 passed
+
+  Test suite "EditDistanceTests" has passed with:
+    1 test case out of 1 passed
+
+    Test case "EditDistanceTests/ComputeEditDistanceErrorTest" has passed
+
+  Test suite "NetworkTestSuite" has passed with:
+    1 test case out of 1 passed
+    1 assertion out of 1 passed
+
+    Test case "NetworkTestSuite/NetworkOperatorPlus" has passed with:
+      1 assertion out of 1 passed
+

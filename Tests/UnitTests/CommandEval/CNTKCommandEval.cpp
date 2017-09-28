@@ -52,7 +52,7 @@ void DoCommand(const ConfigParameters& configRoot)
     auto dataReader = make_shared<DataReader>(readerConfig);
     string strPath(modelPath.begin(), modelPath.end());
     eval.CreateNetwork(strPath);
-    dataReader->StartMinibatchLoop(mbSize, 0, epochSize);
+    dataReader->StartMinibatchLoop(mbSize, 0, inputMatrices.GetStreamDescriptions(), epochSize);
     eval.StartEvaluateMinibatchLoop(outputName);
     while (dataReader->GetMinibatch(inputMatrices))
     {

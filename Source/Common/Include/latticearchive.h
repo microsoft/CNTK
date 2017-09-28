@@ -874,7 +874,7 @@ public:
     template <typename HMMLOOKUPFUNCTION>
     void dump(FILE* f, const HMMLOOKUPFUNCTION& gethmmname) const // dump a lattice in HTK-like format
     {
-        fprintf(f, "N=%lu L=%lu\n", nodes.size(), edges.size());
+        fprintf(f, "N=%lu L=%lu\n", (unsigned long)nodes.size(), (unsigned long)edges.size());
         // foreach_index (i, nodes)
         //    fprintf (f, "I=%d\tt=%.2f\n", i, nodes[i].t * 0.01f);
         foreach_index (j, edges)
@@ -882,9 +882,9 @@ public:
             const auto& e = edges[j];
             fprintf(f, "J=%d\tS=%d\tE=%d\tts=%.2f\tte=%.2f\ta=%.3f\tl=%.8f\td=:",
                     (int) j, (int) e.S, (int) e.E, (float) nodes[e.S].t * 0.01f, (float) nodes[e.E].t * 0.01f, (float) e.a, (float) e.l);
-            const auto align = getaligninfo(j);
-            foreach_index (k, align) // e.g. d=:aa:m-ih:s+t:e,0.03:ow:e-t:m+sil,0.03:sil,0.21:
-                fprintf(f, "%s,%.2f:", gethmmname(align[k].unit), align[k].frames * 0.01f);
+            const auto align2 = getaligninfo(j);
+            foreach_index (k, align2) // e.g. d=:aa:m-ih:s+t:e,0.03:ow:e-t:m+sil,0.03:sil,0.21:
+                fprintf(f, "%s,%.2f:", gethmmname(align2[k].unit), align2[k].frames * 0.01f);
             fprintf(f, "\n");
         }
     }
@@ -1281,7 +1281,7 @@ public:
             char c;
             uint64_t offset;
 #ifdef _WIN32
-            if (sscanf_s(q, "[%I64u]%c", &offset, &c, sizeof(c)) != 1)
+            if (sscanf_s(q, "[%I64u]%c", &offset, &c, (unsigned int)sizeof(c)) != 1)
 #else
 
             if (sscanf(q, "[%" PRIu64 "]%c", &offset, &c) != 1)

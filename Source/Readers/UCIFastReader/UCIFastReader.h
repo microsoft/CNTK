@@ -131,13 +131,14 @@ public:
     {
         InitFromConfig(config);
     }
+
     virtual void Destroy();
     UCIFastReader()
     {
         fprintf(stderr, "********** DEPRECATED **********\n" 
             "UCIFastReader is no longer actively maintained.\n"
             "It is known to have defects, proceed with caution (better yet, switch to CNTKTextFormatReader)!\n"
-            "For more details please see https://github.com/Microsoft/CNTK/wiki \n");
+            "For more details please see https://docs.microsoft.com/en-us/cognitive-toolkit/Brainscript-CNTKTextFormat-Reader \n");
 
         m_pMBLayout = make_shared<MBLayout>();
         m_pMBLayout->SetUniqueAxisName(L"UCIFastReader");
@@ -180,6 +181,11 @@ public:
     void SetRandomSeed(int)
     {
         NOT_IMPLEMENTED;
+    }
+
+    size_t GetCurrentSamplePosition() override
+    {
+        return m_mbStartSample;
     }
 };
 } } }
