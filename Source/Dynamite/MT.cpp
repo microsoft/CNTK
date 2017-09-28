@@ -66,7 +66,7 @@ BinaryModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double 
     nested.insert(nested.end(), layers.begin(), layers.end());
     nested.insert(nested.end(), bns.begin(), bns.end());
     vector<Variable> buffer;
-    return Dynamite::Model({}, NameNumberedParameters(nested),
+    return BinaryModel(nested,//Dynamite::Model({}, NameNumberedParameters(nested),
     [=](const Variable& xFwd, const Variable& xBwd) mutable -> Variable
     {
         // the first layer has different inputs for forward and backward
