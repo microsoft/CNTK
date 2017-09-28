@@ -2512,7 +2512,7 @@ return fInlinedPtr;
         // TODO: ^^ if the CSE can directly redirect, then this loop ^^ is no longer needed
 
         // perform the op
-        let batchSize = ops.size();
+        let numBatchItems = ops.size();
         if (!isFree)
             m_stats.numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
@@ -2520,21 +2520,21 @@ return fInlinedPtr;
         // We count CUDA launches, assuming all args are batched and require a Gather launch.
         // If not all args require that, we err on the side of not batching. BatchNorm must always be batched.
         let numCUDALaunchesInThisOp = 1; // TODO: for Block invocations, use the #nodes; or pick a number, such as 4
-        let worthIt = batchSize * numCUDALaunchesInThisOp/*unbatched launches*/ > (numArgs + 1)/*batched launches*/ || op == PrimitiveOpType::BatchNormalization;
-        //if (batchSize > 1 && !worthIt) // TODO: remove this message once I see it happen
-        //    fprintf(stderr, "%S not worth it: %d vs. %d\n", PrimitiveOpTypeName(f0.m_op).c_str(), (int)batchSize, (int)numArgs + 1);
+        let worthIt = numBatchItems * numCUDALaunchesInThisOp/*unbatched launches*/ > (numArgs + 1)/*batched launches*/ || op == PrimitiveOpType::BatchNormalization;
+        //if (numBatchItems > 1 && !worthIt) // TODO: remove this message once I see it happen
+        //    fprintf(stderr, "%S not worth it: %d vs. %d\n", PrimitiveOpTypeName(f0.m_op).c_str(), (int)numBatchItems, (int)numArgs + 1);
 #ifdef NO_BATCHED_FORWARD
         auto doNaively = true;
 #else
         let doNaively =
             isFree ||
-            batchSize == 1 ||
+            numBatchItems == 1 ||
             !worthIt;
 #endif
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
         //        isFree ? -1 : (int)m_stats.numBatchedLaunches,
         //        doNaively ? "" : "batch-",
-        //        (int)batchSize, f0.OpName().c_str(), f0.m_outputs.front().Shape().AsString().c_str(),
+        //        (int)numBatchItems, f0.OpName().c_str(), f0.m_outputs.front().Shape().AsString().c_str(),
         //        (int)m_schedule.numBatchableOpsPending());
         if (doNaively)
         {
@@ -2627,15 +2627,15 @@ return fInlinedPtr;
             let stackIt = isTimes && outputBatchAxis == 2; // TODO: correctly consider the mapRank
             if (stackIt)
                 outputBatchAxis--; // TODO: also adjust the common input axis
-            size_t batchWidth = batchSize; // sum over dimension of the batch axis of all items
+            size_t batchSize = numBatchItems; // dimension of batch axis
             if (stackIt)
             {
                 // this is for Times only for now
-                batchWidth = 0;
+                batchSize = 0;
                 for (let& f : ops) // create the batched tensors
                 {
                     let& input = f.m_inputs.back();
-                    batchWidth += input.Shape().Dimensions().back();
+                    batchSize += input.Shape().Dimensions().back();
                 }
             }
 
@@ -2650,8 +2650,8 @@ return fInlinedPtr;
                 // allocate buffers to hold the arguments
                 auto& gatherInputs = m_gatherArgsBuffer;
                 gatherInputs.clear();
-                if (gatherInputs.capacity() < batchSize)
-                    gatherInputs.reserve(max(batchSize, 2 * gatherInputs.capacity()));
+                if (gatherInputs.capacity() < numBatchItems)
+                    gatherInputs.reserve(max(numBatchItems, 2 * gatherInputs.capacity()));
                 // optimization: if all args are consecutive slices, then use a slice view instead
                 let& pfields0 = GetInputFields(f0.m_inputs[i]);
                 let isScalar = pfields0.m_shape.Rank() == 0;
@@ -2661,7 +2661,7 @@ return fInlinedPtr;
                 bool allSame = true;                                              // will be true if all are the same objects
                 bool allConsecutiveSlices = !redirectionPair0.sliceRange.empty(); // will be true if all are consecutive index ops into the same batched result
                 bool allSameShape = true;                                         // will be true if all shapes are the same
-                CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, batchSize);
+                CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, numBatchItems);
                 size_t prevSliceEndIndex = 0; // running index
                 for (let& f : ops) // create the batched tensors
                 {
@@ -2696,7 +2696,7 @@ return fInlinedPtr;
                     // note: Variable is just two shared_ptrs, one being NULL; so this is cheap
                     // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
                 }
-                allConsecutiveSlices = allConsecutiveSlices && (prevSliceEndIndex == batchWidth); // if consecutive so far then also check the end
+                allConsecutiveSlices = allConsecutiveSlices && (prevSliceEndIndex == batchSize); // if consecutive so far then also check the end
                 let allConsecutiveIndices = allConsecutiveSlices && allSameShape;
                 if (!allSameShape)
                     Break;
@@ -2715,19 +2715,19 @@ return fInlinedPtr;
                     let& fromDims = output.Shape().Dimensions();
                     fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
                     let axis = fromDims.size() - 1;
-                    if (begin == 0 && batchWidth == fromDims.back()/*[axis]*/) // full range: just take it
+                    if (begin == 0 && batchSize == fromDims.back()/*[axis]*/) // full range: just take it
                         m_batchedInputs[i] = output; // note: graph already has a strong ref to output elsewhere
                     else // sub-range: splice it by taking a slice view on the previously spliced batch
                     {
-                        //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"re-batch", 3, batchSize);
+                        //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"re-batch", 3, numBatchItems);
                         // create a new PrimitiveFunction Slice()
                         vector<size_t> outputShape = fromDims; // determine output shape
-                        outputShape.back()/*[axis]*/ = batchWidth;
+                        outputShape.back()/*[axis]*/ = batchSize;
                         m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape,
                                                                        Dictionary(
                                                                            PrimitiveFunction::AttributeNameAxis       , Axis((int)axis) ,
                                                                            PrimitiveFunction::AttributeNameBeginIndex , (int)begin      ,
-                                                                           PrimitiveFunction::AttributeNameEndIndex   , (int)(begin + batchWidth)
+                                                                           PrimitiveFunction::AttributeNameEndIndex   , (int)(begin + batchSize)
                                                                        ),
                                                                        f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                                                        /*isFree=*/true);
@@ -2740,7 +2740,7 @@ return fInlinedPtr;
                     // BUGBUG: This seems never called in the MT case?
                     if (commonInputBatchAxis != SIZE_MAX && axis != commonInputBatchAxis)
                     {
-                        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, batchSize);
+                        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, numBatchItems);
                         // TODO: Any way we can fold the reshape in using m_redirection?
                         let batchedInput = m_batchedInputs[i];
                         vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
@@ -2755,7 +2755,7 @@ return fInlinedPtr;
                 }
                 else // batch inputs are not consecutive: We must actually copy them together.
                 {
-                    CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, batchSize);
+                    CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, numBatchItems);
                     let& input0Shape = CacheAndGetValue(gatherInputs[0])->Shape();
                     // create a new PrimitiveFunction Splice()
                     let inputBatchAxis = commonInputBatchAxis != SIZE_MAX ? commonInputBatchAxis : (input0Shape.Rank() - stackIt); // batch into one new axis unless we have a shared axis
@@ -2764,7 +2764,7 @@ return fInlinedPtr;
                     outputShape = input0Shape.Dimensions();
                     //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
                     outputShape.resize(inputBatchAxis, 1); // pad to inputBatchAxis
-                    outputShape.push_back(batchWidth);     // and add the batch axis
+                    outputShape.push_back(batchSize);      // and add the batch axis
                     m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape,
                                                                    Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)inputBatchAxis)),
                                                                    f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
@@ -2814,11 +2814,11 @@ return fInlinedPtr;
             // If f0 is a block, then actually an entire subgraph clone will be created here.
             // PERF BUGBUG: If all args are identical, we can degrade to a single op. Then we should not need to create a new PrimitiveFunction.
             //              Note: This is not covered by CSE, since CSE is only used for complex cases.
-            auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchWidth, L"*"/*f0*/, /*isFree=*/false);
+            auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
 
             // some stats and checks
             if (!anyBatchedInputs)
-                m_stats.numCommonSubexpressionsEliminated += batchSize - 1;
+                m_stats.numCommonSubexpressionsEliminated += numBatchItems - 1;
             if (anyBatchedInputs)
                 fail_if(batchedOp->m_outputs.front().Shape().Rank() != outputBatchAxis + 1, "outputBatchAxis was not predicted right");
 
@@ -2829,11 +2829,11 @@ return fInlinedPtr;
             {
                 if (outputBatchAxis != unbatchedOutputShape.Rank()    && !stackIt/*for now*/)
                 {
-                    CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, batchSize);
+                    CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, numBatchItems);
                     // TODO: This should not be necessary anymore, we can let this be implicitly handled by a redirect.
                     fail_if(!isElementWise && !isBasicBlock, "output shape should only have additional singleton axes for elementwise operations or basic-block invocations");
                     // insert a Reshape() op to remove the axes
-                    let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchWidth); // desired batched output shape without the singleton axes
+                    let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
                     fail_if(batchedOutputShape.TotalSize(/*check=*/false) != batchedOp->m_outputs.front().Shape().TotalSize(/*check=*/false), "output shape has unexpected axes that should be singletons but aren't");
 
                     Variable arg = batchedOp->m_outputs.front();
