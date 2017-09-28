@@ -134,7 +134,6 @@ fun AttentionModelReference(size_t attentionDim1)
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
     let zBarrier   = Barrier(20, Named("zBarrier"));
     let resBarrier = Barrier(20, Named("resBarrier"));
-    vector<Variable> us, ws;
     StaticModel doToTanh(/*isBasicBlock=*/false, [=](const Variable& h, const Variable& historyProjectedKey)
     {
         let hProjected = projectQuery(h); // [A]. Batched.
@@ -147,7 +146,7 @@ fun AttentionModelReference(size_t attentionDim1)
             const Variable& historyProjectedKey,   // [A] previous output, embedded
             const Variable& encodingProjectedKeys, // [A x T] encoder hidden state seq, projected as key >> tanh
             const Variable& encodingProjectedData  // [A x T] encoder hidden state seq, projected as data
-           ) mutable -> Variable
+           ) -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // compute attention weights
@@ -284,7 +283,6 @@ fun CreateModelFunction()
     let embedBwd = Embedding(embeddingDim, device, Named("embedBwd"));
     let encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
-    vector<Variable> res;
     return BinaryModel({},
     {
         { L"embedSourceFwd", embedFwd },
@@ -292,20 +290,16 @@ fun CreateModelFunction()
         { L"encode",         encode   },
         { L"decode",         decode   }
     },
-    [=](const Variable& source, const Variable& history) mutable -> Variable
+    [=](const Variable& sourceSeq, const Variable& historySeq) mutable -> Variable
     {
         // embedding
-        let eFwd = embedFwd(source);
-        let eBwd = embedBwd(source);
+        let eFwd = embedFwd(sourceSeq);
+        let eBwd = embedBwd(sourceSeq);
         // encoder
-        let hTensor = encode(eFwd, eBwd);
-        // decoder (outputting logprobs of words)
-        let resTensor = decode(history, hTensor);
-        as_vector(res, resTensor);
-        CountAPICalls(1);
-        let z = Splice(res, Axis::EndStaticAxis());
-        res.clear();
-        return z;
+        let hSeq = encode(eFwd, eBwd);
+        // decoder (outputting log probs of words)
+        let zSeq = decode(historySeq, hSeq);
+        return zSeq;
     });
 }
 
