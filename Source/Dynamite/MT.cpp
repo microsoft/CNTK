@@ -52,39 +52,35 @@ const size_t topHiddenProjectionDim = 1024;
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
 #define DOLOG(var) (var)//((mbCount % 100 == 99) ? LOG(var) : 0)
 
-BinarySequenceModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
+BinaryModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
 {
     dropoutInputKeepProb;
-    vector<BinarySequenceModel> layers;
+    vector<BinaryModel> layers;
     for (size_t i = 0; i < numLayers; i++)
         layers.push_back(Dynamite::Sequence::BiRecurrence(GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, Named("fwdInitialValue")),
                                                           GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, Named("bwdInitialValue"))));
     vector<UnaryBroadcastingModel> bns;
     for (size_t i = 0; i < numLayers-1; i++)
-        bns.push_back(Dynamite::BatchNormalization(device, Named("bnBidi")));
-    vector<vector<Variable>> hs(2); // we need max. 2 buffers for the stack
-    vector<Variable> hBn;
+        bns.push_back(Dynamite::BatchNormalization(device, 1, Named("bnBidi")));
     vector<ModelParametersPtr> nested;
     nested.insert(nested.end(), layers.begin(), layers.end());
     nested.insert(nested.end(), bns.begin(), bns.end());
-    return BinarySequenceModel(nested,
-    [=](vector<Variable>& res, const vector<Variable>& xFwd, const vector<Variable>& xBwd) mutable
+    vector<Variable> buffer;
+    return BinaryModel(nested,
+    [=](const Variable& xFwd, const Variable& xBwd) mutable -> Variable
     {
-        for (size_t i = 0; i < numLayers; i++)
+        // the first layer has different inputs for forward and backward
+        auto h = layers[0](xFwd, xBwd);
+        for (size_t i = 1; i < numLayers; i++)
         {
-            const vector<Variable>& inFwd = (i == 0) ? xFwd : hs[i % 2];
-            const vector<Variable>& inBwd = (i == 0) ? xBwd : hs[i % 2];
-            vector<Variable>& out = (i == numLayers - 1) ? res : hs[(i+1) % 2];
-            if (i > 0)
-            {
-                layers[i](hBn, inFwd, inBwd);
-                bns[i - 1](out, hBn);
-                hBn.clear();
-            }
-            else
-                layers[i](out, inFwd, inBwd);
+            // do another layer
+            h = layers[i](h, h);
+            // after each additional layer, so batch norm
+            // BUGBUG: Why not the first? Seems like a bug.
+            // For now, BatchNorm must be done per frame. In the future, we will be able to batch along the last axis.
+            h = bns[i - 1](h);// no longer needed :) Dynamite::Sequence::map(h, bns[i - 1], buffer);
         }
-        hs[0].clear(); hs[1].clear();
+        return h;
     });
 }
 
@@ -211,7 +207,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     let outputProjection = Linear(tgtVocabSize, ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);  // output layer without non-linearity (no sampling yet)
 
     // buffers
-    vector<Variable> encodingProjectedKeys, encodingProjectedData;
+    vector<Variable> encodingProjectedKeys, encodingProjectedData, attentionContexts;
 
     // decode from a top layer of an encoder, using history as history
     map<wstring, ModelParametersPtr> nestedLayers =
@@ -255,6 +251,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
     [=](vector<Variable>& res, const vector<Variable>& history, const vector<Variable>& hEncs) mutable
     {
         res.resize(history.size());
+        //attentionContexts.resize(res.size());
         // decoding loop
         CountAPICalls(1);
         Variable state = Slice(hEncs.front(), Axis(0), encoderRecurrentDim, 2 * encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
@@ -283,6 +280,7 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
             // vv fully batchable
 #if 1
             let z = doToOutput(state, attentionContext);
+            //attentionContexts[t] = attentionContext;
 #else
             auto state1 = firstHiddenProjection(state); // first one brings it into the right dimension
             for (auto& resnet : resnets)                // then a bunch of ResNet layers
@@ -296,7 +294,10 @@ BinarySequenceModel AttentionDecoder(double dropoutInputKeepProb)
             let z = outputProjection(topHidden);
 #endif
             res[t] = z;
+            //res[t] = state;
         }
+        //let z = doToOutput(Splice(res/*state*/, Axis::EndStaticAxis()), Splice(attentionContexts, Axis::EndStaticAxis()));
+        //as_vector(res, z);
         encodingProjectedKeys.clear();
         encodingProjectedData.clear();
     });
@@ -308,7 +309,7 @@ BinaryModel CreateModelFunction()
     auto embedBwd = Embedding(embeddingDim, device, Named("embedBwd"));
     auto encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
-    vector<Variable> x, eFwd, eBwd, h, hist, res;
+    vector<Variable> h, hist, res;
     return BinaryModel({},
     {
         { L"embedSourceFwd", embedFwd },
@@ -319,14 +320,12 @@ BinaryModel CreateModelFunction()
     [=](const Variable& source, const Variable& history) mutable -> Variable
     {
         // embedding
-        as_vector(x, source);
-        embedFwd(eFwd, x);
-        embedBwd(eBwd, x);
-        x.clear();
+        let eFwd = embedFwd(source);
+        let eBwd = embedBwd(source);
         // encoder
-        encode(h, eFwd, eBwd);
-        eFwd.clear(); eBwd.clear();
+        let hTensor = encode(eFwd, eBwd);
         // decoder (outputting logprobs of words)
+        as_vector(h, hTensor);
         as_vector(hist, history);
         decode(res, hist, h);
         hist.clear(); h.clear();

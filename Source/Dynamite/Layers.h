@@ -121,6 +121,15 @@ public:
 };
 typedef ModelParameters::ModelParametersPtr ModelParametersPtr;
 
+// create a named map where names are [%d]
+static inline map<wstring, ModelParametersPtr> NameNumberedParameters(const vector<ModelParametersPtr>& nested)
+{
+    map<wstring, ModelParametersPtr> res;
+    for (let& p : nested)
+        res[L"[" + std::to_wstring(res.size()) + L"]"] = p;
+    return res;
+}
+
 template<class Base>
 class TModel : public Base, public ModelParametersPtr
 {
@@ -132,20 +141,12 @@ public:
     {
     }
     // constructor with nested items that have names
+    // This is the most general one.
     TModel(const vector<Parameter>& parameters, const map<wstring, ModelParametersPtr>& nested, const Base& f)
         : Base(f), ModelParametersPtr(make_shared<ModelParameters>(parameters, nested))
     {
     }
     // constructor with nested items that are indexed
-private:
-    // create a named map where names are [%d]
-    map<wstring, ModelParametersPtr> NameNumberedParameters(const vector<ModelParametersPtr>& nested)
-    {
-        map<wstring, ModelParametersPtr> res;
-        for (let& p : nested)
-            res[L"[" + std::to_wstring(res.size()) + L"]"] = p;
-        return res;
-    }
 public:
     TModel(const vector<ModelParametersPtr>& nested, const Base& f)
         : Base(f), ModelParametersPtr(make_shared<ModelParameters>(vector<Parameter>(), NameNumberedParameters(nested)))
@@ -181,6 +182,12 @@ typedef TModel<function<void(vector<Variable>&, const vector<Variable>&)>> Unary
 typedef TModel<function<void(vector<Variable>&, const vector<Variable>&, const vector<Variable>&)>> BinarySequenceModel;
 typedef TModel<function<Variable(const vector<Variable>&)>> UnaryFoldingModel;
 typedef TModel<function<Variable(const vector<Variable>&, const vector<Variable>&)>> BinaryFoldingModel;
+
+template<typename Lambda>
+static inline TModel<Lambda> Model(const vector<Parameter>& parameters, const map<wstring, ModelParametersPtr>& nested, const Lambda& f)
+{
+    return TModel<Lambda>(parameters, nested, f);
+}
 
 struct Batch
 {
@@ -289,6 +296,187 @@ static inline UnaryBroadcastingModel operator>> (const UnaryBroadcastingModel& b
 // identity function object; makes it easy to disable stuff
 static UnaryModel Identity = [](const Variable& x) { return x; };
 
+#if 1
+// create a Barrier function
+static UnaryBroadcastingModel Barrier(size_t depthHint, const wstring& name = wstring())
+{
+    // TODO: we can save just a little by wrapping this into a static function. We'd save the attribute Dictionary (which can be shared).
+    return UnaryModel([=](const Variable& x) -> Variable
+    {
+        CountAPICalls();
+        return BatchSync(x, depthHint, name);
+    });
+}
+#else
+// create a Barrier function
+static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
+{
+    static size_t id = 0; // unique id
+    auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
+    return UnaryModel([=](const Variable& x) -> Variable
+    {
+        return BatchSync(x, thisId, name);
+    });
+}
+#endif
+
+struct Sequence
+{
+    // map a tensor along its last axis via a given lambda
+    template<typename Lambda>
+    static Variable map(const Variable& x, const Lambda& f, vector<Variable>& buffer)
+    {
+        let len = x.size();
+        buffer.resize(len);
+        for (size_t t = 0; t < len; t++)
+            buffer[t] = f(x[t]);
+        let res = Splice(buffer, Axis::EndStaticAxis());
+        buffer.clear();
+        return res;
+    }
+
+    // map two tensors along its last axis via a given lambda
+    template<typename Lambda>
+    static Variable map(const Variable& x, const Variable& y, const Lambda& f, vector<Variable>& buffer)
+    {
+        let len = x.size();
+        if (y.size() != len)
+            InvalidArgument("map: x and y have different lengths %d vs. %d", (int)len, (int)y.size());
+        buffer.resize(len);
+        for (size_t t = 0; t < len; t++)
+            buffer[t] = f(x[t], y[t]);
+        let res = Splice(buffer, Axis::EndStaticAxis());
+        buffer.clear();
+        return res;
+    }
+
+    static UnarySequenceModel Map(UnaryModel f)
+    {
+        return UnarySequenceModel({}, { { L"f", f } },
+        [=](vector<Variable>& res, const vector<Variable>& batch)
+        {
+#if 0
+            return map(f, batch);
+#else
+            res.clear();
+            for (const auto& x : batch)
+                res.push_back(f(x));
+            return res;
+#endif
+        });
+    }
+
+    // for binary functions
+    static BinarySequenceModel Map(BinaryModel f)
+    {
+        return BinarySequenceModel({}, { { L"f", f } },
+        [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& y)
+        {
+            assert(y.size() == x.size());
+            res.resize(x.size());
+            for (size_t i = 0; i < x.size(); i++)
+                res[i] = f(x[i], y[i]);
+        });
+    }
+
+    // The last tensor dimension is the sequence axis.
+    static UnaryModel Recurrence(const BinaryModel& step, const Variable& initialState, bool goBackwards = false)
+    {
+        let barrier = Barrier(600, Named("Recurrence"));
+        // if initialState is a learnable parameter, then we must keep it
+        vector<Parameter> rememberedInitialState;
+        if (initialState.IsParameter())
+            rememberedInitialState.push_back((Parameter)initialState);
+        vector<Variable> res;
+        return UnaryModel(rememberedInitialState, { { L"step", step } },
+        [=](const Variable& x) mutable/*res*/ -> Variable
+        {
+            let len = x.size();
+            res.resize(len);
+            auto state = initialState;
+            for (size_t n = 0; n < len; n++)
+            {
+                let t = goBackwards ? len - 1 - n : n;
+                // recurrent step
+                state = step(state, x[t]);
+                // remember result for output
+                // The barrier will force the Splice() to happen batch-side.
+                res[t] = barrier(state);
+            }
+            CountAPICalls(1);
+            let h = Splice(res, Axis::EndStaticAxis());
+            res.clear();
+            return h;
+        });
+    }
+
+    // this layer takes two inputs, one forward one backward, to mimic Frantic's config
+    // The last tensor dimension is the sequence axis.
+    static BinaryModel BiRecurrence(const BinaryModel& stepFwd, const Variable& initialStateFwd, 
+                                    const BinaryModel& stepBwd, const Variable& initialStateBwd)
+    {
+        let fwd = Recurrence(stepFwd, initialStateFwd);
+        let bwd = Recurrence(stepBwd, initialStateBwd, true);
+        vector<Variable> spliceBuffer;
+        return BinaryModel({}, { { L"stepFwd", stepFwd },{ L"stepBwd", stepBwd } },
+        [=](const Variable& inFwd, const Variable& inBwd) mutable/*spliceBuffer*/ -> Variable
+        {
+            let rFwd = fwd(inFwd);
+            let rBwd = bwd(inBwd);
+            return Splice({ rFwd, rBwd }, Axis(0), Named("bidi"));
+            // for now we cannot splice non-uniform shapes; so unroll it  --actually, that's only a problem for sparse
+            //return map(rFwd, rBwd, [](const Variable& x, const Variable& y) -> Variable { return Splice({ x, y }, Axis(0), Named("bidi")); }, spliceBuffer);
+        });
+    }
+
+#if 1   // TODO: update to accept a single Variable
+    static UnaryFoldingModel Fold(const BinaryModel& step, const Variable& initialState)
+    {
+        let barrier = Barrier(600, Named("Fold"));
+        return UnaryFoldingModel({}, { { L"step", step }  },
+        [=](const vector<Variable>& x) -> Variable
+        {
+            Variable state = initialState;
+            for (let& xt : x)
+                state = step(state, xt);
+            state = barrier(state);
+            return state;
+        });
+    }
+#endif
+
+    // Softmax over a vector producing a vector
+    static void Softmax(vector<Variable>& res, const vector<Variable>& z, const UnaryModel& barrier = Identity)
+    {
+        let& shape = z[0].Shape();
+        let axis = Axis((int)shape.Rank());
+        CountAPICalls(2);
+        auto Z = ReduceLogSum(Splice(z, axis), /*axis*/Axis_DropLastAxis); // -> [1]
+        Z = barrier(Z);
+        res.resize(z.size());
+        for (size_t t = 0; t < z.size(); t++)
+            res[t] = Exp(Minus(z[t], Z, Named("vecSoftmaxMinus")));
+        CountAPICalls(2 * z.size());
+    }
+
+    // InnerProduct over a pair of vectors (dot product over the vector dimension)
+    static Variable InnerProduct(const vector<Variable>& xs, const vector<Variable>& ys, const std::wstring& name = std::wstring())
+    {
+        let xRank = xs[0].Shape().Rank();
+        let yRank = ys[0].Shape().Rank();
+        let axis = Axis((int)max(xRank, yRank));
+        // PERF BUGBUG: malloc. Avoidable?
+        vector<Variable> temps(xs.size());
+        CountAPICalls(temps.size());
+        for (size_t t = 0; t < temps.size(); t++)
+            temps[t] = xs[t] * ys[t]; // Batched
+        CountAPICalls(2);
+        let res = /*Reshape*/(ReduceSum(Splice(temps, axis), /*axis*/Axis_DropLastAxis, name)/*, temps[0].Shape(), name*/);
+        // TODO: This should be a primitive.
+        return res;
+    }
+};
+
 enum ProjectionOptions
 {
     none            = 0x00,
@@ -318,30 +506,6 @@ static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescrip
     });
 }
 
-#if 1
-// create a Barrier function
-static UnaryBroadcastingModel Barrier(size_t depthHint, const wstring& name = wstring())
-{
-    // TODO: we can save just a little by wrapping this into a static function. We'd save the attribute Dictionary (which can be shared).
-    return UnaryModel([=](const Variable& x) -> Variable
-    {
-        CountAPICalls();
-        return BatchSync(x, depthHint, name);
-    });
-}
-#else
-// create a Barrier function
-static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
-{
-    static size_t id = 0; // unique id
-    auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
-    return UnaryModel([=](const Variable& x) -> Variable
-    {
-        return BatchSync(x, thisId, name);
-    });
-}
-#endif
-
 // helper to create a unary static lambda by running a lambda over a Placeholder
 class StaticModel
 {
@@ -358,6 +522,7 @@ class StaticModel
         // for debugging: allow to directly call the lambda, without any Composite involved
         static const bool m_forceImmediate = true;// false; // for debugging: if true then don't create a composite; but remember the lambda and execute that directly
         function<Variable(const vector<Variable>&)> m_lambdaRememberedForDebugging;
+        wstring m_nameRememberedForDebugging;
 
         Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& f, std::wstring name) :
             m_arity(arity), m_isBasicBlock(isBasicBlock)
@@ -366,6 +531,7 @@ class StaticModel
             {
                 m_operands.resize(m_arity);
                 m_lambdaRememberedForDebugging = f; // just remember the lambda, and done
+                m_nameRememberedForDebugging = name;
                 return;
             }
             // allocate m_argumentList/m_operands and populate the Placeholder section (later we will add Parameters)
@@ -708,7 +874,7 @@ static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 
-static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const wstring& name = wstring());
+static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, size_t axis, const wstring& name = wstring());
 
 static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const DeviceDescriptor& device, const wstring& name = wstring())
 {
@@ -730,7 +896,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     auto scale = Parameter({}, DTYPE, 1.0, device, L"scale");
     auto weightNormRescale = Parameter({ outputDim }, DTYPE, 1.0, device, L"weightNormRescale");
     let weightNormMinusHalf = Constant::Scalar(DTYPE, -0.5, device);
-    let batchNorm = hasBatchNorm ? BatchNormalization(device, Named("DenseBN")) : Identity;
+    let batchNorm = hasBatchNorm ? BatchNormalization(device, /*axis=*/1, Named("DenseBN")) : Identity;
     let lengthNorm = hasLengthNorm ? LengthNormalization(device) : Identity;
     vector<Parameter> parameters{ W };
     if (hasBias && !hasBatchNorm) // batchNorm supplies its own bias
@@ -761,7 +927,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         return scale1;
         //y = scale1 * y;
     });
-    StaticModel doDense(/*isBasicBlock=*/false, [=](const Variable& x)->Variable
+    StaticModel doDense(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
     {
         auto y = x;
         CountAPICalls(1);
@@ -791,8 +957,9 @@ static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, c
     return Dense(outputDim, Identity, opts, device, name);
 }
 
-// create a Barrier function
-static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const wstring& name /*= wstring()*/)
+// create a BatchNormalization layer
+// TODO: the API must take an axis parameter to declare where the axis is.
+static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const size_t axis, const wstring& name /*= wstring()*/)
 {
 #ifdef DISABLE_NORMALIZATIONS
     device; name;
@@ -805,11 +972,20 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
     auto runningMean   = Parameter({ NDShape::InferredDimension }, DTYPE, 0.0, device, L"runningMean");
     auto runningInvStd = Parameter({ NDShape::InferredDimension }, DTYPE, 1.0, device, L"runningInvStd");
     auto runningCount  = Parameter({                            }, DTYPE, 0.0, device, L"runningCount");
+    vector<Variable> buffer;
     // TODO: figure out this Parameter mess for BN
-    return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount }, [=](const Variable& x) -> Variable
+    return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount }, [=](const Variable& x) mutable/*buffer*/ -> Variable
     {
-        CountAPICalls(1);
-        return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
+        let batchNorm = [&](const Variable& x) // apply to one sample
+        {
+            CountAPICalls(1);
+            return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
+        };
+        // BUGBUG: This cannot work once we reenable static graphs.
+        if (x.Shape().Rank() == axis) // single item
+            return batchNorm(x);
+        else // a batch of items
+            return Dynamite::Sequence::map(x, batchNorm, buffer);
     });
 #endif
 }
@@ -837,140 +1013,6 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
         return doResidualNet(x);
     });
 }
-
-struct Sequence
-{
-    static UnarySequenceModel Map(UnaryModel f)
-    {
-        return UnarySequenceModel({}, { { L"f", f } },
-        [=](vector<Variable>& res, const vector<Variable>& batch)
-        {
-#if 0
-            return map(f, batch);
-#else
-            res.clear();
-            for (const auto& x : batch)
-                res.push_back(f(x));
-            return res;
-#endif
-        });
-    }
-
-    // for binary functions
-    static BinarySequenceModel Map(BinaryModel f)
-    {
-        return BinarySequenceModel({}, { { L"f", f } },
-        [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& y)
-        {
-            assert(y.size() == x.size());
-            res.resize(x.size());
-            for (size_t i = 0; i < x.size(); i++)
-                res[i] = f(x[i], y[i]);
-        });
-    }
-
-    static UnarySequenceModel Recurrence(const BinaryModel& step, const Variable& initialState, bool goBackwards = false)
-    {
-        let barrier = Barrier(600, Named("Recurrence"));
-        // if initialState is a learnable parameter, then we must keep it
-        vector<Parameter> rememberedInitialState;
-        if (initialState.IsParameter())
-            rememberedInitialState.push_back((Parameter)initialState);
-        return UnarySequenceModel(rememberedInitialState, { { L"step", step } },
-        [=](vector<Variable>& res, const vector<Variable>& seq)
-        {
-            let len = seq.size();
-            res.resize(len);
-            for (size_t t = 0; t < len; t++)
-            {
-                if (!goBackwards)
-                {
-                    let& prev = t == 0 ? initialState : res[t - 1];
-                    res[t] = step(prev, seq[t]);
-                }
-                else
-                {
-                    let& prev = t == 0 ? initialState : res[len - 1 - (t - 1)];
-                    res[len - 1 - t] = step(prev, seq[len - 1 - t]);
-                }
-            }
-            for (size_t t = 0; t < len; t++)
-                res[t] = barrier(res[t]);
-        });
-    }
-
-    // this layer takes two inputs, one forward one backward, to mimic Frantic's config
-    static BinarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const Variable& initialStateFwd, 
-                                            const BinaryModel& stepBwd, const Variable& initialStateBwd)
-    {
-        let fwd = Recurrence(stepFwd, initialStateFwd);
-        let bwd = Recurrence(stepBwd, initialStateBwd, true);
-        //let barrier = Barrier(600, Named("BiRecurrence"));
-        let splice = Sequence::Map(BinaryModel([=](const Variable& a, const Variable& b)
-        {
-            CountAPICalls(1);
-            return Splice({ /*barrier*/(a), b }, Axis(0), Named("bidi"));
-        }));
-        vector<Variable> rFwd, rBwd;
-        return BinarySequenceModel({}, { { L"stepFwd", stepFwd },{ L"stepBwd", stepBwd } },
-        [=](vector<Variable>& res, const vector<Variable>& inFwd, const vector<Variable>& inBwd) mutable
-        {
-            fwd(rFwd, inFwd);
-            bwd(rBwd, inBwd);
-            splice(res, rFwd, rBwd);
-            // ^^ batchable
-            //    Would bring it down from #source words in MB to 2 launches (rFwd, rBwd) (and associated Gather)
-            //    For 3 layers a 600 -> from 1800 launches to 6
-            //    But we have 3300 splices, where is the rest?
-            rFwd.clear(); rBwd.clear(); // don't hold references
-        });
-    }
-
-    static UnaryFoldingModel Fold(const BinaryModel& step, const Variable& initialState)
-    {
-        let barrier = Barrier(600, Named("Fold"));
-        return UnaryFoldingModel({}, { { L"step", step }  },
-        [=](const vector<Variable>& x) -> Variable
-        {
-            Variable state = initialState;
-            for (let& xt : x)
-                state = step(state, xt);
-            state = barrier(state);
-            return state;
-        });
-    }
-
-    // Softmax over a vector producing a vector
-    static void Softmax(vector<Variable>& res, const vector<Variable>& z, const UnaryModel& barrier = Identity)
-    {
-        let& shape = z[0].Shape();
-        let axis = Axis((int)shape.Rank());
-        CountAPICalls(2);
-        auto Z = ReduceLogSum(Splice(z, axis), /*axis*/Axis_DropLastAxis); // -> [1]
-        Z = barrier(Z);
-        res.resize(z.size());
-        for (size_t t = 0; t < z.size(); t++)
-            res[t] = Exp(Minus(z[t], Z, Named("vecSoftmaxMinus")));
-        CountAPICalls(2 * z.size());
-    }
-
-    // InnerProduct over a pair of vectors (dot product over the vector dimension)
-    static Variable InnerProduct(const vector<Variable>& xs, const vector<Variable>& ys, const std::wstring& name = std::wstring())
-    {
-        let xRank = xs[0].Shape().Rank();
-        let yRank = ys[0].Shape().Rank();
-        let axis = Axis((int)max(xRank, yRank));
-        // PERF BUGBUG: malloc. Avoidable?
-        vector<Variable> temps(xs.size());
-        CountAPICalls(temps.size());
-        for (size_t t = 0; t < temps.size(); t++)
-            temps[t] = xs[t] * ys[t]; // Batched
-        CountAPICalls(2);
-        let res = /*Reshape*/(ReduceSum(Splice(temps, axis), /*axis*/Axis_DropLastAxis, name)/*, temps[0].Shape(), name*/);
-        // TODO: This should be a primitive.
-        return res;
-    }
-};
 
 // built-in Softmax requires temp memory, so we use an explicit expression instead
 static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring())
