@@ -311,6 +311,13 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
 
 }
 
+// if the matrix contains strictly one-hot data, then return a vector of the indices; otherwise NULL
+template <class ElemType>
+size_t* GPUSparseMatrix<ElemType>::TryCopyToArrayAsOneHot() const
+{
+    return nullptr;
+}
+
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const
 {
@@ -692,18 +699,18 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
 }
 
 // Reserves space for numNZElemToReserve non-zero elements. Also verifies that the matrix is indeed [numRows x numCols].
-// WARNING: When memory is reallocated, existing information will be lost.
-// TODO: add keepExistingValues (default to true) argument so that the existing values are kept even after reallocation
+// If keepExistingValues then the object is assumed already in valid state. This is currently only used for MultiplyAndAdd() for SBC format.
+// If not keepExistingValues, the memory is 0-initialized.
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
+void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
 {
-    // BugBug: This doesn't work because allocate is called from Resize sometimes and resize expects allocate to know the old values not the new values, so this won't work.
     if (GetNumRows() != numRows || GetNumCols() != numCols)
         LogicError("Error, calling allocate with dimensions (%d, %d), but the matrix has dimension (%d, %d).", (int)numRows, (int)numCols, (int)GetNumRows(), (int)GetNumCols());
 
     size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, GetFormat());
     bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
 
+    bool reallocate = (growing || (!growOnly && shrinking));
     if (reallocate)
     {
         // Note that we are allocating one buffer for all of our data structures. Thus the ElemType* nzValues array lives directly next to
@@ -713,22 +720,22 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
         ElemType* pArray = (ElemType*)(buf);
 
         // Note this is required due to m_nz 
-        CUDA_CALL(cudaMemset(pArray, 0, bufferSizeNeeded));
+        CUDA_CALL(cudaMemsetAsync(pArray, 0, bufferSizeNeeded, t_stream));
         if (Buffer() != nullptr)
         {
             if (keepExistingValues)
             {
                 if (NzCount() > numNZElemToReserve || BufferSizeAllocated() > bufferSizeNeeded)
-                    LogicError("Resize: To keep values m_nz should <= numNZElemToReserve.");
+                    LogicError("Allocate: To keep values, m_nz should <= numNZElemToReserve.");
 
-                CUDA_CALL(cudaMemcpy(pArray, Data(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
+                CUDA_CALL(cudaMemcpyAsync(pArray, Data(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice, t_stream));
 
                 GPUSPARSE_INDEX_TYPE* majorIndexInNewBuffer = (GPUSPARSE_INDEX_TYPE*) (pArray + numNZElemToReserve);
 
-                CUDA_CALL(cudaMemcpy(majorIndexInNewBuffer, MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
+                CUDA_CALL(cudaMemcpyAsync(majorIndexInNewBuffer, MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice, t_stream));
 
                 GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, numNZElemToReserve, GetFormat());
-                CUDA_CALL(cudaMemcpy(secondaryIndexInNewBuffer, SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
+                CUDA_CALL(cudaMemcpyAsync(secondaryIndexInNewBuffer, SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice, t_stream));
             }
             TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
         }
@@ -738,10 +745,12 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
         if (!keepExistingValues)
             UpdateCachedNzCount(0);
     }
-    else // if requested size is smaller, keeping original values does not make sense
+    else
     {
         SetSizeAllocated(ElemCountFromBufferSize(numRows, numCols, GetFormat(), BufferSizeAllocated()));
-        CUDA_CALL(cudaMemset(Buffer(), 0, BufferSizeAllocated()));
+        // if requested size is smaller, make sure we still initialize to 0 as if it had been reallocated
+        if (!keepExistingValues)
+            CUDA_CALL(cudaMemsetAsync(Buffer(), 0, BufferSizeAllocated(), t_stream));
         UpdateCachedNzCount(0);
     }
 }
@@ -753,16 +762,19 @@ void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
+void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues)
 {
-    RequireSize(numRows, numCols, numNZElemToReserve, matrixFormat, growOnly);
-    
-    size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
-    bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
+    RequireSize(numRows, numCols, numNZElemToReserve, matrixFormat, growOnly); // (does nothing if type and numRows/numCols already match, irrespective of numNZElemToReserve)
 
-    if (reallocate)
+    if (matrixFormat != GetFormat())
+        LogicError("RequireSizeAndAllocate: matrixFormat not set?");
+
+    // this test is redundant; we only short-circuit a comparison of dimensions
+    //size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
+    //bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
+    //
+    //if (reallocate)
         Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
-
 }
 
 template <class ElemType>
@@ -806,7 +818,7 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
     bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
 
     if (reallocate)
-        Allocate(numRows, numCols, numNZElemToReserve, growOnly, false);
+        Allocate(numRows, numCols, numNZElemToReserve, growOnly, /*keepExistingValues=*/false);
     else
         ClearNzCount();
 }
@@ -1322,8 +1334,8 @@ void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, co
 // E.g. e = E * w -> grad_E = grad_e * w'   (where w = CSC one-hot).
 // In the one-hot case, this adds grad_e(t) to column w_index(t) of E.
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
-                                               const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, GPUSparseMatrix<ElemType>& c)
+/*static*/ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
+                                                          const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, GPUSparseMatrix<ElemType>& c)
 {
     c.VerifyWritable(__FUNCTION__);
 
@@ -1361,15 +1373,19 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         // based on the size of m_nz in rhs and numCols in the resulted matrix we use different approaches
         size_t rhs_nz = rhs.NzCount();
 
-        // block col storage format (target matrix):
+        if (rhs.m_sliceViewOffset != 0)
+            fprintf(stderr, "MultiplyAndAdd: rhs has offset %d\n", (int)rhs.m_sliceViewOffset), fflush(stderr);
+
+        // Block col storage format (target matrix):
         //  - GetBlockSize()                  :                  number of non-zero columns
         //  - ColOrRow2BlockId()[colIndex]    : [numCols]        storage index (=index into the compact matrix), or Id_Pending if not determined yet, or Id_NotAssigned if empty
-        //    The storage indices can be in any order (they are not sorted).
         //  - BlockId2ColOrRow()[storageIndex]: [GetBlockSize()] column index (=logical index into the matrix that this object represents)
-        //    This array is allocated as numCols, but only elements up to GetBlockSize()-1 are used.
+        //                                                       This array is allocated as numCols, but only elements up to GetBlockSize()-1 are used.
+        // The storage indices can be in any order (they are not sorted).
         size_t blockSizePrev = c.GetBlockSize(); // number of non-zero columns in target matrix. Compact storage contains this many columns.
         if (blockSizePrev == 0)
         {
+            fprintf(stderr, "MultiplyAndAdd: resetting to %d items\n", (int)n), fflush(stderr);
             // the first time, we allocate space for all entries
             // Initially, all columns are empty. As we keep adding matrix products into it, columns
             // flip from empty to non-empty (but never back to empty).
@@ -1379,15 +1395,20 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
             c.Resize(m, n, 0);
             // Note a small hack: cudaMemset() sets bytes, but we initialize 32-bit ints. Hence, all bytes in Id_NotAssigned must be identical (0xff).
             static_assert(Id_NotAssigned == -1, "Id_NotAssigned must be 0xffffffff");
+            if (n > c.GetNumCols())
+                LogicError("MultiplyAndAdd: wrong allocation (primary and secondary indices)?");
             CUDA_CALL(cudaMemsetAsync(c.ColOrRow2BlockId(), 0xff, sizeof(GPUSPARSE_INDEX_TYPE) * n, t_stream));
+CUDA_CALL(cudaDeviceSynchronize());
             // PERF BUGBUG: BlockId2ColOrRow()[*] does not need to be initialized actually, does it?
             CUDA_CALL(cudaMemsetAsync(c.BlockId2ColOrRow(), 0xff, sizeof(GPUSPARSE_INDEX_TYPE) * n, t_stream));
+CUDA_CALL(cudaDeviceSynchronize());
         }
 
         // temp buffer to transfer a single value
         size_t* pBlockSizeTempGpu = TracingGPUMemoryAllocator::Allocate<size_t>(lhs.GetComputeDeviceId(), 1);
         // (perf note: we could use a kernel to set the value, to avoid the GPU sync; but below we copy it back, which cannot be avoided)
         CUDA_CALL(cudaMemcpyAsync(pBlockSizeTempGpu, &blockSizePrev, sizeof(size_t), cudaMemcpyHostToDevice, t_stream));
+CUDA_CALL(cudaDeviceSynchronize());
         // TODO: Can we avoid the memory allocation here?? Just keep around a bunch of general-use buffers?
 
         // determine which columns are non-zero -> ColOrRow2BlockId()[colIndex]
@@ -1399,11 +1420,13 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
             /*in*/rhs.RowLocation(), /*in ref*/rhs.ColLocation()[0], /*out*/c.ColOrRow2BlockId(), rhs_nz);
         // RowLocation = base of nz row-index array, without potential slice-view offset. Kernel offsets it by ColLocation()[0], which is non-zero in case of a slice view.
         // Now ColOrRow2BlockId()[colIndex] contains an index or Id_Pending for all non-empty columns.
+CUDA_CALL(cudaDeviceSynchronize());
 
         // assign a storage index to any newly added columns
         blocksPerGrid = (int) ceil(((double) n) / GridDim::maxThreadsPerBlock);
         _determineBlockIds<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
             c.BlockId2ColOrRow(), c.ColOrRow2BlockId(), n, pBlockSizeTempGpu);
+CUDA_CALL(cudaDeviceSynchronize());
         // Now all Id_Pending values in ColOrRow2BlockId()[colIndex] have been replaced,
         // and BlockId2ColOrRow()[storageIndex] values for those have been placed.
         // *pBlockSizeTempGpu has been incremented accordingly.
@@ -1423,37 +1446,49 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         //       initialize newly aded zero-columns, beyond the upper bound.
         size_t blockSizeCurr;
         CUDA_CALL(cudaMemcpy(&blockSizeCurr, pBlockSizeTempGpu, sizeof(size_t), cudaMemcpyDeviceToHost));
+CUDA_CALL(cudaDeviceSynchronize());
         TracingGPUMemoryAllocator::Free<size_t>(lhs.GetComputeDeviceId(), pBlockSizeTempGpu);
         c.SetBlockSize(blockSizeCurr);
         // Now GetBlockSize(), ColOrRow2BlockId()[*], and BlockId2ColOrRow()[*] are up to date.
+        if (blockSizeCurr > c.GetNumCols())
+            LogicError("MultiplyAndAdd: wrong allocation (block size)?");
 
         // if new storage columns have been added, zero them out (after growing the compact storage if needed)
+        if (blockSizeCurr < blockSizePrev)
+            LogicError("MultiplyAndAdd: #non-zero columns became less??");
         if (blockSizeCurr > blockSizePrev)
         {
             fprintf(stderr, "MultiplyAndAdd: growing #non-zero columns from %d to %d, for %d items\n", (int)blockSizePrev, (int)blockSizeCurr, (int)k), fflush(stderr);
             // zero initialize newly added non-zero columns in the compact storage
             size_t nnz = m * blockSizeCurr;
+            // TODO: if blockSizePrev == 0 then there is no need to keep the values. We can just flatten them again.
             c.RequireSizeAndAllocate(m, n, nnz, true, true); // we need to keep the col2blockid and blockid2col info when resizing.
+CUDA_CALL(cudaDeviceSynchronize());
             CUDA_CALL(cudaMemsetAsync(c.Data() + m * blockSizePrev, 0, sizeof(ElemType) * m * (blockSizeCurr - blockSizePrev), t_stream));
+CUDA_CALL(cudaDeviceSynchronize());
         }
+        // Now allocation is up-to-date as well.
 
         // now perform the actual matrix product, adding into the compact storage
         // This only processes the non-zero columns, which are already determined and passed in via ColOrRow2BlockId().
-        LONG64 N = (LONG64) lhs.GetNumElements(); // here we process for each row in lhs and each column in rhs (==columns in lhs)
-        blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
+        LONG64 N = (LONG64) lhs.GetNumElements(); // =m*l, here we process for each row in lhs and each column in rhs (==columns in lhs)
+        blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock); // elements of lhs linearly distributed over cores
+        if (c.m_sliceViewOffset != 0)
+            InvalidArgument("MultiplyAndAdd: Sparse block column matrices cannot be sliced.");
         _denseMulSparseCSCTransposeToSparseBlockCol2<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
             alpha,
-            // lhs (out)
-            lhs.Data(), // this is dense
-            m,          // output dimension, height of lhs
-            l,          // inner dimension. In the case of the sparse gradient, this is the number of samples.
+            // lhs (in)
+            /*lhsValues=*/    lhs.Data(), // this is dense
+            /*numRowsLhs=*/   m,          // output dimension, height of lhs
+            /*numColsRhs=*/   l,          // inner dimension. In the case of the sparse gradient, this is the number of samples.
             // rhs (in)
-            rhs.Buffer(),      // [nzIndex] rhs nz-element array base, without potential slice-view offset.
-            rhs.RowLocation(), // [nzIndex] rhs index array base, without potential slice-view offset.
-            rhs.ColLocation(), // [colIndex] first nzIndex for a given column, with potential slice-view offset. End nzIndex is that of the next column.
-            // result
-            c.ColOrRow2BlockId(), // (in) [colIndex] storage index for each non-zero column
-            c.Data());            // (in/out) [rowIndex, storageIndex] pointer to compact storage
+            /*rhsNZValues=*/  rhs.Buffer(),      // [nzIndex] rhs nz-element array base, without potential slice-view offset.
+            /*rhsRows=*/      rhs.RowLocation(), // [nzIndex] rhs index array base, without potential slice-view offset.
+            /*rhsCols=*/      rhs.ColLocation(), // [colIndex] first nzIndex for a given column, with potential slice-view offset. End nzIndex is that of the next column.
+            // result (out)
+            /*col2blockIds=*/ c.ColOrRow2BlockId(), // (in) [colIndex] storage index for each non-zero column
+            /*resultValues=*/ c.Buffer());          // (in/out) [rowIndex, storageIndex] pointer to compact storage
+CUDA_CALL(cudaDeviceSynchronize());
 
         c.InvalidateCachedNzCount(); // (the cached nzCount value is not used for block-sparse; nzCount = GetBlockSize() * numRows)
     }

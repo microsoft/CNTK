@@ -411,13 +411,18 @@ protected:
     // m_numRows and m_numCols should be removed
     size_t m_numRows;
     size_t m_numCols;
-    size_t m_elemSizeAllocated;
+    size_t m_elemSizeAllocated; // dense: memory allocation of m_pArray; sparse: allocation of non-zero elements section (GPUSparse: indices follow after that)
     ElemType* m_pArray;
+    // For dense matrices, m_elemSizeAllocated = m_numRows * m_numCols.
+    // For CSC sparse matrices, m_elemSizeAllocated = number of non-zero elements.
+    // For SBC (sparse block col), m_elemSizeAllocated = at least number of non-zero columns * numRows, plus buffer if matrix was shrunk
+    // GPUSparse matrices concatenate the major and secondary index data after m_pArray, and access it from m_pArray + m_elemSizeAllocated.
+    // CPUSparse matrices store two additional pointers.
 
     // **************************
     // GPUSparseMatrix variables
     // **************************
-    size_t m_totalBufferSizeAllocated;
+    size_t m_totalBufferSizeAllocated; // actual number of bytes that m_pArray was allocated for
 
     // used by the blockCol and blockRow format
     size_t m_blockSize; // number of non-zero columns. The compact storage has this many columns.
@@ -435,8 +440,8 @@ protected:
     ElemType* m_nzValues;
 
     // non-zero values are stored in m_pArray
-    CPUSPARSE_INDEX_TYPE* m_unCompIndex; // row/col ids in CSC/CSR format
-    CPUSPARSE_INDEX_TYPE* m_compIndex;   // begin ids of col/row in CSC/CSR format
+    CPUSPARSE_INDEX_TYPE* m_unCompIndex; // major index (row/col indices in CSC/CSR format)
+    CPUSPARSE_INDEX_TYPE* m_compIndex;   // secondary index (begin offsets into m_pArray/m_unCompIndex, of col/row in CSC/CSR format)
 
     size_t* m_blockIds;    // block ids
     size_t m_blockIdShift; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift

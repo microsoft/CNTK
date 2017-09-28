@@ -162,7 +162,31 @@ public:
     inline size_t GetNumNZElements() const { return NzCount(); } // TODO: GetNumNZElements() and NzCount() are redundant. Remove one of the two.
 
     void ClearNzCount();
-    // The sparse matrix representation of CSC/CSR uses one large matrix (m_pArray) with offsets to the Major/Secondary index location.
+
+    // Terminology and store of sparse matrices:
+    //  - nz array    [0..nzIndex..nzCount-1]: array of non-zero element values, all concatenated linearly in memory
+    //  - major index [0..nzIndex..nzCount-1]: corresponding index of non-zero element. CSC: row index (RowLocation(), does not include slice-view offset).
+    //  - secondary index [0..j..J-1] -> firstNzIndex: first nzIndex of the non-sparse dimension. CSC: j=colIndex. Secondary index = ColLocation(), *does* include slice-view offset.
+    // The three arrays are concatenated in memory.
+    // CSC:
+    //   This stores the columns sparsely. Columns are indexable; individual elements are not. The memory layout is equivalent to:
+    //     struct CSCLayout
+    //     {
+    //         ElemType nzArray[nzCount];                    // [nzIndex] nz array. --TODO: m_elemSizeAllocated == nzCount? Or can there be a gap, too?
+    //         GPUSPARSE_INDEX_TYPE majorIndex[nzCount];     // [nzIndex] major index
+    //         GPUSPARSE_INDEX_TYPE secondaryIndex[numCols]; // [colIndex] secondary index
+    //     };
+    //   In presence of a slice view, the nz array and major index are commonly the base of the entire array, while the secondary index is offset by the slice view offset.
+    // SBC (sparseBlockCol):
+    //   This stores a matrix with zero or non-zero columns.
+    //     struct SBCLayout
+    //     {
+    //         ElemType nzArray[numRows,numStoredCols], gap[.];    // [rowIndex, storageIndex] nz array. Allocated as [m_elemSizeAllocated], but valid only as [rowIndex, storageIndex]
+    //         GPUSPARSE_INDEX_TYPE majorIndex[numCols];           // [colIndex] -> storageIndex or Id_NotAssigned (empty) (or Id_Pending)
+    //         GPUSPARSE_INDEX_TYPE secondaryIndex[numStoredCols]; // [storageIndex] -> colIndex. Note: allocated as [numCols], but valid only as [numStoredCols]
+    //     };
+
+    // The sparse matrix representation of CSC/CSR uses one large value array (m_pArray) with offsets to the Major/Secondary index location.
     // m_pArray [0,nz] are the nz elements, [nz+1,2*nz+1] is the major index location, and [2*nz+2,2*nz+2+ numcols/rows] is the secondary
     // index location.
     // BUGBUG: This function does not honor the slice-view offset, while CPUSparseMatrix::MajorIndexLocation() does.
@@ -224,11 +248,10 @@ public:
             return MajorIndexLocation() + GetNumCols();
         else if (GetFormat() == matrixFormatSparseBlockRow)
             return MajorIndexLocation() + GetNumRows();
-        else
-        {
-            size_t size = GetSizeAllocated();
-            return (GPUSPARSE_INDEX_TYPE*)((char*)Buffer() + sizeof(GPUSPARSE_INDEX_TYPE) * size + sizeof(ElemType)*size) + m_sliceViewOffset;
-        }
+        else // CSR or CSC
+            return m_sliceViewOffset +
+                   (GPUSPARSE_INDEX_TYPE*)((char*)Buffer() +
+                                           (sizeof(ElemType) + sizeof(GPUSPARSE_INDEX_TYPE)) * GetSizeAllocated());
         // return MajorIndexLocation() + m_elemSizeAllocated + m_sliceViewOffset;
     }
 
@@ -257,16 +280,17 @@ public:
         return (SecondaryIndexCount()) * sizeof(GPUSPARSE_INDEX_TYPE);
     }
 
-    size_t BufferSizeNeeded(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat format) const
+    size_t BufferSizeNeeded(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat format) const // in bytes
     {
         return sizeof(ElemType) * numNZ + sizeof(GPUSPARSE_INDEX_TYPE) * (MajorIndexCount(numRows, numCols, numNZ, format) + SecondaryIndexCount(numRows, numCols, numNZ, format));
     }
 
+    // Data() returns the address of the first non-zero element's value, after accounting for m_sliceViewOffset.
     // SecondaryIndexValueAt calls SecondaryIndexLocation which is already appropriately offset by m_sliceViewOffset
     inline ElemType* Data() const
     {
         return (Buffer() +
-            ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? SecondaryIndexValueAt(0) : 0));
+            ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? SecondaryIndexValueAt(0)/*CSC or CSR*/ : 0/*others*/));
     }
 
     inline size_t GetNumElemAllocated() const
@@ -285,7 +309,7 @@ public:
         // not a valid function for other formats
         assert(GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR);
 
-        return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation();
+        return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexLocation()/*CSR*/ : MajorIndexLocation()/*CSC*/;
     }
 
     size_t RowSize() const // actual number of bytes in use
@@ -293,7 +317,7 @@ public:
         // not a valid function for other formats
         assert(GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR);
 
-        return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexSize() : MajorIndexSize();
+        return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexSize()/*CSR*/ : MajorIndexSize()/*CSC*/;
     }
 
     GPUSPARSE_INDEX_TYPE* ColLocation() const
@@ -301,7 +325,7 @@ public:
         // not a valid function for other formats
         assert(GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR);
 
-        return (GetFormat() & matrixFormatRowMajor) ? MajorIndexLocation() : SecondaryIndexLocation();
+        return (GetFormat() & matrixFormatRowMajor) ? MajorIndexLocation()/*CSR*/ : SecondaryIndexLocation()/*CSC*/;
     }
 
     size_t ColSize() const // actual number of bytes in use
@@ -339,9 +363,9 @@ public:
     void Reshape(const size_t numRows, const size_t numCols);
     void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly = true);
 
-    void Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly = true, bool keepExistingValues = true); // matrix format will affect the size to allocate
-    void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); // matrix format will affect the size to allocate
-    void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
+    void Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues); // matrix format will affect the size to allocate
+    void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues);
+    void RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false); // matrix format will affect the size to allocate
     void RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat format, const bool growOnly = true);
     void RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const bool growOnly = true)
     {
@@ -364,6 +388,7 @@ public:
     GPUMatrix<ElemType> DiagonalToDense() const;
 
     GPUMatrix<ElemType> CopyToDenseMatrix() const;
+    size_t* TryCopyToArrayAsOneHot() const;
     void CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatrix) const;
     void CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>& cpuSparseMatrix) const;
     void ChangeDeviceTo(DEVICEID_TYPE toId);

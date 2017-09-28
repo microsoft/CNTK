@@ -186,6 +186,7 @@ public:
 
     ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
     size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; // allocated by the callee but need to be deleted by the caller
+    size_t* TryCopyToArrayAsOneHot() const;                                     // allocated by the callee but need to be deleted by the caller
     // colStride specifies leading dimension of dst.
     // REVIEW alexeyk: GPU version copies from device to host only, implement all versions (device <-> host).
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;

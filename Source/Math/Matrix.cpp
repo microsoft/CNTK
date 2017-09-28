@@ -687,8 +687,7 @@ size_t Matrix<ElemType>::BufferSize() const
 template <class ElemType>
 ElemType* Matrix<ElemType>::Data() const
 {
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            nullptr,
+    DISPATCH_MATRIX_ON_FLAG(this, nullptr,
                             return m_CPUMatrix->Data(),
                             return m_GPUMatrix->Data(),
                             return m_CPUSparseMatrix->Data(),
@@ -698,12 +697,21 @@ ElemType* Matrix<ElemType>::Data() const
 template <class ElemType>
 ElemType* Matrix<ElemType>::CopyToArray() const
 {
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            nullptr,
+    DISPATCH_MATRIX_ON_FLAG(this, nullptr,
                             return m_CPUMatrix->CopyToArray(),
                             return m_GPUMatrix->CopyToArray(),
                             { CPUMatrix<ElemType> tmpDense(m_CPUSparseMatrix->GetNumRows(), m_CPUSparseMatrix->GetNumCols()); tmpDense.SetValue((ElemType)0); CPUSparseMatrix<ElemType>::ScaleAndAdd((ElemType)1, *m_CPUSparseMatrix, tmpDense); return tmpDense.CopyToArray(); },
                             return m_GPUSparseMatrix->CopyToDenseMatrix().CopyToArray());
+}
+
+template <class ElemType>
+size_t* Matrix<ElemType>::TryCopyToArrayAsOneHot() const
+{
+    DISPATCH_MATRIX_ON_FLAG(this, nullptr,
+                            return nullptr, /* dense matrices are never one-hot */
+                            return nullptr,
+                            return nullptr, /* TODO */
+                            return m_GPUSparseMatrix->TryCopyToArrayAsOneHot());
 }
 
 //memory will be allocated by the callee if not enough but need to be deleted by the caller after it's done
@@ -711,8 +719,7 @@ ElemType* Matrix<ElemType>::CopyToArray() const
 template <class ElemType>
 size_t Matrix<ElemType>::CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const
 {
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            nullptr,
+    DISPATCH_MATRIX_ON_FLAG(this, nullptr,
                             return m_CPUMatrix->CopyToArray(arrayCopyTo, currentArraySize),
                             return m_GPUMatrix->CopyToArray(arrayCopyTo, currentArraySize),
                             NOT_IMPLEMENTED,

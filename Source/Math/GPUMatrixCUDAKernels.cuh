@@ -3368,15 +3368,19 @@ __global__ void _determineBlockIds(
 template <class ElemType>
 __global__ void _denseMulSparseCSCTransposeToSparseBlockCol2(
     const ElemType alpha,
+    // lhs
     const ElemType* lhsValues,
     const size_t numRowsLhs,
     const size_t numColsRhs,
-    const ElemType* rhsNZValues,
-    const GPUSPARSE_INDEX_TYPE* rhsRows,
-    const GPUSPARSE_INDEX_TYPE* rhsCols,
+    // rhs
+    const ElemType* rhsNZValues,         // base of array
+    const GPUSPARSE_INDEX_TYPE* rhsRows, // base of array
+    const GPUSPARSE_INDEX_TYPE* rhsCols, // array offset by slice-view offset
+    // target matrix
     const GPUSPARSE_INDEX_TYPE* col2blockIds,
     ElemType* resultValues)
 {
+    // determine (row,col) on lhs matrix
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG lhsCol = index / numRowsLhs; // rhsCol == lhsCol
     if (lhsCol >= numColsRhs)
@@ -3386,17 +3390,17 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol2(
     // each thread handles one [row, col] combination
     ElemType lhsValue = alpha * lhsValues[IDX2C(lhsRow, lhsCol, numRowsLhs)];
 
-    CUDA_LONG start = rhsCols[lhsCol]; // rhsCol == lhsCol
-    CUDA_LONG end = rhsCols[lhsCol + 1];
-
-    for (CUDA_LONG p = start; p < end; p++)
+    // loop over nz elements for this lhs column
+    CUDA_LONG nzBegin = rhsCols[lhsCol]; // rhsCol == lhsCol
+    CUDA_LONG nzEnd   = rhsCols[lhsCol + 1];
+    for (CUDA_LONG nzIndex = nzBegin; nzIndex < nzEnd; nzIndex++)
     {
-        CUDA_LONG rhsRow = rhsRows[p];
-        ElemType rhsVal = rhsNZValues[p];
-        CUDA_LONG resultCol = col2blockIds[rhsRow]; // resultCol == rhsRow maps to columnid
+        CUDA_LONG rhsRow = rhsRows[nzIndex];
+        ElemType rhsVal = rhsNZValues[nzIndex];
+        CUDA_LONG storageCol = col2blockIds[rhsRow]; // storageCol == rhsRow maps to columnid
 
-        // assume resultValues are 0-initialized
-        atomicAdd(&resultValues[IDX2C(lhsRow, resultCol, numRowsLhs)], lhsValue * rhsVal);
+        // we add into the existing matrix ("beta=1")
+        atomicAdd(&resultValues[IDX2C(lhsRow, storageCol, numRowsLhs)], lhsValue * rhsVal);
     }
 }
 

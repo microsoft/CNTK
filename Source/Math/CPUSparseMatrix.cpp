@@ -1103,6 +1103,8 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
         if (rhs.GetFormat() != matrixFormatSparseCSC)
             NOT_IMPLEMENTED;
 
+        // BUGBUG? GPU version did not consider the slice-view offset correctly. Check whether this one does!
+
         // allocate enough memory
         c.SetFormat(matrixFormatSparseBlockCol);
         size_t blockSizePrev = c.GetBlockSize();
