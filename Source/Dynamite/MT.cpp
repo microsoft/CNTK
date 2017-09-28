@@ -129,7 +129,6 @@ vector<Variable> AsVector(const Variable& seq)
 // reference attention model
 fun AttentionModelReference(size_t attentionDim1)
 {
-    //auto H = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
     let projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize, device);
     let normH = LengthNormalization(device); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
@@ -152,41 +151,13 @@ fun AttentionModelReference(size_t attentionDim1)
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // compute attention weights
-        //let hProjected = projectQuery(h); // [A]. Batched.
-        //let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A]. Batched.
         let tanh = doToTanh(h, historyProjectedKey); // [A]
-#if 1
-        // This is not well-batched yet, I don't know why. This is the solution that should realize maximum parallelization (disregarding Gather steps).
-        CountAPICalls(encodingProjectedKeys.size());
-        for (let& k : AsVector(encodingProjectedKeys))
-            us.push_back(InnerProduct(tanh, k, Axis(0), Named("u"))); // vector<[1]>. Batched.
-        // alternative: ^^ compute the inner product elementwise.
-        //              Will make a broadcast copy of tanh[t] (#copies=mb size), then operate in one go instead of one per sequence
-        // alternative: softmax denom: splice u, ReduceLogSum, slice up -> sequence
-        //              Batched (#mb size in one go): minus, exp -> w[t]
-        //              Not batched (one launch per sentence: ReduceLogSum)
-        Dynamite::Sequence::Softmax(ws, us, zBarrier); // softmax over a vector
-        // BUGBUG: Somehow the Exp() inside does not get batched, although they are unrolled.
-        us.clear();
-        // alternative: product with encodingProjectedData
-        //              Batched: elementwise product -> RAM copy of (encodingProjectedData * u)[t], #items=mb size
-        let res = resBarrier(Dynamite::Sequence::InnerProduct(AsVector(encodingProjectedData), ws, Named("attContext"))); // inner product over a vectors
-        ws.clear();
-#else
         CountAPICalls(1);
         let uVec = InnerProduct(tanh, encodingProjectedKeys, Axis(0), Named("u")); // [1 x T]
         let wVec = Dynamite::Softmax(uVec, Axis(1)); // [1 x T]
         // ^^TODO: put zBarrier inside Softmax
-        //as_vector(us, uVec);
-        //Dynamite::Sequence::Softmax(ws, us, zBarrier); // softmax over a vector
-        // BUGBUG: Somehow the Exp() inside does not get batched, although they are unrolled.
-        //us.clear();
-        // alternative: product with encodingProjectedData
-        //              Batched: elementwise product -> RAM copy of (encodingProjectedData * u)[t], #items=mb size
         CountAPICalls(1);
         let res = resBarrier(InnerProduct(encodingProjectedData, wVec, Axis_DropLastAxis, Named("attContext"))); // [.] inner product over a vectors
-        //let res = resBarrier(Dynamite::Sequence::InnerProduct(encodingProjectedData, ws, Named("attContext"))); // inner product over a vectors
-#endif
         Function::SetDynamicProfiler(prevProfiler);
         return res;
     });
@@ -204,7 +175,6 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier")) >> Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("initialStateProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
     let stepBarrier = Barrier(20, Named("stepBarrier"));
     let stepFunction = GRU(decoderRecurrentDim, device);
-    //let attentionModel = AttentionModelBahdanau(attentionDim);
     auto attentionModel = AttentionModelReference(attentionDim);
     let firstHiddenProjection = Barrier(600, Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return ReLU(x, Named("firstHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
     vector<UnaryBroadcastingModel> resnets;
