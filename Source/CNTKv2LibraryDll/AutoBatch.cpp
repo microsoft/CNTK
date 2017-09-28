@@ -535,6 +535,8 @@ namespace CNTK
     //     - Splice() for each of the N inputs
     // 'free' ops are always batched together and get executed first
 
+using SliceRange = Internal::AutoBatchRedirection::SliceRange;
+
 // ===========================================================================
 // helper classes
 // ===========================================================================
@@ -1300,9 +1302,9 @@ return fInlinedPtr;
                         fail_if(a.m_inputs[i].Shape().IsUnknown(), "AreCompositesBatchable called for unknown shape??");
                         let& aInputFields = GetInputFields(a.m_inputs[i]);
                         let& bInputFields = GetInputFields(b.m_inputs[i]);
-                        if (aInputFields.m_redirection != aInputFields.m_redirection)
+                        if (aInputFields.m_redirection.empty() != aInputFields.m_redirection.empty())
                             return false;
-                        if (aInputFields.m_redirection)
+                        if (!aInputFields.m_redirection.empty())
                         {
                             // BUGBUG: we retraverse multiple paths for now. This will be rewritten and done properly.
                             // BUGBUG: We also must compare the actual graph link structure, not just the unrolled tree.
@@ -1492,11 +1494,7 @@ return fInlinedPtr;
                 var.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
                 fail_if(!fields.m_value, "Parameter/Constant has no Value()??");
             }
-            fields.m_redirection.m_function = nullptr;
-            // and initialize these as well for good measure (not really needed)
-            fields.m_redirection.m_functionHolder.reset();
-            fields.m_redirection.m_index = SIZE_MAX;
-            fields.m_redirection.m_depthHint = 0;
+            fields.m_redirection.reset();
             m_stats.numLeafNodes++;
             return;
         }
@@ -1552,7 +1550,7 @@ return fInlinedPtr;
             fields.m_redirection = redirectedFields.m_redirection; // we redirect to whatever the input redirects to
             // BUGBUG:!!!! How aboud the gradient?? We must know how to find the gradient!
             //        One solution is to redirect to the operation directly on top of the Parameter, not the parameter itself.
-            if (!fields.m_redirection) // redirects to leaves are currently not handled correctly (since redirects are based on Function, not Variable)  --TODO: change that
+            if (fields.m_redirection.empty()) // redirects to leaves are currently not handled correctly (since redirects are based on Function, not Variable)  --TODO: change that
                 InvalidArgument("Value(): See-through ops on leaves are currently not implemented.");
             // if a barrier then record the maximum depth hint encountered
             // Functions consuming this Variable are bound by the barrier (but not the function that produces the original value).
@@ -1566,10 +1564,7 @@ return fInlinedPtr;
             InvalidArgument("Dynamic operations cannot have multiple outputs.");
 
         // set up linkage in our overlaid structure
-        fields.m_redirection.m_function = &f;          // pointer to ourselves
-        fields.m_redirection.m_functionHolder.reset(); // don't hold the ref count to ourselves (would create a cyclic graph)
-        fields.m_redirection.m_index = SIZE_MAX;
-        fields.m_redirection.m_depthHint = 0;
+        fields.m_redirection.reset(&f);          // pointer to ourselves, don't hold the ref count to ourselves (would create a cyclic graph)
 
         // special case BatchNormalization: we must account for all occurences before normalizing
         // We count all occurences during this initial tree traversal.
@@ -1602,7 +1597,7 @@ return fInlinedPtr;
             {
                 //if (inputFields.m_varKind == VariableKind::Placeholder) // Placeholder in Block inlining
                 //    continue;
-                fail_if(!inputFields.m_redirection, "input has no value and is not a function either??");
+                fail_if(inputFields.m_redirection.empty(), "input has no value and is not a function either??");
                 auto& outputFields = GetOutputFields(*inputFields.m_redirection.m_function);
                 pendingInputs++;
                 // record ourselves as a consumer of the input
@@ -1634,7 +1629,7 @@ return fInlinedPtr;
     {
         if (fields.m_value) // value is available (including cached values): use it
             return fields.m_value;
-        fail_if(!fields.m_redirection, "Variable unexpectedly has no value yet, nor is it a slice view into a batched op");
+        fail_if(fields.m_redirection.empty(), "Variable unexpectedly has no value yet, nor is it a slice view into a batched op");
         // get the actual value from the function that computed it
         auto& functionFields = GetOutputFields(*fields.m_redirection.m_function);
         fail_if(&fields == &functionFields, "Variable unexpectedly has no value yet"); // avoid infinite recursion
@@ -1649,13 +1644,9 @@ return fInlinedPtr;
     {
         fail_if(!from, "Variable's input unexpectedly has no value yet");
         // optional implicit index and reshape
-        let index = outputFields.m_redirection.m_index;
-        if (index != SIZE_MAX) // special sentinel value that means "don't slice, actually"
-#if 1
-            from = from->SliceViewAsShape(index, index + 1, outputFields.m_shape);
-#else
-            from = from->IndexLastAxis(index);
-#endif
+        let sliceRange = outputFields.m_redirection.m_sliceRange;
+        if (!sliceRange.empty())
+            from = from->SliceViewAsShape(sliceRange.BeginIndex(), sliceRange.EndIndex(), outputFields.m_shape);
         else // no slice
             ReplaceWithReshapedViewIfNeeded(from, outputFields.m_shape);
         outputFields.m_value = move(from);
@@ -1676,7 +1667,7 @@ return fInlinedPtr;
         auto& fields = GetInputFields(v);
         if (fields.m_value)
             return fields.m_value.get();
-        if (!fields.m_redirection) // redirect to output of function that produces this value
+        if (fields.m_redirection.empty()) // redirect to output of function that produces this value
             LogicError("GetValueObject() called where no value object exists (hit a leaf)??");
         let& output = fields.m_redirection.m_function->m_outputs.front(); // note: may be recursive
         if (&GetInputFields(output) == &fields)
@@ -1728,10 +1719,18 @@ return fInlinedPtr;
                     uid = name + L":" + uid;
                 return uid;
             };
-            if (fields.m_redirection)
+            if (!fields.m_redirection.empty())
             {
                 let& input1 = fields.m_redirection.m_function->m_outputs.front();
-                fprintf(stderr, "%s%s%S%S[%d]", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input1).c_str(), input1.Shape().AsString().c_str(), (int)fields.m_redirection.m_index);
+                fprintf(stderr, "%s%s%S%S", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input1).c_str(), input1.Shape().AsString().c_str());
+                let slice = fields.m_redirection.m_sliceRange;
+                if (!slice.empty())
+                {
+                    if (slice.IsIndex())
+                        fprintf(stderr, "[%d]", (int)fields.m_redirection.m_sliceRange.Index());
+                    else
+                        fprintf(stderr, "[%d:%d]", (int)fields.m_redirection.m_sliceRange.BeginIndex(), (int)(fields.m_redirection.m_sliceRange.EndIndex()));
+                }
             }
             else
                 fprintf(stderr, "%s%s%S%S", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input).c_str(), input.Shape().AsString().c_str());
@@ -1911,9 +1910,11 @@ return fInlinedPtr;
 #endif
         // we must initialize the redirect for backprop
         auto& fields = *f.m_outputs.front().m_dataFields;
-        fields.m_redirection.m_function = &f;       // we are computing stuff ourselves
-        fields.m_redirection.m_index = SIZE_MAX;    // (indicates that this is not a slice)
-        fields.m_redirection.m_depthHint = INT_MAX; // (to indicate an invalid value)
+        fail_if(fields.m_redirection.m_functionHolder, "shouldn't functionHolder be empty here?");
+        fields.m_redirection.reset(&f);         // we are computing stuff ourselves
+        //fields.m_redirection.m_function = &f;         // we are computing stuff ourselves
+        //fields.m_redirection.m_sliceRange.reset(); // (indicates that this is not a slice)
+        //fields.m_redirection.m_depthHint = INT_MAX;   // (to indicate an invalid value)
     }
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
@@ -2028,7 +2029,8 @@ return fInlinedPtr;
         // That is fine, since the -Holder is only concerned with holdinf a ref count for m_function
         // in case is it was a new function. Since m_function also gets overwritten, the object it used
         // to point to is no longer referenced.
-        fields.m_redirection.m_index = j;
+        fields.m_redirection.m_sliceRange.reset(j);
+        // ^^ TODO: use reset() here. But how about depthHint?
         // semantically, this will compute as fields.m_value = out->IndexLastAxis(j);
         // but it gets deferred to save effort
         // update all ops' consumers and schedule them when possible
@@ -2068,26 +2070,32 @@ return fInlinedPtr;
         if (!hash)
         {
             // determine the Fields of the physical object and the slice
-            auto index = SIZE_MAX;
+            SliceRange sliceRange;
             let* pfields = &fields;
-            while (pfields->m_redirection)
+            while (!pfields->m_redirection.empty())
             {
                 let& outFields = GetOutputFields(*pfields->m_redirection.m_function);
                 if (&outFields == pfields)
                     break;
-                if (index == SIZE_MAX)
-                    index = pfields->m_redirection.m_index; // note: it is guaranteed that there is only one index in the chain
+                if (sliceRange.empty())
+                    sliceRange = pfields->m_redirection.m_sliceRange; // note: it is guaranteed that there is only one index in the chain
                 pfields = &outFields;
             }
             hash = 0;
             IncorporateFieldsId(*pfields);
-            index++; // SIZE_MAX -> 0, so we can skip the mul in teh frequent case
-            if (index)
-                hash += index * hashMultiplier;
+            if (!sliceRange.empty())
+            {
+                // (Note: not sure if this hashing is done right. Using the same multiplier will put stuff on top of each other.)
+                if (sliceRange.IsSlice())
+                    hash += (sliceRange.BeginIndex() + hashMultiplier * sliceRange.Width()) * hashMultiplier;
+                else
+                    hash += (sliceRange.Index() + 1) * hashMultiplier; // SIZE_MAX -> 0, so we can skip the mul in the frequent case
+            }
             fields.m_valueAddrForHash = hash;
         }
         return hash;
 #else   // This version compares the starting address in GPU memory, and can therefore detect aliases coming through different routes.
+        fail_if(true, "this must be updated to correctly use m_sliceRange width"); // we must compare the length as well
         auto addrForHash = fields.m_valueAddrForHash;
         if (!addrForHash)
         {
@@ -2136,7 +2144,7 @@ return fInlinedPtr;
         //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ElementTimes, L"ComputeAliasHash()", 3, numInputs);
         for (size_t k = 0; k < numInputs; k++)
         {
-            // TODO: just use object identity (follow redirects through m_index=SIZE_MAX) plus index
+            // TODO: just use object identity (follow redirects through !m_sliceRange) plus index
             let addrForHash = CacheAndGetValueAddrForHash(GetInputFields(inputs[k]));
             hash += (size_t)addrForHash;
             hash += (size_t)(addrForHash >> 8); // also hash the page number, in case allocation is page-aligned
@@ -2336,10 +2344,10 @@ return fInlinedPtr;
     }
 
     // determine the physical source and slice index of an input
-    static const struct { const PrimitiveFunction* originatingFunction; size_t sliceIndex; } LazyPhysicalSlice(const VariableFields& fields)
+    static const struct { const PrimitiveFunction* originatingFunction; SliceRange sliceRange; } LazyPhysicalSlice(const VariableFields& fields)
     {
-        auto function = fields.m_redirection.m_function;
-        auto index    = fields.m_redirection.m_index;
+        auto function   = fields.m_redirection.m_function;
+        auto sliceRange = fields.m_redirection.m_sliceRange;
         // case 1: Placeholder or Constant
         if (!function)
             goto done;
@@ -2352,19 +2360,20 @@ return fInlinedPtr;
         // TODO: patch up the data structure upon first discovery
         for (;;)
         {
-            let redirectedIndex = redirectedFields.m_redirection.m_index;
+            let redirectedSliceRange = redirectedFields.m_redirection.m_sliceRange;
             function = redirectedFunction;
-            if (index == SIZE_MAX)
-                index = redirectedIndex;
+            if (sliceRange.empty())
+                sliceRange = redirectedSliceRange;
             else
-                fail_if(redirectedFields.m_redirection.m_index != SIZE_MAX, "LazyPhysicalSlice: hit a see-through slice??"); // multiple slicing not possible
+                fail_if(!redirectedFields.m_redirection.m_sliceRange.empty(), "LazyPhysicalSlice: hit a see-through slice??"); // multiple slicing not possible
+            // TODO: ^^ multiple non-dropping slices could be composable here
             let& redirectedFields = GetOutputFields(*function);
             redirectedFunction = redirectedFields.m_redirection.m_function;
             if (redirectedFunction == function) // self: end of chain
                 break;
         }
     done:
-        return{ function, index };
+        return{ function, sliceRange };
     }
 
     // subroutine to determine the max Rank() over f's m_inputs
@@ -2607,7 +2616,7 @@ return fInlinedPtr;
                 let is0Redirected = redirectionPair0.originatingFunction != nullptr;
                 // loop over all batched ops
                 bool allSame = true;
-                bool allConsecutiveSlices = is0Redirected && redirectionPair0.sliceIndex != SIZE_MAX; // to be consecutive, it must be a slice to start with
+                bool allConsecutiveSlices = is0Redirected && !redirectionPair0.sliceRange.empty(); // to be consecutive, it must be a slice to start with
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, batchSize);
                 //for (auto op = ops.begin(); op != ops.end(); ++op) // create the batched tensors
                 size_t j = 0; // running index
@@ -2619,16 +2628,17 @@ return fInlinedPtr;
                     // optimization: if all args are the same, then don't batch
                     allSame = allSame &&
                         (&pfields == &pfields0 ||                           // same object
-                         (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceIndex == redirectionPair0.sliceIndex)); // or same view
-                    // ^^ we can remove this double check, and just compare m_function abnd m_index
+                         (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
+                    // ^^ we can remove this double check, and just compare m_function abnd m_sliceRange
                     // optimization: if all args are consecutive slices, then use a slice view instead
                     if (allConsecutiveSlices)
                     {
                         // optimization: if consecutive slices, then recover the original batched tensor
                         // TODO: Can we directly check the data buffer pointer?
+                        fail_if(redirectionPair.sliceRange.IsSlice(), "stacking not yet supported");
                         allConsecutiveSlices =
-                            redirectionPair.originatingFunction == redirectionPair0.originatingFunction && // function that creates the physical output
-                            redirectionPair.sliceIndex          == redirectionPair0.sliceIndex + j;
+                            redirectionPair.originatingFunction     == redirectionPair0.originatingFunction && // function that creates the physical output
+                            redirectionPair.sliceRange.Index() == redirectionPair0.sliceRange.Index() + j;
                         // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
                         // scenario, we will loose entries in the middle. We can allow to keep a few around
                         // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
@@ -2647,10 +2657,11 @@ return fInlinedPtr;
                 if (allSame) // optimized case: all ops share the same operand: no need to batch them
                     // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
                     m_batchedInputs[i] = gatherInputs[0];
-                else if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
+                else if (allConsecutiveSlices) // they are consecutive slice views: can short-circuit as a slice view
                 {
                     let& from  = redirectionPair0.originatingFunction;
-                    let  begin = redirectionPair0.sliceIndex;
+                    fail_if(redirectionPair0.sliceRange.IsSlice(), "stacking not yet supported");
+                    let  begin = redirectionPair0.sliceRange.Index();
                     let& output = from->m_outputs.front();
                     fail_if(!GetOutputFields(*from).m_value, "value not yet available??");
                     let& fromDims = output.Shape().Dimensions();
@@ -2816,10 +2827,10 @@ public:
     // This (and BatchedBackward()) represent the graph via the following structures that overlay the CNTK API structures:
     //  - Variable:
     //     - never look at Variable itself unless it has no m_redirection.m_function, except for:
-    //        - m_value: if not NULL then this is the cached value after applying m_sliceBegin/End and a potential reshape
-    //        - m_shape: the desired shape of this variable, if different from result of op/m_sliceBegin/End
+    //        - m_value: if not NULL then this is the cached value after applying m_sliceRange and a potential reshape
+    //        - m_shape: the desired shape of this variable, if different from result of op/m_sliceRange
     //     - m_redirection.m_function     -> PrimitiveFunction (nullptr for leaves, that is, Parameter and Constant)
-    //     - m_redirection.m_sliceBegin    --if m_sliceEnd not SIZE_MAX, then slice the last dimension with this  --TODO: begin and end?
+    //     - m_redirection.m_sliceRange    --if not empty then index or slice the last dimension with this
     //     - m_depthHint  --this value should only be consumed when there is no ready op that consumes a smaller m_depthHint (0=none specified)
     //  - PrimitiveFunction:
     //     - m_inputs[] -> Variable.m_redirection
@@ -2901,7 +2912,7 @@ public:
                     if (depthHint != 0)
                     {
                         const wchar_t* name = nullptr;
-                        if (inputFields.m_redirection)
+                        if (!inputFields.m_redirection.empty())
                         {
                             let& f = *inputFields.m_redirection.m_function;
                             name = f.Name().c_str();
@@ -2990,10 +3001,10 @@ public:
         // we now have a physical one, but no cached view
         // Reminder: cached view = physical  value |> Barrier >> Slice >> Reshape
         // We must do this backwards. 
-        let index = inputFields.m_redirection.m_index;
+        let sliceRange = inputFields.m_redirection.m_sliceRange;
         auto gradient = gradFields.m_gradient;
         // slice and reshape if needed
-        if (index != SIZE_MAX) // it's a slice: gradient is a slice view into from's output gradient
+        if (!sliceRange.empty()) // it's a slice: gradient is a slice view into from's output gradient
         {
             if (beta == 0.0) // gradient is fresh: explicitly reset all (since we are slicing into the input gradientm, we cannot use the beta mechanism)
             {
@@ -3001,12 +3012,7 @@ public:
                 m_stats.numBackpropSetZeroes++;
                 beta = 1.0;
             }
-#if 1
-            gradient = gradient->SliceViewAsShape(index, index + 1, inputFields.m_shape);
-#else
-            gradient = gradient->IndexLastAxis(index);
-            ReplaceWithReshapedViewIfNeeded(gradient, inputFields.m_shape);
-#endif
+            gradient = gradient->SliceViewAsShape(sliceRange.BeginIndex(), sliceRange.EndIndex(), inputFields.m_shape);
         }
         else // no slice
             ReplaceWithReshapedViewIfNeeded(gradient, inputFields.m_shape);
@@ -3067,12 +3073,10 @@ public:
         // done initializing this node. Now on to its inputs.
 
         // handle leaves
-        if (!gradFields.m_redirection) // has no owner/producer function: it's a Parameter or Constant
+        if (gradFields.m_redirection.empty()) // has no owner/producer function: it's a Parameter or Constant
         {
             // this leaf will receive a gradient; zero it out if one is already present (in case user passes in the buffer)
             fail_if(gradFields.m_varKind != VariableKind::Parameter && gradFields.m_varKind != VariableKind::Constant, "backprop through a see-through op??");
-            //if (gradFields.m_uniqueIdForDebugging == 243)
-            //    Break;
             return;
         }
 
@@ -3142,14 +3146,14 @@ public:
     }
     VariableFields& GetGradientFieldsForBackprop(VariableFields& inputFields, bool firstTime = false)
     {
-        if (!inputFields.m_redirection) // leaf
+        if (inputFields.m_redirection.empty()) // leaf
             return inputFields;
         auto& gradFields = GetOutputFields(*inputFields.m_redirection.m_function);
         //if (inputFields.m_redirection.m_function->m_uniqueIdForDebugging == 368869)
         //    Break;
         //if (gradFields.m_redirection.m_function->m_uniqueIdForDebugging == 368869)
         //    Break;
-        fail_if(!gradFields.m_redirection, "output Variable is a leaf??");
+        fail_if(gradFields.m_redirection.empty(), "output Variable is a leaf??");
         //fail_if(inputFields.m_redirection.m_function->m_op == PrimitiveOpType::Block, "unexpanded Block invocation??");
         // short-circuit if needed
         if (ArePhysicalOutputFields(gradFields)) // a physical Variable
@@ -3157,7 +3161,7 @@ public:
         // if not firstTime then we should not get here
         fail_if(!firstTime, "GetGradientFieldsForBackprop (not firstTime): hit a see-through slice??");
         // move up the m_redirection into 'input', overwriting the current one
-        fail_if(inputFields.m_redirection.m_index != SIZE_MAX, "GetGradientFieldsForBackprop (firstTime): short-circuiting a see-through slice??"); // can only handle one slice per chain
+        fail_if(!inputFields.m_redirection.m_sliceRange.empty(), "GetGradientFieldsForBackprop (firstTime): short-circuiting a see-through slice??"); // can only handle one slice per chain
         inputFields.m_redirection = gradFields.m_redirection; // replace current redirect with the down-stream one
         // and try again
         return GetGradientFieldsForBackprop(inputFields, firstTime/*=true*/); // (note: tail recursion)
@@ -3167,7 +3171,7 @@ public:
     VariableFields& ResetInputGradient(const Variable& input)
     {
         auto& inputFields = GetInputFields(input);
-        if (inputFields.m_redirection)
+        if (!inputFields.m_redirection.empty())
         {
             auto& gradFields = GetOutputFields(*inputFields.m_redirection.m_function);
             if (&gradFields != &inputFields)
@@ -3259,7 +3263,7 @@ public:
             // There are two places it goes: The immediate input's m_gradient (a view); and a potential redirect (to the physical location).
             // They may be the same pointer, different pointers to the same thing, or one could be a Reshape of the other. No slice possible.
             auto& inputFields = GetInputFields(input); // immediate input's gradient view
-            auto& redirectedInputFields = inputFields.m_redirection ? GetOutputFields(*inputFields.m_redirection.m_function) : inputFields; // physical gradient location
+            auto& redirectedInputFields = inputFields.m_redirection.empty() ? inputFields : GetOutputFields(*inputFields.m_redirection.m_function); // physical gradient location
             fail_if(inputFields.m_gradient || redirectedInputFields.m_gradient, "function with viewable gradient unexpectedly already has a gradient??");
             auto outputGradientValue = outputFields.m_gradient; // incoming gradient from top. Our gradient is going to be a view of this.
             if (op == PrimitiveOpType::Reshape)
@@ -3272,7 +3276,7 @@ public:
                 // If input is a redirected slice, then necessarily the underlying object (=inputFields.m_redirection.m_function)
                 // must have multiple consumers. Otherwise it would not be part of a batched operation, which is the only way
                 // of creating redirected slices.
-                fail_if(inputFields.m_redirection.m_index != SIZE_MAX, "redirected slice has single consumer??");
+                fail_if(!inputFields.m_redirection.m_sliceRange.empty(), "redirected slice with single consumer shouldn't be a redirect in the first place");
                 auto grad = inputFields.m_gradient;
                 ReplaceWithReshapedViewIfNeeded(grad, redirectedInputFields.m_shape);
                 redirectedInputFields.m_gradient = move(grad); // and the redirected location. If it is the same, then this will do nothing.

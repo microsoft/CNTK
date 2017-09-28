@@ -530,12 +530,49 @@ namespace CNTK
             //  - redirect into owner: m_functionHolder == empty  ; m_function == m_owner
             //  - redirect elsewhere:  m_functionHolder == object ; m_function == m_functionHolder.get()
             // I.e. in the 'elsewhere' case, this instance owns m_function, holding the ref-count in m_functionHolder.
-            PrimitiveFunction* m_function = nullptr; // function that actually produces the value for this
-            PrimitiveFunctionPtr m_functionHolder;   // holds shared_ptr to owner if it was added by auto-batching
-            size_t m_index = SIZE_MAX - 1;           // and we take this slice on the way (SIZE_MAX if none)  --TODO: replace by m_sliceBegin/End
+            PrimitiveFunction*   m_function = nullptr; // function that actually produces the value for this
+            PrimitiveFunctionPtr m_functionHolder;     // holds shared_ptr to owner if it was added by auto-batching
+            class SliceRange
+            {
+                size_t m_begin = SIZE_MAX - 1;      // and we take this slice on the way (SIZE_MAX if none)
+                size_t m_width = SIZE_MAX - 1;      // of this width (stacking case). SIZE_MAX if drop axis (batching case).
+            public:
+                void reset()                         { m_begin =        m_width = SIZE_MAX;    } // reset to no slice at all
+                void reset(size_t index)             { m_begin = index; m_width = SIZE_MAX;    } // reset to index (with dropping axis)
+                void reset(size_t begin, size_t end) { m_begin = begin; m_width = end - begin; } // reset to slice (not dropping axis)
+                explicit SliceRange()                         { reset(); }
+                explicit SliceRange(size_t index)             { reset(index); }
+                explicit SliceRange(size_t begin, size_t end) { reset(begin, end); }
+                bool empty() const { return m_begin == SIZE_MAX; }                  // empty (it's either index or slice)
+                bool IsIndex()  const { return m_begin != SIZE_MAX && !IsSlice(); } // index means to index then drop the axis
+                bool IsSlice()  const { return m_width != SIZE_MAX; }               // slice means to take a range (axis is not dropped)
+                size_t Index()      const { return m_begin; } // note: these assume you have already checked the type
+                size_t BeginIndex() const { return m_begin; }
+                size_t EndIndex()   const { return m_begin + (IsSlice() ? m_width : 1); } // this can be used for both IsIndex and IsSlice
+                size_t Width()      const { return m_width; }
+                bool operator==(const SliceRange& other) const { return m_begin == other.m_begin && m_width == other.m_width; }
+            } m_sliceRange;
             size_t m_depthHint = 0;                  // this redirection skipped a Barrier with this depthHint
-            //size_t m_sliceBegin, m_sliceEnd;         // slice out these items (applied to last dimension). Do nothing if m_sliceEnd==SIZE_MAX.  --TODO: think this through more
-            operator bool() const { return m_function != nullptr; } // allows for "if (m_redirection)"
+            bool empty() const { return m_function == nullptr; }
+            void reset(PrimitiveFunction* f = nullptr) // reset to non-redirected state or a simple non-owned function
+            {
+                m_function = f;
+                // (the following is not really needed if m_function is empty)
+                m_functionHolder.reset();
+                m_sliceRange.reset();
+                m_depthHint = 0;
+            }
+            void reset(PrimitiveFunctionPtr&& fPtr, SliceRange sliceRange = SliceRange()) // redirect to a function which we will own (with or without slice range)
+            {
+                m_function = fPtr.get();
+                m_functionHolder = move(fPtr); // retain the shared_ptr, and thus the ref-count
+                m_sliceRange = sliceRange;
+                m_depthHint = 0;
+            }
+            void reset(const PrimitiveFunctionPtr& fPtr, SliceRange sliceRange = SliceRange()) // redirect to a function which we will own
+            {
+                reset(move(PrimitiveFunctionPtr(fPtr)), sliceRange);
+            }
         };
 
         // optimized for main case of 1 consumer. No std::vector in that case.
