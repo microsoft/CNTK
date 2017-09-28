@@ -321,6 +321,7 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
         // returns the sequence of output log probs over words
         let z = model_fn(source, history);
         // compute loss per word
+#if 1
         let sequenceLoss = Dynamite::Sequence::Map(BinaryModel([](const Variable& zVector, const Variable& label) { return Dynamite::CrossEntropyWithSoftmax(zVector, label); }));
         as_vector(zVector, z);
         as_vector(labelsVector, labels);
@@ -328,6 +329,22 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
         zVector.clear(); labelsVector.clear();
         let loss = Batch::sum(losses); // TODO: Batch is not the right namespace; but this does the right thing
         losses.clear();
+#else
+#if 1
+        //let lossSeq = Dynamite::Sequence::map(zSeq, labelsSeq, [](const Variable& z, const Variable& y) { return Dynamite::CrossEntropyWithSoftmax(z, y); }, losses);
+        as_vector(zVector, z);
+        as_vector(labelsVector, labelsSeq);
+        let sequenceLoss = Dynamite::Sequence::Map(BinaryModel([](const Variable& z, const Variable& y) { return Dynamite::CrossEntropyWithSoftmax(z, y); }));
+        sequenceLoss(losses, zVector, labelsVector);
+        let lossSeq = Splice(losses, Axis(0));
+        zVector.clear(); labelsVector.clear();
+        losses.clear();
+#else
+        let lossSeq = Dynamite::CrossEntropyWithSoftmax(zSeq, labelsSeq, Axis(0));
+#endif
+        CountAPICalls(1);
+        let loss = ReduceSum(lossSeq, Axis_DropLastAxis);
+#endif
         return loss;
     };
     let profiler = Function::CreateDynamicProfiler(1, L"all");
