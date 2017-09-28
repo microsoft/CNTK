@@ -988,7 +988,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
          to the value returned by :func:`default_unit_gain_value`.
         variance_momentum (float, list, output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. 
-         Note that this is the beta1 parameter in the Adam paper [1]. Defaults to ``momentum_as_time_constant_schedule(720000)``. 
+         Note that this is the beta2 parameter in the Adam paper [1]. Defaults to ``momentum_as_time_constant_schedule(720000)``. 
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
         l2_regularization_weight (float, optional): the L2 regularization weight per sample,
