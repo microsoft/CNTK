@@ -753,6 +753,25 @@ namespace CNTK
         virtual TensorView<ElementType>* const * end() const { NOT_IMPLEMENTED; }
     };
 
+    // unroll a sequence of (sparse) inputs along their last axis, for subsequent Gather or Scatter
+    static vector<NDArrayViewPtr> Unroll(const vector<NDArrayViewPtr>& inputs, size_t axisForChecking, size_t sizeHint)
+    {
+        vector<NDArrayViewPtr> unrolledInputs;
+        unrolledInputs.reserve(sizeHint);
+        for (let& input : inputs)
+        {
+            let dims = input->Shape().Dimensions();
+            if (dims.size() != axisForChecking + 1)
+                InvalidArgument("Gather/Scatter for stacking sparse objects: an input has an incorrect rank");
+            let len = dims.back();
+            for (size_t i = 0; i < len; i++)
+                unrolledInputs.push_back(input->IndexLastAxis(i));
+        }
+        if (unrolledInputs.size() != sizeHint)
+            LogicError("Gather/Scatter for stacking sparse objects has received in incorrect size hint");
+        return unrolledInputs;
+    }
+
     /*static*/ NDArrayViewPtr NDArrayView::GatherBatch(const vector<NDArrayViewPtr>& inputs, size_t axis, NDArrayViewPtr out)
     {
         if (!out) //        || true) // keep this for now for testing this
@@ -785,6 +804,12 @@ namespace CNTK
                 out = MakeSharedObject<NDArrayView>(input0.GetDataType(), input0.GetStorageFormat(), shape, input0.Device());
             }
         }
+
+        // a special case is sparse. TensorView can presently not stack variable-width sparse tensors.
+        // We will unroll all columns. Not very efficient. --TODO: fix TensorView's Gather function
+        if (out->IsSparse() && axis == out->Shape().Rank() - 1 && axis == inputs.front()->Shape().Rank() - 1)
+            return GatherBatch(Unroll(inputs, axis, out->Shape().Dimensions().back()), axis, out);
+
         // perform the operation
         // The underlying TensorView call expects a functor to access the TensorView items.
         // Any error checking will happen inside the TensorView function, so we don't duplicate it here.
@@ -805,6 +830,14 @@ namespace CNTK
 
     /*static*/ void NDArrayView::ScatterBatch(const NDArrayViewPtr& input, vector<NDArrayViewPtr>& outputs, size_t axis, double beta)
     {
+        // a special case is sparse. TensorView can presently not stack variable-width sparse tensors.
+        // We will unroll all columns. Not very efficient. --TODO: fix TensorView's Gather function
+        if (input->IsSparse() && axis == input->Shape().Rank() - 1 && axis == outputs.front()->Shape().Rank() - 1)
+        {
+            auto unrolledOutputs = Unroll(outputs, axis, input->Shape().Dimensions().back());
+            return ScatterBatch(input, unrolledOutputs, axis, beta);
+        }
+
         // Unlike GatherBatch(), the target must already have been fully shaped and allocated.
         // Any error checking will happen inside the TensorView function, so we don't duplicate it here.
         switch (input->m_dataType)
@@ -1126,7 +1159,7 @@ namespace CNTK
             InvalidArgument("NDArrayView::DataBuffer: The specified ElementType '%s' does not match this NDArrayView's DataType '%s'.", typeid(ElementType).name(), DataTypeName(m_dataType));
 
         if (IsSparse())
-            InvalidArgument("The stroage format of 'this' NDArrayView is sparse. Please use SparseDataBuffers().");
+            InvalidArgument("The storage format of 'this' NDArrayView is sparse. Please use SparseDataBuffers().");
 
         // First make sure that the underlying matrix is on the right device
         //auto matrix = GetMatrix<ElementType>();
