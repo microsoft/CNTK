@@ -2586,9 +2586,8 @@ return fInlinedPtr;
             m_batchedInputs.resize(numArgs);
             let& unbatchedOutputShape = f0.m_outputs.front().Shape();
             size_t i0;                   // index of first batched argument (1 for matrix product; 0 otherwise)
-            size_t commonInputBatchAxis; // batch axis of all batched args if the same (all args share one new batch axis); SIZE_MAX to append
-            // TODO: ^^ we can remove the SIZE_MAX case again for now
-            size_t outputBatchAxis;      // batch axis in output (appended for matrix product; shared with inputs otherwise)
+            size_t commonInputBatchAxis; // batch axis of all batched args (it is the same across all args)
+            size_t outputBatchAxis;      // batch axis in output (may differ from commonInputBatchAxis for Times/Convolution)
             // TODO: We restrict this to a single shared batch axis, with exception of unbatched inputs (first Times arg).
             //       All batch axes must be the same across all inputs. Then we can always batch along those.
             //       If all shapes happen to be the same, then there is an optimization (batch into a new axis and then reshape).
@@ -2598,8 +2597,8 @@ return fInlinedPtr;
             if (isTimes)
             {
                 // for matrix product, second arg is batched, and batch axes differ for arg and output. Just append one axis, respectively.
-                commonInputBatchAxis = SIZE_MAX; // not shared f0.m_inputs.back().Shape().Rank();
-                outputBatchAxis = unbatchedOutputShape.Rank();
+                commonInputBatchAxis = f0.m_inputs.back().Shape().Rank();
+                outputBatchAxis      = unbatchedOutputShape      .Rank();
                 i0 = 1; // first arg does not get batched (since that would no longer be a GEMM operation)  --PERF BUGBUG: implement batched GEMM as well, once we have virtual Gather!
             }
             else if (isBasicBlock)
@@ -2626,7 +2625,10 @@ return fInlinedPtr;
             // We must check the last axis over all inputs.
             let stackIt = isTimes && outputBatchAxis == 2; // TODO: correctly consider the mapRank
             if (stackIt)
-                outputBatchAxis--; // TODO: also adjust the common input axis
+            {
+                outputBatchAxis--;
+                commonInputBatchAxis--;
+            }
             size_t batchSize = numBatchItems; // dimension of batch axis
             if (stackIt)
             {
@@ -2738,10 +2740,11 @@ return fInlinedPtr;
                     // if this op has a higher commonInputBatchAxis than the re-batched view, we must move the axis
                     // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
                     // BUGBUG: This seems never called in the MT case?
-                    if (commonInputBatchAxis != SIZE_MAX && axis != commonInputBatchAxis)
+                    // TODO: Do this inside Gather, based on its output shape.
+                    if (axis != commonInputBatchAxis)
                     {
                         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, numBatchItems);
-                        // TODO: Any way we can fold the reshape in using m_redirection?
+                        // TODO: Any way we can fold the reshape in using m_redirection? ... no need, this will become part of Gather.
                         let batchedInput = m_batchedInputs[i];
                         vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
                         outputShape.insert(outputShape.end() - 1, commonInputBatchAxis - axis, 1);
@@ -2758,15 +2761,14 @@ return fInlinedPtr;
                     CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, numBatchItems);
                     let& input0Shape = CacheAndGetValue(gatherInputs[0])->Shape();
                     // create a new PrimitiveFunction Splice()
-                    let inputBatchAxis = commonInputBatchAxis != SIZE_MAX ? commonInputBatchAxis : (input0Shape.Rank() - stackIt); // batch into one new axis unless we have a shared axis
                     vector<size_t> outputShape; // determine output shape
-                    outputShape.reserve(inputBatchAxis + 1);
+                    outputShape.reserve(commonInputBatchAxis + 1);
                     outputShape = input0Shape.Dimensions();
                     //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
-                    outputShape.resize(inputBatchAxis, 1); // pad to inputBatchAxis
+                    outputShape.resize(commonInputBatchAxis, 1); // pad to commonInputBatchAxis
                     outputShape.push_back(batchSize);      // and add the batch axis
                     m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape,
-                                                                   Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)inputBatchAxis)),
+                                                                   Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)commonInputBatchAxis)),
                                                                    f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                                                    /*isFree=*/false, /*spliceIsGather=*/true);
                     // and that's our input to the batched operation
