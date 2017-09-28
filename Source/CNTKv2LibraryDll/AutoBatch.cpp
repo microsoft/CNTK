@@ -2016,20 +2016,23 @@ return fInlinedPtr;
     }
 
     // implant the the result of a function that was executed as a batched op
-    // j = slice index into batched result, or SIZE_MAX (default) if entire tensor
-    void FinalizeBatchedOpAndUpdateSchedule(PrimitiveFunction& f, const PrimitiveFunctionPtr& batchedOp, size_t j = SIZE_MAX)
+    // sliceRange = optional view into batched result, or SliceRange() if entire tensor
+    void FinalizeBatchedOpAndUpdateSchedule(PrimitiveFunction& f, const PrimitiveFunctionPtr& batchedOp, SliceRange sliceRange = SliceRange())
     {
         //CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
         // we remember where we came from for backprop in this case
         auto& fields = GetOutputFields(f);
-        //HoldFunction(fields, batchedOp); // hold a ref count
+#if 1
+        fields.m_redirection.reset(batchedOp, sliceRange);
+#else
         fields.m_redirection.m_function = batchedOp.get(); // this is the actual pointer used to traverse
         fields.m_redirection.m_functionHolder = batchedOp; // and also keep a ref count, since this may be a new object not referenced anywhere else yet
         // If m_functionHolder already contains a pointer, then overwriting it may free the object.
         // That is fine, since the -Holder is only concerned with holdinf a ref count for m_function
         // in case is it was a new function. Since m_function also gets overwritten, the object it used
         // to point to is no longer referenced.
-        fields.m_redirection.m_sliceRange.reset(j);
+        fields.m_redirection.m_sliceRange = sliceRange;
+#endif
         // ^^ TODO: use reset() here. But how about depthHint?
         // semantically, this will compute as fields.m_value = out->IndexLastAxis(j);
         // but it gets deferred to save effort
@@ -2360,12 +2363,12 @@ return fInlinedPtr;
         // TODO: patch up the data structure upon first discovery
         for (;;)
         {
-            let redirectedSliceRange = redirectedFields.m_redirection.m_sliceRange;
             function = redirectedFunction;
+            let& redirectedSliceRange = redirectedFields.m_redirection.m_sliceRange;
             if (sliceRange.empty())
                 sliceRange = redirectedSliceRange;
             else
-                fail_if(!redirectedFields.m_redirection.m_sliceRange.empty(), "LazyPhysicalSlice: hit a see-through slice??"); // multiple slicing not possible
+                fail_if(!redirectedSliceRange.empty(), "LazyPhysicalSlice: hit a see-through slice??"); // multiple slicing not possible
             // TODO: ^^ multiple non-dropping slices could be composable here
             let& redirectedFields = GetOutputFields(*function);
             redirectedFunction = redirectedFields.m_redirection.m_function;
@@ -2804,7 +2807,7 @@ return fInlinedPtr;
             {
                 // TODO: review this w.r.t. multi-output functions
                 // implant the result
-                FinalizeBatchedOpAndUpdateSchedule(f, batchedOp, j);
+                FinalizeBatchedOpAndUpdateSchedule(f, batchedOp, j != SIZE_MAX ? SliceRange(j) : SliceRange());
                 // and implant it to all aliases as well
                 UpdateDuplicatesAndUpdateSchedule(f);
                 // iterate the slice index
