@@ -52,7 +52,7 @@ const size_t topHiddenProjectionDim = 1024;
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
 #define DOLOG(var) (var)//((mbCount % 100 == 99) ? LOG(var) : 0)
 
-BinaryModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
+fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
 {
     dropoutInputKeepProb;
     vector<BinaryModel> layers;
@@ -66,7 +66,8 @@ BinaryModel BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double 
     nested.insert(nested.end(), layers.begin(), layers.end());
     nested.insert(nested.end(), bns.begin(), bns.end());
     vector<Variable> buffer;
-    return BinaryModel(nested,//Dynamite::Model({}, NameNumberedParameters(nested),
+    // BUGBUG: If I change to Dynamite::Model, the model trains differently or causes compilation errors.
+    return /*Dynamite::Model*/BinaryModel({}, NameNumberedParameters(nested),
     [=](const Variable& xFwd, const Variable& xBwd) mutable -> Variable
     {
         // the first layer has different inputs for forward and backward
