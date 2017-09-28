@@ -1260,6 +1260,9 @@ return fInlinedPtr;
                     // depth hint must match
                     if (aFields.m_redirection.m_depthHint != bFields.m_redirection.m_depthHint)
                         return false;
+                    // sparse cannot be batched beyond rank 1
+                    if (aFields.m_isSparse && aFields.m_shape.Rank() > 1)
+                        return false;
                 }
             }
             // attributes must also match
@@ -3183,9 +3186,9 @@ public:
         gatherBatchResultDims.assign(inputShape.begin(), inputShape.end());
         fail_if(axis + 1 < gatherBatchResultDims.size(), "axis not trailing??");
         if (axis == gatherBatchResultDims.size())
-            gatherBatchResultDims.push_back(inputValues.size());
+            gatherBatchResultDims.push_back(inputValues.size()); // batching
         else
-            gatherBatchResultDims[axis] = batchDim;
+            gatherBatchResultDims[axis] = batchDim; // stacking
         auto out = m_arena.NewNDArrayView(gatherBatchResultDims, inputValue0.GetDataType(), inputValue0.GetStorageFormat(), inputValue0.Device());
         m_stats.numBackpropGathers++;
         return move(NDArrayView::GatherBatch(inputValues, (int)axis, move(out)));
