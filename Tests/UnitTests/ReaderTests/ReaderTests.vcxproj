@@ -110,6 +110,8 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\TextDataChunk.cpp" />
+    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\TextDeserializer.cpp" />
     <ClCompile Include="CNTKBinaryReaderTests.cpp" />
     <ClCompile Include="CNTKTextFormatReaderTests.cpp" />
     <ClCompile Include="HTKLMFReaderTests.cpp" />
@@ -119,7 +121,6 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\TextParser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Config\HTKMLFReaderSimpleDataLoop10_Config.cntk" />

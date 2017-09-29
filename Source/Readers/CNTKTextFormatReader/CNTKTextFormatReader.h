@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include "TextParser.h"
 #include "ReaderBase.h"
+#include "TextDeserializer.h"
 
 namespace CNTK {
 

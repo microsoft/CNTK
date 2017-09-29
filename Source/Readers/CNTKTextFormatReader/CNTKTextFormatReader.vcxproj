@@ -97,9 +97,11 @@
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="TextDeserializer.h" />
+    <ClInclude Include="TextParserInfo.h" />
     <ClInclude Include="TextReaderConstants.h" />
     <ClInclude Include="TextConfigHelper.h" />
-    <ClInclude Include="TextParser.h" />
+    <ClInclude Include="TextDataChunk.h" />
     <ClInclude Include="Descriptors.h" />
     <ClInclude Include="CNTKTextFormatReader.h" />
     <ClInclude Include="stdafx.h" />
@@ -107,7 +109,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TextConfigHelper.cpp" />
-    <ClCompile Include="TextParser.cpp" />
+    <ClCompile Include="TextDeserializer.cpp" />
+    <ClCompile Include="TextDataChunk.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Exports.cpp" />
     <ClCompile Include="CNTKTextFormatReader.cpp" />

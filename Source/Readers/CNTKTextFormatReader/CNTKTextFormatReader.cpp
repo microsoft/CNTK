@@ -10,7 +10,7 @@
 #include "ChunkCache.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
-#include "TextParser.h"
+#include "TextDeserializer.h"
 #include "SequencePacker.h"
 #include "FramePacker.h"
 
@@ -30,9 +30,9 @@ CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
     {
         auto corpus = make_shared<CorpusDescriptor>(true);
         if (configHelper.GetDataType() == DataType::Float)
-            m_deserializer = make_shared<TextParser<float>>(corpus, configHelper, true);
+            m_deserializer = make_shared<TextDeserializer<float>>(corpus, configHelper, true);
         else
-            m_deserializer = make_shared<TextParser<double>>(corpus, configHelper, true);
+            m_deserializer = make_shared<TextDeserializer<double>>(corpus, configHelper, true);
 
         if (configHelper.ShouldKeepDataInMemory())
             m_deserializer = make_shared<ChunkCache>(m_deserializer);

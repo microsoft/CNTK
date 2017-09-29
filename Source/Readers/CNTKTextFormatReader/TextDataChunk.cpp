@@ -9,8 +9,10 @@
 #include <cfloat>
 #include "BufferedFileReader.h"
 #include "IndexBuilder.h"
-#include "TextParser.h"
+#include "TextDataChunk.h"
+#include "TextDeserializer.h"
 #include "TextReaderConstants.h"
+#include "TextParserInfo.h"
 #include "File.h"
 
 #define isSign(c) ((c == '-' || c == '+'))
@@ -38,298 +40,109 @@ enum State
 };
 
 template <class ElemType>
-class TextParser<ElemType>::TextDataChunk : public Chunk, public std::enable_shared_from_this<Chunk>
+TextDataChunk<ElemType>::TextDataChunk(std::shared_ptr<TextParserInfo> parserInfo) :
+    m_parserInfo(parserInfo)
 {
-public:
-    explicit TextDataChunk(TextParser* parser);
 
-    // Gets sequences by id.
-    void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override;
-
-    // A map from sequence ids to the sequence data.
-    std::vector<SequenceBuffer> m_sequenceMap;
-
-    // a non-owned pointer to the parser that created this chunk
-    TextParser* m_parser;
-};
-
-
-template <class ElemType>
-struct TextParser<ElemType>::StreamInfo
-{
-    StorageFormat m_type;
-    NDShape m_sampleShape;
-};
-
-template <class ElemType>
-TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper, bool primary) :
-TextParser(corpus, helper.GetFilePath(), helper.GetStreams(), primary)
-{
-    SetTraceLevel(helper.GetTraceLevel());
-    SetMaxAllowedErrors(helper.GetMaxAllowedErrors());
-    SetChunkSize(helper.GetChunkSize());
-    SetSkipSequenceIds(helper.ShouldSkipSequenceIds());
-
-    SetCacheIndex(helper.ShouldCacheIndex());
-
-    Initialize();
-}
-
-// Internal, used for testing.
-template <class ElemType>
-TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool primary) :
-    DataDeserializerBase(primary),
-    m_streamDescriptors(streams),
-    m_filename(filename),
-    m_file(nullptr),
-    m_fileReader(nullptr),
-    m_streamInfos(streams.size()),
-    m_index(nullptr),
-    m_chunkSizeBytes(0),
-    m_traceLevel(TraceLevel::Error),
-    m_hadWarnings(false),
-    m_numAllowedErrors(0),
-    m_skipSequenceIds(false),
-    m_numRetries(5),
-    m_corpus(corpus),
-    m_useMaximumAsSequenceLength(true),
-    m_cacheIndex(false)
-{
-    assert(streams.size() > 0);
-
-    m_maxAliasLength = 0;
-    size_t definesMbSizeCount = 0;
-
-    for (size_t i = 0; i < streams.size(); ++i)
-    {
-        const StreamDescriptor& stream = streams[i];
-
-        definesMbSizeCount += stream.m_definesMbSize ? 1 : 0;
-
-        const string& alias = stream.m_alias;
-        if (m_maxAliasLength < alias.length())
-        {
-            m_maxAliasLength = alias.length();
-        }
-        m_aliasToIdMap[alias] = i;
-
-        StreamInformation streamDescription = stream;
-        streamDescription.m_sampleLayout = NDShape({ stream.m_sampleDimension });
-        m_streams.push_back(streamDescription);
-
-        m_streamInfos[i].m_type = stream.m_storageFormat;
-        m_streamInfos[i].m_sampleShape = streamDescription.m_sampleLayout;
-    }
-
-    m_useMaximumAsSequenceLength = definesMbSizeCount == 0;
-
-    if (definesMbSizeCount > 1)
-    {
-        wstring names;
-        for (const auto& stream : streams) 
-            if (stream.m_definesMbSize) 
-            {
-                if (!names.empty())
-                    names += L", ";
-                names += stream.m_name;
-            }
-        
-
-        RuntimeError("Only a single stream is allowed to define the minibatch size, but %zu found: %ls.", 
-            definesMbSizeCount, names.c_str());
-    }
-
-    assert(m_maxAliasLength > 0);
-
-    m_scratch = unique_ptr<char[]>(new char[m_maxAliasLength + 1]);
 }
 
 template <class ElemType>
-TextParser<ElemType>::~TextParser() = default;
-
-template <class ElemType>
-void TextParser<ElemType>::PrintWarningNotification()
-{
-    if (m_hadWarnings && m_traceLevel < Warning)
-    {
-        fprintf(stderr,
-            "A number of warnings were generated while reading input data, "
-            "to see them please set 'traceLevel' to a value greater or equal to %d.\n", Warning);
-    }
-}
-
-template <class ElemType>
-void TextParser<ElemType>::Initialize()
-{
-    if (m_index != nullptr)
-    {
-        return;
-    }
-
-    attempt(m_numRetries, [this]()
-    {
-        m_file = std::make_shared<FileWrapper>(m_filename, L"rbS");
-
-        m_file->CheckIsOpenOrDie();
-
-        if (m_file->CheckUnicode())
-        {
-            // Retrying won't help here, the file is UTF-16 encoded.
-            m_numRetries = 0;
-            RuntimeError("Found a UTF-16 BOM at the beginning of the input file (%ls). "
-                "UTF-16 encoding is currently not supported.", m_filename.c_str());
-        }
-
-        TextInputIndexBuilder builder(*m_file);
-
-        builder.SetSkipSequenceIds(m_skipSequenceIds)
-            .SetStreamPrefix(NAME_PREFIX)
-            .SetCorpus(m_corpus)
-            .SetPrimary(m_primary)
-            .SetChunkSize(m_chunkSizeBytes)
-            .SetCachingEnabled(m_cacheIndex);
-
-        if (!m_useMaximumAsSequenceLength)
-        {
-            auto mainStream = std::find_if(m_streamDescriptors.begin(), m_streamDescriptors.end(),
-                [](const StreamDescriptor& s) { return s.m_definesMbSize; });
-            builder.SetMainStream(mainStream->m_alias);
-        }
-
-        m_index = builder.Build();
-
-        m_fileReader = std::make_shared<BufferedFileReader>(BUFFER_SIZE, *m_file);
-    });
-
-    assert(m_index != nullptr);
-}
-
-template <class ElemType>
-std::vector<ChunkInfo> TextParser<ElemType>::ChunkInfos()
-{
-    assert(m_index != nullptr);
-
-    std::vector<ChunkInfo> result;
-    result.reserve(m_index->Chunks().size());
-    for (ChunkIdType i = 0; i < m_index->Chunks().size(); ++i)
-    {
-        result.push_back(ChunkInfo{
-                i,
-                m_index->Chunks()[i].NumberOfSamples(),
-                m_index->Chunks()[i].NumberOfSequences()
-        });
-    }
-
-    return result;
-}
-
-template <class ElemType>
-void TextParser<ElemType>::SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result)
-{
-    const auto& chunk = m_index->Chunks()[chunkId];
-    result.reserve(chunk.NumberOfSequences());
-
-    for (size_t sequenceIndex = 0; sequenceIndex < chunk.NumberOfSequences(); ++sequenceIndex)
-    {
-        auto const& s = chunk.Sequences()[sequenceIndex];
-        result.push_back(
-        {
-            sequenceIndex,
-            s.m_numberOfSamples,
-            chunkId,
-            SequenceKey{ s.m_key, 0 }
-        });
-    }
-}
-
-template <class ElemType>
-TextParser<ElemType>::TextDataChunk::TextDataChunk(TextParser* parser) :
-    m_parser(parser)
-{
-}
-
-template <class ElemType>
-void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result)
+void TextDataChunk<ElemType>::GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result)
 {
     assert(sequenceId < m_sequenceMap.size());
-    result.reserve(m_parser->m_streamInfos.size());
+
+    if (m_sequenceMap[sequenceId].size() == 0)
+    {
+        SequenceBuffer& sequence = m_sequenceMap[sequenceId];
+
+        // Get a pointer at sequence start in chunk and create a buffered reader from it
+        auto sequenceStart = m_buffer.get() + m_sequenceDescriptors[sequenceId].OffsetInChunk();
+
+        TextParser<ElemType> parser(m_parserInfo, sequenceStart, m_sequenceDescriptors[sequenceId].SizeInBytes(), m_offsetInFile + m_sequenceDescriptors[sequenceId].OffsetInChunk());
+
+        parser.ParseSequence(sequence, m_sequenceDescriptors[sequenceId]);
+
+    }
 
     const auto& sequenceData = m_sequenceMap[sequenceId];
     result.insert(result.end(), sequenceData.begin(), sequenceData.end());
 }
 
-template <class ElemType>
-ChunkPtr TextParser<ElemType>::GetChunk(ChunkIdType chunkId)
+template class TextDataChunk<float>;
+template class TextDataChunk<double>;
+
+template<class ElemType>
+TextParser<ElemType>::TextParser(std::shared_ptr<TextParserInfo> parserInfo, const char * bufferStart, const size_t& sequenceLength, const size_t& offsetInFile) :
+    m_parserInfo(parserInfo),
+    m_bufferedReader(make_shared<BufferedReader>(sequenceLength, bufferStart, offsetInFile))
 {
-    const auto& chunkDescriptor = m_index->Chunks()[chunkId];
-    auto textChunk = make_shared<TextDataChunk>(this);
-
-    attempt(m_numRetries, [this, &textChunk, &chunkDescriptor]()
-    {
-        if (m_file->CheckError())
-        {
-            m_file.reset(new FileWrapper(m_filename, L"rbS"));
-            m_file->CheckIsOpenOrDie();
-        }
-
-        LoadChunk(textChunk, chunkDescriptor);
-    });
-
-    return textChunk;
+    m_scratch = unique_ptr<char[]>(new char[m_parserInfo->m_maxAliasLength + 1]);
 }
 
 template <class ElemType>
-void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor)
+void TextParser<ElemType>::PrintWarningNotification()
 {
-    chunk->m_sequenceMap.resize(descriptor.NumberOfSequences());
-    for (size_t sequenceIndex = 0; sequenceIndex < descriptor.NumberOfSequences(); ++sequenceIndex)
+    if (m_hadWarnings && m_parserInfo->m_traceLevel < static_cast<unsigned int>(TraceLevel::Warning))
     {
-        const auto& sequenceDescriptor = descriptor.Sequences()[sequenceIndex];
-        chunk->m_sequenceMap[sequenceIndex] = LoadSequence(sequenceDescriptor, descriptor.StartOffset());
+        fprintf(stderr,
+            "A number of warnings were generated while reading input data, "
+            "to see them please set 'traceLevel' to a value greater or equal to %d.\n", TraceLevel::Warning);
     }
 }
 
 template <class ElemType>
 void TextParser<ElemType>::IncrementNumberOfErrorsOrDie()
 {
-    if (m_numAllowedErrors == 0)
+    if (m_parserInfo->m_numAllowedErrors == 0)
     {
         PrintWarningNotification();
         RuntimeError("Reached the maximum number of allowed errors"
             " while reading the input file (%ls).",
-            m_filename.c_str());
+            m_parserInfo->m_filename.c_str());
     }
-    --m_numAllowedErrors;
+    --m_parserInfo->m_numAllowedErrors;
 }
 
-template <class ElemType>
-typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence(const SequenceDescriptor& sequenceDsc, size_t chunkOffsetInFile)
+template<class ElemType>
+void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, const SequenceKey& sequenceKey)
 {
-    size_t fileOffset = sequenceDsc.OffsetInChunk() + chunkOffsetInFile;
-
-    m_fileReader->SetFileOffset(fileOffset);
-
-    size_t bytesToRead = sequenceDsc.SizeInBytes();
-
-    SequenceBuffer sequence;
-
-    // TODO: reuse loaded sequences instead of creating new ones!
-    for (auto const & stream : m_streamInfos)
+    for (size_t j = 0; j < m_parserInfo->m_streamInfos.size(); ++j)
     {
-        if (stream.m_type == StorageFormat::Dense)
+        const StreamInformation& stream = m_parserInfo->m_streamInfos[j];
+        SequenceDataBase* data = sequenceData[j].get();
+        if (stream.m_storageFormat == StorageFormat::SparseCSC)
+        {
+            auto sparseData = static_cast<SparseInputStreamBuffer*>(data);
+            sparseData->m_indices = sparseData->m_indicesBuffer.data();
+            assert(data->m_numberOfSamples == sparseData->m_nnzCounts.size());
+        }
+
+        data->m_key = sequenceKey;
+    }
+}
+
+template<class ElemType>
+void TextParser<ElemType>::ParseSequence(SequenceBuffer& sequence, const SequenceDescriptor& sequenceDsc)
+{
+    for (auto const & stream : m_parserInfo->m_streamInfos)
+    {
+        if (stream.m_storageFormat == StorageFormat::Dense)
         {
             sequence.push_back(make_unique<DenseInputStreamBuffer>(
-                stream.m_sampleShape.Dimensions()[0] * sequenceDsc.m_numberOfSamples, stream.m_sampleShape));
+                stream.m_sampleLayout.Dimensions()[0] * sequenceDsc.NumberOfSamples(), stream.m_sampleLayout));
         }
         else
         {
-            sequence.push_back(make_unique<SparseInputStreamBuffer>(stream.m_sampleShape));
+            sequence.push_back(make_unique<SparseInputStreamBuffer>(stream.m_sampleLayout));
         }
     }
 
-    size_t numRowsRead = 0, expectedRowCount = sequenceDsc.m_numberOfSamples;
+    size_t bytesToRead = sequenceDsc.SizeInBytes();
+
+    size_t numRowsRead = 0, expectedRowCount = sequenceDsc.NumberOfSamples();
+
     size_t rowNumber = 1;
-    while(bytesToRead)
+    while (bytesToRead)
     {
         if ((TryReadRow(sequence, bytesToRead)))
         {
@@ -359,7 +172,6 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             " but only read %" PRIu64 " out of %" PRIu64 " expected rows.\n",
             sequenceDsc.m_key,
             GetFileInfo().c_str(), numRowsRead, expectedRowCount);
-
     }
 
     // Double check if there are empty input streams.
@@ -372,12 +184,12 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         {
             fprintf(stderr,
                 "ERROR: Input ('%ls') is empty in sequence (id = %" PRIu64 ") %ls.\n",
-                m_streams[i].m_name.c_str(), sequenceDsc.m_key, GetFileInfo().c_str());
+                m_parserInfo->m_streamInfos[i].m_name.c_str(), sequenceDsc.m_key, GetFileInfo().c_str());
             hasEmptyInputs = true;
         }
 
-        bool definesSequenceLength = (m_useMaximumAsSequenceLength || m_streamDescriptors[i].m_definesMbSize);
-        
+        bool definesSequenceLength = (m_parserInfo->m_useMaxAsSequenceLength || m_parserInfo->m_streamInfos[i].m_definesMbSize);
+
         if (!definesSequenceLength)
             continue;
 
@@ -391,11 +203,11 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
                 fprintf(stderr,
                     "WARNING: Input ('%ls') contains more samples than expected"
                     " (%u vs. %" PRIu64 ") for sequence (id = %" PRIu64 ") %ls.\n",
-                    m_streams[i].m_name.c_str(), sequence[i]->m_numberOfSamples,
+                    m_parserInfo->m_streamInfos[i].m_name.c_str(), sequence[i]->m_numberOfSamples,
                     expectedRowCount, sequenceDsc.m_key, GetFileInfo().c_str());
             }
         }
-        
+
     }
 
     if (hasEmptyInputs)
@@ -421,7 +233,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         IncrementNumberOfErrorsOrDie();
     }
 
-    if (m_traceLevel >= Info)
+    if (m_parserInfo->m_traceLevel >= static_cast<unsigned int>(TraceLevel::Info))
     {
         fprintf(stderr,
             "INFO: Finished loading sequence (id = %" PRIu64 ") %ls,"
@@ -430,34 +242,15 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     }
 
     FillSequenceMetadata(sequence, { sequenceDsc.m_key, 0 });
-    return sequence;
-}
-
-template<class ElemType>
-void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, const SequenceKey& sequenceKey)
-{
-    for (size_t j = 0; j < m_streamInfos.size(); ++j)
-    {
-        const StreamInfo& stream = m_streamInfos[j];
-        SequenceDataBase* data = sequenceData[j].get();
-        if (stream.m_type == StorageFormat::SparseCSC)
-        {
-            auto sparseData = static_cast<SparseInputStreamBuffer*>(data);
-            sparseData->m_indices = sparseData->m_indicesBuffer.data();
-            assert(data->m_numberOfSamples == sparseData->m_nnzCounts.size());
-        }
-
-        data->m_key = sequenceKey;
-    }
 }
 
 template <class ElemType>
 bool TextParser<ElemType>::TryReadRow(SequenceBuffer& sequence, size_t& bytesToRead)
 {
-    while (bytesToRead && CanRead() && IsDigit(m_fileReader->Peek()))
+    while (bytesToRead && CanRead() && IsDigit(m_bufferedReader->Peek()))
     {
         // skip sequence ids
-        m_fileReader->Pop();
+        m_bufferedReader->Pop();
         --bytesToRead;
     }
 
@@ -465,12 +258,12 @@ bool TextParser<ElemType>::TryReadRow(SequenceBuffer& sequence, size_t& bytesToR
 
     while (bytesToRead && CanRead())
     {
-        char c = m_fileReader->Peek();
+        char c = m_bufferedReader->Peek();
 
         if (c == ROW_DELIMITER)
         {
             // found the end of row, skip the delimiter, return.
-            m_fileReader->Pop();
+            m_bufferedReader->Pop();
             --bytesToRead;
 
             if (numSampleRead == 0 && ShouldWarn())
@@ -478,12 +271,12 @@ bool TextParser<ElemType>::TryReadRow(SequenceBuffer& sequence, size_t& bytesToR
                 fprintf(stderr,
                     "WARNING: Empty input row %ls.\n", GetFileInfo().c_str());
             }
-            else if (numSampleRead > m_streams.size() && ShouldWarn())
+            else if (numSampleRead > m_parserInfo->m_streamInfos.size() && ShouldWarn())
             {
                 fprintf(stderr,
                     "WARNING: Input row %ls contains more"
                     " samples than expected (%" PRIu64 " vs. %" PRIu64 ").\n",
-                    GetFileInfo().c_str(), numSampleRead, m_streams.size());
+                    GetFileInfo().c_str(), numSampleRead, m_parserInfo->m_streamInfos.size());
             }
 
             return numSampleRead > 0;
@@ -492,7 +285,7 @@ bool TextParser<ElemType>::TryReadRow(SequenceBuffer& sequence, size_t& bytesToR
         if (isColumnDelimiter(c))
         {
             // skip column (input) delimiters.
-            m_fileReader->Pop();
+            m_bufferedReader->Pop();
             --bytesToRead;
             continue;
         }
@@ -525,29 +318,29 @@ template <class ElemType>
 bool TextParser<ElemType>::TryReadSample(SequenceBuffer& sequence, size_t& bytesToRead)
 {
     // prefix check.
-    if (m_fileReader->Peek() != NAME_PREFIX)
+    if (m_bufferedReader->Peek() != NAME_PREFIX)
     {
         if (ShouldWarn())
         {
             fprintf(stderr,
                 "WARNING: Unexpected character('%c') in place of a name prefix ('%c')"
                 " in an input name %ls.\n",
-                m_fileReader->Peek(), NAME_PREFIX, GetFileInfo().c_str());
+                m_bufferedReader->Peek(), NAME_PREFIX, GetFileInfo().c_str());
         }
         IncrementNumberOfErrorsOrDie();
         return false;
     }
 
     // skip name prefix
-    m_fileReader->Pop();
+    m_bufferedReader->Pop();
     --bytesToRead;
 
-    if (bytesToRead && CanRead() && m_fileReader->Peek() == ESCAPE_SYMBOL)
+    if (bytesToRead && CanRead() && m_bufferedReader->Peek() == ESCAPE_SYMBOL)
     {
         // A vertical bar followed by the number sign (|#) is treated as an escape sequence, 
         // everything that follows is ignored until the next vertical bar or the end of 
         // row, whichever comes first.
-        m_fileReader->Pop();
+        m_bufferedReader->Pop();
         --bytesToRead;
         return false;
     }
@@ -558,15 +351,15 @@ bool TextParser<ElemType>::TryReadSample(SequenceBuffer& sequence, size_t& bytes
         return false;
     }
 
-    const StreamInfo& stream = m_streamInfos[id];
+    const StreamInformation& stream = m_parserInfo->m_streamInfos[id];
 
-    if (stream.m_type == StorageFormat::Dense)
+    if (stream.m_storageFormat == StorageFormat::Dense)
     {
         DenseInputStreamBuffer* data = reinterpret_cast<DenseInputStreamBuffer*>(sequence[id].get());
         vector<ElemType>& values = data->m_buffer;
         size_t size = values.size();
         assert(size % stream.m_sampleShape.Dimensions()[0] == 0);
-        if (!TryReadDenseSample(values, stream.m_sampleShape.Dimensions()[0], bytesToRead))
+        if (!TryReadDenseSample(values, stream.m_sampleLayout.Dimensions()[0], bytesToRead))
         {
             // expected a dense sample, but was not able to fully read it, ignore it.
             if (values.size() != size)
@@ -587,7 +380,7 @@ bool TextParser<ElemType>::TryReadSample(SequenceBuffer& sequence, size_t& bytes
         vector<SparseIndexType>& indices = data->m_indicesBuffer;
         assert(values.size() == indices.size());
         size_t size = values.size();
-        if (!TryReadSparseSample(values, indices, stream.m_sampleShape.Dimensions()[0], bytesToRead))
+        if (!TryReadSparseSample(values, indices, stream.m_sampleLayout.Dimensions()[0], bytesToRead))
         {
             // expected a sparse sample, but something went south, ignore it.
             if (values.size() != size)
@@ -619,9 +412,9 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
 {
     char* scratchIndex = m_scratch.get();
 
-    for (; bytesToRead && CanRead(); m_fileReader->Pop(), --bytesToRead)
+    for (; bytesToRead && CanRead(); m_bufferedReader->Pop(), --bytesToRead)
     {
-        unsigned char c = m_fileReader->Peek();
+        unsigned char c = m_bufferedReader->Peek();
 
         // stop as soon as there's a value delimiter, an input prefix
         // or a non-printable character (e.g., newline, carriage return).
@@ -631,14 +424,14 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
             if (size)
             {
                 string name(m_scratch.get(), size);
-                auto it = m_aliasToIdMap.find(name);
-                if (it != m_aliasToIdMap.end())
+                auto it = m_parserInfo->m_aliasToIdMap.find(name);
+                if (it != m_parserInfo->m_aliasToIdMap.end())
                 {
                     id = it->second;
                     return true;
                 }
 
-                if (m_traceLevel >= Info)
+                if (m_parserInfo->m_traceLevel >= static_cast<unsigned int>(TraceLevel::Info))
                 {
                     fprintf(stderr,
                         "INFO: Skipping unknown input ('%s') %ls. "
@@ -660,7 +453,7 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
 
             break;
         }
-        else if (scratchIndex < (m_scratch.get() + m_maxAliasLength))
+        else if (scratchIndex < (m_scratch.get() + m_parserInfo->m_maxAliasLength))
         {
             *scratchIndex = c;
             ++scratchIndex;
@@ -669,14 +462,14 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
         {
             // the current string length is already equal to the maximum expected length,
             // yet it's not followed by a delimiter.
-            if (m_traceLevel >= Info)
+            if (m_parserInfo->m_traceLevel >= static_cast<unsigned int>(TraceLevel::Info))
             {
-                string namePrefix(m_scratch.get(), m_maxAliasLength);
+                string namePrefix(m_scratch.get(), m_parserInfo->m_maxAliasLength);
                 fprintf(stderr,
                     "INFO: Skipping unknown input %ls. "
                     "Input name (with the %" PRIu64 "-character prefix '%s') "
                     "exceeds the maximum expected length (%" PRIu64 ").\n",
-                    GetFileInfo().c_str(), m_maxAliasLength, namePrefix.c_str(), m_maxAliasLength);
+                    GetFileInfo().c_str(), m_parserInfo->m_maxAliasLength, namePrefix.c_str(), m_parserInfo->m_maxAliasLength);
             }
             return false;
         }
@@ -689,14 +482,14 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
                 "WARNING: Exhausted all input expected for the current sequence"
                 " while reading an input name %ls.\n", GetFileInfo().c_str());
         }
-        else if (!CanRead()) 
+        else if (!CanRead())
         {
             fprintf(stderr,
                 "WARNING: Expected %" PRIu64 " more bytes, but no more input is available for the current sequence"
                 " while reading an input name %ls.\n", bytesToRead, GetFileInfo().c_str());
         }
     }
-    
+
     // Sequence ends with a dangling input id.
     IncrementNumberOfErrorsOrDie();
     return false;
@@ -710,12 +503,12 @@ bool TextParser<ElemType>::TryReadDenseSample(vector<ElemType>& values, size_t s
 
     while (bytesToRead && CanRead())
     {
-        char c = m_fileReader->Peek();
+        char c = m_bufferedReader->Peek();
 
         if (isValueDelimiter(c))
         {
             // skip value delimiters
-            m_fileReader->Pop();
+            m_bufferedReader->Pop();
             --bytesToRead;
             continue;
         }
@@ -795,12 +588,12 @@ bool TextParser<ElemType>::TryReadSparseSample(std::vector<ElemType>& values, st
 
     while (bytesToRead && CanRead())
     {
-        char c = m_fileReader->Peek();
+        char c = m_bufferedReader->Peek();
 
         if (isValueDelimiter(c))
         {
             // skip value delimiters
-            m_fileReader->Pop();
+            m_bufferedReader->Pop();
             --bytesToRead;
             continue;
         }
@@ -833,7 +626,7 @@ bool TextParser<ElemType>::TryReadSparseSample(std::vector<ElemType>& values, st
         }
 
         // an index must be followed by a delimiter
-        c = m_fileReader->Peek();
+        c = m_bufferedReader->Peek();
         if (c != INDEX_DELIMITER)
         {
             if (ShouldWarn())
@@ -848,7 +641,7 @@ bool TextParser<ElemType>::TryReadSparseSample(std::vector<ElemType>& values, st
         }
 
         // skip index delimiter
-        m_fileReader->Pop();
+        m_bufferedReader->Pop();
         --bytesToRead;
 
         // read the corresponding value
@@ -863,7 +656,7 @@ bool TextParser<ElemType>::TryReadSparseSample(std::vector<ElemType>& values, st
     }
 
     if (ShouldWarn())
-    { 
+    {
         if (bytesToRead == 0)
         {
             fprintf(stderr,
@@ -886,9 +679,9 @@ bool TextParser<ElemType>::TryReadSparseSample(std::vector<ElemType>& values, st
 template <class ElemType>
 void TextParser<ElemType>::SkipToNextInput(size_t& bytesToRead)
 {
-    for (; bytesToRead && CanRead(); m_fileReader->Pop(), --bytesToRead)
+    for (; bytesToRead && CanRead(); m_bufferedReader->Pop(), --bytesToRead)
     {
-        char c = m_fileReader->Peek();
+        char c = m_bufferedReader->Peek();
         // skip everything until we hit either an input marker or the end of row.
         if (c == NAME_PREFIX || c == ROW_DELIMITER)
         {
@@ -902,16 +695,16 @@ bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
 {
     value = 0;
     bool found = false;
-    for (; bytesToRead && CanRead(); m_fileReader->Pop(), --bytesToRead)
+    for (; bytesToRead && CanRead(); m_bufferedReader->Pop(), --bytesToRead)
     {
-        char c = m_fileReader->Peek();
+        char c = m_bufferedReader->Peek();
 
         if (!IsDigit(c))
         {
-            if (!found && ShouldWarn()) 
+            if (!found && ShouldWarn())
             {
                 fprintf(stderr,
-                    "WARNING: Expected a uint64 value, but none found %ls.\n", 
+                    "WARNING: Expected a uint64 value, but none found %ls.\n",
                     GetFileInfo().c_str());
             }
 
@@ -949,9 +742,9 @@ bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
                 "WARNING: Expected %" PRIu64 " more bytes, but no more input is available for the current sequence"
                 " while reading a uint64 value %ls.\n", bytesToRead, GetFileInfo().c_str());
         }
-        
+
     }
-    
+
     // A well-formed input cannot end with a uint64 value.
     return false;
 }
@@ -959,10 +752,10 @@ bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
 
 
 // TODO: better precision (at the moment we're at parity with UCIFast)?
-// Assumes that bytesToRead is greater than the number of characters 
+// Assumes that bytesToRead is greater than the number of characters
 // in the string representation of the floating point number
 // (i.e., the string is followed by one of the delimiters)
-// Post condition: m_pos points to the first character that 
+// Post condition: m_pos points to the first character that
 // cannot be parsed as part of a floating point number.
 // Returns true if parsing was successful.
 template <class ElemType>
@@ -972,9 +765,9 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
     double coefficient = .0, number = .0, divider = .0;
     bool negative = false;
 
-    for (; bytesToRead && CanRead(); m_fileReader->Pop(), --bytesToRead)
+    for (; bytesToRead && CanRead(); m_bufferedReader->Pop(), --bytesToRead)
     {
-        char c = m_fileReader->Peek();
+        char c = m_bufferedReader->Peek();
 
         switch (state)
         {
@@ -1196,66 +989,24 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
     return false;
 }
 
-template <class ElemType>
-void TextParser<ElemType>::SetTraceLevel(unsigned int traceLevel)
-{
-    m_traceLevel = traceLevel;
-}
-
-template <class ElemType>
-void TextParser<ElemType>::SetMaxAllowedErrors(unsigned int maxErrors)
-{
-    m_numAllowedErrors = maxErrors;
-}
-
-template <class ElemType>
-void TextParser<ElemType>::SetSkipSequenceIds(bool skip)
-{
-    m_skipSequenceIds = skip;
-}
-
-template <class ElemType>
-void TextParser<ElemType>::SetChunkSize(size_t size)
-{
-    m_chunkSizeBytes = size;
-}
-
-template <class ElemType>
-void TextParser<ElemType>::SetNumRetries(unsigned int numRetries)
-{
-    m_numRetries = numRetries;
-}
-
-template <class ElemType>
-void TextParser<ElemType>::SetCacheIndex(bool value)
-{
-    m_cacheIndex = value;
-}
-
 template<class ElemType>
 inline bool TextParser<ElemType>::CanRead()
 {
-    return !m_fileReader->Empty();
+    return !m_bufferedReader->Empty();
 }
 
 template <class ElemType>
 int64_t TextParser<ElemType>::GetFileOffset() const
 {
-    return m_fileReader->GetFileOffset();
+    return m_bufferedReader->GetFileOffset();
 }
 
 template <class ElemType>
 std::wstring TextParser<ElemType>::GetFileInfo()
 {
     std::wstringstream info;
-    info << L"at offset " << GetFileOffset() << L" in the input file (" << m_filename << L")";
+    info << L"at offset " << GetFileOffset() << L" in the input file (" << m_parserInfo->m_filename << L")";
     return info.str();
-}
-
-template <class ElemType>
-bool TextParser<ElemType>::GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo& r)
-{
-    return DataDeserializerBase::GetSequenceInfoByKey(*m_index, key, r);
 }
 
 template class TextParser<float>;

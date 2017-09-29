@@ -48,9 +48,9 @@ extern "C" DATAREADER_API bool CreateDeserializer(DataDeserializerPtr& deseriali
     if (type == L"CNTKTextFormatDeserializer")
     {
         if (precision == "float")
-            deserializer = make_shared<TextParser<float>>(corpus, TextConfigHelper(deserializerConfig), primary);
+            deserializer = make_shared<TextDeserializer<float>>(corpus, TextConfigHelper(deserializerConfig), primary);
         else // double
-            deserializer = make_shared<TextParser<double>>(corpus, TextConfigHelper(deserializerConfig), primary);
+            deserializer = make_shared<TextDeserializer<double>>(corpus, TextConfigHelper(deserializerConfig), primary);
     }
     else
         InvalidArgument("Unknown deserializer type '%ls'", type.c_str());

@@ -7,43 +7,58 @@
 
 #include "DataDeserializerBase.h"
 #include "Descriptors.h"
-#include "TextConfigHelper.h"
 #include "Index.h"
-#include "CorpusDescriptor.h"
+#include "TextParserInfo.h"
 
 namespace CNTK {
 
 template <class ElemType>
-class CNTKTextFormatReaderTestRunner;
+class TextDeserializer;
 
-class FileWrapper;
+template <class ElemType>
+class TextParser;
+
+// A sequence buffer is a vector that contains sequence data for each input stream.
+typedef std::vector<SequenceDataPtr> SequenceBuffer;
+
+template <class ElemType>
+class TextDataChunk : public Chunk, public std::enable_shared_from_this<Chunk>
+{
+public:
+    explicit TextDataChunk(std::shared_ptr<TextParserInfo> parserInfo);
+
+    // Gets sequences by id.
+    void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override;
+
+    // A map from sequence ids to the sequence data.
+    std::vector<SequenceBuffer> m_sequenceMap;
+
+    // A map from sequence ids to the the sequence descriptors.
+    std::vector<SequenceDescriptor> m_sequenceDescriptors;
+
+    // Chunk file offset in file
+    size_t m_offsetInFile;
+
+    std::shared_ptr<TextParserInfo> m_parserInfo;
+
+    TextParser<ElemType> * m_parser;
+
+    std::unique_ptr<char[]> m_buffer;
+};
+
+
 class BufferedFileReader;
 
 // TODO: more details when tracing warnings
 // (e.g., buffer content around the char that triggered the warning)
 template <class ElemType>
-class TextParser : public DataDeserializerBase {
+class TextParser {
 public:
-    TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper, bool pimary);
-    ~TextParser();
+    TextParser(std::shared_ptr<TextParserInfo> parserInfo, const char * bufferStart, const size_t& sequenceLength, const size_t& offsetInFile);
 
-    // Retrieves a chunk of data.
-    ChunkPtr GetChunk(ChunkIdType chunkId) override;
-
-    // Get information about chunks.
-    std::vector<ChunkInfo> ChunkInfos() override;
-
-    // Get information about particular chunk.
-    void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result) override;
-
-    bool GetSequenceInfoByKey(const SequenceKey&, SequenceInfo&) override;
+    void ParseSequence(SequenceBuffer& sequence, const SequenceDescriptor& sequenceDsc);
 
 private:
-    TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool primary = true);
-
-    // Builds an index of the input data.
-    void Initialize();
-
     struct DenseInputStreamBuffer : DenseSequenceData
     {
         // capacity = expected number of samples * sample size
@@ -91,53 +106,13 @@ private:
         std::vector<ElemType> m_buffer;
     };
 
-    // A sequence buffer is a vector that contains sequence data for each input stream.
-    typedef std::vector<SequenceDataPtr> SequenceBuffer;
+    std::shared_ptr<TextParserInfo> m_parserInfo;
 
-    // A chunk of input data in the text format.
-    class TextDataChunk;
+    bool m_hadWarnings;
 
-    typedef std::shared_ptr<TextDataChunk> TextChunkPtr;
-
-    enum TraceLevel
-    {
-        Error = 0,
-        Warning = 1,
-        Info = 2
-    };
-
-    const std::wstring m_filename;
-    std::shared_ptr<FileWrapper> m_file;
-    std::shared_ptr<BufferedFileReader> m_fileReader;
-
-    // An internal structure to assist with copying from input stream buffers into
-    // into sequence data in a proper format.
-    struct StreamInfo;
-    std::vector<StreamInfo> m_streamInfos;
-    std::vector<StreamDescriptor> m_streamDescriptors;
-
-    size_t m_maxAliasLength;
-    std::map<std::string, size_t> m_aliasToIdMap;
-
-    std::shared_ptr<Index> m_index;
+    std::shared_ptr<BufferedReader> m_bufferedReader;
 
     unique_ptr<char[]> m_scratch; // local buffer for string parsing
-
-    // Indicates if the sequence length is computed as the maximum 
-    // of number of samples across all streams (inputs).
-    bool m_useMaximumAsSequenceLength;
-
-    size_t m_chunkSizeBytes;
-    unsigned int m_traceLevel;
-    bool m_hadWarnings;
-    unsigned int m_numAllowedErrors;
-    bool m_skipSequenceIds;
-    bool m_cacheIndex;
-    unsigned int m_numRetries; // specifies the number of times an unsuccessful
-                               // file operation should be repeated (default value is 5).
-
-    // Corpus descriptor.
-    CorpusDescriptorPtr m_corpus;
 
     // throws runtime exception when number of parsing errors is
     // greater than the specified threshold
@@ -179,32 +154,9 @@ private:
     bool inline CanRead();
 
     // Returns true if the trace level is greater or equal to 'Warning'
-    bool inline ShouldWarn() { m_hadWarnings = true; return m_traceLevel >= Warning; }
-
-    // Given a descriptor and the file offset of the containing chunk,
-    // retrieves the data for the corresponding sequence from the file.
-    SequenceBuffer LoadSequence(const SequenceDescriptor& descriptor, size_t chunkOffset);
-
-    // Given a descriptor, retrieves the data for the corresponding chunk from the file.
-    void LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor);
+    bool inline ShouldWarn() { m_hadWarnings = true; return m_parserInfo->m_traceLevel >= static_cast<unsigned int>(TraceLevel::Warning); }
 
     // Fills some metadata members to be conformant to the exposed SequenceData interface.
     void FillSequenceMetadata(SequenceBuffer& sequenceBuffer, const SequenceKey& sequenceKey);
-
-    void SetTraceLevel(unsigned int traceLevel);
-
-    void SetMaxAllowedErrors(unsigned int maxErrors);
-
-    void SetSkipSequenceIds(bool skip);
-
-    void SetChunkSize(size_t size);
-
-    void SetNumRetries(unsigned int numRetries);
-
-    void SetCacheIndex(bool value);
-
-    friend class CNTKTextFormatReaderTestRunner<ElemType>;
-
-    DISABLE_COPY_AND_MOVE(TextParser);
 };
 }

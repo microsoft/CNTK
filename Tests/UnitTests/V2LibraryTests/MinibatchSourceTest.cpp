@@ -412,6 +412,29 @@ BOOST_AUTO_TEST_CASE(CompareDeserializers)
     }
 }
 
+BOOST_AUTO_TEST_CASE(TestCNTKTextFormatParallelParser)
+{
+    if (true)
+        // This test is intended to be executed manually and was added only
+        // as a reference point to measure multithreading parsing for CNTKTextFormatReader.
+        return;
+
+    //TODO: Create "4GB.test.tmp" file beforehand
+    auto filename = L"4GB.test.tmp";
+
+    auto deserializer = CTFDeserializer(filename, { { L"S0", 1 }, { L"S1", 1 } });
+    deserializer.Add(L"cacheIndex", true);
+
+    MinibatchSourceConfig config({ deserializer }, false);
+    config.isMultithreaded = true;
+    config.maxSamples = MinibatchSource::InfinitelyRepeat;
+
+    auto minibatchSource = CreateCompositeMinibatchSource(config);
+
+    for (auto i = 0; i < 5000; ++i) {
+        auto minibatchData = minibatchSource->GetNextMinibatch(1000, DeviceDescriptor::CPUDevice());
+    }
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 

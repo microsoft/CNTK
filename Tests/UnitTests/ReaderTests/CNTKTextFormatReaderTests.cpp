@@ -15,7 +15,7 @@
 #include <cstdio>
 #include <boost/scope_exit.hpp>
 #include "Common/ReaderTestHelper.h"
-#include "TextParser.h"
+#include "TextDeserializer.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -27,25 +27,32 @@ namespace CNTK {
     template <class ElemType>
     class CNTKTextFormatReaderTestRunner
     {
-        TextParser<ElemType> m_parser;
+        TextDeserializer<ElemType> m_textDeserializer;
 
     public:
         ChunkPtr m_chunk;
 
         CNTKTextFormatReaderTestRunner(const string& filename,
             const vector<StreamDescriptor>& streams, unsigned int maxErrors) :
-            m_parser(std::make_shared<CorpusDescriptor>(true), wstring(filename.begin(), filename.end()), streams, true)
+            m_textDeserializer(std::make_shared<CorpusDescriptor>(true), wstring(filename.begin(), filename.end()), streams, true)
         {
-            m_parser.SetMaxAllowedErrors(maxErrors);
-            m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Info);
-            m_parser.SetChunkSize(SIZE_MAX);
-            m_parser.SetNumRetries(0);
-            m_parser.Initialize();
+            m_textDeserializer.SetMaxAllowedErrors(maxErrors);
+            m_textDeserializer.SetTraceLevel(static_cast<unsigned int>(TraceLevel::Info));
+            m_textDeserializer.SetChunkSize(SIZE_MAX);
+            m_textDeserializer.SetNumRetries(0);
+            m_textDeserializer.Initialize();
         }
         // Retrieves a chunk of data.
         void LoadChunk()
         {
-            m_chunk = m_parser.GetChunk(0);
+            m_chunk = m_textDeserializer.GetChunk(0);
+            std::vector<SequenceInfo> infos;
+            m_textDeserializer.SequenceInfosForChunk(0, infos);
+            for (auto i = 0; i < infos.size(); ++i) {
+                std::vector<SequenceDataPtr> result;
+                m_chunk->GetSequence(i, result);
+            }
+
         }
     };
 }
