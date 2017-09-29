@@ -2574,9 +2574,11 @@ return fInlinedPtr;
     vector<Variable> m_gatherArgsBuffer;
 
     // helper to create a batched input given a list of operations
-    inline Variable CreateBatchedInputFor(NonOwningFunctionList ops, size_t commonInputBatchAxis, size_t batchSize, size_t i, /*in/out*/bool& anyBatchedInputs)
+    inline Variable CreateBatchedInputFor(NonOwningFunctionList ops, size_t commonInputBatchAxis, size_t batchSize,
+                                          size_t i, /*in/out*/bool& anyBatchedInputs,
+                                          vector<Variable>& gatherInputs)
     {
-        auto& f0 = *ops.front();
+        let& f0 = *ops.front();
         // special case: for matrix-product class operations, the first argument is non-batchable
         // It has already been verified to be identical as part of the batchability condition.
         if (IsMatrixProduct(f0.m_op) && i == 0)
@@ -2586,7 +2588,6 @@ return fInlinedPtr;
         let numBatchItems = ops.size();
         // create splice args for this argument
         // allocate buffers to hold the arguments
-        auto& gatherInputs = m_gatherArgsBuffer;
         gatherInputs.clear();
         if (gatherInputs.capacity() < numBatchItems)
             gatherInputs.reserve(max(numBatchItems, 2 * gatherInputs.capacity()));
@@ -2640,11 +2641,11 @@ return fInlinedPtr;
             Break;
         cudaStatsguard.Stop();
         // and splice
-        Variable batchedInput; // our return value  --TODO: make it a ref?
+        anyBatchedInputs |= !allSame;
         if (allSame) // optimized case: all ops share the same operand: no need to batch them
         {
             // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
-            batchedInput = gatherInputs[0];
+            return gatherInputs[0];
         }
         else if (allConsecutiveIndices) // they are consecutive slice views: can short-circuit as a slice view
         {
@@ -2656,8 +2657,11 @@ return fInlinedPtr;
             let& fromDims = output.Shape().Dimensions();
             fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
             let axis = fromDims.size() - 1;
+            Variable batchedInput; // our return value
             if (begin == 0 && batchSize == fromDims.back()/*[axis]*/) // full range: just take it
+            {
                 batchedInput = output; // note: graph already has a strong ref to output elsewhere
+            }
             else // sub-range: splice it by taking a slice view on the previously spliced batch
             {
                 //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"re-batch", 3, numBatchItems);
@@ -2665,13 +2669,13 @@ return fInlinedPtr;
                 vector<size_t> outputShape = fromDims; // determine output shape
                 outputShape.back()/*[axis]*/ = batchSize;
                 batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape,
-                                                               Dictionary(
-                                                                   PrimitiveFunction::AttributeNameAxis       , Axis((int)axis) ,
-                                                                   PrimitiveFunction::AttributeNameBeginIndex , (int)begin      ,
-                                                                   PrimitiveFunction::AttributeNameEndIndex   , (int)(begin + batchSize)
-                                                               ),
-                                                               f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
-                                                               /*isFree=*/true);
+                                                         Dictionary(
+                                                             PrimitiveFunction::AttributeNameAxis       , Axis((int)axis) ,
+                                                             PrimitiveFunction::AttributeNameBeginIndex , (int)begin      ,
+                                                             PrimitiveFunction::AttributeNameEndIndex   , (int)(begin + batchSize)
+                                                         ),
+                                                         f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
+                                                         /*isFree=*/true);
                 // and that's our input to the batched operation
                 // TODO: Can this be done by directly messing with the Variable? Make a deep copy of the var object with begin/end slice?
                 //       Would avoid allocating a PrimitiveFunction, and make it easier to be short-circuited directly in backprop.
@@ -2692,7 +2696,7 @@ return fInlinedPtr;
                                                          f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 // and that's now really our input to the batched operation
             }
-            anyBatchedInputs = true;
+            return batchedInput;
         }
         else // batch inputs are not consecutive: We must actually copy them together.
         {
@@ -2705,16 +2709,11 @@ return fInlinedPtr;
             //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
             outputShape.resize(commonInputBatchAxis, 1); // pad to commonInputBatchAxis
             outputShape.push_back(batchSize);      // and add the batch axis
-            batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape,
-                                                     Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)commonInputBatchAxis)),
-                                                     f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
-                                                     /*isFree=*/false, /*spliceIsGather=*/true);
-            // and that's our input to the batched operation
-            anyBatchedInputs = true;
+            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape,
+                                             Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)commonInputBatchAxis)),
+                                             f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
+                                             /*isFree=*/false, /*spliceIsGather=*/true);
         }
-        // release shared_ptrs asap, to take advantage of chances of memory reuse
-        gatherInputs.clear();
-        return batchedInput;
     }
 
     // batch-execute a set of ops that are known to be batchable
@@ -2729,7 +2728,7 @@ return fInlinedPtr;
     void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
     {
         // get a representative op
-        auto& f0 = *ops.front();
+        let& f0 = *ops.front();
         let op = f0.m_op;
         let opClass = g_oscTable[op]; // operation-specific auto-batching class
         // fail on unsupported classes
@@ -2784,6 +2783,9 @@ return fInlinedPtr;
         if (!isFree)
             m_stats.numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
+
+        // special case: under certain circumstances, we don't actually execute an op batched
+
         // is unbatched actually more expensive than batched?
         // We count CUDA launches, assuming all args are batched and require a Gather launch.
         // If not all args require that, we err on the side of not batching. BatchNorm must always be batched.
@@ -2827,6 +2829,7 @@ return fInlinedPtr;
                 // distribute value to all aliases
                 UpdateDuplicatesAndUpdateSchedule(f);
             }
+            return; // and done
         }
 
         // === execute the batchable operations as a batch ===
@@ -2839,212 +2842,212 @@ return fInlinedPtr;
         // and we will hack its input's m_outputComposite to hold a strong reference to the Splice() or Slice().
         // (This is a little ugly since m_outputComposite is meant to hold a CompositeFunction, but we misuse it
         // to hold a PrimitiveFunction.)
-        else
-        {
-            // batch all arguments
-            // TODO: see if this can be sped up using un-managed pointers (save lots of ref-counting); or even use GatherBatch lambda
-            // The batch axis will be a new axis appended to all shapes.
-            //  - For elementwise operations, its position must be the same for all inputs.
-            //    The result's batch axis will also be in the same position.
-            //    Thus, it may have padded singleton dims, e.g. for reductions or Index(), which may need to be removed.
-            //    (This also holds for Slice(), if we one day decide to batch it.)
-            //  - Splice() is like an elementwise op, but it may splice into a new axis.
-            //    Hence, we preemptively insert one extra singleton axis into the inputs, and then append the batch axis.
-            //  - For matrix products and convolution, the column axes is already sort of a batch axis. We append the batch axis to them.
-            //    Our special matrix product may increase the number of axes. This is fine; the batch axis remains the respective trailing axis.
-            //    TODO: Verify that mapRank is never counted from the back.
-            m_batchedInputs.resize(numArgs);
-            let& unbatchedOutputShape = f0.m_outputs.front().Shape();
-            let i0 = (size_t)isTimes;    // index of first batchable argument (1 for matrix-product class; 0 otherwise)
-            let batchAxis = f0.m_autoBatchState.m_batchAxis; // we batch along this dimension
-#if 1
-            size_t commonInputBatchAxis; // batch axis of all batched args (it is the same across all args)
-            size_t outputBatchAxis;      // batch axis in output (may differ from commonInputBatchAxis for Times/Convolution)
-            // TODO: We restrict this to a single shared batch axis, with exception of unbatched inputs (first Times arg).
-            //       All batch axes must be the same across all inputs. Then we can always batch along those.
-            //       If all shapes happen to be the same, then there is an optimization (batch into a new axis and then reshape).
-            //       We probably want to make that a part of the Gather function, deep inside, and basically ignore here.
-            //       So: Select a common batch axis for all, and batch along those.
-            //       TODO: We still need a shift from inputs to output; Times() may shift the axis.
-            if (isTimes)
-            {
-                // for matrix product, second arg is batched, and batch axes differ for arg and output. Just append one axis, respectively.
-                commonInputBatchAxis = f0.m_inputs.back().Shape().Rank();
-                outputBatchAxis      = unbatchedOutputShape      .Rank();
-            }
-            else if (isBasicBlock)
-            {
-                outputBatchAxis = max(unbatchedOutputShape.Rank(), CacheAndGetBasicBlockBatchAxis(static_cast<const BlockFunction&>(f0)));
-                commonInputBatchAxis = outputBatchAxis;
-            }
-            else if (isElementWise)
-            {
-                // Elementwise ops may remove the last axis (e.g. InnerProduct()), or add axes (Splice, see-through Reshape).
-                // So the batch axis must be the max over all inputs' and output's rank.
-                // From the batching condition, we know that all input shapes are the same. So we only need to look at the first op instead.
-                // TODO: We could also handle this by an implied AsShape() right before execution.
-                outputBatchAxis = max(unbatchedOutputShape.Rank(), DetermineMaxElementwiseInputRank(f0));
-                commonInputBatchAxis = outputBatchAxis;
-            }
-            else
-                fail_if(true, "should not get here");
 
-            // enable stacking; that is, along the last axis
-            // This is tricky. E.g. must consider whether it's a scalar. For now we stack Times().
-            // We must check the last axis over all inputs.
-            let stackIt = isTimes && outputBatchAxis == 2; // TODO: correctly consider the mapRank
-            if (stackIt)
-            {
-                outputBatchAxis--;
-                commonInputBatchAxis--;
-            }
-            size_t batchSize = numBatchItems; // dimension of batch axis
-            if (stackIt)
-            {
-                // this is for Times only for now
-                batchSize = 0;
-                for (let& f : ops) // create the batched tensors
-                {
-                    let& input = f.m_inputs.back();
-                    batchSize += input.Shape().Dimensions().back();
-                }
-            }
-            if (batchAxis != commonInputBatchAxis)
-                Break;
-#else
-                                                             // determine the output batch size
-            size_t batchSize = 0;
+        // batch all arguments
+        // TODO: see if this can be sped up using un-managed pointers (save lots of ref-counting); or even use GatherBatch lambda
+        // The batch axis will be a new axis appended to all shapes.
+        //  - For elementwise operations, its position must be the same for all inputs.
+        //    The result's batch axis will also be in the same position.
+        //    Thus, it may have padded singleton dims, e.g. for reductions or Index(), which may need to be removed.
+        //    (This also holds for Slice(), if we one day decide to batch it.)
+        //  - Splice() is like an elementwise op, but it may splice into a new axis.
+        //    Hence, we preemptively insert one extra singleton axis into the inputs, and then append the batch axis.
+        //  - For matrix products and convolution, the column axes is already sort of a batch axis. We append the batch axis to them.
+        //    Our special matrix product may increase the number of axes. This is fine; the batch axis remains the respective trailing axis.
+        //    TODO: Verify that mapRank is never counted from the back.
+        m_batchedInputs.resize(numArgs);
+        let& unbatchedOutputShape = f0.m_outputs.front().Shape();
+        let i0 = (size_t)isTimes;    // index of first batchable argument (1 for matrix-product class; 0 otherwise)
+        let batchAxis = f0.m_autoBatchState.m_batchAxis; // we batch along this dimension
+#if 1
+        size_t commonInputBatchAxis; // batch axis of all batched args (it is the same across all args)
+        size_t outputBatchAxis;      // batch axis in output (may differ from commonInputBatchAxis for Times/Convolution)
+        // TODO: We restrict this to a single shared batch axis, with exception of unbatched inputs (first Times arg).
+        //       All batch axes must be the same across all inputs. Then we can always batch along those.
+        //       If all shapes happen to be the same, then there is an optimization (batch into a new axis and then reshape).
+        //       We probably want to make that a part of the Gather function, deep inside, and basically ignore here.
+        //       So: Select a common batch axis for all, and batch along those.
+        //       TODO: We still need a shift from inputs to output; Times() may shift the axis.
+        if (isTimes)
+        {
+            // for matrix product, second arg is batched, and batch axes differ for arg and output. Just append one axis, respectively.
+            commonInputBatchAxis = f0.m_inputs.back().Shape().Rank();
+            outputBatchAxis      = unbatchedOutputShape      .Rank();
+        }
+        else if (isBasicBlock)
+        {
+            outputBatchAxis = max(unbatchedOutputShape.Rank(), CacheAndGetBasicBlockBatchAxis(static_cast<const BlockFunction&>(f0)));
+            commonInputBatchAxis = outputBatchAxis;
+        }
+        else if (isElementWise)
+        {
+            // Elementwise ops may remove the last axis (e.g. InnerProduct()), or add axes (Splice, see-through Reshape).
+            // So the batch axis must be the max over all inputs' and output's rank.
+            // From the batching condition, we know that all input shapes are the same. So we only need to look at the first op instead.
+            // TODO: We could also handle this by an implied AsShape() right before execution.
+            outputBatchAxis = max(unbatchedOutputShape.Rank(), DetermineMaxElementwiseInputRank(f0));
+            commonInputBatchAxis = outputBatchAxis;
+        }
+        else
+            fail_if(true, "should not get here");
+
+        // enable stacking; that is, along the last axis
+        // This is tricky. E.g. must consider whether it's a scalar. For now we stack Times().
+        // We must check the last axis over all inputs.
+        let stackIt = isTimes && outputBatchAxis == 2; // TODO: correctly consider the mapRank
+        if (stackIt)
+        {
+            outputBatchAxis--;
+            commonInputBatchAxis--;
+        }
+        size_t batchSize = numBatchItems; // dimension of batch axis
+        if (stackIt)
+        {
+            // this is for Times only for now
+            batchSize = 0;
             for (let& f : ops) // create the batched tensors
-                batchSize += f.m_autoBatchState.m_batchDim;
-            if (batchSize != numBatchItems)
-                Break; // stacking
+            {
+                let& input = f.m_inputs.back();
+                batchSize += input.Shape().Dimensions().back();
+            }
+        }
+        if (batchAxis != commonInputBatchAxis)
+            Break;
+#else
+                                                            // determine the output batch size
+        size_t batchSize = 0;
+        for (let& f : ops) // create the batched tensors
+            batchSize += f.m_autoBatchState.m_batchDim;
+        if (batchSize != numBatchItems)
+            Break; // stacking
 #endif
 
-            // create all the batched inputs by splicing along the batch axis
-            // Special optimizations are taken if all elements are identical.
-            bool anyBatchedInputs = false; // stays false if for all arguments, all respective batch-item arguments are identical
-            for (size_t i = 0; i < numArgs; i++) // if isTimes then skip the first arg
-            {
-                m_batchedInputs[i] = CreateBatchedInputFor(ops, commonInputBatchAxis, batchSize,
-                                                           i, /*in/out*/anyBatchedInputs);
-            } // end for (i=...)
-            // m_batchedInputs[] have been prepared. anyBatchedInputs has remained false if all had identical inputs across all batch items.
-
-            // special case: BatchNormalization
-            if (op == PrimitiveOpType::BatchNormalization)
-            {
-                // BatchNorm requires three additional parameters for the current mean and invStdDev, and the zero-mean/unit-variance intermediate. These must be kept for backprop.
-                // This is sort of a hack for now. It is not, however, an efficiency problem since there are relatively few batched BatchNorm nodes in the graph.
-                let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
-                let device = GetValueObject(m_batchedInputs[0])->Device();
-                let createParameter = [&](const NDShape& shape) -> Variable // helper to create a Parameter as if it had been initialized by RBuildForwardGraphAndSchedule()
-                {
-                    let p = Parameter(m_arena.NewNDArrayView(shape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, device));
-                    auto& fields = GetInputFields(p);
-                    //fields.m_redirection.m_function = nullptr; // it is already null after creation
-                    fail_if(fields.m_redirection.m_function != nullptr, "Parameter redirect not initialized??");
-                    //fields.m_redirection.m_index = SIZE_MAX;
-                    // initialize m_consumers chain of function that produces the values
-                    //fields.m_consumers.mangle(-5); // (temporarily, so that we can discover if this is ever used)
-                    return p; // TODO: change to return Parameter...
-                };
-                m_batchedInputs.push_back(createParameter(               statShape)  );
-                m_batchedInputs.push_back(createParameter(               statShape)  );
-                m_batchedInputs.push_back(createParameter(m_batchedInputs[0].Shape()));
-                anyBatchedInputs = true; // BUGBUG: If all operands are the same, then BatchNorm does not make sense (variance=0). Should we throw an error?
-            }
-
-            // execute the operation and implant the results
-            // Batched inputs have been prepared in m_batchedInputs[].
-            // If all inputs are identical then degrade to computing it only once (this is the easy case that we don't kick off the CSE machinery for).
-
-            if (!anyBatchedInputs)
-                for (size_t i = 0; i < numArgs; i++)
-                    fail_if(&GetInputFields(m_batchedInputs[i]) != &GetInputFields(f0.m_inputs[i]), "all batch args the same, but not??");
-
-            // >>> This is the actual batched op that we create and execute here. <<<
-            // A new PrimitiveFunction is created for the batched op, so that we can backprop through it.
-            // If f0 is a block, then actually an entire subgraph clone will be created here.
-            // PERF BUGBUG: If all args are identical, we can degrade to a single op. Then we should not need to create a new PrimitiveFunction.
-            //              Note: This is not covered by CSE, since CSE is only used for complex cases.
-            auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
-
-            // some stats and checks
-            if (!anyBatchedInputs)
-                m_stats.numCommonSubexpressionsEliminated += numBatchItems - 1;
-            if (anyBatchedInputs)
-                fail_if(batchedOp->m_outputs.front().Shape().Rank() != outputBatchAxis + 1, "outputBatchAxis was not predicted right");
-
-            // in case of reducing operations (e.g. ReduceSum() and also Index()), additional singleton axes
-            // may have been inserted to align the batch axes. Remove these if present.
-            // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop   --TODO: does it? Verify.
-            if (anyBatchedInputs)
-            {
-                if (outputBatchAxis != unbatchedOutputShape.Rank()    && !stackIt/*for now*/)
-                {
-                    CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, numBatchItems);
-                    // TODO: This should not be necessary anymore, we can let this be implicitly handled by a redirect.
-                    fail_if(!isElementWise && !isBasicBlock, "output shape should only have additional singleton axes for elementwise operations or basic-block invocations");
-                    // insert a Reshape() op to remove the axes
-                    let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
-                    fail_if(batchedOutputShape.TotalSize(/*check=*/false) != batchedOp->m_outputs.front().Shape().TotalSize(/*check=*/false), "output shape has unexpected axes that should be singletons but aren't");
-
-                    Variable arg = batchedOp->m_outputs.front();
-                    arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
-
-                    // Reshape() here does not need the properties at this level anymore; output shape is sufficient
-                    let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, Dictionary(), f0.m_name, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
-
-                    batchedOp = reshapeOp; // this is the result that we redistribute from to the individual consumers
-                }
-            }
-
-            // implant all results in the original unbatched operations (all as lazy/virtual references through m_redirection)
-            // TODO: review this w.r.t. multi-output functions
-            if (anyBatchedInputs && !stackIt)
-            {
-                size_t j = 0;
-                for (auto& f : ops)
-                {
-                    // implant the result
-                    FinalizeBatchedOpAndUpdateSchedule(f, batchedOp, SliceRange(j));
-                    // and implant it to all aliases as well
-                    UpdateDuplicatesAndUpdateSchedule(f);
-                    // iterate the slice index
-                    j++;
-                }
-            }
-            else if (anyBatchedInputs && stackIt)
-            {
-                size_t prevSliceEnd = 0;
-                for (auto& f : ops)
-                {
-                    let width = f.m_inputs.back().Shape().Dimensions().back();
-                    // implant the result
-                    let newSliceEnd = prevSliceEnd + width;
-                    FinalizeBatchedOpAndUpdateSchedule(f, batchedOp, SliceRange(prevSliceEnd, newSliceEnd));
-                    // and implant it to all aliases as well
-                    UpdateDuplicatesAndUpdateSchedule(f);
-                    // iterate the slice index
-                    prevSliceEnd = newSliceEnd;
-                }
-            }
-            else // no batched inputs
-            {
-                for (auto& f : ops)
-                {
-                    // TODO: review this w.r.t. multi-output functions
-                    // implant the result
-                    FinalizeBatchedOpAndUpdateSchedule(f, batchedOp);
-                    // and implant it to all aliases as well
-                    UpdateDuplicatesAndUpdateSchedule(f);
-                }
-            }
-            // To keep the batchedOp ref count alive, FinalizeBatchedOpAndUpdateSchedule() saves the shared_ptr in all m_redirection.m_functionHolder.
-
-            // release the ref counts on the batched inputs; but keep the vector's memory allocated
-            m_batchedInputs.clear();
+        // create all m_batchedInputs[] by splicing along the batch axis
+        // Special optimizations are taken if all elements are identical.
+        bool anyBatchedInputs = false; // stays false if for all arguments, all respective batch-item arguments are identical
+        for (size_t i = 0; i < numArgs; i++) // if isTimes then skip the first arg
+        {
+            m_batchedInputs[i] = CreateBatchedInputFor(ops, commonInputBatchAxis, batchSize,
+                                                       i, /*in/out*/anyBatchedInputs,
+                                                       m_gatherArgsBuffer);
         }
+        m_gatherArgsBuffer.clear(); // (avoid Variables to hang around unnecessarily)
+        // anyBatchedInputs will still be false if all had identical inputs across all batch items.
+
+        // special case: BatchNormalization
+        if (op == PrimitiveOpType::BatchNormalization)
+        {
+            // BatchNorm requires three additional parameters for the current mean and invStdDev, and the zero-mean/unit-variance intermediate. These must be kept for backprop.
+            // This is sort of a hack for now. It is not, however, an efficiency problem since there are relatively few batched BatchNorm nodes in the graph.
+            let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
+            let device = GetValueObject(m_batchedInputs[0])->Device();
+            let createParameter = [&](const NDShape& shape) -> Variable // helper to create a Parameter as if it had been initialized by RBuildForwardGraphAndSchedule()
+            {
+                let p = Parameter(m_arena.NewNDArrayView(shape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, device));
+                auto& fields = GetInputFields(p);
+                //fields.m_redirection.m_function = nullptr; // it is already null after creation
+                fail_if(fields.m_redirection.m_function != nullptr, "Parameter redirect not initialized??");
+                //fields.m_redirection.m_index = SIZE_MAX;
+                // initialize m_consumers chain of function that produces the values
+                //fields.m_consumers.mangle(-5); // (temporarily, so that we can discover if this is ever used)
+                return p; // TODO: change to return Parameter...
+            };
+            m_batchedInputs.push_back(createParameter(               statShape)  );
+            m_batchedInputs.push_back(createParameter(               statShape)  );
+            m_batchedInputs.push_back(createParameter(m_batchedInputs[0].Shape()));
+            anyBatchedInputs = true; // BUGBUG: If all operands are the same, then BatchNorm does not make sense (variance=0). Should we throw an error?
+        }
+
+        // execute the operation and implant the results
+        // Batched inputs have been prepared in m_batchedInputs[].
+        // If all inputs are identical then degrade to computing it only once (this is the easy case that we don't kick off the CSE machinery for).
+
+        if (!anyBatchedInputs)
+            for (size_t i = 0; i < numArgs; i++)
+                fail_if(&GetInputFields(m_batchedInputs[i]) != &GetInputFields(f0.m_inputs[i]), "all batch args the same, but not??");
+
+        // >>> This is the actual batched op that we create and execute here. <<<
+        // A new PrimitiveFunction is created for the batched op, so that we can backprop through it.
+        // If f0 is a block, then actually an entire subgraph clone will be created here.
+        // PERF BUGBUG: If all args are identical, we can degrade to a single op. Then we should not need to create a new PrimitiveFunction.
+        //              Note: This is not covered by CSE, since CSE is only used for complex cases.
+        auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
+
+        // some stats and checks
+        if (!anyBatchedInputs)
+            m_stats.numCommonSubexpressionsEliminated += numBatchItems - 1;
+        if (anyBatchedInputs)
+            fail_if(batchedOp->m_outputs.front().Shape().Rank() != outputBatchAxis + 1, "outputBatchAxis was not predicted right");
+
+        // in case of reducing operations (e.g. ReduceSum() and also Index()), additional singleton axes
+        // may have been inserted to align the batch axes. Remove these if present.
+        // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop   --TODO: does it? Verify.
+        if (anyBatchedInputs)
+        {
+            if (outputBatchAxis != unbatchedOutputShape.Rank()    && !stackIt/*for now*/)
+            {
+                CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, numBatchItems);
+                // TODO: This should not be necessary anymore, we can let this be implicitly handled by a redirect.
+                fail_if(!isElementWise && !isBasicBlock, "output shape should only have additional singleton axes for elementwise operations or basic-block invocations");
+                // insert a Reshape() op to remove the axes
+                let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
+                fail_if(batchedOutputShape.TotalSize(/*check=*/false) != batchedOp->m_outputs.front().Shape().TotalSize(/*check=*/false), "output shape has unexpected axes that should be singletons but aren't");
+
+                Variable arg = batchedOp->m_outputs.front();
+                arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
+
+                // Reshape() here does not need the properties at this level anymore; output shape is sufficient
+                let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, Dictionary(), f0.m_name, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
+
+                batchedOp = reshapeOp; // this is the result that we redistribute from to the individual consumers
+            }
+        }
+
+        // implant all results in the original unbatched operations (all as lazy/virtual references through m_redirection)
+        // TODO: review this w.r.t. multi-output functions
+        if (anyBatchedInputs && !stackIt)
+        {
+            size_t j = 0;
+            for (auto& f : ops)
+            {
+                // implant the result
+                FinalizeBatchedOpAndUpdateSchedule(f, batchedOp, SliceRange(j));
+                // and implant it to all aliases as well
+                UpdateDuplicatesAndUpdateSchedule(f);
+                // iterate the slice index
+                j++;
+            }
+        }
+        else if (anyBatchedInputs && stackIt)
+        {
+            size_t prevSliceEnd = 0;
+            for (auto& f : ops)
+            {
+                let width = f.m_inputs.back().Shape().Dimensions().back();
+                // implant the result
+                let newSliceEnd = prevSliceEnd + width;
+                FinalizeBatchedOpAndUpdateSchedule(f, batchedOp, SliceRange(prevSliceEnd, newSliceEnd));
+                // and implant it to all aliases as well
+                UpdateDuplicatesAndUpdateSchedule(f);
+                // iterate the slice index
+                prevSliceEnd = newSliceEnd;
+            }
+        }
+        else // no batched inputs
+        {
+            for (auto& f : ops)
+            {
+                // TODO: review this w.r.t. multi-output functions
+                // implant the result
+                FinalizeBatchedOpAndUpdateSchedule(f, batchedOp);
+                // and implant it to all aliases as well
+                UpdateDuplicatesAndUpdateSchedule(f);
+            }
+        }
+        // To keep the batchedOp ref count alive, FinalizeBatchedOpAndUpdateSchedule() saves the shared_ptr in all m_redirection.m_functionHolder.
+
+        // release the ref counts on the batched inputs; but keep the vector's memory allocated
+        m_batchedInputs.clear();
     }
 
 public:
