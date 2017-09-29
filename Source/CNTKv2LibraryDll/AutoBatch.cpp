@@ -2599,7 +2599,6 @@ return fInlinedPtr;
         let is0Redirected = redirectionPair0.originatingFunction != nullptr;
         bool allSame = true;                                              // will be true if all are the same objects
         bool allConsecutiveSlices = !redirectionPair0.sliceRange.empty(); // will be true if all are consecutive index ops into the same batched result
-        bool allSameShape = true;                                         // will be true if all shapes are the same
         size_t prevSliceEndIndex = 0; // running index
         for (let& f : ops) // create the batched tensors
         {
@@ -2626,14 +2625,8 @@ return fInlinedPtr;
                 // carry them forward, and ignore them when implanting the result.
                 prevSliceEndIndex = redirectionPair.sliceRange.EndIndex();
             }
-            // optimization: if all shapes are the same then we batch, otherwise we stack (batching is faster in Gather)
-            allSameShape = allSameShape && (isScalar || pfields0.m_shape.Dimensions().back() == pfields.m_shape.Dimensions().back());
-            fail_if(allSameShape && pfields0.m_shape != pfields.m_shape, "shapes differ by more than the batch axis"); // (remove this check)
         }
         if (stackingMode == StackingMode::STACKING)
-            Break;
-        let allConsecutiveIndices = allConsecutiveSlices && allSameShape;
-        if (!allSameShape)
             Break;
         cudaStatsguard.Stop();
         // and splice
@@ -2643,7 +2636,7 @@ return fInlinedPtr;
             // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
             return f0.m_inputs[i];
         }
-        else if (allConsecutiveIndices) // they are consecutive slice views: can short-circuit as a slice view
+        else if (allConsecutiveSlices) // they are consecutive slice views into the same batched tensor: can short-circuit slice+gather as a single slice view
         {
             if (stackingMode == StackingMode::STACKING)
                 Break;
@@ -2954,6 +2947,8 @@ return fInlinedPtr;
             }
             else
                 stackingMode = StackingMode::STACKING;
+            if (stackingMode == StackingMode::STACKING)
+                fprintf(stderr, "STACKING op %S\n", PrimitiveOpTypeName(f0.m_op).c_str());
         }
         fail_if(stackingMode == StackingMode::STACKING_BUT_MAY_BATCH, "StackingMode::STACKING_BUT_MAY_BATCH should have been decided by now??");
         let commonInputBatchAxis = batchAxis; // TODO: remove this extra name
