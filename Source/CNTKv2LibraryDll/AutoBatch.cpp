@@ -78,17 +78,11 @@ namespace CNTK
     // 
     // The batching/stacking operation involves a memory copy to collate all arg batch items into a memory-consecutive
     // dense tensor. (This will generate a "gather" op under the hood, and the back-prop is handled by a "scatter" op.)
+    // (In the future, this may be virtualized.)
     // As an optimization, the gather op is skipped if all items are already consecutive in memory.
     // This is often the case when they themselves are the result of a batched computation.
     // 
-    // The concatenation axis is always last (slowest-changing) axis of the batched data; either a new one (batching) or the last one (stacking).
-    // 
-    // For now, we use batching and not stacking, since the Index proxy only stores an index and not a range.
-    // I.e. all args must have identical shapes including the last axis. To support stacking along the last axis,
-    // we'd need to store a range. This will allow mismatching last dimensions (e.g. stacking vectors of different
-    // dimensions), but not all primitive operations can handle such changed dimensions.
-    // One can also imagine more elaborate stacking in different dimensions, and even in multiple dimensions
-    // (like current CNTK MBLayout).
+    // The batching/stacking axis is always last (slowest-changing) axis of the batched data; either a new one (batching) or the last one (stacking).
     // 
     // If all args to be batched are identical (all items are the same object), then, if possible, the item
     // is not copied, but instead virtually duplicated by means of broadcasting. E.g. if "b1 is b2" (in Python parlance),
@@ -98,56 +92,95 @@ namespace CNTK
     // 
     // where b1 will automatically be broadcast into the second dimension by the "+" operation.
     // This happens, for example, when adding a bias to each step of a sequence.
-    // This optimization can only be done for operators that support broadcasting.
+    // All presently supported operators support broadcasting.
     // 
-    // If all args have this property, then the operation is computed unbatched but only once, and the result is shared:
+    // If all of the args turn out to have this property, then the operation is computed unbatched but only once, and the result is shared:
     // 
     //   c1_c2 = a1 + b1
     //   c1 = c2 = c1_c2
     // 
-    // When comparing dimensions, trailing singleton dimensions can be ignored if possible.
-    // This is not implemented presently, since it makes the comparison operation more complex.
+    // All presently supported operators are batchable. They fall into one of the following classes:
+    //  - elementwise:
+    //     - all inputs share the same axis space
+    //       Note: Any input/ouput of lower rank is interpreted as having its rank padded with singleton dimensions (dim=1).
+    //     - computed output shares the same axis space (but may be Reshaped to form the final result)
+    //     - hence, they are fully batchable/stackable
+    //       Note: This is also true for Reductions, which are elementwise with the reduction dimension having dimension 1.
+    //     - a special case are see-through ops (NoOp, Barrier, Reshape, Slice)
+    //       These are short-circuited prior to auto-batched execution.
+    //  - matrix-product class (Times(), TransposeTimes(), and Convolution):
+    //     - the first arg is a weight tensor. It cannot have a batch axis.
+    //       (One day we may support batch GEMM; and Convolution may already support it with non-shared weights.)
+    //     - they are fully batchable/stackable
+    //     - the batch axis may move
+    //  - Block invocations:
+    //     - block inputs must behave like elementwise, i.e. all inputs share the same axis space
+    //       Note: Blocks may contain matrix-product class ops, but only with Parameters baked into the static graph
+    //
+    // Hence, the general conditions for batching/stacking are:
+    //  - defintions:
+    //     - non-batchable input := any of the following:
+    //        - weight tensor of a matrix-product class operation. Note: It does not share the same axis space as the other input.
+    //        - learnable parameters of BatchNorm. Note: These do share the same axis space with the other inputs, but are reduced.
+    //     - batchable input := all other inputs
+    //  - conditions for batching:
+    //     - batch axis := maximum over ranks of all batchable inputs (Note that a Reshape's or matrix product's output may have a shifted batch axis)
+    //     - all batchable inputs must have matching dimensions
+    //     - all non-batchable inputs must have the same object identity
+    //  - conditions for stacking:
+    //     - batch axis := same as for batching, minus 1
+    //     - batchable inputs: same as for batching, except dim[batch axis], if present, does not need to match
+    //     - non-batchable inputs: same as for batching
+    //     - batch axis must exist (no batchable input is a scalar)
+    //     - the batch axis must not be reduced over
+    //  - additional conditions for special cases:
+    //     - sparse inputs must have batch axis = 1, due to current limitation of the underlying library
+    //     - BatchNormalization:
+    //        - all instances with the same bnId must be available
+    //        - batch axis is specified by user. Must be either the last axis (stacking) or larger (batching).
+    //     - OptimizedRNNStack (presently not supported):
+    //        - the batch is not a tensor (non-uniform batch dimension across time steps)
+    //
+    // Algorithm for testing if two ops are batchable:
+    //  - we use stacking, unless the following forces us to use batching:
+    //     - no batchable input is a scalar
+    //     - there is no reduction along the potential stacked batch axis (=max over ranks of batchable inputs - 1)
+    //     - there is no batchable input that is a sparse vector (i.e., of rank 1). (Math library cannot stack sparse along axis 0.)
+    //  - determine input and output batch axes, as given above depending on stacking/batching decision
+    //  - for any sparse input, the batch axis must be 1, no matter we decided for stacking or batching
+    //    Note: The information up to this point can be precomputed once and stored with the PrimitiveFunction.
+    //  - operation, all attributes, and all inputs' DataType and IsSparse must match
+    //  - batch axes must match
+    //  - all batchable inputs must have matching dimensions up to the batch axis
+    //  - special cases:
+    //     - BatchNormalization also requires batch size == #instances
+    //
+    // Note: One can also imagine more elaborate stacking in different dimensions, and even in multiple dimensions
+    // (like current CNTK MBLayout).
+    //
+    // Side note: The matrix-product class can be thought of as Reshapes combined with an ElementTimes with reduction:
+    //  - A : [I x J]               -> [I x J x 1]
+    //  - B : [J x T]               -> [1 x J x T]
+    //  - C = A x B : [I x T] = ReduceSum(A.AsShape(I,J,1) * B.AsShape(1,J,T), Axis(1)).AsShape(I,T)
+    // TODO: Actually try this!
+    // A more complex formula of the same kind exists for convolution, when disregarding padding.
     // 
-    // The batching operation happens after output and Parameter shapes have been fully determined, as that
-    // happens during graph building, before the computation kicks in. The already determined
+    // The conditions are tested in Schedule() and ExecuteBatchedOpAndSchedule().
+    // The batching deciosion is made after output and Parameter shapes have been fully determined, as that
+    // happens during graph building, before the computation begins. The already determined
     // shapes can directly drive reduction and reshape operations.
     // 
     // The following will go through every single operation and specify how it is batched.
     // This is designed in a way that even multiple batching, with multiple added batch axes, will behave correctly.
     // TODO: This is a TODO list for now with intent to be implemented this way.
     // 
-    // TODO: Needed redesign:
-    //  - Lazy index must contain a range. So it cannot be a pair<>... which is better anyway.
-    //  - Lazy index must contain an optional built-in reshape.
-    //    This may be possible without actually storing the shape (which would be a malloc()),
-    //    since the target dimension is already known when we have access to the unbatched result.
-    //    We should add NDArrayView::SliceViewAsShape(), and always use that.
-    // 
-    // general condition
-    // -----------------
-    // 
-    // This condition applies to all operations, and will be modified with additional op-specific conditions.
-    // There is only one condition that is not an AND with these; which is a relaxation of shape match for Reshape().
-    // 
-    // Conditions for batching:
-    //   All arg arguments must completely match in dimensions. The key for comparison is the full shape.
-    // 
-    // Conditions for stacking:
-    //   All args must match except for their last dimension. The key for comparison is the shape less the last dimension.
-    //   Reduction dimensions may not reduce along the last dimension (otherwise fall back to batching).
-    //
-    // The conditions are tested in Schedule() and ExecuteBatchedOpAndSchedule().
-    //
     // The op-specific conditions are specified in the following initializer.
     // 
     // TODO: implement these V1 nodes somehow via TensorView
     //  - Convolution, Pooling, Unpooling
     //  - RandomDistribution  // for dropout
-    //  - BatchNormalization  // for MT
     //  - OptimizedRNNStack   // for MT
-    // 
-    // TODO:
-    //  - figure out Hardmax. Can we have a OneHot-like op in TensorView?
+    //  - Hardmax. Can we have a OneHot-like op in TensorView?
 
     enum class OpSpecificConditionKind  :  size_t // the meanings of these are specified below
     {
@@ -241,8 +274,8 @@ namespace CNTK
         // and the output. Likewise, any such added singleton dimensions in the output are, if present,
         // removed after the op.
 
-        // Matrix products
-        // ---------------
+        // Matrix-product class
+        // --------------------
         // 
         { OpSpecificConditionKind::MatrixProduct, {
             PrimitiveOpType::Times, PrimitiveOpType::TransposeTimes
@@ -267,11 +300,11 @@ namespace CNTK
 
         // Convolution/pooling
         // -------------------
-        // 
-        { OpSpecificConditionKind::Convolution, {
+        //
+        { OpSpecificConditionKind::Convolution, { // TODO: make this part of matrix-product class
             PrimitiveOpType::Convolution // includes ConvolutionTranspose()
         }},
-        { OpSpecificConditionKind::Pooling, {
+        { OpSpecificConditionKind::Pooling, { // TODO: make this part of unary elementwise ops
             PrimitiveOpType::Pooling, PrimitiveOpType::Unpooling
         }},
         //
@@ -438,8 +471,8 @@ namespace CNTK
         //   False. To allow this, we'd need to analyze the content of the composite to line up the axes.
         //
         // Presently, Invoke(composite, isBasicBlock=true) is only allowed for composites that contain only
-        // elementwise operations. That is, e.g. no Times or Convolution. That is because the underlting layer
-        // does not support batch GEMM/batch Convolution at present.
+        // elementwise operations. That is, e.g. no Times or Convolution. That is because the underlying layer
+        // does not support batch GEMM/batch Convolution at present. --NO: This has been relaxed already. TODO: Update this text.
         //
         // The inputs of the composite just get the batch axis appended. During computation, the composite is interpreted.
         // In each step, the batch axis of all inputs and the output are aligned as needed.

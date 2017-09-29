@@ -878,7 +878,9 @@ namespace CNTK
             mutable size_t m_cachedOpHash = SIZE_MAX-1; // hash for batchability check; 0 means not set yet   --set to SIZE_MAX to detect missing initialization
             //size_t m_aliasHash = SIZE_MAX-1; // hash for alias detection (common subexpression elimination)    --set to SIZE_MAX-1 to detect if we miss to initialize; remove this
             size_t m_depthHint;              // max of depth hints over all inputs
+            // cached:
             size_t m_batchNormId = INT_MAX-1; // 0 if none   --TODO: INT_MAX chosen as to cause an access violation if left unchanged
+            size_t batchAxis;                 // max over ranks of batchable inputs; minus 1 if stacking. Computed upon Schedule().
         } m_autoBatchState;
         mutable DynamicProfilerPtr m_profiler;   // profile using this profiler if set
         static const DynamicProfilerPtr& CurrentDynamicProfiler();
