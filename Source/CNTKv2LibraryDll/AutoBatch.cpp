@@ -568,8 +568,6 @@ namespace CNTK
     //     - Splice() for each of the N inputs
     // 'free' ops are always batched together and get executed first
 
-using SliceRange = Internal::AutoBatchRedirection::SliceRange;
-
 // ===========================================================================
 // helper classes
 // ===========================================================================
@@ -992,6 +990,9 @@ static shared_ptr<DynamicProfiler> m_currentProfiler; // current innermost activ
 
 class Variable::AutoBatch
 {
+    using SliceRange = Internal::AutoBatchRedirection::SliceRange;
+    using StackingMode = PrimitiveFunction::StackingMode;
+
     NDArrayViewArena m_arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
     RuntimeStatistics m_stats;
     VisitorTag m_visitorTag; // helper for managing tree traversal (non-nested)
@@ -1398,17 +1399,17 @@ return fInlinedPtr;
         //  - batching: axis = max rank, dim = 1 (since axis is outside of all shapes)
         //  - stacking: axis = max rank - 1; dim = max over those dims (inputs that do not have that axis can be considered virtually padded to 1. Effectively they are just skipped.)
         // The decision is purely based on the operation and input ranks. Input shapes (other than their rank) must not be considered.
-        static tuple<bool/*stacking*/, size_t/*axis*/, size_t/*dim*/> DetermineBatchAxisAndDim(const PrimitiveFunction& f)
+        static tuple<StackingMode, size_t/*axis*/, size_t/*dim*/> DetermineBatchAxisAndDim(const PrimitiveFunction& f)
         {
             // helper to read out a dimension
-            let getLastDim = [](const Variable& input, size_t axis) -> tuple<bool/*stacking*/, size_t/*axis*/, size_t/*dim*/>
+            let getLastDim = [](const Variable& input, size_t axis) -> tuple<StackingMode, size_t/*axis*/, size_t/*dim*/>
             {
                 let& inputShape = input.Shape().Dimensions();
                 let inputRank = inputShape.size();
                 if (axis == inputRank)
-                    return{ /*stacking=*/false, axis, 1 };
+                    return{ StackingMode::BATCHING, axis, 1 };
                 else if (axis + 1 == inputRank)
-                    return{ /*stacking=*/true, axis, inputShape.back() };
+                    return{ StackingMode::STACKING, axis, inputShape.back() };
                 else
                     LogicError("getLastDim: batch axis is at wrong position");
             };
@@ -1449,15 +1450,15 @@ return fInlinedPtr;
             if (hasSparse)
             {
                 if (maxRank == 2)
-                    return{ /*stacking=*/true, /*axis=*/1, lastDim };
+                    return{ StackingMode::STACKING, /*axis=*/1, lastDim };
                 else if (maxRank == 1)
-                    return{ /*stacking=*/false, /*axis=*/1, 1 };
+                    return{ StackingMode::BATCHING, /*axis=*/1, 1 };
                 else
                     InvalidArgument("DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.");
             }
             // decide stacking vs. batching
             if (maxRank == 0) // can only stack if inputs are not scalars
-                return{ /*stacking=*/false, /*axis=*/0, /*dim=*/1 }; // batching of scalars
+                return{ StackingMode::BATCHING, /*axis=*/0, /*dim=*/1 }; // batching of scalars
             let stackingAxis = maxRank - 1;
             switch (op) // does the unbatched op touch the (potential) stacking axis?
             {
@@ -1468,7 +1469,7 @@ return fInlinedPtr;
             case PrimitiveOpType::Splice:
             case PrimitiveOpType::ReduceElements:
                 if (stackingAxis == (size_t)f.m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex())
-                    return{ /*stacking=*/false, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
+                    return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
                 break;
             case PrimitiveOpType::Slice: // this is an affected op, but it's a view op, so we should not get here
                 // TODO: Think through the Slice case.
@@ -1477,7 +1478,7 @@ return fInlinedPtr;
                 fail_if(true, "DetermineBatchAxis: not yet implemented for TransposeAxes");
             }
             // no problem case detected: we can stack
-            return{ /*stacking=*/true, stackingAxis, lastDim };
+            return{ StackingMode::STACKING_BUT_MAY_BATCH, stackingAxis, lastDim };
         }
 
     public:
@@ -1515,7 +1516,7 @@ return fInlinedPtr;
                 f.m_autoBatchState.m_stacking  = get<0>(batchAxisAndDim);
                 f.m_autoBatchState.m_batchAxis = get<1>(batchAxisAndDim);
                 f.m_autoBatchState.m_batchDim  = get<2>(batchAxisAndDim);
-                fail_if(!f.m_autoBatchState.m_stacking && f.m_autoBatchState.m_batchDim != 1, "batching but batchDim != 1??");
+                fail_if(f.m_autoBatchState.m_stacking == StackingMode::BATCHING && f.m_autoBatchState.m_batchDim != 1, "batching but batchDim != 1??");
                 // this naive implementation just scans linearly
                 // scan through all op sets to see if one is batchable with 'f'
                 // So far this does not show up in profiling.
@@ -2575,7 +2576,7 @@ return fInlinedPtr;
     vector<Variable> m_batchedInputs;
 
     // helper to create a batched input given a list of operations
-    inline Variable CreateBatchedInputFor(NonOwningFunctionList ops, size_t commonInputBatchAxis, size_t batchSize,
+    inline Variable CreateBatchedInputFor(NonOwningFunctionList ops, size_t commonInputBatchAxis, size_t batchSize, StackingMode stackingMode,
                                           size_t i, /*in/out*/bool& anyBatchedInputs)
     {
         let& f0 = *ops.front();
@@ -2599,7 +2600,6 @@ return fInlinedPtr;
         bool allSame = true;                                              // will be true if all are the same objects
         bool allConsecutiveSlices = !redirectionPair0.sliceRange.empty(); // will be true if all are consecutive index ops into the same batched result
         bool allSameShape = true;                                         // will be true if all shapes are the same
-        bool stacking = f0.m_autoBatchState.m_stacking;
         size_t prevSliceEndIndex = 0; // running index
         for (let& f : ops) // create the batched tensors
         {
@@ -2630,7 +2630,7 @@ return fInlinedPtr;
             allSameShape = allSameShape && (isScalar || pfields0.m_shape.Dimensions().back() == pfields.m_shape.Dimensions().back());
             fail_if(allSameShape && pfields0.m_shape != pfields.m_shape, "shapes differ by more than the batch axis"); // (remove this check)
         }
-        if (stacking)
+        if (stackingMode == StackingMode::STACKING)
             Break;
         let allConsecutiveIndices = allConsecutiveSlices && allSameShape;
         if (!allSameShape)
@@ -2645,7 +2645,7 @@ return fInlinedPtr;
         }
         else if (allConsecutiveIndices) // they are consecutive slice views: can short-circuit as a slice view
         {
-            if (stacking)
+            if (stackingMode == StackingMode::STACKING)
                 Break;
             let& from  = redirectionPair0.originatingFunction;
             fail_if(redirectionPair0.sliceRange.IsSlice() && redirectionPair0.sliceRange.Width() != 1, "stacking not yet supported");
@@ -2698,7 +2698,7 @@ return fInlinedPtr;
         }
         else // batch inputs are not consecutive: We must actually copy them together.
         {
-            if (stacking)
+            if (stackingMode == StackingMode::STACKING)
                 Break;
             // create the arguments to the gather operation
             vector<Variable> gatherInputs;
@@ -2869,8 +2869,7 @@ return fInlinedPtr;
         m_batchedInputs.resize(numArgs);
         let& unbatchedOutputShape = f0.m_outputs.front().Shape();
         let i0 = (size_t)isTimes;    // index of first batchable argument (1 for matrix-product class; 0 otherwise)
-        let batchAxis = f0.m_autoBatchState.m_batchAxis; // we batch along this dimension
-#if 1
+#if 0
         size_t commonInputBatchAxis; // batch axis of all batched args (it is the same across all args)
         size_t outputBatchAxis;      // batch axis in output (may differ from commonInputBatchAxis for Times/Convolution)
         // TODO: We restrict this to a single shared batch axis, with exception of unbatched inputs (first Times arg).
@@ -2926,13 +2925,37 @@ return fInlinedPtr;
             Break;
 #else
         // TODO: Make this work logically, then speed this up!
-        // determine the output batch size
-        size_t batchSize = 0;
-        for (let& f : ops) // create the batched tensors
-            batchSize += f.m_autoBatchState.m_batchDim;
-        // TODO: If we knew that this is batching (not stacking), then we can save time and just say batchSize = numBatchItems.
-        if (batchSize != numBatchItems)
-            Break; // stacking
+        // determine stacking vs. batching
+        //  - we must batch if the operation does not allow stacking. AreBatchable takes this into account.
+        //  - if the op allows stacking, we still want to back off to batching if the operation allows it. It will be more efficient.
+        //  - we stack only if it is allowed and required
+        auto stackingMode  = f0.m_autoBatchState.m_stacking; // we batch along this dimension
+        auto batchAxis = f0.m_autoBatchState.m_batchAxis; // we batch along this dimension
+        size_t batchSize;
+        if (stackingMode == StackingMode::BATCHING) // we were batched for batching
+            batchSize = numBatchItems;
+        else // we were batched for stacking. Use batching if possible.
+        {
+            // determine the output batch size
+            bool allBatchDimsTheSame = true;
+            size_t batchDim0 = f0.m_autoBatchState.m_batchDim;
+            batchSize = 0;
+            for (let& f : ops) // create the batched tensors
+            {
+                let batchDim = f.m_autoBatchState.m_batchDim;
+                batchSize += batchDim;
+                allBatchDimsTheSame = allBatchDimsTheSame && batchDim == batchDim0;
+            }
+            if (allBatchDimsTheSame && stackingMode == StackingMode::STACKING_BUT_MAY_BATCH) // we don't need to stack
+            {
+                stackingMode = StackingMode::BATCHING;
+                batchAxis++;
+                batchSize = numBatchItems;
+            }
+            else
+                stackingMode = StackingMode::STACKING;
+        }
+        fail_if(stackingMode == StackingMode::STACKING_BUT_MAY_BATCH, "StackingMode::STACKING_BUT_MAY_BATCH should have been decided by now??");
         let commonInputBatchAxis = batchAxis; // TODO: remove this extra name
         //let maxInputRank = DetermineMaxElementwiseInputRank(f0);
         if (isTimes)
@@ -2948,7 +2971,7 @@ return fInlinedPtr;
         bool anyBatchedInputs = false; // stays false if for all arguments, all respective batch-item arguments are identical
         for (size_t i = 0; i < numArgs; i++) // if isTimes then skip the first arg
         {
-            m_batchedInputs[i] = CreateBatchedInputFor(ops, commonInputBatchAxis, batchSize,
+            m_batchedInputs[i] = CreateBatchedInputFor(ops, commonInputBatchAxis, batchSize, stackingMode,
                                                        i, /*in/out*/anyBatchedInputs);
         }
         // anyBatchedInputs will still be false if all had identical inputs across all batch items.

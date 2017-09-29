@@ -868,6 +868,7 @@ namespace CNTK
         bool m_isKnownToBeAcyclic = true; // true if it is guaranteed that this PrimitiveFunction can never be part of a cycle (==has no Placeholder leaves)
         friend class NonOwningFunctionList;
         friend class NonOwningFunctionListBuilder;
+        enum class StackingMode { STACKING, BATCHING, STACKING_BUT_MAY_BATCH };
         struct
         {
             mutable size_t m_visitedTag = 0; // used for tree traversal at various places (currently only in backprop, in two places, and in composite inlining)
@@ -880,7 +881,7 @@ namespace CNTK
             size_t m_depthHint;              // max of depth hints over all inputs
             // cached:
             size_t m_batchNormId = INT_MAX-1; // 0 if none   --TODO: INT_MAX chosen as to cause an access violation if left unchanged
-            bool m_stacking;                  // true if batch axis is the last axis, rather than a new one
+            StackingMode m_stacking;                  // true if batch axis is the last axis, rather than a new one
             size_t m_batchAxis;               // max over ranks of batchable inputs; minus 1 if stacking. Computed upon Schedule().
             size_t m_batchDim;                // max m_shape[m_batchAxis] over all batchable inputs. Computed upon Schedule().
         } m_autoBatchState;
