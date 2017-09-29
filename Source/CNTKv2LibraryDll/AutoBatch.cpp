@@ -2571,13 +2571,10 @@ return fInlinedPtr;
 
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
     vector<Variable> m_batchedInputs;
-    vector<Variable> m_gatherArgsBuffer;
-    vector<size_t> m_gatherArgRepetitionsBuffer;
 
     // helper to create a batched input given a list of operations
     inline Variable CreateBatchedInputFor(NonOwningFunctionList ops, size_t commonInputBatchAxis, size_t batchSize,
-                                          size_t i, /*in/out*/bool& anyBatchedInputs,
-                                          vector<Variable>& gatherInputs, vector<size_t>& gatherInputRepetitions) // buffers
+                                          size_t i, /*in/out*/bool& anyBatchedInputs)
     {
         let& f0 = *ops.front();
         // special case: for matrix-product class operations, the first argument is non-batchable
@@ -2586,7 +2583,6 @@ return fInlinedPtr;
         {
             return f0.m_inputs.front();
         }
-
         let numBatchItems = ops.size();
         // create splice args for this argument
         // optimization: if all args are consecutive slices, then use a slice view instead
@@ -2608,8 +2604,8 @@ return fInlinedPtr;
             // optimization: if all args are the same, then don't batch
             allSame = allSame &&
                 (&pfields == &pfields0 ||                           // same object
-                 (/*is0Redirected && */redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
-            // ^^ we can remove this double check, and just compare m_function and m_sliceRange
+                 (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
+            // Note: If we remove is0Redirected, then this comparison will not be correct for leaves.
             // optimization: if all args are consecutive slices, then use a slice view instead
             if (allConsecutiveSlices)
             {
@@ -2694,18 +2690,14 @@ return fInlinedPtr;
         }
         else // batch inputs are not consecutive: We must actually copy them together.
         {
-            // create arguments
-            gatherInputs.clear();
-            gatherInputRepetitions.clear();
-            //if (gatherInputs.capacity() < numBatchItems) // don't do this, it's overkill since these are called thousands of times anyways
-            //    gatherInputs.reserve(max(numBatchItems, 2 * gatherInputs.capacity()));
-            for (let& f : ops) // create the batched tensors
+            // create the arguments to the gather operation
+            vector<Variable> gatherInputs;
+            gatherInputs.reserve(numBatchItems);
+            for (let& f : ops)
             {
                 let& input = f.m_inputs[i];
                 gatherInputs.push_back(input);
-                let numRepetitions = 1;
-                gatherInputRepetitions.push_back(numRepetitions);
-                // note: Variable is just two shared_ptrs, one being NULL; so this is cheap
+                // note: Variable is just three shared_ptrs, one being NULL; so this is cheap
                 // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
             }
             CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, numBatchItems);
@@ -2717,7 +2709,8 @@ return fInlinedPtr;
             //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
             outputShape.resize(commonInputBatchAxis, 1); // pad to commonInputBatchAxis
             outputShape.push_back(batchSize);      // and add the batch axis
-            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape,
+            // BUGBUG: vv The move(gatherInputs) is ineffective because ultimately, the copy (not move) constructor of PrimtiveFunction ends up being called.
+            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs), outputShape,
                                              Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)commonInputBatchAxis)),
                                              f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                              /*isFree=*/false, /*spliceIsGather=*/true);
@@ -2936,10 +2929,8 @@ return fInlinedPtr;
         for (size_t i = 0; i < numArgs; i++) // if isTimes then skip the first arg
         {
             m_batchedInputs[i] = CreateBatchedInputFor(ops, commonInputBatchAxis, batchSize,
-                                                       i, /*in/out*/anyBatchedInputs,
-                                                       m_gatherArgsBuffer, m_gatherArgRepetitionsBuffer);
+                                                       i, /*in/out*/anyBatchedInputs);
         }
-        m_gatherArgsBuffer.clear(); // (avoid Variables to hang around unnecessarily)
         // anyBatchedInputs will still be false if all had identical inputs across all batch items.
 
         // special case: BatchNormalization
