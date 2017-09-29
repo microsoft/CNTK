@@ -1398,17 +1398,17 @@ return fInlinedPtr;
         //  - batching: axis = max rank, dim = 1 (since axis is outside of all shapes)
         //  - stacking: axis = max rank - 1; dim = max over those dims (inputs that do not have that axis can be considered virtually padded to 1. Effectively they are just skipped.)
         // The decision is purely based on the operation and input ranks. Input shapes (other than their rank) must not be considered.
-        static pair<size_t/*axis*/,size_t/*dim*/> DetermineBatchAxisAndDim(const PrimitiveFunction& f)
+        static tuple<bool/*stacking*/, size_t/*axis*/, size_t/*dim*/> DetermineBatchAxisAndDim(const PrimitiveFunction& f)
         {
             // helper to read out a dimension
-            let getLastDim = [](const Variable& input, size_t axis) -> pair<size_t/*axis*/, size_t/*dim*/>
+            let getLastDim = [](const Variable& input, size_t axis) -> tuple<bool/*stacking*/, size_t/*axis*/, size_t/*dim*/>
             {
                 let& inputShape = input.Shape().Dimensions();
                 let inputRank = inputShape.size();
                 if (axis == inputRank)
-                    return{ axis, 1 };
+                    return{ /*stacking=*/false, axis, 1 };
                 else if (axis + 1 == inputRank)
-                    return{ axis, inputShape.back() };
+                    return{ /*stacking=*/true, axis, inputShape.back() };
                 else
                     LogicError("getLastDim: batch axis is at wrong position");
             };
@@ -1449,15 +1449,15 @@ return fInlinedPtr;
             if (hasSparse)
             {
                 if (maxRank == 2)
-                    return{ 1, lastDim };
+                    return{ /*stacking=*/true, /*axis=*/1, lastDim };
                 else if (maxRank == 1)
-                    return{ 1, 1 };
+                    return{ /*stacking=*/false, /*axis=*/1, 1 };
                 else
                     InvalidArgument("DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.");
             }
             // decide stacking vs. batching
             if (maxRank == 0) // can only stack if inputs are not scalars
-                return{ /*axis=*/0, /*dim=*/1 }; // batching of scalars
+                return{ /*stacking=*/false, /*axis=*/0, /*dim=*/1 }; // batching of scalars
             let stackingAxis = maxRank - 1;
             switch (op) // does the unbatched op touch the (potential) stacking axis?
             {
@@ -1468,7 +1468,7 @@ return fInlinedPtr;
             case PrimitiveOpType::Splice:
             case PrimitiveOpType::ReduceElements:
                 if (stackingAxis == (size_t)f.m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex())
-                    return{ maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
+                    return{ /*stacking=*/false, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
                 break;
             case PrimitiveOpType::Slice: // this is an affected op, but it's a view op, so we should not get here
                 // TODO: Think through the Slice case.
@@ -1477,7 +1477,7 @@ return fInlinedPtr;
                 fail_if(true, "DetermineBatchAxis: not yet implemented for TransposeAxes");
             }
             // no problem case detected: we can stack
-            return{ stackingAxis, lastDim };
+            return{ /*stacking=*/true, stackingAxis, lastDim };
         }
 
     public:
@@ -1512,8 +1512,10 @@ return fInlinedPtr;
             {
                 // determine stacking vs. batching, and corresponding m_batchAxis
                 let batchAxisAndDim = DetermineBatchAxisAndDim(f);
-                f.m_autoBatchState.m_batchAxis = batchAxisAndDim.first;
-                f.m_autoBatchState.m_batchDim  = batchAxisAndDim.second;
+                f.m_autoBatchState.m_stacking  = get<0>(batchAxisAndDim);
+                f.m_autoBatchState.m_batchAxis = get<1>(batchAxisAndDim);
+                f.m_autoBatchState.m_batchDim  = get<2>(batchAxisAndDim);
+                fail_if(!f.m_autoBatchState.m_stacking && f.m_autoBatchState.m_batchDim != 1, "batching but batchDim != 1??");
                 // this naive implementation just scans linearly
                 // scan through all op sets to see if one is batchable with 'f'
                 // So far this does not show up in profiling.
@@ -2525,7 +2527,7 @@ return fInlinedPtr;
     size_t DetermineMaxElementwiseInputRank(const PrimitiveFunction& f)
     {
         let numArgs = f.m_inputs.size();
-        size_t maxInputRank = f.m_inputs.front().Shape().Rank();
+        size_t maxInputRank = IsMatrixProduct(f.m_op) ? 0 : f.m_inputs.front().Shape().Rank();
         for (size_t i = 1; i < numArgs; i++)
             maxInputRank = max(f.m_inputs[1].Shape().Rank(), maxInputRank);
         return maxInputRank;
@@ -2585,8 +2587,8 @@ return fInlinedPtr;
         }
 
         // create splice args for this argument
-        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, numBatchItems);
         let numBatchItems = ops.size();
+        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, numBatchItems);
 
         // first determine special cases that can be optimized
         // If all args are consecutive slices, then use a slice view instead. If all objects are identical, then don't even use a batch.
@@ -2597,6 +2599,7 @@ return fInlinedPtr;
         bool allSame = true;                                              // will be true if all are the same objects
         bool allConsecutiveSlices = !redirectionPair0.sliceRange.empty(); // will be true if all are consecutive index ops into the same batched result
         bool allSameShape = true;                                         // will be true if all shapes are the same
+        bool stacking = f0.m_autoBatchState.m_stacking;
         size_t prevSliceEndIndex = 0; // running index
         for (let& f : ops) // create the batched tensors
         {
@@ -2605,19 +2608,19 @@ return fInlinedPtr;
             let redirectionPair = LazyPhysicalSlice(pfields);
             // optimization: if all args are the same, then don't batch
             allSame = allSame &&
-                (&pfields == &pfields0 ||                           // same object
-                 (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
+                      (&pfields == &pfields0 ||                           // same object
+                       (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
             // Note: If we remove is0Redirected, then this comparison will not be correct for leaves.
             // optimization: if all args are consecutive slices, then use a slice view instead
             if (allConsecutiveSlices)
             {
                 // optimization: if consecutive slices, then recover the original batched tensor
                 // TODO: Can we directly check the data buffer pointer?
-                fail_if(redirectionPair.sliceRange.IsSlice(), "stacking not yet supported");
+                fail_if(redirectionPair.sliceRange.IsSlice() && redirectionPair.sliceRange.Width() != 1, "stacking not yet supported");
                 allConsecutiveSlices =
                     redirectionPair0.originatingFunction == redirectionPair.originatingFunction && // function that creates the physical output (NULL if not a slice)
                     prevSliceEndIndex                    == redirectionPair.sliceRange.BeginIndex();
-                // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
+                // TODO: Per Jon's suggestion, we could be a little loose here. For a variable-length
                 // scenario, we will loose entries in the middle. We can allow to keep a few around
                 // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
                 // carry them forward, and ignore them when implanting the result.
@@ -2627,7 +2630,8 @@ return fInlinedPtr;
             allSameShape = allSameShape && (isScalar || pfields0.m_shape.Dimensions().back() == pfields.m_shape.Dimensions().back());
             fail_if(allSameShape && pfields0.m_shape != pfields.m_shape, "shapes differ by more than the batch axis"); // (remove this check)
         }
-        allConsecutiveSlices = allConsecutiveSlices && (prevSliceEndIndex == batchSize); // if consecutive so far then also check the end
+        if (stacking)
+            Break;
         let allConsecutiveIndices = allConsecutiveSlices && allSameShape;
         if (!allSameShape)
             Break;
@@ -2641,16 +2645,18 @@ return fInlinedPtr;
         }
         else if (allConsecutiveIndices) // they are consecutive slice views: can short-circuit as a slice view
         {
+            if (stacking)
+                Break;
             let& from  = redirectionPair0.originatingFunction;
-            fail_if(redirectionPair0.sliceRange.IsSlice(), "stacking not yet supported");
+            fail_if(redirectionPair0.sliceRange.IsSlice() && redirectionPair0.sliceRange.Width() != 1, "stacking not yet supported");
             let  begin = redirectionPair0.sliceRange.Index();
             let& output = from->m_outputs.front();
             fail_if(!GetOutputFields(*from).m_value, "value not yet available??");
             let& fromDims = output.Shape().Dimensions();
             fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
-            let axis = fromDims.size() - 1; // batch axis of the view
+            let sliceAxis = fromDims.size() - 1; // batch axis of the view
             Variable batchedInput; // our return value
-            if (begin == 0 && batchSize == fromDims.back()/*[axis]*/) // full range: just take it, no need to slice at all
+            if (begin == 0 && batchSize == fromDims.back()/*[sliceAxis]*/) // full range: just take it, no need to slice at all
             {
                 batchedInput = output; // note: graph already has a strong ref to output elsewhere
             }
@@ -2659,10 +2665,10 @@ return fInlinedPtr;
                 //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"re-batch", 3, numBatchItems);
                 // create a new PrimitiveFunction Slice()
                 vector<size_t> outputShape = fromDims; // determine output shape
-                outputShape.back()/*[axis]*/ = batchSize;
+                outputShape.back()/*[sliceAxis]*/ = batchSize;
                 batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape,
                                                          Dictionary(
-                                                             PrimitiveFunction::AttributeNameAxis       , Axis((int)axis) ,
+                                                             PrimitiveFunction::AttributeNameAxis       , Axis((int)sliceAxis) ,
                                                              PrimitiveFunction::AttributeNameBeginIndex , (int)begin      ,
                                                              PrimitiveFunction::AttributeNameEndIndex   , (int)(begin + batchSize)
                                                          ),
@@ -2676,12 +2682,12 @@ return fInlinedPtr;
             // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
             // BUGBUG: This seems never called in the MT case?
             // TODO: Do this inside Gather, based on its output shape.
-            if (axis != commonInputBatchAxis)
+            if (sliceAxis != commonInputBatchAxis)
             {
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, numBatchItems);
                 // TODO: Any way we can fold the reshape in using m_redirection? ... no need, this will become part of Gather.
                 vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
-                outputShape.insert(outputShape.end() - 1, commonInputBatchAxis - axis, 1);
+                outputShape.insert(outputShape.end() - 1, commonInputBatchAxis - sliceAxis, 1);
                 // insert a Reshape() op
                 batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape,
                                                          Dictionary(),
@@ -2692,6 +2698,8 @@ return fInlinedPtr;
         }
         else // batch inputs are not consecutive: We must actually copy them together.
         {
+            if (stacking)
+                Break;
             // create the arguments to the gather operation
             vector<Variable> gatherInputs;
             gatherInputs.reserve(numBatchItems);
@@ -2917,13 +2925,23 @@ return fInlinedPtr;
         if (batchAxis != commonInputBatchAxis)
             Break;
 #else
-                                                            // determine the output batch size
+        // TODO: Make this work logically, then speed this up!
+        // determine the output batch size
         size_t batchSize = 0;
         for (let& f : ops) // create the batched tensors
             batchSize += f.m_autoBatchState.m_batchDim;
+        // TODO: If we knew that this is batching (not stacking), then we can save time and just say batchSize = numBatchItems.
         if (batchSize != numBatchItems)
             Break; // stacking
+        let commonInputBatchAxis = batchAxis; // TODO: remove this extra name
+        //let maxInputRank = DetermineMaxElementwiseInputRank(f0);
+        if (isTimes)
+            Break;
+        let outputBatchAxis = isTimes ? commonInputBatchAxis + f0.m_outputs.front().Shape().Rank() - f0.m_inputs.back().Shape().Rank() : batchAxis;
+        if (!isTimes && f0.m_outputs.front().Shape().Rank() > DetermineMaxElementwiseInputRank(f0))
+            LogicError("elementwise op that increases rank??");
 #endif
+
 
         // create all m_batchedInputs[] by splicing along the batch axis
         // Special optimizations are taken if all elements are identical.
@@ -2985,7 +3003,7 @@ return fInlinedPtr;
         // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop   --TODO: does it? Verify.
         if (anyBatchedInputs)
         {
-            if (outputBatchAxis != unbatchedOutputShape.Rank()    && !stackIt/*for now*/)
+            if (outputBatchAxis != unbatchedOutputShape.Rank())//    && !stackIt/*for now*/)
             {
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, numBatchItems);
                 // TODO: This should not be necessary anymore, we can let this be implicitly handled by a redirect.
@@ -3006,6 +3024,7 @@ return fInlinedPtr;
 
         // implant all results in the original unbatched operations (all as lazy/virtual references through m_redirection)
         // TODO: review this w.r.t. multi-output functions
+#if 0
         if (anyBatchedInputs && !stackIt)
         {
             size_t j = 0;
@@ -3019,12 +3038,14 @@ return fInlinedPtr;
                 j++;
             }
         }
-        else if (anyBatchedInputs && stackIt)
+        else
+#endif
+        if (anyBatchedInputs)// && stackIt)
         {
             size_t prevSliceEnd = 0;
             for (auto& f : ops)
             {
-                let width = f.m_inputs.back().Shape().Dimensions().back();
+                let width = 1;// f.m_inputs.back().Shape().Dimensions().back();
                 // implant the result
                 let newSliceEnd = prevSliceEnd + width;
                 FinalizeBatchedOpAndUpdateSchedule(f, batchedOp, SliceRange(prevSliceEnd, newSliceEnd));
