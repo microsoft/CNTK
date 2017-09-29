@@ -2573,6 +2573,150 @@ return fInlinedPtr;
     vector<Variable> m_batchedInputs;
     vector<Variable> m_gatherArgsBuffer;
 
+    // helper to create a batched input given a list of operations
+    inline Variable CreateBatchedInputFor(NonOwningFunctionList ops, size_t commonInputBatchAxis, size_t batchSize, size_t i, /*in/out*/bool& anyBatchedInputs)
+    {
+        auto& f0 = *ops.front();
+        // special case: for matrix-product class operations, the first argument is non-batchable
+        // It has already been verified to be identical as part of the batchability condition.
+        if (IsMatrixProduct(f0.m_op) && i == 0)
+        {
+            return f0.m_inputs.front();
+        }
+        let numBatchItems = ops.size();
+        // create splice args for this argument
+        // allocate buffers to hold the arguments
+        auto& gatherInputs = m_gatherArgsBuffer;
+        gatherInputs.clear();
+        if (gatherInputs.capacity() < numBatchItems)
+            gatherInputs.reserve(max(numBatchItems, 2 * gatherInputs.capacity()));
+        // optimization: if all args are consecutive slices, then use a slice view instead
+        let& pfields0 = GetInputFields(f0.m_inputs[i]);
+        let isScalar = pfields0.m_shape.Rank() == 0;
+        let redirectionPair0 = LazyPhysicalSlice(pfields0);
+        let is0Redirected = redirectionPair0.originatingFunction != nullptr;
+        // loop over all batched ops. Collect all inputs and classify if all the same or all consecutive.
+        bool allSame = true;                                              // will be true if all are the same objects
+        bool allConsecutiveSlices = !redirectionPair0.sliceRange.empty(); // will be true if all are consecutive index ops into the same batched result
+        bool allSameShape = true;                                         // will be true if all shapes are the same
+        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, numBatchItems);
+        size_t prevSliceEndIndex = 0; // running index
+        for (let& f : ops) // create the batched tensors
+        {
+            let& input = f.m_inputs[i];
+            let& pfields = GetInputFields(input);
+            let redirectionPair = LazyPhysicalSlice(pfields);
+            // optimization: if all args are the same, then don't batch
+            allSame = allSame &&
+                (&pfields == &pfields0 ||                           // same object
+                 (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
+            // ^^ we can remove this double check, and just compare m_function and m_sliceRange
+            // optimization: if all args are consecutive slices, then use a slice view instead
+            if (allConsecutiveSlices)
+            {
+                // optimization: if consecutive slices, then recover the original batched tensor
+                // TODO: Can we directly check the data buffer pointer?
+                fail_if(redirectionPair.sliceRange.IsSlice(), "stacking not yet supported");
+                allConsecutiveSlices =
+                    redirectionPair0.originatingFunction == redirectionPair.originatingFunction && // function that creates the physical output (NULL if not a slice)
+                    prevSliceEndIndex                    == redirectionPair.sliceRange.BeginIndex();
+                // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
+                // scenario, we will loose entries in the middle. We can allow to keep a few around
+                // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
+                // carry them forward, and ignore them when implanting the result.
+                prevSliceEndIndex = redirectionPair.sliceRange.EndIndex();
+            }
+            // optimization: if all shapes are the same then we batch, otherwise we stack (batching is faster in Gather)
+            allSameShape = allSameShape && (isScalar || pfields0.m_shape.Dimensions().back() == pfields.m_shape.Dimensions().back());
+            fail_if(allSameShape && pfields0.m_shape != pfields.m_shape, "shapes differ by more than the batch axis"); // (remove this check)
+            // append the input
+            gatherInputs.push_back(input);
+            // note: Variable is just two shared_ptrs, one being NULL; so this is cheap
+            // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
+        }
+        allConsecutiveSlices = allConsecutiveSlices && (prevSliceEndIndex == batchSize); // if consecutive so far then also check the end
+        let allConsecutiveIndices = allConsecutiveSlices && allSameShape;
+        if (!allSameShape)
+            Break;
+        cudaStatsguard.Stop();
+        // and splice
+        Variable batchedInput; // our return value  --TODO: make it a ref?
+        if (allSame) // optimized case: all ops share the same operand: no need to batch them
+        {
+            // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
+            batchedInput = gatherInputs[0];
+        }
+        else if (allConsecutiveIndices) // they are consecutive slice views: can short-circuit as a slice view
+        {
+            let& from  = redirectionPair0.originatingFunction;
+            fail_if(redirectionPair0.sliceRange.IsSlice(), "stacking not yet supported");
+            let  begin = redirectionPair0.sliceRange.Index();
+            let& output = from->m_outputs.front();
+            fail_if(!GetOutputFields(*from).m_value, "value not yet available??");
+            let& fromDims = output.Shape().Dimensions();
+            fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
+            let axis = fromDims.size() - 1;
+            if (begin == 0 && batchSize == fromDims.back()/*[axis]*/) // full range: just take it
+                batchedInput = output; // note: graph already has a strong ref to output elsewhere
+            else // sub-range: splice it by taking a slice view on the previously spliced batch
+            {
+                //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"re-batch", 3, numBatchItems);
+                // create a new PrimitiveFunction Slice()
+                vector<size_t> outputShape = fromDims; // determine output shape
+                outputShape.back()/*[axis]*/ = batchSize;
+                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape,
+                                                               Dictionary(
+                                                                   PrimitiveFunction::AttributeNameAxis       , Axis((int)axis) ,
+                                                                   PrimitiveFunction::AttributeNameBeginIndex , (int)begin      ,
+                                                                   PrimitiveFunction::AttributeNameEndIndex   , (int)(begin + batchSize)
+                                                               ),
+                                                               f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
+                                                               /*isFree=*/true);
+                // and that's our input to the batched operation
+                // TODO: Can this be done by directly messing with the Variable? Make a deep copy of the var object with begin/end slice?
+                //       Would avoid allocating a PrimitiveFunction, and make it easier to be short-circuited directly in backprop.
+            }
+            // if this op has a higher commonInputBatchAxis than the re-batched view, we must move the axis
+            // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
+            // BUGBUG: This seems never called in the MT case?
+            // TODO: Do this inside Gather, based on its output shape.
+            if (axis != commonInputBatchAxis)
+            {
+                CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, numBatchItems);
+                // TODO: Any way we can fold the reshape in using m_redirection? ... no need, this will become part of Gather.
+                vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
+                outputShape.insert(outputShape.end() - 1, commonInputBatchAxis - axis, 1);
+                // insert a Reshape() op
+                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape,
+                                                         Dictionary(),
+                                                         f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
+                // and that's now really our input to the batched operation
+            }
+            anyBatchedInputs = true;
+        }
+        else // batch inputs are not consecutive: We must actually copy them together.
+        {
+            CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, numBatchItems);
+            let& input0Shape = CacheAndGetValue(gatherInputs[0])->Shape();
+            // create a new PrimitiveFunction Splice()
+            vector<size_t> outputShape; // determine output shape
+            outputShape.reserve(commonInputBatchAxis + 1);
+            outputShape = input0Shape.Dimensions();
+            //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
+            outputShape.resize(commonInputBatchAxis, 1); // pad to commonInputBatchAxis
+            outputShape.push_back(batchSize);      // and add the batch axis
+            batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape,
+                                                     Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)commonInputBatchAxis)),
+                                                     f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
+                                                     /*isFree=*/false, /*spliceIsGather=*/true);
+            // and that's our input to the batched operation
+            anyBatchedInputs = true;
+        }
+        // release shared_ptrs asap, to take advantage of chances of memory reuse
+        gatherInputs.clear();
+        return batchedInput;
+    }
+
     // batch-execute a set of ops that are known to be batchable
     // For every batched operation, this generates a new PrimitiveFunction object for the op itself, and one
     // for a splice operation for each batched inputs.
@@ -2713,6 +2857,7 @@ return fInlinedPtr;
             let& unbatchedOutputShape = f0.m_outputs.front().Shape();
             let i0 = (size_t)isTimes;    // index of first batchable argument (1 for matrix-product class; 0 otherwise)
             let batchAxis = f0.m_autoBatchState.m_batchAxis; // we batch along this dimension
+#if 1
             size_t commonInputBatchAxis; // batch axis of all batched args (it is the same across all args)
             size_t outputBatchAxis;      // batch axis in output (may differ from commonInputBatchAxis for Times/Convolution)
             // TODO: We restrict this to a single shared batch axis, with exception of unbatched inputs (first Times arg).
@@ -2766,142 +2911,22 @@ return fInlinedPtr;
             }
             if (batchAxis != commonInputBatchAxis)
                 Break;
+#else
+                                                             // determine the output batch size
+            size_t batchSize = 0;
+            for (let& f : ops) // create the batched tensors
+                batchSize += f.m_autoBatchState.m_batchDim;
+            if (batchSize != numBatchItems)
+                Break; // stacking
+#endif
 
             // create all the batched inputs by splicing along the batch axis
             // Special optimizations are taken if all elements are identical.
             bool anyBatchedInputs = false; // stays false if for all arguments, all respective batch-item arguments are identical
-            if (i0 == 1) // Times(): the first arg has already been verified to be identical as part of the batchability condition
-                m_batchedInputs[0] = f0.m_inputs.front();
-            for (size_t i = i0; i < numArgs; i++)
+            for (size_t i = 0; i < numArgs; i++) // if isTimes then skip the first arg
             {
-                // create splice args for this argument
-                // allocate buffers to hold the arguments
-                auto& gatherInputs = m_gatherArgsBuffer;
-                gatherInputs.clear();
-                if (gatherInputs.capacity() < numBatchItems)
-                    gatherInputs.reserve(max(numBatchItems, 2 * gatherInputs.capacity()));
-                // optimization: if all args are consecutive slices, then use a slice view instead
-                let& pfields0 = GetInputFields(f0.m_inputs[i]);
-                let isScalar = pfields0.m_shape.Rank() == 0;
-                let redirectionPair0 = LazyPhysicalSlice(pfields0);
-                let is0Redirected = redirectionPair0.originatingFunction != nullptr;
-                // loop over all batched ops. Collect all inputs and classify if all the same or all consecutive.
-                bool allSame = true;                                              // will be true if all are the same objects
-                bool allConsecutiveSlices = !redirectionPair0.sliceRange.empty(); // will be true if all are consecutive index ops into the same batched result
-                bool allSameShape = true;                                         // will be true if all shapes are the same
-                CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, numBatchItems);
-                size_t prevSliceEndIndex = 0; // running index
-                for (let& f : ops) // create the batched tensors
-                {
-                    let& input = f.m_inputs[i];
-                    let& pfields = GetInputFields(input);
-                    let redirectionPair = LazyPhysicalSlice(pfields);
-                    // optimization: if all args are the same, then don't batch
-                    allSame = allSame &&
-                        (&pfields == &pfields0 ||                           // same object
-                         (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
-                    // ^^ we can remove this double check, and just compare m_function and m_sliceRange
-                    // optimization: if all args are consecutive slices, then use a slice view instead
-                    if (allConsecutiveSlices)
-                    {
-                        // optimization: if consecutive slices, then recover the original batched tensor
-                        // TODO: Can we directly check the data buffer pointer?
-                        fail_if(redirectionPair.sliceRange.IsSlice(), "stacking not yet supported");
-                        allConsecutiveSlices =
-                            redirectionPair0.originatingFunction == redirectionPair.originatingFunction && // function that creates the physical output (NULL if not a slice)
-                            prevSliceEndIndex                    == redirectionPair.sliceRange.BeginIndex();
-                        // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
-                        // scenario, we will loose entries in the middle. We can allow to keep a few around
-                        // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
-                        // carry them forward, and ignore them when implanting the result.
-                        prevSliceEndIndex = redirectionPair.sliceRange.EndIndex();
-                    }
-                    // optimization: if all shapes are the same then we batch, otherwise we stack (batching is faster in Gather)
-                    allSameShape = allSameShape && (isScalar || pfields0.m_shape.Dimensions().back() == pfields.m_shape.Dimensions().back());
-                    fail_if(allSameShape && pfields0.m_shape != pfields.m_shape, "shapes differ by more than the batch axis"); // (remove this check)
-                    // append the input
-                    gatherInputs.push_back(input);
-                    // note: Variable is just two shared_ptrs, one being NULL; so this is cheap
-                    // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
-                }
-                allConsecutiveSlices = allConsecutiveSlices && (prevSliceEndIndex == batchSize); // if consecutive so far then also check the end
-                let allConsecutiveIndices = allConsecutiveSlices && allSameShape;
-                if (!allSameShape)
-                    Break;
-                cudaStatsguard.Stop();
-                // and splice
-                if (allSame) // optimized case: all ops share the same operand: no need to batch them
-                    // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
-                    m_batchedInputs[i] = gatherInputs[0];
-                else if (allConsecutiveIndices) // they are consecutive slice views: can short-circuit as a slice view
-                {
-                    let& from  = redirectionPair0.originatingFunction;
-                    fail_if(redirectionPair0.sliceRange.IsSlice(), "stacking not yet supported");
-                    let  begin = redirectionPair0.sliceRange.Index();
-                    let& output = from->m_outputs.front();
-                    fail_if(!GetOutputFields(*from).m_value, "value not yet available??");
-                    let& fromDims = output.Shape().Dimensions();
-                    fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
-                    let axis = fromDims.size() - 1;
-                    if (begin == 0 && batchSize == fromDims.back()/*[axis]*/) // full range: just take it
-                        m_batchedInputs[i] = output; // note: graph already has a strong ref to output elsewhere
-                    else // sub-range: splice it by taking a slice view on the previously spliced batch
-                    {
-                        //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"re-batch", 3, numBatchItems);
-                        // create a new PrimitiveFunction Slice()
-                        vector<size_t> outputShape = fromDims; // determine output shape
-                        outputShape.back()/*[axis]*/ = batchSize;
-                        m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape,
-                                                                       Dictionary(
-                                                                           PrimitiveFunction::AttributeNameAxis       , Axis((int)axis) ,
-                                                                           PrimitiveFunction::AttributeNameBeginIndex , (int)begin      ,
-                                                                           PrimitiveFunction::AttributeNameEndIndex   , (int)(begin + batchSize)
-                                                                       ),
-                                                                       f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
-                                                                       /*isFree=*/true);
-                        // and that's our input to the batched operation
-                        // TODO: Can this be done by directly messing with the Variable? Make a deep copy of the var object with begin/end slice?
-                        //       Would avoid allocating a PrimitiveFunction, and make it easier to be short-circuited directly in backprop.
-                    }
-                    // if this op has a higher commonInputBatchAxis than the re-batched view, we must move the axis
-                    // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
-                    // BUGBUG: This seems never called in the MT case?
-                    // TODO: Do this inside Gather, based on its output shape.
-                    if (axis != commonInputBatchAxis)
-                    {
-                        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, numBatchItems);
-                        // TODO: Any way we can fold the reshape in using m_redirection? ... no need, this will become part of Gather.
-                        let batchedInput = m_batchedInputs[i];
-                        vector<size_t> outputShape = batchedInput.Shape().Dimensions(); // determine current shape
-                        outputShape.insert(outputShape.end() - 1, commonInputBatchAxis - axis, 1);
-                        // insert a Reshape() op
-                        m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape,
-                                                                       Dictionary(),
-                                                                       f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
-                        // and that's now really our input to the batched operation
-                    }
-                    anyBatchedInputs = true;
-                }
-                else // batch inputs are not consecutive: We must actually copy them together.
-                {
-                    CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, numBatchItems);
-                    let& input0Shape = CacheAndGetValue(gatherInputs[0])->Shape();
-                    // create a new PrimitiveFunction Splice()
-                    vector<size_t> outputShape; // determine output shape
-                    outputShape.reserve(commonInputBatchAxis + 1);
-                    outputShape = input0Shape.Dimensions();
-                    //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
-                    outputShape.resize(commonInputBatchAxis, 1); // pad to commonInputBatchAxis
-                    outputShape.push_back(batchSize);      // and add the batch axis
-                    m_batchedInputs[i] = CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, vector<Variable>(gatherInputs), outputShape,
-                                                                   Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)commonInputBatchAxis)),
-                                                                   f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
-                                                                   /*isFree=*/false, /*spliceIsGather=*/true);
-                    // and that's our input to the batched operation
-                    anyBatchedInputs = true;
-                }
-                // release shared_ptrs asap, to take advantage of chances of memory reuse
-                gatherInputs.clear();
+                m_batchedInputs[i] = CreateBatchedInputFor(ops, commonInputBatchAxis, batchSize,
+                                                           i, /*in/out*/anyBatchedInputs);
             } // end for (i=...)
             // m_batchedInputs[] have been prepared. anyBatchedInputs has remained false if all had identical inputs across all batch items.
 
