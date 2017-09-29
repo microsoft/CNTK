@@ -132,7 +132,7 @@ namespace CNTK
     //     - batchable inputs: same as for batching, except dim[batch axis], if present, does not need to match
     //     - non-batchable inputs: same as for batching
     //     - batch axis must exist (no batchable input is a scalar)
-    //     - the batch axis must not be reduced over
+    //     - the batch axis must not be touched by the unbatched op. Ops that may are ReduceElements, ElementTimes (InnerProduct case), Slice, Splice, and TransposeAxes.
     //  - additional conditions for special cases:
     //     - sparse inputs must have batch axis = 1, due to current limitation of the underlying library
     //     - BatchNormalization:
@@ -143,10 +143,10 @@ namespace CNTK
     //
     // Algorithm for testing if two ops are batchable:
     //  - we use stacking, unless the following forces us to use batching:
-    //     - no batchable input is a scalar
-    //     - there is no reduction along the potential stacked batch axis (=max over ranks of batchable inputs - 1)
-    //     - there is no batchable input that is a sparse vector (i.e., of rank 1). (Math library cannot stack sparse along axis 0.)
-    //  - determine input and output batch axes, as given above depending on stacking/batching decision
+    //     - all batchable inputs are scalars
+    //     - the batch axis is touched by the unbatched operation, e.g. sliced or reduced over
+    //     - there is a batchable input that is a sparse vector (i.e., of rank 1). (Math library cannot stack sparse along axis 0.)
+    //  - determine batch axis, as given above depending on stacking/batching decision
     //  - for any sparse input, the batch axis must be 1, no matter we decided for stacking or batching
     //    Note: The information up to this point can be precomputed once and stored with the PrimitiveFunction.
     //  - operation, all attributes, and all inputs' DataType and IsSparse must match
@@ -1393,6 +1393,59 @@ return fInlinedPtr;
                 compositePtr->m_batchableCompositeId = matcher.MatchAndRememberComposite(compositePtr);
             return compositePtr->m_batchableCompositeId;
         }
+        static size_t DetermineBatchAxis(const PrimitiveFunction& f)
+        {
+            // We use stacking, unless the following forces us to use batching:
+            //  - all batchable input are scalars
+            //  - the batch axis is touched by the unbatched operation, e.g. sliced or reduced over
+            //  - there is abatchable input that is a sparse vector (i.e., of rank 1). (Math library cannot stack sparse along axis 0.)
+            let op = f.m_op;
+            if (op == PrimitiveOpType::BatchNormalization)
+            {
+                // BUGBUG: Get this from a parameter. For now only support vectors.
+                return 1;
+            }
+            else if (IsMatrixProduct(op)) // Times: stacking if input has a bacth dimension already
+            {
+                // BUGBUG: Determine this by counting axes. ...is that sufficient? For now only support vectors.
+                return 1;
+            }
+            size_t batchAxis = 0; // assume scalar
+            for (let& input: f.m_inputs) // (skip first input if matrix product)
+            {
+                let& inputFields = GetInputFields(input);
+                // BUGBUG: How about explicit splicing of sparse inputs? Must be optimized differently. Currently caught outside.
+                // BUGBUG: This also triggers for InnerProduct(vec, sparse vec). The result happens to be correct, but it should not be tested here.
+                if (inputFields.m_isSparse)
+                    return 1; // we can only batch vectors. Later we will not batch any sparse object of rank > 2.
+                let& inputShape = inputFields.m_shape;
+                let rank = inputShape.Rank();
+                batchAxis = max(batchAxis, rank);
+            }
+            if (batchAxis == 0) // can only stack if inputs are not scalars
+                return batchAxis; // batching of scalars
+            let stackingAxis = batchAxis - 1;
+            switch (op) // does the unbatched op touch the (potential) stacking axis?
+            {
+            case PrimitiveOpType::ElementTimes:
+                if (!f.m_attributes.Contains(PrimitiveFunction::AttributeNameAxis)) // if InnerProduct then treat like ReduceElements
+                    break;
+                // fall-through to ReduceElements for InnerProduct case
+            case PrimitiveOpType::Splice:
+            case PrimitiveOpType::ReduceElements:
+                if (stackingAxis == (size_t)f.m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex())
+                    return batchAxis; // touched. Can't stack, must batch.
+                break;
+            case PrimitiveOpType::Slice: // this is an affected op, but it's a view op, so we should not get here
+                // TODO: Think through the Slice case.
+                fail_if(true, "DetermineBatchAxis: should not get here for Slice");
+            case PrimitiveOpType::TransposeAxes: // TODO
+                fail_if(true, "DetermineBatchAxis: not yet implemented for TransposeAxes");
+            }
+            // no problem case detected: we can stack
+            return stackingAxis;
+        }
+
     public:
         // count an occurrence of a BatchNormalization with a given id
         void CountBatchNorm(size_t bnId)
@@ -1423,6 +1476,8 @@ return fInlinedPtr;
                 m_viewOps.push_back(&f); // (linked list)
             else
             {
+                // determine stacking vs. batching, and corresponding m_batchAxis
+                f.m_autoBatchState.m_batchAxis = DetermineBatchAxis(f);
                 // this naive implementation just scans linearly
                 // scan through all op sets to see if one is batchable with 'f'
                 // So far this does not show up in profiling.
@@ -2552,6 +2607,7 @@ return fInlinedPtr;
         // is unbatched actually more expensive than batched?
         // We count CUDA launches, assuming all args are batched and require a Gather launch.
         // If not all args require that, we err on the side of not batching. BatchNorm must always be batched.
+        let isSparseSplice = op == PrimitiveOpType::Splice && f0.m_outputs.front().IsSparse();
         let numCUDALaunchesInThisOp = 1; // TODO: for Block invocations, use the #nodes; or pick a number, such as 4
         let worthIt = numBatchItems * numCUDALaunchesInThisOp/*unbatched launches*/ > (numArgs + 1)/*batched launches*/ || op == PrimitiveOpType::BatchNormalization;
         //if (numBatchItems > 1 && !worthIt) // TODO: remove this message once I see it happen
@@ -2560,7 +2616,8 @@ return fInlinedPtr;
         auto doNaively = true;
 #else
         let doNaively =
-            isFree ||
+            isFree             ||
+            isSparseSplice     || // we only have one axis to work with for splicing sparse data
             numBatchItems == 1 ||
             !worthIt;
 #endif
