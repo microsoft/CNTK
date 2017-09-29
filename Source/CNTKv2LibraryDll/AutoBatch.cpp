@@ -2572,11 +2572,12 @@ return fInlinedPtr;
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
     vector<Variable> m_batchedInputs;
     vector<Variable> m_gatherArgsBuffer;
+    vector<size_t> m_gatherArgRepetitionsBuffer;
 
     // helper to create a batched input given a list of operations
     inline Variable CreateBatchedInputFor(NonOwningFunctionList ops, size_t commonInputBatchAxis, size_t batchSize,
                                           size_t i, /*in/out*/bool& anyBatchedInputs,
-                                          vector<Variable>& gatherInputs)
+                                          vector<Variable>& gatherInputs, vector<size_t>& gatherInputRepetitions) // buffers
     {
         let& f0 = *ops.front();
         // special case: for matrix-product class operations, the first argument is non-batchable
@@ -2585,12 +2586,9 @@ return fInlinedPtr;
         {
             return f0.m_inputs.front();
         }
+
         let numBatchItems = ops.size();
         // create splice args for this argument
-        // allocate buffers to hold the arguments
-        gatherInputs.clear();
-        if (gatherInputs.capacity() < numBatchItems)
-            gatherInputs.reserve(max(numBatchItems, 2 * gatherInputs.capacity()));
         // optimization: if all args are consecutive slices, then use a slice view instead
         let& pfields0 = GetInputFields(f0.m_inputs[i]);
         let isScalar = pfields0.m_shape.Rank() == 0;
@@ -2610,7 +2608,7 @@ return fInlinedPtr;
             // optimization: if all args are the same, then don't batch
             allSame = allSame &&
                 (&pfields == &pfields0 ||                           // same object
-                 (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
+                 (/*is0Redirected && */redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
             // ^^ we can remove this double check, and just compare m_function and m_sliceRange
             // optimization: if all args are consecutive slices, then use a slice view instead
             if (allConsecutiveSlices)
@@ -2630,10 +2628,6 @@ return fInlinedPtr;
             // optimization: if all shapes are the same then we batch, otherwise we stack (batching is faster in Gather)
             allSameShape = allSameShape && (isScalar || pfields0.m_shape.Dimensions().back() == pfields.m_shape.Dimensions().back());
             fail_if(allSameShape && pfields0.m_shape != pfields.m_shape, "shapes differ by more than the batch axis"); // (remove this check)
-            // append the input
-            gatherInputs.push_back(input);
-            // note: Variable is just two shared_ptrs, one being NULL; so this is cheap
-            // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
         }
         allConsecutiveSlices = allConsecutiveSlices && (prevSliceEndIndex == batchSize); // if consecutive so far then also check the end
         let allConsecutiveIndices = allConsecutiveSlices && allSameShape;
@@ -2645,7 +2639,7 @@ return fInlinedPtr;
         if (allSame) // optimized case: all ops share the same operand: no need to batch them
         {
             // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
-            return gatherInputs[0];
+            return f0.m_inputs[i];
         }
         else if (allConsecutiveIndices) // they are consecutive slice views: can short-circuit as a slice view
         {
@@ -2700,6 +2694,20 @@ return fInlinedPtr;
         }
         else // batch inputs are not consecutive: We must actually copy them together.
         {
+            // create arguments
+            gatherInputs.clear();
+            gatherInputRepetitions.clear();
+            //if (gatherInputs.capacity() < numBatchItems) // don't do this, it's overkill since these are called thousands of times anyways
+            //    gatherInputs.reserve(max(numBatchItems, 2 * gatherInputs.capacity()));
+            for (let& f : ops) // create the batched tensors
+            {
+                let& input = f.m_inputs[i];
+                gatherInputs.push_back(input);
+                let numRepetitions = 1;
+                gatherInputRepetitions.push_back(numRepetitions);
+                // note: Variable is just two shared_ptrs, one being NULL; so this is cheap
+                // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
+            }
             CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, numBatchItems);
             let& input0Shape = CacheAndGetValue(gatherInputs[0])->Shape();
             // create a new PrimitiveFunction Splice()
@@ -2929,7 +2937,7 @@ return fInlinedPtr;
         {
             m_batchedInputs[i] = CreateBatchedInputFor(ops, commonInputBatchAxis, batchSize,
                                                        i, /*in/out*/anyBatchedInputs,
-                                                       m_gatherArgsBuffer);
+                                                       m_gatherArgsBuffer, m_gatherArgRepetitionsBuffer);
         }
         m_gatherArgsBuffer.clear(); // (avoid Variables to hang around unnecessarily)
         // anyBatchedInputs will still be false if all had identical inputs across all batch items.
