@@ -1759,46 +1759,6 @@ MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
 template MATH_API File& operator>>(File& stream, CPUSparseMatrix<float>& us);
 template MATH_API File& operator>>(File& stream, CPUSparseMatrix<double>& us);
 
-template <typename ElemType>
-MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
-{
-    if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
-        NOT_IMPLEMENTED;
-
-    stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
-    stream << sizeof(ElemType);
-    stream << std::wstring(L"nnmatrix"); // Note this is needed for compatability, and could potentially be an empty string
-
-    size_t nz, numRows, numCols;
-    size_t compressedSize = us.SecondaryIndexCount();
-    int format = us.GetFormat();
-
-    stream << format << nz << numCols << numRows;
-
-    if (nz > 0)
-    {
-        ElemType* dataBuffer = us.NzValues();
-        CPUSPARSE_INDEX_TYPE* unCompressedIndex = us.MajorIndexLocation();
-        CPUSPARSE_INDEX_TYPE* compressedIndex = us.SecondaryIndexLocation();
-
-        for (size_t i = 0; i < nz; ++i)
-        {
-            stream << dataBuffer[i];
-        }
-        for (size_t i = 0; i < nz; ++i)
-        {
-            stream << unCompressedIndex[i];
-        }
-        for (size_t i = 0; i < compressedSize; ++i)
-        {
-            stream << compressedIndex[i];
-        }
-    }
-    stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
-
-    return stream;
-}
-
 template class CPUSparseMatrix<float>;
 template class CPUSparseMatrix<double>;
 
