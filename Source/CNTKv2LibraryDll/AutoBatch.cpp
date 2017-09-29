@@ -2583,18 +2583,20 @@ return fInlinedPtr;
         {
             return f0.m_inputs.front();
         }
-        let numBatchItems = ops.size();
+
         // create splice args for this argument
-        // optimization: if all args are consecutive slices, then use a slice view instead
+        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, numBatchItems);
+        let numBatchItems = ops.size();
+
+        // first determine special cases that can be optimized
+        // If all args are consecutive slices, then use a slice view instead. If all objects are identical, then don't even use a batch.
         let& pfields0 = GetInputFields(f0.m_inputs[i]);
         let isScalar = pfields0.m_shape.Rank() == 0;
         let redirectionPair0 = LazyPhysicalSlice(pfields0);
         let is0Redirected = redirectionPair0.originatingFunction != nullptr;
-        // loop over all batched ops. Collect all inputs and classify if all the same or all consecutive.
         bool allSame = true;                                              // will be true if all are the same objects
         bool allConsecutiveSlices = !redirectionPair0.sliceRange.empty(); // will be true if all are consecutive index ops into the same batched result
         bool allSameShape = true;                                         // will be true if all shapes are the same
-        CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"gather batched args", 3, numBatchItems);
         size_t prevSliceEndIndex = 0; // running index
         for (let& f : ops) // create the batched tensors
         {
@@ -2646,9 +2648,9 @@ return fInlinedPtr;
             fail_if(!GetOutputFields(*from).m_value, "value not yet available??");
             let& fromDims = output.Shape().Dimensions();
             fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
-            let axis = fromDims.size() - 1;
+            let axis = fromDims.size() - 1; // batch axis of the view
             Variable batchedInput; // our return value
-            if (begin == 0 && batchSize == fromDims.back()/*[axis]*/) // full range: just take it
+            if (begin == 0 && batchSize == fromDims.back()/*[axis]*/) // full range: just take it, no need to slice at all
             {
                 batchedInput = output; // note: graph already has a strong ref to output elsewhere
             }
