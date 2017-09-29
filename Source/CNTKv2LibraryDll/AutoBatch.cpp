@@ -1393,8 +1393,25 @@ return fInlinedPtr;
                 compositePtr->m_batchableCompositeId = matcher.MatchAndRememberComposite(compositePtr);
             return compositePtr->m_batchableCompositeId;
         }
-        static size_t DetermineBatchAxis(const PrimitiveFunction& f)
+        // helper to determine the batch axis and its dimension
+        // We decide stacking vs. batching here. There are two possible return values:
+        //  - batching: axis = max rank, dim = 1 (since axis is outside of all shapes)
+        //  - stacking: axis = max rank - 1; dim = max over those dims (inputs that do not have that axis can be considered virtually padded to 1. Effectively they are just skipped.)
+        // The decision is purely based on the operation and input ranks. Input shapes (other than their rank) must not be considered.
+        static pair<size_t/*axis*/,size_t/*dim*/> DetermineBatchAxisAndDim(const PrimitiveFunction& f)
         {
+            // helper to read out a dimension
+            let getLastDim = [](const Variable& input, size_t axis) -> pair<size_t/*axis*/, size_t/*dim*/>
+            {
+                let& inputShape = input.Shape().Dimensions();
+                let inputRank = inputShape.size();
+                if (axis == inputRank)
+                    return{ axis, 1 };
+                else if (axis + 1 == inputRank)
+                    return{ axis, inputShape.back() };
+                else
+                    LogicError("getLastDim: batch axis is at wrong position");
+            };
             // We use stacking, unless the following forces us to use batching:
             //  - all batchable input are scalars
             //  - the batch axis is touched by the unbatched operation, e.g. sliced or reduced over
@@ -1403,28 +1420,45 @@ return fInlinedPtr;
             if (op == PrimitiveOpType::BatchNormalization)
             {
                 // BUGBUG: Get this from a parameter. For now only support vectors.
-                return 1;
+                return getLastDim(f.m_inputs.front(), 1);
             }
             else if (IsMatrixProduct(op)) // Times: stacking if input has a bacth dimension already
             {
                 // BUGBUG: Determine this by counting axes. ...is that sufficient? For now only support vectors.
-                return 1;
+                return getLastDim(f.m_inputs.back(), 1);
             }
-            size_t batchAxis = 0; // assume scalar
+            // determine maxRank and lastDim over all batchable inputs
+            size_t maxRank = 0;
+            size_t lastDim = 1; // dimension of last axis encountered (actually max over them, due to broadcasting)
+            bool hasSparse = false;
             for (let& input: f.m_inputs) // (skip first input if matrix product)
             {
                 let& inputFields = GetInputFields(input);
-                // BUGBUG: How about explicit splicing of sparse inputs? Must be optimized differently. Currently caught outside.
-                // BUGBUG: This also triggers for InnerProduct(vec, sparse vec). The result happens to be correct, but it should not be tested here.
-                if (inputFields.m_isSparse)
-                    return 1; // we can only batch vectors. Later we will not batch any sparse object of rank > 2.
-                let& inputShape = inputFields.m_shape;
-                let rank = inputShape.Rank();
-                batchAxis = max(batchAxis, rank);
+                hasSparse = hasSparse || inputFields.m_isSparse;
+                let& inputShape = inputFields.m_shape.Dimensions();
+                let inputRank = inputShape.size();
+                if (inputRank > maxRank)
+                {
+                    maxRank = inputRank;
+                    lastDim = inputShape.back(); // previous lastDim was for the wrong axis; start over
+                }
+                else if (inputRank == maxRank && inputRank > 0)
+                    lastDim = max(lastDim, inputShape.back()); // account for broadcasting
             }
-            if (batchAxis == 0) // can only stack if inputs are not scalars
-                return batchAxis; // batching of scalars
-            let stackingAxis = batchAxis - 1;
+            // sparse inputs can only be batched/stacked in axis 1
+            if (hasSparse)
+            {
+                if (maxRank == 2)
+                    return{ 1, lastDim };
+                else if (maxRank == 1)
+                    return{ 1, 1 };
+                else
+                    InvalidArgument("DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.");
+            }
+            // decide stacking vs. batching
+            if (maxRank == 0) // can only stack if inputs are not scalars
+                return{ /*axis=*/0, /*dim=*/1 }; // batching of scalars
+            let stackingAxis = maxRank - 1;
             switch (op) // does the unbatched op touch the (potential) stacking axis?
             {
             case PrimitiveOpType::ElementTimes:
@@ -1434,7 +1468,7 @@ return fInlinedPtr;
             case PrimitiveOpType::Splice:
             case PrimitiveOpType::ReduceElements:
                 if (stackingAxis == (size_t)f.m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex())
-                    return batchAxis; // touched. Can't stack, must batch.
+                    return{ maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
                 break;
             case PrimitiveOpType::Slice: // this is an affected op, but it's a view op, so we should not get here
                 // TODO: Think through the Slice case.
@@ -1443,7 +1477,7 @@ return fInlinedPtr;
                 fail_if(true, "DetermineBatchAxis: not yet implemented for TransposeAxes");
             }
             // no problem case detected: we can stack
-            return stackingAxis;
+            return{ stackingAxis, lastDim };
         }
 
     public:
@@ -1477,7 +1511,9 @@ return fInlinedPtr;
             else
             {
                 // determine stacking vs. batching, and corresponding m_batchAxis
-                f.m_autoBatchState.m_batchAxis = DetermineBatchAxis(f);
+                let batchAxisAndDim = DetermineBatchAxisAndDim(f);
+                f.m_autoBatchState.m_batchAxis = batchAxisAndDim.first;
+                f.m_autoBatchState.m_batchDim  = batchAxisAndDim.second;
                 // this naive implementation just scans linearly
                 // scan through all op sets to see if one is batchable with 'f'
                 // So far this does not show up in profiling.
@@ -2676,7 +2712,7 @@ return fInlinedPtr;
             m_batchedInputs.resize(numArgs);
             let& unbatchedOutputShape = f0.m_outputs.front().Shape();
             let i0 = (size_t)isTimes;    // index of first batchable argument (1 for matrix-product class; 0 otherwise)
-            let batchAxis = f0.m_autoBatchState.m_batchAxis;
+            let batchAxis = f0.m_autoBatchState.m_batchAxis; // we batch along this dimension
             size_t commonInputBatchAxis; // batch axis of all batched args (it is the same across all args)
             size_t outputBatchAxis;      // batch axis in output (may differ from commonInputBatchAxis for Times/Convolution)
             // TODO: We restrict this to a single shared batch axis, with exception of unbatched inputs (first Times arg).
