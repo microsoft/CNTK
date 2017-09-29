@@ -3026,13 +3026,14 @@ return fInlinedPtr;
         // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop   --TODO: does it? Verify.
         if (anyBatchedInputs)
         {
-            if (outputBatchAxis != unbatchedOutputShape.Rank())//    && !stackIt/*for now*/)
+            let unbatchedOutputRank = unbatchedOutputShape.Rank() - (stackingMode == StackingMode::STACKING); // (stacking axis is included in unbatched shape, while batching axis is not)
+            if (outputBatchAxis != unbatchedOutputRank)
             {
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, numBatchItems);
-                // TODO: This should not be necessary anymore, we can let this be implicitly handled by a redirect.
+                // TODO: An explicit Reshape should be avoiable now, since we could let this be implicitly handled by a redirect.
                 fail_if(!isElementWise && !isBasicBlock, "output shape should only have additional singleton axes for elementwise operations or basic-block invocations");
                 // insert a Reshape() op to remove the axes
-                let batchedOutputShape = unbatchedOutputShape.AppendAxis(unbatchedOutputShape.Rank(), batchSize); // desired batched output shape without the singleton axes
+                let batchedOutputShape = unbatchedOutputShape.SubShape(0, unbatchedOutputRank).AppendAxis(unbatchedOutputRank, batchSize); // desired batched output shape without the singleton axes
                 fail_if(batchedOutputShape.TotalSize(/*check=*/false) != batchedOp->m_outputs.front().Shape().TotalSize(/*check=*/false), "output shape has unexpected axes that should be singletons but aren't");
 
                 Variable arg = batchedOp->m_outputs.front();
@@ -3047,47 +3048,27 @@ return fInlinedPtr;
 
         // implant all results in the original unbatched operations (all as lazy/virtual references through m_redirection)
         // TODO: review this w.r.t. multi-output functions
-#if 0
-        if (anyBatchedInputs && !stackIt)
+        size_t sliceBegin = 0;
+        SliceRange sliceRange;
+        for (auto& f : ops)
         {
-            size_t j = 0;
-            for (auto& f : ops)
+            // implant the result
+            if (anyBatchedInputs) // if no batched inputs then we only produced a single shared reuslt that must just be copied
             {
-                // implant the result
-                FinalizeBatchedOpAndUpdateSchedule(f, batchedOp, SliceRange(j));
-                // and implant it to all aliases as well
-                UpdateDuplicatesAndUpdateSchedule(f);
-                // iterate the slice index
-                j++;
+                if (stackingMode == StackingMode::BATCHING) // if batching then create an index
+                {
+                    sliceRange = SliceRange(sliceBegin);
+                    sliceBegin++;
+                }
+                else // if stacking then create a slice
+                {
+                    sliceRange = SliceRange(sliceBegin, sliceBegin + f.m_autoBatchState.m_batchDim);
+                    sliceBegin = sliceRange.EndIndex();
+                }
             }
-        }
-        else
-#endif
-        if (anyBatchedInputs)// && stackIt)
-        {
-            size_t prevSliceEnd = 0;
-            for (auto& f : ops)
-            {
-                let width = 1;// f.m_inputs.back().Shape().Dimensions().back();
-                // implant the result
-                let newSliceEnd = prevSliceEnd + width;
-                FinalizeBatchedOpAndUpdateSchedule(f, batchedOp, SliceRange(prevSliceEnd, newSliceEnd));
-                // and implant it to all aliases as well
-                UpdateDuplicatesAndUpdateSchedule(f);
-                // iterate the slice index
-                prevSliceEnd = newSliceEnd;
-            }
-        }
-        else // no batched inputs
-        {
-            for (auto& f : ops)
-            {
-                // TODO: review this w.r.t. multi-output functions
-                // implant the result
-                FinalizeBatchedOpAndUpdateSchedule(f, batchedOp);
-                // and implant it to all aliases as well
-                UpdateDuplicatesAndUpdateSchedule(f);
-            }
+            FinalizeBatchedOpAndUpdateSchedule(f, batchedOp, sliceRange);
+            // and implant it to all aliases as well
+            UpdateDuplicatesAndUpdateSchedule(f);
         }
         // To keep the batchedOp ref count alive, FinalizeBatchedOpAndUpdateSchedule() saves the shared_ptr in all m_redirection.m_functionHolder.
 
