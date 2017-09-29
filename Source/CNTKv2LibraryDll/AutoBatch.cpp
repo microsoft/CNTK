@@ -1217,7 +1217,7 @@ return fInlinedPtr;
         static bool AreBatchable(const PrimitiveFunction& a, const PrimitiveFunction& b) // TODO: change to & (NULL is not a valid value here)
         {
             //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::Equal, L"AreBatchable()", 3);
-            // check the hash first
+            // check the hash first  --turns out this is slower
 #if 0
             if (a.m_op != b.m_op) // first-level hash :)
                 return false;
@@ -1234,6 +1234,10 @@ return fInlinedPtr;
             // some operations have variable number of arguments, e.g. Splice(). Those can't batch if the number of inputs differ
             if (a.m_inputs.size() != b.m_inputs.size())
                 return false;
+            // batch axis must match. Note that m_batchAxis reflects a decision on stacking vs. batching.
+            let batchAxis = a.m_autoBatchState.m_batchAxis;
+            if (batchAxis != b.m_autoBatchState.m_batchAxis)
+                return false;
             // special case BatchNormalization
             if (op == PrimitiveOpType::BatchNormalization)
             {
@@ -1244,6 +1248,7 @@ return fInlinedPtr;
                 if (aId != bId)
                     return false;
                 // shape of first argument and object identities of all other arguments must match, otherwise it's an error
+                // TODO: Analyze the interplay with batchAxis.
                 if (a.m_inputs.front().Shape() != b.m_inputs.front().Shape())
                     InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different shapes %S and %S.",
                                     PrimitiveOpTypeName(op).c_str(), (int)aId, a.m_inputs.front().Shape().AsString().c_str(), b.m_inputs.front().Shape().AsString().c_str());
@@ -1265,8 +1270,6 @@ return fInlinedPtr;
                     return false;
             }
             // all input dimensions must match (with exception of a few special cases)
-            //let opClass = g_oscTable[op]; // operation-specific auto-batching class
-            //let isTimes = opClass == OpSpecificConditionKind::MatrixProduct;
             let isTimes = IsMatrixProduct(op);
             let numInputs = a.m_inputs.size();
             for (size_t i = 0; i < numInputs; i++)
@@ -1286,23 +1289,20 @@ return fInlinedPtr;
                 {
                     // shapes and data types must match
                     // BUGBUG: How about strides?
-#if 1
-                    if (isTimes)
+                    let rank = aFields.m_shape.Rank();
+                    if (rank != bFields.m_shape.Rank())
+                        return false;
+#if 0
+                    // shapes must have same rank and match up to the batch axis
+                    for (size_t k = 0; k < rank && k < batchAxis; k++)
                     {
-                        // special case for now: detect stacking only for Times
-                        let rank = aFields.m_shape.Rank();
-                        if (rank != bFields.m_shape.Rank())
+                        if (aFields.m_shape[k] != bFields.m_shape[k])
                             return false;
-                        for (size_t k = 0; k + 1 < rank; k++)
-                        {
-                            if (aFields.m_shape[k] != bFields.m_shape[k])
-                                return false;
-                        }
                     }
-                    else
-#endif
+#else
                     if (aFields.m_shape != bFields.m_shape)
                         return false;
+#endif
                     if (aFields.m_dataType != bFields.m_dataType)
                         return false;
                     if (aFields.m_isSparse != bFields.m_isSparse)
@@ -1311,7 +1311,7 @@ return fInlinedPtr;
                     if (aFields.m_redirection.m_depthHint != bFields.m_redirection.m_depthHint)
                         return false;
                     // sparse cannot be batched beyond rank 1
-                    if (aFields.m_isSparse && aFields.m_shape.Rank() > 1)
+                    if (aFields.m_isSparse && rank > 1)
                         return false;
                 }
             }
@@ -2675,7 +2675,8 @@ return fInlinedPtr;
             //    TODO: Verify that mapRank is never counted from the back.
             m_batchedInputs.resize(numArgs);
             let& unbatchedOutputShape = f0.m_outputs.front().Shape();
-            size_t i0;                   // index of first batched argument (1 for matrix product; 0 otherwise)
+            let i0 = (size_t)isTimes;    // index of first batchable argument (1 for matrix-product class; 0 otherwise)
+            let batchAxis = f0.m_autoBatchState.m_batchAxis;
             size_t commonInputBatchAxis; // batch axis of all batched args (it is the same across all args)
             size_t outputBatchAxis;      // batch axis in output (may differ from commonInputBatchAxis for Times/Convolution)
             // TODO: We restrict this to a single shared batch axis, with exception of unbatched inputs (first Times arg).
@@ -2689,13 +2690,11 @@ return fInlinedPtr;
                 // for matrix product, second arg is batched, and batch axes differ for arg and output. Just append one axis, respectively.
                 commonInputBatchAxis = f0.m_inputs.back().Shape().Rank();
                 outputBatchAxis      = unbatchedOutputShape      .Rank();
-                i0 = 1; // first arg does not get batched (since that would no longer be a GEMM operation)  --PERF BUGBUG: implement batched GEMM as well, once we have virtual Gather!
             }
             else if (isBasicBlock)
             {
                 outputBatchAxis = max(unbatchedOutputShape.Rank(), CacheAndGetBasicBlockBatchAxis(static_cast<const BlockFunction&>(f0)));
                 commonInputBatchAxis = outputBatchAxis;
-                i0 = 0; // all args participate in batching (non-elementwise ops are forbidden in basic blocks, with special-casing of Times)
             }
             else if (isElementWise)
             {
@@ -2705,7 +2704,6 @@ return fInlinedPtr;
                 // TODO: We could also handle this by an implied AsShape() right before execution.
                 outputBatchAxis = max(unbatchedOutputShape.Rank(), DetermineMaxElementwiseInputRank(f0));
                 commonInputBatchAxis = outputBatchAxis;
-                i0 = 0;                                 // all args participate in batching
             }
             else
                 fail_if(true, "should not get here");
@@ -2730,6 +2728,8 @@ return fInlinedPtr;
                     batchSize += input.Shape().Dimensions().back();
                 }
             }
+            if (batchAxis != commonInputBatchAxis)
+                Break;
 
             // create all the batched inputs by splicing along the batch axis
             // Special optimizations are taken if all elements are identical.
