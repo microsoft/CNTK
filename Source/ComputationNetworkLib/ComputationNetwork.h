@@ -30,7 +30,14 @@
 #include <unordered_map>
 #include <set>
 
+#include "ComputationGraphAlgorithms.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+inline std::wstring ToString(const ComputationNodeBasePtr& node)
+{
+    return node->NodeName();
+}
 
 // ===========================================================================
 // ComputationNetwork -- computation graph and operations
@@ -265,7 +272,6 @@ public:
 private:
     void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
     void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>>& parentsMap);
-    void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 
 public:
     // -----------------------------------------------------------------------
@@ -275,16 +281,9 @@ public:
     void FormNestedNetwork(const ComputationNodeBasePtr& rootNode);
     ComputationNodeBasePtr GetNestedNetwork(const ComputationNodeBasePtr& rootNode);
 
-    // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
-    // TODO: Can this be moved to a separate class?
 private:
-    // This is part of the FormRecurrentLoops() process, and only called from there.
-    void FormRecurrentLoops(const ComputationNodeBasePtr& rootNode);
-    void DetermineSCCs(const ComputationNodeBasePtr& rootNode);
-    void DetermineSCCsR(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);
-    void DetermineLoopForwardOrderR(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);
-    void GatherLoopNodesR(const ComputationNodeBasePtr& rootNode, std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult, std::list<ComputationNodeBasePtr>& noRecurrentResult);
-    void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr>& /*noRecurrentNodes*/);
+    // The method below determines evaluation order, which is tricky in presence of recurrent loops.
+    void FormRecurrentLoops();
 
 public:
     // -----------------------------------------------------------------------
@@ -306,13 +305,14 @@ public:
         }
 
         std::list<ComputationNodeBasePtr> evalOrder;
-        if (!rootNode) // this creates the global one
+        ExecutionGraph graph(m_allRoots);
+        if (!rootNode) // this creates the global list of nodes
         {
-            evalOrder = ComputationNodeBase::EnumerateNodes(m_allRoots);
+            evalOrder = ::CNTK::PostOrderTraversal(graph, m_allRoots);
         }
         else // this creates a subset of the global eval order of all nodes that rootNode depends on
         {
-            auto rawTraversalForRoot = ComputationNodeBase::EnumerateNodes({ rootNode }); // traverse to find the set (we ignore the order)
+            auto rawTraversalForRoot = ::CNTK::PostOrderTraversal(graph, { rootNode });// traverse to find the set (we ignore the order)
             set<ComputationNodeBasePtr> rawSet(rawTraversalForRoot.begin(), rawTraversalForRoot.end());
             for (const auto& node : GetEvalOrder(nullptr)) // iterate over global one and pull out everything that is included in the set for rootNode
             {
@@ -344,7 +344,7 @@ public:
 
     // replace an existing eval order with an updated one
     // This is meant to be used by FormRecurrentLoops().  TODO: Hopefully this can be not done anymore some day.
-    void UpdateEvalOrder(const ComputationNodeBasePtr& rootNode, std::list<ComputationNodeBasePtr>& nodes)
+    void UpdateEvalOrder(const ComputationNodeBasePtr& rootNode, const std::list<ComputationNodeBasePtr>& nodes)
     {
         GetEvalOrder(rootNode); // verify that there is already an entry for rootNode
         m_evalOrders[rootNode] = nodes;
@@ -1283,6 +1283,25 @@ private:
     // pool for matrices that can be shared across nodes
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
     MatrixPool m_matrixPool;
+
+    // Implementation of a graph based on ComputationNodes.
+    class ExecutionGraph : public ::CNTK::DirectedGraph<ComputationNodeBasePtr>
+    {
+        std::vector<ComputationNodeBasePtr> m_roots;
+
+    public:
+        ExecutionGraph(const std::vector<ComputationNodeBasePtr>& roots) : m_roots(roots) {}
+
+        const std::vector<ComputationNodeBasePtr>& Predecessors(const ComputationNodeBasePtr& node) const override
+        {
+            return node->GetInputs();
+        }
+
+        const std::vector<ComputationNodeBasePtr>& Roots() const override
+        {
+            return m_roots;
+        }
+    };
 };
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 
