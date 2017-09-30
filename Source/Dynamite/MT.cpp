@@ -660,8 +660,8 @@ void Train(wstring outputDirectory)
         auto& targetSents = args[1];
         let desiredLength = targetSents[0].size(); // length of first entry
         vector<size_t> indices; // (sentIndex, someValue) array to sort
-        for (let& sent : targetSents)
-            indices.push_back(indices.size());
+        for (let& _ : targetSents)
+            indices.push_back(indices.size()), _;
         // keep the N closest in target length
         sort(indices.begin(), indices.end(), [&](size_t i, size_t j) { return abs((int)targetSents[i].size() - (int)desiredLength) < abs((int)targetSents[j].size() - (int)desiredLength); });
         size_t numTargetWordsInBatch = 0;
