@@ -18,11 +18,11 @@
 
 #define Axis_DropLastAxis (Axis(-1)) // TODO: make this a CNTK construct, Axis::DropLastAxis(), with a special sentinel; or an official flag to ReduceXXX()
 
-//#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling
+#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling
 
 #define let const auto
-#define Named(n) (L##n)
-//#define Named(n) (std::wstring())
+//#define Named(n) (L##n)
+#define Named(n) (std::wstring())
 
 using namespace CNTK;
 using namespace std;
@@ -957,7 +957,7 @@ static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, c
 static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const size_t axis, const wstring& name /*= wstring()*/)
 {
 #ifdef DISABLE_NORMALIZATIONS
-    device; name;
+    device; name; axis;
     return Identity;
 #else
     static size_t id = 0; // unique id
