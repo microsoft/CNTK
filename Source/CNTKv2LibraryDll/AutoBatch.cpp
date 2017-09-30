@@ -1295,12 +1295,14 @@ return fInlinedPtr;
                         return false;
 #if 0
                     // shapes must have same rank and match up to the batch axis
+                    // If the batch axis is not outside the shape, then this is the stacking case.
                     for (size_t k = 0; k < rank && k < batchAxis; k++)
                     {
                         if (aFields.m_shape[k] != bFields.m_shape[k])
                             return false;
                     }
 #else
+                    // this branch disables stacking (unless special rare cases where it is forced)
                     if (aFields.m_shape != bFields.m_shape)
                         return false;
 #endif
@@ -1402,14 +1404,14 @@ return fInlinedPtr;
         static tuple<StackingMode, size_t/*axis*/, size_t/*dim*/> DetermineBatchAxisAndDim(const PrimitiveFunction& f)
         {
             // helper to read out a dimension
-            let getLastDim = [](const Variable& input, size_t axis) -> tuple<StackingMode, size_t/*axis*/, size_t/*dim*/>
+            let getLastDim = [](const Variable& input, size_t axis, StackingMode modeIfStacking) -> tuple<StackingMode, size_t/*axis*/, size_t/*dim*/>
             {
                 let& inputShape = input.Shape().Dimensions();
                 let inputRank = inputShape.size();
                 if (axis == inputRank)
                     return{ StackingMode::BATCHING, axis, 1 };
                 else if (axis + 1 == inputRank)
-                    return{ StackingMode::STACKING, axis, inputShape.back() };
+                    return{ modeIfStacking, axis, inputShape.back() };
                 else
                     LogicError("getLastDim: batch axis is at wrong position");
             };
@@ -1421,12 +1423,14 @@ return fInlinedPtr;
             if (op == PrimitiveOpType::BatchNormalization)
             {
                 // BUGBUG: Get this from a parameter. For now only support vectors.
-                return getLastDim(f.m_inputs.front(), 1);
+                return getLastDim(f.m_inputs.front(), 1, StackingMode::STACKING);
             }
             else if (IsMatrixProduct(op)) // Times: stacking if input has a bacth dimension already
             {
                 // BUGBUG: Determine this by counting axes. ...is that sufficient? For now only support vectors.
-                return getLastDim(f.m_inputs.back(), 1);
+                // Note: We could batch Times ops that have the same sequence length. For now, those would be forced to be stacking.
+                // Stacking is fine though in this case. Since there is no funky broadcasting involved, it is equally efficient (same kernel dims).
+                return getLastDim(f.m_inputs.back(), 1, StackingMode::STACKING);
             }
             // determine maxRank and lastDim over all batchable inputs
             size_t maxRank = 0;
@@ -2593,7 +2597,8 @@ return fInlinedPtr;
 
         // first determine special cases that can be optimized
         // If all args are consecutive slices, then use a slice view instead. If all objects are identical, then don't even use a batch.
-        let& pfields0 = GetInputFields(f0.m_inputs[i]);
+        let& input0 = f0.m_inputs[i];
+        let& pfields0 = GetInputFields(input0);  // TODO: rename to inputFields0
         let isScalar = pfields0.m_shape.Rank() == 0;
         let redirectionPair0 = LazyPhysicalSlice(pfields0);
         let is0Redirected = redirectionPair0.originatingFunction != nullptr;
@@ -2603,7 +2608,8 @@ return fInlinedPtr;
         for (let& f : ops) // create the batched tensors
         {
             let& input = f.m_inputs[i];
-            let& pfields = GetInputFields(input);
+            let& pfields = GetInputFields(input); // TODO: rename to inputFields
+            fail_if(pfields.m_shape.Rank() > commonInputBatchAxis + (stackingMode == StackingMode::STACKING), "batch axis too small??");
             let redirectionPair = LazyPhysicalSlice(pfields);
             // optimization: if all args are the same, then don't batch
             allSame = allSame &&
@@ -2626,8 +2632,17 @@ return fInlinedPtr;
                 prevSliceEndIndex = redirectionPair.sliceRange.EndIndex();
             }
         }
+        fail_if(allSame && allConsecutiveSlices && numBatchItems > 1, "allSame and allConsecutiveSlices are mututally exclusive");
         if (stackingMode == StackingMode::STACKING)
             Break;
+        if (allSame && stackingMode == StackingMode::STACKING) // allSame broadcasting is only OK is the input has no extend in stacking direction
+        {
+            // Consider stacking of b + [X X Y Y Y Z Z], where b, X, Y, Z have matching vector dimension D.
+            // In this case, concatenating X, X, Y, Y, Y, Z and Z gives a 7*D vector. b cannot be added to that.
+            // (While for BATCHING, we'd get a [D x 7] tensor, to which b can be added without problem.)
+            allSame = pfields0.m_shape.Rank() < commonInputBatchAxis || // does not live in the batch axis
+                      pfields0.m_shape[commonInputBatchAxis] == 1;      // lives there but broadcasts
+        }
         cudaStatsguard.Stop();
         // and splice
         anyBatchedInputs |= !allSame;
@@ -2699,7 +2714,18 @@ return fInlinedPtr;
             for (let& f : ops)
             {
                 let& input = f.m_inputs[i];
-                gatherInputs.push_back(input);
+                let& inputFields = GetInputFields(input);
+                if (stackingMode == StackingMode::STACKING &&
+                    (commonInputBatchAxis < inputFields.m_shape.Rank() ? inputFields.m_shape[commonInputBatchAxis] : 1) != f.m_autoBatchState.m_batchDim)
+                {
+                    // if this input broadcasts in the batch-axis dimension, we must manually unroll it.
+                    // This implements broadcasting with non-uniform dimensions in the stacking case.
+                    let rep = f.m_autoBatchState.m_batchDim;
+                    for (size_t n = 0; n < rep; n++)
+                        gatherInputs.push_back(input);
+                }
+                else
+                    gatherInputs.push_back(input);
                 // note: Variable is just three shared_ptrs, one being NULL; so this is cheap
                 // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
             }
