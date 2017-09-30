@@ -18,7 +18,7 @@
 
 #define Axis_DropLastAxis (Axis(-1)) // TODO: make this a CNTK construct, Axis::DropLastAxis(), with a special sentinel; or an official flag to ReduceXXX()
 
-#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling
+#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
 
 #define let const auto
 //#define Named(n) (L##n)
@@ -480,13 +480,12 @@ enum ProjectionOptions
     stabilize       = 0x02,
     batchNormalize  = 0x04,
     lengthNormalize = 0x08,
-    weightNormalize = 0x10
 #else
     stabilize       = 0,//x02,
     batchNormalize  = 0,//x04,
     lengthNormalize = 0,//x08,
-    weightNormalize = 0//x10
 #endif
+    weightNormalize = 0x10
 };
 static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { return (ProjectionOptions)(((size_t)a) | ((size_t)b)); }
 static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device, const wstring& name = wstring());
