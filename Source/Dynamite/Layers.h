@@ -1010,20 +1010,21 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
 }
 
 // built-in Softmax requires temp memory, so we use an explicit expression instead
-static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring())
+static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring(), const UnaryModel& barrier = Identity)
 {
     //LOG(z);
     //LOG(ReduceLogSum(z, axis, L"smLogDenom"));
     CountAPICalls(2);
-    return z - ReduceLogSum(z, axis, name);
+    let Z = barrier(ReduceLogSum(z, axis, name));
+    return z - Z;
 }
 
 // built-in Softmax requires temp memory, so we use an explicit expression instead
-static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring())
+static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring(), const UnaryModel& barrier = Identity)
 {
     //LOG(LogSoftmax(z, axis));
     CountAPICalls(1);
-    return Exp(LogSoftmax(z, axis, name), name);
+    return Exp(LogSoftmax(z, axis, name, barrier), name);
 }
 
 // built-in Softplus is a BlockFunction, so need to replace it here

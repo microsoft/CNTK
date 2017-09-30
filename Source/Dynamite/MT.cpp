@@ -147,12 +147,12 @@ fun AttentionModelReference(size_t attentionDim1)
             const Variable& encodingProjectedData  // [A x T] encoder hidden state seq, projected as data
            ) -> Variable
     {
-        let prevProfiler = Function::SetDynamicProfiler(profiler, true);
+        let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // compute attention weights
         let tanh = doToTanh(h, historyProjectedKey); // [A]
         CountAPICalls(1);
         let uVec = InnerProduct(tanh, encodingProjectedKeys, Axis(0), Named("u")); // [1 x T]
-        let wVec = /*zBarrier*/(Dynamite::Softmax(uVec, Axis(1))); // [1 x T]
+        let wVec = Dynamite::Softmax(uVec, Axis(1), Named("attSoftmax"), zBarrier); // [1 x T]
         // ... CONTINUE HERE: ^^ putting zBarrier in recovers the original loss, but #ops goes up from 10k to 25k
         //     BUGBUG: Need to fix Splice output axis. Maybe that's it already. Try wortIt = true to elicit this.
         CountAPICalls(1);
