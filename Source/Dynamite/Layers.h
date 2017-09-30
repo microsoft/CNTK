@@ -415,15 +415,12 @@ struct Sequence
     {
         let fwd = Recurrence(stepFwd, initialStateFwd);
         let bwd = Recurrence(stepBwd, initialStateBwd, true);
-        vector<Variable> spliceBuffer;
         return BinaryModel({}, { { L"stepFwd", stepFwd },{ L"stepBwd", stepBwd } },
-        [=](const Variable& inFwd, const Variable& inBwd) mutable/*spliceBuffer*/ -> Variable
+        [=](const Variable& inFwd, const Variable& inBwd) -> Variable
         {
             let rFwd = fwd(inFwd);
             let rBwd = bwd(inBwd);
             return Splice({ rFwd, rBwd }, Axis(0), Named("bidi"));
-            // for now we cannot splice non-uniform shapes; so unroll it  --actually, that's only a problem for sparse
-            //return map(rFwd, rBwd, [](const Variable& x, const Variable& y) -> Variable { return Splice({ x, y }, Axis(0), Named("bidi")); }, spliceBuffer);
         });
     }
 
@@ -675,7 +672,7 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
     }, Named("lengthNorm"));
 
     // Note: Arguments() is slow. Don't call this inside graph generation.
-    return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x) mutable
+    return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x) //mutable
     {
 #if 1
         return doLengthNorm(x);
@@ -837,7 +834,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         //{ L"projectState",  projectState },
         { L"normR",  normR  },
     },
-    [=](const Variable& dh, const Variable& x) mutable
+    [=](const Variable& dh, const Variable& x) //mutable
     {
 #if 1
         // TODO: Somehow this increases #nodes from ~300k to ~450k --what's going on?
@@ -970,9 +967,9 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
     auto runningMean   = Parameter({ NDShape::InferredDimension }, DTYPE, 0.0, device, L"runningMean");
     auto runningInvStd = Parameter({ NDShape::InferredDimension }, DTYPE, 1.0, device, L"runningInvStd");
     auto runningCount  = Parameter({                            }, DTYPE, 0.0, device, L"runningCount");
-    vector<Variable> buffer;
+    //vector<Variable> buffer;
     // TODO: figure out this Parameter mess for BN
-    return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount }, [=](const Variable& x) mutable/*buffer*/ -> Variable
+    return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount }, [=](const Variable& x) -> Variable
     {
         let batchNorm = [&](const Variable& x) // apply to one sample
         {

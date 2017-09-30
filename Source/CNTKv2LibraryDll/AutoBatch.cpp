@@ -104,6 +104,7 @@ namespace CNTK
     //     - all inputs share the same axis space
     //       Note: Any input/ouput of lower rank is interpreted as having its rank padded with singleton dimensions (dim=1).
     //     - computed output shares the same axis space (but may be Reshaped to form the final result)
+    //       Special case: Splice and Reshape may add axes. To make them fall into this category, we pad all inputs with singleton dims to output rank.
     //     - hence, they are fully batchable/stackable
     //       Note: This is also true for Reductions, which are elementwise with the reduction dimension having dimension 1.
     //     - a special case are see-through ops (NoOp, Barrier, Reshape, Slice)
@@ -1453,10 +1454,8 @@ return fInlinedPtr;
             size_t maxRank = 0;
             size_t lastDim = 1; // dimension of last axis encountered (actually max over them, due to broadcasting)
             bool hasSparse = false;
-            for (let& input: f.m_inputs) // (skip first input if matrix product)
+            let updateRankDimSparse = [&](const VariableFields& inputFields)
             {
-                let& inputFields = GetInputFields(input);
-                hasSparse = hasSparse || inputFields.m_isSparse;
                 let& inputShape = inputFields.m_shape.Dimensions();
                 let inputRank = inputShape.size();
                 if (inputRank > maxRank)
@@ -1466,6 +1465,16 @@ return fInlinedPtr;
                 }
                 else if (inputRank == maxRank && inputRank > 0)
                     lastDim = max(lastDim, inputShape.back()); // account for broadcasting
+            };
+            for (let& input: f.m_inputs) // (Note that this loop would be incorrect for matrix-product class ops. Those are already special-cased above.)
+            {
+                let& inputFields = GetInputFields(input);
+                hasSparse = hasSparse || inputFields.m_isSparse;
+                updateRankDimSparse(inputFields);
+            }
+            if (op == PrimitiveOpType::Splice || op == PrimitiveOpType::Reshape)
+            {
+                updateRankDimSparse(GetOutputFields(f));
             }
             // sparse inputs can only be batched/stacked in axis 1
             if (hasSparse)
@@ -2864,7 +2873,7 @@ return fInlinedPtr;
         // If not all args require that, we err on the side of not batching. BatchNorm must always be batched.
         let isSparseSplice = op == PrimitiveOpType::Splice && f0.m_outputs.front().IsSparse();
         let numCUDALaunchesInThisOp = 1; // TODO: for Block invocations, use the #nodes; or pick a number, such as 4
-        let worthIt = numBatchItems * numCUDALaunchesInThisOp/*unbatched launches*/ > (numArgs + 1)/*batched launches*/ || op == PrimitiveOpType::BatchNormalization;
+        let worthIt = true;// numBatchItems * numCUDALaunchesInThisOp/*unbatched launches*/ > (numArgs + 1)/*batched launches*/ || op == PrimitiveOpType::BatchNormalization;
         // BUGBUG: setting worthIt := true elicits a problem with output batch axis
         //if (numBatchItems > 1 && !worthIt) // TODO: remove this message once I see it happen
         //    fprintf(stderr, "%S not worth it: %d vs. %d\n", PrimitiveOpTypeName(f0.m_op).c_str(), (int)numBatchItems, (int)numArgs + 1);
@@ -3026,10 +3035,9 @@ return fInlinedPtr;
         if (isTimes)
             Break;
         let outputBatchAxis = isTimes ? commonInputBatchAxis + f0.m_outputs.front().Shape().Rank() - f0.m_inputs.back().Shape().Rank() : batchAxis;
-        if (!isTimes && f0.m_outputs.front().Shape().Rank() > DetermineMaxElementwiseInputRank(f0))
+        if (!isTimes && op != PrimitiveOpType::Splice && op != PrimitiveOpType::Reshape && f0.m_outputs.front().Shape().Rank() > DetermineMaxElementwiseInputRank(f0))
             LogicError("elementwise op that increases rank??");
 #endif
-
 
         // create all m_batchedInputs[] by splicing along the batch axis
         // Special optimizations are taken if all elements are identical.

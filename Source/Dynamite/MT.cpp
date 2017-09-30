@@ -65,10 +65,9 @@ fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutI
     vector<ModelParametersPtr> nested;
     nested.insert(nested.end(), layers.begin(), layers.end());
     nested.insert(nested.end(), bns.begin(), bns.end());
-    vector<Variable> buffer;
     // BUGBUG: If I change to Dynamite::Model, the model trains differently or causes compilation errors.
     return /*Dynamite::Model*/BinaryModel({}, NameNumberedParameters(nested),
-    [=](const Variable& xFwd, const Variable& xBwd) mutable -> Variable
+    [=](const Variable& xFwd, const Variable& xBwd) -> Variable
     {
         // the first layer has different inputs for forward and backward
         auto h = layers[0](xFwd, xBwd);
@@ -78,8 +77,7 @@ fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutI
             h = layers[i](h, h);
             // after each additional layer, so batch norm
             // BUGBUG: Why not the first? Seems like a bug.
-            // For now, BatchNorm must be done per frame. In the future, we will be able to batch along the last axis.
-            h = bns[i - 1](h);// no longer needed :) Dynamite::Sequence::map(h, bns[i - 1], buffer);
+            h = bns[i - 1](h);
         }
         return h;
     });
@@ -149,7 +147,7 @@ fun AttentionModelReference(size_t attentionDim1)
             const Variable& encodingProjectedData  // [A x T] encoder hidden state seq, projected as data
            ) -> Variable
     {
-        let prevProfiler = Function::SetDynamicProfiler(profiler, false);
+        let prevProfiler = Function::SetDynamicProfiler(profiler, true);
         // compute attention weights
         let tanh = doToTanh(h, historyProjectedKey); // [A]
         CountAPICalls(1);
@@ -290,7 +288,7 @@ fun CreateModelFunction()
         { L"encode",         encode   },
         { L"decode",         decode   }
     },
-    [=](const Variable& sourceSeq, const Variable& historySeq) mutable -> Variable
+    [=](const Variable& sourceSeq, const Variable& historySeq) -> Variable
     {
         // embedding
         let eFwd = embedFwd(sourceSeq);
@@ -305,7 +303,7 @@ fun CreateModelFunction()
 
 fun CreateCriterionFunction(const BinaryModel& model_fn)
 {
-    vector<Variable> features, historyVector, labelsVector, zVector, losses;
+    vector<Variable> /*features, historyVector,*/ labelsVector, zVector, losses; // TODO: remove this; leave it to Splice(&&)
     // features and labels are tensors with first dimension being the length
     BinaryModel criterion = [=](const Variable& source, const Variable& target) mutable -> Variable
     {
@@ -351,18 +349,17 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
     // create a batch mapper (which will eventually allow suspension)
     let batchModel = Batch::Map(criterion);
     // for final summation, we create a new lambda (featBatch, labelBatch) -> mbLoss
-    vector<Variable> lossesPerSequence;
     return BinaryFoldingModel({}, { { L"model", model_fn } },
-    [=](const /*batch*/vector<Variable>& features, const /*batch*/vector<Variable>& labels) mutable -> Variable
+    [=](const /*batch*/vector<Variable>& features, const /*batch*/vector<Variable>& labels) -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
+        vector<Variable> lossesPerSequence;
         batchModel(lossesPerSequence, features, labels);             // batch-compute the criterion
         CountAPICalls(1);
-        let collatedLosses = Splice(lossesPerSequence, Axis(0), Named("seqLosses"));     // collate all seq lossesPerSequence
+        let collatedLosses = Splice(move(lossesPerSequence), Axis(0), Named("seqLosses"));     // collate all seq lossesPerSequence
         // ^^ this is one launch per MB
         CountAPICalls(1);
         let mbLoss = ReduceSum(collatedLosses, Axis_DropLastAxis, Named("batchLoss"));  // aggregate over entire minibatch
-        lossesPerSequence.clear();
         Function::SetDynamicProfiler(prevProfiler);
         return mbLoss;
     });
