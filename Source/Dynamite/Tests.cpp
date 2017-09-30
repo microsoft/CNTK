@@ -88,7 +88,7 @@ static double SumAll(const NDArrayViewPtr& x, DataType dataType, const DeviceDes
     return sum->AsScalar<double>();
 }
 
-size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
+size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const DeviceDescriptor& device)
 {
     // for testing batch normalization, we need shared several parameters
 #define BN_SHAPE { 13, 42 }
@@ -174,7 +174,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         { ValOpWithRed(ElementwiseProduct, NDShape({ 1           })), VarExpr(                CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0))          ), { { 13           }, { 13           } } },
         // splicing. NDArrayView::Slice() and SliceView() differ in also slicing the matrix or not. Test both.
         // slicing, reshaping   --TODO: reshaping (should be easy)
-        { { ValExpr(argValues[0]->Slice    ({ 0, 3 }, {     13 })), "Index" }, VarExpr(CNTK::Index(args[0], 3)),{ { 13, 42 } } }, // index of rank > 1; also testing SlicedTensorView()
+        { { ValExpr(argValues[0]->Slice    ({ 0, 3 }, { 13     })), "Index" }, VarExpr(CNTK::Index(args[0], 3)),{ { 13, 42 } } }, // index of rank > 1; also testing SlicedTensorView()
         { { ValExpr(argValues[0]->SliceView({    1 }, {        })), "Index" }, VarExpr(CNTK::Index(args[0], 1)),{ { 13 } } }, // index of rank 1
         { { ValExpr(argValues[0]->SliceView({ 0, 1 }, { 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0), Axis(1) }, { 0, 1 }, { 13, 1+4 })),{ { 13, 42 } } }, // multi-axis slice
         { { ValExpr(argValues[0]->Slice    ({ 2, 0 }, {  3, 42 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0)          }, { 2    }, { 2+3     })),{ { 13, 42 } } }, // non-contiguous slice
@@ -229,26 +229,61 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
     };
 
     fprintf(stderr, "\n--- Running tests for batch of %d. %s on %S\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str());
+    let profiler = Function::CreateDynamicProfiler(1, L"test");
     let doGradientCheck = dataType == DataType::Double;
     size_t numFailed = 0;
     for (let& test : tests) // loop over all tests
     {
+        let isTimes     = strstr(test.op.second, "Times")              != nullptr;
+        let isSplice    = strstr(test.op.second, "Splice")             != nullptr;
+        let isBatchNorm = strstr(test.op.second, "BatchNormalization") != nullptr; // BatchNormalization requires some special-casing
+        let isReduction = strstr(test.op.second, "Reduc")              != nullptr; // InnerProduct and Reduce
+
         let aryness = test.shapes.size(); // number of arguments of this test
-        let isBatchNorm = strstr(test.op.second, "BatchNormalization"); // BatchNormalization requires some special-casing
+
+        let testStacking = testStackingEnabled &&
+                           !isSplice &&  // splice uses funky shapes on output, don't touch the last axis
+                           !isReduction && // some reduction ops test reduction along first axis, so can't mess with the other axes
+                           !isBatchNorm; // TODO: update BatchNorm test to test stacking (batch along last dim); currently it batches
+        if (testStackingEnabled && !testStacking) // if stacking-test requested but not possible for this op then don't bother
+            continue;
+
         // prepare example test tensors for all batch items
         vector<vector<NDArrayViewPtr>> allArgValues(N, vector<NDArrayViewPtr>(aryness)); // [batchIndex][argIndex]
+        // determine max input rank, which is used to test varying the batch dimension if present (N>1 only)
+        size_t maxRank = 0;
+        for (size_t j = 0; j < aryness; j++)
+        {
+            if (isTimes && j == 0) // ignore the Times weight in determining this
+                continue;
+            let& argShape = test.shapes[j];
+            maxRank = max(maxRank, argShape.Rank());
+        }
         for (size_t n = 0; n < N; n++) // loop over samples
         {
             for (size_t j = 0; j < aryness; j++)
             {
+                let isTimesWeight = isTimes && j == 0; // is first arg of Times op
                 let isShared = // some tests share arguments across batch items
                     (isBatchNorm && j > 0) ||
                     (strstr(test.op.second, "Times_shared") && j == 0);
+                auto argShape = test.shapes[j].Dimensions();
+                // patch up the last dimension to test stacking
+                if (testStacking)
+                {
+                    let rank = argShape.size();
+                    if (n > 0 && !isShared && !isTimesWeight && rank == maxRank &&
+                        (!isTimes || rank > 1) && // first axis of a Times input is not a batch axis
+                        !argShape.empty() && argShape.back() != 1)     // 1 could be meant to be broadcast, so don't break that
+                    {
+                        argShape.back() += n; // increase the batch dimension
+                    }
+                }
                 allArgValues[n][j] =
                     /*if*/ (n > 0 && isShared) ?
                         allArgValues[0][j] // some ops require args to be shared across the batch items
                     /*else*/:
-                        TestTensor(test.shapes[j], 0.3, test.op.second, j, dataType, device);
+                        TestTensor(argShape, 0.3, test.op.second, j, dataType, device);
             }
         }
         // special case: for BatchNormalization reference, we manually compute mean and inv stddev here
@@ -266,7 +301,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
             auto batchSqrMean = make_shared<NDArrayView>(batchItems[0]->GetDataType(), batchItems[0]->GetStorageFormat(), batchItems[0]->Shape(), device);
             let alpha = (double)batchMean->Shape().TotalSize() / (double)batch->Shape().TotalSize();
             NDArrayView::NumericOperation({ batch }, alpha, L"Copy", batchMean);
-            NDArrayView::NumericOperation({ batch - batchMean }, alpha, L"Sqr",  batchSqrMean);
+            NDArrayView::NumericOperation({ batch - batchMean }, alpha, L"Sqr", batchSqrMean);
             let minusHalf = make_shared<NDArrayView>(-0.5, batchItems[0]->GetDataType(), NDShape{ }, device, true);
             batchInvStd = NDArrayView::NumericOperation({ batchSqrMean, minusHalf }, 1.0, L"Pow"); // x^{-0.5}
             //batchMean->LogToFile(L"batchMean", stderr);
@@ -279,7 +314,11 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         NDArrayViewPtr refVal;
         for (size_t n = 0; n < N; n++) // aggregate over all samples in the MB with alternating sign
         {
-            let refVal1 = test.op.first(allArgValues[n]);
+            auto refVal1 = test.op.first(allArgValues[n]);
+            // when testing stacking, the batch dimensions are different, so we sum up all columns instead
+            let& shape1 = refVal1->Shape();
+            if (testStacking && shape1.Rank() > 0)
+                refVal1 = NDArrayView::NumericOperation({ refVal1 }, /*alpha=*/1.0, L"Copy", shape1.SubShape(0, shape1.Rank() - 1).AppendShape({ 1 }));
             refVal =
                 /*if*/ (n == 0) ?
                     refVal1
@@ -316,10 +355,14 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         // Dynamite computation. Result is sum with alternating sign over all batch items in this test.
         let functionUnderRest = [&](const vector<vector<Variable>>& testArgs) -> Variable
         {
+            let prevProfiler = Function::SetDynamicProfiler(profiler, false); // set to true to see the detailed log
             Variable res;
             for (size_t n = 0; n < N; n++) // aggregate over all samples in the MB
             {
-                let itemRes = test.f(testArgs[n]);
+                auto itemRes = test.f(testArgs[n]);
+                let& shape1 = itemRes.Shape();
+                if (testStacking && shape1.Rank() > 0)
+                    itemRes = CNTK::ReduceSum(itemRes, Axis(shape1.Rank() - 1));
                 res =
                     /*if*/ (n == 0) ?
                         itemRes
@@ -328,6 +371,7 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                     /*else*/:
                         res + itemRes;
             }
+            Function::SetDynamicProfiler(prevProfiler);
             return res;
         };
         let resVar = functionUnderRest(allArgs);
@@ -338,6 +382,8 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
         if (avSqrErr > 1e-5)
         {
             fprintf(stderr, ">>>>>>>>>> FWD FAILED: avSqrErr = %.10f\n", avSqrErr);
+            resVal->LogToFile(L"result (Dynamite)");
+            refVal->LogToFile(L"reference (NDArrayView)");
             numFailed++;
         }
         // gradient check
@@ -414,8 +460,9 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
                 }
 
                 // check result
+                let absErr = fabs(perturbationBasedDelta - gradientBasedDelta);
                 let relErr = (perturbationBasedDelta == gradientBasedDelta) ? 0 : fabs(((perturbationBasedDelta - gradientBasedDelta) / perturbationBasedDelta));
-                if (relErr > 1e-3)
+                if (relErr > 1e-3 && absErr > 1e-10)
                 {
                     fprintf(stderr, ">>>>>>>>>> BWD[%d] FAILED: err=%.10f%% (numeric=%.20f, symbolic=%.20f)\n", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
                     numFailed++;
@@ -435,17 +482,18 @@ size_t DynamiteTest(size_t N, DataType dataType, const DeviceDescriptor& device)
 
 void RunDynamiteTests()
 {
-#if 0 // (interferes with logging for profiling and reprodible Parameter initialization)
+#if 1 // (interferes with logging for profiling and reprodible Parameter initialization)
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
-    numFailed += DynamiteTest(N, DataType::Double, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true,  DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
 #if 0 // only do a batched one on the GPU by default
-    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::GPUDevice(0));
-    numFailed += DynamiteTest(N, DataType::Double, DeviceDescriptor::CPUDevice());
-    numFailed += DynamiteTest(N, DataType::Float,  DeviceDescriptor::GPUDevice(0));
-    numFailed += DynamiteTest(1, DataType::Float,  DeviceDescriptor::GPUDevice(0));
-    numFailed += DynamiteTest(1, DataType::Double, DeviceDescriptor::CPUDevice());
-    numFailed += DynamiteTest(1, DataType::Float,  DeviceDescriptor::CPUDevice());
+    numFailed += DynamiteTest(1, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::CPUDevice());
+    numFailed += DynamiteTest(N, DataType::Float,  /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(1, DataType::Float,  /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
+    numFailed += DynamiteTest(1, DataType::Double, /*testStacking=*/false, DeviceDescriptor::CPUDevice());
+    numFailed += DynamiteTest(1, DataType::Float,  /*testStacking=*/false, DeviceDescriptor::CPUDevice());
 #endif
     if (numFailed > 0)
         LogicError("RunDynamiteTests: %d tests failed.", (int)numFailed);
