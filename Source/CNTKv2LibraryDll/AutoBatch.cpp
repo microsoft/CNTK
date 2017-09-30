@@ -1293,7 +1293,7 @@ return fInlinedPtr;
                     let rank = aFields.m_shape.Rank();
                     if (rank != bFields.m_shape.Rank())
                         return false;
-#if 0
+#if 1
                     // shapes must have same rank and match up to the batch axis
                     // If the batch axis is not outside the shape, then this is the stacking case.
                     for (size_t k = 0; k < rank && k < batchAxis; k++)
@@ -2598,22 +2598,24 @@ return fInlinedPtr;
         // first determine special cases that can be optimized
         // If all args are consecutive slices, then use a slice view instead. If all objects are identical, then don't even use a batch.
         let& input0 = f0.m_inputs[i];
-        let& pfields0 = GetInputFields(input0);  // TODO: rename to inputFields0
-        let isScalar = pfields0.m_shape.Rank() == 0;
-        let redirectionPair0 = LazyPhysicalSlice(pfields0);
+        let& inputFields0 = GetInputFields(input0);
+        let isScalar = inputFields0.m_shape.Rank() == 0;
+        let redirectionPair0 = LazyPhysicalSlice(inputFields0);
         let is0Redirected = redirectionPair0.originatingFunction != nullptr;
         bool allSame = true;                                              // will be true if all are the same objects
         bool allConsecutiveSlices = !redirectionPair0.sliceRange.empty(); // will be true if all are consecutive index ops into the same batched result
         size_t prevSliceEndIndex = 0; // running index
         for (let& f : ops) // create the batched tensors
         {
+            if (!allSame && !allConsecutiveSlices)
+                break;
             let& input = f.m_inputs[i];
-            let& pfields = GetInputFields(input); // TODO: rename to inputFields
-            fail_if(pfields.m_shape.Rank() > commonInputBatchAxis + (stackingMode == StackingMode::STACKING), "batch axis too small??");
-            let redirectionPair = LazyPhysicalSlice(pfields);
+            let& inputFields = GetInputFields(input);
+            fail_if(inputFields.m_shape.Rank() > commonInputBatchAxis + (stackingMode == StackingMode::STACKING), "batch axis too small??");
+            let redirectionPair = LazyPhysicalSlice(inputFields);
             // optimization: if all args are the same, then don't batch
             allSame = allSame &&
-                      (&pfields == &pfields0 ||                           // same object
+                      (&inputFields == &inputFields0 ||                           // same object (also covers the case of leaves)
                        (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
             // Note: If we remove is0Redirected, then this comparison will not be correct for leaves.
             // optimization: if all args are consecutive slices, then use a slice view instead
@@ -2621,7 +2623,6 @@ return fInlinedPtr;
             {
                 // optimization: if consecutive slices, then recover the original batched tensor
                 // TODO: Can we directly check the data buffer pointer?
-                fail_if(redirectionPair.sliceRange.IsSlice() && redirectionPair.sliceRange.Width() != 1, "stacking not yet supported");
                 allConsecutiveSlices =
                     redirectionPair0.originatingFunction == redirectionPair.originatingFunction && // function that creates the physical output (NULL if not a slice)
                     prevSliceEndIndex                    == redirectionPair.sliceRange.BeginIndex();
@@ -2629,6 +2630,12 @@ return fInlinedPtr;
                 // scenario, we will loose entries in the middle. We can allow to keep a few around
                 // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
                 // carry them forward, and ignore them when implanting the result.
+                if (stackingMode == StackingMode::STACKING &&
+                    (commonInputBatchAxis < inputFields.m_shape.Rank() ? inputFields.m_shape[commonInputBatchAxis] : 1) != f.m_autoBatchState.m_batchDim)
+                {
+                    // this input is broadcasting in the stacking axis: cannot be realized as a view
+                    allConsecutiveSlices = false;
+                }
                 prevSliceEndIndex = redirectionPair.sliceRange.EndIndex();
             }
         }
@@ -2640,8 +2647,8 @@ return fInlinedPtr;
             // Consider stacking of b + [X X Y Y Y Z Z], where b, X, Y, Z have matching vector dimension D.
             // In this case, concatenating X, X, Y, Y, Y, Z and Z gives a 7*D vector. b cannot be added to that.
             // (While for BATCHING, we'd get a [D x 7] tensor, to which b can be added without problem.)
-            allSame = pfields0.m_shape.Rank() < commonInputBatchAxis || // does not live in the batch axis
-                      pfields0.m_shape[commonInputBatchAxis] == 1;      // lives there but broadcasts
+            allSame = inputFields0.m_shape.Rank() < commonInputBatchAxis || // does not live in the batch axis
+                      inputFields0.m_shape[commonInputBatchAxis] == 1;      // lives there but broadcasts
         }
         cudaStatsguard.Stop();
         // and splice
@@ -2656,7 +2663,6 @@ return fInlinedPtr;
             if (stackingMode == StackingMode::STACKING)
                 Break;
             let& from  = redirectionPair0.originatingFunction;
-            fail_if(redirectionPair0.sliceRange.IsSlice() && redirectionPair0.sliceRange.Width() != 1, "stacking not yet supported");
             let  begin = redirectionPair0.sliceRange.Index();
             let& output = from->m_outputs.front();
             fail_if(!GetOutputFields(*from).m_value, "value not yet available??");
@@ -2690,6 +2696,7 @@ return fInlinedPtr;
             // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
             // BUGBUG: This seems never called in the MT case?
             // TODO: Do this inside Gather, based on its output shape.
+            // TODO: Verify once again whether there is a special case going from/to stacking/batching
             if (sliceAxis != commonInputBatchAxis)
             {
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"interm. reshape", 3, numBatchItems);
@@ -2720,6 +2727,7 @@ return fInlinedPtr;
                 {
                     // if this input broadcasts in the batch-axis dimension, we must manually unroll it.
                     // This implements broadcasting with non-uniform dimensions in the stacking case.
+                    // TODO: avoid the many vectors by creating an expanded copy, using ReduceElements, which can also expand!
                     let rep = f.m_autoBatchState.m_batchDim;
                     for (size_t n = 0; n < rep; n++)
                         gatherInputs.push_back(input);
