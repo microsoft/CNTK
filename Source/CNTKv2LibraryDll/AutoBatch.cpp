@@ -2727,10 +2727,16 @@ return fInlinedPtr;
                 {
                     // if this input broadcasts in the batch-axis dimension, we must manually unroll it.
                     // This implements broadcasting with non-uniform dimensions in the stacking case.
-                    // TODO: avoid the many vectors by creating an expanded copy, using ReduceElements, which can also expand!
-                    let rep = f.m_autoBatchState.m_batchDim;
-                    for (size_t n = 0; n < rep; n++)
-                        gatherInputs.push_back(input);
+                    vector<size_t> broadcastShape = inputFields.m_shape.Dimensions();
+                    broadcastShape.resize(commonInputBatchAxis);
+                    broadcastShape.push_back(f.m_autoBatchState.m_batchDim); // this is the shape we want
+                    // insert a ReduceElements op, which in fact ignores its axes and therefore can also be used to broadcast
+                    gatherInputs.push_back(CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, vector<Variable>{ input }, broadcastShape,
+                                                                     Dictionary(PrimitiveFunction::AttributeNameReductionOpName, PrimitiveFunction::InternalSumReductionOpName),
+                                                                     f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/false));
+                    // Note that at this point, the inputs to the Gather operation will have inconsistent
+                    // rank; those we expanded here have a batch axis, while the unexpanded may not.
+                    // Gather can handle that.
                 }
                 else
                     gatherInputs.push_back(input);

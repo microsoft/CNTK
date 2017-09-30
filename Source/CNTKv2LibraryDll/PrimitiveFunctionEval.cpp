@@ -378,12 +378,15 @@ namespace CNTK
                 if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
                     op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
                 else if (reductionOpName == PrimitiveFunction::InternalLogSumReductionOpName)
+                {
                     NDArrayView::NumericOperation({ const_cast<NDArrayView*>(outputGradientValue)->shared_from_this(),
                                                     const_cast<NDArrayView*>( inputValues[0]    )->shared_from_this(),
                                                     const_cast<NDArrayView*>(outputValue        )->shared_from_this() }, alpha,
                                                   Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExpOfDiff,
                                                   gradient, beta,
                                                   Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                    handled = true;
+                }
                 else if (reductionOpName == PrimitiveFunction::InternalMeanReductionOpName)
                 {
                     op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
@@ -395,7 +398,6 @@ namespace CNTK
                     //  PrimitiveFunction::InternalProdReductionOpName
                     LogicError("Variable '%S' Value(): Gradient of reduction op %S not yet implemented.", funcForErrMsg.AsString().c_str(), reductionOpName.c_str());
             }
-            handled = true;
             break;
             // hard stuff
         case PrimitiveOpType::Splice:

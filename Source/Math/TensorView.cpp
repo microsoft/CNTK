@@ -650,6 +650,8 @@ void TensorView<ElemType>::DoGatherBatchOf(const IArrayRef<const TensorView*>& i
     // Batches inputs along an axis.
     // A special optimization is applied when each input is dense and its shape does, 1-padded, match
     // the output shape except for the last output dimension, which is the sum of the (1-padded) input dimensions.
+    // Shapes can have less dimensions, which are then filled in virtually by singleton dimensions.
+    // This is important for stacking support.
     if (CanGatherScatterBatch(m_shape, inputs, axis))
     {
         // optimized case
