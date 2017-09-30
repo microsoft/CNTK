@@ -1443,12 +1443,25 @@ return fInlinedPtr;
                 // BUGBUG: Get this from a parameter. For now only support vectors.
                 return getLastDim(f.m_inputs.front(), 1, StackingMode::STACKING);
             }
-            else if (IsMatrixProduct(op)) // Times: stacking if input has a bacth dimension already
+            else if (IsMatrixProduct(op)) // Times: stacking if input has a batch dimension already
             {
-                // BUGBUG: Determine this by counting axes. ...is that sufficient? For now only support vectors.
+                let& inputs = f.m_inputs;
+                let& output = GetOutputFields(f);
+                let& left  = inputs.front();
+                let& right = inputs.back();
+                let leftRank  = left .Shape().Rank();
+                let rightRank = right.Shape().Rank();
+                let reductionRankX2 = leftRank + rightRank - output.m_shape.Rank();
+                // TODO: check this w.r.t. TransposeTimes
+                let reductionRank = reductionRankX2 / 2;
+                fail_if(reductionRank * 2 != reductionRankX2, "DetermineBatchAxisAndDim: reductionRank for matrix-product class not determined correctly");
+                let outputRank = leftRank  - reductionRank;
+                let mapRank    = rightRank - reductionRank;
+                if (right.IsSparse() && rightRank > 1)
+                    InvalidArgument("DetermineBatchAxisAndDim: Sparse matrix product currently only supports vectors or matrices.");
                 // Note: We could batch Times ops that have the same sequence length. For now, those would be forced to be stacking.
                 // Stacking is fine though in this case. Since there is no funky broadcasting involved, it is equally efficient (same kernel dims).
-                return getLastDim(f.m_inputs.back(), 1, StackingMode::STACKING);
+                return getLastDim(right, mapRank == 0/*single vector; no batch dim*/ ? reductionRank : rightRank - 1, StackingMode::STACKING);
             }
             // determine maxRank and lastDim over all batchable inputs
             size_t maxRank = 0;
@@ -1498,9 +1511,12 @@ return fInlinedPtr;
                 // fall-through to ReduceElements for InnerProduct case
             case PrimitiveOpType::Splice:
             case PrimitiveOpType::ReduceElements:
-                if (stackingAxis == (size_t)f.m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex())
-                    return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
-                break;
+                {
+                    let& axis = f.m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                    if (!axis.IsStaticAxis() || stackingAxis == (size_t)axis.StaticAxisIndex(/*checked=*/false))
+                        return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
+                    break;
+                }
             case PrimitiveOpType::Slice: // this is an affected op, but it's a view op, so we should not get here
                 // TODO: Think through the Slice case.
                 fail_if(true, "DetermineBatchAxis: should not get here for Slice");
