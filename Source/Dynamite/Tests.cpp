@@ -228,7 +228,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         { ValRedOp(Sum,    NDShape({  1     }), 13), VarExpr(CNTK::ReduceMean  (args[0], Axis(0)          )), { { 13     } } }
     };
 
-    fprintf(stderr, "\n--- Running tests for batch of %d. %s on %S\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str());
+    fprintf(stderr, "\n--- Running tests for batch of %d. %s on %S.%s\n\n", (int)N, CNTK::DataTypeName(dataType), device.AsString().c_str(), N == 1 ? " Unbatched." : testStackingEnabled ? " Stacking." : " Batching.");
     let profiler = Function::CreateDynamicProfiler(1, L"test");
     let doGradientCheck = dataType == DataType::Double;
     size_t numFailed = 0;
@@ -236,15 +236,17 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
     {
         let isTimes     = strstr(test.op.second, "Times")              != nullptr;
         let isSplice    = strstr(test.op.second, "Splice")             != nullptr;
+        let isSlice     = strstr(test.op.second, "Slice")              != nullptr;
         let isBatchNorm = strstr(test.op.second, "BatchNormalization") != nullptr; // BatchNormalization requires some special-casing
         let isReduction = strstr(test.op.second, "Reduc")              != nullptr; // InnerProduct and Reduce
 
         let aryness = test.shapes.size(); // number of arguments of this test
 
         let testStacking = testStackingEnabled &&
-                           !isSplice &&  // splice uses funky shapes on output, don't touch the last axis
-                           !isReduction && // some reduction ops test reduction along first axis, so can't mess with the other axes
-                           !isBatchNorm; // TODO: update BatchNorm test to test stacking (batch along last dim); currently it batches
+                           !isSplice    &&  // splice uses funky shapes on output, don't touch the last axis
+                           !isSlice     &&  // slice reference has baked-in result dimensions that are off
+                           !isReduction &&  // some reduction ops test reduction along first axis, so can't mess with the other axes
+                           !isBatchNorm;    // TODO: update BatchNorm test to test stacking (batch along last dim); currently it batches
         if (testStackingEnabled && !testStacking) // if stacking-test requested but not possible for this op then don't bother
             continue;
 
@@ -347,7 +349,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
             }
             if (n == 0) // logging
             {
-                fprintf(stderr, "%25s(", test.op.second);
+                fprintf(stderr, "#%25s(", test.op.second);
                 for (let& arg : allArgs[n])
                     fprintf(stderr, " %S ", arg.Shape().AsString().c_str());
             }
@@ -355,14 +357,14 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         // Dynamite computation. Result is sum with alternating sign over all batch items in this test.
         let functionUnderRest = [&](const vector<vector<Variable>>& testArgs) -> Variable
         {
-            let prevProfiler = Function::SetDynamicProfiler(profiler, false); // set to true to see the detailed log
+            let prevProfiler = Function::SetDynamicProfiler(profiler, true); // set to true to see the detailed log
             Variable res;
             for (size_t n = 0; n < N; n++) // aggregate over all samples in the MB
             {
                 auto itemRes = test.f(testArgs[n]);
                 let& shape1 = itemRes.Shape();
                 if (testStacking && shape1.Rank() > 0)
-                    itemRes = CNTK::ReduceSum(itemRes, Axis(shape1.Rank() - 1));
+                    itemRes = CNTK::ReduceSum(itemRes, Axis((int)shape1.Rank() - 1));
                 res =
                     /*if*/ (n == 0) ?
                         itemRes
@@ -482,12 +484,12 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
 
 void RunDynamiteTests()
 {
-#if 1 // (interferes with logging for profiling and reprodible Parameter initialization)
+#if 0 // (interferes with logging for profiling and reprodible Parameter initialization)
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true,  DeviceDescriptor::GPUDevice(0));
-    numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
 #if 0 // only do a batched one on the GPU by default
+    numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(N, DataType::Float,  /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));

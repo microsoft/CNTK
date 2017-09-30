@@ -967,6 +967,7 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
     auto runningMean   = Parameter({ NDShape::InferredDimension }, DTYPE, 0.0, device, L"runningMean");
     auto runningInvStd = Parameter({ NDShape::InferredDimension }, DTYPE, 1.0, device, L"runningInvStd");
     auto runningCount  = Parameter({                            }, DTYPE, 0.0, device, L"runningCount");
+    axis;
     //vector<Variable> buffer;
     // TODO: figure out this Parameter mess for BN
     return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount }, [=](const Variable& x) -> Variable

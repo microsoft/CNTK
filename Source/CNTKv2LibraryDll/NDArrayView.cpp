@@ -871,6 +871,15 @@ namespace CNTK
         return GetTensorShape().IsDense();
     }
 
+    // debugging helper
+    // Cut this into return statements to look at the result.
+    static inline NDArrayViewPtr LogHelper(const wstring& name, NDArrayViewPtr view)
+    {
+        let clone = view->NumericOperation({ view }, 1.0, opCopy); // make a copy since we can only Log contigous ones for now
+        clone->LogToFile(name);
+        return view;
+    }
+
     NDArrayViewPtr NDArrayView::Slice(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides, SliceMode sliceMode, bool readOnly) const
     {
         let rank = Shape().Rank();
