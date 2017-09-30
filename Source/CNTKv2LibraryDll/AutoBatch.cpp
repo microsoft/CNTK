@@ -1250,9 +1250,23 @@ return fInlinedPtr;
                     return false;
                 // shape of first argument and object identities of all other arguments must match, otherwise it's an error
                 // TODO: Analyze the interplay with batchAxis.
-                if (a.m_inputs.front().Shape() != b.m_inputs.front().Shape())
-                    InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different shapes %S and %S.",
+                let& aFields = GetInputFields(a.m_inputs.front());
+                let& bFields = GetInputFields(b.m_inputs.front());
+                // shapes and data types must match
+                // BUGBUG: How about strides?
+                let rank = aFields.m_shape.Rank();
+                if (rank != bFields.m_shape.Rank())
+                    InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different-rank shapes %S and %S.",
                                     PrimitiveOpTypeName(op).c_str(), (int)aId, a.m_inputs.front().Shape().AsString().c_str(), b.m_inputs.front().Shape().AsString().c_str());
+                // shapes must have same rank and match up to the batch axis
+                // If the batch axis is not outside the shape, then this is the stacking case.
+                for (size_t k = 0; k < rank && k < batchAxis; k++)
+                {
+                    if (aFields.m_shape[k] != bFields.m_shape[k])
+                        InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different shapes %S and %S.",
+                                        PrimitiveOpTypeName(op).c_str(), (int)aId, a.m_inputs.front().Shape().AsString().c_str(), b.m_inputs.front().Shape().AsString().c_str());
+                }
+                // check the remaining parameters--requires object identity
                 for (size_t i = 1; i < 6; i++)
                 {
                     if (a.m_inputs[i].m_dataFields != b.m_inputs[i].m_dataFields)
@@ -1313,9 +1327,11 @@ return fInlinedPtr;
                     // depth hint must match
                     if (aFields.m_redirection.m_depthHint != bFields.m_redirection.m_depthHint)
                         return false;
+#if 0
                     // sparse cannot be batched beyond rank 1
                     if (aFields.m_isSparse && rank > 1)
                         return false;
+#endif
                 }
             }
             // attributes must also match
@@ -1498,6 +1514,11 @@ return fInlinedPtr;
         // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
         void Schedule(PrimitiveFunction& f)
         {
+#if 1
+            let& f0 = f;
+            if (GetOutputFields(f0).m_uniqueIdForDebugging == 241565 || GetOutputFields(f0).m_uniqueIdForDebugging == 241579 || GetOutputFields(f0).m_uniqueIdForDebugging == 241593 || GetOutputFields(f0).m_uniqueIdForDebugging == 241607)
+                Break;
+#endif
             //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ToSequence, L"Schedule()", 3, m_regularOps.size() * m_regularOps.size());
             let op = f.m_op;
             // special case BatchNormalization: we must account for all occurences
@@ -1848,7 +1869,9 @@ return fInlinedPtr;
             uid = name + L":" + uid;
         if (prefix && *prefix)
             fprintf(stderr, "[%S] ", prefix);
-        fprintf(stderr, "%S%S = %S (", uid.c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
+        fprintf(stderr, "%S^%d%S = %S (", uid.c_str(), (int)GetInputFields(output).m_uniqueIdForDebugging, outputShape.AsString().c_str(), f.OpName().c_str());
+        if (GetInputFields(output).m_uniqueIdForDebugging == 241565)
+            Break;
         for (size_t i = 0; i < inputs.size(); i++)
         {
             let& input = inputs[i];
@@ -1860,9 +1883,12 @@ return fInlinedPtr;
                 auto uid = input.Uid();
                 if (uid.size() > 9 && wcscmp(uid.c_str() + uid.size() - 9, L"_Output_0") == 0)
                     uid.resize(uid.size() - 9);
-                let& name = input.IsOutput() ? input.m_dataFields->m_redirection.m_function->Name() : input.Name();
+                let& inputFields = GetInputFields(input);
+                let& name = !inputFields.m_redirection.empty() ? inputFields.m_redirection.m_function->Name() : input.Name();
                 if (!name.empty())
                     uid = name + L":" + uid;
+                let uidForDebugging = !inputFields.m_redirection.empty() ? GetOutputFields(*inputFields.m_redirection.m_function).m_uniqueIdForDebugging : GetInputFields(input).m_uniqueIdForDebugging;
+                uid += L"^" + to_wstring(uidForDebugging);
                 return uid;
             };
             if (!fields.m_redirection.empty())
@@ -2647,8 +2673,8 @@ return fInlinedPtr;
             // Consider stacking of b + [X X Y Y Y Z Z], where b, X, Y, Z have matching vector dimension D.
             // In this case, concatenating X, X, Y, Y, Y, Z and Z gives a 7*D vector. b cannot be added to that.
             // (While for BATCHING, we'd get a [D x 7] tensor, to which b can be added without problem.)
-            allSame = inputFields0.m_shape.Rank() < commonInputBatchAxis || // does not live in the batch axis
-                      inputFields0.m_shape[commonInputBatchAxis] == 1;      // lives there but broadcasts
+            allSame = commonInputBatchAxis >= inputFields0.m_shape.Rank() || // does not live in the batch axis
+                      inputFields0.m_shape[commonInputBatchAxis] == 1;       // lives there but broadcasts
         }
         cudaStatsguard.Stop();
         // and splice
@@ -2827,6 +2853,8 @@ return fInlinedPtr;
         if (!isFree)
             m_stats.numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
+        if (GetOutputFields(f0).m_uniqueIdForDebugging == 241565 || GetOutputFields(f0).m_uniqueIdForDebugging == 241579 || GetOutputFields(f0).m_uniqueIdForDebugging == 241593 || GetOutputFields(f0).m_uniqueIdForDebugging == 241607)
+            Break;
 
         // special case: under certain circumstances, we don't actually execute an op batched
 
