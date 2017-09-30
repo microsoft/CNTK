@@ -647,7 +647,7 @@ void Train(wstring outputDirectory)
         timer.Restart();
         // get next minibatch
         partTimer.Restart();
-#if 1   // hack (until we fix the reader): pack sequences of similar length
+#if 0   // hack (until we fix the reader): pack sequences of similar length
         //  - get 10 x the minibatch
         //  - pick a length, e.g. of the first  --use target length here
         //  - pick the 10% that are closest

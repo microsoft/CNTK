@@ -18,11 +18,11 @@
 
 #define Axis_DropLastAxis (Axis(-1)) // TODO: make this a CNTK construct, Axis::DropLastAxis(), with a special sentinel; or an official flag to ReduceXXX()
 
-#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
+//#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
 
 #define let const auto
-//#define Named(n) (L##n)
-#define Named(n) (std::wstring())
+#define Named(n) (L##n)
+//#define Named(n) (std::wstring())
 
 using namespace CNTK;
 using namespace std;
@@ -519,7 +519,7 @@ class StaticModel
         wstring m_nameRememberedForDebugging;
 
         Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& f, std::wstring name) :
-            m_arity(arity), m_isBasicBlock(isBasicBlock)
+            m_arity(arity), m_isBasicBlock(   false    )//isBasicBlock) // for now, disable basic blocks
         {
             if (m_forceImmediate)
             {
