@@ -647,10 +647,52 @@ void Train(wstring outputDirectory)
         timer.Restart();
         // get next minibatch
         partTimer.Restart();
+#if 1   // hack (until we fix the reader): pack sequences of similar length
+        //  - get 10 x the minibatch
+        //  - pick a length, e.g. of the first  --use target length here
+        //  - pick the 10% that are closest
+        //  - sort them by length --use source length to aid the attention model
+        auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, 10 * (size_t)minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);
+        if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
+            break;
+        Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
+        auto& sourceSents = args[0];
+        auto& targetSents = args[1];
+        let desiredLength = targetSents[0].size(); // length of first entry
+        vector<size_t> indices; // (sentIndex, someValue) array to sort
+        for (let& sent : targetSents)
+            indices.push_back(indices.size());
+        // keep the N closest in target length
+        sort(indices.begin(), indices.end(), [&](size_t i, size_t j) { return abs((int)targetSents[i].size() - (int)desiredLength) < abs((int)targetSents[j].size() - (int)desiredLength); });
+        size_t numTargetWordsInBatch = 0;
+        for (size_t i = 0; i < indices.size(); i++)
+        {
+            let len = targetSents[indices[i]].size();
+            if (i > 0 && numTargetWordsInBatch + len > minibatchSize)
+            {
+                indices.resize(i);
+                break;
+            }
+            numTargetWordsInBatch += len;
+        }
+        // now sort by source length, longest first
+        sort(indices.begin(), indices.end(), [&](size_t i, size_t j) { return (int)sourceSents[i].size() > (int)sourceSents[j].size(); }); // longest first
+        // and update the args
+        let updateSents = [&](vector<Variable>& sents)
+        {
+            vector<Variable> newSents;
+            for (auto index : indices)
+                newSents.push_back(sents[index]);
+            sents = move(newSents);
+        };
+        updateSents(sourceSents);
+        updateSents(targetSents);
+#else
         auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, (size_t)minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);
         if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
             break;
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
+#endif
         let timeGetNextMinibatch = partTimer.Elapsed();
         //partTimer.Log("FromCNTKMB", minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
         //args[0].resize(1);
