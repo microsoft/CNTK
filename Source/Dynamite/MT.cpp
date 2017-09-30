@@ -652,9 +652,7 @@ void Train(wstring outputDirectory)
         //  - pick a length, e.g. of the first  --use target length here
         //  - pick the 10% that are closest
         //  - sort them by length --use source length to aid the attention model
-        auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, 10 * (size_t)minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);
-        if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
-            break;
+        auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, 5 * (size_t)minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);
         Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
         auto& sourceSents = args[0];
         auto& targetSents = args[1];
@@ -665,10 +663,11 @@ void Train(wstring outputDirectory)
         // keep the N closest in target length
         sort(indices.begin(), indices.end(), [&](size_t i, size_t j) { return abs((int)targetSents[i].size() - (int)desiredLength) < abs((int)targetSents[j].size() - (int)desiredLength); });
         size_t numTargetWordsInBatch = 0;
+        let desiredNumWords = minibatchSize / communicator->Workers().size();
         for (size_t i = 0; i < indices.size(); i++)
         {
             let len = targetSents[indices[i]].size();
-            if (i > 0 && numTargetWordsInBatch + len > minibatchSize)
+            if (i > 0 && numTargetWordsInBatch + len > desiredNumWords)
             {
                 indices.resize(i);
                 break;
