@@ -1457,7 +1457,7 @@ return fInlinedPtr;
                 fail_if(reductionRank * 2 != reductionRankX2, "DetermineBatchAxisAndDim: reductionRank for matrix-product class not determined correctly");
                 let outputRank = leftRank  - reductionRank;
                 let mapRank    = rightRank - reductionRank;
-                if (right.IsSparse() && rightRank > 1)
+                if (right.IsSparse() && rightRank > 2)
                     InvalidArgument("DetermineBatchAxisAndDim: Sparse matrix product currently only supports vectors or matrices.");
                 // Note: We could batch Times ops that have the same sequence length. For now, those would be forced to be stacking.
                 // Stacking is fine though in this case. Since there is no funky broadcasting involved, it is equally efficient (same kernel dims).
@@ -1540,11 +1540,6 @@ return fInlinedPtr;
         // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
         void Schedule(PrimitiveFunction& f)
         {
-#if 1
-            let& f0 = f;
-            if (GetOutputFields(f0).m_uniqueIdForDebugging == 241565 || GetOutputFields(f0).m_uniqueIdForDebugging == 241579 || GetOutputFields(f0).m_uniqueIdForDebugging == 241593 || GetOutputFields(f0).m_uniqueIdForDebugging == 241607)
-                Break;
-#endif
             //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ToSequence, L"Schedule()", 3, m_regularOps.size() * m_regularOps.size());
             let op = f.m_op;
             // special case BatchNormalization: we must account for all occurences
@@ -1896,8 +1891,6 @@ return fInlinedPtr;
         if (prefix && *prefix)
             fprintf(stderr, "[%S] ", prefix);
         fprintf(stderr, "%S^%d%S = %S (", uid.c_str(), (int)GetInputFields(output).m_uniqueIdForDebugging, outputShape.AsString().c_str(), f.OpName().c_str());
-        if (GetInputFields(output).m_uniqueIdForDebugging == 241565)
-            Break;
         for (size_t i = 0; i < inputs.size(); i++)
         {
             let& input = inputs[i];
@@ -2692,8 +2685,8 @@ return fInlinedPtr;
             }
         }
         fail_if(allSame && allConsecutiveSlices && numBatchItems > 1, "allSame and allConsecutiveSlices are mututally exclusive");
-        if (stackingMode == StackingMode::STACKING)
-            Break;
+        //if (stackingMode == StackingMode::STACKING)
+        //    Break;
         if (allSame && stackingMode == StackingMode::STACKING) // allSame broadcasting is only OK is the input has no extend in stacking direction
         {
             // Consider stacking of b + [X X Y Y Y Z Z], where b, X, Y, Z have matching vector dimension D.
@@ -2712,8 +2705,8 @@ return fInlinedPtr;
         }
         else if (allConsecutiveSlices) // they are consecutive slice views into the same batched tensor: can short-circuit slice+gather as a single slice view
         {
-            if (stackingMode == StackingMode::STACKING)
-                Break;
+            //if (stackingMode == StackingMode::STACKING)
+            //    Break;
             let& from  = redirectionPair0.originatingFunction;
             let  begin = redirectionPair0.sliceRange.Index();
             let& output = from->m_outputs.front();
@@ -2765,8 +2758,8 @@ return fInlinedPtr;
         }
         else // batch inputs are not consecutive: We must actually copy them together.
         {
-            if (stackingMode == StackingMode::STACKING)
-                Break;
+            //if (stackingMode == StackingMode::STACKING)
+            //    Break;
             // create the arguments to the gather operation
             vector<Variable> gatherInputs;
             gatherInputs.reserve(numBatchItems);
@@ -2879,8 +2872,8 @@ return fInlinedPtr;
         if (!isFree)
             m_stats.numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
-        if (GetOutputFields(f0).m_uniqueIdForDebugging == 241565 || GetOutputFields(f0).m_uniqueIdForDebugging == 241579 || GetOutputFields(f0).m_uniqueIdForDebugging == 241593 || GetOutputFields(f0).m_uniqueIdForDebugging == 241607)
-            Break;
+        //if (GetOutputFields(f0).m_uniqueIdForDebugging == 241565 || GetOutputFields(f0).m_uniqueIdForDebugging == 241579 || GetOutputFields(f0).m_uniqueIdForDebugging == 241593 || GetOutputFields(f0).m_uniqueIdForDebugging == 241607)
+        //    Break;
 
         // special case: under certain circumstances, we don't actually execute an op batched
 
@@ -3048,8 +3041,8 @@ return fInlinedPtr;
         fail_if(stackingMode == StackingMode::STACKING_BUT_MAY_BATCH, "StackingMode::STACKING_BUT_MAY_BATCH should have been decided by now??");
         let commonInputBatchAxis = batchAxis; // TODO: remove this extra name
         //let maxInputRank = DetermineMaxElementwiseInputRank(f0);
-        if (isTimes)
-            Break;
+        //if (isTimes)
+        //    Break;
         let outputBatchAxis = isTimes ? commonInputBatchAxis + f0.m_outputs.front().Shape().Rank() - f0.m_inputs.back().Shape().Rank() : batchAxis;
         if (!isTimes && op != PrimitiveOpType::Splice && op != PrimitiveOpType::Reshape && f0.m_outputs.front().Shape().Rank() > DetermineMaxElementwiseInputRank(f0))
             LogicError("elementwise op that increases rank??");
