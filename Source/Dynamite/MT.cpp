@@ -154,8 +154,9 @@ fun AttentionModelReference(size_t attentionDim1)
         let tanh = doToTanh(h, historyProjectedKey); // [A]
         CountAPICalls(1);
         let uVec = InnerProduct(tanh, encodingProjectedKeys, Axis(0), Named("u")); // [1 x T]
-        let wVec = Dynamite::Softmax(uVec, Axis(1)); // [1 x T]
-        // ^^TODO: put zBarrier inside Softmax
+        let wVec = /*zBarrier*/(Dynamite::Softmax(uVec, Axis(1))); // [1 x T]
+        // ... CONTINUE HERE: ^^ putting zBarrier in recovers the original loss, but #ops goes up from 10k to 25k
+        //     BUGBUG: Need to fix Splice output axis. Maybe that's it already. Try wortIt = true to elicit this.
         CountAPICalls(1);
         let res = resBarrier(InnerProduct(encodingProjectedData, wVec, Axis_DropLastAxis, Named("attContext"))); // [.] inner product over a vectors
         Function::SetDynamicProfiler(prevProfiler);
@@ -183,9 +184,6 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("topHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
     let outputProjection = Linear(tgtVocabSize, ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);  // output layer without non-linearity (no sampling yet)
 
-    // buffers
-    vector<Variable> res;
-
     // decode from a top layer of an encoder, using history as history
     map<wstring, ModelParametersPtr> nestedLayers =
     {
@@ -203,10 +201,11 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         nestedLayers[L"resnet[" + std::to_wstring(nestedLayers.size()) + L"]"] = resnet;
     let profiler = Function::CreateDynamicProfiler(1, L"decode");
 
-#if 1 // this fails because some dimensions are not known yet
+    let outProjProfiler = Function::CreateDynamicProfiler(1, L"outProj");
     StaticModel doToOutput(/*isBasicBlock=*/false, [=](const Variable& state, const Variable& attentionContext)
     {
         // first one brings it into the right dimension
+        let prevProfiler = Function::SetDynamicProfiler(outProjProfiler, false);
         auto state1 = firstHiddenProjection(state);
         // then a bunch of ResNet layers
         for (auto& resnet : resnets)
@@ -219,12 +218,12 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         dropoutInputKeepProb;
         // compute output
         let z = outputProjection(topHidden);
+        Function::SetDynamicProfiler(prevProfiler);
         return z;
     });
-#endif
 
     return Dynamite::Model/*BinaryModel*/({ }, nestedLayers,
-    [=](const Variable& history, const Variable& hEncs) mutable -> Variable
+    [=](const Variable& history, const Variable& hEncs) -> Variable
     {
         //attentionContexts.resize(res.size());
         // decoding loop
@@ -236,7 +235,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         // We pack the result into a dense matrix; but only after the matrix product, to allow for it to be batched.
         let encodingProjectedKeys = encoderKeysProjection(hEncs); // this projects the entire sequence
         let encodingProjectedData = encoderDataProjection(hEncs);
-        res.resize(history.size()); // we put the time steps here
+        vector<Variable> res(history.size()); // we put the time steps here
         let historyEmbedded = embedTarget(history);
         for (size_t t = 0; t < history.size(); t++)
         {
@@ -274,7 +273,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         }
         //let z = doToOutput(Splice(res/*state*/, Axis::EndStaticAxis()), Splice(attentionContexts, Axis::EndStaticAxis()));
         //as_vector(res, z);
-        return Splice(res, Axis::EndStaticAxis());
+        return Splice(move(res), Axis::EndStaticAxis());
     });
 }
 

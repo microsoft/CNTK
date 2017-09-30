@@ -1417,6 +1417,7 @@ return fInlinedPtr;
         //  - batching: axis = max rank, dim = 1 (since axis is outside of all shapes)
         //  - stacking: axis = max rank - 1; dim = max over those dims (inputs that do not have that axis can be considered virtually padded to 1. Effectively they are just skipped.)
         // The decision is purely based on the operation and input ranks. Input shapes (other than their rank) must not be considered.
+        // BUGBUG: For Splice into a new axis, we must account for that new axis.
         static tuple<StackingMode, size_t/*axis*/, size_t/*dim*/> DetermineBatchAxisAndDim(const PrimitiveFunction& f)
         {
             // helper to read out a dimension
@@ -2864,6 +2865,7 @@ return fInlinedPtr;
         let isSparseSplice = op == PrimitiveOpType::Splice && f0.m_outputs.front().IsSparse();
         let numCUDALaunchesInThisOp = 1; // TODO: for Block invocations, use the #nodes; or pick a number, such as 4
         let worthIt = numBatchItems * numCUDALaunchesInThisOp/*unbatched launches*/ > (numArgs + 1)/*batched launches*/ || op == PrimitiveOpType::BatchNormalization;
+        // BUGBUG: setting worthIt := true elicits a problem with output batch axis
         //if (numBatchItems > 1 && !worthIt) // TODO: remove this message once I see it happen
         //    fprintf(stderr, "%S not worth it: %d vs. %d\n", PrimitiveOpTypeName(f0.m_op).c_str(), (int)numBatchItems, (int)numArgs + 1);
 #ifdef NO_BATCHED_FORWARD

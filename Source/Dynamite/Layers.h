@@ -387,12 +387,11 @@ struct Sequence
         vector<Parameter> rememberedInitialState;
         if (initialState.IsParameter())
             rememberedInitialState.push_back((Parameter)initialState);
-        vector<Variable> res;
         return UnaryModel(rememberedInitialState, { { L"step", step } },
-        [=](const Variable& x) mutable/*res*/ -> Variable
+        [=](const Variable& x) -> Variable
         {
             let len = x.size();
-            res.resize(len);
+            vector<Variable> res(len);
             auto state = initialState;
             for (size_t n = 0; n < len; n++)
             {
@@ -400,13 +399,12 @@ struct Sequence
                 // recurrent step
                 state = step(state, x[t]);
                 // remember result for output
-                // The barrier will force the Splice() to happen batch-side.
-                res[t] = barrier(state);
+                res[t] = state;
             }
             CountAPICalls(1);
-            let h = Splice(res, Axis::EndStaticAxis());
-            res.clear();
-            return h;
+            let h = Splice(move(res), Axis::EndStaticAxis());
+            // The barrier will force the Splice() to happen batch-side.
+            return barrier(h);
         });
     }
 
@@ -982,10 +980,10 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
             return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
         };
         // BUGBUG: This cannot work once we reenable static graphs.
-        if (x.Shape().Rank() == axis) // single item
+        //if (x.Shape().Rank() == axis) // single item
             return batchNorm(x);
-        else // a batch of items
-            return Dynamite::Sequence::map(x, batchNorm, buffer);
+        //else // a batch of items
+        //    return Dynamite::Sequence::map(x, batchNorm, buffer);
     });
 #endif
 }
