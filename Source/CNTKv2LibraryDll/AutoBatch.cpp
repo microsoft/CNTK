@@ -1276,6 +1276,9 @@ return fInlinedPtr;
                 }
                 return true; // these *must* be batched
             }
+#if 0       // for debugging: disable all batching except for BatchNorm were it is required
+            return false;
+#else
             // special case for Block
             if (op == PrimitiveOpType::Block)
             {
@@ -1340,6 +1343,7 @@ return fInlinedPtr;
                 return false;
             // all match: we can batch
             return true;
+#endif
         }
 
         // determine and cache a unique id for every basic block composite
@@ -1540,7 +1544,7 @@ return fInlinedPtr;
         // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
         void Schedule(PrimitiveFunction& f)
         {
-            //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ToSequence, L"Schedule()", 3, m_regularOps.size() * m_regularOps.size());
+            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ToSequence, L"Schedule()", 3, m_regularOps.size() * m_regularOps.size());
             let op = f.m_op;
             // special case BatchNormalization: we must account for all occurences
             if (op == PrimitiveOpType::BatchNormalization)
@@ -3035,8 +3039,8 @@ return fInlinedPtr;
             }
             else
                 stackingMode = StackingMode::STACKING;
-            if (stackingMode == StackingMode::STACKING)
-                fprintf(stderr, "STACKING op %S\n", PrimitiveOpTypeName(f0.m_op).c_str());
+            //if (stackingMode == StackingMode::STACKING)
+            //    fprintf(stderr, "STACKING op %S\n", PrimitiveOpTypeName(f0.m_op).c_str());
         }
         fail_if(stackingMode == StackingMode::STACKING_BUT_MAY_BATCH, "StackingMode::STACKING_BUT_MAY_BATCH should have been decided by now??");
         let commonInputBatchAxis = batchAxis; // TODO: remove this extra name
