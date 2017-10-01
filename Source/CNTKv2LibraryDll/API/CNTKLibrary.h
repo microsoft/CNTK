@@ -388,7 +388,7 @@ namespace CNTK
             (left.m_sampleLayout == right.m_sampleLayout));
     }
 
-    // Some projects require only some generic data types/interfaces from this file, and do not want to link explicitely to CNTKv2Library.
+    // Some projects require only some generic data types/interfaces from this file, and do not want to link explicitly to CNTKv2Library.
     // In this case they have to define CNTK_HEADERONLY_DEFINITIONS before including CNTKLibrary.h
 #ifndef CNTK_HEADERONLY_DEFINITIONS
     ///
