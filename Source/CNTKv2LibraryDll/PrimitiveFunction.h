@@ -796,8 +796,24 @@ namespace CNTK
               
                 if (i < operands.size() - 1)
                 {
+#if 1               // special case for Dynamite. For now, we assume a hard-coded batch axis=1. TODO: Change that to a parameter.
+                    // Dynamite variables have no dynamic batch dimension. For the static case, BatchNorm makes no sense without dynamic axes, so we can use that to detect Dynamite.
+                    if (inferDimensions && paramShape.HasInferredDimension() && operands.front().DynamicAxes().empty())
+                    {
+                        size_t batchAxis = 1; // TODO: make this a parameter
+                        paramShape = mainOperandShape.SubShape(0, batchAxis);
+                        if (spatial) // spatial means that all dims but the last (=color plane) pool their statistics.  BUGBUG: How about B&W images? The 'spatial' parameterization is broken!
+                            for (size_t k = 0; k < batchAxis - 1; k++)
+                                paramShape[k] = 1;
+                        std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
+                        UpdateOperandShapes(newParamShape);
+                    }
+                    else
+#endif
                     if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasUnboundDimension())
                     {
+                        // BUGBUG: This uses a flat vector for the stats in case of spatial? E.g. data : [W x H x C] -> mean : [C] instead of [1 x 1 x C].
+                        //         I guess the engine does not care, but it is wrong. Maybe this is needed to support the legacy tensor format?
                         size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
                         paramShape[0] = total;
                         std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
