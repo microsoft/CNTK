@@ -982,6 +982,9 @@ static shared_ptr<DynamicProfiler> m_currentProfiler; // current innermost activ
 }
 /*static*/ const DynamicProfilerPtr& PrimitiveFunction::CurrentDynamicProfiler() { return m_currentProfiler; }
 
+// a few helper functions--sort these
+static size_t DetermineInvokeBatchDim(const vector<Variable>& inputs, bool check);
+static inline vector<size_t> InjectBatchDim(vector<size_t> shape, size_t batchDimValue);
 
 // ===========================================================================
 // AutoBatch -- autobatching happening inside here
@@ -1106,49 +1109,49 @@ class Variable::AutoBatch
                 InvalidArgument("Invoke() cannot be used on composites with cycles.");
             return static_pointer_cast<PrimitiveFunction>(const_cast<PrimitiveFunction*>(fInlined)->shared_from_this()); // (shared_from_this() gives us a FunctionPtr, not PrimitiveFunctionPtr)
         }
-f.m_autoBatchState.m_link = nullptr; // Bring into valid state so we can detect cycles. Gets overwritten once we are done cloning.
+        f.m_autoBatchState.m_link = nullptr; // Bring into valid state so we can detect cycles. Gets overwritten once we are done cloning.
 
-// clone f
-// First clone the inputs;
-let& inputs = f.m_inputs;
-vector<Variable> inlinedInputs(inputs.size()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
-for (size_t i = 0; i < inputs.size(); i++)
-{
-    let& input = inputs[i];
-    let& inputFields = GetInputFields(input);
-
-    // --- case 0: a Variable that already has a value; that is, a Constant, Parameter, or any result of another Dynamite invocation
-    if (inputFields.m_varKind == VariableKind::Constant || inputFields.m_varKind == VariableKind::Parameter || inputFields.m_value)
-    {
-        if (!inputFields.m_value)
+        // clone f
+        // First clone the inputs;
+        let& inputs = f.m_inputs;
+        vector<Variable> inlinedInputs(inputs.size()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
+        for (size_t i = 0; i < inputs.size(); i++)
         {
-            input.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
-            fail_if(!inputFields.m_value, "Parameter/Constant has no Value()??");
+            let& input = inputs[i];
+            let& inputFields = GetInputFields(input);
+
+            // --- case 0: a Variable that already has a value; that is, a Constant, Parameter, or any result of another Dynamite invocation
+            if (inputFields.m_varKind == VariableKind::Constant || inputFields.m_varKind == VariableKind::Parameter || inputFields.m_value)
+            {
+                if (!inputFields.m_value)
+                {
+                    input.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
+                    fail_if(!inputFields.m_value, "Parameter/Constant has no Value()??");
+                }
+                inlinedInputs[i] = input;
+            }
+            // --- case 1: a Placeholder: substitute with invocation arg
+            else if (inputFields.m_varKind == VariableKind::Placeholder)
+            {
+                let argIndex = inputFields.m_compositeArgumentIndex;
+                fail_if(argIndex >= invocationArgs.size(), "no invocation arg lined was up with composite->Arguments[]??");
+                inlinedInputs[i] = invocationArgs[argIndex];
+            }
+            // --- case 2: an Output Variable: clone the Function
+            else
+            {
+                fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
+                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, cloneFn);
+                inlinedInputs[i] = fInlinedPtr->m_outputs.front();
+                inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
+                // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
+            }
         }
-        inlinedInputs[i] = input;
-    }
-    // --- case 1: a Placeholder: substitute with invocation arg
-    else if (inputFields.m_varKind == VariableKind::Placeholder)
-    {
-        let argIndex = inputFields.m_compositeArgumentIndex;
-        fail_if(argIndex >= invocationArgs.size(), "no invocation arg lined was up with composite->Arguments[]??");
-        inlinedInputs[i] = invocationArgs[argIndex];
-    }
-    // --- case 2: an Output Variable: clone the Function
-    else
-    {
-        fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-        let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, cloneFn);
-        inlinedInputs[i] = fInlinedPtr->m_outputs.front();
-        inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
-        // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
-    }
-}
-// now create a new function and set up the outputs;
-let fInlinedPtr = cloneFn(f, move(inlinedInputs));
-// and finally remember where this function got redirected to.
-f.m_autoBatchState.m_link = fInlinedPtr.get();
-return fInlinedPtr;
+        // now create a new function and set up the outputs;
+        let fInlinedPtr = cloneFn(f, move(inlinedInputs));
+        // and finally remember where this function got redirected to.
+        f.m_autoBatchState.m_link = fInlinedPtr.get();
+        return fInlinedPtr;
     }
 
 #define hashMultiplier ((size_t)1572869) // 4 1-bits. An arbitrarily picked prime from http://planetmath.org/goodhashtableprimes
@@ -1444,7 +1447,7 @@ return fInlinedPtr;
             let op = f.m_op;
             if (op == PrimitiveOpType::BatchNormalization)
             {
-                // BUGBUG: Get this from a parameter. For now only support vectors.
+                // BUGBUG: Get this from a parameter. For now only support vectors, batch axis is always 1.
                 return getLastDim(f.m_inputs.front(), 1, StackingMode::STACKING);
             }
             else if (IsMatrixProduct(op)) // Times: stacking if input has a batch dimension already
@@ -1566,6 +1569,7 @@ return fInlinedPtr;
                 f.m_autoBatchState.m_stacking  = get<0>(batchAxisAndDim);
                 f.m_autoBatchState.m_batchAxis = get<1>(batchAxisAndDim);
                 f.m_autoBatchState.m_batchDim  = get<2>(batchAxisAndDim);
+                fail_if(f.m_autoBatchState.m_batchDim == NDShape::FreeDimension, "FreeDimension made it into batchDim??");
                 fail_if(f.m_autoBatchState.m_stacking == StackingMode::BATCHING && f.m_autoBatchState.m_batchDim != 1, "batching but batchDim != 1??");
                 // this naive implementation just scans linearly
                 // scan through all op sets to see if one is batchable with 'f'
@@ -2161,11 +2165,6 @@ return fInlinedPtr;
     static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& f, vector<Variable>&& newInputs)
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
-        // get the output shape
-        let& outputs = f.m_outputs;
-        if (outputs.size() != 1)
-            InvalidArgument("Dynamic operations cannot have multiple outputs.");
-        let& output = outputs.front();
         // clone it
         PrimitiveFunctionPtr fCloned;
         if (f.m_op == PrimitiveOpType::Block)
@@ -2181,12 +2180,28 @@ return fInlinedPtr;
             f.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
             fCloned = MakeSharedObject<PrimitiveFunction>(f.m_op, move(newInputs), move(attributes), wstring(f.Name()));
         }
-        //if (fCloned->m_uniqueIdForDebugging == 194962)
-        //    Break;
         // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
         // unfortunately output initialization must be separated out since it requires s shared_ptr to fCloned
-        let& fClonedInputs = fCloned->m_inputs;
-        fCloned->InitOutput(OutputVariable(output.Shape(), fClonedInputs.front().GetDataType(), vector<Axis>(), output.NeedsGradient(), output.IsSparse(), wstring()));
+        // get the output shape
+        let& outputs = f.m_outputs;
+        if (outputs.size() != 1)
+            InvalidArgument("Dynamic operations cannot have multiple outputs.");
+        let& output = outputs.front();
+        let dataType = fCloned->m_inputs.front().GetDataType();
+
+
+        // replace FreeDimension
+        vector<size_t> outputShape;
+        let batchAxis = 1; // TODO: this must be parameterized somehow
+        if (output.Shape().Rank() > batchAxis && output.Shape().Dimensions().back() == NDShape::FreeDimension)
+        {
+            // if input shape is known and composite output has a FreeDimension in the batch axis, then replace it with the actual value
+            let batchDim = DetermineInvokeBatchDim(fCloned->m_inputs, /*check=*/true);
+            outputShape = InjectBatchDim(output.Shape().Dimensions(), batchDim);
+        }
+
+
+        fCloned->InitOutput(OutputVariable(outputShape.empty() ? output.Shape() : NDShape(outputShape), dataType, vector<Axis>(), output.NeedsGradient(), output.IsSparse(), wstring()));
         // add additional initializations for auto-batch only
         FinishConstructingPrimitiveFunction(*fCloned, f.m_profiler, /*logPrefix=*/nullptr);
         return fCloned;
@@ -4188,6 +4203,7 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argume
     }
 }
 
+// TODO: Move this function out of the way. It is not part of the Invoke stuff.
 // special short-circuited version where output is created outside
 void PrimitiveFunction::InitOutput(Variable&& output)
 {
@@ -4199,6 +4215,72 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
     m_outputs.resize(1);
     m_outputs.front() = move(output);
+}
+
+// heuristic to determine the batch axis when invoking
+// TODO: This needs to be done systematically.
+// The heuristic for now is this:
+//  - inputs := non-Parameters (parameters never have a batch dimension)
+//  - all inputs to an Invoke are of batched nature
+//  - their batch dimension is hard-coded as 1
+// Hence, all inputs must either have or not have the batch dim.
+// If they do, we must set all inputs' dimension [1] to FreeDimension; and pad if necessary.
+// Then, if the composite's output has a FreeDimension at the end, we must replace it with the batch dimension if we had at least
+// one input with batch dimension, or otherwise drop it.
+
+// determine "the" batch dimension of an invocation
+// The result is either the dim (presently hard-coded as 1) (if all inputs have a batch dim) or SIZE_MAX (if no input has a batch dim), or an error.
+static size_t DetermineInvokeBatchDim(const vector<Variable>& inputs, bool check)
+{
+    let batchAxis = 1; // TODO: this must be parameterized somehow
+    size_t batchDim = SIZE_MAX;
+    for (let& input : inputs)
+    {
+        if (input.IsParameter()) // placeholders have no batch dimension
+            continue;
+        let& shape = input.Shape().Dimensions();
+        let rank = shape.size();
+        let inputBatchDim = rank > batchAxis ? shape.back() : SIZE_MAX;
+        batchDim = inputBatchDim;
+        break; // we only need to look at the first since we require them to be all the same
+    }
+    // now batchDim is SIZE_MAX if either no inputs or we have inputs but none has a batch axis
+    if (check)
+    {
+        for (let& input : inputs)
+        {
+            if (input.IsParameter()) // placeholders have no batch dimension
+                continue;
+            let& shape = input.Shape().Dimensions();
+            let rank = shape.size();
+            if (rank != batchAxis && rank != batchAxis + 1)
+                InvalidArgument("Invoke: Presently only supports inputs to be vectors or batches of vectors.");
+            let inputBatchDim = rank > batchAxis ? shape.back() : SIZE_MAX;
+            if (inputBatchDim != batchDim)
+                InvalidArgument("Invoke: Presently, all inputs must either have a batch axis or not; but not mixed.");
+        }
+    }
+    return batchDim;
+}
+
+// helper to replace the batch dimension of inputShape by the given value
+// This adds axes if needed. If the given value is SIZE_MAX, it strips the axis.
+static inline vector<size_t> InjectBatchDim(vector<size_t> shape, size_t batchDimValue)
+{
+    let batchAxis = 1; // TODO: this must be parameterized somehow
+    fail_if(shape.size() > batchAxis + 1, "Invoke: batch axes > 1 not supported presently.");
+    if (batchDimValue == SIZE_MAX)
+    {
+        shape.resize(batchAxis); // no batch dimension: drop the axis
+        // BUGBUG: How does this work with scalars? We can't know that here.
+    }
+    else
+    {
+        if (shape.size() < batchAxis + 1)
+            shape.resize(batchAxis + 1, 1);
+        shape.back() = batchDimValue;
+    }
+    return shape;
 }
 
 // TODO: make the interface nicer. The composite should be locked away in a struct Invocable.
@@ -4243,6 +4325,9 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
 
     // BUGBUG: Must handle the map here now that we pass it. Also must verify that the Placeholders are actually in the composite.
 
+    // determine the batch dimension
+    let batchDim = DetermineInvokeBatchDim(m_inputs, /*check=*/true);
+
     // BUGBUG: Must verify that all Parameters are covered here.
     unordered_map<Variable, Variable> replacementMap;
     for (size_t i = 0; i < m_inputs.size(); i++)
@@ -4264,7 +4349,11 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
             if (input.IsInput())
                 InvalidArgument("Invoke cannot work on Input variables, it is for dynamic networks only.");
             fail_if(input.Shape().IsUnknown(), "unknown input shapes at this point??");
-            auto updatedCompositePlaceholder = PlaceholderLike(input); // we replace with a placeholder of the same type. This gives the composite the shape.
+            // we replace with a placeholder of the same type. This gives the composite the shape.
+            // to allow for varying sequence axis, we replace the last axis with FreeDimension, and infer with that
+            auto updatedCompositePlaceholder = PlaceholderVariable(batchDim == SIZE_MAX ? input.Shape() : InjectBatchDim(input.Shape().Dimensions(), NDShape::FreeDimension),
+                input.GetDataType(), input.Name(), input.DynamicAxes(), input.NeedsGradient(), input.IsSparse());
+            //auto updatedCompositePlaceholder = PlaceholderLike(input);
             updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = compositeLeaf.m_dataFields->m_compositeArgumentIndex;
             replacementMap.insert({ compositeLeaf, updatedCompositePlaceholder }); // replace with new Placeholder, which has a block mapping implanted
             // TODO: fix the interface. This should become a private method to Invocable
@@ -4278,8 +4367,9 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
     // OUTDATED --The composite args' Placeholders now have a block mapping to the actual inputs.
     // BUGBUG: That's bad, since they are gone after this. There should be no block mapping.
 
+    // if batchDim != SIZE_MAX, the resulting composite output likely has a batch axis as well, which is also FreeDimension
     if (compositeOutputs.front().Shape().IsUnknown()) // or not?
-        LogicError("Invoke with determineShapes=true must only be called with inputs with fully specified dimensions.");
+        LogicError("Invoke with determineShapes=true must not be called with inputs with Placeholder dimensions.");
 
     // Now the composite is fully type-inferred; ready for consumption by Dynamite.
 }
@@ -4290,11 +4380,20 @@ Variable BlockFunction::FinalizeInvoke(bool shapeIsKnown)
     // now set up the output variable. Clone the composite's one output Variable, then inject the mapping pointer. This following the pattern of InferOutputs().
     // ...EXCEPT we do not implant a Variable mapping, since the composite is shared. The composite does not know that it is part of a BlockFunction.
     let& compositeOutput = m_composite->m_outputs.front();
+    vector<size_t> outputShape;
+    let batchAxis = 1; // TODO: this must be parameterized somehow
+    if (shapeIsKnown && compositeOutput.Shape().Rank() > batchAxis && compositeOutput.Shape().Dimensions().back() == NDShape::FreeDimension)
+    {
+        // if input shape is known and composite output has a FreeDimension in the batch axis, then replace it with the actual value
+        let batchDim = DetermineInvokeBatchDim(m_inputs, /*check=*/true);
+        outputShape = InjectBatchDim(compositeOutput.Shape().Dimensions(), batchDim);
+    }
     Variable blockOutput =
         /*if*/ (!shapeIsKnown) ? // if we are being called while building a static graph
             OutputVariable(NDShape::Unknown(), DataType::Unknown, vector<Axis>(), Name())
         /*else*/:
-            OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), vector<Axis>(), compositeOutput.NeedsGradient(), compositeOutput.IsSparse(), Name());
+            OutputVariable(outputShape.empty() ? compositeOutput.Shape() : NDShape(outputShape), compositeOutput.GetDataType(), vector<Axis>(), compositeOutput.NeedsGradient(), compositeOutput.IsSparse(), Name());
+    fail_if(blockOutput.Shape().HasFreeDimension(), "Invoke: still has FreeDimension??");
     InitOutput(move(blockOutput));
     // behave as if this was returning a Composite: implant a ref count. This will be taken over by the next consumer.
     return m_outputs.front().CompositePreservingCopy(static_pointer_cast<PrimitiveFunction>(shared_from_this()));

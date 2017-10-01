@@ -519,7 +519,7 @@ class StaticModel
         wstring m_nameRememberedForDebugging;
 
         Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& f, std::wstring name) :
-            m_arity(arity), m_isBasicBlock(   false    )//isBasicBlock) // for now, disable basic blocks
+            m_arity(arity), m_isBasicBlock(isBasicBlock    && false) // for now, disable basic blocks
         {
             if (m_forceImmediate)
             {
