@@ -27,7 +27,7 @@ namespace CNTK
 
         // special version for InvokeGraph(). Defined in AutoBatch.cpp for now.
         BlockFunction(const std::shared_ptr<CompositeFunction>& composite, std::vector<Variable>& argumentList, std::vector<Variable>&& operands, bool isBasicBlock, bool determineShapes, std::wstring&& blockName);
-        Variable FinalizeInvoke(bool shapeIsKnown);
+        Variable FinalizeInvoke(const std::vector<Variable>& argumentList, bool shapeIsKnown);
 
         // special short-circuited constructor private to auto-batcher
         // This must not be used for anything else.

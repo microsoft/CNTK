@@ -983,7 +983,6 @@ static shared_ptr<DynamicProfiler> m_currentProfiler; // current innermost activ
 /*static*/ const DynamicProfilerPtr& PrimitiveFunction::CurrentDynamicProfiler() { return m_currentProfiler; }
 
 // a few helper functions--sort these
-static size_t DetermineInvokeBatchDim(const vector<Variable>& inputs, bool check);
 static inline vector<size_t> ReplaceBatchDim(vector<size_t> shape, size_t batchDimValue);
 
 // ===========================================================================
@@ -1154,7 +1153,7 @@ class Variable::AutoBatch
                     if (operandDims[k] != placeholderDims[k])
                         InvalidArgument("Invoke: Argument shape %S incompatible with placeholder's shape %S.", operand.Shape().AsString().c_str(), input.Shape().AsString().c_str());
                 // deal with invocationArgsBatchDim
-                let thisBatchDim = placeholderHasFreeDimension ? operandDims.back() : SIZE_MAX;
+                let thisBatchDim = (placeholderHasFreeDimension && operandRank == placeholderRank) ? operandDims.back() : SIZE_MAX;
                 if (invocationArgsBatchDim == 0) // first encounter
                     invocationArgsBatchDim = thisBatchDim;
                 else if (invocationArgsBatchDim != thisBatchDim)
@@ -4221,7 +4220,7 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argume
         // BUGBUG: Do we need this? m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy())); for the operands
         // TODO: Since we copy the operands, we could augment the Parameters here as well.
         let f = MakeSharedObject<BlockFunction>(composite, argumentList, vector<Variable>(operands), isBasicBlock, determineShapesThisTime, wstring(name));
-        return f->FinalizeInvoke(/*shapeIsKnown=*/!needToDetermineShapes);
+        return f->FinalizeInvoke(argumentList, /*shapeIsKnown=*/!needToDetermineShapes);
     }
 }
 
@@ -4254,49 +4253,49 @@ void PrimitiveFunction::InitOutput(Variable&& output)
 //  - their batch dimension is hard-coded as 1
 
 // determine "the" batch dimension of an invocation
-// The result is either the dim (presently hard-coded as 1) (if all inputs have a batch dim) or SIZE_MAX (if no input has a batch dim), or an error.
-static size_t DetermineInvokeBatchDim(const vector<Variable>& inputs, bool check)
+// The result is either the dim (if all inputs have a batch dim) or SIZE_MAX (if no input has a batch dim), or an error.
+// This function has the heuristics built in that the batch axis is hard-coded as 1.
+static size_t DetermineInvokeBatchDim(const vector<Variable>& inputs)
 {
     let batchAxis = 1; // TODO: this must be parameterized somehow
-    size_t batchDim = SIZE_MAX;
+    size_t invocationArgsBatchDim = 0; // 0 means no input at all
     for (let& input : inputs)
     {
         if (input.IsParameter()) // placeholders have no batch dimension
             continue;
         let& shape = input.Shape().Dimensions();
         let rank = shape.size();
-        let inputBatchDim = rank > batchAxis ? shape.back() : SIZE_MAX;
-        batchDim = inputBatchDim;
-        break; // we only need to look at the first since we require them to be all the same
+        let thisBatchDim = rank > batchAxis ? shape.back() : SIZE_MAX;
+        if (invocationArgsBatchDim == 0) // first encounter
+            invocationArgsBatchDim = thisBatchDim;
+        else if (invocationArgsBatchDim != thisBatchDim)
+            InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)invocationArgsBatchDim, input.Shape().AsString().c_str());
     }
-    // now batchDim is SIZE_MAX if either no inputs or we have inputs but none has a batch axis
-    if (check)
-    {
-        for (let& input : inputs)
-        {
-            if (input.IsParameter()) // placeholders have no batch dimension
-                continue;
-            let& shape = input.Shape().Dimensions();
-            let rank = shape.size();
-            if (rank != batchAxis && rank != batchAxis + 1)
-                InvalidArgument("Invoke: Presently only supports inputs to be vectors or batches of vectors.");
-            let inputBatchDim = rank > batchAxis ? shape.back() : SIZE_MAX;
-            if (inputBatchDim != batchDim)
-                InvalidArgument("Invoke: Presently, all inputs must either have a batch axis or not; but not mixed.");
-        }
-    }
-    return batchDim;
+    return invocationArgsBatchDim;
 }
 
 // helper to replace the batch dimension of inputShape by the given value
 // The batch dim must be present. If the given value is SIZE_MAX, it strips the axis.
 static inline vector<size_t> ReplaceBatchDim(vector<size_t> shape, size_t batchDimValue)
 {
-    fail_if(batchDimValue != NDShape::FreeDimension && shape.back() != NDShape::FreeDimension, "ReplaceBatchDim called on shape thathas no FreeDimension??");
-    if (batchDimValue == SIZE_MAX)
-        shape.resize(shape.size() - 1); // no batch dimension: drop the axis
-    else
-        shape.back() = batchDimValue;
+    let rank = shape.size();
+    if (batchDimValue == NDShape::FreeDimension) // value is FreeDimension: replace or expand
+    {
+        if (rank < 1 || rank > 2)
+            InvalidArgument("Invoke: Shapes with rank < 1 or > 2 currently not supported here.");
+        if (rank == 1)
+            shape.push_back(batchDimValue);
+        else
+            shape.back() = batchDimValue;
+    }
+    else // value is not FreeDimension: replace or pop
+    {
+        fail_if(shape.back() != NDShape::FreeDimension, "ReplaceBatchDim called on shape that has no FreeDimension??");
+        if (batchDimValue == SIZE_MAX)
+            shape.resize(rank - 1); // no batch dimension: drop the axis
+        else
+            shape.back() = batchDimValue;
+    }
     return shape;
 }
 
@@ -4324,6 +4323,9 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
     if (!determineShapes)
         return;
 
+    //if (callee->Name() != L"dense.normWeight")
+    //    Break;
+
     let& compositeOutputs = callee->RawOutputs(); // RawOutputs() forces callee.m_compositeOutputs to be initialized if not yet. It would initialize it to something is shape IsUnknown, though.
     if (compositeOutputs.size() != 1)
         InvalidArgument("Invoke can only be used with BlockFunctions that have a single output (this one has %d).", (int)compositeOutputs.size());
@@ -4343,7 +4345,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
     // BUGBUG: Must handle the map here now that we pass it. Also must verify that the Placeholders are actually in the composite.
 
     // determine the batch dimension
-    let batchDim = DetermineInvokeBatchDim(m_inputs, /*check=*/true);
+    let batchDim = DetermineInvokeBatchDim(m_inputs);
 
     // BUGBUG: Must verify that all Parameters are covered here.
     unordered_map<Variable, Variable> replacementMap;
@@ -4368,7 +4370,9 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
             fail_if(input.Shape().IsUnknown(), "unknown input shapes at this point??");
             // we replace with a placeholder of the same type. This gives the composite the shape.
             // to allow for varying sequence axis, we replace the last axis with FreeDimension, and infer with that
-            auto updatedCompositePlaceholder = PlaceholderVariable(batchDim == SIZE_MAX ? input.Shape() : ReplaceBatchDim(input.Shape().Dimensions(), NDShape::FreeDimension),
+            // If the input does not have that axis, then we create it.
+            fail_if(batchDim == 0, "no batchDim determined??");
+            auto updatedCompositePlaceholder = PlaceholderVariable(ReplaceBatchDim(input.Shape().Dimensions(), NDShape::FreeDimension),
                 input.GetDataType(), input.Name(), input.DynamicAxes(), input.NeedsGradient(), input.IsSparse());
             //auto updatedCompositePlaceholder = PlaceholderLike(input);
             updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = compositeLeaf.m_dataFields->m_compositeArgumentIndex;
@@ -4380,7 +4384,8 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
             InvalidArgument("Invoke: argumentList can only contain Placeholders and Parameters.");
     }
 
-    callee->ReplacePlaceholders(replacementMap); // This gives the composite the shape.
+    if (!replacementMap.empty())
+        callee->ReplacePlaceholders(replacementMap); // This gives the composite the shape.
     // OUTDATED --The composite args' Placeholders now have a block mapping to the actual inputs.
     // BUGBUG: That's bad, since they are gone after this. There should be no block mapping.
 
@@ -4392,7 +4397,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
 }
 
 // call this after construction from Invoke()
-Variable BlockFunction::FinalizeInvoke(bool shapeIsKnown)
+Variable BlockFunction::FinalizeInvoke(const vector<Variable>& argumentList, bool shapeIsKnown)
 {
     // now set up the output variable. Clone the composite's one output Variable, then inject the mapping pointer. This following the pattern of InferOutputs().
     // ...EXCEPT we do not implant a Variable mapping, since the composite is shared. The composite does not know that it is part of a BlockFunction.
@@ -4403,7 +4408,39 @@ Variable BlockFunction::FinalizeInvoke(bool shapeIsKnown)
     if (shapeIsKnown && compositeOutput.Shape().Rank() > batchAxis && compositeOutput.Shape().Dimensions().back() == NDShape::FreeDimension)
     {
         // if input shape is known and composite output has a FreeDimension in the batch axis, then replace it with the actual value
-        let batchDim = DetermineInvokeBatchDim(m_inputs, /*check=*/true);
+        let batchDim = DetermineInvokeBatchDim(m_inputs);
+        // type-check the inputs
+        let arity = m_inputs.size();
+        for (size_t k = 0; k < arity; k++)
+        {
+            let& input = argumentList[k];
+            if (!input.IsPlaceholder())
+                continue;
+            let& operand = m_inputs[k];
+#if 1   // this code is duplicated from RInlineComposite()--share this
+            // input = placeholder; operand = what it should pretend to be
+            // Typecheck.
+            // PERF BUGBUG: This typecheck is done repeatedly for the same argument. Can we save that effort?
+            let& placeholderDims = input.Shape().Dimensions();
+            let& operandDims = operand.Shape().Dimensions();
+            let placeholderRank = placeholderDims.size();
+            let operandRank = operandDims.size();
+            let placeholderHasFreeDimension = (placeholderRank > 0 && placeholderDims.back() == NDShape::FreeDimension);
+            let itemRank = placeholderRank - placeholderHasFreeDimension;
+            if (placeholderHasFreeDimension)
+                Break;
+            // itemRank = shape components that must match
+            if (operandRank < itemRank || operandRank > placeholderRank)
+                InvalidArgument("Invoke: Argument shape %S too short to match placeholder's shape %S.", operand.Shape().AsString().c_str(), input.Shape().AsString().c_str());
+            for (size_t k = 0; k < itemRank; k++)
+                if (operandDims[k] != placeholderDims[k])
+                    InvalidArgument("Invoke: Argument shape %S incompatible with placeholder's shape %S.", operand.Shape().AsString().c_str(), input.Shape().AsString().c_str());
+            // deal with invocationArgsBatchDim
+            let thisBatchDim = (placeholderHasFreeDimension && operandRank == placeholderRank) ? operandDims.back() : SIZE_MAX;
+            if (batchDim != thisBatchDim)
+                InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)batchDim, input.Shape().AsString().c_str());
+#endif
+        }
         outputShape = ReplaceBatchDim(compositeOutput.Shape().Dimensions(), batchDim);
     }
     Variable blockOutput =

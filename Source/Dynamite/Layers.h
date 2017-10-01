@@ -519,7 +519,7 @@ class StaticModel
         wstring m_nameRememberedForDebugging;
 
         Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& f, std::wstring name) :
-            m_arity(arity), m_isBasicBlock(isBasicBlock    && false) // for now, disable basic blocks
+            m_arity(arity), m_isBasicBlock(isBasicBlock) // for now, disable basic blocks
         {
             if (m_forceImmediate)
             {
@@ -819,24 +819,24 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     StaticModel gru3Composite(/*isBasicBlock=*/true, [=](const Variable& dh, const Variable& projdh3, const Variable& projx3)
     {
         return gru3(dh, projdh3, projx3);
-    }, L"gru");
+    }, L"gru3Composite");
     StaticModel doGRU(/*isBasicBlock=*/false, [=](const Variable& dh, const Variable& x) -> Variable
     {
         CountAPICalls(2);
         let projx3 = b + projectInput(x); // TODO: fold 'b' into the Linear layer
         let projdh3 = normR(Times(R, dh));
         return gru3Composite(dh, projdh3, projx3);
-    }, Named("doGRU"));
+    }, Named("gru"));
     return BinaryModel({ R, b },
     {
         { L"projectInput",  projectInput },
         //{ L"projectState",  projectState },
         { L"normR",  normR  },
     },
+    // TODO: can we pass doGRU here directly, instead of creating a new lambda? Needs some form of type cast of StaticModel to this lambda.
     [=](const Variable& dh, const Variable& x) //mutable
     {
 #if 1
-        // TODO: Somehow this increases #nodes from ~300k to ~450k --what's going on?
         return doGRU(dh, x);
 #else
         let projx3 = b + projectInput(x); // TODO: fold 'b' into the Linear layer
@@ -920,7 +920,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         let scale1 = invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
         return scale1;
         //y = scale1 * y;
-    });
+    }, Named("dense.normWeight"));
     StaticModel doDense(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
     {
         auto y = x;
