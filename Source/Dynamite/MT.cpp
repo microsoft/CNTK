@@ -430,7 +430,7 @@ void Train(wstring outputDirectory)
     size_t numParameters = 0;
     for (let& p : parameters)
         numParameters += p.Shape().TotalSize();
-    fprintf(stderr, "Total number of learnable parameters: %u\n", (unsigned int)numParameters), fflush(stderr);
+    fprintf(stderr, "Total number of learnable parameters is %u in %d parameter tensors.\n", (unsigned int)numParameters, (int)parameters.size()), fflush(stderr);
     let epochSize = 10000000; // 10M is a bit more than half an epoch of ROM-ENG (~16M words)
     let minibatchSize = 4096      * communicator->Workers().size() /6; // for debugging: switch to smaller MB when running without MPI
     AdditionalLearningOptions learnerOptions;
