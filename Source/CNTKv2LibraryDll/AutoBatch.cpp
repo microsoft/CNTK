@@ -984,7 +984,7 @@ static shared_ptr<DynamicProfiler> m_currentProfiler; // current innermost activ
 
 // a few helper functions--sort these
 static size_t DetermineInvokeBatchDim(const vector<Variable>& inputs, bool check);
-static inline vector<size_t> InjectBatchDim(vector<size_t> shape, size_t batchDimValue);
+static inline vector<size_t> ReplaceBatchDim(vector<size_t> shape, size_t batchDimValue);
 
 // ===========================================================================
 // AutoBatch -- autobatching happening inside here
@@ -1173,7 +1173,7 @@ class Variable::AutoBatch
             }
         }
         // now create a new function and set up the outputs;
-        let fInlinedPtr = cloneFn(f, move(inlinedInputs));
+        let fInlinedPtr = cloneFn(f, move(inlinedInputs), batchDim);
         // and finally remember where this function got redirected to.
         f.m_autoBatchState.m_link = fInlinedPtr.get();
         return fInlinedPtr;
@@ -2035,8 +2035,10 @@ class Variable::AutoBatch
 
         let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
         size_t batchDim = 0;
-        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, batchDim, [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs) -> PrimitiveFunctionPtr
+        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, batchDim,
+            [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs, size_t batchDim) -> PrimitiveFunctionPtr
         {
+            batchDim; // TODO: what to do with this?
             // This lambda must apply the passed in the composite's PrimitiveFunction 'f' to 'newInputs'.
             // The newInputs are batched; that is, their shapes may mismatch those of f's inputs in that they may have an additional batch axis.
 
@@ -2191,7 +2193,7 @@ class Variable::AutoBatch
     // clone a PrimitiveFunction
     // Subroutine of inlining non-basic-block BlockFunctions during forward graph preparation.
     // Special consideration is given to nested BlockFunctions.
-    static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& f, vector<Variable>&& newInputs)
+    static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& f, vector<Variable>&& newInputs, size_t batchDim)
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
         // clone it
@@ -2216,21 +2218,17 @@ class Variable::AutoBatch
         if (outputs.size() != 1)
             InvalidArgument("Dynamic operations cannot have multiple outputs.");
         let& output = outputs.front();
-        let dataType = fCloned->m_inputs.front().GetDataType();
-
-
-        // replace FreeDimension
-        vector<size_t> outputShape;
-        let batchAxis = 1; // TODO: this must be parameterized somehow
-        if (output.Shape().Rank() > batchAxis && output.Shape().Dimensions().back() == NDShape::FreeDimension)
+        // if output has a FreeDimension (which represents the batch axis) then replace (or drop) it
+        vector<size_t> actualOutputShape;
+        let& outputDims = output.Shape().Dimensions();
+        if (!outputDims.empty() && outputDims.back() == NDShape::FreeDimension)
         {
             // if input shape is known and composite output has a FreeDimension in the batch axis, then replace it with the actual value
-            let batchDim = DetermineInvokeBatchDim(fCloned->m_inputs, /*check=*/true);
-            outputShape = InjectBatchDim(output.Shape().Dimensions(), batchDim);
+            fail_if(batchDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
+            actualOutputShape = ReplaceBatchDim(outputDims, batchDim);
         }
-
-
-        fCloned->InitOutput(OutputVariable(outputShape.empty() ? output.Shape() : NDShape(outputShape), dataType, vector<Axis>(), output.NeedsGradient(), output.IsSparse(), wstring()));
+        let dataType = fCloned->m_inputs.front().GetDataType();
+        fCloned->InitOutput(OutputVariable(actualOutputShape.empty() ? output.Shape() : NDShape(actualOutputShape), dataType, vector<Axis>(), output.NeedsGradient(), output.IsSparse(), wstring()));
         // add additional initializations for auto-batch only
         FinishConstructingPrimitiveFunction(*fCloned, f.m_profiler, /*logPrefix=*/nullptr);
         return fCloned;
@@ -4296,22 +4294,14 @@ static size_t DetermineInvokeBatchDim(const vector<Variable>& inputs, bool check
 }
 
 // helper to replace the batch dimension of inputShape by the given value
-// This adds axes if needed. If the given value is SIZE_MAX, it strips the axis.
-static inline vector<size_t> InjectBatchDim(vector<size_t> shape, size_t batchDimValue)
+// The batch dim must be present. If the given value is SIZE_MAX, it strips the axis.
+static inline vector<size_t> ReplaceBatchDim(vector<size_t> shape, size_t batchDimValue)
 {
-    let batchAxis = 1; // TODO: this must be parameterized somehow
-    fail_if(shape.size() > batchAxis + 1, "Invoke: batch axes > 1 not supported presently.");
+    fail_if(batchDimValue != NDShape::FreeDimension && shape.back() != NDShape::FreeDimension, "ReplaceBatchDim called on shape thathas no FreeDimension??");
     if (batchDimValue == SIZE_MAX)
-    {
-        shape.resize(batchAxis); // no batch dimension: drop the axis
-        // BUGBUG: How does this work with scalars? We can't know that here.
-    }
+        shape.resize(shape.size() - 1); // no batch dimension: drop the axis
     else
-    {
-        if (shape.size() < batchAxis + 1)
-            shape.resize(batchAxis + 1, 1);
         shape.back() = batchDimValue;
-    }
     return shape;
 }
 
@@ -4383,7 +4373,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
             fail_if(input.Shape().IsUnknown(), "unknown input shapes at this point??");
             // we replace with a placeholder of the same type. This gives the composite the shape.
             // to allow for varying sequence axis, we replace the last axis with FreeDimension, and infer with that
-            auto updatedCompositePlaceholder = PlaceholderVariable(batchDim == SIZE_MAX ? input.Shape() : InjectBatchDim(input.Shape().Dimensions(), NDShape::FreeDimension),
+            auto updatedCompositePlaceholder = PlaceholderVariable(batchDim == SIZE_MAX ? input.Shape() : ReplaceBatchDim(input.Shape().Dimensions(), NDShape::FreeDimension),
                 input.GetDataType(), input.Name(), input.DynamicAxes(), input.NeedsGradient(), input.IsSparse());
             //auto updatedCompositePlaceholder = PlaceholderLike(input);
             updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = compositeLeaf.m_dataFields->m_compositeArgumentIndex;
@@ -4414,11 +4404,12 @@ Variable BlockFunction::FinalizeInvoke(bool shapeIsKnown)
     let& compositeOutput = m_composite->m_outputs.front();
     vector<size_t> outputShape;
     let batchAxis = 1; // TODO: this must be parameterized somehow
+    // TODO: This should use the same heuristics as during inlining. But we don't know the placeholders, do we?
     if (shapeIsKnown && compositeOutput.Shape().Rank() > batchAxis && compositeOutput.Shape().Dimensions().back() == NDShape::FreeDimension)
     {
         // if input shape is known and composite output has a FreeDimension in the batch axis, then replace it with the actual value
         let batchDim = DetermineInvokeBatchDim(m_inputs, /*check=*/true);
-        outputShape = InjectBatchDim(compositeOutput.Shape().Dimensions(), batchDim);
+        outputShape = ReplaceBatchDim(compositeOutput.Shape().Dimensions(), batchDim);
     }
     Variable blockOutput =
         /*if*/ (!shapeIsKnown) ? // if we are being called while building a static graph
