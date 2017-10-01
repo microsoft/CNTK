@@ -820,13 +820,13 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     {
         return gru3(dh, projdh3, projx3);
     }, L"gru");
-    StaticModel doGRU(/*isBasicBlock=*/false, [=](const Variable& dh, const Variable& x)->Variable
+    StaticModel doGRU(/*isBasicBlock=*/false, [=](const Variable& dh, const Variable& x) -> Variable
     {
         CountAPICalls(2);
         let projx3 = b + projectInput(x); // TODO: fold 'b' into the Linear layer
         let projdh3 = normR(Times(R, dh));
         return gru3Composite(dh, projdh3, projx3);
-    }, Named("gru"));
+    }, Named("doGRU"));
     return BinaryModel({ R, b },
     {
         { L"projectInput",  projectInput },

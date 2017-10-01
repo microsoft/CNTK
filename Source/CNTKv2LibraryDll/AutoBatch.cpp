@@ -1099,7 +1099,7 @@ class Variable::AutoBatch
     // for both the initial unbatched inlining (no basic block), as well for inlining basic blocks during execution.
     VisitorTag m_compositeVisitorTag; // helper for managing tree traversal through composite (not nested)
     template<class F>
-    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, const vector<Variable>& invocationArgs, const F& cloneFn) const
+    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, const vector<Variable>& invocationArgs, size_t& batchDim, const F& cloneFn) const
     {
         // if we already cloned this one then just return the clone
         if (m_compositeVisitorTag.Visited(f.m_autoBatchState.m_visitedTag))
@@ -1135,13 +1135,38 @@ class Variable::AutoBatch
             {
                 let argIndex = inputFields.m_compositeArgumentIndex;
                 fail_if(argIndex >= invocationArgs.size(), "no invocation arg lined was up with composite->Arguments[]??");
-                inlinedInputs[i] = invocationArgs[argIndex];
+                let& operand = invocationArgs[argIndex];
+                // input = placeholder; operand = what it should pretend to be
+                // Typecheck.
+                // PERF BUGBUG: This typecheck is done repeatedly for the same argument. Can we save that effort?
+                let& placeholderDims = input.Shape().Dimensions();
+                let& operandDims = operand.Shape().Dimensions();
+                let placeholderRank = placeholderDims.size();
+                let operandRank = operandDims.size();
+                let placeholderHasFreeDimension = (placeholderRank > 0 && placeholderDims.back() == NDShape::FreeDimension);
+                let itemRank = placeholderRank - placeholderHasFreeDimension;
+                if (placeholderHasFreeDimension)
+                    Break;
+                // itemRank = shape components that must match
+                if (operandRank < itemRank || operandRank > placeholderRank)
+                    InvalidArgument("Invoke: Argument shape %S too short to match placeholder's shape %S.", operand.Shape().AsString().c_str(), input.Shape().AsString().c_str());
+                for (size_t k = 0; k < itemRank; k++)
+                    if (operandDims[k] != placeholderDims[k])
+                        InvalidArgument("Invoke: Argument shape %S incompatible with placeholder's shape %S.", operand.Shape().AsString().c_str(), input.Shape().AsString().c_str());
+                // deal with batchDim
+                let thisBatchDim = placeholderHasFreeDimension ? operandDims.back() : SIZE_MAX;
+                if (batchDim == 0) // first encounter
+                    batchDim = thisBatchDim;
+                else if (batchDim != thisBatchDim)
+                    InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)batchDim, input.Shape().AsString().c_str());
+                // OK!
+                inlinedInputs[i] = operand;
             }
             // --- case 2: an Output Variable: clone the Function
             else
             {
                 fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, cloneFn);
+                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, batchDim, cloneFn);
                 inlinedInputs[i] = fInlinedPtr->m_outputs.front();
                 inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
                 // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
@@ -1708,8 +1733,11 @@ class Variable::AutoBatch
             // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
             // Besides that, the original Block function will remain unmodified.
             m_compositeVisitorTag.Begin();
+            size_t batchDim = 0;
+            //if (static_cast<BlockFunction&>(f).Composite()->Name() == L"gru")
+            //    Break;
             auto inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*f.BlockRoot()),
-                                                   f.m_inputs, /*cloneFn=*/ClonePrimitiveFunction);
+                                                   f.m_inputs, batchDim, /*cloneFn=*/ClonePrimitiveFunction);
             // This returns a shared_ptr to the deep copy of the root.
             // ^^ This currently does not inline nested blocks. Instead of cloning the BlockFunction, we should just unroll any nested non-basic-block right there.
             // prepare graph that we just unrolled
@@ -2006,7 +2034,8 @@ class Variable::AutoBatch
         //    Break;
 
         let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
-        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs) -> PrimitiveFunctionPtr
+        size_t batchDim = 0;
+        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, batchDim, [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs) -> PrimitiveFunctionPtr
         {
             // This lambda must apply the passed in the composite's PrimitiveFunction 'f' to 'newInputs'.
             // The newInputs are batched; that is, their shapes may mismatch those of f's inputs in that they may have an additional batch axis.
@@ -4218,15 +4247,18 @@ void PrimitiveFunction::InitOutput(Variable&& output)
 }
 
 // heuristic to determine the batch axis when invoking
-// TODO: This needs to be done systematically.
-// The heuristic for now is this:
+//  - this heuristic is only applied when constructing the Composite, it is reflected in the signature
+//  - the signature of a composite is its input and output shapes
+//  - they may contain FreeDimension. It reflects one shared variable axis (meant to be the batch axis)
+//  - during each dynamic Invoke() (dynamic := shapes known), the input shapes are verified
+//     - dims must match
+//     - all FreeDimension values must be replaced by the same value
+//     - if FreeDimension is missing in the input shapes, it must be missing for all of them, and gets stripped from the output shape
+//     - FreeDimension must be in the last position
+// The heuristic for now is this (whcih, again, is ONLY applied while constructing the signature of the composite):
 //  - inputs := non-Parameters (parameters never have a batch dimension)
 //  - all inputs to an Invoke are of batched nature
 //  - their batch dimension is hard-coded as 1
-// Hence, all inputs must either have or not have the batch dim.
-// If they do, we must set all inputs' dimension [1] to FreeDimension; and pad if necessary.
-// Then, if the composite's output has a FreeDimension at the end, we must replace it with the batch dimension if we had at least
-// one input with batch dimension, or otherwise drop it.
 
 // determine "the" batch dimension of an invocation
 // The result is either the dim (presently hard-coded as 1) (if all inputs have a batch dim) or SIZE_MAX (if no input has a batch dim), or an error.
