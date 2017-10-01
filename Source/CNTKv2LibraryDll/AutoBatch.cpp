@@ -1098,7 +1098,7 @@ class Variable::AutoBatch
     // for both the initial unbatched inlining (no basic block), as well for inlining basic blocks during execution.
     VisitorTag m_compositeVisitorTag; // helper for managing tree traversal through composite (not nested)
     template<class F>
-    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, const vector<Variable>& invocationArgs, size_t& invocationArgsBatchDim, const F& cloneFn) const
+    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, const vector<Variable>& invocationArgs, /*out*/ size_t& invocationArgsBatchDim, const F& cloneFn) const
     {
         // if we already cloned this one then just return the clone
         if (m_compositeVisitorTag.Visited(f.m_autoBatchState.m_visitedTag))
@@ -1112,12 +1112,14 @@ class Variable::AutoBatch
 
         // clone f
         // First clone the inputs;
+        invocationArgsBatchDim = SIZE_MAX;
         let& inputs = f.m_inputs;
         vector<Variable> inlinedInputs(inputs.size()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
         for (size_t i = 0; i < inputs.size(); i++)
         {
             let& input = inputs[i];
             let& inputFields = GetInputFields(input);
+            size_t thisBatchDim = SIZE_MAX;
 
             // --- case 0: a Variable that already has a value; that is, a Constant, Parameter, or any result of another Dynamite invocation
             if (inputFields.m_varKind == VariableKind::Constant || inputFields.m_varKind == VariableKind::Parameter || inputFields.m_value)
@@ -1127,6 +1129,8 @@ class Variable::AutoBatch
                     input.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
                     fail_if(!inputFields.m_value, "Parameter/Constant has no Value()??");
                 }
+                // Note: By not touching invocationArgsBatchDim, we are not handling the case that constants may have a batch axis.
+                //       However, this only affects Constants that live inside the composite, which cannot actually have one.
                 inlinedInputs[i] = input;
             }
             // --- case 1: a Placeholder: substitute with invocation arg
@@ -1152,12 +1156,8 @@ class Variable::AutoBatch
                 for (size_t k = 0; k < itemRank; k++)
                     if (operandDims[k] != placeholderDims[k])
                         InvalidArgument("Invoke: Argument shape %S incompatible with placeholder's shape %S.", operand.Shape().AsString().c_str(), input.Shape().AsString().c_str());
-                // deal with invocationArgsBatchDim
-                let thisBatchDim = (placeholderHasFreeDimension && operandRank == placeholderRank) ? operandDims.back() : SIZE_MAX;
-                if (invocationArgsBatchDim == 0) // first encounter
-                    invocationArgsBatchDim = thisBatchDim;
-                else if (invocationArgsBatchDim != thisBatchDim)
-                    InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)invocationArgsBatchDim, input.Shape().AsString().c_str());
+                // determine the batch dimension
+                thisBatchDim = (placeholderHasFreeDimension && operandRank == placeholderRank) ? operandDims.back() : SIZE_MAX;
                 // OK!
                 inlinedInputs[i] = operand;
             }
@@ -1165,13 +1165,22 @@ class Variable::AutoBatch
             else
             {
                 fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, invocationArgsBatchDim, cloneFn);
+                size_t thisBatchDim = 0; // this will come back as the batch dimension of the result
+                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, thisBatchDim, cloneFn);
                 inlinedInputs[i] = fInlinedPtr->m_outputs.front();
                 inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
                 // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
             }
+            // update invocationArgsBatchDim
+            // This is the batch dimension that the result should get.
+            // For arguments that have a batch dimension, it must match. It is possible that argument have none.
+            // For example, in x - ReduceMean(x), the second arg has no batch dim.
+            if (invocationArgsBatchDim == SIZE_MAX) // first encounter
+                invocationArgsBatchDim = thisBatchDim;
+            else if (thisBatchDim != SIZE_MAX && invocationArgsBatchDim != thisBatchDim)
+                InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)invocationArgsBatchDim, input.Shape().AsString().c_str());
         }
-        // now create a new function and set up the outputs;
+        // now create a new function and set up the outputs
         let fInlinedPtr = cloneFn(f, move(inlinedInputs), invocationArgsBatchDim);
         // and finally remember where this function got redirected to.
         f.m_autoBatchState.m_link = fInlinedPtr.get();
@@ -1548,6 +1557,8 @@ class Variable::AutoBatch
                         return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
                     break;
                 }
+            case PrimitiveOpType::Block: // Blocks cannot stack for now--TODO: They really really should!!!
+                return{ StackingMode::BATCHING, maxRank, 1 };
             case PrimitiveOpType::Slice: // this is an affected op, but it's a view op, so we should not get here
                 // TODO: Think through the Slice case.
                 fail_if(true, "DetermineBatchAxis: should not get here for Slice");
@@ -2948,6 +2959,8 @@ class Variable::AutoBatch
                 // execute it
                 if (f.m_op == PrimitiveOpType::Block)
                 {
+                    //if (f.m_uniqueIdForDebugging == 67463)
+                    //    Break;
                     let fInlinedPtr = InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(f), f.m_inputs, /*batchAxis=*/SIZE_MAX, /*batchSize=*/1/*dummy*/);
                     // implant the result
                     FinalizeBatchedOpAndUpdateSchedule(f, fInlinedPtr);
@@ -3135,6 +3148,8 @@ class Variable::AutoBatch
         // If f0 is a block, then actually an entire subgraph clone will be created here.
         // PERF BUGBUG: If all args are identical, we can degrade to a single op. Then we should not need to create a new PrimitiveFunction.
         //              Note: This is not covered by CSE, since CSE is only used for complex cases.
+        //if (f0.m_uniqueIdForDebugging == 23286)
+        //    Break;
         auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
 
         // some stats and checks
