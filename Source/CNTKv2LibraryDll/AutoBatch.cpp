@@ -4198,7 +4198,7 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     m_outputs.front() = move(output);
 }
 
-/*Internal::*/Invocable::Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
+/*Internal::*/Invocable::Invocable(size_t arity, size_t batchAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
     m_arity(arity), m_isBasicBlock(isBasicBlock   &&false) // for now, disable basic blocks
 {
     // for debugging, we can disable static invocation altogether
@@ -4212,20 +4212,13 @@ void PrimitiveFunction::InitOutput(Variable&& output)
 
     // -- create the composite
     // allocate m_argumentList/m_operands and populate the Placeholder section (later we will add Parameters)
-    //m_argumentList.resize(m_arity);
     for (size_t i = 0; i < m_arity; i++)
     {
-        //let batchDim = 1;
-        //// Placeholders have shapes of the form { InferredDimension+, FreeDimension }, where FreeDimension indicates where the batch dimension goes
-        //vector<size_t> dims(batchDim, NDShape::InferredDimension);
-        //dims.push_back(NDShape::FreeDimension); // indicate to Invoke() where the batch dimension is supposed to be
-        //arg = PlaceholderVariable(dims);
-        // BUGBUG: This causes some mix-up. Fix later.
         let arg = PlaceholderVariable();
         // implant the redirect into the placeholder
         arg.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
-        // TODO: implant index here, and also use push_back()
         m_argumentList.push_back(arg);
+        m_argumentBatchAxes.push_back(batchAxis);
     }
     // invoke the lambda with Placeholders as arguments
     // This builds the graph as a CompositeFunction.
@@ -4254,27 +4247,6 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     m_stillNeedsToInferShapes = true;
 }
 
-#if 0
-// subroutine of Invocable() with access to Function members
-void Function::InitCompositeForInvoke(const vector<Variable>& placeholders)
-{
-    let callee = static_cast<CompositeFunction*>(this);
-    // implant the redirect into the placeholders
-    for (size_t i = 0; i < placeholders.size(); i++)
-    {
-        let& p = placeholders[i]; // Placeholder or Parameter in callee
-        if (!p.IsPlaceholder())
-            InvalidArgument("InitForInvoke(): All argument items must be Placeholders.");
-        p.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
-    }
-    // reset the cached batch axis (=max over all ranks involved, for batching the composite as elementwise
-    // This is only used if isBasicBlock, but since.
-    callee->m_basicBlockBatchAxis = SIZE_MAX;  // SIZE_MAX means value has not yet been determined. Once it is, it is cached here.
-
-    callee->m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
-}
-#endif
-
 Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
 {
     if (m_forceImmediate)
@@ -4294,7 +4266,7 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
 
 // argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
 // operands     = what the arguments should prerent to be. Must currently include a copy of Parameters at the end.
-/*static*/ Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argumentList, const vector<Variable>& operands, bool isBasicBlock, bool& needToDetermineShapes, const std::wstring& name /*= std::wstring()*/)
+Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argumentList, const vector<Variable>& operands, bool isBasicBlock, bool& needToDetermineShapes, const std::wstring& name /*= std::wstring()*/) const
 {
     let composite = static_pointer_cast<CompositeFunction>(callee); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
 #if 0   // This baloney, at least in the case of isBasicBlock.

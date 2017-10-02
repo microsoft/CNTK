@@ -502,10 +502,11 @@ static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescrip
 class StaticModel
 {
     shared_ptr<CNTK::Invocable> m_invocable; // this is the only member, so that we can copy this with shared state
+    static const size_t batchAxis = 1; // TODO: make this a parameter
 public:
     template<typename Lambda>
     StaticModel(bool isBasicBlock, const Lambda& f, std::wstring name = std::wstring()) :
-        m_invocable(make_shared<CNTK::Invocable>(isBasicBlock, f, name))
+        m_invocable(make_shared<CNTK::Invocable>(isBasicBlock, batchAxis, f, name))
     { }
 
     template <typename ...ArgTypes>

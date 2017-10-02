@@ -4503,6 +4503,7 @@ namespace CNTK
         const size_t m_arity; // actual number of function arguments. Note: m_argumentList/m_operands contain additional leaves, so its size() is not sufficient.
         const bool m_isBasicBlock;
         mutable std::vector<Variable> m_argumentList; // contains the Variables in the composite. May be updated upon determining the shapes with PlaceholderLikes.
+        std::vector<size_t> m_argumentBatchAxes;      // batch axis for each argument
         mutable std::vector<Variable> m_operands;     // these are overwritten upon each call
         FunctionPtr m_composite; // Note: multiple calls to Invoke() assume that the composite does not change; so encapsulate it here.
         mutable bool m_stillNeedsToInferShapes;
@@ -4512,7 +4513,7 @@ namespace CNTK
         std::function<Variable(const std::vector<Variable>&)> m_lambdaRememberedForDebugging;
         std::wstring m_nameRememberedForDebugging;
 
-        CNTK_API Invocable(size_t arity, bool isBasicBlock, const std::function<Variable(const std::vector<Variable>&)>& f, std::wstring name);
+        CNTK_API Invocable(size_t arity, size_t batchAxis, bool isBasicBlock, const std::function<Variable(const std::vector<Variable>&)>& f, std::wstring name);
         void CheckArity(size_t arity) const
         {
             if (m_arity != arity)
@@ -4524,21 +4525,13 @@ namespace CNTK
         }
         Variable noArg; // dummy for clearing out the args map
         CNTK_API Variable DoInvoke() const; // note: caller must call SetOperand() first to set the operands
-        ///
-        /// Invokes a static CNTK graph (aka composite). Returns the output of a new BlockFunction.
-        /// The set of { operands.first } must match composite.Arguments().
-        /// A non-basic block gets inlined on the high level, and is fully batchable.
-        /// A basic block gets batched as one, there is no cross-basic-block batching.
-        /// This is similar to AsBlock(), but unlike AsBlock(), it does not take ownership of the composite.
-        /// This presently only works for Dynamite. For static graphs, use AsBlock().
-        ///
-        static Variable Invoke(const FunctionPtr& composite, std::vector<Variable>& argumentList, const std::vector<Variable>& operands, bool isBasicBlock, bool& determineShapes, const std::wstring& name = std::wstring());
+        Variable Invoke(const FunctionPtr& composite, std::vector<Variable>& argumentList, const std::vector<Variable>& operands, bool isBasicBlock, bool& determineShapes, const std::wstring& name = std::wstring()) const;
         // TODO: ^^ merge Invoke() into DoInvoke()
     public:
-        Invocable(bool isBasicBlock, const std::function<Variable(                                                 )>& f, std::wstring name) : Invocable(0, isBasicBlock, [=](const std::vector<Variable>& args) { args; return f(                   ); }, name) { }
-        Invocable(bool isBasicBlock, const std::function<Variable(const Variable&                                  )>& f, std::wstring name) : Invocable(1, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0]                  ); }, name) { }
-        Invocable(bool isBasicBlock, const std::function<Variable(const Variable&, const Variable&                 )>& f, std::wstring name) : Invocable(2, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0], args[1]         ); }, name) { }
-        Invocable(bool isBasicBlock, const std::function<Variable(const Variable&, const Variable&, const Variable&)>& f, std::wstring name) : Invocable(3, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0], args[1], args[2]); }, name) { }
+        Invocable(bool isBasicBlock, size_t batchAxis, const std::function<Variable(                                                 )>& f, std::wstring name) : Invocable(0, batchAxis, isBasicBlock, [=](const std::vector<Variable>& args) { args; return f(                   ); }, name) { }
+        Invocable(bool isBasicBlock, size_t batchAxis, const std::function<Variable(const Variable&                                  )>& f, std::wstring name) : Invocable(1, batchAxis, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0]                  ); }, name) { }
+        Invocable(bool isBasicBlock, size_t batchAxis, const std::function<Variable(const Variable&, const Variable&                 )>& f, std::wstring name) : Invocable(2, batchAxis, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0], args[1]         ); }, name) { }
+        Invocable(bool isBasicBlock, size_t batchAxis, const std::function<Variable(const Variable&, const Variable&, const Variable&)>& f, std::wstring name) : Invocable(3, batchAxis, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0], args[1], args[2]); }, name) { }
         Variable operator()() const
         {
             CheckArity(0);
