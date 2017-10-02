@@ -46,9 +46,9 @@
     {
         if (device.Type() == CNTK::DeviceKind::GPU)
         {
-            auto cpuView = new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
-            auto gpuView = new CNTK::NDArrayView(cpuView->GetDataType(), cpuView->GetStorageFormat(), viewShape, device);
-            gpuView->CopyFrom(*cpuView);
+            CNTK::NDArrayView cpuView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
+            auto gpuView = new CNTK::NDArrayView(cpuView.GetDataType(), cpuView.GetStorageFormat(), viewShape, device);
+            gpuView->CopyFrom(cpuView);
             return gpuView;
         }
         else
@@ -59,9 +59,9 @@
     {
         if (device.Type() == CNTK::DeviceKind::GPU)
         {
-            auto cpuView = new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
-            auto gpuView = new CNTK::NDArrayView(cpuView->GetDataType(), cpuView->GetStorageFormat(), viewShape, device);
-            gpuView->CopyFrom(*cpuView);
+            CNTK::NDArrayView cpuView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
+            auto gpuView = new CNTK::NDArrayView(cpuView.GetDataType(), cpuView.GetStorageFormat(), viewShape, device);
+            gpuView->CopyFrom(cpuView);
             return gpuView;
         }
         else
