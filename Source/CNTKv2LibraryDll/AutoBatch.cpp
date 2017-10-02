@@ -1101,52 +1101,53 @@ class Variable::AutoBatch
     //  - Upon return, it will contain the one batch dim value that is shared across all substituted placeholders.
     VisitorTag m_compositeVisitorTag; // helper for managing tree traversal through composite (not nested)
     template<class F>
-    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, const vector<Variable>& invocationArgs, /*in/out*/size_t& invocationArgsBatchDim, /*out*/ size_t& compositeBatchDim, const F& cloneFn) const
+    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& clonee, const vector<Variable>& invocationArgs, /*in/out*/size_t& invocationArgsBatchDim, /*out*/ size_t& inlinedBatchDim, const F& cloneFn) const
     {
         // if we already cloned this one then just return the clone
-        if (m_compositeVisitorTag.Visited(f.m_autoBatchState.m_visitedTag))
+        if (m_compositeVisitorTag.Visited(clonee.m_autoBatchState.m_visitedTag))
         {
-            let fInlined = f.m_autoBatchState.m_link; // we remembered the clone here
+            let fInlined = clonee.m_autoBatchState.m_link; // we remembered the clone here
             if (!fInlined) // if we get here before this was filled in then we have discovered a cycle
                 InvalidArgument("Invoke() cannot be used on composites with cycles.");
-            compositeBatchDim = f.m_autoBatchState.m_batchDim;
+            inlinedBatchDim = clonee.m_autoBatchState.m_batchDim;
             return static_pointer_cast<PrimitiveFunction>(const_cast<PrimitiveFunction*>(fInlined)->shared_from_this()); // (shared_from_this() gives us a FunctionPtr, not PrimitiveFunctionPtr)
         }
-        f.m_autoBatchState.m_link = nullptr; // Bring into valid state so we can detect cycles. Gets overwritten once we are done cloning.
+        clonee.m_autoBatchState.m_link = nullptr; // Bring into valid state so we can detect cycles. Gets overwritten once we are done cloning.
 
-        // clone f
-        // First clone the inputs;
-        compositeBatchDim = SIZE_MAX;
-        let& inputs = f.m_inputs;
-        vector<Variable> inlinedInputs(inputs.size()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
-        for (size_t i = 0; i < inputs.size(); i++)
+        // clone clonee
+        // The clonee lives inside a composite, not in a Dynamic graph.
+        // First clone the clonee's inputs;
+        inlinedBatchDim = SIZE_MAX; // resulting batch dim
+        let& cloneeInputs = clonee.m_inputs;
+        vector<Variable> inlinedInputs(cloneeInputs.size()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
+        for (size_t i = 0; i < cloneeInputs.size(); i++)
         {
-            let& input = inputs[i];
-            let& inputFields = GetInputFields(input);
+            let& cloneeInput = cloneeInputs[i];
+            let& cloneeInputFields = GetInputFields(cloneeInput);
             size_t thisBatchDim = SIZE_MAX;
 
             // --- case 0: a Variable that already has a value; that is, a Constant, Parameter, or any result of another Dynamite invocation
-            if (inputFields.m_varKind == VariableKind::Constant || inputFields.m_varKind == VariableKind::Parameter || inputFields.m_value)
+            if (cloneeInputFields.m_varKind == VariableKind::Constant || cloneeInputFields.m_varKind == VariableKind::Parameter || cloneeInputFields.m_value)
             {
-                if (!inputFields.m_value)
+                if (!cloneeInputFields.m_value)
                 {
-                    input.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
-                    fail_if(!inputFields.m_value, "Parameter/Constant has no Value()??");
+                    cloneeInput.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
+                    fail_if(!cloneeInputFields.m_value, "Parameter/Constant has no Value()??");
                 }
-                // Note: By not touching compositeBatchDim, we are not handling the case that constants may have a batch axis.
-                //       However, this only affects Constants that live inside the composite, which cannot actually have one.
-                inlinedInputs[i] = input;
+                // Note: By not touching inlinedBatchDim, we are not handling the case that constants may have a batch axis.
+                //       However, this only affects Constants that live inside the clonee, which cannot actually have one.
+                inlinedInputs[i] = cloneeInput;
             }
             // --- case 1: a Placeholder: substitute with invocation arg
-            else if (inputFields.m_varKind == VariableKind::Placeholder)
+            else if (cloneeInputFields.m_varKind == VariableKind::Placeholder)
             {
-                let argIndex = inputFields.m_compositeArgumentIndex;
-                fail_if(argIndex >= invocationArgs.size(), "no invocation arg lined was up with composite->Arguments[]??");
+                let argIndex = cloneeInputFields.m_compositeArgumentIndex;
+                fail_if(argIndex >= invocationArgs.size(), "no invocation arg lined was up with clonee->Arguments[]??");
                 let& operand = invocationArgs[argIndex];
-                // input = placeholder; operand = what it should pretend to be
+                // cloneeInput = placeholder; operand = what it should pretend to be
                 // Typecheck.
                 // PERF BUGBUG: This typecheck is done repeatedly for the same argument. Can we save that effort?
-                let& placeholderDims = input.Shape().Dimensions();
+                let& placeholderDims = cloneeInput.Shape().Dimensions();
                 let& operandDims = operand.Shape().Dimensions();
                 let placeholderRank = placeholderDims.size();
                 let operandRank = operandDims.size();
@@ -1156,44 +1157,42 @@ class Variable::AutoBatch
                     Break;
                 // itemRank = shape components that must match
                 if (operandRank < itemRank || operandRank > placeholderRank)
-                    InvalidArgument("Invoke: Argument shape %S too short to match placeholder's shape %S.", operand.Shape().AsString().c_str(), input.Shape().AsString().c_str());
+                    InvalidArgument("Invoke: Argument shape %S too short to match placeholder's shape %S.", operand.Shape().AsString().c_str(), cloneeInput.Shape().AsString().c_str());
                 for (size_t k = 0; k < itemRank; k++)
                     if (operandDims[k] != placeholderDims[k])
-                        InvalidArgument("Invoke: Argument shape %S incompatible with placeholder's shape %S.", operand.Shape().AsString().c_str(), input.Shape().AsString().c_str());
+                        InvalidArgument("Invoke: Argument shape %S incompatible with placeholder's shape %S.", operand.Shape().AsString().c_str(), cloneeInput.Shape().AsString().c_str());
                 // determine the batch dimension
                 thisBatchDim = (placeholderHasFreeDimension && operandRank == placeholderRank) ? operandDims.back() : SIZE_MAX;
                 if (invocationArgsBatchDim == 0) // first encounter
                     invocationArgsBatchDim = thisBatchDim;
                 else if (invocationArgsBatchDim != thisBatchDim)
-                    InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)invocationArgsBatchDim, input.Shape().AsString().c_str());
+                    InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)invocationArgsBatchDim, cloneeInput.Shape().AsString().c_str());
                 // OK!
                 inlinedInputs[i] = operand;
             }
             // --- case 2: an Output Variable: clone the Function
             else
             {
-                fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, /*in/out*/ invocationArgsBatchDim, /*out*/ thisBatchDim, cloneFn);
+                fail_if(cloneeInputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
+                let fInlinedPtr = RInlineComposite(*cloneeInputFields.Owner(), invocationArgs, /*in/out*/ invocationArgsBatchDim, /*out*/ thisBatchDim, cloneFn);
                 inlinedInputs[i] = fInlinedPtr->m_outputs.front();
                 inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
                 // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
             }
-            //if (inlinedInputs[i].Shape().HasFreeDimension())
-            //    Break;
-            // update compositeBatchDim
+            // update inlinedBatchDim
             // This is the batch dimension that the result should get.
             // For arguments that have a batch dimension, it must match. It is possible that argument have none.
             // For example, in x - ReduceMean(x), the second arg has no batch dim.
-            if (compositeBatchDim == SIZE_MAX) // first encounter
-                compositeBatchDim = thisBatchDim;
-            else if (thisBatchDim != SIZE_MAX && compositeBatchDim != thisBatchDim)
-                InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)compositeBatchDim, input.Shape().AsString().c_str());
+            if (inlinedBatchDim == SIZE_MAX) // first encounter
+                inlinedBatchDim = thisBatchDim;
+            else if (thisBatchDim != SIZE_MAX && inlinedBatchDim != thisBatchDim)
+                InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)inlinedBatchDim, cloneeInput.Shape().AsString().c_str());
         }
         // now create a new function and set up the outputs
-        let fInlinedPtr = cloneFn(f, move(inlinedInputs), compositeBatchDim);
+        let fInlinedPtr = cloneFn(clonee, move(inlinedInputs), inlinedBatchDim);
         // and finally remember where this function got redirected to.
-        f.m_autoBatchState.m_link = fInlinedPtr.get();
-        f.m_autoBatchState.m_batchDim = compositeBatchDim;
+        clonee.m_autoBatchState.m_link = fInlinedPtr.get();
+        clonee.m_autoBatchState.m_batchDim = inlinedBatchDim;
         return fInlinedPtr;
     }
 
@@ -4427,30 +4426,30 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
     for (size_t i = 0; i < m_inputs.size(); i++)
     {
         let& compositeLeaf = argumentList[i]; // Placeholder or Parameter in composite
-        let& input = m_inputs[i];             // what they should pretend to be
+        let& operand = m_inputs[i];             // what they should pretend to be
         if (compositeLeaf.IsParameter())
         {
             // for Parameters, supply an empty Variable
-            if (input != compositeLeaf)
+            if (operand != compositeLeaf)
                 LogicError("Invoke: Parameters should have passed as themselves.");
             // That's it. We just keep it in the list so that auto-batch can find them.
         }
         else if (compositeLeaf.IsPlaceholder())
         {
             // verify the mappings have been implanted
-            fail_if(compositeLeaf.m_dataFields->m_compositeArgumentIndex != i, "m_compositeArgumentIndex not set up??"); // when dynamically expanding this, we match up this Placeholder with the respective input[i]
-            // TODO: rethink the logic. If the input's shape IsUnknown, then why not directly return? Why even replace?
-            if (input.IsInput())
+            fail_if(compositeLeaf.m_dataFields->m_compositeArgumentIndex != i, "m_compositeArgumentIndex not set up??"); // when dynamically expanding this, we match up this Placeholder with the respective operand [i]
+            // TODO: rethink the logic. If the operand's shape IsUnknown, then why not directly return? Why even replace?
+            if (operand.IsInput())
                 InvalidArgument("Invoke cannot work on Input variables, it is for dynamic networks only.");
-            fail_if(input.Shape().IsUnknown(), "unknown input shapes at this point??");
+            fail_if(operand.Shape().IsUnknown(), "unknown operand shapes at this point??");
             // we replace with a placeholder of the same type. This gives the composite the shape.
             // to allow for varying sequence axis, we replace the last axis with FreeDimension, and infer with that
-            // If the input does not have that axis, then we create it.
+            // If the operand does not have that axis, then we create it.
             fail_if(batchDim == 0, "no batchDim determined??");
             // TODO: check against the current Placeholder
-            auto updatedCompositePlaceholder = PlaceholderVariable(ReplaceBatchDim(input.Shape().Dimensions(), NDShape::FreeDimension),
-                input.GetDataType(), input.Name(), input.DynamicAxes(), input.NeedsGradient(), input.IsSparse());
-            //auto updatedCompositePlaceholder = PlaceholderLike(input);
+            auto updatedCompositePlaceholder = PlaceholderVariable(ReplaceBatchDim(operand.Shape().Dimensions(), NDShape::FreeDimension),
+                operand.GetDataType(), operand.Name(), operand.DynamicAxes(), operand.NeedsGradient(), operand.IsSparse());
+            //auto updatedCompositePlaceholder = PlaceholderLike(operand);
             updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = compositeLeaf.m_dataFields->m_compositeArgumentIndex;
             replacementMap.insert({ compositeLeaf, updatedCompositePlaceholder }); // replace with new Placeholder, which has a block mapping implanted
             // TODO: fix the interface. This should become a private method to Invocable
