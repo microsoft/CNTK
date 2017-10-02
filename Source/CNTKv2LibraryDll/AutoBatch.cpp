@@ -1096,6 +1096,9 @@ class Variable::AutoBatch
     // This makes a deep copy of the graph below 'f', which must live in a composite owned by a BlockFunction; *not* the dynamic graph.
     // The actual PrimitiveFunction copy is made via the cloneFn. This way, this function can be used
     // for both the initial unbatched inlining (no basic block), as well for inlining basic blocks during execution.
+    // This function checks whether all substituted Placeholders have the same batch dimension (FreeDimension).
+    //  - At the root of a composite, pass invocationArgsBatchDim=0; inside here, pass the value as is.
+    //  - Upon return, it will contain the one batch dim value that is shared across all substituted placeholders.
     VisitorTag m_compositeVisitorTag; // helper for managing tree traversal through composite (not nested)
     template<class F>
     PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, const vector<Variable>& invocationArgs, /*in/out*/size_t& invocationArgsBatchDim, /*out*/ size_t& compositeBatchDim, const F& cloneFn) const
@@ -1159,6 +1162,10 @@ class Variable::AutoBatch
                         InvalidArgument("Invoke: Argument shape %S incompatible with placeholder's shape %S.", operand.Shape().AsString().c_str(), input.Shape().AsString().c_str());
                 // determine the batch dimension
                 thisBatchDim = (placeholderHasFreeDimension && operandRank == placeholderRank) ? operandDims.back() : SIZE_MAX;
+                if (invocationArgsBatchDim == 0) // first encounter
+                    invocationArgsBatchDim = thisBatchDim;
+                else if (invocationArgsBatchDim != thisBatchDim)
+                    InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)invocationArgsBatchDim, input.Shape().AsString().c_str());
                 // OK!
                 inlinedInputs[i] = operand;
             }
@@ -1166,7 +1173,7 @@ class Variable::AutoBatch
             else
             {
                 fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, invocationArgsBatchDim, thisBatchDim, cloneFn);
+                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, /*in/out*/ invocationArgsBatchDim, /*out*/ thisBatchDim, cloneFn);
                 inlinedInputs[i] = fInlinedPtr->m_outputs.front();
                 inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
                 // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
