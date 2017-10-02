@@ -1189,6 +1189,7 @@ class Variable::AutoBatch
                 InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)inlinedBatchDim, cloneeInput.Shape().AsString().c_str());
         }
         // now create a new function and set up the outputs
+        // 'inlinedBatchDim' will replace the FreeDimension.
         let fInlinedPtr = cloneFn(clonee, move(inlinedInputs), inlinedBatchDim);
         // and finally remember where this function got redirected to.
         clonee.m_autoBatchState.m_link = fInlinedPtr.get();
@@ -2215,33 +2216,55 @@ class Variable::AutoBatch
         return output;
     }
 
+    // helper to verify that we figured out the FreeDimension replacement for a clonee correctly
+    static void VerifyFreeDimensionReplacement(const vector<Variable>& cloneeInputs, const vector<Variable>& operands, size_t newInputsBatchDim)
+    {
+        let arity = cloneeInputs.size();
+        for (size_t i = 0; i < arity; i++)
+        {
+            let& cloneeInput = cloneeInputs[i];
+            let& operand = operands[i];
+            let& cloneeInputDims = cloneeInput.Shape().Dimensions();
+            let rank = cloneeInputDims.size();
+            if (rank == 0 || cloneeInputDims.back() != NDShape::FreeDimension)
+                continue;
+            let& operandDims = operand.Shape().Dimensions();
+            if (operandDims.size() < rank)
+                continue;
+            fail_if(operandDims.size() > rank, "operand has too many axes, should not have passed type check");
+            // now test the condition we are after
+            fail_if(operandDims.back() != newInputsBatchDim, "newInputsBatchDim does not match the dimension passed for the placeholder's FreeDimension");
+        }
+    }
+
     // clone a PrimitiveFunction
-    // Subroutine of inlining non-basic-block BlockFunctions during forward graph preparation.
+    // Subroutine of early inlining non-basic-block BlockFunctions during forward graph preparation.
+    // These are non-batched. The output shape is determined here by either stripping the FreeDimension if no input has one, or replacing it.
     // Special consideration is given to nested BlockFunctions.
-    static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& f, vector<Variable>&& newInputs, size_t newInputsBatchDim)
+    static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& clonee, vector<Variable>&& newInputs, size_t newInputsBatchDim)
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
         // clone it
         PrimitiveFunctionPtr fCloned;
-        if (f.m_op == PrimitiveOpType::Block)
+        if (clonee.m_op == PrimitiveOpType::Block)
         {
-            let& fAsBlock = static_cast<BlockFunction&>(f);
-            fCloned = MakeSharedObject<BlockFunction>(fAsBlock.Composite(), move(newInputs), fAsBlock.IsBasicBlock(), wstring(fAsBlock.OpName()), wstring(f.Name()));
+            let& fAsBlock = static_cast<BlockFunction&>(clonee);
+            fCloned = MakeSharedObject<BlockFunction>(fAsBlock.Composite(), move(newInputs), fAsBlock.IsBasicBlock(), wstring(fAsBlock.OpName()), wstring(clonee.Name()));
             // PERF BUGBUG: (?) If not basic block then we should expand it right here.
         }
         else
         {
             // clone the attributes
             Dictionary attributes;
-            f.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
-            fCloned = MakeSharedObject<PrimitiveFunction>(f.m_op, move(newInputs), move(attributes), wstring(f.Name()));
+            clonee.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
+            fCloned = MakeSharedObject<PrimitiveFunction>(clonee.m_op, move(newInputs), move(attributes), wstring(clonee.Name()));
         }
         //if (fCloned->m_uniqueIdForDebugging == 20000)
         //    fprintf(stderr, "");
         // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
         // unfortunately output initialization must be separated out since it requires s shared_ptr to fCloned
         // get the output shape
-        let& outputs = f.m_outputs;
+        let& outputs = clonee.m_outputs;
         if (outputs.size() != 1)
             InvalidArgument("Dynamic operations cannot have multiple outputs.");
         let& output = outputs.front();
@@ -2249,11 +2272,16 @@ class Variable::AutoBatch
         let& outputDims = output.Shape().Dimensions();
         let mustReplaceFreeDimension = (!outputDims.empty() && outputDims.back() == NDShape::FreeDimension);
         fail_if(mustReplaceFreeDimension && newInputsBatchDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
+#if 1
+        // check that we got it right
+        if (mustReplaceFreeDimension)
+            VerifyFreeDimensionReplacement(clonee.m_inputs, fCloned->m_inputs, newInputsBatchDim);
+#endif
         // initialize the output
         let dataType = fCloned->m_inputs.front().GetDataType();
         fCloned->InitOutput(OutputVariable(mustReplaceFreeDimension ? NDShape(ReplaceBatchDim(outputDims, newInputsBatchDim)) : output.Shape(), dataType, vector<Axis>(), output.NeedsGradient(), output.IsSparse(), wstring()));
         // add additional initializations for auto-batch only
-        FinishConstructingPrimitiveFunction(*fCloned, f.m_profiler, /*logPrefix=*/nullptr);
+        FinishConstructingPrimitiveFunction(*fCloned, clonee.m_profiler, /*logPrefix=*/nullptr);
         return fCloned;
     }
 
@@ -4204,7 +4232,7 @@ void PrimitiveFunction::InitOutput(Variable&& output)
 }
 
 /*Internal::*/Invocable::Invocable(size_t arity, size_t batchAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
-    m_arity(arity), m_isBasicBlock(isBasicBlock )//  &&false) // for now, disable basic blocks
+    m_arity(arity), m_isBasicBlock(isBasicBlock   &&false) // for now, disable basic blocks
 {
     // for debugging, we can disable static invocation altogether
     if (m_forceImmediate)
