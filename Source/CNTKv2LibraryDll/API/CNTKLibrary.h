@@ -4309,9 +4309,11 @@ namespace CNTK
     /// Create an instance of the CNTK build-in operation to get a tensor that is gathered from reference tensor by indices.
     ///
     CNTK_API FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
     ///
+#define Axis_DropLastAxis (Axis(-1)) // TODO: make this a CNTK construct, Axis::DropLastAxis(), with a special sentinel; or an official flag to ReduceXXX()
     CNTK_API FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
@@ -4495,15 +4497,75 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = std::wstring());
 
-    ///
-    /// Invokes a static CNTK graph (aka composite). Returns the output of a new BlockFunction.
-    /// The set of { operands.first } must match composite.Arguments().
-    /// A non-basic block gets inlined on the high level, and is fully batchable.
-    /// A basic block gets batched as one, there is no cross-basic-block batching.
-    /// This is similar to AsBlock(), but unlike AsBlock(), it does not take ownership of the composite.
-    /// This presently only works for Dynamite. For static graphs, use AsBlock().
-    ///
-    CNTK_API Variable Invoke(const FunctionPtr& composite, std::vector<Variable>& argumentList, const std::vector<Variable>& operands, bool isBasicBlock, bool& determineShapes, const std::wstring& name = std::wstring());
+    // TODO: Move this to Internal. Not trivial since Variable is not known inside the Internal header.
+    class Invocable
+    {
+        const size_t m_arity; // actual number of function arguments. Note: m_argumentList/m_operands contain additional leaves, so its size() is not sufficient.
+        const bool m_isBasicBlock;
+        mutable std::vector<Variable> m_argumentList; // contains the Variables in the composite. May be updated upon determining the shapes with PlaceholderLikes.
+        mutable std::vector<Variable> m_operands;     // these are overwritten upon each call
+        FunctionPtr m_composite; // Note: multiple calls to Invoke() assume that the composite does not change; so encapsulate it here.
+        mutable bool m_stillNeedsToInferShapes;
+
+        // for debugging: allow to directly call the lambda, without any Composite involved
+        static const bool m_forceImmediate = false; // for debugging: if true then don't create a composite; but remember the lambda and execute that directly
+        std::function<Variable(const std::vector<Variable>&)> m_lambdaRememberedForDebugging;
+        std::wstring m_nameRememberedForDebugging;
+
+        CNTK_API Invocable(size_t arity, bool isBasicBlock, const std::function<Variable(const std::vector<Variable>&)>& f, std::wstring name);
+        void CheckArity(size_t arity) const
+        {
+            if (m_arity != arity)
+                LogicError("Invocable: It was attempted to invoke a %d-nary function with %d arguments.", (int)m_arity, (int)arity);
+        }
+        void SetOperand(size_t argIndex, const Variable& argVal) const
+        {
+            m_operands[argIndex] = argVal;
+        }
+        Variable noArg; // dummy for clearing out the args map
+        CNTK_API Variable DoInvoke() const; // note: caller must call SetOperand() first to set the operands
+        ///
+        /// Invokes a static CNTK graph (aka composite). Returns the output of a new BlockFunction.
+        /// The set of { operands.first } must match composite.Arguments().
+        /// A non-basic block gets inlined on the high level, and is fully batchable.
+        /// A basic block gets batched as one, there is no cross-basic-block batching.
+        /// This is similar to AsBlock(), but unlike AsBlock(), it does not take ownership of the composite.
+        /// This presently only works for Dynamite. For static graphs, use AsBlock().
+        ///
+        static Variable Invoke(const FunctionPtr& composite, std::vector<Variable>& argumentList, const std::vector<Variable>& operands, bool isBasicBlock, bool& determineShapes, const std::wstring& name = std::wstring());
+        // TODO: ^^ merge Invoke() into DoInvoke()
+    public:
+        Invocable(bool isBasicBlock, const std::function<Variable(                                                 )>& f, std::wstring name) : Invocable(0, isBasicBlock, [=](const std::vector<Variable>& args) { args; return f(                   ); }, name) { }
+        Invocable(bool isBasicBlock, const std::function<Variable(const Variable&                                  )>& f, std::wstring name) : Invocable(1, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0]                  ); }, name) { }
+        Invocable(bool isBasicBlock, const std::function<Variable(const Variable&, const Variable&                 )>& f, std::wstring name) : Invocable(2, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0], args[1]         ); }, name) { }
+        Invocable(bool isBasicBlock, const std::function<Variable(const Variable&, const Variable&, const Variable&)>& f, std::wstring name) : Invocable(3, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0], args[1], args[2]); }, name) { }
+        Variable operator()() const
+        {
+            CheckArity(0);
+            return DoInvoke();
+        }
+        Variable operator()(const Variable& x1) const
+        {
+            CheckArity(1);
+            SetOperand(0, x1);
+            return DoInvoke();
+        }
+        Variable operator()(const Variable& x1, const Variable& x2) const
+        {
+            CheckArity(2);
+            SetOperand(0, x1);
+            SetOperand(1, x2);
+            return DoInvoke();
+        }
+        Variable operator()(const Variable& x1, const Variable& x2, const Variable& x3) const
+        {
+            CheckArity(3);
+            SetOperand(0, x1);
+            SetOperand(1, x2);
+            SetOperand(2, x3);
+            return DoInvoke();
+        }
+    };
 
     ///
     /// Creates a new Function instance which output its input as it is and previent any gradient contribution from its output. 

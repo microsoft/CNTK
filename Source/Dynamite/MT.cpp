@@ -732,6 +732,7 @@ void Train(wstring outputDirectory)
                 lr0, learner->LearningRate() / lr0);
         // train minibatch
         let numAPICalls0 = CountAPICalls(0);
+        //criterion_fn(args[0], args[1]); // call it once before, to flush that thing that we otherwise also measure, whatever that is
         partTimer.Restart();
         auto mbLoss = criterion_fn(args[0], args[1]);
         //mbLoss = criterion_fn(args[0], args[1]);

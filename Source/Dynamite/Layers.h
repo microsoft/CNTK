@@ -16,8 +16,6 @@
 #include <set>
 #include <vector>
 
-#define Axis_DropLastAxis (Axis(-1)) // TODO: make this a CNTK construct, Axis::DropLastAxis(), with a special sentinel; or an official flag to ReduceXXX()
-
 //#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
 
 #define let const auto
@@ -503,121 +501,17 @@ static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescrip
 // helper to create a unary static lambda by running a lambda over a Placeholder
 class StaticModel
 {
-    // TODO: Move this down into the V2 API; and make Invoke() a private function of this class. Invoke() is a brittle API since it requires control of the composite.
-    class Invocable
-    {
-        const size_t m_arity; // actual number of function arguments. Note: m_argumentList/m_operands contain additional leaves, so its size() is not sufficient.
-        const bool m_isBasicBlock;
-        mutable vector<Variable> m_argumentList; // contains the Variables in the composite. May be updated upon determining the shapes with PlaceholderLikes.
-        mutable vector<Variable> m_operands;     // these are overwritten upon each call
-        FunctionPtr m_composite; // Note: multiple calls to Invoke() assume that the composite does not change; so encapsulate it here.
-        mutable bool m_stillNeedsToInferShapes;
-
-        // for debugging: allow to directly call the lambda, without any Composite involved
-        static const bool m_forceImmediate = false; // for debugging: if true then don't create a composite; but remember the lambda and execute that directly
-        function<Variable(const vector<Variable>&)> m_lambdaRememberedForDebugging;
-        wstring m_nameRememberedForDebugging;
-
-        Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& f, std::wstring name) :
-            m_arity(arity), m_isBasicBlock(isBasicBlock) // for now, disable basic blocks
-        {
-            if (m_forceImmediate)
-            {
-                m_operands.resize(m_arity);
-                m_lambdaRememberedForDebugging = f; // just remember the lambda, and done
-                m_nameRememberedForDebugging = name;
-                return;
-            }
-            // allocate m_argumentList/m_operands and populate the Placeholder section (later we will add Parameters)
-            m_argumentList.resize(m_arity);
-            m_operands.resize(m_arity);
-            for (auto& arg : m_argumentList)
-                arg = PlaceholderVariable(); // TODO: once this becomes an internal API, we can implant the index right here?
-            FunctionPtr composite = f(m_argumentList);
-            // note: the graph is built by calling the lambda on Placeholders
-            // We must pass in the Placeholders and remember them, since the composite itself will not remember their ordering.
-            if (!name.empty())
-                composite = Alias(composite, name);
-            composite->InitCompositeForInvoke(m_argumentList);
-            m_composite = move(composite);
-            // complete the m_argsMap pairs by including all learnable Parameters in it as well
-            // This is needed so that the auto-batcher can see all Parameters that are inside, without having to traverse it.
-            for (let& p : m_composite->Parameters())
-            {
-                m_argumentList.push_back(p); // presently also must pass all Parameters
-                m_operands.push_back(p); // we prepopulate the operands here, these are not changed afterwards
-            }
-            m_stillNeedsToInferShapes = true;
-        }
-        void CheckArity(size_t arity) const
-        {
-            if (m_arity != arity)
-                LogicError("Invocable: It was attempted to invoke a %d-nary function with %d arguments.", (int)m_arity, (int)arity);
-        }
-        void SetOperand(size_t argIndex, const Variable& argVal) const
-        {
-            m_operands[argIndex] = argVal;
-        }
-        Variable noArg; // dummy for clearing out the args map
-        Variable DoInvoke() const // note: caller must call SetOperand() first to set the operands
-        {
-            if (m_forceImmediate)
-            {
-                return m_lambdaRememberedForDebugging(m_operands);
-            }
-
-            // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
-            // We leave the Parameters in the m_argsMap array untouched (they are at the end).
-            // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
-            CountAPICalls();
-            let res = CNTK::Invoke(m_composite, m_argumentList, m_operands, m_isBasicBlock, /*ref*/ m_stillNeedsToInferShapes);
-            // BUGBUG: I get an "unexpectedly expired" weak_ptr when I enable this.
-            //for (size_t i = 0; i < arity; i++)
-            //    SetArg(i, noArg);
-            return res;
-        }
-    public:
-        Invocable(bool isBasicBlock, const function<Variable(                                                 )>& f, std::wstring name) : Invocable(0, isBasicBlock, [=](const vector<Variable>& args) { args; return f(                   ); }, name) { }
-        Invocable(bool isBasicBlock, const function<Variable(const Variable&                                  )>& f, std::wstring name) : Invocable(1, isBasicBlock, [=](const vector<Variable>& args) { return f(args[0]                  ); }, name) { }
-        Invocable(bool isBasicBlock, const function<Variable(const Variable&, const Variable&                 )>& f, std::wstring name) : Invocable(2, isBasicBlock, [=](const vector<Variable>& args) { return f(args[0], args[1]         ); }, name) { }
-        Invocable(bool isBasicBlock, const function<Variable(const Variable&, const Variable&, const Variable&)>& f, std::wstring name) : Invocable(3, isBasicBlock, [=](const vector<Variable>& args) { return f(args[0], args[1], args[2]); }, name) { }
-        Variable operator()() const
-        {
-            CheckArity(0);
-            return DoInvoke();
-        }
-        Variable operator()(const Variable& x1) const
-        {
-            CheckArity(1);
-            SetOperand(0, x1);
-            return DoInvoke();
-        }
-        Variable operator()(const Variable& x1, const Variable& x2) const
-        {
-            CheckArity(2);
-            SetOperand(0, x1);
-            SetOperand(1, x2);
-            return DoInvoke();
-        }
-        Variable operator()(const Variable& x1, const Variable& x2, const Variable& x3) const
-        {
-            CheckArity(3);
-            SetOperand(0, x1);
-            SetOperand(1, x2);
-            SetOperand(2, x3);
-            return DoInvoke();
-        }
-    };
-    shared_ptr<Invocable> m_invocable; // this is the only member, so that we can copy this with shared state
+    shared_ptr<CNTK::Invocable> m_invocable; // this is the only member, so that we can copy this with shared state
 public:
     template<typename Lambda>
     StaticModel(bool isBasicBlock, const Lambda& f, std::wstring name = std::wstring()) :
-        m_invocable(make_shared<Invocable>(isBasicBlock, f, name))
+        m_invocable(make_shared<CNTK::Invocable>(isBasicBlock, f, name))
     { }
 
     template <typename ...ArgTypes>
     Variable operator()(ArgTypes&& ...args) const
     {
+        CountAPICalls();
         return m_invocable->operator()(std::forward<ArgTypes>(args)...);
     }
 };

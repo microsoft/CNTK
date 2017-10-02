@@ -1560,8 +1560,6 @@ class Variable::AutoBatch
                         return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
                     break;
                 }
-            case PrimitiveOpType::Block: // Blocks cannot stack for now--TODO: They really really should!!!
-                return{ StackingMode::BATCHING, maxRank, 1 };
             case PrimitiveOpType::Slice: // this is an affected op, but it's a view op, so we should not get here
                 // TODO: Think through the Slice case.
                 fail_if(true, "DetermineBatchAxis: should not get here for Slice");
@@ -4177,8 +4175,70 @@ void PrimitiveFunction::MemoizeKnowableValue() const
 }
 
 // ===========================================================================
-// Invoke() and our pieces of PrimitiveFunction and BlockFunction -- contained here for now
+// Invocable and our pieces of PrimitiveFunction and BlockFunction -- contained here for now
 // ===========================================================================
+
+// special short-circuited version where output is created outside
+void PrimitiveFunction::InitOutput(Variable&& output)
+{
+    //std::call_once(m_outputsInitFlag, [this]() {});
+    m_outputInitializingByThreadId = std::thread::id();
+    fail_if(m_outputsInitFlag || !m_outputs.empty(), "InitOutput called twice??");
+    m_outputsInitFlag++;
+    output.SetOwner(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
+    // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
+    m_outputs.resize(1);
+    m_outputs.front() = move(output);
+}
+
+/*Internal::*/Invocable::Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& f, std::wstring name) :
+    m_arity(arity), m_isBasicBlock(isBasicBlock   &&false) // for now, disable basic blocks
+{
+    if (m_forceImmediate)
+    {
+        m_operands.resize(m_arity);
+        m_lambdaRememberedForDebugging = f; // just remember the lambda, and done
+        m_nameRememberedForDebugging = name;
+        return;
+    }
+    // allocate m_argumentList/m_operands and populate the Placeholder section (later we will add Parameters)
+    m_argumentList.resize(m_arity);
+    m_operands.resize(m_arity);
+    for (auto& arg : m_argumentList)
+        arg = PlaceholderVariable(); // TODO: once this becomes an internal API, we can implant the index right here?
+    FunctionPtr composite = f(m_argumentList);
+    // note: the graph is built by calling the lambda on Placeholders
+    // We must pass in the Placeholders and remember them, since the composite itself will not remember their ordering.
+    if (!name.empty())
+        composite = Alias(composite, name);
+    composite->InitCompositeForInvoke(m_argumentList);
+    m_composite = move(composite);
+    // complete the m_argsMap pairs by including all learnable Parameters in it as well
+    // This is needed so that the auto-batcher can see all Parameters that are inside, without having to traverse it.
+    for (let& p : m_composite->Parameters())
+    {
+        m_argumentList.push_back(p); // presently also must pass all Parameters
+        m_operands.push_back(p); // we prepopulate the operands here, these are not changed afterwards
+    }
+    m_stillNeedsToInferShapes = true;
+}
+
+Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
+{
+    if (m_forceImmediate)
+    {
+        return m_lambdaRememberedForDebugging(m_operands);
+    }
+
+    // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
+    // We leave the Parameters in the m_argsMap array untouched (they are at the end).
+    // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
+    let res = Invoke(m_composite, m_argumentList, m_operands, m_isBasicBlock, /*ref*/ m_stillNeedsToInferShapes);
+    // BUGBUG: I get an "unexpectedly expired" weak_ptr when I enable this.
+    //for (size_t i = 0; i < arity; i++)
+    //    SetArg(i, noArg);
+    return res;
+}
 
 // call this upon creation of the compositer
 // TODO: Encapsulate this into the Invocable class.
@@ -4204,7 +4264,7 @@ void Function::InitCompositeForInvoke(const vector<Variable>& placeholders)
 
 // argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
 // operands     = what the arguments should prerent to be. Must currently include a copy of Parameters at the end.
-Variable Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argumentList, const vector<Variable>& operands, bool isBasicBlock, bool& needToDetermineShapes, const std::wstring& name /*= std::wstring()*/)
+/*static*/ Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argumentList, const vector<Variable>& operands, bool isBasicBlock, bool& needToDetermineShapes, const std::wstring& name /*= std::wstring()*/)
 {
     let composite = static_pointer_cast<CompositeFunction>(callee); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
 #if 0   // This baloney, at least in the case of isBasicBlock.
@@ -4249,20 +4309,6 @@ Variable Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argume
         let f = MakeSharedObject<BlockFunction>(composite, argumentList, vector<Variable>(operands), isBasicBlock, determineShapesThisTime, wstring(name));
         return f->FinalizeInvoke(argumentList, /*shapeIsKnown=*/!needToDetermineShapes);
     }
-}
-
-// TODO: Move this function out of the way. It is not part of the Invoke stuff.
-// special short-circuited version where output is created outside
-void PrimitiveFunction::InitOutput(Variable&& output)
-{
-    //std::call_once(m_outputsInitFlag, [this]() {});
-    m_outputInitializingByThreadId = std::thread::id();
-    fail_if(m_outputsInitFlag || !m_outputs.empty(), "InitOutput called twice??");
-    m_outputsInitFlag++;
-    output.SetOwner(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
-    // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
-    m_outputs.resize(1);
-    m_outputs.front() = move(output);
 }
 
 // heuristic to determine the batch axis when invoking
@@ -4493,7 +4539,7 @@ size_t Variable::size() const
     let& shape = Shape();
     if (shape.Rank() == 0)
         InvalidArgument("size: Variable is a scalar and thus has no length.");
-    if (shape.IsUnknown())
+    if (shape.IsUnknown()) // BUGBUG: FreeDimension
         InvalidArgument("size: Variable has no known size yet.");
     return shape.Dimensions().back();
 }
