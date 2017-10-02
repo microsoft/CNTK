@@ -1098,7 +1098,7 @@ class Variable::AutoBatch
     // for both the initial unbatched inlining (no basic block), as well for inlining basic blocks during execution.
     VisitorTag m_compositeVisitorTag; // helper for managing tree traversal through composite (not nested)
     template<class F>
-    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, const vector<Variable>& invocationArgs, /*out*/ size_t& invocationArgsBatchDim, const F& cloneFn) const
+    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& f, const vector<Variable>& invocationArgs, /*in/out*/size_t& invocationArgsBatchDim, /*out*/ size_t& compositeBatchDim, const F& cloneFn) const
     {
         // if we already cloned this one then just return the clone
         if (m_compositeVisitorTag.Visited(f.m_autoBatchState.m_visitedTag))
@@ -1106,14 +1106,14 @@ class Variable::AutoBatch
             let fInlined = f.m_autoBatchState.m_link; // we remembered the clone here
             if (!fInlined) // if we get here before this was filled in then we have discovered a cycle
                 InvalidArgument("Invoke() cannot be used on composites with cycles.");
-            invocationArgsBatchDim = f.m_autoBatchState.m_batchDim;
+            compositeBatchDim = f.m_autoBatchState.m_batchDim;
             return static_pointer_cast<PrimitiveFunction>(const_cast<PrimitiveFunction*>(fInlined)->shared_from_this()); // (shared_from_this() gives us a FunctionPtr, not PrimitiveFunctionPtr)
         }
         f.m_autoBatchState.m_link = nullptr; // Bring into valid state so we can detect cycles. Gets overwritten once we are done cloning.
 
         // clone f
         // First clone the inputs;
-        invocationArgsBatchDim = SIZE_MAX;
+        compositeBatchDim = SIZE_MAX;
         let& inputs = f.m_inputs;
         vector<Variable> inlinedInputs(inputs.size()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
         for (size_t i = 0; i < inputs.size(); i++)
@@ -1130,7 +1130,7 @@ class Variable::AutoBatch
                     input.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
                     fail_if(!inputFields.m_value, "Parameter/Constant has no Value()??");
                 }
-                // Note: By not touching invocationArgsBatchDim, we are not handling the case that constants may have a batch axis.
+                // Note: By not touching compositeBatchDim, we are not handling the case that constants may have a batch axis.
                 //       However, this only affects Constants that live inside the composite, which cannot actually have one.
                 inlinedInputs[i] = input;
             }
@@ -1166,27 +1166,27 @@ class Variable::AutoBatch
             else
             {
                 fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, thisBatchDim, cloneFn);
+                let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, invocationArgsBatchDim, thisBatchDim, cloneFn);
                 inlinedInputs[i] = fInlinedPtr->m_outputs.front();
                 inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
                 // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
             }
             //if (inlinedInputs[i].Shape().HasFreeDimension())
             //    Break;
-            // update invocationArgsBatchDim
+            // update compositeBatchDim
             // This is the batch dimension that the result should get.
             // For arguments that have a batch dimension, it must match. It is possible that argument have none.
             // For example, in x - ReduceMean(x), the second arg has no batch dim.
-            if (invocationArgsBatchDim == SIZE_MAX) // first encounter
-                invocationArgsBatchDim = thisBatchDim;
-            else if (thisBatchDim != SIZE_MAX && invocationArgsBatchDim != thisBatchDim)
-                InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)invocationArgsBatchDim, input.Shape().AsString().c_str());
+            if (compositeBatchDim == SIZE_MAX) // first encounter
+                compositeBatchDim = thisBatchDim;
+            else if (thisBatchDim != SIZE_MAX && compositeBatchDim != thisBatchDim)
+                InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)compositeBatchDim, input.Shape().AsString().c_str());
         }
         // now create a new function and set up the outputs
-        let fInlinedPtr = cloneFn(f, move(inlinedInputs), invocationArgsBatchDim);
+        let fInlinedPtr = cloneFn(f, move(inlinedInputs), compositeBatchDim);
         // and finally remember where this function got redirected to.
         f.m_autoBatchState.m_link = fInlinedPtr.get();
-        f.m_autoBatchState.m_batchDim = invocationArgsBatchDim;
+        f.m_autoBatchState.m_batchDim = compositeBatchDim;
         return fInlinedPtr;
     }
 
@@ -1744,9 +1744,10 @@ class Variable::AutoBatch
             // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
             // Besides that, the original Block function will remain unmodified.
             m_compositeVisitorTag.Begin();
-            size_t inputsBatchDim = 0;
+            size_t invocationArgsBatchDim = 0;
+            size_t inputsBatchDimDummy;
             auto inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*f.BlockRoot()),
-                                                   f.m_inputs, inputsBatchDim, /*cloneFn=*/ClonePrimitiveFunction);
+                                                   f.m_inputs, invocationArgsBatchDim, inputsBatchDimDummy, /*cloneFn=*/ClonePrimitiveFunction);
             // This returns a shared_ptr to the deep copy of the root.
             // ^^ This currently does not inline nested blocks. Instead of cloning the BlockFunction, we should just unroll any nested non-basic-block right there.
             // prepare graph that we just unrolled
@@ -2044,11 +2045,10 @@ class Variable::AutoBatch
 
         let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
         size_t invocationArgsBatchDim = 0;
-        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, invocationArgsBatchDim,
-            [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs, size_t invocationArgsBatchDim) -> PrimitiveFunctionPtr
+        size_t compositeBatchDim;
+        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, invocationArgsBatchDim, compositeBatchDim,
+            [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs, size_t compositeBatchDim) -> PrimitiveFunctionPtr
         {
-            invocationArgsBatchDim; // TODO: what to do with this? Is it redundant with batchSize?
-
             // This lambda must apply the passed in the composite's PrimitiveFunction 'f' to 'newInputs'.
             // The newInputs are batched; that is, their shapes may mismatch those of f's inputs in that they may have an additional batch axis.
 
@@ -2062,7 +2062,7 @@ class Variable::AutoBatch
             // PERF BUGBUG: newInputs is already a copy that we can just move
             // PERF BUGBUG: We should short-circuit the free ops for composites as well.
             let isFree = IsViewOp(f.m_op);
-            return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, invocationArgsBatchDim, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
+            return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, compositeBatchDim, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
         });
         m_compositeVisitorTag.End(prevVisitorTag); // (restore)
         return fInlinedPtr;
@@ -2089,9 +2089,9 @@ class Variable::AutoBatch
     // create a PrimitiveFunction that is a batched version of a given op, and execute it right away
     // This is a wrapper around CreateAndMemoizeOp(). If a batchAxis is provided (!= SIZE_MAX), then the output will have that axis.
     // In that case, all inputs[*], unless not batched, must have the same batch axis (an example of a non-batched arg is the first arg of a matrix product).
-    // Note that invocationArgsBatchDim is only valid if we are cloning from a composite.
+    // Note that compositeBatchDim is only valid if we are cloning from a composite.
     // TODO: pass 'inputs' as rvalue ref, and move it below.
-    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, const vector<Variable>& inputs, size_t invocationArgsBatchDim, size_t batchAxis, size_t batchSize, const wchar_t* logPrefix, bool isFree)
+    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, const vector<Variable>& inputs, size_t compositeBatchDim, size_t batchAxis, size_t batchSize, const wchar_t* logPrefix, bool isFree)
     {
         // special case for basic blocks: need to clone the entire composite (for backprop)
         if (f.m_op == PrimitiveOpType::Block)
@@ -2105,14 +2105,14 @@ class Variable::AutoBatch
         let mustReplaceFreeDimension = (!outputDims.empty() && outputDims.back() == NDShape::FreeDimension);
         if (mustReplaceFreeDimension)
             Break;
-        fail_if(mustReplaceFreeDimension && invocationArgsBatchDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
+        fail_if(mustReplaceFreeDimension && compositeBatchDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
         Dictionary attributes;
         f.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
 #if 1   // a sanity check whether we batched correctly. Can be removed once this stuff works.
         if (IsMatrixProduct(f.m_op))
             fail_if(inputs.front().Shape() != f.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
 #endif
-        return CreateAndMemoizeOp(f.m_op, vector<Variable>(inputs), mustReplaceFreeDimension ? NDShape(ReplaceBatchDim(outputDims, invocationArgsBatchDim)) : shape, move(attributes), f.m_name, f.m_profiler, L"*"/*f*/, isFree);
+        return CreateAndMemoizeOp(f.m_op, vector<Variable>(inputs), mustReplaceFreeDimension ? NDShape(ReplaceBatchDim(outputDims, compositeBatchDim)) : shape, move(attributes), f.m_name, f.m_profiler, L"*"/*f*/, isFree);
     }
 
     // create a PrimitiveFunction and execute it right away
@@ -3160,7 +3160,7 @@ class Variable::AutoBatch
         //              Note: This is not covered by CSE, since CSE is only used for complex cases.
         //if (f0.m_uniqueIdForDebugging == 23286)
         //    Break;
-        auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, /*invocationArgsBatchDim=*/SIZE_MAX/*dummy*/, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
+        auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, /*compositeBatchDim=*/SIZE_MAX/*dummy*/, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
 
         // some stats and checks
         if (!anyBatchedInputs)
