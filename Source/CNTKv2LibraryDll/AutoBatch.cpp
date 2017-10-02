@@ -2105,22 +2105,24 @@ class Variable::AutoBatch
         if (clonee.m_op == PrimitiveOpType::Block)
             return InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(clonee), m_batchedInputs, batchAxis, batchSize);
 
-        let& unbatchedOutputShape = clonee.m_outputs.front().Shape(); // <-- cut FreeDim replacement in here!
-        const NDShape& shape = batchAxis != SIZE_MAX ? (batchAxis < unbatchedOutputShape.Rank() ? unbatchedOutputShape.SubShape(0, batchAxis) : unbatchedOutputShape).AppendAxis(batchAxis, batchSize) : unbatchedOutputShape;
-        // TODO: This is a little malloc-inefficient                                  ^^
-        // handle the case that 'clonee' lives inside a composite
-        let& outputDims = unbatchedOutputShape.Dimensions();
-        let mustReplaceFreeDimension = (!outputDims.empty() && outputDims.back() == NDShape::FreeDimension);
+        // get the unbatched output shape, considering the case that 'clonee' lives inside a composite
+        let& cloneeOutputShape = clonee.m_outputs.front().Shape();
+        let& cloneeOutputDims = cloneeOutputShape.Dimensions();
+        let mustReplaceFreeDimension = (!cloneeOutputDims.empty() && cloneeOutputDims.back() == NDShape::FreeDimension);
         if (mustReplaceFreeDimension)
             VerifyFreeDimensionReplacement(clonee.m_inputs, inputs, compositeBatchDim);
-        fail_if(mustReplaceFreeDimension && compositeBatchDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
+
+        let& unbatchedOutputShape = mustReplaceFreeDimension ? NDShape(ReplaceBatchDim(cloneeOutputDims, compositeBatchDim)) : clonee.m_outputs.front().Shape(); // <-- cut FreeDim replacement in here!
+
+        const NDShape& shape = batchAxis != SIZE_MAX ? (batchAxis < unbatchedOutputShape.Rank() ? unbatchedOutputShape.SubShape(0, batchAxis) : unbatchedOutputShape).AppendAxis(batchAxis, batchSize) : unbatchedOutputShape;
+        // TODO: This is a little malloc-inefficient                                  ^^
         Dictionary attributes;
         clonee.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
 #if 1   // a sanity check whether we batched correctly. Can be removed once this stuff works.
         if (IsMatrixProduct(clonee.m_op))
             fail_if(inputs.front().Shape() != clonee.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
 #endif
-        return CreateAndMemoizeOp(clonee.m_op, vector<Variable>(inputs), mustReplaceFreeDimension ? NDShape(ReplaceBatchDim(outputDims, compositeBatchDim)) : shape, move(attributes), clonee.m_name, clonee.m_profiler, L"*"/*clonee*/, isFree);
+        return CreateAndMemoizeOp(clonee.m_op, vector<Variable>(inputs), shape, move(attributes), clonee.m_name, clonee.m_profiler, L"*"/*clonee*/, isFree);
     }
 
     // create a PrimitiveFunction and execute it right away
@@ -2217,6 +2219,7 @@ class Variable::AutoBatch
     static void VerifyFreeDimensionReplacement(const vector<Variable>& cloneeInputs, const vector<Variable>& operands, size_t newInputsBatchDim)
     {
         let arity = cloneeInputs.size();
+        fail_if(arity > 0 && newInputsBatchDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
         for (size_t i = 0; i < arity; i++)
         {
             let& cloneeInput = cloneeInputs[i];
