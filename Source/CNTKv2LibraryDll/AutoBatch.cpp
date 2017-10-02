@@ -1106,6 +1106,7 @@ class Variable::AutoBatch
             let fInlined = f.m_autoBatchState.m_link; // we remembered the clone here
             if (!fInlined) // if we get here before this was filled in then we have discovered a cycle
                 InvalidArgument("Invoke() cannot be used on composites with cycles.");
+            invocationArgsBatchDim = f.m_autoBatchState.m_batchDim;
             return static_pointer_cast<PrimitiveFunction>(const_cast<PrimitiveFunction*>(fInlined)->shared_from_this()); // (shared_from_this() gives us a FunctionPtr, not PrimitiveFunctionPtr)
         }
         f.m_autoBatchState.m_link = nullptr; // Bring into valid state so we can detect cycles. Gets overwritten once we are done cloning.
@@ -1165,7 +1166,6 @@ class Variable::AutoBatch
             else
             {
                 fail_if(inputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                size_t thisBatchDim = 0; // this will come back as the batch dimension of the result
                 let fInlinedPtr = RInlineComposite(*inputFields.Owner(), invocationArgs, thisBatchDim, cloneFn);
                 inlinedInputs[i] = fInlinedPtr->m_outputs.front();
                 inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
@@ -1184,6 +1184,7 @@ class Variable::AutoBatch
         let fInlinedPtr = cloneFn(f, move(inlinedInputs), invocationArgsBatchDim);
         // and finally remember where this function got redirected to.
         f.m_autoBatchState.m_link = fInlinedPtr.get();
+        f.m_autoBatchState.m_batchDim = invocationArgsBatchDim;
         return fInlinedPtr;
     }
 
@@ -2220,6 +2221,8 @@ class Variable::AutoBatch
             f.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
             fCloned = MakeSharedObject<PrimitiveFunction>(f.m_op, move(newInputs), move(attributes), wstring(f.Name()));
         }
+        //if (fCloned->m_uniqueIdForDebugging == 20000)
+        //    fprintf(stderr, "");
         // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
         // unfortunately output initialization must be separated out since it requires s shared_ptr to fCloned
         // get the output shape
@@ -3058,6 +3061,8 @@ class Variable::AutoBatch
         if (batchAxis != commonInputBatchAxis)
             Break;
 #else
+        //if (f0.m_uniqueIdForDebugging == 20000)
+        //    Break;
         // TODO: Make this work logically, then speed this up!
         // determine stacking vs. batching
         //  - we must batch if the operation does not allow stacking. AreBatchable takes this into account.
