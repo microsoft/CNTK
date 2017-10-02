@@ -25,7 +25,7 @@ nccl_path=
 nccl_check=include/nccl.h
 
 # CNTK Custom MKL Version
-cntk_custom_mkl_version=`cat $root_dir/Dependencies/CNTKCustomMKL/version.txt`
+cntk_custom_mkl_version=`cat $src_root/Dependencies/CNTKCustomMKL/version.txt`
 
 have_mkl=no
 mkl_path=
