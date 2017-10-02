@@ -4230,25 +4230,7 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     m_stillNeedsToInferShapes = true;
 }
 
-Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
-{
-    if (m_forceImmediate)
-    {
-        return m_lambdaRememberedForDebugging(m_operands);
-    }
-
-    // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
-    // We leave the Parameters in the m_argsMap array untouched (they are at the end).
-    // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
-    let res = Invoke(m_composite, m_argumentList, m_operands, m_isBasicBlock, /*ref*/ m_stillNeedsToInferShapes);
-    // BUGBUG: I get an "unexpectedly expired" weak_ptr when I enable this.
-    //for (size_t i = 0; i < arity; i++)
-    //    SetArg(i, noArg);
-    return res;
-}
-
-// call this upon creation of the compositer
-// TODO: Encapsulate this into the Invocable class.
+// subroutine of Invocable() with access to Function members
 void Function::InitCompositeForInvoke(const vector<Variable>& placeholders)
 {
     let callee = dynamic_cast<CompositeFunction*>(this);
@@ -4267,6 +4249,23 @@ void Function::InitCompositeForInvoke(const vector<Variable>& placeholders)
     callee->m_basicBlockBatchAxis = SIZE_MAX;  // SIZE_MAX means value has not yet been determined. Once it is, it is cached here.
 
     callee->m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
+}
+
+Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
+{
+    if (m_forceImmediate)
+    {
+        return m_lambdaRememberedForDebugging(m_operands);
+    }
+
+    // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
+    // We leave the Parameters in the m_argsMap array untouched (they are at the end).
+    // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
+    let res = Invoke(m_composite, m_argumentList, m_operands, m_isBasicBlock, /*ref*/ m_stillNeedsToInferShapes);
+    // BUGBUG: I get an "unexpectedly expired" weak_ptr when I enable this.
+    //for (size_t i = 0; i < arity; i++)
+    //    SetArg(i, noArg);
+    return res;
 }
 
 // argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
