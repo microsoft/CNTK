@@ -4634,7 +4634,7 @@ namespace CNTK
         // Method to update the parameters associated with this learner. By returning false, this method indicates that
         // learning has stopped for all of the parameters associated with this learner
         //
-        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) = 0;
+        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd) = 0;
 
         ///
         /// Returns the set of parameters associated with this learner.
@@ -4685,6 +4685,16 @@ namespace CNTK
         size_t TotalNumberOfSamplesSeen() const
         {
             return m_sampleCount;
+        }
+
+        size_t TotalNumberOfMinibatchesSeen() const
+        {
+            return m_minibatchCount;
+        }
+
+        size_t TotalNumberOfSweepsSeen() const
+        {
+            return m_sweepCount;
         }
 
         ///
@@ -4874,7 +4884,7 @@ namespace CNTK
             return m_communicator;
         }
 
-        bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t minibatchSampleCount, bool sweepEnd = false) override
+        bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t minibatchSampleCount, bool sweepEnd) override
         {
             MinibatchInfo info{ false, sweepEnd, minibatchSampleCount };
             return Update(gradientValues, info);
@@ -5066,6 +5076,16 @@ namespace CNTK
     ///
     CNTK_API EvaluatorPtr CreateEvaluator(const FunctionPtr& evaluationFunction, const std::vector<ProgressWriterPtr>& progressWriters = {});
 
+    enum class DataUnit : unsigned int
+    {
+        ///Indiciate that the frequency of action is counted by sweep.
+        Sweep = 0,
+        ///Indiciate that the frequency of action is counted by sample.
+        Sample = 1,
+        ///Indiciate that the frequency of action is counted by minibatch.
+        Minibatch = 2
+    };
+
     ///
     /// Trainer is the top-level abstraction responsible for the orchestration of the training of a model
     /// using the specified learners and training data either explicitly supplied as Value objects or from
@@ -5083,7 +5103,7 @@ namespace CNTK
         ///
         /// An overload of the TrainMinibatch above that takes a map of variables and their values (as its first argument).
         ///
-        CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, bool isSweepEndInArguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Optimize model parameters using the specified 'arguments' minibatch of training samples.
@@ -5097,7 +5117,7 @@ namespace CNTK
         ///
         /// An overload of the TrainMinibatch above that takes a map of variables and their values (as its first argument).
         ///
-        CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, bool isSweepEndInarguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Checkpoint the model and other Trainer state at the specified file location
@@ -5143,6 +5163,11 @@ namespace CNTK
         /// Total number of samples seen from the beginning of the training.
         ///
         CNTK_API size_t TotalNumberOfSamplesSeen() const;
+
+        ///
+        /// Total number of units (samples, minibatches, or sweeps) seen from the beginning of the training.
+        ///
+        CNTK_API size_t TotalNumberOfUnitsSeen(DataUnit unit = DataUnit::Sample) const;
 
         ///
         /// Writes the summary of training progress and resets the accumulators.
@@ -5703,11 +5728,12 @@ namespace CNTK
         /// Cross validation configuration.
         /// crossValidationSource: a minibatch source that will be used for cross validation.
         /// crossValidationSchedule : a minibatch size schedule for cross validation.
-        /// crossValidationFrequencyInSamples: frequency in samples when to perform cross validation.
+        /// crossValidationFrequency: frequency in samples when to perform cross validation.
         ///
         CNTK_API CrossValidationConfig(const MinibatchSourcePtr& crossValidationSource,
             const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(64),
-            size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max(),
+            size_t crossValidationFrequency = std::numeric_limits<size_t>::max(),
+            DataUnit crossValidationFrequencyUnit = DataUnit::Sample,
             size_t maxSamples = std::numeric_limits<size_t>::max(),
             const std::unordered_map<Variable, StreamInformation>& inputVarToStream = {});
 
@@ -5716,6 +5742,7 @@ namespace CNTK
         const MinibatchSourcePtr m_source;
         const MinibatchSizeSchedule m_mbSize;
         const size_t m_frequency;
+        const DataUnit m_frequencyUnit;
         const size_t m_maxSamples;
         const std::unordered_map<Variable, StreamInformation> m_varToStream;
     };
@@ -5735,7 +5762,8 @@ namespace CNTK
         ///
         CNTK_API CheckpointConfig(
             const std::wstring& checkPointFileName,
-            size_t checkpointFrequencyInSamples = std::numeric_limits<size_t>::max(),
+            size_t checkpointFrequency = std::numeric_limits<size_t>::max(),
+            DataUnit checkpointFrequencyUnit = DataUnit::Sample,
             bool restoreFromCheckpointIfExists = true,
             bool preserveAllCheckpoints = false);
 
@@ -5745,6 +5773,7 @@ namespace CNTK
         const bool m_restore;
         const bool m_preserveAll;
         const size_t m_frequency;
+        const DataUnit m_frequencyUnit;
     };
 
     ///
@@ -5777,8 +5806,9 @@ namespace CNTK
         struct PeriodicAction
         {
             size_t frequency;
+            DataUnit frequencyUnit;
             size_t currentIndex;
-            size_t sampleCountWhenLastCalled;
+            size_t unitCountWhenLastCalled;
             std::function<bool(size_t currentIndex, const DeviceDescriptor&)> action;
         };
 
@@ -5799,6 +5829,7 @@ namespace CNTK
             const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
             size_t maxNumTrainingSamples,
             size_t progressFrequency,
+            DataUnit progressFrequencyUnit,
             const CheckpointConfig& checkpointing,
             const CrossValidationConfig& crossValidation,
             const TestConfig& test);
@@ -5874,9 +5905,10 @@ namespace CNTK
         void GetNextMinibatch(const MinibatchSourcePtr& source,
             std::unordered_map<Variable, ValuePtr>& minibatch,
             const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
+            bool* pIsMinibatchAtSweepEnd,
             size_t maxMbSize, size_t workerRank, size_t numberOfWorkers, const DeviceDescriptor& computeDevice);
-        void GetTrainingMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice);
-        void GetCrossValidationMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice);
+        void GetTrainingMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, bool* pIsMinibatchAtSweepEnd, size_t maxMbSize, const DeviceDescriptor& computeDevice);
+        void GetCrossValidationMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, bool* pIsMinibatchAtSweepEnd, size_t maxMbSize, const DeviceDescriptor& computeDevice);
 
         void RestoreFromCheckpoint();
         void SaveCheckpoint(size_t currentIndex);
@@ -5902,6 +5934,7 @@ namespace CNTK
         const std::unordered_map<Variable, StreamInformation> m_varToStream;
         const size_t m_maxNumSamples;
         const size_t m_progressFrequency;
+        const DataUnit m_progressFrequencyUnit;
 
         // Additional configuration.
         CheckpointConfig m_checkpoint;
@@ -6035,6 +6068,7 @@ namespace CNTK
         const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
         size_t maxNumTrainingSamples,
         size_t progressFrequency,
+        DataUnit progressFrequencyUnit,
         const CheckpointConfig& checkpointing = { L"" },
         const CrossValidationConfig& crossValidation = { nullptr },
         const TestConfig& test = { nullptr });
