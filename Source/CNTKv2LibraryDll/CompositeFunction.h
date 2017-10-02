@@ -461,6 +461,7 @@ namespace CNTK
         // only for composites owned by BlockFunctions with m_isBasicBlock=true (Dynamite):
         friend class BlockFunction;
         friend class Variable::AutoBatch;
+        friend class Invocable;
         size_t m_basicBlockBatchAxis;  // we cache the batch axis here upon first use. SIZE_MAX means not cached yet.
         size_t m_batchableCompositeId; // composites with the same id are batchable. SIZE_MAX means not determined yet.
 

@@ -4198,30 +4198,54 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     m_outputs.front() = move(output);
 }
 
-/*Internal::*/Invocable::Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& f, std::wstring name) :
+/*Internal::*/Invocable::Invocable(size_t arity, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
     m_arity(arity), m_isBasicBlock(isBasicBlock   &&false) // for now, disable basic blocks
 {
+    // for debugging, we can disable static invocation altogether
     if (m_forceImmediate)
     {
         m_operands.resize(m_arity);
-        m_lambdaRememberedForDebugging = f; // just remember the lambda, and done
+        m_lambdaRememberedForDebugging = lambda; // just remember the lambda, and done
         m_nameRememberedForDebugging = name;
         return;
     }
+
+    // -- create the composite
     // allocate m_argumentList/m_operands and populate the Placeholder section (later we will add Parameters)
-    m_argumentList.resize(m_arity);
-    m_operands.resize(m_arity);
-    for (auto& arg : m_argumentList)
-        arg = PlaceholderVariable(); // TODO: once this becomes an internal API, we can implant the index right here?
-    FunctionPtr composite = f(m_argumentList);
+    //m_argumentList.resize(m_arity);
+    for (size_t i = 0; i < m_arity; i++)
+    {
+        //let batchDim = 1;
+        //// Placeholders have shapes of the form { InferredDimension+, FreeDimension }, where FreeDimension indicates where the batch dimension goes
+        //vector<size_t> dims(batchDim, NDShape::InferredDimension);
+        //dims.push_back(NDShape::FreeDimension); // indicate to Invoke() where the batch dimension is supposed to be
+        //arg = PlaceholderVariable(dims);
+        // BUGBUG: This causes some mix-up. Fix later.
+        let arg = PlaceholderVariable();
+        // implant the redirect into the placeholder
+        arg.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
+        // TODO: implant index here, and also use push_back()
+        m_argumentList.push_back(arg);
+    }
+    // invoke the lambda with Placeholders as arguments
+    // This builds the graph as a CompositeFunction.
+    FunctionPtr fPtr = lambda(m_argumentList);
     // note: the graph is built by calling the lambda on Placeholders
-    // We must pass in the Placeholders and remember them, since the composite itself will not remember their ordering.
+    // We must pass in the Placeholders and remember them, since the fPtr itself will not remember their ordering.
     if (!name.empty())
-        composite = Alias(composite, name);
-    composite->InitCompositeForInvoke(m_argumentList);
-    m_composite = move(composite);
-    // complete the m_argsMap pairs by including all learnable Parameters in it as well
+        fPtr = Alias(fPtr, name);
+    let fCompositePtr = dynamic_pointer_cast<CompositeFunction>(fPtr);
+    if (!fCompositePtr)
+        InvalidArgument("Invocable() must only be called on CompositeFunctions.");
+    // reset the cached batch axis (=max over all ranks involved, for batching the composite as elementwise
+    // This is only used if isBasicBlock, but since.
+    fCompositePtr->m_basicBlockBatchAxis = SIZE_MAX;  // SIZE_MAX means value has not yet been determined. Once it is, it is cached here.
+    fCompositePtr->m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
+    m_composite = move(fCompositePtr);
+
+    // -- prep this class for Invoke(). Complete the m_argsMap pairs by including all learnable Parameters in it as well.
     // This is needed so that the auto-batcher can see all Parameters that are inside, without having to traverse it.
+    m_operands.resize(m_argumentList.size());
     for (let& p : m_composite->Parameters())
     {
         m_argumentList.push_back(p); // presently also must pass all Parameters
@@ -4230,12 +4254,11 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     m_stillNeedsToInferShapes = true;
 }
 
+#if 0
 // subroutine of Invocable() with access to Function members
 void Function::InitCompositeForInvoke(const vector<Variable>& placeholders)
 {
-    let callee = dynamic_cast<CompositeFunction*>(this);
-    if (!callee)
-        InvalidArgument("InitForInvoke() must only be called on CompositeFunctions.");
+    let callee = static_cast<CompositeFunction*>(this);
     // implant the redirect into the placeholders
     for (size_t i = 0; i < placeholders.size(); i++)
     {
@@ -4250,6 +4273,7 @@ void Function::InitCompositeForInvoke(const vector<Variable>& placeholders)
 
     callee->m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
 }
+#endif
 
 Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
 {
@@ -4451,6 +4475,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
             // to allow for varying sequence axis, we replace the last axis with FreeDimension, and infer with that
             // If the input does not have that axis, then we create it.
             fail_if(batchDim == 0, "no batchDim determined??");
+            // TODO: check against the current Placeholder
             auto updatedCompositePlaceholder = PlaceholderVariable(ReplaceBatchDim(input.Shape().Dimensions(), NDShape::FreeDimension),
                 input.GetDataType(), input.Name(), input.DynamicAxes(), input.NeedsGradient(), input.IsSparse());
             //auto updatedCompositePlaceholder = PlaceholderLike(input);

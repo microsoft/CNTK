@@ -1943,6 +1943,7 @@ namespace CNTK
         friend class PrimitiveFunction;
         friend class Utils;
         friend struct VariableFields;
+        friend class Invocable;
 
         template <typename T>
         friend struct std::hash;
@@ -3796,7 +3797,6 @@ namespace CNTK
     public: // for Dynamite
         CNTK_API static DynamicProfilerPtr CreateDynamicProfiler(int verbosity, const std::wstring& name);
         CNTK_API static DynamicProfilerPtr SetDynamicProfiler(const DynamicProfilerPtr&, bool outer = false);
-        CNTK_API void InitCompositeForInvoke(const std::vector<Variable>& placeholders);
 
     private:
         static UserFunctionFactoryPtr s_userFunctionFactory;
