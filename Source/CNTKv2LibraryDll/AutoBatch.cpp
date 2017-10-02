@@ -2024,8 +2024,10 @@ class Variable::AutoBatch
         LogFunction(f, profiler ? profiler->Name() : L"-", markIndex);
     }
 
-    // clone a graph of PrimitiveFunctions of a composite of a basic block, and execute it as we go along
-    // This is used to execute a basic block. It returns a new PrimitiveFunction(-Ptr), which will have its output's m_value set.
+    // execute a basic block.
+    // This clones a block's composite graph of PrimitiveFunctions, and evaluates it as it goes along.
+    // Called only by InlineAndMemoizeBatchedBasicBlock() and the equivalent non-batched case in ExecuteBatchedOpAndUpdateSchedule().
+    // This returns a new PrimitiveFunction(-Ptr) (so we can backprop through it), which will have its output's m_value set.
     // Logically, we execute the block's composite by replacing its Placeholders (on the fly) with the provided batched blockInputs[].
     // Practically, we completely clone this graph, in order to be able to backprop through it.
     // The clone will have changed dimensions that reflect the additional batch axis. The batch axis is shared across *all* operations,
@@ -2045,20 +2047,8 @@ class Variable::AutoBatch
         //    If user code is correct, it will compute the right thing. But we cannot presently check or account for it.
         //  - this does not short-circuit operations. We need to do the same to the composite as we do to the dynamic graph in forward-graph building.
 
-        //if (any_of(block.m_inputs.begin(), block.m_inputs.end(), [](const Variable& arg) { return arg.m_dataFields->m_uniqueIdForDebugging == 243; }))
-        //    Break;
-        //if (block.m_inputs.size() == 4)
-        //    Break;
-        //if (block.m_inputs.size() == 4 && block.m_inputs.back().m_dataFields->m_uniqueIdForDebugging == 243)
-        //    Break;
-        //if (block.Composite()->m_outputs.front().m_dataFields->m_uniqueIdForDebugging == 288)
-        //    Break;
-
-        let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
-        size_t invocationArgsBatchDim = 0;
-        size_t compositeBatchDim;
-        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, invocationArgsBatchDim, compositeBatchDim,
-            [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs, size_t compositeBatchDim) -> PrimitiveFunctionPtr
+        // lambda (cloneFn) that RInlineComposite() calls for each cloned function in the composite
+        let cloneFn = [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs, size_t compositeBatchDim) -> PrimitiveFunctionPtr
         {
             // This lambda must apply the passed in the composite's PrimitiveFunction 'f' to 'newInputs'.
             // The newInputs are batched; that is, their shapes may mismatch those of f's inputs in that they may have an additional batch axis.
@@ -2074,7 +2064,12 @@ class Variable::AutoBatch
             // PERF BUGBUG: We should short-circuit the free ops for composites as well.
             let isFree = IsViewOp(f.m_op);
             return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, compositeBatchDim, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
-        });
+        };
+
+        size_t invocationArgsBatchDim = 0;
+        size_t compositeBatchDim;
+        let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
+        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, invocationArgsBatchDim, compositeBatchDim, cloneFn);
         m_compositeVisitorTag.End(prevVisitorTag); // (restore)
         return fInlinedPtr;
     }
@@ -2097,33 +2092,35 @@ class Variable::AutoBatch
         return input;
     }
 
-    // create a PrimitiveFunction that is a batched version of a given op, and execute it right away
-    // This is a wrapper around CreateAndMemoizeOp(). If a batchAxis is provided (!= SIZE_MAX), then the output will have that axis.
+    // create a PrimitiveFunction that is a batched version of a given function ('clonee'), and execute it right away
+    // This is a wrapper around CreateAndMemoizeOp().
+    // If a batchAxis is provided (!= SIZE_MAX), then the output will have that axis.
+    // If 
     // In that case, all inputs[*], unless not batched, must have the same batch axis (an example of a non-batched arg is the first arg of a matrix product).
     // Note that compositeBatchDim is only valid if we are cloning from a composite.
     // TODO: pass 'inputs' as rvalue ref, and move it below.
-    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, const vector<Variable>& inputs, size_t compositeBatchDim, size_t batchAxis, size_t batchSize, const wchar_t* logPrefix, bool isFree)
+    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& clonee, const vector<Variable>& inputs, size_t compositeBatchDim, size_t batchAxis, size_t batchSize, const wchar_t* logPrefix, bool isFree)
     {
         // special case for basic blocks: need to clone the entire composite (for backprop)
-        if (f.m_op == PrimitiveOpType::Block)
-            return InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(f), m_batchedInputs, batchAxis, batchSize);
+        if (clonee.m_op == PrimitiveOpType::Block)
+            return InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(clonee), m_batchedInputs, batchAxis, batchSize);
 
-        let& unbatchedOutputShape = f.m_outputs.front().Shape();
+        let& unbatchedOutputShape = clonee.m_outputs.front().Shape(); // <-- cut FreeDim replacement in here!
         const NDShape& shape = batchAxis != SIZE_MAX ? (batchAxis < unbatchedOutputShape.Rank() ? unbatchedOutputShape.SubShape(0, batchAxis) : unbatchedOutputShape).AppendAxis(batchAxis, batchSize) : unbatchedOutputShape;
         // TODO: This is a little malloc-inefficient                                  ^^
-        // handle the case that 'f' lives inside a composite
-        let& outputDims = shape.Dimensions();
+        // handle the case that 'clonee' lives inside a composite
+        let& outputDims = unbatchedOutputShape.Dimensions();
         let mustReplaceFreeDimension = (!outputDims.empty() && outputDims.back() == NDShape::FreeDimension);
         if (mustReplaceFreeDimension)
-            Break;
+            VerifyFreeDimensionReplacement(clonee.m_inputs, inputs, compositeBatchDim);
         fail_if(mustReplaceFreeDimension && compositeBatchDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
         Dictionary attributes;
-        f.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
+        clonee.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
 #if 1   // a sanity check whether we batched correctly. Can be removed once this stuff works.
-        if (IsMatrixProduct(f.m_op))
-            fail_if(inputs.front().Shape() != f.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
+        if (IsMatrixProduct(clonee.m_op))
+            fail_if(inputs.front().Shape() != clonee.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
 #endif
-        return CreateAndMemoizeOp(f.m_op, vector<Variable>(inputs), mustReplaceFreeDimension ? NDShape(ReplaceBatchDim(outputDims, compositeBatchDim)) : shape, move(attributes), f.m_name, f.m_profiler, L"*"/*f*/, isFree);
+        return CreateAndMemoizeOp(clonee.m_op, vector<Variable>(inputs), mustReplaceFreeDimension ? NDShape(ReplaceBatchDim(outputDims, compositeBatchDim)) : shape, move(attributes), clonee.m_name, clonee.m_profiler, L"*"/*clonee*/, isFree);
     }
 
     // create a PrimitiveFunction and execute it right away
