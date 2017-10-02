@@ -1425,6 +1425,7 @@ class Variable::AutoBatch
                         {
                             // BUGBUG: we retraverse multiple paths for now. This will be rewritten and done properly.
                             // BUGBUG: We also must compare the actual graph link structure, not just the unrolled tree.
+                            // BIG BUGBUG: AreBatchable considers m_batchAxis etc., which have not been set up for Primitives inside the composite.
                             if (!AreBatchable(*aInputFields.m_redirection.m_function, *bInputFields.m_redirection.m_function))
                                 return false;
                         }
@@ -1566,6 +1567,9 @@ class Variable::AutoBatch
                         return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
                     break;
                 }
+            case PrimitiveOpType::Block:
+                Break;
+                break;
             case PrimitiveOpType::Slice: // this is an affected op, but it's a view op, so we should not get here
                 // TODO: Think through the Slice case.
                 fail_if(true, "DetermineBatchAxis: should not get here for Slice");
@@ -2648,6 +2652,7 @@ class Variable::AutoBatch
         return maxInputRank;
     }
 
+#if 0
     // helper to determine the max Rank() over all inputs and outputs in composite's m_rootFunction
     // Auto-batching needs to know a common batch axis it can use throughout the entire BlockFunction.
     // It is determined as the max rank over all involved inputs and outputs.
@@ -2685,6 +2690,7 @@ class Variable::AutoBatch
 #endif
         return composite.m_basicBlockBatchAxis;
     }
+#endif
 
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
     vector<Variable> m_batchedInputs;
@@ -4198,7 +4204,7 @@ void PrimitiveFunction::InitOutput(Variable&& output)
 }
 
 /*Internal::*/Invocable::Invocable(size_t arity, size_t batchAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
-    m_arity(arity), m_isBasicBlock(isBasicBlock   &&false) // for now, disable basic blocks
+    m_arity(arity), m_isBasicBlock(isBasicBlock )//  &&false) // for now, disable basic blocks
 {
     // for debugging, we can disable static invocation altogether
     if (m_forceImmediate)
@@ -4231,8 +4237,11 @@ void PrimitiveFunction::InitOutput(Variable&& output)
         InvalidArgument("Invocable() must only be called on CompositeFunctions.");
     // reset the cached batch axis (=max over all ranks involved, for batching the composite as elementwise
     // This is only used if isBasicBlock, but since.
-    fCompositePtr->m_basicBlockBatchAxis = SIZE_MAX;  // SIZE_MAX means value has not yet been determined. Once it is, it is cached here.
-    fCompositePtr->m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
+    if (isBasicBlock)
+    {
+        fCompositePtr->m_basicBlockBatchAxis = m_argumentBatchAxes.empty() ? SIZE_MAX : batchAxis; // remember the one axis used for all ops inside the basic block
+        fCompositePtr->m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
+    }
     m_composite = move(fCompositePtr);
 
     // -- prep this class for Invoke(). Complete the m_argsMap pairs by including all learnable Parameters in it as well.
@@ -4240,8 +4249,9 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     m_operands.resize(m_argumentList.size());
     for (let& p : m_composite->Parameters())
     {
-        m_argumentList.push_back(p); // presently also must pass all Parameters
-        m_operands.push_back(p); // we prepopulate the operands here, these are not changed afterwards
+        m_argumentList.push_back(p);             // presently also must pass all Parameters
+        m_operands.push_back(p);                 // we prepopulate the operands here, these are not changed afterwards
+        m_argumentBatchAxes.push_back(SIZE_MAX); // make sure we can index these elements, too
     }
     m_stillNeedsToInferShapes = true;
 }
@@ -4312,21 +4322,51 @@ Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee,
     }
 }
 
-// heuristic to determine the batch axis when invoking
-//  - this heuristic is only applied when constructing the Composite, it is reflected in the signature
-//  - the signature of a composite is its input and output shapes
-//  - they may contain FreeDimension. It reflects one shared variable axis (meant to be the batch axis)
-//  - during each dynamic Invoke() (dynamic := shapes known), the input shapes are verified
-//     - dims must match
-//     - all FreeDimension values must be replaced by the same value
-//     - if FreeDimension is missing in the input shapes, it must be missing for all of them, and gets stripped from the output shape
-//     - FreeDimension must be in the last position
-// The heuristic for now is this (whcih, again, is ONLY applied while constructing the signature of the composite):
-//  - inputs := non-Parameters (parameters never have a batch dimension)
-//  - all inputs to an Invoke are of batched nature
-//  - their batch dimension is hard-coded as 1
+// Static invocation
+//  - a static graph can be invoked with input arguments that substitute for its Placeholders
+//  - this is done via the Invocable class
+//  - invocation:
+//     - an invocation translates into a single node in the graph, which links to the static graph via m_composite
+//     - multiple invocations share the same underlying static graph
+//     - static graphs can be called both during dynamic computation ("dynamic invocation"), as well as during construction of other static graphs ("static invocation")
+//     - upon first dynamic invocation, the static graph's shapes are determined
+//        - to support stacking, the last axis of each input may be variable. It is stored and inferred in the static graph.
+//        - at static-graph construction time, input shapes are not known. For now, user must tell at that point what the stacking axis is.
+//          E.g. a static graph Times(W,_) can be applied to inputs with variable #columns. Pass batchAxis = 1 here to allow stacking them.
+//     - static graphs can be invoked in two modes:
+//        - early inlining (isBasicBlock=false): static graph gets inlined into the dynamic graph before any batching decisions
+//          Allows for fine-grained auto-batching, as if the static graph's operations were just dynamically unrolled.
+//        - late inlining (isBasicBlock=true): static graph gets treated like a PrimitiveFunction for purpose of batching.
+//          Allows to cut overhead of the auto-batching algorithm, and also provides auto-batching constraints (as hints).
+//  - variable dimensions:
+//     - static graphs get their shapes inferred only once, upon first invocation
+//       This is to save time. Due to this, early inlining of a static graph is more restrictive than regular dynamic invocation.
+//     - static graph can only have one variable dimension (implemented via CNTK's FreeDimension mechanism)
+//     - user must declare the variable axis for all arguments
+//     - upon invocation, either all or no actual argument must have that axis,
+//       If they do, they must all have the same dimension in their respective axis, which the output will also have. If not, the output will not have the axis.
+//        - early inlining:
+//           - allowed: f([I x *], [J x K x *]) -> [N x *],
+//                      invocable as f([I x T], [J x K x T]) -> [N x T]
+//                      or as f([I], [J x K]) -> [N]
+//           - not supported: f([I x *], [J x K]) -> [N x ?] (second arg has no variable dimension)
+//           - not supported: invoke as f([I x T], [J x K]) -> [N x ?] (second arg has no variable dimension)
+//             TODO: This ^^ is actually doable with just a little more code.
+//        - late inlining:
+//           - the batch axis must be the same for all args, and no intermediate op may touch that axis
+//             TODO: We could relax this, but for now it simplifies things a lot. (TODO: revisit later to see if it really does)
+//           - allowed: f([I x *], [J x *]) -> [N x *]
+//           - not supported: f([I x *], [J x K x *]) -> [N x *] (batch dim not at same location)
+//  - batching
+//     - any invocation with variable dimension can use stacking or batching
+//        - batching if all inputs have matching dimension in the respective batch axes. Batching adds one more axis.
+//          { [I x J X T], [I x J x T] } -> [I x J x T x 2], with T=batch axis
+//        - stacking if batch dimensions differ
+//          { [I x J X T1], [I x J x T2] } -> [I x J x (T1+T2)]
+//        - none at all if not batchable
+//     - batchability per stacking condition: two ops are batchable if their inputs have matching dimensions except for the batch axis
 
-// determine "the" batch dimension of an invocation
+// determine "the" batch dimension of an invocation, using a hack (fixed axis := 1)
 // The result is either the dim (if all inputs have a batch dim) or SIZE_MAX (if no input has a batch dim), or an error.
 // This function has the heuristics built in that the batch axis is hard-coded as 1.
 static size_t DetermineInvokeBatchDim(const vector<Variable>& inputs)
@@ -4467,6 +4507,11 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
     // if batchDim != SIZE_MAX, the resulting composite output likely has a batch axis as well, which is also FreeDimension
     if (compositeOutputs.front().Shape().IsUnknown()) // or not?
         LogicError("Invoke with determineShapes=true must not be called with inputs with Placeholder dimensions.");
+
+    // populate all composite's m_batchAxis etc. fields
+    if (isBasicBlock)
+    {
+    }
 
     // Now the composite is fully type-inferred; ready for consumption by Dynamite.
 }
