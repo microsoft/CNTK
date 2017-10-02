@@ -1171,6 +1171,8 @@ class Variable::AutoBatch
                 inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
                 // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
             }
+            //if (inlinedInputs[i].Shape().HasFreeDimension())
+            //    Break;
             // update invocationArgsBatchDim
             // This is the batch dimension that the result should get.
             // For arguments that have a batch dimension, it must match. It is possible that argument have none.
@@ -2056,16 +2058,13 @@ class Variable::AutoBatch
             // If any, then the output will get one as well.
             let anyBatchedInputs = any_of(newInputs.begin(), newInputs.end(), [batchAxis](const Variable& input) { return input.Shape().Rank() >= batchAxis; });
 
-            if (IsMatrixProduct(f.m_op) && newInputs.front().Shape().Rank() >= batchAxis)
-                InvalidArgument("Inside a basic block, the first argument of a matrix products cannot have a batch axis.");
-
             // clone and memoize this operation
             // We pass on batchAxis such that the output shape will be that of the original output shape of the Function in the
             // composite, augmented with the batch axis. However, if no input has a batch axis, then the output should have none.
             // PERF BUGBUG: newInputs is already a copy that we can just move
             // PERF BUGBUG: We should short-circuit the free ops for composites as well.
             let isFree = IsViewOp(f.m_op);
-            return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
+            return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, invocationArgsBatchDim, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
         });
         m_compositeVisitorTag.End(prevVisitorTag); // (restore)
         return fInlinedPtr;
@@ -2092,7 +2091,9 @@ class Variable::AutoBatch
     // create a PrimitiveFunction that is a batched version of a given op, and execute it right away
     // This is a wrapper around CreateAndMemoizeOp(). If a batchAxis is provided (!= SIZE_MAX), then the output will have that axis.
     // In that case, all inputs[*], unless not batched, must have the same batch axis (an example of a non-batched arg is the first arg of a matrix product).
-    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, const vector<Variable>& inputs, size_t batchAxis, size_t batchSize, const wchar_t* logPrefix, bool isFree)
+    // Note that invocationArgsBatchDim is only valid if we are cloning from a composite.
+    // TODO: pass 'inputs' as rvalue ref, and move it below.
+    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& f, const vector<Variable>& inputs, size_t invocationArgsBatchDim, size_t batchAxis, size_t batchSize, const wchar_t* logPrefix, bool isFree)
     {
         // special case for basic blocks: need to clone the entire composite (for backprop)
         if (f.m_op == PrimitiveOpType::Block)
@@ -2100,14 +2101,20 @@ class Variable::AutoBatch
 
         let& unbatchedOutputShape = f.m_outputs.front().Shape();
         const NDShape& shape = batchAxis != SIZE_MAX ? (batchAxis < unbatchedOutputShape.Rank() ? unbatchedOutputShape.SubShape(0, batchAxis) : unbatchedOutputShape).AppendAxis(batchAxis, batchSize) : unbatchedOutputShape;
-        // TODO: This is a little inefficient                                  ^^
+        // TODO: This is a little malloc-inefficient                                  ^^
+        // handle the case that 'f' lives inside a composite
+        let& outputDims = shape.Dimensions();
+        let mustReplaceFreeDimension = (!outputDims.empty() && outputDims.back() == NDShape::FreeDimension);
+        if (mustReplaceFreeDimension)
+            Break;
+        fail_if(mustReplaceFreeDimension && invocationArgsBatchDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
         Dictionary attributes;
         f.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
 #if 1   // a sanity check whether we batched correctly. Can be removed once this stuff works.
         if (IsMatrixProduct(f.m_op))
             fail_if(inputs.front().Shape() != f.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
 #endif
-        return CreateAndMemoizeOp(f.m_op, vector<Variable>(inputs), shape, move(attributes), f.m_name, f.m_profiler, L"*"/*f*/, isFree);
+        return CreateAndMemoizeOp(f.m_op, vector<Variable>(inputs), mustReplaceFreeDimension ? NDShape(ReplaceBatchDim(outputDims, invocationArgsBatchDim)) : shape, move(attributes), f.m_name, f.m_profiler, L"*"/*f*/, isFree);
     }
 
     // create a PrimitiveFunction and execute it right away
@@ -2962,7 +2969,7 @@ class Variable::AutoBatch
                 // execute it
                 if (f.m_op == PrimitiveOpType::Block)
                 {
-                    //if (f.m_uniqueIdForDebugging == 67463)
+                    //if (f.m_uniqueIdForDebugging == 52152)
                     //    Break;
                     let fInlinedPtr = InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(f), f.m_inputs, /*batchAxis=*/SIZE_MAX, /*batchSize=*/1/*dummy*/);
                     // implant the result
@@ -3155,7 +3162,7 @@ class Variable::AutoBatch
         //              Note: This is not covered by CSE, since CSE is only used for complex cases.
         //if (f0.m_uniqueIdForDebugging == 23286)
         //    Break;
-        auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
+        auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, /*invocationArgsBatchDim=*/SIZE_MAX/*dummy*/, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
 
         // some stats and checks
         if (!anyBatchedInputs)
