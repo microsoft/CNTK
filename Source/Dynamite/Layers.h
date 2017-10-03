@@ -789,7 +789,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     if (hasLengthNorm)
         nested[L"lengthNorm"] = lengthNorm;
     // BUGBUG: if isBasicBlock 'true' then this fails with projectInput.weightNormRescale not a parameter
-    StaticModel normWeight(/*isBasicBlock=*/false , [=]() -> Variable
+    StaticModel normWeight(/*isBasicBlock=*/true , [=]() -> Variable
     {
         if (!hasWeightNorm)
             return W; // TODO: this is a dummy so that we don't reference the weightNormRescale parameter
@@ -804,7 +804,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         let scale1 = invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
         return scale1;
         //y = scale1 * y;
-    }, Named("dense.normWeight"));
+    }, Named("dense.normWeight" + to_wstring(xxx)));
     StaticModel doDense(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
     {
         auto y = x;

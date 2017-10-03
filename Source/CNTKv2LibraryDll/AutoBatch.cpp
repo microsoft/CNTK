@@ -1164,10 +1164,10 @@ class Variable::AutoBatch
                 // determine the free dimension
                 let freeAxis = itemRank;
                 thisFreeDim = (placeholderHasFreeDimension && freeAxis < operandRank) ? operandDims[freeAxis] : SIZE_MAX;
-                if (invocationArgsFreeDim == 0) // first encounter
+                if (invocationArgsFreeDim == SIZE_MAX)
                     invocationArgsFreeDim = thisFreeDim;
-                else if (invocationArgsFreeDim != thisFreeDim)
-                    InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisFreeDim, (int)invocationArgsFreeDim, cloneeInput.Shape().AsString().c_str());
+                else if (thisFreeDim != SIZE_MAX && invocationArgsFreeDim != thisFreeDim)
+                    InvalidArgument("Invoke: Incompatible replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisFreeDim, (int)invocationArgsFreeDim, cloneeInput.Shape().AsString().c_str());
                 // OK!
                 inlinedInputs[i] = operand;
             }
@@ -1412,7 +1412,7 @@ class Variable::AutoBatch
                 {
                     if (&a == &b)
                         return true;
-#if 0               // BUGBUG: I noticed a slight loss after I added batching of composites. It is not clear where it is from. Verify this!
+#if 1               // BUGBUG: I noticed a slight loss after I added batching of composites. It is not clear where it is from. Verify this!
                     return false;
 #else
                     if (!AreBatchable(a, b))
@@ -1793,7 +1793,7 @@ class Variable::AutoBatch
             // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
             // Besides that, the original Block function will remain unmodified.
             m_compositeVisitorTag.Begin();
-            size_t invocationArgsFreeDim = 0;
+            size_t invocationArgsFreeDim = SIZE_MAX;
             size_t inputsBatchDimDummy;
             auto inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*f.BlockRoot()),
                                                    f.m_inputs, invocationArgsFreeDim, inputsBatchDimDummy, /*cloneFn=*/ClonePrimitiveFunction);
@@ -2105,7 +2105,7 @@ class Variable::AutoBatch
             return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, compositeBatchDim, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
         };
 
-        size_t invocationArgsFreeDim = 0;
+        size_t invocationArgsFreeDim = SIZE_MAX;
         size_t compositeBatchDim;
         let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
         let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, invocationArgsFreeDim, compositeBatchDim, cloneFn);
@@ -4301,6 +4301,11 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     // We must pass in the Placeholders and remember them, since the fPtr itself will not remember their ordering.
     if (!name.empty())
         fPtr = Alias(fPtr, name);
+#if 1
+    fprintf(stderr, "Invocable('%S'):\n", name.c_str());
+    for (let& p : fPtr->Parameters())
+        fprintf(stderr, "    %S : %S\n", p.Name().c_str(), p.Shape().AsString().c_str());
+#endif
     let fCompositePtr = dynamic_pointer_cast<CompositeFunction>(fPtr);
     if (!fCompositePtr)
         InvalidArgument("Invocable() must only be called on CompositeFunctions.");
@@ -4438,6 +4443,7 @@ Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee,
 
 // determine "the" free dimension of an invocation, using a hack (fixed axis := 1)
 // The result is either the dim (if all inputs have a batch dim) or SIZE_MAX (if no input has a batch dim), or an error.
+// BUGBUG: This constraint is no longer needed. Also, tis should use the correct axes.
 // This function has the heuristics built in that the batch axis is hard-coded as 1.
 static size_t DetermineInvokeFreeDim(const vector<Variable>& inputs)
 {
@@ -4579,6 +4585,11 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
     if (compositeOutputs.front().Shape().IsUnknown()) // or not?
         LogicError("Invoke with determineShapes=true must not be called with inputs with Placeholder dimensions.");
 
+#if 1
+    fprintf(stderr, "BlockFunction('%S') : %S\n", callee->Name().c_str(), compositeOutputs.front().Shape().AsString().c_str());
+    for (let& p : Parameters())
+        fprintf(stderr, "    %S : %S\n", p.Name().c_str(), p.Shape().AsString().c_str());
+#endif
     // Now the composite is fully type-inferred; ready for consumption by Dynamite.
 }
 
