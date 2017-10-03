@@ -769,10 +769,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
     auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
     auto scale = Parameter({}, DTYPE, 1.0, device, L"scale");
-    static int xxx = 0; ++xxx;
-    if (xxx == 7)
-        fprintf(stderr, "");
-    auto weightNormRescale = Parameter({ outputDim }, DTYPE, 1.0, device, L"weightNormRescale"+to_wstring(xxx));
+    auto weightNormRescale = Parameter({ outputDim }, DTYPE, 1.0, device, L"weightNormRescale");
     let weightNormMinusHalf = Constant::Scalar(DTYPE, -0.5, device);
     let batchNorm = hasBatchNorm ? BatchNormalization(device, /*axis=*/1, Named("DenseBN")) : Identity;
     let lengthNorm = hasLengthNorm ? LengthNormalization(device) : Identity;
@@ -804,7 +801,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         let scale1 = invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
         return scale1;
         //y = scale1 * y;
-    }, Named("dense.normWeight" + to_wstring(xxx)));
+    }, Named("dense.normWeight"));
     StaticModel doDense(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
     {
         auto y = x;

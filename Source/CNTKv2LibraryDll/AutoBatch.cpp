@@ -1328,9 +1328,10 @@ class Variable::AutoBatch
             return false;
 #else
             // special case for Block
-            if (op == PrimitiveOpType::Block)
+            let isBlock = (op == PrimitiveOpType::Block);
+            if (isBlock)
             {
-                // composites must match (object identity)
+                // composites must match (object identity or fully equivalent graph)
                 let& aComposite = static_cast<const BlockFunction&>(a).Composite();
                 let& bComposite = static_cast<const BlockFunction&>(b).Composite();
                 if (CacheAndGetBatchableCompositeId(static_pointer_cast<CompositeFunction>(aComposite)) != CacheAndGetBatchableCompositeId(static_pointer_cast<CompositeFunction>(bComposite)))
@@ -1344,11 +1345,13 @@ class Variable::AutoBatch
                 let& aFields = GetInputFields(a.m_inputs[i]); // (we don't see through no-ops since the target shape is the right one to test)
                 let& bFields = GetInputFields(b.m_inputs[i]);
                 // there are a few special cases
-                if (isTimes && i == 0)
+                if ((isTimes && i == 0) ||
+                    (isBlock && (aFields.m_varKind == VariableKind::Parameter || bFields.m_varKind == VariableKind::Parameter))) // BUGBUG: unnecessarily restrictive
                 {
                     // for Times, the first arg must be the same object, not just the same shape
                     // TODO: a special case is a dot product, which we can write as ReduceSum(ElementTimes(a,b))
                     //       This would require to rewrite the graph though; can we do that?
+                    // for Block, the built-in references to Parameters must match by object, since for now, we cannot substitute them. with a batched version
                     if (&aFields != &bFields)
                         return false;
                 }
@@ -1412,7 +1415,7 @@ class Variable::AutoBatch
                 {
                     if (&a == &b)
                         return true;
-#if 1               // BUGBUG: I noticed a slight loss after I added batching of composites. It is not clear where it is from. Verify this!
+#if 0               // BUGBUG: I noticed a slight loss after I added batching of composites. It is not clear where it is from. Verify this!
                     return false;
 #else
                     if (!AreBatchable(a, b))
@@ -1458,6 +1461,8 @@ class Variable::AutoBatch
                         let otherCompositePtr = otherList.front().lock();
                         if (!otherCompositePtr)
                             continue; // TODO: keep looking for a non-expired one
+                        //if (compositePtr->Name() == L"dense.normWeight5" || otherCompositePtr->Name() == L"dense.normWeight5")
+                        //    Break;
                         let areBatchable = AreCompositesBatchable(static_cast<const PrimitiveFunction&>(*compositePtr->RootFunction()), static_cast<const PrimitiveFunction&>(*otherCompositePtr->RootFunction()));
                         // found a match
                         if (areBatchable)
@@ -2222,17 +2227,17 @@ class Variable::AutoBatch
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
-        // logging
-        if (ShouldProfile(f))
-            LogFunction(f, f.m_profiler);
-        //if (f.m_op == PrimitiveOpType::ElementTimes)
-        //    LogFunction(f, L"bf  ");
         auto outValue =
             /*if*/ (isFree) ?
                 NDArrayViewPtr()
             /*else*/:
                 m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
         cudaStatsGuardPrepare.Stop();
+        // logging
+        if (ShouldProfile(f))
+            LogFunction(f, f.m_profiler);
+        //if (f.m_op == PrimitiveOpType::ElementTimes)
+        //    LogFunction(f, L"bf  ");
         CudaStats* cudaStatsPtr = nullptr;
         if (ShouldLogMemoizeStats())
         {
@@ -3201,6 +3206,7 @@ class Variable::AutoBatch
                                                        i, /*in/out*/anyBatchedInputs);
         }
         // anyBatchedInputs will still be false if all had identical inputs across all batch items.
+        // BUGBUG: ^^ We batch arguments of basic blocks as well, which is not necessary snce they are never replaced.
 
         // special case: BatchNormalization
         if (op == PrimitiveOpType::BatchNormalization)
@@ -3234,6 +3240,17 @@ class Variable::AutoBatch
             for (size_t i = 0; i < numArgs; i++)
                 fail_if(&GetInputFields(m_batchedInputs[i]) != &GetInputFields(f0.m_inputs[i]), "all batch args the same, but not??");
 
+        //if (f0.m_op == PrimitiveOpType::Block)
+        //{
+        //    for (let& f : ops)
+        //    {
+        //        let name = static_cast<const BlockFunction&>(f).Composite()->Name();
+        //        if (name.size() > 6 && name.substr(0, 6) == L"dense.")
+        //            Break;
+        //        if (name == L"dense.normWeight3")
+        //            Break;
+        //    }
+        //}
         // >>> This is the actual batched op that we create and execute here. <<<
         // A new PrimitiveFunction is created for the batched op, so that we can backprop through it.
         // If f0 is a block, then actually an entire subgraph clone will be created here.
