@@ -742,7 +742,7 @@ class NDArrayViewArena
     static NDArrayViewPtr s_currentArena;
     static size_t s_currentArenaUsed;
     static vector<unique_ptr<NDArrayView>> s_recycledArenas;
-    static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
+    static const size_t ARENASIZE = 4*64000000; // we allocate in this chunk size
 public:
     // allocate an NDArrayView of a given shape, data type, and device
     // The returned memory region is a slice into a much larger NDArrayView; therefore,
@@ -766,7 +766,7 @@ public:
         // The deleter, though, will intercept that and move it into the recycledArenas array.
         // Next time we need a new arena, we will look there first and recycle one.
         // If the data type is different, we drop the current arena. We can't presently mix data types, so this is ah-OK.
-        if (!s_currentArena || numElements > (ARENASIZE - s_currentArenaUsed) ||
+        if (!s_currentArena || numElements > (s_currentArena->Shape()[0]/*ARENASIZE*/ - s_currentArenaUsed) ||
             dataType != s_currentArena->GetDataType() || device != s_currentArena->Device())
         {
             //CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
