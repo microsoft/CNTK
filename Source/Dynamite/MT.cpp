@@ -286,44 +286,21 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
 {
     vector<Variable> /*features, historyVector,*/ labelsVector, zVector, losses; // TODO: remove this; leave it to Splice(&&)
     // features and labels are tensors with first dimension being the length
-    BinaryModel criterion = [=](const Variable& source, const Variable& target) mutable -> Variable
+    BinaryModel criterion = [=](const Variable& sourceSeq, const Variable& targetSeq) mutable -> Variable
     {
         // convert sequence tensors into sequences of tensors
         // and strip the corresponding boundary markers
         //  - features: strip any?
         //  - labels: strip leading <s>
         //  - history: strip training </s>
-        CountAPICalls(2);
-        let labelsSeq  = Slice(target, Axis(-1), 1, (int)target.size()    ); // labelsSeq  = targets without leading <s>
-        let historySeq = Slice(target, Axis(-1), 0, (int)target.size() - 1); // historySeq = targets without trailing </s>
+        let labelsSeq  = Slice(targetSeq, Axis(-1), 1, (int)targetSeq.size()    ); CountAPICalls(); // labels  = targets without leading <s>
+        let historySeq = Slice(targetSeq, Axis(-1), 0, (int)targetSeq.size() - 1); CountAPICalls(); // history = targets without trailing </s>
         // apply model function
         // returns the sequence of output log probs over words
-        let zSeq = model_fn(source, historySeq);
+        let zSeq = model_fn(sourceSeq, historySeq);
         // compute loss per word
-#if 0
-        let sequenceLoss = Dynamite::Sequence::Map(BinaryModel([](const Variable& zVector, const Variable& label) { return Dynamite::CrossEntropyWithSoftmax(zVector, label); }));
-        as_vector(zVector, zSeq);
-        as_vector(labelsVector, labelsSeq);
-        sequenceLoss(losses, zVector, labelsVector);
-        zVector.clear(); labelsVector.clear();
-        let loss = Batch::sum(losses); // TODO: Batch is not the right namespace; but this does the right thing
-        losses.clear();
-#else
-#if 0
-        //let lossSeq = Dynamite::Sequence::map(zSeq, labelsSeq, [](const Variable& zSeq, const Variable& y) { return Dynamite::CrossEntropyWithSoftmax(zSeq, y); }, losses);
-        as_vector(zVector, zSeq);
-        as_vector(labelsVector, labelsSeq);
-        let sequenceLoss = Dynamite::Sequence::Map(BinaryModel([](const Variable& zSeq, const Variable& y) { return Dynamite::CrossEntropyWithSoftmax(zSeq, y); }));
-        sequenceLoss(losses, zVector, labelsVector);
-        let lossSeq = Splice(losses, Axis(0));
-        zVector.clear(); labelsVector.clear();
-        losses.clear();
-#else
         let lossSeq = Dynamite::CrossEntropyWithSoftmax(zSeq, labelsSeq, Axis(0));
-#endif
-        CountAPICalls(1);
-        let loss = ReduceSum(lossSeq, Axis_DropLastAxis);
-#endif
+        let loss = ReduceSum(lossSeq, Axis_DropLastAxis); CountAPICalls(1);
         return loss;
     };
     let profiler = Function::CreateDynamicProfiler(1, L"all");
@@ -336,11 +313,8 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
         let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
         vector<Variable> lossesPerSequence;
         batchModel(lossesPerSequence, features, labels);             // batch-compute the criterion
-        CountAPICalls(1);
-        let collatedLosses = Splice(move(lossesPerSequence), Axis(0), Named("seqLosses"));     // collate all seq lossesPerSequence
-        // ^^ this is one launch per MB
-        CountAPICalls(1);
-        let mbLoss = ReduceSum(collatedLosses, Axis_DropLastAxis, Named("batchLoss"));  // aggregate over entire minibatch
+        let collatedLosses = Splice(move(lossesPerSequence), Axis(0), Named("seqLosses")); CountAPICalls(1);    // collate all seq lossesPerSequence
+        let mbLoss = ReduceSum(collatedLosses, Axis_DropLastAxis, Named("batchLoss")); CountAPICalls(1); // aggregate over entire minibatch
         Function::SetDynamicProfiler(prevProfiler);
         return mbLoss;
     });
