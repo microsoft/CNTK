@@ -10,9 +10,9 @@
 
 // Disabling some deprecation warnings in boost.
 // Classes that we use are not deprecated.
-#pragma warning(disable:4348 4459 4100)
+#pragma warning(disable:4348 4459 4100 4819)
 #include <boost/spirit/include/qi.hpp>
-#pragma warning(default:4348 4459 4100)
+#pragma warning(default:4348 4459 4100 4819)
 
 using namespace std;
 

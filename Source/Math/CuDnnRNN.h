@@ -79,14 +79,25 @@ public:
         m_dataType(CuDnnTensor::GetDataType<ElemType>())
     {
         CUDNN_CALL(cudnnCreateRNNDescriptor(&m_rnnDesc));
+#if CUDNN_VERSION >= 7000
+        CUDNN_CALL(cudnnSetRNNDescriptor_v5(m_rnnDesc,
+                  (int)m_rnnAttributes.m_hiddenSize,
+                  (int)m_rnnAttributes.m_numLayers,
+                  m_dropout,
+                  CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
+                  m_rnnAttributes.m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+                  GetMode(),
+                  m_dataType));
+#else
         CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
-            (int)m_rnnAttributes.m_hiddenSize,
-            (int)m_rnnAttributes.m_numLayers,
-            m_dropout,
-            CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
-            m_rnnAttributes.m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
-            GetMode(),
-            m_dataType));
+                  (int)m_rnnAttributes.m_hiddenSize,
+                  (int)m_rnnAttributes.m_numLayers,
+                  m_dropout,
+                  CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
+                  m_rnnAttributes.m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+                  GetMode(),
+                  m_dataType));
+#endif
     }
 
     ~CuDnnRNN()

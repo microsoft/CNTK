@@ -9,6 +9,7 @@
 
 configure=$0
 build_top=$PWD
+src_root=`dirname $0`
 
 cuda_path=
 cuda_check=include/cuda.h
@@ -24,7 +25,7 @@ nccl_path=
 nccl_check=include/nccl.h
 
 # CNTK Custom MKL Version
-cntk_custom_mkl_version=3
+cntk_custom_mkl_version=`cat $src_root/Dependencies/CNTKCustomMKL/version.txt`
 
 have_mkl=no
 mkl_path=
@@ -61,11 +62,11 @@ buildtype=
 default_buildtype=release
 
 have_gdk_include=no
-gdk_include_path=
+gdk_include_path=$cuda_path/include
 gdk_include_check=nvml.h
 
 have_gdk_nvml_lib=no
-gdk_nvml_lib_path=
+gdk_nvml_lib_path=$cuda_path/lib64
 gdk_nvml_lib_check=libnvidia-ml.so
 
 have_cub=no
@@ -73,8 +74,8 @@ cub_path=
 cub_check=cub/cub.cuh
 
 have_cudnn=no
-cudnn_path=
-cudnn_check=cuda/include/cudnn.h
+cudnn_path=/usr/include/x86_64-linux-gnu
+cudnn_check=cudnn.h
 
 have_opencv=no
 opencv_path=
@@ -119,13 +120,13 @@ default_openblas=""
 
 default_boost="boost-1.60.0"
 
-default_cudas="cuda-8.0 cuda-7.5"
+default_cudas="cuda-9.0"
 default_nccls="nccl"
 default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdk_includes="include/nvidia/gdk"
 default_gdk_nvml_libs="src/gdk/nvml/lib"
-default_cubs="cub-1.4.1"
-default_cudnns="cudnn-6.0 cudnn-5.1 cudnn-5.0"
+default_cubs="cub-1.7.4"
+default_cudnns="cudnn-7.0.3"
 default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_protobuf="protobuf-3.1.0"
 default_libzips="libzip-1.1.2"
