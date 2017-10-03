@@ -2085,7 +2085,7 @@ class Variable::AutoBatch
     // batched inputs and consistent batching for all ops, and therefore does not perform any additional (re-)batching.
     PrimitiveFunctionPtr InlineAndMemoizeBatchedBasicBlock(const BlockFunction& block, const vector<Variable>& invocationArgs, size_t batchAxis/*or SIZE_MAX*/, size_t batchSize)
     {
-        CudaStatsGuard cudaStatsguard(block.m_op, nullptr, 0, block.m_outputs.front().Shape().TotalSize(/*check=*/false));
+        CudaStatsGuard cudaStatsguard(block.m_op, L"invoke basic block", 3, block.m_outputs.front().Shape().TotalSize(/*check=*/false));
         // BUGBUG:
         //  - if block contains BatchNorm, then the implied barrier is not accounted for in batching.
         //    If user code is correct, it will compute the right thing. But we cannot presently check or account for it.
@@ -3436,7 +3436,7 @@ public:
                 }
             }
             // execute it, and also update all outputs' values and consumers, and the schedule
-            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::Block/*misusing this for actual op*/, L"forward execute", 3);
+            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"forward execute", 3);
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
         CacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
