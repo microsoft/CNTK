@@ -4503,7 +4503,7 @@ namespace CNTK
         const size_t m_arity; // actual number of function arguments. Note: m_argumentList/m_operands contain additional leaves, so its size() is not sufficient.
         const bool m_isBasicBlock;
         mutable std::vector<Variable> m_argumentList; // contains the Variables in the composite. May be updated upon determining the shapes with PlaceholderLikes.
-        std::vector<size_t> m_argumentBatchAxes;      // batch axis for each argument
+        std::vector<size_t> m_argumentFreeAxes;       // axis where the FreeDimension goes, for each argument
         mutable std::vector<Variable> m_operands;     // these are overwritten upon each call
         FunctionPtr m_composite; // Note: multiple calls to Invoke() assume that the composite does not change; so encapsulate it here.
         mutable bool m_stillNeedsToInferShapes;
@@ -4513,7 +4513,7 @@ namespace CNTK
         std::function<Variable(const std::vector<Variable>&)> m_lambdaRememberedForDebugging;
         std::wstring m_nameRememberedForDebugging;
 
-        CNTK_API Invocable(size_t arity, size_t batchAxis, bool isBasicBlock, const std::function<Variable(const std::vector<Variable>&)>& f, std::wstring name);
+        CNTK_API Invocable(size_t arity, size_t freeAxis, bool isBasicBlock, const std::function<Variable(const std::vector<Variable>&)>& f, std::wstring name);
         void CheckArity(size_t arity) const
         {
             if (m_arity != arity)
@@ -4528,10 +4528,10 @@ namespace CNTK
         Variable Invoke(const FunctionPtr& composite, std::vector<Variable>& argumentList, const std::vector<Variable>& operands, bool isBasicBlock, bool& determineShapes, const std::wstring& name = std::wstring()) const;
         // TODO: ^^ merge Invoke() into DoInvoke()
     public:
-        Invocable(bool isBasicBlock, size_t batchAxis, const std::function<Variable(                                                 )>& f, std::wstring name) : Invocable(0, batchAxis, isBasicBlock, [=](const std::vector<Variable>& args) { args; return f(                   ); }, name) { }
-        Invocable(bool isBasicBlock, size_t batchAxis, const std::function<Variable(const Variable&                                  )>& f, std::wstring name) : Invocable(1, batchAxis, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0]                  ); }, name) { }
-        Invocable(bool isBasicBlock, size_t batchAxis, const std::function<Variable(const Variable&, const Variable&                 )>& f, std::wstring name) : Invocable(2, batchAxis, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0], args[1]         ); }, name) { }
-        Invocable(bool isBasicBlock, size_t batchAxis, const std::function<Variable(const Variable&, const Variable&, const Variable&)>& f, std::wstring name) : Invocable(3, batchAxis, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0], args[1], args[2]); }, name) { }
+        Invocable(bool isBasicBlock, size_t freeAxis, const std::function<Variable(                                                 )>& f, std::wstring name) : Invocable(0, freeAxis, isBasicBlock, [=](const std::vector<Variable>& args) { args; return f(                   ); }, name) { }
+        Invocable(bool isBasicBlock, size_t freeAxis, const std::function<Variable(const Variable&                                  )>& f, std::wstring name) : Invocable(1, freeAxis, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0]                  ); }, name) { }
+        Invocable(bool isBasicBlock, size_t freeAxis, const std::function<Variable(const Variable&, const Variable&                 )>& f, std::wstring name) : Invocable(2, freeAxis, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0], args[1]         ); }, name) { }
+        Invocable(bool isBasicBlock, size_t freeAxis, const std::function<Variable(const Variable&, const Variable&, const Variable&)>& f, std::wstring name) : Invocable(3, freeAxis, isBasicBlock, [=](const std::vector<Variable>& args) { return f(args[0], args[1], args[2]); }, name) { }
         Variable operator()() const
         {
             CheckArity(0);

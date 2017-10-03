@@ -462,7 +462,7 @@ namespace CNTK
         friend class BlockFunction;
         friend class Variable::AutoBatch;
         friend class Invocable;
-        size_t m_basicBlockBatchAxis;  // we cache the batch axis here upon first use. SIZE_MAX means not cached yet.
+        size_t m_basicBlockFreeAxis;   // for basic blocks: axis that carries FreeDimension
         size_t m_batchableCompositeId; // composites with the same id are batchable. SIZE_MAX means not determined yet.
 
         // Version history:

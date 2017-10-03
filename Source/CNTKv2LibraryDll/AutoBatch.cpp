@@ -983,7 +983,7 @@ static shared_ptr<DynamicProfiler> m_currentProfiler; // current innermost activ
 /*static*/ const DynamicProfilerPtr& PrimitiveFunction::CurrentDynamicProfiler() { return m_currentProfiler; }
 
 // a few helper functions--sort these
-static inline vector<size_t> ReplaceBatchDim(vector<size_t> shape, size_t batchDimValue);
+static inline vector<size_t> ReplaceFreeDim(vector<size_t> shape, size_t batchDimValue);
 
 // ===========================================================================
 // AutoBatch -- autobatching happening inside here
@@ -1097,11 +1097,11 @@ class Variable::AutoBatch
     // The actual PrimitiveFunction copy is made via the cloneFn. This way, this function can be used
     // for both the initial unbatched inlining (no basic block), as well for inlining basic blocks during execution.
     // This function checks whether all substituted Placeholders have the same batch dimension (FreeDimension).
-    //  - At the root of a composite, pass invocationArgsBatchDim=0; inside here, pass the value as is.
+    //  - At the root of a composite, pass invocationArgsFreeDim=0; inside here, pass the value as is.
     //  - Upon return, it will contain the one batch dim value that is shared across all substituted placeholders.
     VisitorTag m_compositeVisitorTag; // helper for managing tree traversal through composite (not nested)
     template<class F>
-    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& clonee, const vector<Variable>& invocationArgs, /*in/out*/size_t& invocationArgsBatchDim, /*out*/ size_t& inlinedBatchDim, const F& cloneFn) const
+    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& clonee, const vector<Variable>& invocationArgs, /*in/out*/size_t& invocationArgsFreeDim, /*out*/ size_t& inlinedFreeDim, const F& cloneFn) const
     {
         // if we already cloned this one then just return the clone
         if (m_compositeVisitorTag.Visited(clonee.m_autoBatchState.m_visitedTag))
@@ -1109,7 +1109,7 @@ class Variable::AutoBatch
             let fInlined = clonee.m_autoBatchState.m_link; // we remembered the clone here
             if (!fInlined) // if we get here before this was filled in then we have discovered a cycle
                 InvalidArgument("Invoke() cannot be used on composites with cycles.");
-            inlinedBatchDim = clonee.m_autoBatchState.m_batchDim;
+            inlinedFreeDim = clonee.m_autoBatchState.m_batchDim;
             return static_pointer_cast<PrimitiveFunction>(const_cast<PrimitiveFunction*>(fInlined)->shared_from_this()); // (shared_from_this() gives us a FunctionPtr, not PrimitiveFunctionPtr)
         }
         clonee.m_autoBatchState.m_link = nullptr; // Bring into valid state so we can detect cycles. Gets overwritten once we are done cloning.
@@ -1117,14 +1117,14 @@ class Variable::AutoBatch
         // clone clonee
         // The clonee lives inside a composite, not in a Dynamic graph.
         // First clone the clonee's inputs;
-        inlinedBatchDim = SIZE_MAX; // resulting batch dim
+        inlinedFreeDim = SIZE_MAX; // resulting batch dim
         let& cloneeInputs = clonee.m_inputs;
         vector<Variable> inlinedInputs(cloneeInputs.size()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
         for (size_t i = 0; i < cloneeInputs.size(); i++)
         {
             let& cloneeInput = cloneeInputs[i];
             let& cloneeInputFields = GetInputFields(cloneeInput);
-            size_t thisBatchDim = SIZE_MAX;
+            size_t thisFreeDim = SIZE_MAX;
 
             // --- case 0: a Variable that already has a value; that is, a Constant, Parameter, or any result of another Dynamite invocation
             if (cloneeInputFields.m_varKind == VariableKind::Constant || cloneeInputFields.m_varKind == VariableKind::Parameter || cloneeInputFields.m_value)
@@ -1134,7 +1134,7 @@ class Variable::AutoBatch
                     cloneeInput.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
                     fail_if(!cloneeInputFields.m_value, "Parameter/Constant has no Value()??");
                 }
-                // Note: By not touching inlinedBatchDim, we are not handling the case that constants may have a batch axis.
+                // Note: By not touching inlinedFreeDim, we are not handling the case that constants may have a batch axis.
                 //       However, this only affects Constants that live inside the clonee, which cannot actually have one.
                 inlinedInputs[i] = cloneeInput;
             }
@@ -1156,17 +1156,18 @@ class Variable::AutoBatch
                 if (placeholderHasFreeDimension)
                     Break;
                 // itemRank = shape components that must match
-                if (operandRank < itemRank || operandRank > placeholderRank)
-                    InvalidArgument("Invoke: Argument shape %S too short to match placeholder's shape %S.", operand.Shape().AsString().c_str(), cloneeInput.Shape().AsString().c_str());
+                if (operandRank < itemRank)
+                    InvalidArgument("Invoke: Operand shape %S has too few axes to match placeholder's shape %S.", operand.Shape().AsString().c_str(), cloneeInput.Shape().AsString().c_str());
                 for (size_t k = 0; k < itemRank; k++)
                     if (operandDims[k] != placeholderDims[k])
-                        InvalidArgument("Invoke: Argument shape %S incompatible with placeholder's shape %S.", operand.Shape().AsString().c_str(), cloneeInput.Shape().AsString().c_str());
-                // determine the batch dimension
-                thisBatchDim = (placeholderHasFreeDimension && operandRank == placeholderRank) ? operandDims.back() : SIZE_MAX;
-                if (invocationArgsBatchDim == 0) // first encounter
-                    invocationArgsBatchDim = thisBatchDim;
-                else if (invocationArgsBatchDim != thisBatchDim)
-                    InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)invocationArgsBatchDim, cloneeInput.Shape().AsString().c_str());
+                        InvalidArgument("Invoke: Operand shape %S incompatible with placeholder's shape %S.", operand.Shape().AsString().c_str(), cloneeInput.Shape().AsString().c_str());
+                // determine the free dimension
+                let freeAxis = itemRank;
+                thisFreeDim = (placeholderHasFreeDimension && freeAxis < operandRank) ? operandDims[freeAxis] : SIZE_MAX;
+                if (invocationArgsFreeDim == 0) // first encounter
+                    invocationArgsFreeDim = thisFreeDim;
+                else if (invocationArgsFreeDim != thisFreeDim)
+                    InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisFreeDim, (int)invocationArgsFreeDim, cloneeInput.Shape().AsString().c_str());
                 // OK!
                 inlinedInputs[i] = operand;
             }
@@ -1174,26 +1175,26 @@ class Variable::AutoBatch
             else
             {
                 fail_if(cloneeInputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                let fInlinedPtr = RInlineComposite(*cloneeInputFields.Owner(), invocationArgs, /*in/out*/ invocationArgsBatchDim, /*out*/ thisBatchDim, cloneFn);
+                let fInlinedPtr = RInlineComposite(*cloneeInputFields.Owner(), invocationArgs, /*in/out*/ invocationArgsFreeDim, /*out*/ thisFreeDim, cloneFn);
                 inlinedInputs[i] = fInlinedPtr->m_outputs.front();
                 inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
                 // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
             }
-            // update inlinedBatchDim
+            // update inlinedFreeDim
             // This is the batch dimension that the result should get.
             // For arguments that have a batch dimension, it must match. It is possible that argument have none.
             // For example, in x - ReduceMean(x), the second arg has no batch dim.
-            if (inlinedBatchDim == SIZE_MAX) // first encounter
-                inlinedBatchDim = thisBatchDim;
-            else if (thisBatchDim != SIZE_MAX && inlinedBatchDim != thisBatchDim)
-                InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)inlinedBatchDim, cloneeInput.Shape().AsString().c_str());
+            if (inlinedFreeDim == SIZE_MAX) // first encounter
+                inlinedFreeDim = thisFreeDim;
+            else if (thisFreeDim != SIZE_MAX && inlinedFreeDim != thisFreeDim)
+                InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisFreeDim, (int)inlinedFreeDim, cloneeInput.Shape().AsString().c_str());
         }
         // now create a new function and set up the outputs
-        // 'inlinedBatchDim' will replace the FreeDimension.
-        let fInlinedPtr = cloneFn(clonee, move(inlinedInputs), inlinedBatchDim);
+        // 'inlinedFreeDim' will replace the FreeDimension.
+        let fInlinedPtr = cloneFn(clonee, move(inlinedInputs), inlinedFreeDim);
         // and finally remember where this function got redirected to.
         clonee.m_autoBatchState.m_link = fInlinedPtr.get();
-        clonee.m_autoBatchState.m_batchDim = inlinedBatchDim;
+        clonee.m_autoBatchState.m_batchDim = inlinedFreeDim;
         return fInlinedPtr;
     }
 
@@ -1536,6 +1537,18 @@ class Variable::AutoBatch
                 hasSparse = hasSparse || inputFields.m_isSparse;
                 updateRankDimSparse(inputFields);
             }
+            if (op == PrimitiveOpType::Block)
+            {
+                let composite = static_cast<const CompositeFunction*>(static_cast<const BlockFunction&>(f).Composite().get());
+                let freeAxis = composite->m_basicBlockFreeAxis;
+                if (freeAxis == SIZE_MAX) // if basic block has no free dimension, then we won't batch in the first place' but formally, let's say we batch it
+                    return{ StackingMode::BATCHING, maxRank, 1 };
+                else if (freeAxis == maxRank) // argument has no FreeDimension specified: stack, but dim on stacking axis is implied 1
+                    return{ StackingMode::STACKING_BUT_MAY_BATCH, freeAxis, 1 };
+                else if (freeAxis + 1 == maxRank) // argument has a axis to fill the FreeDimension: use that
+                    return{ StackingMode::STACKING_BUT_MAY_BATCH, freeAxis, lastDim };
+                InvalidArgument("DetermineBatchAxis: The rank of an argument to a basic block invocation exceeds the declared free-axis position.");
+            }
             if (op == PrimitiveOpType::Splice || op == PrimitiveOpType::Reshape)
             {
                 updateRankDimSparse(GetOutputFields(f));
@@ -1755,10 +1768,10 @@ class Variable::AutoBatch
             // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
             // Besides that, the original Block function will remain unmodified.
             m_compositeVisitorTag.Begin();
-            size_t invocationArgsBatchDim = 0;
+            size_t invocationArgsFreeDim = 0;
             size_t inputsBatchDimDummy;
             auto inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*f.BlockRoot()),
-                                                   f.m_inputs, invocationArgsBatchDim, inputsBatchDimDummy, /*cloneFn=*/ClonePrimitiveFunction);
+                                                   f.m_inputs, invocationArgsFreeDim, inputsBatchDimDummy, /*cloneFn=*/ClonePrimitiveFunction);
             // This returns a shared_ptr to the deep copy of the root.
             // ^^ This currently does not inline nested blocks. Instead of cloning the BlockFunction, we should just unroll any nested non-basic-block right there.
             // prepare graph that we just unrolled
@@ -2066,10 +2079,10 @@ class Variable::AutoBatch
             return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, compositeBatchDim, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
         };
 
-        size_t invocationArgsBatchDim = 0;
+        size_t invocationArgsFreeDim = 0;
         size_t compositeBatchDim;
         let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
-        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, invocationArgsBatchDim, compositeBatchDim, cloneFn);
+        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, invocationArgsFreeDim, compositeBatchDim, cloneFn);
         m_compositeVisitorTag.End(prevVisitorTag); // (restore)
         return fInlinedPtr;
     }
@@ -2112,7 +2125,7 @@ class Variable::AutoBatch
         if (mustReplaceFreeDimension)
             VerifyFreeDimensionReplacement(clonee.m_inputs, inputs, compositeBatchDim);
 
-        let& unbatchedOutputShape = mustReplaceFreeDimension ? NDShape(ReplaceBatchDim(cloneeOutputDims, compositeBatchDim)) : clonee.m_outputs.front().Shape(); // <-- cut FreeDim replacement in here!
+        let& unbatchedOutputShape = mustReplaceFreeDimension ? NDShape(ReplaceFreeDim(cloneeOutputDims, compositeBatchDim)) : cloneeOutputShape;
 
         const NDShape& shape = batchAxis != SIZE_MAX ? (batchAxis < unbatchedOutputShape.Rank() ? unbatchedOutputShape.SubShape(0, batchAxis) : unbatchedOutputShape).AppendAxis(batchAxis, batchSize) : unbatchedOutputShape;
         // TODO: This is a little malloc-inefficient                                  ^^
@@ -2216,10 +2229,10 @@ class Variable::AutoBatch
     }
 
     // helper to verify that we figured out the FreeDimension replacement for a clonee correctly
-    static void VerifyFreeDimensionReplacement(const vector<Variable>& cloneeInputs, const vector<Variable>& operands, size_t newInputsBatchDim)
+    static void VerifyFreeDimensionReplacement(const vector<Variable>& cloneeInputs, const vector<Variable>& operands, size_t newInputsFreeDim)
     {
         let arity = cloneeInputs.size();
-        fail_if(arity > 0 && newInputsBatchDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
+        fail_if(arity > 0 && newInputsFreeDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
         for (size_t i = 0; i < arity; i++)
         {
             let& cloneeInput = cloneeInputs[i];
@@ -2228,12 +2241,10 @@ class Variable::AutoBatch
             let rank = cloneeInputDims.size();
             if (rank == 0 || cloneeInputDims.back() != NDShape::FreeDimension)
                 continue;
+            let freeAxis = rank - 1; // placeholder has a free axis, at this position
             let& operandDims = operand.Shape().Dimensions();
-            if (operandDims.size() < rank)
-                continue;
-            fail_if(operandDims.size() > rank, "operand has too many axes, should not have passed type check");
             // now test the condition we are after
-            fail_if(operandDims.back() != newInputsBatchDim, "newInputsBatchDim does not match the dimension passed for the placeholder's FreeDimension");
+            fail_if(freeAxis < operandDims.size()  && operandDims[freeAxis] != newInputsFreeDim, "newInputsFreeDim does not match the dimension passed for the placeholder's FreeDimension");
         }
     }
 
@@ -2241,7 +2252,7 @@ class Variable::AutoBatch
     // Subroutine of early inlining non-basic-block BlockFunctions during forward graph preparation.
     // These are non-batched. The output shape is determined here by either stripping the FreeDimension if no input has one, or replacing it.
     // Special consideration is given to nested BlockFunctions.
-    static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& clonee, vector<Variable>&& newInputs, size_t newInputsBatchDim)
+    static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& clonee, vector<Variable>&& newInputs, size_t newInputsFreeDim)
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
         // clone it
@@ -2271,15 +2282,15 @@ class Variable::AutoBatch
         // if output has a FreeDimension (which represents the batch axis) then replace (or drop) it
         let& outputDims = output.Shape().Dimensions();
         let mustReplaceFreeDimension = (!outputDims.empty() && outputDims.back() == NDShape::FreeDimension);
-        fail_if(mustReplaceFreeDimension && newInputsBatchDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
+        fail_if(mustReplaceFreeDimension && newInputsFreeDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
 #if 1
         // check that we got it right
         if (mustReplaceFreeDimension)
-            VerifyFreeDimensionReplacement(clonee.m_inputs, fCloned->m_inputs, newInputsBatchDim);
+            VerifyFreeDimensionReplacement(clonee.m_inputs, fCloned->m_inputs, newInputsFreeDim);
 #endif
         // initialize the output
         let dataType = fCloned->m_inputs.front().GetDataType();
-        fCloned->InitOutput(OutputVariable(mustReplaceFreeDimension ? NDShape(ReplaceBatchDim(outputDims, newInputsBatchDim)) : output.Shape(), dataType, vector<Axis>(), output.NeedsGradient(), output.IsSparse(), wstring()));
+        fCloned->InitOutput(OutputVariable(mustReplaceFreeDimension ? NDShape(ReplaceFreeDim(outputDims, newInputsFreeDim)) : output.Shape(), dataType, vector<Axis>(), output.NeedsGradient(), output.IsSparse(), wstring()));
         // add additional initializations for auto-batch only
         FinishConstructingPrimitiveFunction(*fCloned, clonee.m_profiler, /*logPrefix=*/nullptr);
         return fCloned;
@@ -2687,7 +2698,7 @@ class Variable::AutoBatch
     size_t CacheAndGetBasicBlockBatchAxis(const BlockFunction& block)
     {
         auto& composite = static_cast<CompositeFunction&>(*block.Composite());
-        if (composite.m_basicBlockBatchAxis == SIZE_MAX) // not computed yet (has been reset in Invoke())
+        if (composite.m_basicBlockFreeAxis == SIZE_MAX) // not computed yet (has been reset in Invoke())
         {
             // start with the inputs
             size_t maxRank = DetermineMaxElementwiseInputRank(block);
@@ -2711,12 +2722,12 @@ class Variable::AutoBatch
                     maxRank = max(maxRank, outputs.front().Shape().Rank());
                 }
             });
-            composite.m_basicBlockBatchAxis = maxRank;
+            composite.m_basicBlockFreeAxis = maxRank;
         }
 #if 1   // BUGBUG: This uses a hard-coded constant (12) to heuristically detect an uninitialized value. That is not general, so remove this once this stuff works.
-        fail_if(composite.m_basicBlockBatchAxis == 0 || composite.m_basicBlockBatchAxis > 12, "m_basicBlockBatchAxis was not prepared??");
+        fail_if(composite.m_basicBlockFreeAxis == 0 || composite.m_basicBlockFreeAxis > 12, "m_basicBlockFreeAxis was not prepared??");
 #endif
-        return composite.m_basicBlockBatchAxis;
+        return composite.m_basicBlockFreeAxis;
     }
 #endif
 
@@ -3149,6 +3160,8 @@ class Variable::AutoBatch
         let outputBatchAxis = isTimes ? commonInputBatchAxis + f0.m_outputs.front().Shape().Rank() - f0.m_inputs.back().Shape().Rank() : batchAxis;
         if (!isTimes && op != PrimitiveOpType::Splice && op != PrimitiveOpType::Reshape && f0.m_outputs.front().Shape().Rank() > DetermineMaxElementwiseInputRank(f0))
             LogicError("elementwise op that increases rank??");
+        if (op == PrimitiveOpType::Block)// && stackingMode == StackingMode::BATCHING)
+            Break;
 #endif
 
         // create all m_batchedInputs[] by splicing along the batch axis
@@ -4231,8 +4244,8 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     m_outputs.front() = move(output);
 }
 
-/*Internal::*/Invocable::Invocable(size_t arity, size_t batchAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
-    m_arity(arity), m_isBasicBlock(isBasicBlock   &&false) // for now, disable basic blocks
+/*Internal::*/Invocable::Invocable(size_t arity, size_t freeAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
+    m_arity(arity), m_isBasicBlock(isBasicBlock  )// &&false) // for now, disable basic blocks
 {
     // for debugging, we can disable static invocation altogether
     if (m_forceImmediate)
@@ -4251,7 +4264,7 @@ void PrimitiveFunction::InitOutput(Variable&& output)
         // implant the redirect into the placeholder
         arg.m_dataFields->m_compositeArgumentIndex = i;     // when dynamically expanding this, we match up this Placeholder with the respective input[i]
         m_argumentList.push_back(arg);
-        m_argumentBatchAxes.push_back(batchAxis);
+        m_argumentFreeAxes.push_back(freeAxis);
     }
     // invoke the lambda with Placeholders as arguments
     // This builds the graph as a CompositeFunction.
@@ -4267,7 +4280,7 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     // This is only used if isBasicBlock, but since.
     if (isBasicBlock)
     {
-        fCompositePtr->m_basicBlockBatchAxis = m_argumentBatchAxes.empty() ? SIZE_MAX : batchAxis; // remember the one axis used for all ops inside the basic block
+        fCompositePtr->m_basicBlockFreeAxis = m_argumentFreeAxes.empty() ? SIZE_MAX : freeAxis; // remember the one axis used for all ops inside the basic block
         fCompositePtr->m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
     }
     m_composite = move(fCompositePtr);
@@ -4279,7 +4292,7 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     {
         m_argumentList.push_back(p);             // presently also must pass all Parameters
         m_operands.push_back(p);                 // we prepopulate the operands here, these are not changed afterwards
-        m_argumentBatchAxes.push_back(SIZE_MAX); // make sure we can index these elements, too
+        m_argumentFreeAxes.push_back(SIZE_MAX); // make sure we can index these elements, too
     }
     m_stillNeedsToInferShapes = true;
 }
@@ -4358,27 +4371,27 @@ Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee,
 //     - multiple invocations share the same underlying static graph
 //     - static graphs can be called both during dynamic computation ("dynamic invocation"), as well as during construction of other static graphs ("static invocation")
 //     - upon first dynamic invocation, the static graph's shapes are determined
-//        - to support stacking, the last axis of each input may be variable. It is stored and inferred in the static graph.
-//        - at static-graph construction time, input shapes are not known. For now, user must tell at that point what the stacking axis is.
-//          E.g. a static graph Times(W,_) can be applied to inputs with variable #columns. Pass batchAxis = 1 here to allow stacking them.
+//        - to support stacking, the last axis of each input may be variable. It is stored and inferred in the static graph as FreeDimension.
+//        - at static-graph construction time, input shapes are not known. For now, user must tell at that location what the stacking axis is.
+//          E.g. a static graph Times(W,_) can be applied to inputs with variable #columns. Pass freeAxis = 1 here to allow stacking them.
 //     - static graphs can be invoked in two modes:
 //        - early inlining (isBasicBlock=false): static graph gets inlined into the dynamic graph before any batching decisions
 //          Allows for fine-grained auto-batching, as if the static graph's operations were just dynamically unrolled.
 //        - late inlining (isBasicBlock=true): static graph gets treated like a PrimitiveFunction for purpose of batching.
-//          Allows to cut overhead of the auto-batching algorithm, and also provides auto-batching constraints (as hints).
-//  - variable dimensions:
+//          Allows to cut overhead of the auto-batching algorithm, and also acts as an auto-batching constraint.
+//  - variable batch dimension (FreeDimension):
 //     - static graphs get their shapes inferred only once, upon first invocation
 //       This is to save time. Due to this, early inlining of a static graph is more restrictive than regular dynamic invocation.
-//     - static graph can only have one variable dimension (implemented via CNTK's FreeDimension mechanism)
-//     - user must declare the variable axis for all arguments
-//     - upon invocation, either all or no actual argument must have that axis,
+//     - static graph can only have one free dimension, in the "free axis" which must be the last. This is implemented via CNTK's FreeDimension mechanism.
+//     - user must declare the free axis location for all arguments
+//     - upon invocation, either all or no actual argument must have that axis.  --TODO: I think they no longer need to.
 //       If they do, they must all have the same dimension in their respective axis, which the output will also have. If not, the output will not have the axis.
 //        - early inlining:
 //           - allowed: f([I x *], [J x K x *]) -> [N x *],
 //                      invocable as f([I x T], [J x K x T]) -> [N x T]
 //                      or as f([I], [J x K]) -> [N]
-//           - not supported: f([I x *], [J x K]) -> [N x ?] (second arg has no variable dimension)
-//           - not supported: invoke as f([I x T], [J x K]) -> [N x ?] (second arg has no variable dimension)
+//           - not supported: f([I x *], [J x K]) -> [N x ?] (second arg has no free dimension)
+//           - not supported: invoke as f([I x T], [J x K]) -> [N x ?] (second arg has no free dimension)
 //             TODO: This ^^ is actually doable with just a little more code.
 //        - late inlining:
 //           - the batch axis must be the same for all args, and no intermediate op may touch that axis
@@ -4386,43 +4399,45 @@ Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee,
 //           - allowed: f([I x *], [J x *]) -> [N x *]
 //           - not supported: f([I x *], [J x K x *]) -> [N x *] (batch dim not at same location)
 //  - batching
-//     - any invocation with variable dimension can use stacking or batching
-//        - batching if all inputs have matching dimension in the respective batch axes. Batching adds one more axis.
+//     - any invocation with free dimension can use stacking or batching
+//        - batching if all inputs have matching dimension in the respective free axes. Batching adds one more axis.
 //          { [I x J X T], [I x J x T] } -> [I x J x T x 2], with T=batch axis
-//        - stacking if batch dimensions differ
+//          In this situation, the actual execution will see tensors with one axis to the right of the free axis. TODO: So don't use back() on operands!
+//        - stacking if free-dimension values differ
 //          { [I x J X T1], [I x J x T2] } -> [I x J x (T1+T2)]
 //        - none at all if not batchable
-//     - batchability per stacking condition: two ops are batchable if their inputs have matching dimensions except for the batch axis
+//     - batchability per stacking condition: two ops are batchable if their inputs have matching dimensions except for the free axis
 
-// determine "the" batch dimension of an invocation, using a hack (fixed axis := 1)
+// determine "the" free dimension of an invocation, using a hack (fixed axis := 1)
 // The result is either the dim (if all inputs have a batch dim) or SIZE_MAX (if no input has a batch dim), or an error.
 // This function has the heuristics built in that the batch axis is hard-coded as 1.
-static size_t DetermineInvokeBatchDim(const vector<Variable>& inputs)
+static size_t DetermineInvokeFreeDim(const vector<Variable>& inputs)
 {
-    let batchAxis = 1; // TODO: this must be parameterized somehow
-    size_t invocationArgsBatchDim = 0; // 0 means no input at all
+    let freeAxis = 1; // TODO: this must be parameterized somehow
+    size_t invocationArgsFreeDim = 0; // 0 means no input at all
     for (let& input : inputs)
     {
         if (input.IsParameter()) // placeholders have no batch dimension
             continue;
         let& shape = input.Shape().Dimensions();
         let rank = shape.size();
-        let thisBatchDim = rank > batchAxis ? shape.back() : SIZE_MAX;
-        if (invocationArgsBatchDim == 0) // first encounter
-            invocationArgsBatchDim = thisBatchDim;
-        else if (invocationArgsBatchDim != thisBatchDim)
-            InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)invocationArgsBatchDim, input.Shape().AsString().c_str());
+        let thisFreeDim = freeAxis < rank ? shape[freeAxis] : SIZE_MAX;
+        if (invocationArgsFreeDim == 0) // first encounter
+            invocationArgsFreeDim = thisFreeDim;
+        else if (invocationArgsFreeDim != thisFreeDim)
+            InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisFreeDim, (int)invocationArgsFreeDim, input.Shape().AsString().c_str());
     }
-    return invocationArgsBatchDim;
+    return invocationArgsFreeDim;
 }
 
 // helper to replace the batch dimension of inputShape by the given value
 // The batch dim must be present. If the given value is SIZE_MAX, it strips the axis.
-static inline vector<size_t> ReplaceBatchDim(vector<size_t> shape, size_t batchDimValue)
+static inline vector<size_t> ReplaceFreeDim(vector<size_t> shape, size_t batchDimValue)
 {
     let rank = shape.size();
     if (batchDimValue == NDShape::FreeDimension) // value is FreeDimension: replace or expand
     {
+        // BUGBUG: We must honor the declared freeAxis here.
         if (rank < 1 || rank > 2)
             InvalidArgument("Invoke: Shapes with rank < 1 or > 2 currently not supported here.");
         if (rank == 1)
@@ -4432,7 +4447,7 @@ static inline vector<size_t> ReplaceBatchDim(vector<size_t> shape, size_t batchD
     }
     else // value is not FreeDimension: replace or pop
     {
-        fail_if(shape.back() != NDShape::FreeDimension, "ReplaceBatchDim called on shape that has no FreeDimension??");
+        fail_if(shape.back() != NDShape::FreeDimension, "ReplaceFreeDim called on shape that has no FreeDimension??");
         if (batchDimValue == SIZE_MAX)
             shape.resize(rank - 1); // no batch dimension: drop the axis
         else
@@ -4487,7 +4502,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
     // BUGBUG: Must handle the map here now that we pass it. Also must verify that the Placeholders are actually in the composite.
 
     // determine the batch dimension
-    let batchDim = DetermineInvokeBatchDim(m_inputs);
+    let batchDim = DetermineInvokeFreeDim(m_inputs);
 
     // BUGBUG: Must verify that all Parameters are covered here.
     unordered_map<Variable, Variable> replacementMap;
@@ -4515,7 +4530,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
             // If the operand does not have that axis, then we create it.
             fail_if(batchDim == 0, "no batchDim determined??");
             // TODO: check against the current Placeholder
-            auto updatedCompositePlaceholder = PlaceholderVariable(ReplaceBatchDim(operand.Shape().Dimensions(), NDShape::FreeDimension),
+            auto updatedCompositePlaceholder = PlaceholderVariable(ReplaceFreeDim(operand.Shape().Dimensions(), NDShape::FreeDimension),
                 operand.GetDataType(), operand.Name(), operand.DynamicAxes(), operand.NeedsGradient(), operand.IsSparse());
             //auto updatedCompositePlaceholder = PlaceholderLike(operand);
             updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = compositeLeaf.m_dataFields->m_compositeArgumentIndex;
@@ -4536,7 +4551,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
     if (compositeOutputs.front().Shape().IsUnknown()) // or not?
         LogicError("Invoke with determineShapes=true must not be called with inputs with Placeholder dimensions.");
 
-    // populate all composite's m_batchAxis etc. fields
+    // populate all composite's m_freeAxis etc. fields
     if (isBasicBlock)
     {
     }
@@ -4551,12 +4566,12 @@ Variable BlockFunction::FinalizeInvoke(const vector<Variable>& argumentList, boo
     // ...EXCEPT we do not implant a Variable mapping, since the composite is shared. The composite does not know that it is part of a BlockFunction.
     let& compositeOutput = m_composite->m_outputs.front();
     vector<size_t> outputShape;
-    let batchAxis = 1; // TODO: this must be parameterized somehow
+    let freeAxis = 1; // TODO: this must be parameterized somehow
     // TODO: This should use the same heuristics as during inlining. But we don't know the placeholders, do we?
-    if (shapeIsKnown && compositeOutput.Shape().Rank() > batchAxis && compositeOutput.Shape().Dimensions().back() == NDShape::FreeDimension)
+    if (shapeIsKnown && compositeOutput.Shape().Rank() > freeAxis && compositeOutput.Shape().Dimensions().back() == NDShape::FreeDimension)
     {
         // if input shape is known and composite output has a FreeDimension in the batch axis, then replace it with the actual value
-        let batchDim = DetermineInvokeBatchDim(m_inputs);
+        let inputsFreeDim = DetermineInvokeFreeDim(m_inputs);
         // type-check the inputs
         let arity = m_inputs.size();
         for (size_t k = 0; k < arity; k++)
@@ -4583,13 +4598,14 @@ Variable BlockFunction::FinalizeInvoke(const vector<Variable>& argumentList, boo
             for (size_t k = 0; k < itemRank; k++)
                 if (operandDims[k] != placeholderDims[k])
                     InvalidArgument("Invoke: Argument shape %S incompatible with placeholder's shape %S.", operand.Shape().AsString().c_str(), input.Shape().AsString().c_str());
-            // deal with invocationArgsBatchDim
-            let thisBatchDim = (placeholderHasFreeDimension && operandRank == placeholderRank) ? operandDims.back() : SIZE_MAX;
-            if (batchDim != thisBatchDim)
-                InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisBatchDim, (int)batchDim, input.Shape().AsString().c_str());
+            // deal with invocationArgsFreeDim
+            let thisFreeDim = (placeholderHasFreeDimension && operandRank == placeholderRank) ? operandDims.back() : SIZE_MAX;
+            if (inputsFreeDim != thisFreeDim)
+                InvalidArgument("Invoke: Inconsistent replacement for FreeDimension %d (previous: %d) for placeholder's shape %S.", (int)thisFreeDim, (int)inputsFreeDim, input.Shape().AsString().c_str());
+            // BUGBUG: ^^ I think we can now handle inconsistent ones.
 #endif
         }
-        outputShape = ReplaceBatchDim(compositeOutput.Shape().Dimensions(), batchDim);
+        outputShape = ReplaceFreeDim(compositeOutput.Shape().Dimensions(), inputsFreeDim);
     }
     Variable blockOutput =
         /*if*/ (!shapeIsKnown) ? // if we are being called while building a static graph
