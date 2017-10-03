@@ -34,8 +34,6 @@ namespace CNTK
         }
         else
         {
-            auto extent = arg->Shape().Dimensions();
-            auto startOffset = vector<size_t>(extent.size(), 0);
             if (attributes.Contains(PrimitiveFunction::AttributeNameAxisVec)) // vector of slices
             {
                 let& axes         = AsVector<Axis>(attributes[PrimitiveFunction::AttributeNameAxisVec      ].Value<vector<DictionaryValue>>());
@@ -43,6 +41,8 @@ namespace CNTK
                 let& endIndices   = AsVector<int> (attributes[PrimitiveFunction::AttributeNameEndIndexVec  ].Value<vector<DictionaryValue>>());
                 if (attributes.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
                     LogicError("Variable '%S' Value(): Strided slicing not yet implemented.", funcForErrMsg.AsString().c_str());
+                auto extent = arg->Shape().Dimensions();
+                auto startOffset = vector<size_t>(extent.size(), 0);
                 for (size_t i = 0; i < axes.size(); i++)
                 {
                     let axisIndex  = axes[i].StaticAxisIndex();
@@ -51,6 +51,9 @@ namespace CNTK
                     startOffset[axisIndex] = beginIndex;
                     extent[axisIndex] = endIndex - beginIndex;
                 }
+                // TODO: use IndexLastAxis()
+                if (extent != arg->Shape().Dimensions() || any_of(startOffset.begin(), startOffset.end(), [](size_t v) { return v != 0; }))
+                    return arg->Slice(startOffset, extent, vector<size_t>(), NDArrayView::SliceMode::View, readOnly); // slice it
             }
             else // single slice
             {
@@ -60,11 +63,14 @@ namespace CNTK
                 if (attributes.Contains(PrimitiveFunction::AttributeNameSliceStrides))
                     LogicError("Variable '%S' Value(): Strided slicing not yet implemented.", funcForErrMsg.AsString().c_str());
                 let axisIndex = axis.StaticAxisIndex();
+                // TODO: implement a special version without std::vectors
+                auto extent = arg->Shape().Dimensions();
+                auto startOffset = vector<size_t>(extent.size(), 0);
                 startOffset[axisIndex] = beginIndex;
                 extent[axisIndex] = endIndex - beginIndex;
+                if (extent != arg->Shape().Dimensions() || any_of(startOffset.begin(), startOffset.end(), [](size_t v) { return v != 0; }))
+                    return arg->Slice(startOffset, extent, vector<size_t>(), NDArrayView::SliceMode::View, readOnly); // slice it
             }
-            if (extent != arg->Shape().Dimensions() || any_of(startOffset.begin(), startOffset.end(), [](size_t v) { return v != 0; }))
-                return arg->Slice(startOffset, extent, vector<size_t>(), NDArrayView::SliceMode::View, readOnly); // slice it
         }
         return arg;
     }
@@ -72,7 +78,7 @@ namespace CNTK
     // Performs a forward operation.
     // It is assumed that the inputs are immutable, and hence if the result can be expressed as a view (e.g. Reshape()),
     // a view into the an input is returned instead of a newly allocated buffer.
-    // For Slice(), a view is returned if the slice is memory-contiguous. Otherwise, a copy is made, so that the
+    // For Slice(), a view is returned even if the slice is not memory-contiguous; caller must fix this if it is a problem.
     // result remains compatible with potential subsequent Matrix-library operations.
     // Note: To support auto-batching, this function must only consider attributes when presence of an additional
     // batch axis makes no difference. That is, for example, not the case for ReduceElements over AllStaticAxes().
@@ -92,7 +98,7 @@ namespace CNTK
             primitiveOp == PrimitiveOpType::Pass         ||
             primitiveOp == PrimitiveOpType::NoOp         ||
             primitiveOp == PrimitiveOpType::Reshape      ||
-            (primitiveOp == PrimitiveOpType::Slice && !out && sliceView->IsContiguous())) // must copy if output buffer provided or data not contiguous
+            (primitiveOp == PrimitiveOpType::Slice && !out /*&& sliceView->IsContiguous()*/)) // (should copy if output buffer provided or data not contiguous; we do that outside, as we cannot control mem alloc here)
         {
             if (out)
                 LogicError("Variable '%S' Value(): An output buffer was passed for op %S that does not need one.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());

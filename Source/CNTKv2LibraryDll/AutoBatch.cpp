@@ -2125,9 +2125,9 @@ class Variable::AutoBatch
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
     Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const wstring& name,
                                        const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
-                                       bool isFree = false, bool spliceIsGather = false)
+                                       bool isFree = false, bool logSpliceAsGather = false)
     {
-        auto fPtr = CreateAndMemoizeOp(op, move(inputs), shape, move(attributes), name, profiler, logPrefix, isFree, spliceIsGather);
+        auto fPtr = CreateAndMemoizeOp(op, move(inputs), shape, move(attributes), name, profiler, logPrefix, isFree, logSpliceAsGather);
         let& output = fPtr->m_outputs.front();
         // To make the consumer of this hold a reference to this PrimitiveFunction, inject a strong ref to the copy of its Output.
         //input = output.CompositePreservingCopy(fPtr); // without the acyclic trick, this works as well, but is not quite right since fPtr is not a Composite
@@ -2174,7 +2174,7 @@ class Variable::AutoBatch
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
     PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const wstring& name,
                                             const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
-                                            bool isFree = false, bool spliceIsGather = false)
+                                            bool isFree = false, bool logSpliceAsGather = false)
     {
         // create the object
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Pass, L"RawPrimitiveFunction", 3);
@@ -2194,7 +2194,7 @@ class Variable::AutoBatch
         cudaStatsguard.Stop();
 
         // execute it
-        MemoizeKnowableValueInArena(*fPtr, isFree, spliceIsGather);
+        MemoizeKnowableValueInArena(*fPtr, isFree, logSpliceAsGather);
         return fPtr;
     }
 
@@ -2216,17 +2216,17 @@ class Variable::AutoBatch
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     // The result is stored in f.m_outputs.front()'s m_value.
-    const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool spliceIsGather = false)
+    const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool logSpliceAsGather = false)
     {
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
-        CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: prepare", 3, inputs.size());
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
             inputValues[i] = CacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
+        CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: prepare", 3, inputs.size());
         auto outValue =
             /*if*/ (isFree) ?
                 NDArrayViewPtr()
@@ -2242,17 +2242,27 @@ class Variable::AutoBatch
         if (ShouldLogMemoizeStats())
         {
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
-            let logAsOp = (f.m_op == PrimitiveOpType::Splice && spliceIsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
+            let logAsOp = (f.m_op == PrimitiveOpType::Splice && logSpliceAsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
             cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, IsViewOp(f.m_op) ? 2 : hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false), inputValues.front()->Device());
         }
+        //if (f.m_op == PrimitiveOpType::Slice && !any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); }))
+        //    Break;
         // execute it
-        GetOutputFields(f).m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
-        // stats
+        auto res = PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f);
         EndCudaStats(cudaStatsPtr, inputValues.front()->Device());
-        let primitiveOp = f.m_op;
+        // special case: a Slice op is non-contiguous. We must copy.
+        if (f.m_op == PrimitiveOpType::Slice && !res->IsContiguous())
+        {
+            let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
+            CudaStatsGuard cudaStatsGuard(f.m_op, nullptr, hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false));
+            res = move(NDArrayView::NumericOperation({ move(res) }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
+                        m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device())));
+        }
+        GetOutputFields(f).m_value = move(res);
+        // stats
         if (isFree) // means we did not pass a data buffer for the result; any one we pass a buffer does actual work
             m_stats.numDoneFreeOps++;
-        else if (primitiveOp == PrimitiveOpType::Splice && spliceIsGather)
+        else if (f.m_op == PrimitiveOpType::Splice && logSpliceAsGather)
             m_stats.numDoneGatherOps++;
         else
             m_stats.numDoneOtherOps++;
@@ -2942,7 +2952,7 @@ class Variable::AutoBatch
             return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs), outputShape,
                                              Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)commonInputBatchAxis)),
                                              f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
-                                             /*isFree=*/false, /*spliceIsGather=*/true);
+                                             /*isFree=*/false, /*logSpliceAsGather=*/true);
         }
     }
 
