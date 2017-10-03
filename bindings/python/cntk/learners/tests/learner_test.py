@@ -734,15 +734,18 @@ def test_restore_from_checkpoint(tmpdir, learner):
 # After this is resolved: https://github.com/Microsoft/CNTK/issues/2411
 # this should be replaced with LEARNER_LAMBDAS
 SPARSE_AND_DENSE_LEARNER_LAMBDAS = [
-    lambda params: C.adadelta(params),
-    lambda params: C.adam(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)),
-    lambda params: C.fsadagrad(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)),
-    lambda params: C.rmsprop(params, lr=learning_rate_schedule(1, UnitType.minibatch), gamma=0.1, inc=3.0, dec=0.1, max=np.inf, min=1e-8),
-    lambda params: C.sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch))]
+    (lambda params: C.adadelta(params), False),
+    (lambda params: C.adam(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)), True),
+    (lambda params: C.fsadagrad(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)), True),
+    (lambda params: C.rmsprop(params, lr=learning_rate_schedule(1, UnitType.minibatch), gamma=0.1, inc=3.0, dec=0.1, max=np.inf, min=1e-8), True),
+    (lambda params: C.sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch)), False)]
 
+@pytest.mark.parametrize("learner, gpu_only", SPARSE_AND_DENSE_LEARNER_LAMBDAS)
+@pytest.mark.parametrize("checkpoint", [True, False])
+def test_sparse_vs_dense_updates(tmpdir, learner, gpu_only, checkpoint, device_id):
 
-@pytest.mark.parametrize("learner, checkpoint", itertools.product(SPARSE_AND_DENSE_LEARNER_LAMBDAS, [True, False]))
-def test_sparse_vs_dense_updates(tmpdir, learner, checkpoint):
+    if device_id == -1 and gpu_only:
+        pytest.skip('Test for adam, fsadagrad and rmspro currently only runs on GPU')
 
     def session(is_sparse):
         x = C.input_variable((200,), is_sparse=is_sparse)
