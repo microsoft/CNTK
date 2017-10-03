@@ -141,22 +141,20 @@ fun AttentionModelReference(size_t attentionDim1)
         return tanh;
     });
     return Dynamite::Model({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
-        [=](const Variable& h,                     // [A] decoder hidden state
-            const Variable& historyProjectedKey,   // [A] previous output, embedded
-            const Variable& encodingProjectedKeys, // [A x T] encoder hidden state seq, projected as key >> tanh
-            const Variable& encodingProjectedData  // [A x T] encoder hidden state seq, projected as data
+        [=](const Variable& h,                        // [A] decoder hidden state
+            const Variable& historyProjectedKey,      // [A] previous output, embedded
+            const Variable& encodingProjectedKeysSeq, // [A x T] encoder hidden state seq, projected as key >> tanh
+            const Variable& encodingProjectedDataSeq  // [A x T] encoder hidden state seq, projected as data
            ) -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
         // compute attention weights
         let tanh = doToTanh(h, historyProjectedKey); // [A]
         CountAPICalls(1);
-        let uVec = InnerProduct(tanh, encodingProjectedKeys, Axis(0), Named("u")); // [1 x T]
-        let wVec = Dynamite::Softmax(uVec, Axis(1), Named("attSoftmax"), zBarrier); // [1 x T]
-        // ... CONTINUE HERE: ^^ putting zBarrier in recovers the original loss, but #ops goes up from 10k to 25k
-        //     BUGBUG: Need to fix Splice output axis. Maybe that's it already. Try wortIt = true to elicit this.
+        let uSeq = InnerProduct(tanh, encodingProjectedKeysSeq, Axis(0), Named("u")); // [1 x T]
+        let wSeq = Dynamite::Softmax(uSeq, Axis(1), Named("attSoftmax"), zBarrier);   // [1 x T]
         CountAPICalls(1);
-        let res = resBarrier(InnerProduct(encodingProjectedData, wVec, Axis_DropLastAxis, Named("attContext"))); // [.] inner product over a vectors
+        let res = resBarrier(InnerProduct(encodingProjectedDataSeq, wSeq, Axis_DropLastAxis, Named("attContext"))); // [.] inner product over a vectors
         Function::SetDynamicProfiler(prevProfiler);
         return res;
     });
@@ -223,7 +221,6 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     return Dynamite::Model/*BinaryModel*/({ }, nestedLayers,
     [=](const Variable& history, const Variable& hEncs) -> Variable
     {
-        //attentionContexts.resize(res.size());
         // decoding loop
         CountAPICalls(2);
         Variable state = Slice(hEncs[0], Axis(0), encoderRecurrentDim, 2 * encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
@@ -233,11 +230,12 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         // We pack the result into a dense matrix; but only after the matrix product, to allow for it to be batched.
         let encodingProjectedKeys = encoderKeysProjection(hEncs); // this projects the entire sequence
         let encodingProjectedData = encoderDataProjection(hEncs);
-        vector<Variable> res(history.size()); // we put the time steps here
+        vector<Variable> states(history.size());           // we put the time steps here
+        vector<Variable> attentionContexts(states.size()); // and the attentionContexts
         let historyEmbedded = embedTarget(history);
         for (size_t t = 0; t < history.size(); t++)
         {
-            // do recurrent step (in inference, history[t] would become res[t-1])
+            // do recurrent step (in inference, history[t] would become states[t-1])
             CountAPICalls(1);
             let historyProjectedKey = historyEmbedded[t];
             let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
@@ -247,31 +245,14 @@ fun AttentionDecoder(double dropoutInputKeepProb)
             // compute attention vector
             //attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
             attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeys, encodingProjectedData);
-            // ^^ two operations that are per-sequence
             Function::SetDynamicProfiler(prevProfiler);
-            // stack of non-recurrent projections
-            // vv fully batchable
-#if 1
-            let z = doToOutput(state, attentionContext);
-            //attentionContexts[t] = attentionContext;
-#else
-            auto state1 = firstHiddenProjection(state); // first one brings it into the right dimension
-            for (auto& resnet : resnets)                // then a bunch of ResNet layers
-                state1 = resnet(state1);
-            // one more transform, bringing back the attention context
-            let topHidden = topHiddenProjection(Splice({ state1, attentionContext }, Axis(0)));
-            // ^^ batchable; currently one per target word in MB (e.g. 600); could be one per batch (2 launches)
-            // TODO: dropout layer here
-            dropoutInputKeepProb;
-            // compute output
-            let z = outputProjection(topHidden);
-#endif
-            res[t] = z;
-            //res[t] = state;
+            states[t] = state;
+            attentionContexts[t] = attentionContext;
+            // TODO: This has now become just a recurrence with a tuple state. Let's have a function for that.
         }
-        //let z = doToOutput(Splice(res/*state*/, Axis::EndStaticAxis()), Splice(attentionContexts, Axis::EndStaticAxis()));
-        //as_vector(res, z);
-        return Splice(move(res), Axis::EndStaticAxis());
+        // stack of output transforms
+        let z = doToOutput(Splice(move(states)/*state*/, Axis::EndStaticAxis()), Splice(move(attentionContexts), Axis::EndStaticAxis()));
+        return z;
     });
 }
 

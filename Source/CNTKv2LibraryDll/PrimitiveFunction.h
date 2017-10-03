@@ -897,8 +897,8 @@ namespace CNTK
             size_t m_depthHint;              // max of depth hints over all inputs
             // cached:
             size_t m_batchNormId = INT_MAX-1; // 0 if none   --TODO: INT_MAX chosen as to cause an access violation if left unchanged
-            StackingMode m_stacking;                  // true if batch axis is the last axis, rather than a new one
-            size_t m_batchAxis;               // max over ranks of batchable inputs; minus 1 if stacking. Computed upon Schedule().
+            StackingMode m_stacking;          // true if batch axis is the last axis, rather than a new one
+            size_t m_batchAxis = INT_MAX - 1; // max over ranks of batchable inputs; minus 1 if stacking. Computed upon Schedule().
             size_t m_batchDim;                // max m_shape[m_batchAxis] over all batchable inputs. Computed upon Schedule().
         } m_autoBatchState;
         mutable DynamicProfilerPtr m_profiler;   // profile using this profiler if set

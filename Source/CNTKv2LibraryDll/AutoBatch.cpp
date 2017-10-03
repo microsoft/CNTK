@@ -1153,8 +1153,8 @@ class Variable::AutoBatch
                 let operandRank = operandDims.size();
                 let placeholderHasFreeDimension = (placeholderRank > 0 && placeholderDims.back() == NDShape::FreeDimension);
                 let itemRank = placeholderRank - placeholderHasFreeDimension;
-                if (placeholderHasFreeDimension)
-                    Break;
+                //if (placeholderHasFreeDimension)
+                //    Break;
                 // itemRank = shape components that must match
                 if (operandRank < itemRank)
                     InvalidArgument("Invoke: Operand shape %S has too few axes to match placeholder's shape %S.", operand.Shape().AsString().c_str(), cloneeInput.Shape().AsString().c_str());
@@ -1285,6 +1285,7 @@ class Variable::AutoBatch
                 return false;
             // batch axis must match. Note that m_batchAxis reflects a decision on stacking vs. batching.
             let batchAxis = a.m_autoBatchState.m_batchAxis;
+            fail_if(batchAxis == SIZE_MAX - 2, "m_batchAxis not initialized??");
             if (batchAxis != b.m_autoBatchState.m_batchAxis)
                 return false;
             // special case BatchNormalization
@@ -1438,6 +1439,16 @@ class Variable::AutoBatch
             public:
                 size_t MatchAndRememberComposite(const CompositeFunctionPtr& compositePtr)
                 {
+                    // populate all composite's m_freeAxis etc. fields
+                    let freeAxis = compositePtr->m_basicBlockFreeAxis;
+                    Function::PreorderTraverseFunctions(compositePtr->RootFunction(), [freeAxis](const FunctionPtr& fPtr)
+                    {
+                        auto& f = *dynamic_pointer_cast<PrimitiveFunction>(fPtr);
+                        let batchAxisAndDim = DetermineBatchAxisAndDim(f);
+                        f.m_autoBatchState.m_stacking  = get<0>(batchAxisAndDim);
+                        f.m_autoBatchState.m_batchAxis = get<1>(batchAxisAndDim);
+                        f.m_autoBatchState.m_batchDim  = get<2>(batchAxisAndDim);
+                    });
                     // match new composite against all in the list by deep structure comparison
                     for (size_t i = 0; i < allComposites.size(); i++)
                     {
@@ -1471,6 +1482,7 @@ class Variable::AutoBatch
         //  - stacking: axis = max rank - 1; dim = max over those dims (inputs that do not have that axis can be considered virtually padded to 1. Effectively they are just skipped.)
         // The decision is purely based on the operation and input ranks. Input shapes (other than their rank) must not be considered.
         // BUGBUG: For Splice into a new axis, we must account for that new axis.
+        // Note that this is also called for composites, where the last dimension may be FreeDimension. Should still work.
         static tuple<StackingMode, size_t/*axis*/, size_t/*dim*/> DetermineBatchAxisAndDim(const PrimitiveFunction& f)
         {
             // helper to read out a dimension
@@ -1581,12 +1593,25 @@ class Variable::AutoBatch
                         return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
                     break;
                 }
-            case PrimitiveOpType::Block:
-                Break;
+            case PrimitiveOpType::Slice: // it's a view op, but we can get here in postprocessing basic-block composites
+                // TODO: Once we short-circuit in static graphs, we should not get here at all.
+                if (f.m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec)) // vector of slices
+                {
+                    let& axes = AsVector<Axis>(f.m_attributes[PrimitiveFunction::AttributeNameAxisVec      ].Value<vector<DictionaryValue>>());
+                    for (size_t i = 0; i < axes.size(); i++)
+                    {
+                        let axisIndex = axes[i].StaticAxisIndex();
+                        if (stackingAxis == (size_t)axisIndex)
+                            return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
+                    }
+                }
+                else // single slice
+                {
+                    let axis = f.m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                    if (stackingAxis == (size_t)axis.StaticAxisIndex(/*checked=*/false))
+                        return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
+                }
                 break;
-            case PrimitiveOpType::Slice: // this is an affected op, but it's a view op, so we should not get here
-                // TODO: Think through the Slice case.
-                fail_if(true, "DetermineBatchAxis: should not get here for Slice");
             case PrimitiveOpType::TransposeAxes: // TODO
                 fail_if(true, "DetermineBatchAxis: not yet implemented for TransposeAxes");
             }
@@ -2055,6 +2080,7 @@ class Variable::AutoBatch
     // batched inputs and consistent batching for all ops, and therefore does not perform any additional (re-)batching.
     PrimitiveFunctionPtr InlineAndMemoizeBatchedBasicBlock(const BlockFunction& block, const vector<Variable>& invocationArgs, size_t batchAxis/*or SIZE_MAX*/, size_t batchSize)
     {
+        CudaStatsGuard cudaStatsguard(block.m_op, nullptr, 0, block.m_outputs.front().Shape().TotalSize(/*check=*/false));
         // BUGBUG:
         //  - if block contains BatchNorm, then the implied barrier is not accounted for in batching.
         //    If user code is correct, it will compute the right thing. But we cannot presently check or account for it.
@@ -3160,8 +3186,10 @@ class Variable::AutoBatch
         let outputBatchAxis = isTimes ? commonInputBatchAxis + f0.m_outputs.front().Shape().Rank() - f0.m_inputs.back().Shape().Rank() : batchAxis;
         if (!isTimes && op != PrimitiveOpType::Splice && op != PrimitiveOpType::Reshape && f0.m_outputs.front().Shape().Rank() > DetermineMaxElementwiseInputRank(f0))
             LogicError("elementwise op that increases rank??");
-        if (op == PrimitiveOpType::Block)// && stackingMode == StackingMode::BATCHING)
-            Break;
+        //if (op == PrimitiveOpType::Block && stackingMode == StackingMode::BATCHING)
+        //    Break;
+        //else if (op == PrimitiveOpType::Block)
+        //    Break;
 #endif
 
         // create all m_batchedInputs[] by splicing along the batch axis
@@ -4551,11 +4579,6 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
     if (compositeOutputs.front().Shape().IsUnknown()) // or not?
         LogicError("Invoke with determineShapes=true must not be called with inputs with Placeholder dimensions.");
 
-    // populate all composite's m_freeAxis etc. fields
-    if (isBasicBlock)
-    {
-    }
-
     // Now the composite is fully type-inferred; ready for consumption by Dynamite.
 }
 
@@ -4590,8 +4613,8 @@ Variable BlockFunction::FinalizeInvoke(const vector<Variable>& argumentList, boo
             let operandRank = operandDims.size();
             let placeholderHasFreeDimension = (placeholderRank > 0 && placeholderDims.back() == NDShape::FreeDimension);
             let itemRank = placeholderRank - placeholderHasFreeDimension;
-            if (placeholderHasFreeDimension)
-                Break;
+            //if (placeholderHasFreeDimension)
+            //    Break;
             // itemRank = shape components that must match
             if (operandRank < itemRank || operandRank > placeholderRank)
                 InvalidArgument("Invoke: Argument shape %S too short to match placeholder's shape %S.", operand.Shape().AsString().c_str(), input.Shape().AsString().c_str());

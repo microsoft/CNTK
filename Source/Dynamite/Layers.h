@@ -665,10 +665,10 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 {
     // matrices are stacked in order (i, r, h)
-    auto R  = Parameter({ outputDim * 3, outputDim                  }, DTYPE, GlorotUniformInitializer(), device, L"R");
-    auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize, device, Named("projectInput"));
+    auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, device, Named("projectInput"));
     //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, device);
-    auto b  = Parameter({ outputDim * 3 }, DTYPE, 0.0f, device, L"b");
+    auto R  = Parameter({ outputDim * 3, outputDim }, DTYPE, GlorotUniformInitializer(), device, L"R");
+    //auto b  = Parameter({ outputDim * 3            }, DTYPE, 0.0f, device, L"b");
     let normR = LengthNormalization(device);
     let stackAxis = Axis(0);
     let stackedDim = (int)outputDim;
@@ -717,12 +717,11 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     }, L"gru3Composite");
     StaticModel doGRU(/*isBasicBlock=*/false, [=](const Variable& dh, const Variable& x) -> Variable
     {
-        CountAPICalls(2);
-        let projx3 = b + projectInput(x); // TODO: fold 'b' into the Linear layer
-        let projdh3 = normR(Times(R, dh));
+        let projx3 = projectInput(x); // note: this has a bias
+        let projdh3 = normR(Times(R, dh)); CountAPICalls(1);
         return gru3Composite(dh, projdh3, projx3);
     }, Named("gru"));
-    return BinaryModel({ R, b },
+    return BinaryModel({ R },
     {
         { L"projectInput",  projectInput },
         //{ L"projectState",  projectState },
@@ -731,20 +730,7 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     // TODO: can we pass doGRU here directly, instead of creating a new lambda? Needs some form of type cast of StaticModel to this lambda.
     [=](const Variable& dh, const Variable& x) //mutable
     {
-#if 1
         return doGRU(dh, x);
-#else
-        let projx3 = b + projectInput(x); // TODO: fold 'b' into the Linear layer
-        let projdh3 = normR(Times(R, dh));
-#if 0   // using the composite
-        gruArgs[0].second = dh;
-        gruArgs[1].second = projdh3;
-        gruArgs[2].second = projx3;
-        return Invoke(gru3Composite, gruArgs, /*isBasicBlock=*/false); // basic block not working, as it does not know not to batch multiple matrix products
-#else   // using imperative code
-        return gru3(dh, projdh3, projx3);
-#endif
-#endif
     });
 }
 #endif
@@ -783,7 +769,10 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
     auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
     auto scale = Parameter({}, DTYPE, 1.0, device, L"scale");
-    auto weightNormRescale = Parameter({ outputDim }, DTYPE, 1.0, device, L"weightNormRescale");
+    static int xxx = 0; ++xxx;
+    if (xxx == 7)
+        fprintf(stderr, "");
+    auto weightNormRescale = Parameter({ outputDim }, DTYPE, 1.0, device, L"weightNormRescale"+to_wstring(xxx));
     let weightNormMinusHalf = Constant::Scalar(DTYPE, -0.5, device);
     let batchNorm = hasBatchNorm ? BatchNormalization(device, /*axis=*/1, Named("DenseBN")) : Identity;
     let lengthNorm = hasLengthNorm ? LengthNormalization(device) : Identity;
@@ -800,7 +789,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     if (hasLengthNorm)
         nested[L"lengthNorm"] = lengthNorm;
     // BUGBUG: if isBasicBlock 'true' then this fails with projectInput.weightNormRescale not a parameter
-    StaticModel normWeight(/*isBasicBlock=*/false, [=]() -> Variable
+    StaticModel normWeight(/*isBasicBlock=*/false , [=]() -> Variable
     {
         if (!hasWeightNorm)
             return W; // TODO: this is a dummy so that we don't reference the weightNormRescale parameter
