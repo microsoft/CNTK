@@ -684,9 +684,9 @@ public:
     {
         Matrix<ElemType> result = ValueFor(fr);
         Matrix<ElemType> nWords = Input(0)->ValueFor(fr);
-        result.SetValue((ElemType) -1.e-30);
+        result.SetValue(Input(1)->ValueFor(fr));
 
-        for (size_t inputIndex = 1; inputIndex < GetNumInputs(); inputIndex++)
+        for (size_t inputIndex = 2; inputIndex < GetNumInputs(); inputIndex++)
         {
             let input = Input(inputIndex)->ValueFor(fr);
             Matrix<ElemType>::DoElementMaxOf(result, input, inputIndex, nWords);

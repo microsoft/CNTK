@@ -4113,7 +4113,6 @@ void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue,
     CUDA_LONG nRows = (CUDA_LONG)inputValue.GetNumRows();
     int blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
-
     _addElementMaxGradient<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(inputValue.Data(), outputValue.Data(), outputGradient.Data(), Data(), n, InputIndex, nWords.Data(), nRows);
 }
 

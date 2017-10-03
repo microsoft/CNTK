@@ -718,16 +718,13 @@ __global__ void _addElementMaxGradient(
         return;
 
     const CUDA_LONG iCol = id / nRows;
-    if (inputindex <= nWords[iCol])
+    if (inputindex <= nWords[iCol] && inputValue[id] == outputValue[id])
     {
-        if (inputValue[id] == outputValue[id])
-        {
-            inputGradient[id] = outputGradient[id];
-        }
-        else
-        {
-            inputGradient[id] = 0;
-        }
+        inputGradient[id] = outputGradient[id];
+    }
+    else
+    {
+        inputGradient[id] = 0;
     }
 }
 
