@@ -111,6 +111,18 @@ struct TypeSelector<half>
     typedef float comp_t;
 };
 
+/* operators to write to/read from files for half */
+inline Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, half& h)
+{
+    stream >> *(short *)&h;
+    return stream;
+}
+inline Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const half& h)
+{
+    stream << *(short *)&h;
+    return stream;
+}
+
 /* Some basic arithmetic operations expected of a builtin */
 __FP16_DECL__ half operator+(const half &lh, const half &rh) { return (half)((float)lh + (float)rh); }
 __FP16_DECL__ half operator-(const half &lh, const half &rh) { return (half)((float)lh - (float)rh); }
