@@ -57,10 +57,13 @@ RUN CONFIGURE_OPTS="--with-py36-path=/opt/anaconda/envs/cntk-py36" && \
     sed -i "s,libprotobuf.a,libprotobuf.so,g" Makefile && \ 
     sed -i "s,libprotobuf.a,libprotobuf.so,g" configure && \
     sed -i "s,libmpi.so.12,libmpi.so,g" bindings/python/cntk/train/distributed.py && \
+    cd Source/Multiverso && \
+    mkdir build && cd build && \
+    cmake .. && make && make install && cd /cntk && \
     mkdir -p build-mkl/cpu/release && \
     cd build-mkl/cpu/release && \
     ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
-    make -j"$(nproc)" all
+    make -j1 all
 
 RUN cd Examples/Image/DataSets/CIFAR-10 && \
     python install_cifar10.py && \
