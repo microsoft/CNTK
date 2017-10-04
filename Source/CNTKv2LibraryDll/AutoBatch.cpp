@@ -1579,6 +1579,8 @@ class Variable::AutoBatch
             if (op == PrimitiveOpType::Block)
             {
                 let composite = static_cast<const CompositeFunction*>(static_cast<const BlockFunction&>(f).Composite().get());
+                //if (composite->Name() == L"doToOutput")
+                //    Break;
                 let freeAxis = composite->m_basicBlockInfo.m_freeAxis;
                 if (freeAxis == SIZE_MAX) // if basic block has no free dimension, then we won't batch in the first place' but formally, let's say we batch it
                     return{ StackingMode::BATCHING, maxRank, 1 };
@@ -1680,7 +1682,7 @@ class Variable::AutoBatch
             else if (op == PrimitiveOpType::Block)
             {
                 // we also must count BatchNorm instances embedded inside basic-block composites
-                let* composite = static_cast<const CompositeFunction*>(static_cast<BlockFunction&>(f).Composite().get());
+                let* composite = static_cast<const CompositeFunction*>(static_cast<const BlockFunction&>(f).Composite().get());
                 for (let bnId : *composite->m_basicBlockInfo.m_batchNormIds)
                     m_bnPendingCounts[bnId]--;
             }
@@ -1730,15 +1732,26 @@ class Variable::AutoBatch
         size_t numBatchableOpsPending() const { return m_regularOps.size(); }
         // helper to check whether this is a BatchNormalization op that still has some instances pending
         // TODO: just return 'true'; or maybe rename to IsBatchNormPending()
-        int GetBatchNormPending(const vector<NonOwningFunctionListBuilder>::const_iterator& iter)
+        bool GetBatchNormPending(const vector<NonOwningFunctionListBuilder>::const_iterator& iter)
         {
             let& f = *iter->front();
-            if (f.m_op != PrimitiveOpType::BatchNormalization)
-                return 0;
-            let bnId = f.m_autoBatchState.m_batchNormId;
-            fail_if(bnId != f.m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>(), "m_batchNormId not initialized correctly??"); // TODO: remove once confirmed not flagging for a while
-            return m_bnPendingCounts[bnId] > 0;
-            // TODO: get this from f.m_autoBatchState.m_batchNormId
+            if (f.m_op == PrimitiveOpType::BatchNormalization)
+            {
+                let bnId = f.m_autoBatchState.m_batchNormId;
+                fail_if(bnId != f.m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>(), "m_batchNormId not initialized correctly??"); // TODO: remove once confirmed not flagging for a while
+                return m_bnPendingCounts[bnId] > 0;
+            }
+            else if (f.m_op == PrimitiveOpType::Block)
+            {
+                // we also must count BatchNorm instances embedded inside basic-block composites
+                let* composite = static_cast<const CompositeFunction*>(static_cast<const BlockFunction&>(f).Composite().get());
+                for (let bnId : *composite->m_basicBlockInfo.m_batchNormIds)
+                    if (m_bnPendingCounts[bnId] > 0)
+                        return true;
+                if (!composite->m_basicBlockInfo.m_batchNormIds->empty())
+                    Break;
+            }
+            return false;
         }
         // select the next batched op to execute
         NonOwningFunctionList pop_best()
@@ -1759,7 +1772,7 @@ class Variable::AutoBatch
                     // TODO: optimize this further, e.g. don't get autobatch state over again
                     int diff = 0;
                     // TODO: just say if IsBatchNormPending(iter) continue;
-                    diff = -(GetBatchNormPending(iter) - GetBatchNormPending(best)); // BatchNormalization with pending inputs always loses
+                    diff = -((int)GetBatchNormPending(iter) - (int)GetBatchNormPending(best)); // BatchNormalization with pending inputs always loses
                     if (diff) goto got_diff;
                     diff = -((int)iter->front()->m_autoBatchState.m_depthHint - (int)best->front()->m_autoBatchState.m_depthHint); // barrier: higher depthHint gets batched last
                     if (diff) goto got_diff;
@@ -1909,7 +1922,7 @@ class Variable::AutoBatch
         if (op == PrimitiveOpType::Block)
         {
             // we also must count BatchNorm instances embedded inside basic-block composites
-            let* composite = static_cast<const CompositeFunction*>(static_cast<BlockFunction&>(f).Composite().get());
+            let* composite = static_cast<const CompositeFunction*>(static_cast<const BlockFunction&>(f).Composite().get());
             for (let bnId : *composite->m_basicBlockInfo.m_batchNormIds)
                 m_schedule.CountBatchNorm(bnId);
         }
@@ -4415,25 +4428,25 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     if (!fCompositePtr)
         InvalidArgument("Invocable() must only be called on CompositeFunctions.");
     // precompute some additional info for basic blocks
-    if (isBasicBlock)
+    // Some of these are used for composites that are declared as basic blocks, but also for those
+    // invoked by basic blocks even if not declared as such. Hence, we must initialize this always.
+    // (we probably only need m_freeAxis; the others are only used for sceduling).
+    fCompositePtr->m_basicBlockInfo.m_freeAxis = m_argumentFreeAxes.empty() ? SIZE_MAX : freeAxis; // remember the one axis used for all ops inside the basic block
+    fCompositePtr->m_basicBlockInfo.m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
+    fCompositePtr->m_basicBlockInfo.m_batchNormIds = make_unique<vector<size_t>>();
+    fCompositePtr->m_basicBlockInfo.m_depthHint = 0;
+    Function::PreorderTraverseFunctions(fCompositePtr->RootFunction(), [&](const FunctionPtr& fPtr)
     {
-        fCompositePtr->m_basicBlockInfo.m_freeAxis = m_argumentFreeAxes.empty() ? SIZE_MAX : freeAxis; // remember the one axis used for all ops inside the basic block
-        fCompositePtr->m_basicBlockInfo.m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
-        fCompositePtr->m_basicBlockInfo.m_batchNormIds = make_unique<vector<size_t>>();
-        fCompositePtr->m_basicBlockInfo.m_depthHint = 0;
-        Function::PreorderTraverseFunctions(fCompositePtr->RootFunction(), [&](const FunctionPtr& fPtr)
+        let& f = *dynamic_pointer_cast<PrimitiveFunction>(fPtr);
+        let op = f.OpType();
+        if (op == PrimitiveOpType::BatchNormalization)
         {
-            let& f = *dynamic_pointer_cast<PrimitiveFunction>(fPtr);
-            let op = f.OpType();
-            if (op == PrimitiveOpType::BatchNormalization)
-            {
-                let bnId = f.Attributes()[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
-                fCompositePtr->m_basicBlockInfo.m_batchNormIds->push_back(bnId);
-            }
-            if (Variable::AutoBatch::IsBarrier(f))
-                fCompositePtr->m_basicBlockInfo.m_depthHint = max(fCompositePtr->m_basicBlockInfo.m_depthHint, f.Attributes()[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
-        }, /*traverseInsideBlockFunction=*/ true);
-    }
+            let bnId = f.Attributes()[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+            fCompositePtr->m_basicBlockInfo.m_batchNormIds->push_back(bnId);
+        }
+        if (Variable::AutoBatch::IsBarrier(f))
+            fCompositePtr->m_basicBlockInfo.m_depthHint = max(fCompositePtr->m_basicBlockInfo.m_depthHint, f.Attributes()[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
+    }, /*traverseInsideBlockFunction=*/ true);
     m_composite = move(fCompositePtr);
 
     // -- prep this class for Invoke(). Complete the m_argsMap pairs by including all learnable Parameters in it as well.

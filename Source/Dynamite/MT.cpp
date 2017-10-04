@@ -198,7 +198,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     let profiler = Function::CreateDynamicProfiler(1, L"decode");
 
     let outProjProfiler = Function::CreateDynamicProfiler(1, L"outProj");
-    StaticModel doToOutput(/*isBasicBlock=*/false, [=](const Variable& state, const Variable& attentionContext)
+    StaticModel doToOutput(/*isBasicBlock=*/true, [=](const Variable& state, const Variable& attentionContext)
     {
         // first one brings it into the right dimension
         let prevProfiler = Function::SetDynamicProfiler(outProjProfiler, false);
@@ -216,7 +216,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         let z = outputProjection(topHidden);
         Function::SetDynamicProfiler(prevProfiler);
         return z;
-    });
+    }, Named("doToOutput"));
 
     return Dynamite::Model/*BinaryModel*/({ }, nestedLayers,
     [=](const Variable& history, const Variable& hEncs) -> Variable
