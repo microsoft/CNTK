@@ -1312,11 +1312,9 @@ void GPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, co
     SyncGuard syncGuard;
     _columnwiseScaleAndWeightedAdd4CSC<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
         alpha,
-        // BUGBUG? I suspect Data() here should be Buffer().
-        a.Data(), a.SecondaryIndexLocation(), a.MajorIndexLocation(),
+        a.Buffer(), a.ColLocation(), a.RowLocation(),
         v.Data(),
         beta,
-        // BUGBUG? I suspect Data() here should be Buffer().
         c.Data(),
         a.GetNumRows(), a.GetNumCols());
 }
