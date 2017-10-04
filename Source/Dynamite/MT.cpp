@@ -198,7 +198,8 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     let profiler = Function::CreateDynamicProfiler(1, L"decode");
 
     let outProjProfiler = Function::CreateDynamicProfiler(1, L"outProj");
-    StaticModel doToOutput(/*isBasicBlock=*/true, [=](const Variable& state, const Variable& attentionContext)
+    // BUGBUG: Setting this to true fails with an off batch axis.
+    StaticModel doToOutput(/*isBasicBlock=*/false, [=](const Variable& state, const Variable& attentionContext)
     {
         // first one brings it into the right dimension
         let prevProfiler = Function::SetDynamicProfiler(outProjProfiler, false);
