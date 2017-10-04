@@ -3763,7 +3763,7 @@ namespace CNTK
     /// Create an instance of the slice operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name = L"");
-\
+
     /// Create an instance of attach dynamic axis operation that convert the input's first static axis to dynamic axis.
     /// Only batch axis is supported now.
     ///
@@ -4009,11 +4009,10 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = L"");
 
-	///
-	/// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.
-	///
-	CNTK_API FunctionPtr LegacyCrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = L"");
-
+    ///
+    /// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.
+    ///
+    CNTK_API FunctionPtr LegacyCrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.

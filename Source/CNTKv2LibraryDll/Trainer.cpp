@@ -240,9 +240,7 @@ namespace CNTK
             for (const auto& parameter : m_learnerParameters)
                 gradients[parameter] = parameterGradients[parameter]->Data();
             trainingLoss = m_prevMinibatchAggregateTrainingLossValue->Data();
-
-			std::cout << "After fwdback rank " << MPICommunicator()->CurrentWorker().m_globalRank << "  local loss " << trainingLoss->AsScalar<float>() << " samples " << TotalNumberOfSamplesSeen() << std::endl;
-			evalCriterion = m_prevMinibatchAggregateEvalCriterionValue->Data();
+            evalCriterion = m_prevMinibatchAggregateEvalCriterionValue->Data();
         }
 
         auto currentWorkerNumSamples = m_prevMinibatchNumSamples;
