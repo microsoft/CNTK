@@ -1108,31 +1108,70 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     int n = transposeB ? (int) rhs.GetNumRows() : (int) rhs.GetNumCols();
 
     assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
-    assert(k == l);
-    if (k != l)
+    // assert(k == l);
+
+    if (k == l)
+    {
+        if (beta == 0)
+            c.RequireSize(m, n);
+        else
+            c.VerifySize(m, n); // Can't resize if beta != 0
+
+        c.PrepareDevice();
+        if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+        {
+            ConvolveAndWeightedAdd(alpha, lhs, transposeA, rhs, transposeB, beta, c, 1, 1, false, false);
+        }
+        else if (rhs.GetFormat() == matrixFormatSparseCSR)
+        {
+            GPUSparseMatrix<ElemType> tempMatrix(rhs.GetComputeDeviceId(), matrixFormatSparseCSC);
+            rhs.ConvertToSparseFormat(matrixFormatSparseCSC, tempMatrix);
+            MultiplyAndWeightedAdd(alpha, lhs, transposeA, tempMatrix, transposeB, beta, c);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    else if (l % k == 0)
+    {
+        c.PrepareDevice();
+        if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+        {
+            ConvolveAndWeightedAdd3D(alpha, lhs, transposeA, rhs, transposeB, beta, c, 1, 1, false, false);
+
+            // c = 64 x [[288] x 10]
+            unique_ptr<ElemType[]> cPtr(c.CopyToArray());
+            
+            ElemType cMin = cPtr[0], cMax = cPtr[0];
+
+            for (size_t i = 0; i < 10 * 288 * 64; i++)
+            {
+                ElemType v = cPtr[i];
+                if (v > cMax)
+                {
+                    cMax = v;
+                }
+
+                if (v < cMin)
+                {
+                    cMin = v;
+                }
+            }
+
+            printf("min = %f, max = %f\n", cMin, cMax);
+
+            printf("\n");
+
+            cPtr.reset();
+        }
+        else {
+            NOT_IMPLEMENTED;
+        }
+    }
+    else
     {
         InvalidArgument("GPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a (= %d) and b (= %d) don't match.", k, l);
-    }
-
-    if (beta == 0)
-        c.RequireSize(m, n);
-    else
-        c.VerifySize(m, n); // Can't resize if beta != 0
-
-    c.PrepareDevice();
-    if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC)
-    {
-        ConvolveAndWeightedAdd(alpha, lhs, transposeA, rhs, transposeB, beta, c, 1, 1, false, false);
-    }
-    else if (rhs.GetFormat() == matrixFormatSparseCSR)
-    {
-        GPUSparseMatrix<ElemType> tempMatrix(rhs.GetComputeDeviceId(), matrixFormatSparseCSC);
-        rhs.ConvertToSparseFormat(matrixFormatSparseCSC, tempMatrix);
-        MultiplyAndWeightedAdd(alpha, lhs, transposeA, tempMatrix, transposeB, beta, c);
-    }
-    else
-    {
-        NOT_IMPLEMENTED;
     }
 }
 
@@ -1234,6 +1273,71 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
     }
 }
 
+// dense X sparse = dense
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd3D(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
+                                                         const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta,
+                                                         GPUMatrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool, bool channelwise)
+{
+    if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
+        RuntimeError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd: All matrices must be on the same GPU");
+
+    if (lhs.IsEmpty() || rhs.IsEmpty())
+        LogicError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd:  one of the input matrix is empty.");
+
+    int m = transposeA ? (int)lhs.GetNumCols() : (int)lhs.GetNumRows(); // 288
+    int k = transposeA ? (int)lhs.GetNumRows() : (int)lhs.GetNumCols(); // 147,876
+    int l = transposeB ? (int)rhs.GetNumCols() : (int)rhs.GetNumRows(); // 1,478,760
+    int n = transposeB ? (int)rhs.GetNumRows() : (int)rhs.GetNumCols(); // 64
+
+    assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
+
+    int numSteps = l / k;
+
+    int cRows = m;
+    int cCols = n * numSteps;
+
+    if (beta == 0)
+        c.RequireSize(cRows, cCols);
+    else
+        c.VerifySize(cRows, cCols); // Can't resize if beta != 0
+
+    c.PrepareDevice();
+    if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+    {
+        if (!transposeB)
+        {
+            int blocksPerGrid = (int)ceil(1.0 * cRows * cCols / GridDim::maxThreadsPerBlock);
+            SyncGuard syncGuard;
+            _sparseCDSSM<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(
+                m,                   // rowDense
+                k,                   // colDense
+                n,                   // colSparse
+                numChannels,         // number of input channels
+                numSteps,            // convolution num steps
+                horizontalSubsample, // convolution step size
+                channelwise,         // channelwise or pixelwise multiplication
+                alpha,
+                reinterpret_cast<const ElemType*>(lhs.Data()), // dense
+                transposeA,
+                reinterpret_cast<const ElemType*>(rhs.Buffer()), // sparse nz values. Note that because of the offsets we use the array
+                rhs.RowLocation(),
+                rhs.ColLocation(),
+                beta,
+                reinterpret_cast<ElemType*>(c.Data()) // dense target
+                );
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
 // c[:,j] = alpha * v[j] * a[:,j] + beta * c[:,j]
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& v, ElemType beta, GPUMatrix<ElemType>& c)
@@ -1324,84 +1428,134 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
     assert(m > 0 && k > 0 && l > 0 && n > 0);
     (void) m;
     (void) n; // converting from size_t to int may cause overflow
-    assert(k == l);
-    if (k != l)
+    if (k == l)
+    {
+        if (!transposeA && !transposeB)
+        {
+            NOT_IMPLEMENTED;
+        }
+        else if (!transposeA && transposeB)
+        {
+            if (rhs.GetFormat() != matrixFormatSparseCSC)
+                NOT_IMPLEMENTED;
+
+            c.SetFormat(matrixFormatSparseBlockCol);
+
+            lhs.PrepareDevice();
+
+            int blocksPerGrid = 0;
+            SyncGuard syncGuard;
+
+            // based on the size of m_nz in rhs and numCols in the resulted matrix we use different approaches
+            size_t rhs_nz = rhs.NzCount();
+
+            size_t blockSizePrev = c.GetBlockSize();
+            if (blockSizePrev == 0)
+            {
+                c.Resize(m, n, 0);
+                CUDA_CALL(cudaMemset(c.ColOrRow2BlockId(), SparseIndex_NotAssigned, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
+                CUDA_CALL(cudaMemset(c.BlockId2ColOrRow(), SparseIndex_NotAssigned, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
+            }
+
+            size_t* blockSize = TracingGPUMemoryAllocator::Allocate<size_t>(lhs.GetComputeDeviceId(), 1);
+            CUDA_CALL(cudaMemcpy(blockSize, &blockSizePrev, sizeof(size_t), cudaMemcpyHostToDevice));
+
+            blocksPerGrid = (int)ceil(((double)rhs_nz) / GridDim::maxThreadsPerBlock);
+            _findColsWithValues<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(
+                rhs.RowLocation(), c.ColOrRow2BlockId(), rhs_nz);
+
+            blocksPerGrid = (int)ceil(((double)n) / GridDim::maxThreadsPerBlock);
+            _determineBlockIds<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(
+                c.BlockId2ColOrRow(), c.ColOrRow2BlockId(), n, blockSize);
+
+            size_t blockSizeCurr;
+            CUDA_CALL(cudaMemcpy(&blockSizeCurr, blockSize, sizeof(size_t), cudaMemcpyDeviceToHost));
+            TracingGPUMemoryAllocator::Free<size_t>(lhs.GetComputeDeviceId(), blockSize);
+            c.SetBlockSize(blockSizeCurr);
+
+            if (blockSizeCurr > blockSizePrev)
+            {
+                // zero initialize new blocks
+                size_t nnz = m * blockSizeCurr;
+                c.RequireSizeAndAllocate(m, n, nnz, true, true); // we need to keep the col2blockid and blockid2col info when resizing.
+                CUDA_CALL(cudaMemset(c.Data() + m * blockSizePrev, 0, sizeof(ElemType) * m * (blockSizeCurr - blockSizePrev)));
+            }
+
+            LONG64 N = (LONG64)lhs.GetNumElements(); // here we process for each row in lhs and each column in rhs (==columns in lhs)
+            blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
+            _denseMulSparseCSCTransposeToSparseBlockCol2<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(
+                alpha,
+                lhs.Data(),
+                m,
+                l,
+                rhs.Data(),
+                rhs.RowLocation(),
+                rhs.ColLocation(),
+                c.ColOrRow2BlockId(),
+                c.Data());
+        }
+        else if (transposeA && !transposeB)
+        {
+            NOT_IMPLEMENTED;
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    else if (k % l == 0)
+    {
+        if (!transposeA && transposeB)
+        {
+            if (rhs.GetFormat() != matrixFormatSparseCSC)
+                NOT_IMPLEMENTED;
+
+            int rows = (int)c.GetNumRows();
+            int cols = (int)c.GetNumCols();
+            int samples = l;
+            int steps = k / l;
+            int blocks = (rows * cols * steps + (int)GridDim::maxThreadsPerBlock - 1) / (int)GridDim::maxThreadsPerBlock;
+            printf("rows = %d, cols = %d, samples = %d, steps = %d, blocks =%d\n", rows, cols, samples, steps, blocks);
+
+            _backPropCDSSM<ElemType> << <blocks, GridDim::maxThreadsPerBlock, 0, t_stream >> >
+                (rows, cols, samples, steps, lhs.Data(), rhs.Data(), rhs.RowLocation(), rhs.ColLocation(), c.Data());
+
+          /*  unique_ptr<ElemType[]> cPtr(c.CopyToArray());
+
+            ElemType cMin = cPtr[0], cMax = cPtr[0];
+
+            for (size_t i = 0; i < 288 * 147876; i++)
+            {
+                ElemType v = cPtr[i];
+                if (v > cMax)
+                {
+                    cMax = v;
+                }
+
+                if (v < cMin)
+                {
+                    cMin = v;
+                }
+            }
+
+            printf("min = %f, max = %f\n", cMin, cMax);
+
+            printf("\n");
+
+            cPtr.reset();*/
+
+            printf("complete\n");
+        }
+        else {
+            NOT_IMPLEMENTED;
+        }
+    }
+    else
     {
         InvalidArgument("GPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a (= %d) and b (= %d) don't match.", k, l);
     }
 
-    if (!transposeA && !transposeB)
-    {
-        NOT_IMPLEMENTED;
-    }
-    else if (!transposeA && transposeB)
-    {
-        if (rhs.GetFormat() != matrixFormatSparseCSC)
-            NOT_IMPLEMENTED;
-
-        c.SetFormat(matrixFormatSparseBlockCol);
-
-        lhs.PrepareDevice();
-
-        int blocksPerGrid = 0;
-        SyncGuard syncGuard;
-
-        // based on the size of m_nz in rhs and numCols in the resulted matrix we use different approaches
-        size_t rhs_nz = rhs.NzCount();
-
-        size_t blockSizePrev = c.GetBlockSize();
-        if (blockSizePrev == 0)
-        {
-            c.Resize(m, n, 0);
-            CUDA_CALL(cudaMemset(c.ColOrRow2BlockId(), SparseIndex_NotAssigned, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
-            CUDA_CALL(cudaMemset(c.BlockId2ColOrRow(), SparseIndex_NotAssigned, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
-        }
-
-        size_t* blockSize = TracingGPUMemoryAllocator::Allocate<size_t>(lhs.GetComputeDeviceId(), 1);
-        CUDA_CALL(cudaMemcpy(blockSize, &blockSizePrev, sizeof(size_t), cudaMemcpyHostToDevice));
-
-        blocksPerGrid = (int) ceil(((double) rhs_nz) / GridDim::maxThreadsPerBlock);
-        _findColsWithValues<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-            rhs.RowLocation(), c.ColOrRow2BlockId(), rhs_nz);
-                
-        blocksPerGrid = (int) ceil(((double) n) / GridDim::maxThreadsPerBlock);
-        _determineBlockIds<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-            c.BlockId2ColOrRow(), c.ColOrRow2BlockId(), n, blockSize);
-
-        size_t blockSizeCurr;
-        CUDA_CALL(cudaMemcpy(&blockSizeCurr, blockSize, sizeof(size_t), cudaMemcpyDeviceToHost));
-        TracingGPUMemoryAllocator::Free<size_t>(lhs.GetComputeDeviceId(), blockSize);
-        c.SetBlockSize(blockSizeCurr);
-
-        if (blockSizeCurr > blockSizePrev)
-        {
-            // zero initialize new blocks
-            size_t nnz = m * blockSizeCurr;
-            c.RequireSizeAndAllocate(m, n, nnz, true, true); // we need to keep the col2blockid and blockid2col info when resizing.
-            CUDA_CALL(cudaMemset(c.Data() + m * blockSizePrev, 0, sizeof(ElemType) * m * (blockSizeCurr - blockSizePrev)));
-        }
-
-        LONG64 N = (LONG64) lhs.GetNumElements(); // here we process for each row in lhs and each column in rhs (==columns in lhs)
-        blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
-        _denseMulSparseCSCTransposeToSparseBlockCol2<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-            alpha,
-            lhs.Data(),
-            m,
-            l,
-            rhs.Data(),
-            rhs.RowLocation(),
-            rhs.ColLocation(),
-            c.ColOrRow2BlockId(),
-            c.Data());
-    }
-    else if (transposeA && !transposeB)
-    {
-        NOT_IMPLEMENTED;
-    }
-    else
-    {
-        NOT_IMPLEMENTED;
-    }
+    
 }
 
 // find the rows of rhs with values

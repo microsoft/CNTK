@@ -3141,6 +3141,64 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
     c[IDX2C(rowInC, colInC, m * numSteps)] = alpha * s + (beta == 0 ? 0 : beta * c[IDX2C(rowInC, colInC, m * numSteps)]); // If beta is zero then don't lookup c
 }
 
+template <class ElemType>
+__global__ void _sparseCDSSM(
+    const int m,                // rowDense 288
+    const int k,                // colDense 147876
+    const int n,                // colSparse 64
+    const int,                  // input num channels
+    const int numSteps,         // convolution num steps 10
+    const int,                  // convolution step size 147876
+    const bool,                 // pixelwise for normal multiplication and channelwise for convolution operation
+    const ElemType,
+    const ElemType* a,          // dense
+    const bool,
+    const ElemType* bnzValues,  // sparse nz values
+    const GPUSPARSE_INDEX_TYPE * rowIndex,
+    const GPUSPARSE_INDEX_TYPE * colCSCIndex,
+    const ElemType,
+    ElemType* c // dense target
+)
+{
+    // 288 x 10 x 64
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= m * numSteps * n)
+        return;
+
+    int colInC = id / (m * numSteps);  // [0, 64), sample id
+    int rowInC = id % (m * numSteps);  // [0, 288 x 10)
+    int stepIdx = rowInC / m;           // [0, 10)
+    int hIdx = rowInC % m;
+
+    int start = colCSCIndex[colInC];
+    int end = colCSCIndex[colInC + 1];
+
+    ElemType s = 0;
+    if (start < end)
+    {
+        int startIndex = rowIndex[start];
+        int endIndex = rowIndex[end - 1];
+
+        int stepStart = k * stepIdx;
+        int stepEnd = k * (stepIdx + 1) - 1;
+
+        if (stepEnd >= startIndex && stepStart <= endIndex) // overlap
+        {
+            for (int j = start; j < end; j++)
+            {
+                int i = rowIndex[j];
+                if (i >= stepStart && i <= stepEnd)
+                {
+                    s += //a[IDX2C(i - stepStart, hIdx, k)] // 288 x [147,876]
+                        a[IDX2C(hIdx, i - stepStart, m)] * bnzValues[j]; // 147,876 x [288]
+                }
+            }
+        }
+    }
+
+    c[IDX2C(rowInC, colInC, m * numSteps)] = s;
+}
+
 /// c += alpha * a * b^T
 template <class ElemType>
 __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
@@ -3426,6 +3484,79 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol2(
 
         // assume resultValues are 0-initialized
         atomicAdd(&resultValues[IDX2C(lhsRow, resultCol, numRowsLhs)], lhsValue * rhsVal);
+    }
+}
+
+inline __host__ __device__ int findIndex(int start, int end, const GPUSPARSE_INDEX_TYPE * indices, const int target)
+{
+    if (end < start)
+    {
+        return -1;
+    }
+
+    if (start == end)
+    {
+        return (indices[start] == target) ? start : -1;
+    }
+
+    int mid = start + ((end - start) >> 1);
+    if (indices[mid] > target)
+    {
+        return findIndex(start, mid - 1, indices, target);
+    }
+    else if (indices[mid] < target)
+    {
+        return findIndex(mid + 1, end, indices, target);
+    }
+    else {
+        return mid;
+    }
+}
+
+template <class ElemType>
+__global__ void _backPropCDSSM(const int rows,     // 288
+                               const int cols,     // 147,876
+                               const int samples,  // 64
+                               const int steps,    // 10
+                               const ElemType* grad,
+                               const ElemType* bnzValues,
+                               const GPUSPARSE_INDEX_TYPE * rowIndex,
+                               const GPUSPARSE_INDEX_TYPE * colCSCIndex,
+                               ElemType* weightGrad)
+{
+    int id = blockIdx.x * blockDim.x + threadIdx.x;
+    if (id >= rows * cols * steps) // 425,882,880 int range (4,294,967,295)
+    {
+        return;
+    }
+
+    int l0 = cols * steps;
+    int r0 = id % l0;   // index in sparse sample
+
+    int rowi = id / l0;
+    int stepi = r0 / cols;
+    int coli = r0 % cols;
+
+    ElemType s = 0;
+    for (int samplei = 0; samplei < samples; samplei++)
+    {
+        int start = colCSCIndex[samplei];
+        int end = colCSCIndex[samplei + 1] - 1;
+        if (start <= end && r0 <= rowIndex[end])
+        {
+            int index = findIndex(start, end, rowIndex, r0);
+            if (index >= 0)
+            {
+                int gradIndex = 
+                    IDX2C(rowi, samplei * steps + stepi, rows); // 288 x [147,876]
+                s += bnzValues[index] * grad[gradIndex];
+            }
+        }
+    }
+
+    if (s != 0)
+    {
+        atomicAdd(&weightGrad[IDX2C(rowi, coli, rows)], s);
     }
 }
 

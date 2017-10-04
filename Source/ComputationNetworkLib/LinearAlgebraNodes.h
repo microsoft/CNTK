@@ -764,18 +764,30 @@ public:
                 // cannot be determined as sparse when AllocateGradientMatricesForInputs happens.
 
                 auto& currentInput0GradientMatrixRef = InputRef(0).Gradient();
-                auto newInput0SparseGradientMatrix =
-                    std::make_shared<Matrix<ElemType>>(
-                        currentInput0GradientMatrixRef.GetNumRows(),
-                        currentInput0GradientMatrixRef.GetNumCols(),
-                        currentInput0GradientMatrixRef.GetPreferredDeviceId(),
-                        SPARSE,
-                        MatrixFormat::matrixFormatSparseBlockCol);
 
-                // no need not set sparse with value from dense as its just cleared to zero when PreferredGradientMatrixType == UNDETERMINED
+                auto rows = currentInput0GradientMatrixRef.GetNumRows();
+                auto cols = currentInput0GradientMatrixRef.GetNumCols();
 
-                InputRef(0).GradientPtrRef() = newInput0SparseGradientMatrix;
-                InputRef(0).SetPreferredGradientMatrixType(SPARSE);
+                printf("rows = %d, cols = %d\n", (int)rows, (int)cols);
+                if (cols % 49292 == 0)
+                {
+                    InputRef(0).Gradient().SwitchToMatrixType(DENSE, matrixFormatDense, !overwriteInputGradient);
+                    InputRef(0).SetPreferredGradientMatrixType(DENSE);
+                }
+                else {
+                    auto newInput0SparseGradientMatrix =
+                        std::make_shared<Matrix<ElemType>>(
+                            currentInput0GradientMatrixRef.GetNumRows(),
+                            currentInput0GradientMatrixRef.GetNumCols(),
+                            currentInput0GradientMatrixRef.GetPreferredDeviceId(),
+                            SPARSE,
+                            MatrixFormat::matrixFormatSparseBlockCol);
+
+                    // no need not set sparse with value from dense as its just cleared to zero when PreferredGradientMatrixType == UNDETERMINED
+
+                    InputRef(0).GradientPtrRef() = newInput0SparseGradientMatrix;
+                    InputRef(0).SetPreferredGradientMatrixType(SPARSE);
+                }
             }
             else if (InputRef(1).Value().GetMatrixType() == DENSE &&
                      InputRef(0).GetPreferredGradientMatrixType() != DENSE)

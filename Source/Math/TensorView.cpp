@@ -338,6 +338,9 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     // create a Matrix view into the TensorView (which in turn is a view over a Matrix...)
     // The way to do this is to use a ColumnSlice.
     // express the TensorView's storage in m_sob's coordinates
+    let rows = m_sob->GetNumRows();
+    let cols = m_sob->GetNumCols();
+
     let firstColumn = m_shape.GetOffset()      / m_sob->GetNumRows();
     let numColumns  = m_shape.GetNumElements() / m_sob->GetNumRows();
     if (firstColumn * m_sob->GetNumRows() != m_shape.GetOffset() || numColumns * m_sob->GetNumRows() != m_shape.GetNumElements())
@@ -363,7 +366,11 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     else if (needsSlicing && !needsReshaping) // slicing is supported for sparse as well
         return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns));
     else if (m_sob->GetMatrixType() != MatrixType::DENSE) // needsReshaping: not allowed for sparse matrices
-        RuntimeError("AsMatrix: Sparse tensors are not supported unless they are 1D or 2D matrices.");
+    {
+        // Sparse [ 147876 x 10 x 1 x * ]
+        printf("3D sparse tensors\r\n");
+        return m_sob;
+    }
     else                                                  // dense can slice and reshape neutrally, but will also fail if output matrix needs to move devices
         return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns).Reshaped(m_shape[0], m_shape[1]));
 }

@@ -729,7 +729,9 @@ template <class ElemType>
             node.DetermineDataSize(rows, cols);
 
             auto& valueMatrix = node.Value();
-            if ((valueMatrix.GetNumRows() != rows) || (valueMatrix.GetNumCols() != cols))
+            auto isCDSSMQuery = (rows == 147876 && valueMatrix.GetMatrixType() == MatrixType::SPARSE);
+            if (((valueMatrix.GetNumRows() != rows) || (valueMatrix.GetNumCols() != cols)) &&
+                !isCDSSMQuery)
             {
                 LogicError("%ls %ls operation found to have incorrect Value() matrix shape %lu x %lu during backprop; expected shape is %lu x %lu. "
                     "This may be due to incorrect memory sharing.",
