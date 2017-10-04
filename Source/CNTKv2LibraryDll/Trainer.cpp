@@ -282,11 +282,7 @@ namespace CNTK
             return;
         }
 
-		double loss1 = loss->AsScalar<double>();
-		loss1 += 0;
         m_aggregatedTrainingLossValue->Update(loss, computeDevice);
-		double aggLoss = m_aggregatedTrainingLossValue->AsScalar<double>();
-		aggLoss += 0;
 
         if (m_aggregatedTrainingEvalCriterionValue)
         {

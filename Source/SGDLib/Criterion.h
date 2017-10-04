@@ -142,8 +142,6 @@ private:
         if (numSamples > 0) // (if MB is empty, we must not look at the matrix)
         {
 			auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
-			double loss1 = node->Get00Element();
-			loss1 += 0;
             // Note: If criterion is > [1 x 1] then inverse broadcasting will kick in and aggregate.
             // If count is zero, we lazily consider the numerator as zero as well.
             criterionAccumulator.DoCopyOf(m_aggregateSampleCounts[i] ? (float)beta : 0, criterionValue, 1);
