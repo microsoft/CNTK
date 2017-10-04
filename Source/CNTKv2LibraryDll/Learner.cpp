@@ -517,9 +517,6 @@ namespace CNTK
         const auto learningRate = ElementType(LearningRate(trainingSampleCount));
         const auto momentum = ElementType(MomentumValueForMB(trainingSampleCount));
 
-		//std::cout << "Momentum - " << momentum << std::endl;
-		//std::cout << "LR - " << learningRate << std::endl;
-
         parameterMatrix->MomentumSGDUpdate(*gradientMatrix, *smoothedGradientMatrix,
                                            learningRate, momentum, UseUnitGainMomentum());
     }

@@ -26,7 +26,7 @@ namespace CNTK
     inline static bool IsInfinite(MinibatchSourcePtr mbSource, size_t numberOfSamples = std::numeric_limits<size_t>::max())
     {
         return (numberOfSamples == MinibatchSource::InfinitelyRepeat ||
-                numberOfSamples >= (size_t)std::numeric_limits<long long>::max()) &&
+            numberOfSamples >= (size_t)std::numeric_limits<long long>::max()) &&
             mbSource->IsInfinite();
     }
 
@@ -57,7 +57,7 @@ namespace CNTK
         const MinibatchSizeSchedule& crossValidationSchedule,
         size_t crossValidationFrequencyInSamples,
         size_t maxSamples,
-        const std::unordered_map<Variable, StreamInformation>& inputVarToStream):
+        const std::unordered_map<Variable, StreamInformation>& inputVarToStream) :
         m_source(crossValidationSource),
         m_mbSize(crossValidationSchedule),
         m_frequency(crossValidationFrequencyInSamples),
@@ -231,7 +231,7 @@ namespace CNTK
         if (restoredNumberOfSamples != Trainer()->TotalNumberOfSamplesSeen())
         {
             // Let's do all actions on the last probably a partial data at the end.
-            for (auto& action: m_actions)
+            for (auto& action : m_actions)
             {
                 if (Trainer()->TotalNumberOfSamplesSeen() % action.frequency != 0 &&
                     Trainer()->TotalNumberOfSamplesSeen() != action.sampleCountWhenLastCalled)
@@ -376,9 +376,7 @@ namespace CNTK
         if (minibatchData.empty())
             return;
 
-		std::cout << "rank " << workerRank << " mbsize " << minibatchData.begin()->second.numberOfSamples << std::endl;
-        
-		for (auto v : inputVarToStream)
+        for (auto v : inputVarToStream)
         {
             auto value = minibatchData.find(v.second);
             if (value == minibatchData.end())
