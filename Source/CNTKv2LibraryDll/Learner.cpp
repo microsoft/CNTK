@@ -660,7 +660,7 @@ namespace CNTK
                 static_assert(sizeof(int) <= sizeof(float), "Buffer for timestamps is not big enough on this platform");
                 const auto view = MakeSharedObject<NDArrayView>(float(0.0), NDShape({ numCols }), gradientValue->Device());
                 const auto itBoolPair = m_lastUpdateTime.emplace(make_pair(parameter, view));
-                assert(itBoolPair->second); // insertion took place
+                assert(itBoolPair.second); // insertion took place
                 timestamps = reinterpret_cast<int*>(const_cast<float*>(itBoolPair.first->second->DataBuffer<float>()));
                 m_currentTime[parameter] = 0;
             }
