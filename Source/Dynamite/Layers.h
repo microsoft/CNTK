@@ -534,20 +534,20 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
 #if 1
 
     // for efficiency, we set this up as a static graph
-    StaticModel doMeanNorm(/*isBasicBlock=*/true, [=](const Variable& x) -> Variable
+    let doMeanNorm = StaticModel(/*isBasicBlock=*/true, [=](const Variable& x) -> Variable
     {
         CountAPICalls(2);
         let mean = ReduceMean(x, axis);
         return x - mean;
     }, Named("doMeanNorm"));
     // for efficiency, we set this up as a static graph
-    StaticModel doGetLength(/*isBasicBlock=*/true, [=](const Variable& x0) -> Variable
+    let doGetLength = StaticModel(/*isBasicBlock=*/true, [=](const Variable& x0) -> Variable
     {
         CountAPICalls(3);
         let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf);
         return invLen;
     }, Named("doGetLength"));
-    StaticModel doLengthNorm(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
+    let doLengthNorm = StaticModel(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler);
 #if 1
@@ -707,15 +707,11 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
         Function::SetDynamicProfiler(prevProfiler);
         return h;
     };
-    //vector<pair<Variable, Variable>> gruArgs = { { PlaceholderVariable(), Variable() }, { PlaceholderVariable(), Variable() },{ PlaceholderVariable(), Variable() } };
-    //let gru3Composite = Alias(gru3(gruArgs[0].first, gruArgs[1].first, gruArgs[2].first), L"gru");
-    //for (let& p : gru3Composite->Parameters())
-    //    gruArgs.push_back({ p,p }); // presently also must pass all Parameters
-    StaticModel gru3Composite(/*isBasicBlock=*/true, [=](const Variable& dh, const Variable& projdh3, const Variable& projx3)
+    let gru3Composite = StaticModel(/*isBasicBlock=*/true, [=](const Variable& dh, const Variable& projdh3, const Variable& projx3)
     {
         return gru3(dh, projdh3, projx3);
     }, L"gru3Composite");
-    StaticModel doGRU(/*isBasicBlock=*/false, [=](const Variable& dh, const Variable& x) -> Variable
+    let doGRU = StaticModel(/*isBasicBlock=*/false, [=](const Variable& dh, const Variable& x) -> Variable
     {
         let projx3 = projectInput(x); // note: this has a bias
         let projdh3 = normR(Times(R, dh)); CountAPICalls(1);
@@ -786,7 +782,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     if (hasLengthNorm)
         nested[L"lengthNorm"] = lengthNorm;
     // BUGBUG: if isBasicBlock 'true' then this fails with projectInput.weightNormRescale not a parameter
-    StaticModel normWeight(/*isBasicBlock=*/true , [=]() -> Variable
+    let normWeight = StaticModel(/*isBasicBlock=*/true , [=]() -> Variable
     {
         if (!hasWeightNorm)
             return W; // TODO: this is a dummy so that we don't reference the weightNormRescale parameter
@@ -802,7 +798,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         return scale1;
         //y = scale1 * y;
     }, Named("dense.normWeight"));
-    StaticModel doDense(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
+    let doDense = StaticModel(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
     {
         auto y = x;
         CountAPICalls(1);
@@ -872,7 +868,7 @@ static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescript
 {
     let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device, Named("project1"));
     let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device, Named("project2"));
-    StaticModel doResidualNet(/*isBasicBlock=*/false, [=](const Variable& x)
+    let doResidualNet = StaticModel(/*isBasicBlock=*/false, [=](const Variable& x)
     {
         CountAPICalls(3);
         let h = ReLU(project1(x)    , Named("hRes"));

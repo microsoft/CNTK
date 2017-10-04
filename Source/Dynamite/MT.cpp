@@ -133,7 +133,7 @@ fun AttentionModelReference(size_t attentionDim1)
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
     let zBarrier   = Barrier(20, Named("zBarrier"));
     let resBarrier = Barrier(20, Named("resBarrier"));
-    StaticModel doToTanh(/*isBasicBlock=*/false, [=](const Variable& h, const Variable& historyProjectedKey)
+    let doToTanh = StaticModel(/*isBasicBlock=*/false, [=](const Variable& h, const Variable& historyProjectedKey)
     {
         let hProjected = projectQuery(h); // [A]. Batched.
         CountAPICalls(2);
@@ -199,7 +199,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
 
     let outProjProfiler = Function::CreateDynamicProfiler(1, L"outProj");
     // BUGBUG: Setting this to true fails with an off batch axis.
-    StaticModel doToOutput(/*isBasicBlock=*/false, [=](const Variable& state, const Variable& attentionContext)
+    let doToOutput = StaticModel(/*isBasicBlock=*/false, [=](const Variable& state, const Variable& attentionContext)
     {
         // first one brings it into the right dimension
         let prevProfiler = Function::SetDynamicProfiler(outProjProfiler, false);
