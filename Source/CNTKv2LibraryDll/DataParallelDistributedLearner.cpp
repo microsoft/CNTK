@@ -164,10 +164,6 @@ namespace CNTK
             valuesToAggregate.push_back(info.evalCriterionValue);
             valuesToAggregate.push_back(info.trainingLossValue);
 
-            std::cout.setf(std::ios::fixed, std::ios::floatfield);
-            std::cout.precision(17);
-            std::cout << "Before agg rank " << m_communicator->CurrentWorker().m_globalRank << "  local loss " << info.trainingLossValue->AsScalar<float>() << " samples " << info.numberOfSamples << std::endl;
-
             auto value = MakeSharedObject<NDArrayView>(static_cast<double>(info.numberOfSamples), NDShape{}, DeviceDescriptor::CPUDevice());
             valuesToAggregate.push_back(value);
 
@@ -178,8 +174,6 @@ namespace CNTK
             {
                 m_communicator->AllReduceSparseBlockColumn(sparseValuesToAggregate);
             }
-
-            std::cout << "After agg rank " << m_communicator->CurrentWorker().m_globalRank << "  local loss " << info.trainingLossValue->AsScalar<float>() << " samples " << info.numberOfSamples << std::endl;
         }
 
 #ifndef  CNTK_UWP
