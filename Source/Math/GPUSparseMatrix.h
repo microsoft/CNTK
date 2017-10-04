@@ -307,8 +307,8 @@ public:
     // Note also that this same issue may be present in CPUSparseMatrix. CPUSparseMatrix handles this a little different, so I am not touching that for now.
     inline ElemType* Data_IThinkThisShouldBeBuffer() const
     {
-        if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR)
-            LogicError("Data_IThinkThisShouldBeBuffer: Should only be used for CSC and CSR types.");
+        if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR && m_sliceViewOffset != 0) // TODO: Is this actually true?
+            LogicError("Data_IThinkThisShouldBeBuffer: m_sliceViewOffset cannot be used for sparse matrix types other than CSC and CSR.");
         if (m_sliceViewOffset != 0)
             LogicError("Data_IThinkThisShouldBeBuffer: I believe this is an incorrect use of Data().");
         return Data(); // this is the current behavior, which I think should be Buffer(). For m_sliceViewOffset == 0, they are the same.
