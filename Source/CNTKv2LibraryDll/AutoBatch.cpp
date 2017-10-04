@@ -1063,6 +1063,7 @@ class Variable::AutoBatch
     }
 
     // helper to test whether a PrimitiveFunction is a barrier operation
+    friend class Invocable;
     static bool IsBarrier(const PrimitiveFunction& f)
     {
         return f.m_op == PrimitiveOpType::BarrierOp && f.m_attributes.Size() > 0;
@@ -1414,7 +1415,7 @@ class Variable::AutoBatch
             {
                 // using weak_ptr so that we can detect whether a composite has been deleted, and remove it from the list,
                 // and eventually recycle unique ids. TODO.
-                vector<vector<weak_ptr<CompositeFunction>>> allComposites; // [m_batchableCompositeId]
+                vector<vector<weak_ptr<CompositeFunction>>> allComposites; // [m_basicBlockInfo.m_batchableCompositeId]
                 // Note: This handles the special case of Times() via AreBatchable().
                 // Any embedded Times() operation must match object identity of the first argument.
                 // That will never match if that argument is computed inside the basic block,
@@ -1451,7 +1452,7 @@ class Variable::AutoBatch
                 size_t MatchAndRememberComposite(const CompositeFunctionPtr& compositePtr)
                 {
                     // populate all composite's m_freeAxis etc. fields
-                    let freeAxis = compositePtr->m_basicBlockFreeAxis;
+                    let freeAxis = compositePtr->m_basicBlockInfo.m_freeAxis;
                     Function::PreorderTraverseFunctions(compositePtr->RootFunction(), [freeAxis](const FunctionPtr& fPtr)
                     {
                         auto& f = *dynamic_pointer_cast<PrimitiveFunction>(fPtr);
@@ -1485,9 +1486,9 @@ class Variable::AutoBatch
                  }
             };
             static BatchableCompositeIdMatcher matcher; // holding this in a static var, but using weak pointers, so this is lightweight
-            if (compositePtr->m_batchableCompositeId == SIZE_MAX)
-                compositePtr->m_batchableCompositeId = matcher.MatchAndRememberComposite(compositePtr);
-            return compositePtr->m_batchableCompositeId;
+            if (compositePtr->m_basicBlockInfo.m_batchableCompositeId == SIZE_MAX)
+                compositePtr->m_basicBlockInfo.m_batchableCompositeId = matcher.MatchAndRememberComposite(compositePtr);
+            return compositePtr->m_basicBlockInfo.m_batchableCompositeId;
         }
         // helper to determine the batch axis and its dimension
         // We decide stacking vs. batching here. There are two possible return values:
@@ -1578,7 +1579,7 @@ class Variable::AutoBatch
             if (op == PrimitiveOpType::Block)
             {
                 let composite = static_cast<const CompositeFunction*>(static_cast<const BlockFunction&>(f).Composite().get());
-                let freeAxis = composite->m_basicBlockFreeAxis;
+                let freeAxis = composite->m_basicBlockInfo.m_freeAxis;
                 if (freeAxis == SIZE_MAX) // if basic block has no free dimension, then we won't batch in the first place' but formally, let's say we batch it
                     return{ StackingMode::BATCHING, maxRank, 1 };
                 else if (freeAxis == maxRank) // argument has no FreeDimension specified: stack, but dim on stacking axis is implied 1
@@ -1674,8 +1675,14 @@ class Variable::AutoBatch
                 CudaStatsGuard cudaStatsGuard(PrimitiveOpType::BatchNormalization, L"Schedule(BN)", 3);
                 let bnId = f.m_autoBatchState.m_batchNormId;
                 fail_if(bnId != f.m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>(), "m_batchNormId not initialized correctly??"); // TODO: remove once confirmed not flagging for a while
-                fail_if(m_bnPendingCounts[bnId] == 0, "m_bnPendingCounts decreased beyond initial count??");
                 m_bnPendingCounts[bnId]--; // only those with pending count 0 are ready
+            }
+            else if (op == PrimitiveOpType::Block)
+            {
+                // we also must count BatchNorm instances embedded inside basic-block composites
+                let* composite = static_cast<const CompositeFunction*>(static_cast<BlockFunction&>(f).Composite().get());
+                for (let bnId : *composite->m_basicBlockInfo.m_batchNormIds)
+                    m_bnPendingCounts[bnId]--;
             }
             // we manage two ready sets, since two common kinds are very simple
             //fail_if (IsBarrier(f), "m_barrierOps.push_back(f) should no longer be done"); // BUGBUG: We never get here since we now see through barriers for efficiency...
@@ -1899,6 +1906,13 @@ class Variable::AutoBatch
         }
         else
             f.m_autoBatchState.m_batchNormId = 0;
+        if (op == PrimitiveOpType::Block)
+        {
+            // we also must count BatchNorm instances embedded inside basic-block composites
+            let* composite = static_cast<const CompositeFunction*>(static_cast<BlockFunction&>(f).Composite().get());
+            for (let bnId : *composite->m_basicBlockInfo.m_batchNormIds)
+                m_schedule.CountBatchNorm(bnId);
+        }
 
         // determine how many inputs are pending; and also recurse and set up the consumer list
         size_t pendingInputs = 0;
@@ -2768,7 +2782,7 @@ class Variable::AutoBatch
     size_t CacheAndGetBasicBlockBatchAxis(const BlockFunction& block)
     {
         auto& composite = static_cast<CompositeFunction&>(*block.Composite());
-        if (composite.m_basicBlockFreeAxis == SIZE_MAX) // not computed yet (has been reset in Invoke())
+        if (composite.m_basicBlockInfo.m_freeAxis == SIZE_MAX) // not computed yet (has been reset in Invoke())
         {
             // start with the inputs
             size_t maxRank = DetermineMaxElementwiseInputRank(block);
@@ -2792,12 +2806,12 @@ class Variable::AutoBatch
                     maxRank = max(maxRank, outputs.front().Shape().Rank());
                 }
             });
-            composite.m_basicBlockFreeAxis = maxRank;
+            composite.m_basicBlockInfo.m_freeAxis = maxRank;
         }
 #if 1   // BUGBUG: This uses a hard-coded constant (12) to heuristically detect an uninitialized value. That is not general, so remove this once this stuff works.
-        fail_if(composite.m_basicBlockFreeAxis == 0 || composite.m_basicBlockFreeAxis > 12, "m_basicBlockFreeAxis was not prepared??");
+        fail_if(composite.m_basicBlockInfo.m_freeAxis == 0 || composite.m_basicBlockInfo.m_freeAxis > 12, "m_basicBlockInfo.m_freeAxis was not prepared??");
 #endif
-        return composite.m_basicBlockFreeAxis;
+        return composite.m_basicBlockInfo.m_freeAxis;
     }
 #endif
 
@@ -4400,12 +4414,25 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     let fCompositePtr = dynamic_pointer_cast<CompositeFunction>(fPtr);
     if (!fCompositePtr)
         InvalidArgument("Invocable() must only be called on CompositeFunctions.");
-    // reset the cached batch axis (=max over all ranks involved, for batching the composite as elementwise
-    // This is only used if isBasicBlock, but since.
+    // precompute some additional info for basic blocks
     if (isBasicBlock)
     {
-        fCompositePtr->m_basicBlockFreeAxis = m_argumentFreeAxes.empty() ? SIZE_MAX : freeAxis; // remember the one axis used for all ops inside the basic block
-        fCompositePtr->m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
+        fCompositePtr->m_basicBlockInfo.m_freeAxis = m_argumentFreeAxes.empty() ? SIZE_MAX : freeAxis; // remember the one axis used for all ops inside the basic block
+        fCompositePtr->m_basicBlockInfo.m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
+        fCompositePtr->m_basicBlockInfo.m_batchNormIds = make_unique<vector<size_t>>();
+        fCompositePtr->m_basicBlockInfo.m_depthHint = 0;
+        Function::PreorderTraverseFunctions(fCompositePtr->RootFunction(), [&](const FunctionPtr& fPtr)
+        {
+            let& f = *dynamic_pointer_cast<PrimitiveFunction>(fPtr);
+            let op = f.OpType();
+            if (op == PrimitiveOpType::BatchNormalization)
+            {
+                let bnId = f.Attributes()[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
+                fCompositePtr->m_basicBlockInfo.m_batchNormIds->push_back(bnId);
+            }
+            if (Variable::AutoBatch::IsBarrier(f))
+                fCompositePtr->m_basicBlockInfo.m_depthHint = max(fCompositePtr->m_basicBlockInfo.m_depthHint, f.Attributes()[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
+        }, /*traverseInsideBlockFunction=*/ true);
     }
     m_composite = move(fCompositePtr);
 

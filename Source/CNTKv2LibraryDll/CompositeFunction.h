@@ -462,8 +462,13 @@ namespace CNTK
         friend class BlockFunction;
         friend class Variable::AutoBatch;
         friend class Invocable;
-        size_t m_basicBlockFreeAxis;   // for basic blocks: axis that carries FreeDimension
-        size_t m_batchableCompositeId; // composites with the same id are batchable. SIZE_MAX means not determined yet.
+        struct
+        {
+            size_t m_freeAxis;             // axis that carries FreeDimension
+            size_t m_batchableCompositeId; // composites with the same id are batchable. SIZE_MAX means not determined yet.
+            std::unique_ptr<std::vector<size_t>> m_batchNormIds; // list of ids of all BatchNorm invocations inside this composite (incl. nested blocks)
+            size_t m_depthHint;            // max over all Barriers inside this composite (incl. nested blocks)
+        } m_basicBlockInfo; // additional info if this Composite is part of a basic block invocation
 
         // Version history:
         // 1 -- initial version.

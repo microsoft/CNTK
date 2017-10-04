@@ -709,7 +709,8 @@ void Train(wstring outputDirectory)
         partTimer.Restart();
         mbLoss.Value()->AsScalar<float>();
         let timeForward = partTimer.Elapsed();
-        //fprintf(stderr, "%.5f\n", mbLoss.Value()->AsScalar<float>()), fflush(stderr);
+        //fprintf(stderr, "%.7f\n", mbLoss.Value()->AsScalar<float>()), fflush(stderr);
+        //exit(1);
         //partTimer.Log("ForwardProp", numLabels);
         // note: we must use numScoredLabels here
         let numScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
