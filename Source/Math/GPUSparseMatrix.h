@@ -95,6 +95,8 @@ public:
     // Special Note: for the matrix may be a read-only column slice view of another
     // matrix (only supported for CSC format today) and hence the NzValues needs
     // to be offset accordingly.
+    // TODO: Name this clearly. Does it include the m_sliceViewOffset or not?
+    //       E.g., rename to CSxNzValueArray
     inline const ElemType* NzValues() const
     {
         return Data();
@@ -108,6 +110,7 @@ public:
 private:
     // determine the NzCount from the GPU-side arrays
     // This is a GPU sync, and thus expensive. NzCount() caches this value.
+    // TODO: Clarify by renaming: Does this apply to the entire buffer or the view?
     GPUSPARSE_INDEX_TYPE FetchNzCount() const
     {
         if (GetFormat() == matrixFormatSparseCSC)
@@ -242,6 +245,8 @@ public:
     }
 
     // Since the m_sliceViewOffset affects Data and MajorIndexLocation differently than SecondaryIndexLocation, we compute it fully here.
+    // BUGBUG: This function is semantically ill-defined. Does it return the buffer address, or the view that considers m_sliceViewOffset?
+    //         TODO: Use different names for those two different purposes.
     GPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const // compressed index, col/row in CSC/CSR format, col2blockId/row2blockId in BlockCol/BlockRow format
     {
         if (GetFormat() == matrixFormatSparseBlockCol)
@@ -293,6 +298,22 @@ public:
             ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? SecondaryIndexValueAt(0)/*CSC or CSR*/ : 0/*others*/));
     }
 
+    // helper function to discover problems with potentially incorrect use of Data()
+    // Data() includes m_sliceViewOffset. This function is called where I reviewed the code and think that
+    // the offset should not be included (Buffer() should be called instead). But I am not 100% sure.
+    // In some cases, it does not matter because slice-view offset is always 0.
+    // All those potentially incorrect Data() calls have been replaced with Data_IThinkThisShouldBeBuffer(),
+    // which still calls Data() as before, but tests for m_sliceViewOffset==0 as a precondition.
+    // Note also that this same issue may be present in CPUSparseMatrix. CPUSparseMatrix handles this a little different, so I am not touching that for now.
+    inline ElemType* Data_IThinkThisShouldBeBuffer() const
+    {
+        if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR)
+            LogicError("Data_IThinkThisShouldBeBuffer: Should only be used for CSC and CSR types.");
+        if (m_sliceViewOffset != 0)
+            LogicError("Data_IThinkThisShouldBeBuffer: I believe this is an incorrect use of Data().");
+        return Data(); // this is the current behavior, which I think should be Buffer(). For m_sliceViewOffset == 0, they are the same.
+    }
+
     inline size_t GetNumElemAllocated() const
     {
         return GetSizeAllocated();
@@ -304,6 +325,15 @@ public:
     }
 
     // the column and row locations will swap based on what format we are in. Full index always follows the data array
+    // TODO: Find a better name. CSxNzIndexArray()?
+    //       Potential naming conventions:
+    //        - buffer: points to the first stored element, but buffer may contain extra space for future growth
+    //        - array: points to the first stored element, but semantically does not include extra space
+    //          Is the distinction of array and buffer ever needed?
+    //        - data: points to the first actual element  --TODO: get rid of this altogether if possible
+    //       Note: A GPUSparseMatrix is always a view. The unsliced entity is the storage object. Maybe that should be reflected in the names?
+    // BUGBUG: For CSR, this includes m_sliceViewOffset. It is not possible to abstract this way, while handling m_sliceViewOffset correclty.
+    //         The solution is to make this less abstract and call it what it is. It should just be a wrapper around getting the index array for CSR or CSC.
     GPUSPARSE_INDEX_TYPE* RowLocation() const
     {
         // not a valid function for other formats
@@ -312,6 +342,8 @@ public:
         return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexLocation()/*CSR*/ : MajorIndexLocation()/*CSC*/;
     }
 
+    // TODO: Match name and semantics to CSxNzIndexArray(). CSxNzIndexArrayByteSize()?
+    //       Also avoid "size" as it could be #elements (as in STL) or size in bytes. Change to ByteSize().
     size_t RowSize() const // actual number of bytes in use
     {
         // not a valid function for other formats
@@ -320,6 +352,8 @@ public:
         return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexSize()/*CSR*/ : MajorIndexSize()/*CSC*/;
     }
 
+    // BUGBUG: Don't abstract that far, cannot be correct w.r.t. m_sliceViewOffset.
+    // TODO: Change name, e.g. CSxNzOffsetSlice()? Include "Slice" to indicate it includes m_sliceView offset
     GPUSPARSE_INDEX_TYPE* ColLocation() const
     {
         // not a valid function for other formats
@@ -336,7 +370,9 @@ public:
         return (GetFormat() & matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
     }
 
+    // TODO: rename that, e.g. CSxNzOffsetSliceAt()
     GPUSPARSE_INDEX_TYPE SecondaryIndexValueAt(size_t idx) const;
+
     GPUSPARSE_INDEX_TYPE* BlockId2ColOrRow() const
     {
         // not a valid function for other formats

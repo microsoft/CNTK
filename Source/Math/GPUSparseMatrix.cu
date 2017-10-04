@@ -122,7 +122,7 @@ template <class ElemType>
     m_sliceViewOffset = 0; // reset to zero as we only start copying the indices starting from the offset in the source matrix
 
     // BUGBUG? I suspect Data() here should be Buffer() for CSC, although Data() is the same because m_sliceViewOffset == 0
-    CUDA_CALL(cudaMemcpy(Data(), deepCopy.NzValues(), deepCopy.NzBytes(), cudaMemcpyDeviceToDevice));
+    CUDA_CALL(cudaMemcpy(Data_IThinkThisShouldBeBuffer(), deepCopy.NzValues(), deepCopy.NzBytes(), cudaMemcpyDeviceToDevice));
     CUDA_CALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocationWithSliceViewOffset(), deepCopy.MajorIndexSize(), cudaMemcpyDeviceToDevice));
     CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), deepCopy.SecondaryIndexLocation(), deepCopy.SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
 
@@ -163,10 +163,12 @@ void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCo
 
     if (deepCopy.GetFormat() == matrixFormatSparseCSR)
     {
+        // BUGBUG: Does this handle slice-view offset correctly? We should only copy parts.
         SetMatrixFromCSRFormat(deepCopy.RowLocation(), deepCopy.ColLocation(), deepCopy.Data(), deepCopy.GetNumElemAllocated(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
     }
     else if (deepCopy.GetFormat() == matrixFormatSparseCSC)
     {
+        // BUGBUG: Does this handle slice-view offset correctly? We should only copy parts.
         SetMatrixFromCSCFormat(deepCopy.ColLocation(), deepCopy.RowLocation(), deepCopy.Data(), deepCopy.GetNumElemAllocated(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
     }
     else if (deepCopy.GetFormat() == matrixFormatSparseBlockCol)
@@ -198,6 +200,7 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
 
         if (sizeof(GPUSPARSE_INDEX_TYPE) == sizeof(CPUSPARSE_INDEX_TYPE))
         {
+            // BUGBUG: Should this be RowLocationWithSliceViewOffset()?
             CUDA_CALL(cudaMemcpy(cpuSparseMatrix.RowLocation(), RowLocation(), RowSize(), cudaMemcpyDeviceToHost));
             CUDA_CALL(cudaMemcpy(cpuSparseMatrix.ColLocation(), ColLocation(), ColSize(), cudaMemcpyDeviceToHost));
         }
@@ -212,7 +215,7 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
             ConvertBuffer(cpuSparseMatrix.ColLocation(), h_Col, MajorIndexCount());
         }
 
-        CUDA_CALL(cudaMemcpy(cpuSparseMatrix.Data(), Data(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaMemcpy(cpuSparseMatrix.Data(), Data_IThinkThisShouldBeBuffer(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
     }
     else if (this->GetFormat() == matrixFormatSparseCSC)
     {
@@ -375,14 +378,14 @@ void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GP
         {
             // BUGBUG? I suspect Data() here should be Buffer().
             CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, int(GetNumRows()), int(GetNumCols()), int(GetSizeAllocated()),
-                                           (float*) Data(), RowLocation(), ColLocation(), (float*) outMatrix.Data(),
+                                           (float*) Data_IThinkThisShouldBeBuffer(), RowLocation(), ColLocation(), (float*) outMatrix.Data_IThinkThisShouldBeBuffer(),
                                            outMatrix.RowLocation(), outMatrix.ColLocation(), CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO));
         }
         else
         {
             // BUGBUG? I suspect Data() here should be Buffer().
             CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, int(GetNumRows()), int(GetNumCols()), int(GetSizeAllocated()),
-                                           (double*) Data(), RowLocation(), ColLocation(), (double*) outMatrix.Data(),
+                                           (double*) Data_IThinkThisShouldBeBuffer(), RowLocation(), ColLocation(), (double*) outMatrix.Data_IThinkThisShouldBeBuffer(),
                                            outMatrix.RowLocation(), outMatrix.ColLocation(), CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO));
         }
         InvalidateCachedNzCount();
@@ -546,13 +549,13 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
         {
             // BUGBUG? I suspect Data() here should be Buffer().
             CUSPARSE_CALL(cusparseSdense2csr(cusparseHandle, (int) GetNumRows(), (int) GetNumCols(), descr, reinterpret_cast<float*>(denseMatrix.Data()),
-                                             (int) GetNumRows(), nnzPerRowOrCol, reinterpret_cast<float*>(Data()), RowLocation(), ColLocation()));
+                                             (int) GetNumRows(), nnzPerRowOrCol, reinterpret_cast<float*>(Data_IThinkThisShouldBeBuffer()), RowLocation(), ColLocation()));
         }
         else
         {
             // BUGBUG? I suspect Data() here should be Buffer().
             CUSPARSE_CALL(cusparseDdense2csr(cusparseHandle, (int) GetNumRows(), (int) GetNumCols(), descr, reinterpret_cast<double*>(denseMatrix.Data()),
-                                             (int) GetNumRows(), nnzPerRowOrCol, reinterpret_cast<double*>(Data()), RowLocation(), ColLocation()));
+                                             (int) GetNumRows(), nnzPerRowOrCol, reinterpret_cast<double*>(Data_IThinkThisShouldBeBuffer()), RowLocation(), ColLocation()));
         }
     }
     else if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
@@ -561,13 +564,13 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
         {
             // BUGBUG? I suspect Data() here should be Buffer().
             CUSPARSE_CALL(cusparseSdense2csc(cusparseHandle, (int) GetNumRows(), (int) GetNumCols(), descr, reinterpret_cast<float*>(denseMatrix.Data()),
-                                             (int) GetNumRows(), nnzPerRowOrCol, reinterpret_cast<float*>(Data()), RowLocation(), ColLocation()));
+                                             (int) GetNumRows(), nnzPerRowOrCol, reinterpret_cast<float*>(Data_IThinkThisShouldBeBuffer()), RowLocation(), ColLocation()));
         }
         else
         {
             // BUGBUG? I suspect Data() here should be Buffer().
             CUSPARSE_CALL(cusparseDdense2csc(cusparseHandle, (int) GetNumRows(), (int) GetNumCols(), descr, reinterpret_cast<double*>(denseMatrix.Data()),
-                                             (int) GetNumRows(), nnzPerRowOrCol, reinterpret_cast<double*>(Data()), RowLocation(), ColLocation()));
+                                             (int) GetNumRows(), nnzPerRowOrCol, reinterpret_cast<double*>(Data_IThinkThisShouldBeBuffer()), RowLocation(), ColLocation()));
         }
     }
     UpdateCachedNzCount(nnzTotalDevHostPtr);
@@ -702,7 +705,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
     if (Buffer() != nullptr)
     {
         // BUGBUG? I suspect Data() here should be Buffer().
-        CUDA_CALL(cudaMemcpy(pArray, Data(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(pArray, Data_IThinkThisShouldBeBuffer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice));
 
         GPUSPARSE_INDEX_TYPE* majorIndexInNewBuffer = (GPUSPARSE_INDEX_TYPE*) (pArray + GetSizeAllocated());
         GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, GetSizeAllocated(), GetFormat());
@@ -758,7 +761,7 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
                     LogicError("Allocate: To keep values, m_nz should <= numNZElemToReserve.");
 
                 // BUGBUG? I suspect Data() here should be Buffer().
-                CUDA_CALL(cudaMemcpyAsync(pArray, Data(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice, t_stream));
+                CUDA_CALL(cudaMemcpyAsync(pArray, Data_IThinkThisShouldBeBuffer(), GetSizeElemAllocated(), cudaMemcpyDeviceToDevice, t_stream));
 
                 GPUSPARSE_INDEX_TYPE* majorIndexInNewBuffer = (GPUSPARSE_INDEX_TYPE*) (pArray + numNZElemToReserve);
 
@@ -895,7 +898,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYP
 
     cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
     // BUGBUG? I suspect Data() here should be Buffer().
-    CUDA_CALL(cudaMemcpy(Data(), h_Val, nz * sizeof(ElemType), kind));
+    CUDA_CALL(cudaMemcpy(Data_IThinkThisShouldBeBuffer(), h_Val, nz * sizeof(ElemType), kind));
 
     if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
     {
@@ -943,7 +946,7 @@ void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_
 
         PrepareDevice();
         // BUGBUG? I suspect Data() here should be Buffer(), and/or slice view offset should be 0.
-        CUDA_CALL(cudaMemcpy(h_Val, Data(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaMemcpy(h_Val, Data_IThinkThisShouldBeBuffer(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
 
         if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
         {
@@ -1013,11 +1016,11 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(
         transferer->RecordComputeStreamSyncPoint();
         transferer->WaitForSyncPointOnAssignStreamAsync();
         // BUGBUG? I suspect Data() here should be Buffer(), and/or slice view offset should be 0.
-        transferer->CopyCPUToGPUAsync(h_Val, nz, sizeof(ElemType), Data());
+        transferer->CopyCPUToGPUAsync(h_Val, nz, sizeof(ElemType), Data_IThinkThisShouldBeBuffer());
     }
     else
         // BUGBUG? I suspect Data() here should be Buffer(), and/or slice view offset should be 0.
-        CUDA_CALL(cudaMemcpy(Data(), h_Val, nz * sizeof(ElemType), kind));
+        CUDA_CALL(cudaMemcpy(Data_IThinkThisShouldBeBuffer(), h_Val, nz * sizeof(ElemType), kind));
 
     // copy the index arrays
     if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE)) // note: this is true
@@ -1116,7 +1119,7 @@ void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(GPUSPARSE_INDEX_TYPE*& h_
 
         PrepareDevice();
         // BUGBUG? I suspect Data() here should be Buffer(), and/or slice view offset should be 0.
-        CUDA_CALL(cudaMemcpy(h_Val, Data(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaMemcpy(h_Val, Data_IThinkThisShouldBeBuffer(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
 
         if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
         {
@@ -2044,10 +2047,10 @@ void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseB
 
     // do we have enough memory to store just the row buffer?
     // BUGBUG? I suspect Data() here should be Buffer().
-    if (cSize >= rowBufferRequired && c.Data() != nullptr && canReuseBuffer)
+    if (cSize >= rowBufferRequired && c.Data_IThinkThisShouldBeBuffer() != nullptr && canReuseBuffer)
     {
         // BUGBUG? I suspect Data() here should be Buffer().
-        csrRowPtrC = (GPUSPARSE_INDEX_TYPE*) c.Data();
+        csrRowPtrC = (GPUSPARSE_INDEX_TYPE*) c.Data_IThinkThisShouldBeBuffer();
     }
     else
     {
@@ -2131,14 +2134,14 @@ void GPUSparseMatrix<ElemType>::Multiply(const GPUSparseMatrix<ElemType>& S1, bo
         CUSPARSE_CALL(cusparseScsrgemm(cusparseHandle, operA, operB, m, n, k, descrA, nnzA, (const float*) S1.Buffer(), S1.RowLocation(), S1.ColLocation(),
                                        descrB, nnzB, (const float*) S2.Buffer(), S2.RowLocation(), S2.ColLocation(),
                                        // BUGBUG? I suspect Data() here should be Buffer().
-                                       descrC, (float*) c.Data(), c.RowLocation(), c.ColLocation()));
+                                       descrC, (float*) c.Data_IThinkThisShouldBeBuffer(), c.RowLocation(), c.ColLocation()));
     }
     else
     {
         CUSPARSE_CALL(cusparseDcsrgemm(cusparseHandle, operA, operB, m, n, k, descrA, nnzA, (const double*) S1.Buffer(), S1.RowLocation(), S1.ColLocation(),
                                        descrB, nnzB, (const double*) S2.Buffer(), S2.RowLocation(), S2.ColLocation(),
                                        // BUGBUG? I suspect Data() here should be Buffer().
-                                       descrC, (double*) c.Data(), c.RowLocation(), c.ColLocation()));
+                                       descrC, (double*) c.Data_IThinkThisShouldBeBuffer(), c.RowLocation(), c.ColLocation()));
     }
     cusparseDestroy(cusparseHandle);
     c.VerifyCachedNzCount(c.NzCount()); // (to be sure)
@@ -2203,14 +2206,14 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatri
     if (sizeof(ElemType) == sizeof(float))
     {
         // BUGBUG? I suspect Data() here should be Buffer().
-        CUSPARSE_CALL(cusparseScsrgeam(cusparseHandle, m, n, reinterpret_cast<const float*>(&alpha), descrA, nnzA, reinterpret_cast<const float*>(a.Data()), a.RowLocation(), a.ColLocation(),
-                                       reinterpret_cast<const float*>(&beta), descrB, nnzB, reinterpret_cast<const float*>(b.Data()), b.RowLocation(), b.ColLocation(), descrC, reinterpret_cast<float*>(c.Data()), c.RowLocation(), c.ColLocation()));
+        CUSPARSE_CALL(cusparseScsrgeam(cusparseHandle, m, n, reinterpret_cast<const float*>(&alpha), descrA, nnzA, reinterpret_cast<const float*>(a.Data_IThinkThisShouldBeBuffer()), a.RowLocation(), a.ColLocation(),
+                                       reinterpret_cast<const float*>(&beta), descrB, nnzB, reinterpret_cast<const float*>(b.Data_IThinkThisShouldBeBuffer()), b.RowLocation(), b.ColLocation(), descrC, reinterpret_cast<float*>(c.Data_IThinkThisShouldBeBuffer()), c.RowLocation(), c.ColLocation()));
     }
     else
     {
         // BUGBUG? I suspect Data() here should be Buffer().
-        CUSPARSE_CALL(cusparseDcsrgeam(cusparseHandle, m, n, reinterpret_cast<const double*>(&alpha), descrA, nnzA, reinterpret_cast<const double*>(a.Data()), a.RowLocation(), a.ColLocation(),
-                                       reinterpret_cast<const double*>(&beta), descrB, nnzB, reinterpret_cast<const double*>(b.Data()), b.RowLocation(), b.ColLocation(), descrC, reinterpret_cast<double*>(c.Data()), c.RowLocation(), c.ColLocation()));
+        CUSPARSE_CALL(cusparseDcsrgeam(cusparseHandle, m, n, reinterpret_cast<const double*>(&alpha), descrA, nnzA, reinterpret_cast<const double*>(a.Data_IThinkThisShouldBeBuffer()), a.RowLocation(), a.ColLocation(),
+                                       reinterpret_cast<const double*>(&beta), descrB, nnzB, reinterpret_cast<const double*>(b.Data_IThinkThisShouldBeBuffer()), b.RowLocation(), b.ColLocation(), descrC, reinterpret_cast<double*>(c.Data_IThinkThisShouldBeBuffer()), c.RowLocation(), c.ColLocation()));
     }
     cusparseDestroy(cusparseHandle);
     c.VerifyCachedNzCount(c.NzCount()); // (to be sure)
@@ -2238,7 +2241,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatri
     CUDA_LONG M = (CUDA_LONG) a.GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * M / GridDim::maxThreadsPerBlock);
     // BUGBUG? I suspect a.Data() here should be Buffer().
-    _sparseCSRPlusDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(alpha, a.Data(), a.RowLocation(), a.ColLocation(), c.Data(), M);
+    _sparseCSRPlusDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(alpha, a.Data_IThinkThisShouldBeBuffer(), a.RowLocation(), a.ColLocation(), c.Data(), M);
 }
 
 template <class ElemType>
@@ -2320,18 +2323,18 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
         if (sizeof(ElemType) == sizeof(float))
         {
             // BUGBUG? I suspect Data() here should be Buffer().
-            CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(a.Data()), a.RowLocation(), a.ColLocation(), reinterpret_cast<float*>(cscValA), cscRowIndA, cscColPtrA, cpVals, idxBase));
+            CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(a.Data_IThinkThisShouldBeBuffer()), a.RowLocation(), a.ColLocation(), reinterpret_cast<float*>(cscValA), cscRowIndA, cscColPtrA, cpVals, idxBase));
         }
         else
         {
             // BUGBUG? I suspect Data() here should be Buffer().
-            CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(a.Data()), a.RowLocation(), a.ColLocation(), reinterpret_cast<double*>(cscValA), cscRowIndA, cscColPtrA, cpVals, idxBase));
+            CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(a.Data_IThinkThisShouldBeBuffer()), a.RowLocation(), a.ColLocation(), reinterpret_cast<double*>(cscValA), cscRowIndA, cscColPtrA, cpVals, idxBase));
         }
     }
     else if (a.GetFormat() == matrixFormatSparseCSC)
     {
         // BUGBUG? I suspect Data() here should be Buffer().
-        cscValA = (ElemType*) a.Data();
+        cscValA = (ElemType*) a.Data_IThinkThisShouldBeBuffer();
         cscRowIndA = a.RowLocation();
         cscColPtrA = a.ColLocation();
     }
@@ -2552,7 +2555,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseM
     CUDA_LONG M = (CUDA_LONG) a.GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * M / GridDim::maxThreadsPerBlock);
     // BUGBUG? I suspect a.Data() here should be Buffer().
-    _sparseCSRElemMulDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.Data(), a.RowLocation(), a.ColLocation(), b.Data(), c.Data(), M);
+    _sparseCSRElemMulDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.Data_IThinkThisShouldBeBuffer(), a.RowLocation(), a.ColLocation(), b.Data(), c.Data(), M);
     return c;
 }
 
@@ -2647,14 +2650,14 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
             if (sizeof(ElemType) == sizeof(float))
             {
                 // BUGBUG? I suspect Data() here should be Buffer().
-                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(Data()), RowLocation(), ColLocation(),
-                                               reinterpret_cast<float*>(c.Data()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const float*>(Data_IThinkThisShouldBeBuffer()), RowLocation(), ColLocation(),
+                                               reinterpret_cast<float*>(c.Data_IThinkThisShouldBeBuffer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
             }
             else
             {
                 // BUGBUG? I suspect Data() here should be Buffer().
-                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(Data()), RowLocation(), ColLocation(),
-                                               reinterpret_cast<double*>(c.Data()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
+                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, m, n, nnz, reinterpret_cast<const double*>(Data_IThinkThisShouldBeBuffer()), RowLocation(), ColLocation(),
+                                               reinterpret_cast<double*>(c.Data_IThinkThisShouldBeBuffer()), c.ColLocation(), c.RowLocation(), cpVals, idxBase));
             }
         }
         else
@@ -2669,14 +2672,14 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
             if (sizeof(ElemType) == sizeof(float))
             {
                 // BUGBUG? I suspect Data() here should be Buffer().
-                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const float*>(this->Data()), this->ColLocation(), this->RowLocation(),
-                                               reinterpret_cast<float*>(c.Data()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                CUSPARSE_CALL(cusparseScsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const float*>(this->Data_IThinkThisShouldBeBuffer()), this->ColLocation(), this->RowLocation(),
+                                               reinterpret_cast<float*>(c.Data_IThinkThisShouldBeBuffer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
             }
             else
             {
                 // BUGBUG? I suspect Data() here should be Buffer().
-                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const double*>(this->Data()), this->ColLocation(), this->RowLocation(),
-                                               reinterpret_cast<double*>(c.Data()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
+                CUSPARSE_CALL(cusparseDcsr2csc(cusparseHandle, n, m, nnz, reinterpret_cast<const double*>(this->Data_IThinkThisShouldBeBuffer()), this->ColLocation(), this->RowLocation(),
+                                               reinterpret_cast<double*>(c.Data_IThinkThisShouldBeBuffer()), c.RowLocation(), c.ColLocation(), cpVals, idxBase));
             }
         }
         else
