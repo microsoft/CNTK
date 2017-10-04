@@ -1331,6 +1331,10 @@ class Variable::AutoBatch
             }
             return false;
 #else
+            // BUGBUG: Somehow this specific operation changes the result if stacked.
+            //         Classification as STACKING only happens for sparse.
+            //if (op == PrimitiveOpType::ElementTimes && a.m_attributes.Size() > 0 && a.m_autoBatchState.m_stacking == StackingMode::STACKING)
+            //    return false;
             // special case for Block
             let isBlock = (op == PrimitiveOpType::Block);
             if (isBlock)
@@ -1588,18 +1592,11 @@ class Variable::AutoBatch
                 updateRankDimSparse(GetOutputFields(f));
             }
             // sparse inputs can only be batched/stacked in axis 1
-            if (hasSparse)
-            {
-                if (maxRank == 2)
-                    return{ StackingMode::STACKING, /*axis=*/1, lastDim };
-                else if (maxRank == 1)
-                    return{ StackingMode::BATCHING, /*axis=*/1, 1 };
-                else
-                    InvalidArgument("DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.");
-            }
+            if (hasSparse && (maxRank < 1 || maxRank > 2))
+                InvalidArgument("DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.");
             // decide stacking vs. batching
             if (maxRank == 0) // can only stack if inputs are not scalars
-                return{ StackingMode::BATCHING, /*axis=*/0, /*dim=*/1 }; // batching of scalars
+                goto mustBatch;
             let stackingAxis = maxRank - 1;
             switch (op) // does the unbatched op touch the (potential) stacking axis?
             {
@@ -1612,9 +1609,9 @@ class Variable::AutoBatch
                 {
                     let& axis = f.m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
                     if (!axis.IsStaticAxis() || stackingAxis == (size_t)axis.StaticAxisIndex(/*checked=*/false))
-                        return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
-                    break;
+                        goto mustBatch; // touched. Can't stack, must batch.
                 }
+                break;
             case PrimitiveOpType::Slice: // it's a view op, but we can get here in postprocessing basic-block composites
                 // TODO: Once we short-circuit in static graphs, we should not get here at all.
                 if (f.m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec)) // vector of slices
@@ -1624,21 +1621,36 @@ class Variable::AutoBatch
                     {
                         let axisIndex = axes[i].StaticAxisIndex();
                         if (stackingAxis == (size_t)axisIndex)
-                            return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
+                            goto mustBatch; // touched. Can't stack, must batch.
                     }
                 }
                 else // single slice
                 {
                     let axis = f.m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
                     if (stackingAxis == (size_t)axis.StaticAxisIndex(/*checked=*/false))
-                        return{ StackingMode::BATCHING, maxRank, 1 }; // touched. Can't stack, must batch. Dimension in batch axis is 1.
+                        goto mustBatch; // touched. Can't stack, must batch.
                 }
                 break;
             case PrimitiveOpType::TransposeAxes: // TODO
                 fail_if(true, "DetermineBatchAxis: not yet implemented for TransposeAxes");
+                break;
             }
             // no problem case detected: we can stack
-            return{ StackingMode::STACKING_BUT_MAY_BATCH, stackingAxis, lastDim };
+            if (!hasSparse)
+                return{ StackingMode::STACKING_BUT_MAY_BATCH, stackingAxis, lastDim };
+            else if (maxRank == 2) // sparse matrices must be stacked along axis 1
+                return{ StackingMode::STACKING, stackingAxis, lastDim };
+            else if (maxRank == 1) // sparse vectors must be batched along axis 1
+                return{ StackingMode::BATCHING, maxRank, 1 };
+            else
+                LogicError("should not get here??");
+        mustBatch: // problem case: we cannot batch
+            // We get here if the operation touches the stacking axis, or if it is a scalar op.
+            if (hasSparse)
+                Break;
+            if (hasSparse && maxRank != 1)
+                InvalidArgument("DetermineBatchAxis: Sparse matrices cannot be batched.");
+            return{ StackingMode::BATCHING, maxRank, 1 }; // if we batch, the batch dimension is 1
         }
 
     public:
@@ -2997,6 +3009,8 @@ class Variable::AutoBatch
             outputShape.push_back(batchDim);  // and add the batch axis
             //fail_if(outputShape[batchAxis] != batchDim, "CreateBatchedInputFor() post=condition not fulfilled??"); // (no need to check; post-condition is obviously fulfilled by construction)
             // BUGBUG: vv The move(gatherInputs) is ineffective because ultimately, the copy (not move) constructor of PrimtiveFunction ends up being called.
+            //if (f0.m_op == PrimitiveOpType::ElementTimes && f0.m_attributes.Size() > 0 && stackingMode == StackingMode::STACKING) // we were batched for batching
+            //    Break;
             return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs), outputShape,
                                              Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)batchAxis)),
                                              f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
@@ -3216,6 +3230,8 @@ class Variable::AutoBatch
         auto stackingMode  = f0.m_autoBatchState.m_stacking; // we batch along this dimension
         auto batchAxis = f0.m_autoBatchState.m_batchAxis; // we batch along this dimension
         size_t batchSize;
+        //if (f0.m_op == PrimitiveOpType::ElementTimes && f0.m_attributes.Size() > 0 && stackingMode == StackingMode::STACKING) // we were batched for batching
+        //    Break;
         if (stackingMode == StackingMode::BATCHING) // we were batched for batching
             batchSize = numBatchItems;
         else // we were batched for stacking. Use batching if possible.
