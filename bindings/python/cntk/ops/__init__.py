@@ -13,7 +13,7 @@ import numpy as np
 import numbers
 from . import sequence
 from .functions import CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, sanitize_multi_axis_reduction_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
@@ -22,6 +22,10 @@ from ..default_options import get_default_override, default_override_or
 
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
+
+CONSTANT_PAD = cntk_py.PaddingMode_CONSTANTPAD
+REFLECT_PAD = cntk_py.PaddingMode_REFLECTPAD
+SYMMETRIC_PAD = cntk_py.PaddingMode_SYMMETRICPAD
 
 @typemap
 def combine(*operands, **kw_name):
@@ -216,7 +220,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-                auto_padding=[True], max_temp_mem_size_in_samples=0, name=''):
+                auto_padding=[True], dilation=(1,), reduction_rank=1, groups=1, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -230,7 +234,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     `convolution` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
     ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
     The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
-    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input.
+    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input, which can be ignored if `reduction_rank` is `0`.
     The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
     dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
 
@@ -259,6 +263,12 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          pixels outside the area are assumed zero ("padded with zeroes"). Without padding, the kernels are only shifted over
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
+        dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+        reduction_rank (`int`, default 1): must be 0 or 1, 0 mean no depth or channel dimension in the input and 1 mean the input has channel or depth dimension.
+        groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+         which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
+         divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
+         Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0. 
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -270,12 +280,13 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
     strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
-    return convolution(convolution_map, operand, strides, sharing, auto_padding,
-                       max_temp_mem_size_in_samples, name)
+    dilation = sanitize_shape(dilation)
+    return convolution(convolution_map, operand, strides, sharing, auto_padding, dilation,
+                       reduction_rank, groups, max_temp_mem_size_in_samples, name)
 
 @typemap
 def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
-                          auto_padding=[True], output_shape=None, max_temp_mem_size_in_samples=0, name=''):
+                          auto_padding=[True], output_shape=None, dilation=(1,), reduction_rank=1, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the transposed convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -320,6 +331,8 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
         output_shape: user expected output shape after convolution transpose.
+        dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+        reduction_rank (`int`, default 1): must be 0 or 1, 0 mean no depth or channel dimension in the input and 1 mean the input has channel or depth dimension.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -334,8 +347,9 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     if output_shape is None:
         output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
+    dilation = sanitize_shape(dilation)
     return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
-                                 output_shape, max_temp_mem_size_in_samples, name)
+                                 output_shape, dilation, reduction_rank, max_temp_mem_size_in_samples, name)
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
@@ -353,6 +367,11 @@ def roipooling(operand, rois, pooling_type, roi_output_shape, spatial_scale, nam
     Each input image has a fixed number of regions of interest, which are specified as bounding boxes (x, y, w, h)
     that are relative to the image size [W x H]. This operation can be used as a replacement for the final
     pooling layer of an image classification network (as presented in Fast R-CNN and others).
+
+    .. versionchanged:: 2.1
+      The signature was updated to match the Caffe implementation:
+      the parameters `pooling_type` and `spatial_scale` were added, and
+      the coordinates for the parameters `rois` are now absolute to the original image size.
 
     Args:
         operand: a convolutional feature map as the input volume ([W x H x C x N]).
@@ -1471,6 +1490,94 @@ def cos(x, name=''):
     x = sanitize_input(x)
     return cos(x, name)
 
+@typemap
+def acos(x, name=''):
+    '''
+    Computes the element-wise arccos (inverse cosine) of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.acos([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 0.     ,  1.0472 ],
+               [ 1.82348,  2.41886]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import acos
+    x = sanitize_input(x)
+    return acos(x, name)
+
+@typemap
+def asin(x, name=''):
+    '''
+    Computes the element-wise arcsin (inverse sine) of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.asin([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 1.5708 ,  0.5236 ],
+               [-0.25268, -0.84806]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import asin
+    x = sanitize_input(x)
+    return asin(x, name)
+
+@typemap
+def sinh(x, name=''):
+    '''
+    Computes the element-wise sinh of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.sinh([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 1.1752 ,  0.5211 ],
+               [-0.25261, -0.82232]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sinh
+    x = sanitize_input(x)
+    return sinh(x, name)
+
+@typemap
+def cosh(x, name=''):
+    '''
+    Computes the element-wise cosh of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.cosh([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 1.54308,  1.12763],
+               [ 1.03141,  1.29468]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import cosh
+    x = sanitize_input(x)
+    return cosh(x, name)
+
 
 @typemap
 def softmax(x, axis=None, name=''):
@@ -1486,7 +1593,7 @@ def softmax(x, axis=None, name=''):
     therefore be interpreted as probabilities for mutually exclusive outcomes
     as in the case of multiclass classification.
 
-    If ``axis`` is given as integer, then the softmax will be computed along that axis. 
+    If ``axis`` is given as integer, then the softmax will be computed along that axis.
     If the provided ``axis`` is -1, it will be computed along the last axis. Otherwise,
     softmax will be applied to all axes.
 
@@ -1901,6 +2008,50 @@ def swapaxes(x, axis1=0, axis2=1, name=''):
     axis2 = sanitize_axis(axis2)
     return transpose_axes(x, axis1, axis2, name)
 
+
+@typemap
+def pad(x, pattern, mode=CONSTANT_PAD, constant_value = 0, name=''):
+    '''
+    Pads a tensor according to the specified patterns.
+    Three padding modes are supported: CONSTANT / REFLECT / SYMMETRIC.
+
+    Example:
+        >>> data = np.arange(6, dtype=np.float32).reshape((2,3))
+        >>> x = C.constant(value=data)
+        >>> C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.CONSTANT_PAD, constant_value=1).eval()
+        array([[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
+               [ 1.,  1.,  0.,  1.,  2.,  1.,  1.],
+               [ 1.,  1.,  3.,  4.,  5.,  1.,  1.],
+               [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]], dtype=float32)
+        >>> C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.REFLECT_PAD).eval()
+        array([[ 5.,  4.,  3.,  4.,  5.,  4.,  3.],
+               [ 2.,  1.,  0.,  1.,  2.,  1.,  0.],
+               [ 5.,  4.,  3.,  4.,  5.,  4.,  3.],
+               [ 2.,  1.,  0.,  1.,  2.,  1.,  0.]], dtype=float32)
+        >>> C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.SYMMETRIC_PAD).eval()
+        array([[ 1.,  0.,  0.,  1.,  2.,  2.,  1.],
+               [ 1.,  0.,  0.,  1.,  2.,  2.,  1.],
+               [ 4.,  3.,  3.,  4.,  5.,  5.,  4.],
+               [ 4.,  3.,  3.,  4.,  5.,  5.,  4.]], dtype=float32)
+
+    Args:
+        x: tensor to be padded.
+        pattern (list of tuple with 2 integers): how many values to add before and after the contents of the tensor in each dimension.
+        mode (int): padding mode: C.ops.CONSTANT_PAD, C.ops.REFLECT_PAD and C.ops.SYMMETRIC_PAD
+        constant_value: the value used to fill the padding cells, only meaningful under CONSTANT mode.
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import pad
+    if (any([len(_) != 2 for _  in pattern])):
+        raise ValueError("padding pattern should be a integer list with shape [n, 2]")
+    x = sanitize_input(x)
+    head = [p[0] for p in reversed(pattern)]
+    foot = [p[1] for p in reversed(pattern)]
+    return pad(x, mode, head, foot, constant_value, name)
+
+
 @typemap
 def slice(x, axis, begin_index, end_index, strides=None, name=''):
     '''
@@ -1968,9 +2119,9 @@ def slice(x, axis, begin_index, end_index, strides=None, name=''):
         axis (int or :class:`~cntk.axis.Axis`): axis along which ``begin_index`` and ``end_index``
          will be used. If it is of type int it will be used as a static axis.
         begin_index (int): the index along axis where the slicing starts
-        end_index (int): the index along axis where the slicing ends
-        name (str, optional): the name of the Function instance in the network
+        end_index (int): the index along axis where the slicing ends (exclusive)
         strides(int): step sizes when applying slice, negative value means in reverse order
+        name (str, optional): the name of the Function instance in the network
 
     See also:
         Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
@@ -2036,6 +2187,59 @@ def splice(*inputs, **kw_axis_name):
     axis = sanitize_axis(axis)
 
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
+
+@typemap
+def unpack_batch(x, name=''):
+    '''
+    Concatenate the input tensor's last dynamic axis to static axis.
+    Only tensors with batch axis are supported now.
+
+    Example:
+        >>> data = np.arange(12).reshape((3,2,2))
+        >>> x = C.input((2,2))
+        >>> C.unpack_batch(x).eval({x:data})
+        array([[[  0.,   1.],
+                [  2.,   3.]],
+        <BLANKLINE>
+               [[  4.,   5.],
+                [  6.,   7.]],
+        <BLANKLINE>
+               [[  8.,   9.],
+                [ 10.,  11.]]], dtype=float32)
+
+    Args:
+        x: a tensor with dynamic axis
+        name: (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import unpack_batch
+    x = sanitize_input(x)
+    return unpack_batch(x, name)
+
+@typemap
+def to_batch(x, name=''):
+    '''
+    Concatenate the input tensor's first axis to batch axis.
+
+    Example:
+        >>> data = np.arange(12).reshape((3,2,2))
+        >>> x = C.constant(value=data)
+        >>> y = C.to_batch(x)
+        >>> y.shape
+        (2, 2)
+
+    Args:
+        x: a tensor with dynamic axis
+        name: (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import to_batch
+    x = sanitize_input(x)
+    return to_batch(x, name)
 
 @typemap
 def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
@@ -2105,7 +2309,7 @@ def gather(reference, indices):
 @typemap
 def reduce_sum(x, axis=None, name=''):
     '''
-    Computes the sum of the input tensor's elements across one axis. If the axis parameter
+    Computes the sum of the input tensor's elements across one axis or a list of axes. If the axis parameter
     is not specified then the sum will be computed over all static axes, which is
     equivalent with specifying ``axis=Axis.all_static_axes()``. If
     ``axis=Axis.all_axes()`` is specified, then the output is a scalar which is the sum of all the
@@ -2113,64 +2317,42 @@ def reduce_sum(x, axis=None, name=''):
     will happen across the batch axis (In this case the input must not be a sequence).
 
     Example:
-        >>> x = C.sequence.input_variable((2,2))
-        >>> # create a batch of 2 sequences each containing 2 2x2 matrices
-        >>> x0 = np.arange(16,dtype=np.float32).reshape(2,2,2,2)
-        >>> # reduce over all static axes
-        >>> C.reduce_mean(x).eval({x:x0})
-        [array([  1.5,   5.5], dtype=float32),
-         array([  9.5,  13.5], dtype=float32)]
-        >>> # reduce over specified axes
-        >>> C.reduce_mean(x,axis=0).eval({x:x0})
-        [array([[[  1.,   2.]],
+        >>> # create 3x2x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
+
+        >>> C.reduce_sum(data, 0).eval().round(4)
+        array([[[  90.,    3.],
+                [ 120.,    6.]]], dtype=float32)
+        >>> np.sum(data, axis=0).round(4)
+        array([[  90.,    3.],
+               [ 120.,    6.]], dtype=float32)
+        >>> C.reduce_sum(data, 1).eval().round(4)
+        array([[[  25.,    3.]],
         <BLANKLINE>
-                [[  5.,   6.]]], dtype=float32),
+               [[  70.,    3.]],
         <BLANKLINE>
-        <BLANKLINE>
-         array([[[  9.,  10.]],
-        <BLANKLINE>
-                [[ 13.,  14.]]], dtype=float32)]
-        >>> C.reduce_mean(x,axis=1).eval({x:x0})
-        [array([[[  0.5],
-                 [  2.5]],
-        <BLANKLINE>
-                [[  4.5],
-                 [  6.5]]], dtype=float32),
-        <BLANKLINE>
-        <BLANKLINE>
-         array([[[  8.5],
-                 [ 10.5]],
-        <BLANKLINE>
-                [[ 12.5],
-                 [ 14.5]]], dtype=float32)]
-        >>> # reduce over all axes
-        >>> np.round(C.reduce_mean(x, axis=C.Axis.all_axes()).eval({x:x0}),5)
-        7.5
-        >>> # reduce over all axes when the batch has sequences of different length
-        >>> x1 = np.arange(4,dtype=np.float32).reshape(1,2,2)
-        >>> x2 = np.arange(12,dtype=np.float32).reshape(3,2,2)
-        >>> np.round(C.reduce_mean(x, axis=C.Axis.all_axes()).eval({x:[x1,x2]}),5)
-        4.5
-        >>> (np.sum(x1)+np.sum(x2))/(x1.size+x2.size)
-        4.5
-        >>> # reduce over batch axis
-        >>> xv = C.input_variable((2,2))
-        >>> xd = np.arange(8,dtype=np.float32).reshape(2,2,2)
-        >>> C.reduce_sum(xv,axis=C.Axis.default_batch_axis()).eval({xv:xd})
-        array([[  4.,   6.],
-               [  8.,  10.]], dtype=float32)
+               [[ 115.,    3.]]], dtype=float32)
+        >>> np.sum(data, axis=1).round(4)
+        array([[  25.,    3.],
+               [  70.,    3.],
+               [ 115.,    3.]], dtype=float32)
+        >>> C.reduce_sum(data, (0,2)).eval().round(4)
+        array([[[  93.],
+                [ 126.]]], dtype=float32)
 
     Args:
         x: input tensor
-        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str, optional): the name of the Function instance in the network
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Note that CNTK keeps the shape of the resulting tensors when reducing over multiple static axes.
     '''
     from cntk.cntk_py import reduce_sum
     x = sanitize_input(x)
-    axis = sanitize_axis(axis)
+    axis = sanitize_multi_axis_reduction_list(axis)
     return reduce_sum(x, axis, name)
 
 
@@ -2178,134 +2360,182 @@ def reduce_sum(x, axis=None, name=''):
 def reduce_log_sum_exp(x, axis=None, name=''):
     '''
     Computes the log of the sum of the exponentiations of the input tensor's
-    elements across the specified axis.
+    elements across a specified axis or a list of specified axes.
 
     Example:
-        >>> x = C.input_variable(shape=(3,2))
-        >>> val = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
-        >>> lse = C.reduce_log_sum_exp(x)
-        >>> lse.eval({x:[val]})
-        array([ 5.456193], dtype=float32)
-        >>> np.log(np.sum(np.exp(val)))
-        5.4561934
+        >>> # create 3x2x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
+
+        >>> C.reduce_log_sum_exp(data, axis=0).eval().round(4)
+        array([[[ 55.      ,   2.0986],
+                [ 60.      ,   3.0986]]], dtype=float32)
+        >>> np.log(np.sum(np.exp(data), axis=0)).round(4)
+        array([[ 55.      ,   2.0986],
+               [ 60.      ,   3.0986]], dtype=float32)
+        >>> C.reduce_log_sum_exp(data, axis=(0,2)).eval().round(4)
+        array([[[ 55.],
+                [ 60.]]], dtype=float32)
+        >>> np.log(np.sum(np.exp(data), axis=(0,2))).round(4)
+        array([ 55.,  60.], dtype=float32)
+
+        >>> x = C.input_variable(shape=(2,2))
+        >>> lse = C.reduce_log_sum_exp(x, axis=[C.axis.Axis.default_batch_axis(), 1])
+        >>> lse.eval({x:data}).round(4)
+        array([[ 55.],
+               [ 60.]], dtype=float32)
+        >>> np.log(np.sum(np.exp(data), axis=(0,2))).round(4)
+        array([ 55.,  60.], dtype=float32)
 
     Args:
         x: input tensor
-        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str): the name of the Function instance in the network
-
-    See also:
-        :func:`~cntk.ops.reduce_sum` for more details and examples.
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Note that CNTK keeps the shape of the resulting tensors when reducing over multiple static axes.
     '''
     # TODO: rename V2 API function as well from reduce_log_sum() to reduce_log_sum_exp()
     from cntk.cntk_py import reduce_log_sum
     x = sanitize_input(x)
-    axis = sanitize_axis(axis)
+    axis = sanitize_multi_axis_reduction_list(axis)
     return reduce_log_sum(x, axis, name)
 
 
 @typemap
 def reduce_mean(x, axis=None, name=''):
     '''
-    Computes the mean of the input tensor's elements across the specified axis.
+    Computes the mean of the input tensor's elements across a specified axis or a list of specified axes.
 
     Example:
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[5, 20],[30, 40],[55, 60]]
+        >>> # create 3x2x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
 
-        >>> C.reduce_mean(data, 0).eval()
-        array([[ 30.,  40.]], dtype=float32)
+        >>> C.reduce_mean(data, 0).eval().round(4)
+        array([[[ 30.,   1.],
+                [ 40.,   2.]]], dtype=float32)
+        >>> np.mean(data, axis=0).round(4)
+        array([[ 30.,   1.],
+               [ 40.,   2.]], dtype=float32)
+        >>> C.reduce_mean(data, 1).eval().round(4)
+        array([[[ 12.5,   1.5]],
+        <BLANKLINE>
+               [[ 35. ,   1.5]],
+        <BLANKLINE>
+               [[ 57.5,   1.5]]], dtype=float32)
+        >>> np.mean(data, axis=1).round(4)
+        array([[ 12.5,   1.5],
+               [ 35. ,   1.5],
+               [ 57.5,   1.5]], dtype=float32)
+        >>> C.reduce_mean(data, (0,2)).eval().round(4)
+        array([[[ 15.5],
+                [ 21. ]]], dtype=float32)
 
-        >>> C.reduce_mean(data, 1).eval()
-        array([[ 12.5],
-               [ 35. ],
-               [ 57.5]], dtype=float32)
+        >>> x = C.input_variable((2,2))
+        >>> C.reduce_mean( x * 1.0, (C.Axis.default_batch_axis(), 1)).eval({x: data}).round(4)
+        array([[ 15.5],
+               [ 21.      ]], dtype=float32)
 
     Args:
         x: input tensor
-        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str, optional): the name of the Function instance in the network
-
-    See also:
-        :func:`~cntk.ops.reduce_sum` for more details and examples.
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+     Note that CNTK keeps the shape of the resulting tensors when reducing over multiple static axes.
     '''
     from cntk.cntk_py import reduce_mean
     x = sanitize_input(x)
-    axis = sanitize_axis(axis)
+    axis = sanitize_multi_axis_reduction_list(axis)
     return reduce_mean(x, axis, name)
 
 
 @typemap
 def reduce_max(x, axis=None, name=''):
     '''
-    Computes the max of the input tensor's elements across the specified axis.
+    Computes the max of the input tensor's elements across a specified axis or a list of specified axes.
 
     Example:
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]
+        >>> # create 3x2x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
 
-        >>> C.reduce_max(data, 0).eval()
-        array([[ 50.,  60.]], dtype=float32)
+        >>> C.reduce_max(data, 0).eval().round(4)
+        array([[[ 55.,   1.],
+                [ 60.,   2.]]], dtype=float32)
+        >>> C.reduce_max(data, 1).eval().round(4)
+        array([[[ 20.,   2.]],
+        <BLANKLINE>
+               [[ 40.,   2.]],
+        <BLANKLINE>
+               [[ 60.,   2.]]], dtype=float32)
+        >>> C.reduce_max(data, (0,2)).eval().round(4)
+        array([[[ 55.],
+                [ 60.]]], dtype=float32)
 
-        >>> C.reduce_max(data, 1).eval()
-        array([[ 20.],
-               [ 40.],
+        >>> x = C.input_variable((2,2))
+        >>> C.reduce_max( x * 1.0, (C.Axis.default_batch_axis(), 1)).eval({x: data}).round(4)
+        array([[ 55.],
                [ 60.]], dtype=float32)
 
     Args:
         x: input tensor
-        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str): the name of the Function instance in the network
-
-    See also:
-        :func:`~cntk.ops.reduce_sum` for more details and examples.
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Note that CNTK keeps the shape of the resulting tensors when reducing over multiple static axes.
     '''
     from cntk.cntk_py import reduce_max
     x = sanitize_input(x)
-    axis = sanitize_axis(axis)
+    axis = sanitize_multi_axis_reduction_list(axis)
     return reduce_max(x, axis, name)
 
 
 @typemap
 def reduce_min(x, axis=None, name=''):
     '''
-    Computes the min of the input tensor's elements across the specified axis.
+    Computes the min of the input tensor's elements across a specified axis or a list of specified axes.
 
     Example:
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]
+        >>> # create 3x2x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
 
-        >>> C.reduce_min(data, 0).eval()
-        array([[ 10.,  20.]], dtype=float32)
+        >>> C.reduce_min(data, 0).eval().round(4)
+        array([[[  5.,   1.],
+                [ 20.,   2.]]], dtype=float32)
+        >>> C.reduce_min(data, 1).eval().round(4)
+        array([[[  5.,   1.]],
+        <BLANKLINE>
+               [[ 30.,   1.]],
+        <BLANKLINE>
+               [[ 55.,   1.]]], dtype=float32)
+        >>> C.reduce_min(data, (0,2)).eval().round(4)
+        array([[[ 1.],
+                [ 2.]]], dtype=float32)
 
-        >>> C.reduce_min(data, 1).eval()
-        array([[ 10.],
-               [ 30.],
-               [ 50.]], dtype=float32)
+        >>> x = C.input_variable((2,2))
+        >>> C.reduce_min( x * 1.0, (C.Axis.default_batch_axis(), 1)).eval({x: data}).round(4)
+        array([[ 1.],
+               [ 2.]], dtype=float32)
 
     Args:
         x: input tensor
-        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        axis (int or :class:`~cntk.axis.Axis` or a list of integers or a list of :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str): the name of the Function instance in the network
-
-    See also:
-        :func:`~cntk.ops.reduce_sum` for more details and examples.
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+     Note that CNTK keeps the shape of the resulting tensors when reducing over multiple static axes.
     '''
     from cntk.cntk_py import reduce_min
     x = sanitize_input(x)
-    axis = sanitize_axis(axis)
+    axis = sanitize_axis_list(axis)
     return reduce_min(x, axis, name)
 
 
@@ -2315,31 +2545,40 @@ def reduce_prod(x, axis=None, name=''):
     Computes the min of the input tensor's elements across the specified axis.
 
     Example:
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[1, 2],[3, 4],[5, 6]]
+        >>> # create 3x2x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
 
-        >>> C.reduce_prod(data, 0).eval()
-        array([[ 15.,  48.]], dtype=float32)
+        >>> C.reduce_prod(data, 0).eval().round(4)
+        array([[[  8250.,      1.],
+                [ 48000.,      8.]]], dtype=float32)
+        >>> C.reduce_prod(data, 1).eval().round(4)
+        array([[[  100.,     2.]],
+        <BLANKLINE>
+               [[ 1200.,     2.]],
+        <BLANKLINE>
+               [[ 3300.,     2.]]], dtype=float32)
+        >>> C.reduce_prod(data, (0,2)).eval().round(4)
+        array([[[   8250.],
+                [ 384000.]]], dtype=float32)
 
-        >>> C.reduce_prod(data, 1).eval()
-        array([[  2.],
-               [ 12.],
-               [ 30.]], dtype=float32)
+        >>> x = C.input_variable((2,2))
+        >>> C.reduce_prod( x * 1.0, (C.Axis.default_batch_axis(), 1)).eval({x: data}).round(4)
+        array([[   8250.],
+               [ 384000.]], dtype=float32)
 
     Args:
         x: input tensor
-        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str): the name of the Function instance in the network
-
-    See also:
-        :func:`~cntk.ops.reduce_sum` for more details and examples.
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Note that CNTK keeps the shape of the resulting tensors when reducing over multiple static axes.
     '''
     from cntk.cntk_py import reduce_prod
     x = sanitize_input(x)
-    axis = sanitize_axis(axis)
+    axis = sanitize_multi_axis_reduction_list(axis)
     return reduce_prod(x, axis, name)
 
 @typemap
@@ -2522,7 +2761,7 @@ def random_sample_inclusion_frequency(
     seed = SentinelValueForAutoSelectRandomSeed,
     name=''):
     '''
-    For weighted sampling with the specifed sample size (`num_samples`)
+    For weighted sampling with the specified sample size (`num_samples`)
     this operation computes the expected number of occurrences of each class
     in the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the
@@ -2645,7 +2884,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
     Args:
         shape (tuple or int): the shape of the input tensor
         dtype (np.float32 or np.float64): data type. Default is np.float32.
-        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
+        needs_gradient (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
         name (str, optional): the name of the Function instance in the network
@@ -2671,7 +2910,7 @@ def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=
     Args:
         shape (tuple or int): the shape of the input tensor
         dtype (np.float32 or np.float64): data type. Default is np.float32.
-        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
+        needs_gradient (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
         name (str, optional): the name of the Function instance in the network
@@ -2921,3 +3160,77 @@ def assign(ref, input, name=''):
     operand = sanitize_input(input, dtype)
     ref_operand = sanitize_input(ref, dtype)
     return assign(ref_operand, operand, name)
+
+@typemap
+def crop_manual(node_input, node_referent, offset_x, offset_y, name = ''):
+    '''
+    Crops input along spatial dimensions so that it matches spatial size of reference input.
+    Crop offsets are given in pixels.
+
+    Args:
+        node_input: class:`~cntk.ops.functions.Function` that outputs the tensor to be cropped
+        node_referent: class:`~cntk.ops.functions.Function` that outputs the reference tensor
+        offset_x (int): horizontal crop offset
+        offset_y (int): vertical crop offset
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import crop
+    arg_input = sanitize_input(node_input, get_data_type(node_input))
+    arg_ref = sanitize_input(node_referent,  get_data_type(node_referent))
+    return crop(arg_input, arg_ref, offset_x, offset_y, name)
+
+@typemap
+def crop_automatic(node_input, node_referent, name = ''):
+    '''
+    Crops input along spatial dimensions so that it matches spatial size of reference input.
+
+    Crop offsets are computed by traversing the network graph and computing affine transform
+    between the two inputs. Translation part of the transform determines the offsets. The transform
+    is computed as composition of the transforms between each input and their common ancestor.
+    The common ancestor is expected to exist.
+
+    Args:
+        node_input: class:`~cntk.ops.functions.Function` that outputs the tensor to be cropped
+        node_referent: class:`~cntk.ops.functions.Function` that outputs the reference tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import crop
+    arg_input = sanitize_input(node_input, get_data_type(node_input))
+    arg_ref = sanitize_input(node_referent,  get_data_type(node_referent))
+    return crop(arg_input, arg_ref, name)
+
+@typemap
+def crop_automatic_with_ancestors(node_input, node_referent, ancestor_input, ancestor_referent, name = ''):
+    '''
+    Crops input along spatial dimensions so that it matches spatial size of reference input.
+
+    Crop offsets are computed by traversing the network graph and computing affine transform
+    between the two inputs. Translation part of the transform determines the offsets. The transform
+    is computed as composition of the transforms between each input and their common ancestor.
+
+    ancestor_input and ancestor_referent are expected to be ancestors of node_input and
+    node_referent, respectively. They act like the same node for the purpose of finding a common
+    ancestor. They are used in cases when node_input and node_referent do not have a common
+    ancestor in the network. Typically, the ancestor nodes have the same spatial size. For example, in
+    pixelwise semantic labeling, ancestor_input would be the input image, and ancestor_referent would
+    be the ground truth image containing pixelwise labels.
+
+    Args:
+        node_input: class:`~cntk.ops.functions.Function` that outputs the tensor to be cropped
+        node_referent: class:`~cntk.ops.functions.Function` that outputs the reference tensor
+        ancestor_input (optional): class:`~cntk.ops.functions.Function` that outputs ancestor of node_input
+        ancestor_referent (optional): class:`~cntk.ops.functions.Function` that outputs ancestor of node_referent
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import crop
+    arg_node_input = sanitize_input(node_input, get_data_type(node_input))
+    arg_node_ref = sanitize_input(node_referent,  get_data_type(node_referent))
+    arg_ancestor_input = sanitize_input(ancestor_input, get_data_type(ancestor_input))
+    arg_ancestor_ref = sanitize_input(ancestor_referent,  get_data_type(ancestor_referent))
+    return crop(arg_node_input, arg_node_ref, arg_ancestor_input, arg_ancestor_ref, name)

@@ -61,8 +61,8 @@ public:
     void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) override;
 
 private:
-    void CreateDeserializers(const ConfigParameters& readerConfig);
-    void CreateTransforms(const ConfigParameters& deserializerConfig);
+    bool CreateDeserializers(const Microsoft::MSR::CNTK::ConfigParameters& readerConfig);
+    void CreateTransforms(const Microsoft::MSR::CNTK::ConfigParameters& deserializerConfig);
 
     DataDeserializerPtr CreateDeserializer(const Microsoft::MSR::CNTK::ConfigParameters& readerConfig, bool primary);
     TransformerPtr CreateTransformer(const Microsoft::MSR::CNTK::ConfigParameters& config, const std::string& defaultModule, const std::wstring& transformerType);

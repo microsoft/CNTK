@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include <numeric>
 #include <random>
+#include <set>
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
 #include "BlockRandomizer.h"
@@ -15,7 +16,7 @@
 #include "TruncatedBpttPacker.h"
 #include "CudaMemoryProvider.h"
 #include "HeapMemoryProvider.h"
-#include "MemoryBuffer.h"
+#include "BufferedFileReader.h"
 
 #pragma warning(push)
 // disable warning about possible mod 0 operation in uniform_int_distribution
@@ -982,8 +983,18 @@ BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)
     string randomKey(10, (char)distr(rng));
 
     CorpusDescriptor corpus(false);
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded(randomKey));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded(""));
+    BOOST_CHECK_EQUAL(false, corpus.IsHashingEnabled());
+    BOOST_CHECK_EQUAL(false, corpus.IsNumericSequenceKeys());
+
+    BOOST_CHECK_EQUAL(0, corpus.KeyToId(randomKey));
+    BOOST_CHECK_EQUAL(1, corpus.KeyToId(""));
+}
+
+BOOST_AUTO_TEST_CASE(CorpusDescriptorHashing)
+{
+    auto hashVersion = CorpusDescriptor::s_hashVersion;
+    BOOST_CHECK_EQUAL(1, hashVersion);
+    BOOST_CHECK_EQUAL(1661589163364855789u, CorpusDescriptor(false, true).KeyToId("abcDEF_+123!890x.Y.Z@"));
 }
 
 BOOST_AUTO_TEST_CASE(NumericCorpusDescriptor)
@@ -1015,25 +1026,6 @@ BOOST_AUTO_TEST_CASE(LiteralCorpusDescriptor)
     CorpusDescriptor corpus(false);
     BOOST_CHECK(100 != corpus.KeyToId("100"));
     BOOST_CHECK_NO_THROW(corpus.KeyToId("not a number"));
-}
-
-BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
-{
-    FILE* test = fopen("test.tmp", "w+");
-    fwrite("1\n", sizeof(char), 2, test);
-    fwrite("2\n", sizeof(char), 2, test);
-    fwrite("4\n", sizeof(char), 2, test);
-    fclose(test);
-
-    CorpusDescriptor corpus(L"test.tmp", true, false);
-    BOOST_CHECK_EQUAL(false, corpus.IsIncluded("0"));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded("1"));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded("2"));
-    BOOST_CHECK_EQUAL(false, corpus.IsIncluded("3"));
-    BOOST_CHECK_EQUAL(true, corpus.IsIncluded("4"));
-    BOOST_CHECK_EQUAL(false, corpus.IsIncluded("5"));
-
-    remove("test.tmp");
 }
 
 BOOST_AUTO_TEST_CASE(LiteralCorpusDescriptorWithHash)
@@ -1207,318 +1199,6 @@ BOOST_AUTO_TEST_CASE(CheckNoDegenerateMinibatches)
         test(underTestBlock);
         test(underTestNo);
     }
-}
-
-const std::string g_MemBufferTextData =
-    "0\t|a 1 1\t|b 1 1\n"    // 16 characters
-    "0\t|a 2 2\t|b 2 2\n"    // 16 
-    "0\t|a 3 3\t|b 3 3\n"    // 16
-    "0\t|a 4 4\n"            // 9
-    "0\t|a 5 5\n"            // 9
-    "1\t|b 6 6\t |a 6 6 6\n" // 19
-    "1\t|b 7 7\t |a 7 7 7\n" // 19
-    "1\t|b 8 8 8 8 8\n"      // 15
-    "1\t|b 9\n"              // 7
-    "1\t|b 10 10 10 10 10\n";// 20
-
-BOOST_AUTO_TEST_CASE(MemoryBufferWithoutCompleteLines)
-{
-    FILE* test = fopen("test.tmp", "w+b");
-    fwrite(g_MemBufferTextData.c_str(), 1, g_MemBufferTextData.size(), test);
-    fclose(test);
-
-    test = fopen("test.tmp", "r");
-    BOOST_CHECK_EQUAL(filesize(test), 146);
-
-    MemoryBuffer mb(25);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
-
-    auto p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(48, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(50, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(50, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(57, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(75, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(75, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(100, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(100, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(119, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(125, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(125, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == mb.End(), true);
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(146, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), true);
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-
-    remove("test.tmp");
-}
-
-BOOST_AUTO_TEST_CASE(MemoryBufferWithCompleteLines)
-{
-    FILE* test = fopen("test.tmp", "w+b");
-    fwrite(g_MemBufferTextData.c_str(), 1, g_MemBufferTextData.size(), test);
-    fclose(test);
-
-    test = fopen("test.tmp", "r");
-    BOOST_CHECK_EQUAL(filesize(test), 146);
-
-    MemoryBuffer mb(25, true);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
-
-    auto p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '0');
-    BOOST_CHECK_EQUAL(48, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == mb.End(), true);
-    BOOST_CHECK_EQUAL(57, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(57, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(119, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == mb.End(), true);
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(146, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), true);
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-
-    remove("test.tmp");
-}
-
-const std::string g_MemBufferTextData1 =
-    "0\t|a 1 1\t|b 1 1\n"  // 16 characters
-    "1\t|b 10 10 10 10 10";// 19
-
-BOOST_AUTO_TEST_CASE(MemoryBufferWithoutLastCR)
-{
-    FILE* test = fopen("test.tmp", "w+b");
-    fwrite(g_MemBufferTextData1.c_str(), 1, g_MemBufferTextData1.size(), test);
-    fclose(test);
-
-    test = fopen("test.tmp", "r");
-    BOOST_CHECK_EQUAL(filesize(test), 35);
-
-    MemoryBuffer mb(25);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
-
-    auto p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(35, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(mb.Eof(), true);
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-
-    remove("test.tmp");
-}
-
-BOOST_AUTO_TEST_CASE(MemoryBufferFullLineWithoutLastCR)
-{
-    FILE* test = fopen("test.tmp", "w+b");
-    fwrite(g_MemBufferTextData1.c_str(), 1, g_MemBufferTextData1.size(), test);
-    fclose(test);
-
-    test = fopen("test.tmp", "r");
-    BOOST_CHECK_EQUAL(filesize(test), 35);
-
-    MemoryBuffer mb(25, true);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
-
-    auto p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(*p, '1');
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(mb.End() != mb.Start(), true);
-    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    p = mb.MoveToNextLine();
-    BOOST_CHECK_EQUAL(p == nullptr, true);
-    BOOST_CHECK_EQUAL(35, mb.GetFileOffset());
-    BOOST_CHECK_EQUAL(mb.Eof(), false);
-
-    mb.RefillFrom(test);
-    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
-    BOOST_CHECK_EQUAL(mb.Eof(), true);
-
-    remove("test.tmp");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -576,6 +576,49 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
     UpdateCachedNzCount(nnzTotalDevHostPtr);
 }
 
+///
+/// adjusts the sparse block column matrix with the new Col2BlockId
+/// For each column, if new Col2BlockId contains valid index, a corresponding block exists at the index
+/// if old col2BlockId[i] contains value at that column, it would be copied over; otherwise the block would be filled with zeros
+///
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::AdjustCol2BlockId(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col)
+{
+    if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
+        LogicError("Expected sparse block col matrix");
+
+    // create new buffer
+    size_t numRows = GetNumRows();
+    size_t numCols = GetNumCols();
+    size_t numNZ = numBlocks * numRows;
+    size_t bufferSizeNeeded = BufferSizeNeeded(GetNumRows(), GetNumCols(), numNZ, GetFormat());
+    ElemType* pArray = reinterpret_cast<ElemType*>(TracingGPUMemoryAllocator::Allocate<char>(GetComputeDeviceId(), bufferSizeNeeded));
+    GPUSPARSE_INDEX_TYPE* newBlockId2Col = (GPUSPARSE_INDEX_TYPE*)(pArray + numNZ);
+    GPUSPARSE_INDEX_TYPE* newCol2BlockId = newBlockId2Col + numCols;
+
+    CUDA_CALL(cudaMemset(newBlockId2Col, SparseIndex_NotAssigned, numCols * sizeof(GPUSPARSE_INDEX_TYPE)));
+    CUDA_CALL(cudaMemcpy(newCol2BlockId, cpuCol2BlockId, numCols * sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyHostToDevice));
+
+    int blocksPerGrid = CeilDiv(numCols, GridDim::maxThreadsPerBlock);
+ 
+    // when useBlockId2Col==true, the original col2BlockId is copied to blockId2Col to avoid getting overwritten 
+    // during the inplace aggregation of col2BlockId prior to this
+    _adjustCol2BlockId<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (
+        numRows,
+        numCols,
+        useBlockId2Col ? BlockId2ColOrRow() : ColOrRow2BlockId(),
+        Data(),
+        newCol2BlockId,
+        pArray,
+        newBlockId2Col);
+
+    TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
+
+    SetBuffer(pArray, bufferSizeNeeded);
+    SetSizeAllocated(numNZ);
+    SetBlockSize(numBlocks);
+}
+
 // fetch the CSC-column/CSR-row offset array from the GPU to the CPU
 // Returns a pointer that the caller must delete[].
 template <class ElemType>
@@ -982,7 +1025,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(
         LogicError("SetMatrixFromCSCFormat: nullptr passed in.");
     if (!IsOnDevice && nz != h_CSCCol[numCols] - h_CSCCol[0])
         LogicError("SetMatrixFromCSCFormat: wrong nz value passed in.");
-#if 1 // validate input indices
+#if 0 // validate input indices
     if (!IsOnDevice)
     {
         for (size_t j = 0; j < numCols; j++)
@@ -1081,8 +1124,8 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, c
     static std::vector<GPUSPARSE_INDEX_TYPE> gpuBlockId2Col(numCols);
     static std::vector<GPUSPARSE_INDEX_TYPE> gpuCol2BlockId(numCols);
 
-    std::fill(gpuBlockId2Col.begin(), gpuBlockId2Col.end(), Id_NotAssigned);
-    std::fill(gpuCol2BlockId.begin(), gpuCol2BlockId.end(), Id_NotAssigned);
+    std::fill(gpuBlockId2Col.begin(), gpuBlockId2Col.end(), SparseIndex_NotAssigned);
+    std::fill(gpuCol2BlockId.begin(), gpuCol2BlockId.end(), SparseIndex_NotAssigned);
 
     #pragma omp parallel for
     for (int i = 0; i < numBlocks; ++i)
@@ -1411,12 +1454,9 @@ template <class ElemType>
         // based on the size of m_nz in rhs and numCols in the resulted matrix we use different approaches
         size_t rhs_nz = rhs.NzCount();
 
-        //if (rhs.m_sliceViewOffset != 0)
-        //    fprintf(stderr, "MultiplyAndAdd: rhs has offset %d\n", (int)rhs.m_sliceViewOffset), fflush(stderr);
-
         // Block col storage format (target matrix):
         //  - GetBlockSize()                  :                  number of non-zero columns
-        //  - ColOrRow2BlockId()[colIndex]    : [numCols]        storage index (=index into the compact matrix), or Id_Pending if not determined yet, or Id_NotAssigned if empty
+        //  - ColOrRow2BlockId()[colIndex]    : [numCols]        storage index (=index into the compact matrix), or SparseIndex_Pending if not determined yet, or SparseIndex_NotAssigned if empty
         //  - BlockId2ColOrRow()[storageIndex]: [GetBlockSize()] column index (=logical index into the matrix that this object represents)
         //                                                       This array is allocated as numCols, but only elements up to GetBlockSize()-1 are used.
         // The storage indices can be in any order (they are not sorted).
@@ -1431,8 +1471,8 @@ template <class ElemType>
             // Note that this may be expensive, as we initialize the full dimension (which is large, otherwise we wouldn't be using sparse).
             // We could speed that up by maintaining a dirty range, and only resetting that. Reset() could create a "lazy reset" instruction.
             c.Resize(m, n, 0);
-            // Note a small hack: cudaMemset() sets bytes, but we initialize 32-bit ints. Hence, all bytes in Id_NotAssigned must be identical (0xff).
-            static_assert(Id_NotAssigned == -1, "Id_NotAssigned must be 0xffffffff");
+            // Note a small hack: cudaMemset() sets bytes, but we initialize 32-bit ints. Hence, all bytes in SparseIndex_NotAssigned must be identical (0xff).
+            static_assert(SparseIndex_NotAssigned == -1, "SparseIndex_NotAssigned must be 0xffffffff");
             if (n > c.GetNumCols())
                 LogicError("MultiplyAndAdd: wrong allocation (primary and secondary indices)?");
             CUDA_CALL(cudaMemsetAsync(c.ColOrRow2BlockId(), 0xff, sizeof(GPUSPARSE_INDEX_TYPE) * n, t_stream));
@@ -1448,19 +1488,19 @@ template <class ElemType>
 
         // determine which columns are non-zero -> ColOrRow2BlockId()[colIndex]
         // Some columns may already be non-zero. Those already have a storage index.
-        // Columns that were zero before but are no longer get Id_Pending.
+        // Columns that were zero before but are no longer get SparseIndex_Pending.
         // This is driven by rhs.RowLocation(); that is, the array of row indices of non-zero elements.
         blocksPerGrid = (int) ceil(((double) rhs_nz) / GridDim::maxThreadsPerBlock);
         _findColsWithValues<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
             /*in*/rhs.RowLocation(), /*in ref*/rhs.ColLocation()[0], /*out*/c.ColOrRow2BlockId(), rhs_nz);
         // RowLocation = base of nz row-index array, without potential slice-view offset. Kernel offsets it by ColLocation()[0], which is non-zero in case of a slice view.
-        // Now ColOrRow2BlockId()[colIndex] contains an index or Id_Pending for all non-empty columns.
+        // Now ColOrRow2BlockId()[colIndex] contains an index or SparseIndex_Pending for all non-empty columns.
 
         // assign a storage index to any newly added columns
         blocksPerGrid = (int) ceil(((double) n) / GridDim::maxThreadsPerBlock);
         _determineBlockIds<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
             c.BlockId2ColOrRow(), c.ColOrRow2BlockId(), n, pBlockSizeTempGpu);
-        // Now all Id_Pending values in ColOrRow2BlockId()[colIndex] have been replaced,
+        // Now all SparseIndex_Pending values in ColOrRow2BlockId()[colIndex] have been replaced,
         // and BlockId2ColOrRow()[storageIndex] values for those have been placed.
         // *pBlockSizeTempGpu has been incremented accordingly.
         // BlockId2ColOrRow()[storageIndex] is now valid up to [*pBlockSizeTempGpu-1].
@@ -1634,7 +1674,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
 // Updates a dense matrix.
 // TODO: this should be const.
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum)
+void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum, ElemType unitGainFactor)
 {
     VerifyWritable(__FUNCTION__);
 
@@ -1660,7 +1700,7 @@ void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemTyp
             Data(),
             BlockId2ColOrRow(),
             c.Data(),
-            unitGainMomentum);
+            unitGainFactor);
     }
     else
     {
@@ -1737,7 +1777,7 @@ void GPUSparseMatrix<ElemType>::FSAdagrad(
     ElemType momentum,
     ElemType adaWeight,
     ElemType adaMul,
-    bool unitGainMomentum)
+    ElemType unitGainFactor)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
@@ -1759,7 +1799,7 @@ void GPUSparseMatrix<ElemType>::FSAdagrad(
     _fsadagrad4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         n, Data(), ColOrRow2BlockId(), GetNumRows(),
         c.Data(), c.Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
+        learnRatePerSample, momentum, adaWeight, adaMul, unitGainFactor);
 }
 
 // -> dense
@@ -1773,7 +1813,7 @@ void GPUSparseMatrix<ElemType>::Adam(
     ElemType adaWeight,
     ElemType adaMul,
     ElemType epsilon,
-    bool unitGainMomentum,
+    ElemType unitGainFactor,
     bool adamax)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
@@ -1796,7 +1836,7 @@ void GPUSparseMatrix<ElemType>::Adam(
     _adam4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         n, Data(), ColOrRow2BlockId(), GetNumRows(),
         c.Data(), c.Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainMomentum, adamax);
+        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainFactor, adamax);
 }
 
 // -> dense

@@ -42,7 +42,7 @@ def eval_and_write(model_file, node_name, output_file, minibatch_source, num_obj
 if __name__ == '__main__':
     # define location of model and data and check existence
     base_folder = os.path.dirname(os.path.abspath(__file__))
-    model_file  = os.path.join(base_folder, "..", "PretrainedModels", "ResNet_18.model")
+    model_file  = os.path.join(base_folder, "..", "..", "..", "PretrainedModels", "ResNet18_ImageNet_CNTK.model")
     map_file    = os.path.join(base_folder, "..", "DataSets", "Grocery", "test.txt")
     os.chdir(os.path.join(base_folder, "..", "DataSets", "Grocery"))
     if not (os.path.exists(model_file) and os.path.exists(map_file)):

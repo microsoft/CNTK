@@ -11,6 +11,7 @@
 
 #include "PackerBase.h"
 #include "ReaderUtil.h"
+#include <set>
 
 namespace CNTK {
 

@@ -279,9 +279,9 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     // train
     let d_parameters = d_model_fn.Parameters();
-    auto d_learner = SGDLearner(d_parameters, LearningRatePerSampleSchedule(0.05));
+    auto d_learner = SGDLearner(d_parameters, TrainingParameterPerSampleSchedule(0.05));
 
-    auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
+    auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), TrainingParameterPerSampleSchedule(0.05));
     auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
 
     // force synchronized GPU operation so we can profile more meaningfully

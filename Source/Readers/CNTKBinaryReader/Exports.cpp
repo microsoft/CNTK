@@ -10,10 +10,9 @@
 #include "DataReader.h"
 #include "ReaderShim.h"
 #include "CNTKBinaryReader.h"
-#include "HeapMemoryProvider.h"
-#include "CudaMemoryProvider.h"
 #include "V2Dependencies.h"
 #include "BinaryChunkDeserializer.h"
+#include "CorpusDescriptor.h"
 
 namespace CNTK {
 

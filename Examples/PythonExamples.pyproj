@@ -138,7 +138,7 @@
     <Compile Include="Image\Detection\FastRCNN\fastRCNN\voc_eval.py" />
     <Compile Include="Image\Detection\FastRCNN\fastRCNN\__init__.py" />
     <Compile Include="Image\Detection\FastRCNN\imdb_data.py" />
-    <Compile Include="Image\Detection\FastRCNN\install_fastrcnn.py" />
+    <Compile Include="Image\Detection\FastRCNN\install_data_and_model.py" />
     <Compile Include="Image\Detection\FastRCNN\PARAMETERS.py" />
     <Compile Include="Image\Detection\FastRCNN\selectivesearch\selectivesearch.py" />
     <Compile Include="Image\Detection\FastRCNN\selectivesearch\__init__.py" />

@@ -7,7 +7,6 @@
 
 #include "DataDeserializerBase.h"
 #include "BinaryConfigHelper.h"
-#include "CorpusDescriptor.h"
 #include "BinaryDataChunk.h"
 #include "BinaryDataDeserializer.h"
 
@@ -79,6 +78,11 @@ private:
 
 typedef unique_ptr<ChunkTable> ChunkTablePtr;
 
+class CorpusDescriptor;
+typedef std::shared_ptr<CorpusDescriptor> CorpusDescriptorPtr;
+
+class FileWrapper;
+
 // TODO: more details when tracing warnings 
 class BinaryChunkDeserializer : public DataDeserializerBase {
 public:
@@ -86,7 +90,7 @@ public:
 
     BinaryChunkDeserializer(CorpusDescriptorPtr corpus, const BinaryConfigHelper& helper) = delete;
 
-    ~BinaryChunkDeserializer();
+    ~BinaryChunkDeserializer() = default;
 
     // Retrieves a chunk of data.
     ChunkPtr GetChunk(ChunkIdType chunkId) override;
@@ -102,8 +106,7 @@ private:
     void Initialize(const std::map<std::wstring, std::wstring>& rename, DataType precision);
 
     // Reads the chunk table from disk into memory
-    void ReadChunkTable(FILE* infile, uint32_t firstChunkIdx, uint32_t numChunks);
-    void ReadChunkTable(FILE* infile);
+    void ReadChunkTable();
 
     // Reads a chunk from disk into buffer
     unique_ptr<byte[]> ReadChunk(ChunkIdType chunkId);
@@ -113,8 +116,7 @@ private:
     void SetTraceLevel(unsigned int traceLevel);
 
 private:
-    const wstring m_filename;
-    FILE* m_file;
+    FileWrapper m_file;
 
     int64_t m_headerOffset, m_chunkTableOffset;
 

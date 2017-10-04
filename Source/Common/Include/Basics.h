@@ -134,6 +134,7 @@ static inline void Warning(const char* format, ...)
 
     va_start(args, format);
     vsprintf(buffer, format, args);
+    va_end(args);
 };
 #pragma warning(pop)
 static inline void Warning(const string& message)
@@ -218,6 +219,7 @@ struct _strprintf : public std::basic_string<_T>
             std::vector<_T> varbuf(n + 1); // incl. '\0'
             this->assign(_sprintf(&varbuf[0], varbuf.size(), format, args), n);
         }
+        va_end(args);
     }
 
 private:
@@ -225,7 +227,7 @@ private:
     inline size_t _cprintf(const wchar_t* format, va_list args)
     {
 #ifdef _MSC_VER
-        return vswprintf(nullptr, 0, format, args);
+        return _vscwprintf(format, args);
 #elif defined(__UNIX__)
         // TODO: Really??? Write to file in order to know the length of a string?
         FILE* dummyf = fopen("/dev/null", "w");

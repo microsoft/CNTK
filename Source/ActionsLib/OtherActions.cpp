@@ -551,7 +551,11 @@ void DoTopologyPlot(const ConfigParameters& config)
         auto rc = system(msra::strfun::utf8(renderCmd).c_str());
         rc; // ignoring the result--this gets flagged by gcc if we don't save the return value
 #else
+#ifdef CNTK_UWP
+        RuntimeError("DoTopologyPlot: UWP cannot execute an external process");
+#else
         _wsystem(renderCmd.c_str());
+#endif
 #endif
     }
     fprintf(stderr, "Done.\n");

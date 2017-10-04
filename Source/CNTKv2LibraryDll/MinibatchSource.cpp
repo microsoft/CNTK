@@ -23,7 +23,7 @@ namespace CNTK
     const size_t MinibatchSource::DefaultRandomizationWindowInChunks = g_4GB / g_32MB;
     const size_t  MinibatchSource::InfinitelyRepeat = g_infinity;
     const size_t  MinibatchSource::FullDataSweep = g_dataSweep;
-
+    const static std::wstring DeserializersProperty = L"_deserializers";
 
     const std::unordered_map<StreamInformation, MinibatchData>& MinibatchSource::GetNextMinibatch(size_t minibatchSizeInSamples, const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
@@ -43,10 +43,29 @@ namespace CNTK
         return str.str();
     }
 
-    MinibatchSourceConfig::MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize/* = true*/) 
-        : deserializers(deserializers)
+    // Some deserializers can contains other deserializers inside (i.e. htk), this function will flatten them.
+    inline static std::vector<Deserializer> Flatten(const std::vector<Deserializer>& deserializers)
     {
-        if (!randomize) 
+        std::vector<Deserializer> flattened;
+        for (const auto& d : deserializers)
+        {
+            if (d.Contains(DeserializersProperty) && d.Size() == 1)
+            {
+                auto inner = d[DeserializersProperty].Value<std::vector<DictionaryValue>>();
+                for (auto& i : inner)
+                    flattened.push_back(i.Value<Dictionary>());
+            }
+            else
+                flattened.push_back(d);
+        }
+
+        return flattened;
+    }
+
+    MinibatchSourceConfig::MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize/* = true*/)
+        : deserializers(Flatten(deserializers))
+    {
+        if (!randomize)
         {
             randomizationWindowInChunks = 0;
             randomizationWindowInSamples = 0;
@@ -140,6 +159,12 @@ namespace CNTK
         m_shim->Init(config);
     }
 
+    bool CompositeMinibatchSource::IsInfinite()
+    {
+        return m_maxNumSamplesToRead == MinibatchSource::InfinitelyRepeat &&
+               m_maxNumSweepsToRead == MinibatchSource::InfinitelyRepeat;
+    }
+
     /*virtual*/ const std::unordered_map<StreamInformation, MinibatchData>&
     CompositeMinibatchSource::GetNextMinibatch(size_t minibatchSizeInSequences,
                                                size_t minibatchSizeInSamples,
@@ -147,7 +172,9 @@ namespace CNTK
                                                size_t workerRank,
                                                const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/) /*override*/
     {
+#ifndef  CNTK_UWP
         auto profGetMinibatch = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainGetMinibatch);
+#endif
 
         m_minibatchData.clear();
 
@@ -265,7 +292,7 @@ namespace CNTK
                     if (!matrix)
                         LogicError("GetNextMinibatch: Invalid matrix type.");
 
-                    minibatchValuePtr = MakeSharedObject<PackedValue>(s.m_sampleLayout, Axis::DefaultInputVariableDynamicAxes(), matrix, input.pMBLayout, /*readOnly =*/ false);
+                    minibatchValuePtr = MakeSharedObject<PackedValue>(AsNDShape(input.sampleLayout), Axis::DefaultInputVariableDynamicAxes(), matrix, input.pMBLayout, /*readOnly =*/ false);
 
                     size_t numSamples = input.pMBLayout->GetActualNumSamples();
                     size_t numSequences = input.pMBLayout->GetNumSequences();
@@ -434,19 +461,30 @@ namespace CNTK
 
     Deserializer HTKFeatureDeserializer(const std::vector<HTKFeatureConfiguration>& streams)
     {
-        Deserializer htk;
-        Dictionary input;
+        if (streams.empty())
+            InvalidArgument("HTK deserializer expects at least one stream.");
+
+        std::vector<DictionaryValue> deserializers;
         for (const auto& s : streams)
         {
+            Deserializer htk;
+            Dictionary input;
             const auto& key = s.m_streamName;
             Dictionary stream;
             std::vector<DictionaryValue> ctxWindow = { DictionaryValue(s.m_left), DictionaryValue(s.m_right) };
             stream.Add(L"scpFile", s.m_scp, L"dim", s.m_dim, L"contextWindow", ctxWindow, L"expandToUtterance", s.m_broadcast);
             stream[L"definesMBSize"] = s.m_definesMbSize;
             input[key] = stream;
+            htk.Add(L"type", L"HTKFeatureDeserializer", L"input", input);
+            deserializers.push_back(htk);
         }
-        htk.Add(L"type", L"HTKFeatureDeserializer", L"input", input);
-        return htk;
+
+        if (deserializers.size() == 1)
+            return deserializers.front().Value<Dictionary>();
+
+        Dictionary result;
+        result[DeserializersProperty] = deserializers;
+        return result;
     }
 
     Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries)
@@ -472,9 +510,8 @@ namespace CNTK
         return htk;
     }
 
-    namespace Internal 
+    namespace Internal
     {
-
         void Validate(const MinibatchSourceConfig& configuration)
         {
             if (configuration.maxSamples != MinibatchSource::InfinitelyRepeat && configuration.maxSweeps != MinibatchSource::InfinitelyRepeat)

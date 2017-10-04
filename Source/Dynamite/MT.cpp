@@ -400,7 +400,7 @@ void Train(wstring outputDirectory)
     //  - denom should be /sqrt(minibatchSize)
     let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;
     let lr0 = 0.0003662109375 * f;
-    auto baseLearner = AdamLearner(parameters, LearningRatePerSampleSchedule({ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
+    auto baseLearner = AdamLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
         MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
         learnerOptions);
 #endif

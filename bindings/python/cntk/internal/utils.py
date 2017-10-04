@@ -210,7 +210,10 @@ def _to_cntk_dict_value(py_value):
     if isinstance(py_value, np.ndarray):
         py_value = NDArrayView.from_dense(py_value)
         return DictionaryValueFromNDArrayView(py_value)
-    
+
+    if isinstance(py_value, cntk_py.training_double_parameter_schedule):
+        return cntk_py.DictionaryValueFromTrainingDoubleParameterSchedule(py_value)
+
     if py_value is None:
         return DictionaryValue()
 

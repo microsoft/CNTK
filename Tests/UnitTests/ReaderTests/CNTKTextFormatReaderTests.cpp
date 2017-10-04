@@ -624,33 +624,34 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_missing_trailing_newline)
 
 BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_blank_lines)
 {
-    auto test = [this](const vector<wstring>& parameters)
+    auto test = [this](const vector<wstring>& parameters) 
     {
-        BOOST_REQUIRE_EXCEPTION(
-            HelperRunReaderTest<double>(
-                testDataPath() + "/Config/CNTKTextFormatReader/edge_cases.cntk",
-                testDataPath() + "/Control/CNTKTextFormatReader/blank_lines.txt",
-                testDataPath() + "/Control/CNTKTextFormatReader/blank_lines_Output.txt",
-                "blank_lines",
-                "reader",
-                2,  // epoch size
-                2,  // mb size  
-                1,  // num epochs
-                1,
-                0,
-                0,
-                1,       // number of subsets
-                false, false, true,
-                parameters),
-            std::runtime_error,
-            [](std::runtime_error const& ex)
-        {
-            return string("Reached the maximum number of allowed errors"
-                " while reading the input file (contains_blank_lines.txt).") == ex.what();
-        });
+        HelperRunReaderTest<double>(
+            testDataPath() + "/Config/CNTKTextFormatReader/edge_cases.cntk",
+            testDataPath() + "/Control/CNTKTextFormatReader/blank_lines.txt",
+            testDataPath() + "/Control/CNTKTextFormatReader/blank_lines_Output.txt",
+            "blank_lines",
+            "reader",
+            2,  // epoch size
+            2,  // mb size  
+            1,  // num epochs
+            1,
+            0,
+            0,
+            1,       // number of subsets
+            false, false, true,
+            parameters);
     };
 
-    test({});
+    BOOST_REQUIRE_EXCEPTION(
+        test({}),
+        std::runtime_error,
+        [](std::runtime_error const& ex)
+    {
+        return string("Reached the maximum number of allowed errors"
+            " while reading the input file (contains_blank_lines.txt).") == ex.what();
+    });
+
     test({ L"defMBSize=true" });
 };
 
@@ -819,24 +820,28 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_no_trailing_newline_valid_input)
     streams[0].m_storageFormat = StorageFormat::Dense;
     streams[0].m_sampleDimension = 1;
 
-    string filename = "no_trailing_newline.txt";
+    vector<std::pair<string, double>> input{ {"1", 1}, { "-123", -123. },{ "45.", 45. }, {"6.78", 6.78}, {"9.10e-11", 9.10e-11 } };
 
-    vector<std::pair<string, double>> input{ { "-123", -123. },{ "45.", 45. }, {"6.78", 6.78}, {"9.10e-11", 9.10e-11 } };
-
+    size_t count = 0;
     for (const auto& pair : input) 
     {
+        string filename = std::to_string(count++) + ".no_trailing_newline.txt";
+        double value = 0;
+
         {
-            boost::filesystem::remove(filename);
             std::ofstream file;
             file.open(filename, std::ofstream::out);
             file << "|A " << pair.first;
-        }
-        CNTKTextFormatReaderTestRunner<double> testRunner(filename, streams, 0);
+            file.flush();
 
-        testRunner.LoadChunk();
-        vector<SequenceDataPtr> data;
-        testRunner.m_chunk->GetSequence(0, data);
-        double value = *(reinterpret_cast<const double*>(data[0]->GetDataBuffer()));
+            CNTKTextFormatReaderTestRunner<double> testRunner(filename, streams, 0);
+            testRunner.LoadChunk();
+            vector<SequenceDataPtr> data;
+            testRunner.m_chunk->GetSequence(0, data);
+            value = *(reinterpret_cast<const double*>(data[0]->GetDataBuffer()));
+        }
+        
+        boost::filesystem::remove(filename);
 
         BOOST_REQUIRE_CLOSE(value, pair.second, 0.00001);
 

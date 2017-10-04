@@ -1422,6 +1422,9 @@ class Function(cntk_py.Function):
             ValueError('callbacks list must only contain objects of type ProgressWriter')
         progress_writers = callbacks or []
         evaluator = Evaluator(output, progress_writers + [collector])
+
+        if minibatch_source.is_infinite():
+            raise ValueError("minibatch_source must have a limited number of samples or sweeps.")
         # evaluation loop
         while True:
             data = minibatch_source.next_minibatch(minibatch_size) # fetch minibatch
@@ -1618,8 +1621,12 @@ class UserFunction(Function):
         name (str): name of this function
     '''
 
-    def __init__(self, inputs, as_numpy=True, name=''):
-        super(UserFunction, self).__init__(inputs, name)
+    def __init__(self, inputs, as_numpy=True, attributes=None, name=''):
+        if  attributes is None:
+            super(UserFunction, self).__init__(inputs, name)
+        else:
+            attributes = _py_dict_to_cntk_dict(attributes)
+            super(UserFunction, self).__init__(inputs, attributes, name)
         self.set_native(False)
         self.as_numpy = as_numpy
 

@@ -12,6 +12,7 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_202_Language_Understanding.ipynb")
 # Runs on GPU only, batch normalization training on CPU is not yet implemented.
 notebook_deviceIdsToRun = [0]
+notebook_timeoutSeconds = 900
 
 def test_cntk_202_language_understanding_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell
@@ -31,7 +32,7 @@ def test_cntk_202_language_understanding_trainerror(nb):
            pass
         except KeyError:
            pass
-    expectedMetrics = [0.45, 0.45, 0.37, 0.3]
+    expectedMetrics = [0.45, 0.45, 0.37, 0.3, 0.1, 0.1]
     # TODO tighten tolerances
     assert numpy.allclose(expectedMetrics, metrics, atol=0.15)
 

@@ -22,6 +22,7 @@ def test_convolution_attributes():
     expected = {'autoPadding': [False, False, False], 
         'sharing': [True, True, True], 
         'strides': (1, 1, 1), 
+        'dilation': (1, 1, 1),
         'maxTempMemSizeInSamples': 0, 
         'upperPad': (0, 0, 0), 
         'lowerPad': (0, 0, 0),
@@ -34,7 +35,8 @@ def test_convolution_attributes():
     d = f.root_function.attributes
     expected = {'autoPadding': [False, False, True], 
         'sharing': [True, True, True], 
-        'strides': (1, 1, 1), 
+        'strides': (1, 1, 1),
+        'dilation': (1, 1, 1),
         'maxTempMemSizeInSamples': 0, 
         'upperPad': (0, 0, 0), 
         'lowerPad': (0, 0, 0),
@@ -51,7 +53,8 @@ def test_convolution_transpose_attributes():
     d = f.root_function.attributes
     expected = {'autoPadding': [False, False, False], 
         'sharing': [True, True, True], 
-        'strides': (1, 1, 1), 
+        'strides': (1, 1, 1),
+        'dilation': (1, 1, 1),
         'maxTempMemSizeInSamples': 0, 
         'upperPad': (0, 0, 0), 
         'lowerPad': (0, 0, 0),

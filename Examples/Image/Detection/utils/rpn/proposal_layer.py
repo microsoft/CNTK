@@ -10,12 +10,7 @@ import numpy as np
 import yaml
 from utils.rpn.generate_anchors import generate_anchors
 from utils.rpn.bbox_transform import bbox_transform_inv, clip_boxes
-from utils.rpn.nms_wrapper import nms
-
-try:
-    from config import cfg
-except ImportError:
-    from utils.default_config import cfg
+from utils.nms_wrapper import nms
 
 DEBUG = False
 
@@ -25,14 +20,14 @@ class ProposalLayer(UserFunction):
     transformations to a set of regular boxes (called "anchors").
     '''
 
-    def __init__(self, arg1, arg2, arg3, name='ProposalLayer', param_str=None):
-        super(ProposalLayer, self).__init__([arg1, arg2, arg3], name=name)
-        self.param_str_ = param_str if param_str is not None else "'feat_stride': 16\n'scales':\n - 8 \n - 16 \n - 32"
+    def __init__(self, arg1, arg2, arg3, layer_config, name='ProposalLayer'):
+        super(ProposalLayer, self).__init__([arg1, arg2, arg3], attributes=layer_config, name=name)
+
+        self._layer_config = layer_config
+        self._feat_stride = 16 if 'feat_stride' not in layer_config else layer_config['feat_stride']
+        anchor_scales = [8, 16, 32] if 'scales' not in layer_config else layer_config['scales']
 
         # parse the layer parameter string, which must be valid YAML
-        layer_params = yaml.load(self.param_str_)
-        self._feat_stride = layer_params['feat_stride']
-        anchor_scales = layer_params.get('scales', (8, 16, 32))
         self._anchors = generate_anchors(scales=np.array(anchor_scales))
         self._num_anchors = self._anchors.shape[0]
 
@@ -46,13 +41,10 @@ class ProposalLayer(UserFunction):
         # (n, x1, y1, x2, y2) specifying an image batch index n and a
         # rectangle (x1, y1, x2, y2)
         # for CNTK the proposal shape is [4 x roisPerImage], and mirrored in Python
-
-        # cfg_key = str(self.phase) # either 'TRAIN' or 'TEST' --> use FreeDimension and set output size in fwd
-        proposalShape = (cfg["TRAIN"].RPN_POST_NMS_TOP_N, 4)
-        #proposalShape = (FreeDimension, 4)
+        proposalShape = (FreeDimension, 4)
 
         return [output_variable(proposalShape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
-                                name="rpn_rois_raw", needs_gradient=False)] # , name="rpn_rois" | name="rpn_rois_raw"
+                            name="rpn_rois_raw", needs_gradient=False)]
 
     def forward(self, arguments, device=None, outputs_to_retain=None):
         # Algorithm:
@@ -68,18 +60,18 @@ class ProposalLayer(UserFunction):
         # take after_nms_topN proposals after NMS
         # return the top proposals (-> RoIs top, scores top)
 
-        # TODO: remove 'False and' once FreeDimension works
-        if False and len(outputs_to_retain) == 0:
+        # use potentially different number of proposals for training vs evaluation
+        if len(outputs_to_retain) == 0:
             # print("EVAL")
-            pre_nms_topN = cfg["TEST"].RPN_PRE_NMS_TOP_N
-            post_nms_topN = cfg["TEST"].RPN_POST_NMS_TOP_N
-            nms_thresh = cfg["TEST"].RPN_NMS_THRESH
-            min_size = cfg["TEST"].RPN_MIN_SIZE
+            pre_nms_topN = self._layer_config['test_pre_nms_topN']
+            post_nms_topN = self._layer_config['test_post_nms_topN']
+            nms_thresh = self._layer_config['test_nms_thresh']
+            min_size = self._layer_config['test_min_size']
         else:
-            pre_nms_topN = cfg["TRAIN"].RPN_PRE_NMS_TOP_N
-            post_nms_topN = cfg["TRAIN"].RPN_POST_NMS_TOP_N
-            nms_thresh = cfg["TRAIN"].RPN_NMS_THRESH
-            min_size = cfg["TRAIN"].RPN_MIN_SIZE
+            pre_nms_topN = self._layer_config['train_pre_nms_topN']
+            post_nms_topN = self._layer_config['train_post_nms_topN']
+            nms_thresh = self._layer_config['train_nms_thresh']
+            min_size = self._layer_config['train_min_size']
 
         bottom = arguments
         assert bottom[0].shape[0] == 1, \
@@ -89,11 +81,14 @@ class ProposalLayer(UserFunction):
         # the second set are the fg probs, which we want
         scores = bottom[0][:, self._num_anchors:, :, :]
         bbox_deltas = bottom[1]
-        im_info = bottom[2]
+        im_info = bottom[2][0]
 
         if DEBUG:
+            # im_info = (pad_width, pad_height, scaled_image_width, scaled_image_height, orig_img_width, orig_img_height)
+            # e.g.(1000, 1000, 1000, 600, 500, 300) for an original image of 600x300 that is scaled and padded to 1000x1000
             print ('im_size: ({}, {})'.format(im_info[0], im_info[1]))
-            print ('scale: {}'.format(im_info[2]))
+            print ('scaled im_size: ({}, {})'.format(im_info[2], im_info[3]))
+            print ('original im_size: ({}, {})'.format(im_info[4], im_info[5]))
 
         # 1. Generate proposals from bbox deltas and shifted anchors
         height, width = scores.shape[-2:]
@@ -140,17 +135,18 @@ class ProposalLayer(UserFunction):
         proposals = bbox_transform_inv(anchors, bbox_deltas)
 
         # 2. clip predicted boxes to image
-        proposals = clip_boxes(proposals, im_info[:2])
+        proposals = clip_boxes(proposals, im_info)
 
         # 3. remove predicted boxes with either height or width < threshold
-        # (NOTE: convert min_size to input image scale stored in im_info[2])
-        keep = _filter_boxes(proposals, min_size * im_info[2])
+        # (NOTE: convert min_size to input image scale. Original size = im_info[4:6], scaled size = im_info[2:4])
+        cntk_image_scale = im_info[2] / im_info[4]
+        keep = _filter_boxes(proposals, min_size * cntk_image_scale)
         proposals = proposals[keep, :]
         scores = scores[keep]
 
         # 4. sort all (proposal, score) pairs by score from highest to lowest
         # 5. take top pre_nms_topN (e.g. 6000)
-        order = scores.ravel().argsort()[::-1]
+        order = scores.ravel().argsort(kind='mergesort')[::-1]
         if pre_nms_topN > 0:
             order = order[:pre_nms_topN]
         proposals = proposals[order, :]
@@ -187,20 +183,16 @@ class ProposalLayer(UserFunction):
         pass
 
     def clone(self, cloned_inputs):
-        return ProposalLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], param_str=self.param_str_)
+        return ProposalLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], layer_config=self._layer_config)
 
     def serialize(self):
         internal_state = {}
-        internal_state['param_str'] = self.param_str_
-
+        internal_state['layer_config'] = self._layer_config
         return internal_state
 
     @staticmethod
     def deserialize(inputs, name, state):
-        param_str = state['param_str']
-
-        return ProposalLayer(inputs[0], inputs[1], inputs[2], name=name, param_str=param_str)
-
+        return ProposalLayer(inputs[0], inputs[1], inputs[2], layer_config=state['layer_config'], name=name)
 
 def _filter_boxes(boxes, min_size):
     """Remove all boxes with any side smaller than min_size."""

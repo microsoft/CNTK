@@ -531,6 +531,16 @@ namespace CNTK
         // -------------------
         // 
         { OpSpecificConditionKind::ToDo, {
+            // new ones after merge from master --TODO, sort and finish them
+            PrimitiveOpType::Sinh,
+            PrimitiveOpType::Cosh,
+            PrimitiveOpType::UnpackBatch,
+            PrimitiveOpType::ToBatch,
+            PrimitiveOpType::Asin,
+            PrimitiveOpType::Acos,
+            PrimitiveOpType::Pad,
+            PrimitiveOpType::Crop,
+            // end new ones after merge from master
             PrimitiveOpType::ROIPooling,   // need to find out how it works precisely--is it just like pooling?
             PrimitiveOpType::LambdaRank,
             PrimitiveOpType::NDCG,

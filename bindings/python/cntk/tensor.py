@@ -239,8 +239,10 @@ class ArrayMixin(object):
 
             def to_csr(dense_data):
                 if len(dense_data.shape) > 2:
-                    raise ValueError('Cannot convert a sparse NDArrayView or Value object '
-                                     'with shape %s of rank > 2 to a scipy.csr matrix.' % str(dense_data.shape))
+                    warnings.warn('Cannot convert a sparse NDArrayView or Value object '
+                                     'with shape %s of rank > 2 to a scipy.csr matrix.'
+                                     ' Returning dense data.' % str(dense_data.shape))
+                    return dense_data
                 return sparse.csr_matrix(dense_data)
 
             if isinstance(dense_data, list):

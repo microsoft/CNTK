@@ -31,7 +31,7 @@ def test_feature_extraction(device_id):
         model_file = os.path.join(extPath, *"PreTrainedModels/ResNet/v1/ResNet_18.model".split("/"))
         map_file = os.path.join(extPath, *"Image/CIFAR/v0/cifar-10-batches-py/test_map.txt".split("/"))
     else:
-        model_file = os.path.join(base_path, *"../../../../Examples/Image/PretrainedModels/ResNet_18.model".split("/"))
+        model_file = os.path.join(base_path, *"../../../../PretrainedModels/ResNet_18.model".split("/"))
         map_file = os.path.join(base_path, *"../../../../Examples/Image/DataSets/CIFAR-10/test_map.txt".split("/"))
 
     original_dir = os.curdir

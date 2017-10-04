@@ -31,6 +31,8 @@ public:
 
     bool ShouldSkipSequenceIds() const { return m_skipSequenceIds; }
 
+    bool ShouldCacheIndex() const { return m_cacheIndex; }
+
     unsigned int GetMaxAllowedErrors() const { return m_maxErrors; }
 
     unsigned int GetTraceLevel() const { return m_traceLevel; }
@@ -59,6 +61,8 @@ private:
     size_t m_chunkSizeBytes; // chunks size in bytes
     bool m_keepDataInMemory; // if true the whole dataset is kept in memory
     bool m_frameMode; // if true, the maximum expected sequence length in the dataset is one sample.
+    bool m_cacheIndex; // When true, the index will be loaded from a cache file it if exists.
+                       // If cache does not exist, the index, once created, will be written out to a file.
 };
 
 }

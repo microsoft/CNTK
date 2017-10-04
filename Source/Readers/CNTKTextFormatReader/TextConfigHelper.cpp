@@ -127,6 +127,7 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     m_chunkSizeBytes = config(L"chunkSizeInBytes", g_32MB); // 32 MB by default
     m_keepDataInMemory = config(L"keepDataInMemory", false);
     m_frameMode = config(L"frameMode", false);
+    m_cacheIndex = config(L"cacheIndex", false);
 
     m_randomizationWindow = GetRandomizationWindowFromConfig(config);
     m_sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", false);

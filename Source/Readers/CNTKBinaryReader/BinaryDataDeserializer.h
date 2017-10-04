@@ -7,9 +7,9 @@
 
 #include "DataDeserializerBase.h"
 #include "BinaryConfigHelper.h"
-#include "CorpusDescriptor.h"
 #include "BinaryDataChunk.h"
-#include "FileHelper.h"
+#include "FileWrapper.h"
+#include "Reader.h"
 
 namespace CNTK {
 
@@ -18,7 +18,7 @@ class BinaryDataDeserializer
 {
 public:
 
-    BinaryDataDeserializer(FILE* file, DataType precision = DataType::Float)
+    BinaryDataDeserializer(FileWrapper& file, DataType precision = DataType::Float)
     {
         ReadName(file);
         ReadDataType(file);
@@ -77,26 +77,26 @@ protected:
 
     virtual ~BinaryDataDeserializer() = default;
 
-    void ReadName(FILE* file)
+    void ReadName(FileWrapper& file)
     {
         uint32_t len;
         // read the name
-        CNTKBinaryFileHelper::ReadOrDie(&len, sizeof(len), 1, file);
+        file.ReadOrDie(len);
         vector<char> temp(len + 1 , '\0');
-        CNTKBinaryFileHelper::ReadOrDie(temp.data(), sizeof(char), len, file);
+        file.ReadOrDie(temp.data(), sizeof(char), len);
         m_name = msra::strfun::utf16(temp.data());
     }
 
-    void ReadDataType(FILE* file)
+    void ReadDataType(FileWrapper& file)
     {
-        CNTKBinaryFileHelper::ReadOrDie(&m_dataType, sizeof(m_dataType), 1, file);
+        file.ReadOrDie(m_dataType);
         if (m_dataType> ReaderDataType::tdouble)
             RuntimeError("Unsupported input data type %u.", (unsigned int)m_dataType);
     }
 
-    void ReadSampleSize(FILE* file)
+    void ReadSampleSize(FileWrapper& file)
     {
-        CNTKBinaryFileHelper::ReadOrDie(&m_sampleDimension, sizeof(m_sampleDimension), 1, file);
+        file.ReadOrDie(m_sampleDimension);
     }
 
     struct DenseInputStreamBuffer : DenseSequenceData
@@ -176,7 +176,7 @@ public:
 class SparseBinaryDataDeserializer : public BinaryDataDeserializer
 {
 public:
-    SparseBinaryDataDeserializer(FILE* file, DataType precision = DataType::Float)
+    SparseBinaryDataDeserializer(FileWrapper& file, DataType precision = DataType::Float)
         :BinaryDataDeserializer(file, precision)
     {
         if (IndexType(m_sampleDimension) < 0)

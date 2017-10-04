@@ -15,7 +15,7 @@ for /f "delims=" %%i in ('python -c "import cntk, os, sys; sys.stdout.write(os.p
 if errorlevel 1 exit /b 1
 
 where cntk && ^
-pytest %MODULE_DIR% -k "not test_create_two_image_deserializers and not test_base64_image_deserializer" && ^
+pytest %MODULE_DIR% -k "not test_create_two_image_deserializers and not test_base64_image_deserializer and not test_base64_is_equal_image and not test_crop_dimensionality" && ^
 cd cntk && ^
 cd Tutorials && ^
 python NumpyInterop/FeedForwardNet.py && ^

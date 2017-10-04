@@ -259,6 +259,16 @@ namespace CNTK
         case PrimitiveOpType::Assign:
             RuntimeError("Variable '%S' Value(): Memoziation of operation %S not applicable (applies only to static graphs).", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // special ops family
+        // TODO: these are new, need to finish them
+        case PrimitiveOpType::Sinh:
+        case PrimitiveOpType::Cosh:
+        case PrimitiveOpType::UnpackBatch:
+        case PrimitiveOpType::ToBatch:
+        case PrimitiveOpType::Asin:
+        case PrimitiveOpType::Acos:
+        case PrimitiveOpType::Pad:
+        case PrimitiveOpType::Crop:
+        // END new ops
         case PrimitiveOpType::LambdaRank:
         case PrimitiveOpType::NDCG:
         case PrimitiveOpType::EditDistanceError:

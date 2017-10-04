@@ -11,7 +11,7 @@
 #   <desired stream name> is the desired name for the input in CNTK.
 #   <stream alias> is the alias for the stream in the input file.
 #   <matrix type> is the matrix type, i.e., dense or sparse
-#   <sample dimension> is the dimensino of each sample for the input
+#   <sample dimension> is the dimension of each sample for the input
 #
 
 import sys
@@ -29,11 +29,14 @@ class ElementType:
 
 class MatrixEncodingType:
     DENSE = 0
-    SPARSE_CSC = 1
+    SPARSE = 1
+    # TODO: use varint encoding for sparse indices,
+    # use varint encoding for integer values,
+    # use a single byte for boolean values (e.g., one-hot values).
     #COMPRESSED_DENSE = 2
-    #COMPRESSED_SPARSE_CSC = 3
+    #COMPRESSED_SPARSE = 3
 
-# This will convert data in the ctf format into the binary format
+# This will convert data in the CTF format into the binary format
 class Converter(object):
     def __init__(self, name, sample_dim, element_type):
         self.name = name
@@ -44,17 +47,17 @@ class Converter(object):
 
     def write_header(self, output):
         # First is the matrix type.
-        output.write(struct.pack('B', self.get_matrix_type()))
-        # Nest comes the stream name.
-        output.write(struct.pack('I', len(self.name)))
+        output.write(struct.pack('<B', self.get_matrix_type()))
+        # Next comes the stream name.
+        output.write(struct.pack('<I', len(self.name)))
         output.write(self.name.encode('ascii'))
         # Next is the elem type
-        output.write(struct.pack('B', self.element_type))
+        output.write(struct.pack('<B', self.element_type))
         # Finally, the sample dimension.
-        output.write(struct.pack('I', self.sample_dim))
+        output.write(struct.pack('<I', self.sample_dim))
 
     def write_signed_ints(self, output, ints):
-        output.write(b''.join([struct.pack('i', x) for x in ints]))
+        output.write(b''.join([struct.pack('<i', x) for x in ints]))
 
     def write_floats(self, output, floats):
         format = 'f' if self.is_float() else 'd'
@@ -75,7 +78,7 @@ class Converter(object):
     def add_sample(self, sample):
         raise NotImplementedError()
 
-# Specilization for dense inputs
+# Specialization for dense inputs
 class DenseConverter(Converter):
 
     def get_matrix_type(self):
@@ -98,7 +101,7 @@ class DenseConverter(Converter):
 
     def write_data(self, output):
         for sequence in self.sequences:
-            output.write(struct.pack('I', len(sequence)))
+            output.write(struct.pack('<I', len(sequence)))
             for sample in sequence:
                 self.write_floats(output, sample)
 
@@ -127,12 +130,12 @@ class SparseConverter(Converter):
         return byte_size
 
     def get_matrix_type(self):
-        return MatrixEncodingType.SPARSE_CSC;
+        return MatrixEncodingType.SPARSE;
 
     def write_data(self, output):
         format = 'f' if self.is_float() else 'd'
         for sequence in self.sequences:
-            # write out each sequence in csc format
+            # write out each sequence in sparse format
             values = []
             indices = []
             sizes = []
@@ -143,10 +146,10 @@ class SparseConverter(Converter):
                     indices.append(index)
                     values.append(value)
 
-            output.write(struct.pack('I', len(sequence))) #number of samples in this sequence
+            output.write(struct.pack('<I', len(sequence))) #number of samples in this sequence
             # nnz and indices have to be written out as signed ints, since
             # this is the index type of the CNTK sparse matrix
-            output.write(struct.pack('i', len(values))) #total nnz count for this sequence
+            output.write(struct.pack('<i', len(values))) #total nnz count for this sequence
             self.write_floats(output, values)
             self.write_signed_ints(output, indices)
             self.write_signed_ints(output, sizes)
@@ -174,7 +177,7 @@ def write_chunk(binfile, converters, chunk):
     binfile.flush()
     chunk.offset = binfile.tell()
     # write out the number of samples for each sequence in the chunk
-    binfile.write(b''.join([struct.pack('I', x) for x in chunk.sequences]))
+    binfile.write(b''.join([struct.pack('<I', x) for x in chunk.sequences]))
 
     for converter in converters.values():
         converter.write_data(binfile)
@@ -226,32 +229,32 @@ class Header:
         output_file.flush()
         header_offset = output_file.tell()
         # First, write the magic number (uint64, 8 bytes)
-        output_file.write(struct.pack('Q', MAGIC_NUMBER));
+        output_file.write(struct.pack('<Q', MAGIC_NUMBER));
          # Next is the number of chunks (uint32, 4 bytes)
-        output_file.write(struct.pack('I', len(self.chunks)))
+        output_file.write(struct.pack('<I', len(self.chunks)))
         # Finally the number of input streams (uint32, 4 bytes)
-        output_file.write(struct.pack('I', len(self.converters)))
+        output_file.write(struct.pack('<I', len(self.converters)))
         for converter in self.converters.values():
             converter.write_header(output_file)
         # write the chunk table
         for chunk in self.chunks:
-            # uint64: start offset for chunk
-            output_file.write(struct.pack('q', chunk.offset))
+            # int64: start offset for chunk
+            output_file.write(struct.pack('<q', chunk.offset))
             # uint32: number of sequences in the chunk
-            output_file.write(struct.pack('I', chunk.num_sequences()))
+            output_file.write(struct.pack('<I', chunk.num_sequences()))
             # uint32: number of samples in the chunk
-            output_file.write(struct.pack('I', chunk.num_samples()))
+            output_file.write(struct.pack('<I', chunk.num_samples()))
 
-        output_file.write(struct.pack('q', header_offset))
+        output_file.write(struct.pack('<q', header_offset))
 
 def process(input_name, output_name, streams, element_type, chunk_size=32<<20):
     converters = build_converters(streams, element_type)
 
     output = open(output_name, "wb")
     # The very first 8 bytes of the file is the CBF magic number.
-    output.write(struct.pack('Q', MAGIC_NUMBER));
+    output.write(struct.pack('<Q', MAGIC_NUMBER));
     # Next 4 bytes is the CBF version.
-    output.write(struct.pack('I', CBF_VERSION));
+    output.write(struct.pack('<I', CBF_VERSION));
 
 
     header = Header(converters)

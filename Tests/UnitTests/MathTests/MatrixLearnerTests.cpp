@@ -81,9 +81,9 @@ BOOST_FIXTURE_TEST_CASE(FSAdagradSparse, MatrixLearnerFixture)
 {
     // run learner
     double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = 0.5;
-    matSG.FSAdagradUpdate(matG, matM, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, 0.0001, 1.0, 0.9, false);
+    matSG.FSAdagradUpdate(matG, matM, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, 0.0001, 1.0, 0.9, 1.0);
 
-    matSGsparse.FSAdagradUpdate(matGsparseBSC, matMsparse, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, 0.0001, 1.0, 0.9, false);
+    matSGsparse.FSAdagradUpdate(matGsparseBSC, matMsparse, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, 0.0001, 1.0, 0.9, 1.0);
 
     BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE5));
     BOOST_CHECK(matM.IsEqualTo(matMsparse, c_epsilonFloatE5));

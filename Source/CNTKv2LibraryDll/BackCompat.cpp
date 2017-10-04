@@ -147,10 +147,18 @@ namespace CNTK
                     opType = PrimitiveOpType::StableSigmoid;
                 else if (node->OperationName() == OperationNameOf(TanhNode))
                     opType = PrimitiveOpType::Tanh;
+                else if (node->OperationName() == OperationNameOf(AsinNode))
+                    opType = PrimitiveOpType::Asin;
+                else if (node->OperationName() == OperationNameOf(AcosNode))
+                    opType = PrimitiveOpType::Acos;
                 else if (node->OperationName() == OperationNameOf(CosineNode))
                     opType = PrimitiveOpType::Cos;
                 else if (node->OperationName() == OperationNameOf(SinNode))
                     opType = PrimitiveOpType::Sin;
+                else if (node->OperationName() == OperationNameOf(CoshNode))
+                    opType = PrimitiveOpType::Cosh;
+                else if (node->OperationName() == OperationNameOf(SinhNode))
+                    opType = PrimitiveOpType::Sinh;
                 else if (node->OperationName() == OperationNameOf(PassNode))
                     opType = PrimitiveOpType::Pass;
                 else if (node->OperationName() == OperationNameOf(LabelsToGraphNode))
@@ -324,7 +332,7 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(ReduceElementsNode))
                 {
                     auto reduceElementsNode = node->As<ReduceElementsNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(reduceElementsNode->ReductionAxis());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(AsAxis(reduceElementsNode->ReductionAxis()));
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameReductionOpName] = reduceElementsNode->ReductionOpName();
 
                     opType = PrimitiveOpType::ReduceElements;
@@ -517,6 +525,10 @@ namespace CNTK
                     std::tie(uid, name) = UidAndNameFromCNTKInternalNodeName(node->NodeName());
 
                     return PerDimMeanVarianceNormalize(inputVars[0], meanValue, invStdDevValue, name);
+                }
+                else if (node->OperationName() == OperationNameOf(CropNode))
+                {
+                    opType = PrimitiveOpType::Crop;
                 }
                 else
                     InvalidArgument("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model.\n"

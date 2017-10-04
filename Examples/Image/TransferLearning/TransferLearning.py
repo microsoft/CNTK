@@ -44,7 +44,7 @@ momentum_per_mb = 0.9
 l2_reg_weight = 0.0005
 
 # define base model location and characteristics
-_base_model_file = os.path.join(base_folder, "..", "PretrainedModels", "ResNet_18.model")
+_base_model_file = os.path.join(base_folder, "..", "..", "..", "PretrainedModels", "ResNet18_ImageNet_CNTK.model")
 _feature_node_name = "features"
 _last_hidden_node_name = "z.x"
 _image_height = 224

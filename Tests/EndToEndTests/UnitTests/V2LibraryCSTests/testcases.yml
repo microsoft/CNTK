@@ -1,0 +1,16 @@
+dataDir: .
+
+tags:
+  # CPU-only for now.
+  - bvt-i (build_sku == 'cpu') and (os == 'windows')
+  - nightly-i (build_sku == 'cpu') and (os == 'windows')
+  - weekly-i (build_sku == 'cpu') and (os == 'windows')
+
+testCases:
+  Each test passes:
+    patterns:
+      - Passed
+
+  Test run successful:
+    patterns:
+      - "Test Run Successful."

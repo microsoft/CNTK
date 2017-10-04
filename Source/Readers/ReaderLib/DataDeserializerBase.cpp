@@ -5,7 +5,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "DataDeserializerBase.h"
-#include "Indexer.h"
+#include "Index.h"
 
 namespace CNTK {
 

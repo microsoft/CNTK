@@ -118,6 +118,14 @@ void CropTransformer::StartEpoch(const EpochConfiguration &config)
     ImageTransformerBase::StartEpoch(config);
 }
 
+// For crop we set the current sample layout to Unknown, because the output shape depends on the input image.
+StreamInformation CropTransformer::Transform(const StreamInformation& inputStream)
+{
+    TransformBase::Transform(inputStream);
+    m_outputStream.m_sampleLayout = NDShape::Unknown();
+    return m_outputStream;
+}
+
 void CropTransformer::Apply(uint8_t copyId, cv::Mat &mat)
 {
     auto seed = GetSeed();

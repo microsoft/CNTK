@@ -21,6 +21,14 @@
       <Configuration>Release_CpuOnly</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_UWP|x64">
+      <Configuration>Debug_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_UWP|x64">
+      <Configuration>Release_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F0A9637C-20DA-42F0-83D4-23B4704DE602}</ProjectGuid>
@@ -39,8 +47,13 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <TargetName>Cntk.Reader-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.Reader$(OutputSuffix)-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="$(IsUWP)">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\PerformanceProfilerDll;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
@@ -53,8 +66,13 @@
     <ClInclude Include="ChunkCache.h" />
     <ClInclude Include="ChunkRandomizer.h" />
     <ClInclude Include="ExceptionCapture.h" />
-    <ClInclude Include="Indexer.h" />
-    <ClInclude Include="MemoryBuffer.h" />
+    <ClInclude Include="FileWrapper.h" />
+    <ClInclude Include="Index.h" />
+    <ClInclude Include="IndexBuilder.h" />
+    <ClInclude Include="BufferedFileReader.h" />
+    <ClInclude Include="LTTumblingWindowRandomizer.h" />
+    <ClInclude Include="LTNoRandomizer.h" />
+    <ClInclude Include="LocalTimelineRandomizerBase.h" />
     <ClInclude Include="ReaderBase.h" />
     <ClInclude Include="ReaderConstants.h" />
     <ClInclude Include="SequenceData.h" />
@@ -85,8 +103,12 @@
     <ClCompile Include="ChunkCache.cpp" />
     <ClCompile Include="ChunkRandomizer.cpp" />
     <ClCompile Include="DataDeserializerBase.cpp" />
-    <ClCompile Include="Indexer.cpp" />
-    <ClCompile Include="MemoryBuffer.cpp" />
+    <ClCompile Include="Index.cpp" />
+    <ClCompile Include="IndexBuilder.cpp" />
+    <ClCompile Include="BufferedFileReader.cpp" />
+    <ClCompile Include="LTTumblingWindowRandomizer.cpp" />
+    <ClCompile Include="LTNoRandomizer.cpp" />
+    <ClCompile Include="LocalTimelineRandomizerBase.cpp" />
     <ClCompile Include="NoRandomizer.cpp" />
     <ClCompile Include="BlockRandomizer.cpp" />
     <ClCompile Include="PackerBase.cpp" />

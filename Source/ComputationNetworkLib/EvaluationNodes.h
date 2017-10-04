@@ -902,7 +902,7 @@ private:
     Matrix<ElemType> mBacktrace;
 
     int mStartLab; // the starting output label
-    int mEndLab;   // the ending output label, if avaliable
+    int mEndLab;   // the ending output label, if available
     ElemType m_default_activity;
 
 public:

@@ -211,15 +211,15 @@ public:
     void AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
 
     void SGDUpdate(Matrix<ElemType>& gradients, ElemType learnRatePerSample);
-    void MomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, bool unitGainMomentum = true);
-    void NesterovAcceleratedMomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, bool unitGainMomentum = true);
+    void MomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, ElemType unitGainFactor);
+    void NesterovAcceleratedMomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, ElemType unitGainFactor);
 
     ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
     void FSAdagradUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
-                         const double learnRatePerSample, const double meanMomentum, const double varMomentum, bool unitGainMomentum = true);
+                         const double learnRatePerSample, const double meanMomentum, const double varMomentum, ElemType unitGainFactor);
 
     void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double smoothedCount,
-        const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, bool unitGainMomentum = true, bool adamax = false);
+        const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, ElemType unitGainFactor, bool adamax = false);
 
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier, const bool initialized);
 
@@ -294,6 +294,8 @@ public:
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const ElemType val, size_t colInd);
     void SetColumn(const Matrix<ElemType>& valMat, size_t colInd);
+
+    void AdjustSparseBlockColumn(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
 
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const Matrix<ElemType>& vector);
@@ -412,6 +414,18 @@ public:
 
     Matrix<ElemType>& InplaceNegativeSine();
     Matrix<ElemType>& AssignNegativeSineOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceAcos();
+    Matrix<ElemType>& AssignAcosOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceAsin();
+    Matrix<ElemType>& AssignAsinOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceCosh();
+    Matrix<ElemType>& AssignCoshOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceSinh();
+    Matrix<ElemType>& AssignSinhOf(const Matrix<ElemType>& a);
 
     Matrix<ElemType>& InplaceLog10();
     Matrix<ElemType>& AssignLog10Of(const Matrix<ElemType>& a);

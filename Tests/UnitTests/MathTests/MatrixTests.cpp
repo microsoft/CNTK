@@ -1244,7 +1244,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSGDUpdate, RandomSeedFixture)
             }
 
             p1.SGDUpdate(g1, lr);
-            p2.MomentumSGDUpdate(g2, sg2, lr, 0.0);
+            p2.MomentumSGDUpdate(g2, sg2, lr, 0.0, 1.0);
 
             // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
             BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
@@ -1282,16 +1282,16 @@ BOOST_FIXTURE_TEST_CASE(MatrixMomentumSGDUpdate_WithAndWithout_UnitGain, RandomS
 
         for (; lr > 0.01; lr = lr / 2)
         {
-            p1.MomentumSGDUpdate(g1, sg1, lr, 0.0, true);
-            p2.MomentumSGDUpdate(g2, sg2, lr, 0.0, false);
+            p1.MomentumSGDUpdate(g1, sg1, lr, 0.0, 1.0);
+            p2.MomentumSGDUpdate(g2, sg2, lr, 0.0, 1.0);
             // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
             BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
 
         for (lr = 1.0; lr > 0.03; lr = lr / 2)
         {
-            p1.MomentumSGDUpdate(g1, sg1, lr, 0.5, true);
-            p2.MomentumSGDUpdate(g2, sg2, lr/2, 0.5, false);
+            p1.MomentumSGDUpdate(g1, sg1, lr, 0.5, 0.5);
+            p2.MomentumSGDUpdate(g2, sg2, lr/2, 0.5, 1.0);
             // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
             BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
@@ -1300,8 +1300,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixMomentumSGDUpdate_WithAndWithout_UnitGain, RandomS
         BOOST_CHECK(g1.IsEqualTo(g2, c_epsilonFloatE5));
         BOOST_CHECK(sg1.IsEqualTo(sg2, c_epsilonFloatE5));
 
-        p1.MomentumSGDUpdate(g1, sg1, lr, 0.5, true);
-        p2.MomentumSGDUpdate(g2, sg2, lr, 0.5, false);
+        p1.MomentumSGDUpdate(g1, sg1, lr, 0.5, 0.5);
+        p2.MomentumSGDUpdate(g2, sg2, lr, 0.5, 1.0);
         // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
         BOOST_CHECK(!p1.IsEqualTo(p2, c_epsilonFloatE5));
 
@@ -1330,16 +1330,16 @@ BOOST_FIXTURE_TEST_CASE(MatrixNesterovAcceleratedMomentumSGDUpdate_WithAndWithou
 
         for (; lr > 0.01; lr = lr / 2)
         {
-            p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.0, true);
-            p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr, 0.0, false);
+            p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.0, 1.0);
+            p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr, 0.0, 1.0);
             // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
             BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
 
         for (lr = 1.0; lr > 0.03; lr = lr / 2)
         {
-            p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.5, true);
-            p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr/2, 0.5, false);
+            p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.5, 0.5);
+            p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr/2, 0.5, 1.0);
             // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
             BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
@@ -1348,8 +1348,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixNesterovAcceleratedMomentumSGDUpdate_WithAndWithou
         BOOST_CHECK(g1.IsEqualTo(g2));
         BOOST_CHECK(sg1.IsEqualTo(sg2));
 
-        p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.5, true);
-        p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr, 0.5, false);
+        p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.5, 0.5);
+        p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr, 0.5, 1.0);
 
         // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
         BOOST_CHECK(!p1.IsEqualTo(p2, c_epsilonFloatE5));
@@ -1384,8 +1384,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixFSAdagradUpdate_WithAndWithout_UnitGain, RandomSee
             double varMomentum = 1.0 - lr;
             double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = targetAdagradAvDenom * sqrt(smoothedCount);
 
-            sg1.FSAdagradUpdate(g1, p1, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.0, varMomentum, true);
-            sg2.FSAdagradUpdate(g2, p2, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.0, varMomentum, true /*false*/);
+            sg1.FSAdagradUpdate(g1, p1, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.0, varMomentum, 1.0);
+            sg2.FSAdagradUpdate(g2, p2, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.0, varMomentum, 1.0 /*false*/);
             // BUGBUG: at the moment this fails even with identical arguments.
             // BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
@@ -1400,8 +1400,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixFSAdagradUpdate_WithAndWithout_UnitGain, RandomSee
             double varMomentum = 1.0 - lr;
             double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = targetAdagradAvDenom * sqrt(smoothedCount);
 
-            sg1.FSAdagradUpdate(g1, p1, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.5, varMomentum, true);
-            sg2.FSAdagradUpdate(g2, p2, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr /*lr/2*/, 0.5, varMomentum, true /*false*/);
+            sg1.FSAdagradUpdate(g1, p1, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.5, varMomentum, 0.5);
+            sg2.FSAdagradUpdate(g2, p2, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr /*lr/2*/, 0.5, varMomentum, 0.5 /*false*/);
             // BUGBUG: at the moment this fails even with identical arguments.
             // BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }

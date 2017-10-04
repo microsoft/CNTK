@@ -1,6 +1,23 @@
-%module(directors="1") cntk_py
-//%feature("autodoc", "1");
+%module(directors="1", threads="1") cntk_py
 
+// By default we do not release thread lock, we do this
+// for a set of long running C++ operations.
+%feature("nothreadallow");
+
+%threadallow CNTK::MinibatchSource::GetNextMinibatch;
+%threadallow CNTK::MinibatchSource::StreamInfos;
+%threadallow CNTK::MinibatchSource::GetCheckpointState;
+%threadallow CNTK::MinibatchSource::RestoreFromCheckpoint;
+%threadallow CNTK::MinibatchSource::~MinibatchSource;
+
+%threadallow CNTK::Trainer::TrainMinibatch;
+%threadallow CNTK::Trainer::TestMinibatch;
+%threadallow CNTK::Trainer::SaveCheckpoint;
+%threadallow CNTK::Trainer::RestoreFromCheckpoint;
+
+%threadallow CNTK::Evaluator::TestMinibatch;
+
+%threadallow CNTK::TrainingSession::Train;
 
 %include "stl.i"
 %include "std_wstring.i"
@@ -45,6 +62,12 @@
 %rename(_register_udf_deserialize_callback) CNTK::Internal::RegisterUDFDeserializeCallbackWrapper;
 %rename(base64_image_deserializer) CNTK::Base64ImageDeserializer;
 %rename(_none) CNTK::DictionaryValue::Type::None;
+%rename(nce_loss) CNTK::NCELoss;
+
+%rename(_register_deserializer_factory) CNTK::RegisterDeserializerFactory;
+%rename(_stream_infos) CNTK::SwigDataDeserializer::_GetStreamInfos;
+%rename(_chunk_infos) CNTK::SwigDataDeserializer::_GetChunkInfos;
+%rename(_get_chunk) CNTK::SwigDataDeserializer::_GetChunk;
 
 %include "CNTKWarnFilters.i"
 
@@ -66,12 +89,21 @@
 %ignore CNTK::Dictionary::operator=;
 %ignore CNTK::Dictionary::operator[];
 
+%ignore CNTK::TrainingParameterSchedule::TrainingParameterSchedule(TrainingParameterSchedule<T>&&); 
+%ignore CNTK::TrainingParameterSchedule(const std::vector<T>&, std::size_t);
 %ignore CNTK::TrainingParameterSchedule::operator=;
 %ignore CNTK::TrainingParameterSchedule::operator[];
+%attribute(CNTK::TrainingParameterSchedule<double>, std::size_t, minibatch_size, GetMinibatchSize, SetMinibatchSize);
+%attribute(CNTK::TrainingParameterSchedule<std::size_t>, std::size_t, minibatch_size, GetMinibatchSize, SetMinibatchSize);
+%attribute(CNTK::Learner, std::size_t, minibatch_size, GetMinibatchSize, SetMinibatchSize);
+// for internal test purpose
+%attribute(CNTK::Learner, CNTK::LearningRateSchedule, _learning_rate_schedule, GetLearningRateSchedule, SetLearningRateSchedule);
 
 %ignore CNTK::GetCheckedMode;
 
 %ignore CNTK::Internal::Optional::operator=;
+
+%ignore CNTK::NDArrayView::AdjustSparseBlockColumn;
 
 // renaming overloads for TrainMinibatch and TestMinibatch that take a map
 // of Variables and MinibatchData as their first parameter. If this is not done,
@@ -85,6 +117,12 @@
 
 %rename(l1_regularization_weight) CNTK::AdditionalLearningOptions::l1RegularizationWeight;
 %rename(l2_regularization_weight) CNTK::AdditionalLearningOptions::l2RegularizationWeight;
+%rename(ignored_minibatch_size) CNTK::TrainingParameterSchedule<double>::IgnoredMinibatchSize;
+%rename(ignored_minibatch_size) CNTK::TrainingParameterSchedule<std::size_t>::IgnoredMinibatchSize;
+%rename(_MINIBATCH_SIZE) CNTK::Learner::MinibatchSizeKey; // L"MinibatchSize"
+%rename(ignored_minibatch_size)  CNTK::Learner::IgnoredMinibatchSize;
+%rename(_options) CNTK::Learner::GetOptions;
+
 %rename(ndcg_at_1) CNTK::NDCGAt1;
 
 // if we don't except RandomUniform the corresponding template functions will not be generated
@@ -438,6 +476,13 @@ fail:   return false;
             case CNTK::DictionaryValue::Type::NDShape:
                 val = NDShapeToTuple(dictVal.Value<CNTK::NDShape>());
                 break;
+            case CNTK::DictionaryValue::Type::TrainingParameterSchedule:
+            {
+                CNTK::TrainingParameterSchedule<double>* schedulePtr = new CNTK::TrainingParameterSchedule<double>(dictVal.Value<CNTK::TrainingParameterSchedule<double>>());
+                
+                val = SWIG_NewPointerObj(schedulePtr, $descriptor(CNTK::TrainingParameterSchedule<double>), 1);
+                break;
+            }
             case CNTK::DictionaryValue::Type::Axis:
                 val = PyTuple_New(3);
                 if (val == NULL)
@@ -629,6 +674,7 @@ public:
 %feature("nodirector") CNTK::Function::OpName;
 // Callback support
 %feature("director") CNTK::Internal::UDFDeserializeCallbackWrapper;
+%feature("director") CNTK::DeserializerFactory;
 
 %typemap(directorout) std::shared_ptr<CNTK::Function> (void * swig_argp, int swig_res = 0) {
   if ($input == Py_None) {
@@ -671,12 +717,24 @@ public:
 %feature("nodirector") CNTK::SwigMinibatchSource::GetNextMinibatch;//(size_t minibatchSizeInSamples, size_t minibatchSizeInSequences, size_t numberOfWorkers, size_t workerRank, const DeviceDescriptor&);
 %feature("nodirector") CNTK::SwigMinibatchSource::GetCheckpointState;
 
+%feature("director") CNTK::SwigDataDeserializer;
+%feature("nodirector") CNTK::SwigDataDeserializer::StreamInfos;
+%feature("nodirector") CNTK::SwigDataDeserializer::ChunkInfos;
+%feature("nodirector") CNTK::SwigDataDeserializer::SequenceInfosForChunk;
+
+%feature("nodirector") CNTK::SwigDataDeserializer::GetSequenceInfo;
+%feature("nodirector") CNTK::SwigDataDeserializer::GetChunk;
+
+%feature("director") CNTK::SwigChunk;
+%feature("nodirector") CNTK::SwigChunk::GetSequence;
+
 %{
     #include "CNTKLibrary.h"
     #include "CNTKLibraryExperimental.h"
     #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
     #include "numpy/ndarraytypes.h"
     #include "numpy/arrayobject.h"
+    #include "SwigDeserializer.h"
     using namespace CNTK;
 %}
 
@@ -724,6 +782,12 @@ public:
 
 %typemap(out, fragment="NDShapeToTuple") CNTK::NDShape {
     $result = NDShapeToTuple($1);
+}
+
+%extend CNTK::TrainingParameterSchedule {
+   T __getitem__(size_t count) {
+    return (*$self)[count];
+  }
 }
 
 %extend CNTK::NDShape {
@@ -843,17 +907,15 @@ public:
     $input = DictionaryToPy($1);
 }
 
-// Implementing typemapping for InferOutputs virtual function that takes vector of variables by reference
-// And can be implemented in Python.
-
-%typemap(directorin) std::vector<CNTK::Variable>& outputs
+%define %vector_ref_conversion_directorargin(DATA_TYPE, NAME)
+%typemap(directorin) std::vector<DATA_TYPE>& NAME
 {
     $input = PyList_New(0);
 }
+%enddef
 
-%define %unordered_vector_ref_conversion_directorargout(DATA_TYPE)
-
-%typemap(directorargout) std::vector<DATA_TYPE>& outputs
+%define %vector_ref_conversion_directorargout(DATA_TYPE, NAME)
+%typemap(directorargout) std::vector<DATA_TYPE>& NAME
 {
     if (!PyList_Check($input))
         RuntimeError("List expected");
@@ -866,12 +928,12 @@ public:
      while ((item = PyIter_Next(iterator.get())))
      {
          void *raw_var = nullptr;
-         int res = SWIG_ConvertPtr(item, &raw_var, swig::type_info<DATA_TYPE>(),  0);
+         int res = SWIG_ConvertPtr(item, &raw_var, swig::type_info<DATA_TYPE>(), 0);
          if (!SWIG_IsOK(res))
-             RuntimeError("Cannot convert list element to CNTK::Variable");
+             RuntimeError("Cannot convert list element to DATA_TYPE");
 
          if (!raw_var)
-             RuntimeError("Invalid null reference when converting a list element to CNTK::Variable");
+             RuntimeError("Invalid null reference when converting a list element to DATA_TYPE");
 
          auto var = reinterpret_cast<DATA_TYPE*>(raw_var);
          $1.push_back(*var);
@@ -1361,8 +1423,13 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %unordered_map_ref_conversion_directorin(CNTK::Variable,  $descriptor(CNTK::Variable *), CNTK::ValuePtr, $descriptor(CNTK::ValuePtr *))
 %unordered_map_ref_conversion_directorin(CNTK::Parameter, $descriptor(CNTK::Parameter *), CNTK::NDArrayViewPtr, $descriptor(CNTK::NDArrayViewPtr *))
 
-%unordered_vector_ref_conversion_directorargout(CNTK::Variable)
-%unordered_vector_ref_conversion_directorargout(CNTK::StreamInformation)
+%vector_ref_conversion_directorargin(CNTK::Variable, outputs)
+%vector_ref_conversion_directorargout(CNTK::Variable, outputs)
+
+%vector_ref_conversion_directorargin(CNTK::StreamInformation,)
+%vector_ref_conversion_directorargout(CNTK::StreamInformation,)
+%vector_ref_conversion_directorargin(CNTK::ChunkInfo,)
+%vector_ref_conversion_directorargout(CNTK::ChunkInfo,)
 
 %define %unordered_map_ref_conversion(DATA_TYPE1, _SWIG_TYPE1, DATA_TYPE2, _SWIG_TYPE2)
 
@@ -1419,10 +1486,18 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::Internal::TensorBoardFileWriter)
 %shared_ptr(CNTK::ProgressWriter)
 %shared_ptr(CNTK::Internal::UDFDeserializeCallbackWrapper)
+%shared_ptr(CNTK::DeserializerFactory)
+%shared_ptr(CNTK::SwigMinibatchSource)
+%shared_ptr(CNTK::SwigDataDeserializer)
+%shared_ptr(CNTK::SwigChunk)
+%shared_ptr(CNTK::TrainingParameterSchedule<double>)
+%shared_ptr(CNTK::TrainingParameterSchedule<size_t>)
+
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibraryExperimental.h"
 %include "CNTKLibrary.h"
+%include "SwigDeserializer.h"
 
 %inline %{
    // Trainer initializers.
@@ -1463,9 +1538,6 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
     class SwigMinibatchSource;
     typedef std::shared_ptr<SwigMinibatchSource> SwigMinibatchSourcePtr;
 %}
-
-%shared_ptr(CNTK::SwigMinibatchSource)
-
 
 %inline %{
 namespace CNTK
@@ -1512,6 +1584,7 @@ namespace CNTK
         const std::unordered_set<StreamInformation>& StreamInfos() override
         {
             std::call_once(m_streamInfosInitFlag, [this]() {
+                GilStateGuard gilGuard;
                 PyObject *pylist = PyList_New(0);
 
                 // Necassary due to SWIG convention, it seems the reference is stolen by the function,
@@ -1560,6 +1633,7 @@ namespace CNTK
             size_t workerRank,
             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) override
         {
+            GilStateGuard gilGuard;
             PyObject* pyInfoMap = PyDict_New();
 
             // Necassary due to SWIG convention, it seems the reference is stolen by the function,
@@ -1604,10 +1678,62 @@ namespace CNTK
 
         Dictionary GetCheckpointState() const
         {
+            GilStateGuard gilGuard;
             return _GetCheckpointState();
         }
     };
 }
+
+namespace CNTK
+{
+    // Factory for Python user deserializers.
+    class DeserializerFactory
+    {
+    public:
+        // Creates a deserializer for a given object id.
+        virtual DataDeserializerPtr operator()(const std::wstring& /*id*/) const
+        {
+            LogicError("Deserializer factory should be implemented by Python.");
+            return nullptr; 
+        }
+
+        virtual ~DeserializerFactory() = default;
+    };
+
+    static std::shared_ptr<DeserializerFactory> s_deserializerFactory;
+
+    void RegisterDeserializerFactory(std::shared_ptr<DeserializerFactory> factoryImpl)
+    {
+        s_deserializerFactory = factoryImpl;
+    }
+}
+
+#ifdef _WIN32
+#define CNTKPYTHON_API __declspec(dllexport)
+#else // no DLLs on Linux
+#define CNTKPYTHON_API
+#endif
+
+// From the reader perspective the Python deserializer is no different
+// from any other deserializer. It is implemented in _cntk_py.pyd module
+// that exposes CreateDeserializer function.
+// The only difference is that on the Python side CreateDeserializer
+// is not creating a new object, but returning a reference to already created object.
+// Python deserializers get all configuration already on the Python side, i.e.
+//    deserializer = CSVDeserializer(blabla)
+//    mbsource = MinibatchSource([deserializer]);  <-- we register Python deserializer object inside this call
+//                                                     end when CreateDeserializer is called from C++ side
+//                                                     we return a reference to it.
+// CreateDeserializer retrieves an earlier created user deserializer by its id.
+extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deserializer, const std::wstring& id)
+{
+    if(CNTK::s_deserializerFactory == nullptr)
+        RuntimeError("Deserializer factory has not been registered.");
+
+    deserializer = (*CNTK::s_deserializerFactory)(id);
+    return true;
+}
+
 %}
 
 //
@@ -1826,12 +1952,12 @@ namespace CNTK
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 %template(DictionaryValueFromNDArrayView) CNTK::DictionaryValue::DictionaryValue<CNTK::NDArrayView>;
+%template(DictionaryValueFromTrainingDoubleParameterSchedule) CNTK::DictionaryValue::DictionaryValue<CNTK::TrainingParameterSchedule<double>>;
 
-%template(training_parameter_per_sample_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
-%template(training_parameter_per_minibatch_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Minibatch>;
-
-typedef CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample> MinibatchSizeSchedule;
-%template(minibatch_size_schedule) CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample>;
+typedef CNTK::TrainingParameterSchedule<size_t> MinibatchSizeSchedule;
+%template(minibatch_size_schedule)  CNTK::TrainingParameterSchedule<size_t>;
+typedef CNTK::TrainingParameterSchedule<double> TrainingDoubleParameterSchedule;
+%template(training_double_parameter_schedule) CNTK::TrainingParameterSchedule<double>;
 
 %template(OptionalBool) CNTK::Internal::Optional<bool>;
 
@@ -1877,6 +2003,8 @@ namespace CNTK {
 
         virtual ~UserBackPropState()
         {
+            // Can be called from C++.
+            GilStateGuard gilGuard;
             Py_DECREF(m_userData);
         }
 

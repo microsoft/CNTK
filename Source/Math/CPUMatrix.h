@@ -94,10 +94,10 @@ public:
     ElemType Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
     
     void FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, 
-                   ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+                   ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType unitGainFactor);
 
     void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax=false);
+              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax=false);
 
     ElemType RmsProp(CPUMatrix<ElemType>& gradients,
                      ElemType RMS_GAMMA,
@@ -255,6 +255,18 @@ public:
 
     CPUMatrix<ElemType>& InplaceNegativeSine();
     CPUMatrix<ElemType>& AssignNegativeSineOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceAcos();
+    CPUMatrix<ElemType>& AssignAcosOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceAsin();
+    CPUMatrix<ElemType>& AssignAsinOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceCosh();
+    CPUMatrix<ElemType>& AssignCoshOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceSinh();
+    CPUMatrix<ElemType>& AssignSinhOf(const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& InplaceAbs();
     CPUMatrix<ElemType>& AssignAbsOf(const CPUMatrix<ElemType>& a);

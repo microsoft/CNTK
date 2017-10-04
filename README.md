@@ -2,12 +2,39 @@
 
 ## Latest news 
 
-***2017-07-07.*** CNTK July interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2064). 
+***2017-09-25.*** CNTK September interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2410). 
 
-***2017-06-26.*** A great class for getting started with both Deep Learning and CNTK, [Deep Learning Explained](https://www.edx.org/course/deep-learning-explained-microsoft-dat236x) is now available on edX.
+***2017-09-24.*** CNTK R-binding now available [here](https://github.com/Microsoft/CNTK-R). 
 
-***2017-06-01.* CNTK 2.0 is released.**
-The first production release of Cognitive Toolkit v.2. See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_0_Release_Notes), and get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
+***2017-09-15.* CNTK 2.2**  
+Release of Cognitive Toolkit v2.2. 
+
+Hightlights: 
+* NCCL 2 support 
+* New learner interface 
+* A C#/.NET API that enables people to build and train networks 
+* New C++ and C# eval examples 
+* New nodes 
+* Tensorboard image support for CNTK
+
+See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_2_Release_Notes).  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
+
+***2017-08-04.*** CNTK August interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2194). 
+
+***2017-07-31.* CNTK 2.1**  
+Release of Cognitive Toolkit v.2.1.
+
+Highlights:
+* cuDNN 6.0 integration
+* Support of Universal Windows Platform (UWP)
+* Improvements in backend for Keras
+* Performance improvements
+* New manuals, tutorials and examples
+* Multiple bug fixes
+
+See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_1_Release_Notes).  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
 
 See [all news](https://docs.microsoft.com/en-us/cognitive-toolkit/news)
 
@@ -35,6 +62,7 @@ You may learn more about CNTK with the following resources:
 * [Manual](https://github.com/Microsoft/CNTK/tree/master/Manual)
 * [Tutorials](https://docs.microsoft.com/en-us/cognitive-toolkit/tutorials)
 * [Examples](https://docs.microsoft.com/en-us/cognitive-toolkit/Examples)
+* [Pretrained models](./PretrainedModels)
 * [Blog](https://www.microsoft.com/en-us/cognitive-toolkit/blog/)
 * [Presentations](https://docs.microsoft.com/en-us/cognitive-toolkit/Presentations)
 * [License](./LICENSE.md)

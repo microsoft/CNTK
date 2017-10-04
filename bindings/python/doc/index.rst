@@ -1,4 +1,3 @@
-
 .. some aliases
 .. _CNTK: https://cntk.ai/
 
@@ -23,6 +22,7 @@ them on sample data in real time. Please give feedback through these :cntkwiki:`
    Working with Sequences <sequence>
    Tutorials <tutorials>
    Examples <examples>
+   Manuals <manuals>
    Layers Library Reference  <layerref>
    Python API Reference <cntk>
    Readers, Multi-GPU, Profiling...<readersprofetc>

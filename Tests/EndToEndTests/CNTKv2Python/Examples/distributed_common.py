@@ -45,12 +45,12 @@ def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error,
     str_out = mpiexec_execute(script, mpiexec_params, params, timeout_seconds, device_id, use_only_cpu)
     results = re.findall("Finished Evaluation \[.+?\]: Minibatch\[.+?\]: metric = (.+?)%", str_out)
 
-    assert len(results) == 2
+    assert len(results) == 2, str_out
 
     if match_exactly:
-        assert results[0] == results[1]
+        assert results[0] == results[1], str_out
     else:
         if abs((float(results[0]) - float(results[1]))) > per_minibatch_tolerance:
             print(str_out)
             assert False
-    assert np.allclose(float(results[0])/100, expected_test_error, atol=error_tolerance)
+    assert np.allclose(float(results[0])/100, expected_test_error, atol=error_tolerance), str_out
