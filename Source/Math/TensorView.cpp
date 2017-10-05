@@ -296,7 +296,8 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
 
     // special support for sparse data: ReduceSum(ElementWiseProduct(x,y)) (same as batched Times(x,y)) and gradient.
     // This is used for batched cross-entropy computation.
-    if (op == ElementWiseOperator::opElementwiseProduct && reductionOp == ElementWiseOperator::opSum)
+    if (op == ElementWiseOperator::opElementwiseProduct && reductionOp == ElementWiseOperator::opSum &&
+        (a.GetSOB().GetMatrixType() == MatrixType::SPARSE || b.GetSOB().GetMatrixType() == MatrixType::SPARSE))
     {
         // special case 1: dot product
         // Note: Because CNTK API does not allow ElementTimes with ReduceSum in one op, user writes Times() instead, and Dynamite will map it to this instead.

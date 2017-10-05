@@ -2,7 +2,7 @@
 #define _BUILDINFO_H 
 #define _GIT_EXIST 
 #define _BUILDBRANCH_  "fseide/dynamite"      
-#define _BUILDSHA1_    "bfb5cb1d6817e10c17fd630e5e67515f87f3928f (modified)"
+#define _BUILDSHA1_    "cdec8758be5b5a3c11915c28300d31ae7d818ca9 (modified)"
 #define _MATHLIB_ "mkl"
 #define _BUILDER_ "fseide"     
 #define _BUILDMACHINE_ "FSEIDE-GPU"    
