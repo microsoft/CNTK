@@ -134,6 +134,12 @@ namespace CNTK
         m_dataFields->m_ownerFunction = ownerFunction;
     }
 
+    // simplified version for internal use only
+    void Variable::SetOwner(std::weak_ptr<PrimitiveFunction>&& ownerFunction)
+    {
+        m_dataFields->m_ownerFunction = move(ownerFunction);
+    }
+
     Variable::operator FunctionPtr() const
     {
         // Note: This function does not get executed in dynamic networks.
@@ -466,6 +472,11 @@ namespace CNTK
 
     Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
         m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, name, uid)),
+        m_shapeDims(&m_dataFields->m_shape.Dimensions())
+    {}
+
+    Variable::Variable(NDShape&& shape, VariableKind varType, CNTK::DataType dataType, bool needsGradient, bool isSparse) :
+        m_dataFields(MakeSharedObject<VariableFields>(std::move(shape), varType, dataType, needsGradient, isSparse)),
         m_shapeDims(&m_dataFields->m_shape.Dimensions())
     {}
 

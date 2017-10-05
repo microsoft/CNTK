@@ -90,6 +90,13 @@ namespace CNTK
             }
         }
 
+        // simple version used during cloning
+        VariableFields(NDShape&& shape, VariableKind varType, ::CNTK::DataType type, bool needsGradient, bool isSparse)
+            : m_shape(std::move(shape)), m_varKind(varType), m_dataType(type),
+              m_needsGradient(needsGradient), m_isSparse(isSparse), m_valueTimeStamp(0)
+        {
+        }
+
         std::wstring AsString() const;
         std::shared_ptr<VariableFields> Clone() const;
         PrimitiveFunctionPtr Owner() const; // (can't be a const& since we lock the weak pointer)

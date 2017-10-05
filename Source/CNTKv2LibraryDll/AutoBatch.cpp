@@ -991,7 +991,7 @@ static shared_ptr<DynamicProfiler> m_currentProfiler; // current innermost activ
 /*static*/ const DynamicProfilerPtr& PrimitiveFunction::CurrentDynamicProfiler() { return m_currentProfiler; }
 
 // a few helper functions--sort these
-static inline vector<size_t> ReplaceFreeDim(vector<size_t> shape, size_t batchDimValue);
+static inline vector<size_t> ReplaceFreeDim(const vector<size_t>& shape, size_t batchDimValue);
 
 // ===========================================================================
 // AutoBatch -- autobatching happening inside here
@@ -2248,10 +2248,9 @@ class Variable::AutoBatch
         auto fPtr = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(attributes), std::move(name));
         // unfortunately output initialization must be separated out since it requires s shared_ptr to f
         let& fInputs = fPtr->m_inputs;
-        fPtr->InitOutput(OutputVariable(shape, fInputs.front().GetDataType(), vector<Axis>(),
+        fPtr->InitOutput(OutputVariable(NDShape(shape)/*it's a &&*/, fInputs.front().GetDataType(),
                                         any_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.NeedsGradient(); }), // PERF BUGBUG: caller knows this already; should pass it in
-                                        all_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.IsSparse();      }), // BUGBUG: This is not generally correct -> Caller knows this, just pass it in.
-                                     wstring()));
+                                        all_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.IsSparse();      }))); // BUGBUG: This is not generally correct -> Caller knows this, just pass it in.
         //if (fPtr->m_uniqueIdForDebugging == 194962)
         //    Break;
         //if (!fPtr->m_outputs.front().NeedsGradient())
@@ -2265,7 +2264,7 @@ class Variable::AutoBatch
     }
 
     // call this after constructing a PrimitiveFunction from inside here, to set up the additional fields
-    static void FinishConstructingPrimitiveFunction(PrimitiveFunction& f, const DynamicProfilerPtr& profiler, const wchar_t* logPrefix)
+    static __forceinline void FinishConstructingPrimitiveFunction(PrimitiveFunction& f, const DynamicProfilerPtr& profiler, const wchar_t* logPrefix)
     {
         f.m_profiler = profiler;
 #ifdef LOG_DETAILS
@@ -2355,49 +2354,77 @@ class Variable::AutoBatch
         }
     }
 
+    static Dictionary ShallowCloneDictionary(const Dictionary& other)
+    {
+        Dictionary res;
+        other.ShallowCloneTo(res); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
+        return res;
+    }
+
+    // this saves an instruction when checking the size of a vector
+    template<class VectorType>
+    static bool VecSizeIs(const VectorType& vec, size_t s)
+    {
+        return vec.end() == vec.begin() + s;
+    }
+
+    // simplified version avoiding moving unnecessary parameters around (esp. strings)
+    static Variable OutputVariable(NDShape&& shape, ::CNTK::DataType dataType, bool needsGradient, bool isSparse)
+    {
+        return Variable(move(shape), VariableKind::Output, dataType, needsGradient, isSparse);
+    }
+
     // clone a PrimitiveFunction
     // Subroutine of early inlining non-basic-block BlockFunctions during forward graph preparation.
     // These are non-batched. The output shape is determined here by either stripping the FreeDimension if no input has one, or replacing it.
     // Special consideration is given to nested BlockFunctions.
+    // This runs in early inlining, and is thus time-critical. This function was at one point measured to take 10% of total Forward time,
+    // so the code below has been hand-optimized by single-stepping through disassembly.
     static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& clonee, vector<Variable>&& newInputs, size_t newInputsFreeDim)
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
         // clone it
-        PrimitiveFunctionPtr fCloned;
-        if (clonee.m_op == PrimitiveOpType::Block)
-        {
-            let& fAsBlock = static_cast<BlockFunction&>(clonee);
-            fCloned = MakeSharedObject<BlockFunction>(fAsBlock.Composite(), move(newInputs), fAsBlock.IsBasicBlock(), wstring(fAsBlock.OpName()), wstring(clonee.Name()));
+        PrimitiveFunctionPtr fCloned =
+        /*if*/ (clonee.m_op == PrimitiveOpType::Block) ?
+        //{
+            //let& fAsBlock = static_cast<BlockFunction&>(clonee);
+            make_shared/*MakeSharedObject*/<BlockFunction>(static_cast<BlockFunction&>(clonee).Composite(), move(newInputs), static_cast<BlockFunction&>(clonee).IsBasicBlock(), wstring(static_cast<BlockFunction&>(clonee).OpName()), wstring(clonee.Name()))
             // PERF BUGBUG: (?) If not basic block then we should expand it right here.
-        }
-        else
-        {
+        //}
+        /*else*/:
+        //{
             // clone the attributes
-            Dictionary attributes;
-            clonee.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
-            fCloned = MakeSharedObject<PrimitiveFunction>(clonee.m_op, move(newInputs), move(attributes), wstring(clonee.Name()));
-        }
+            //Dictionary attributes;
+            //clonee.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
+            make_shared/*MakeSharedObject*/<PrimitiveFunction>(clonee.m_op, move(newInputs), move(ShallowCloneDictionary(clonee.m_attributes)));// , wstring(clonee.Name()));
+        //}
+        // Note: We can use make_shared since no shared_ptrs to these clones are ever exposed across the DLL boundary.
         //if (fCloned->m_uniqueIdForDebugging == 20000)
         //    fprintf(stderr, "");
         // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
         // unfortunately output initialization must be separated out since it requires s shared_ptr to fCloned
         // get the output shape
         let& outputs = clonee.m_outputs;
-        if (outputs.size() != 1)
+        if (!VecSizeIs(outputs, 1))
+        //if (outputs.size() != 1)
             InvalidArgument("Dynamic operations cannot have multiple outputs.");
         let& output = outputs.front();
         // if output has a FreeDimension (which represents the batch axis) then replace (or drop) it
         let& outputDims = output.Shape().Dimensions();
         let mustReplaceFreeDimension = (!outputDims.empty() && outputDims.back() == NDShape::FreeDimension);
         fail_if(mustReplaceFreeDimension && newInputsFreeDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
-#if 1
+#if 0
         // check that we got it right
         if (mustReplaceFreeDimension)
             VerifyFreeDimensionReplacement(clonee.m_inputs, fCloned->m_inputs, newInputsFreeDim);
 #endif
         // initialize the output
         let dataType = fCloned->m_inputs.front().GetDataType();
-        fCloned->InitOutput(OutputVariable(mustReplaceFreeDimension ? NDShape(ReplaceFreeDim(outputDims, newInputsFreeDim)) : output.Shape(), dataType, vector<Axis>(), output.NeedsGradient(), output.IsSparse(), wstring()));
+        if (mustReplaceFreeDimension)
+            fCloned->InitOutput(Variable(NDShape(ReplaceFreeDim(outputDims, newInputsFreeDim)), VariableKind::Output, dataType, output.NeedsGradient(), output.IsSparse()));
+        else
+            fCloned->InitOutput(Variable(NDShape(output.Shape()), VariableKind::Output, dataType, output.NeedsGradient(), output.IsSparse()));
+        // Note: Somehow, OutputVariable() above does not get inlined, even with __forceinline.
         // add additional initializations for auto-batch only
         FinishConstructingPrimitiveFunction(*fCloned, clonee.m_profiler, /*logPrefix=*/nullptr);
         return fCloned;
@@ -4607,27 +4634,33 @@ static size_t DetermineInvokeFreeDim(const vector<Variable>& inputs)
 
 // helper to replace the batch dimension of inputShape by the given value
 // The batch dim must be present. If the given value is SIZE_MAX, it strips the axis.
-static inline vector<size_t> ReplaceFreeDim(vector<size_t> shape, size_t batchDimValue)
+static inline vector<size_t> ReplaceWithFreeDim(const vector<size_t>& inShape)
 {
-    let rank = shape.size();
-    if (batchDimValue == NDShape::FreeDimension) // value is FreeDimension: replace or expand
-    {
-        // BUGBUG: We must honor the declared freeAxis here.
-        if (rank < 1 || rank > 2)
-            InvalidArgument("Invoke: Shapes with rank < 1 or > 2 currently not supported here.");
-        if (rank == 1)
-            shape.push_back(batchDimValue);
-        else
-            shape.back() = batchDimValue;
-    }
-    else // value is not FreeDimension: replace or pop
-    {
-        fail_if(shape.back() != NDShape::FreeDimension, "ReplaceFreeDim called on shape that has no FreeDimension??");
-        if (batchDimValue == SIZE_MAX)
-            shape.resize(rank - 1); // no batch dimension: drop the axis
-        else
-            shape.back() = batchDimValue;
-    }
+    auto shape = inShape;
+       // BUGBUG: We must honor the declared freeAxis here.
+       let rank = shape.size();
+       if (rank < 1 || rank > 2)
+           InvalidArgument("Invoke: Shapes with rank < 1 or > 2 currently not supported here.");
+       if (rank == 1)
+           shape.push_back(NDShape::FreeDimension);
+       else
+           shape.back() = NDShape::FreeDimension;
+    return shape;
+}
+
+// helper to replace the batch dimension of inputShape by the given value
+// The batch dim must be present. If the given value is SIZE_MAX, it strips the axis.
+static inline vector<size_t> ReplaceFreeDim(const vector<size_t>& inShape, size_t batchDimValue)
+{
+    auto shape = inShape;
+    fail_if(batchDimValue == NDShape::FreeDimension, "use ReplaceWithFreeDim() instead");
+    fail_if(shape.back() != NDShape::FreeDimension, "ReplaceFreeDim called on shape that has no FreeDimension??");
+    //let rank = shape.size();
+    if (batchDimValue == SIZE_MAX)
+        //shape.resize(rank - 1); // no batch dimension: drop the axis
+        shape.pop_back(); // no batch dimension: drop the axis
+    else
+        shape.back() = batchDimValue;
     return shape;
 }
 
@@ -4705,7 +4738,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Var
             // If the operand does not have that axis, then we create it.
             fail_if(batchDim == 0, "no batchDim determined??");
             // TODO: check against the current Placeholder
-            auto updatedCompositePlaceholder = PlaceholderVariable(ReplaceFreeDim(operand.Shape().Dimensions(), NDShape::FreeDimension),
+            auto updatedCompositePlaceholder = PlaceholderVariable(ReplaceWithFreeDim(operand.Shape().Dimensions()),
                 operand.GetDataType(), operand.Name(), operand.DynamicAxes(), operand.NeedsGradient(), operand.IsSparse());
             //auto updatedCompositePlaceholder = PlaceholderLike(operand);
             updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = compositeLeaf.m_dataFields->m_compositeArgumentIndex;

@@ -2164,6 +2164,9 @@ namespace CNTK
     public:
         CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
 
+        // simplified version for Dynamite
+        CNTK_API Variable(NDShape&& shape, VariableKind varType, ::CNTK::DataType dataType, bool needsGradient, bool isSparse);
+
     private:
         PrimitiveFunctionPtr OutputOwner() const; // for Outputs only; can never return null
         bool OwnerIs(const Function* f) const; // faster than saying Owner() == ...
@@ -2182,6 +2185,7 @@ namespace CNTK
         CNTK_API static Variable Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
         void SetOwner(const std::weak_ptr<PrimitiveFunction>& ownerFunction);
+        void SetOwner(std::weak_ptr<PrimitiveFunction>&& ownerFunction);
 
         Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
 
