@@ -1,1 +1,1 @@
-docker build --squash --tag cntk_cpu_archlinux:v2 .
+docker build --squash --tag cntk_cpu_archlinux:v2.2 .
