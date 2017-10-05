@@ -19,8 +19,8 @@
 //#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
 
 #define let const auto
-#define Named(n) (L##n)
-//#define Named(n) (std::wstring())
+//#define Named(n) (L##n)
+#define Named(n) (std::wstring())
 
 using namespace CNTK;
 using namespace std;
