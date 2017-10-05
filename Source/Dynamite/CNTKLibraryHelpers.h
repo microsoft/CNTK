@@ -124,7 +124,7 @@ namespace Dynamite {
             {
                 //auto data = sequences[s];      // NDArrayView
                 auto data = sequences[med != SIZE_MAX ? med : s];      // NDArrayView
-#if 1
+#if 0
                 // BUGBUG: This crashes MT.cpp in CPU mode with an A/V! Yikes!
                 data = data->DeepClone(); // sometimes we get strange objective values; see if this is the cause. This will release the original matrix.
 #endif

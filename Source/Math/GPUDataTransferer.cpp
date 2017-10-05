@@ -202,7 +202,11 @@ void GPUDataTransferer::WaitForCopyCPUToGPUAsync()
 
 PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int deviceId) : GranularGPUDataTransferer(deviceId, nullptr, nullptr, true)
 {
-     cudaStreamCreateWithFlags(&m_stream, cudaStreamNonBlocking) || "cudaStreamCreateWithFlags failed (PrefetchGPUDataTransferer ctor)";
+#if 1
+    m_stream = NULL;
+#else
+    cudaStreamCreateWithFlags(&m_stream, cudaStreamNonBlocking) || "cudaStreamCreateWithFlags failed (PrefetchGPUDataTransferer ctor)";
+#endif
 }
 
 PrefetchGPUDataTransferer::~PrefetchGPUDataTransferer()
@@ -217,11 +221,14 @@ PrefetchGPUDataTransferer::~PrefetchGPUDataTransferer()
         return;
     }
 
-    auto code = cudaStreamDestroy(m_stream);
-    if (code != cudaSuccess)
+    if (m_stream)
     {
-        std::cerr << "cudaStreamDestroy failed (PrefetchGPUDataTransferer dtor): "
-            << cudaGetErrorString(code) << " (cuda error " <<  code << ")"<< std::endl;
+        auto code = cudaStreamDestroy(m_stream);
+        if (code != cudaSuccess)
+        {
+            std::cerr << "cudaStreamDestroy failed (PrefetchGPUDataTransferer dtor): "
+                << cudaGetErrorString(code) << " (cuda error " << code << ")" << std::endl;
+        }
     }
 }
 
