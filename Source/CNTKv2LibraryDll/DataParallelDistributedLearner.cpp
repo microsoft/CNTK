@@ -8,7 +8,7 @@
 #include "DistributedCommunicator.h"
 #include "Learner.h"
 #include "PerformanceProfiler.h"
-
+#include "iostream"
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 #include "QuantizedDistributedCommunicator.h"
 #include "QuantizedDataParallelDistributedLearner.h"
@@ -125,7 +125,12 @@ namespace CNTK
     {
         // sparse gradient may be converted to dense for aggregation
         std::unordered_map<Parameter, NDArrayViewPtr> convertedGradientValues = gradientValues;
-
+        std::ostringstream ostr;
+        ostr << "info.end of sweep: " << info.atEndOfSweep << "\n"
+             << "info.num of sampels: " << info.numberOfSamples << "\n";
+        std::cerr << ostr.str() << std::flush;
+        size_t minibatchCount = info.numberOfSamples > 0 ? 1 : 0;
+        size_t sweepCount = info.numberOfSamples > 0 && info.atEndOfSweep ? 1 : 0;
         if (m_sampleCount >= m_distributeAfterSamples && m_communicator->Workers().size() > 1)
         {
 #ifndef  CNTK_UWP
@@ -164,11 +169,21 @@ namespace CNTK
             valuesToAggregate.push_back(info.evalCriterionValue);
             valuesToAggregate.push_back(info.trainingLossValue);
 
+            auto numMinibatchesValue = MakeSharedObject<NDArrayView>(static_cast<double>(minibatchCount), NDShape{}, DeviceDescriptor::CPUDevice());
+            valuesToAggregate.push_back(numMinibatchesValue);
+
+            auto sweepEndCountValue = MakeSharedObject<NDArrayView>(static_cast<double>(sweepCount), NDShape{}, DeviceDescriptor::CPUDevice());
+            valuesToAggregate.push_back(sweepEndCountValue);
+
+
             auto value = MakeSharedObject<NDArrayView>(static_cast<double>(info.numberOfSamples), NDShape{}, DeviceDescriptor::CPUDevice());
             valuesToAggregate.push_back(value);
 
             m_communicator->AggregateInPlace(valuesToAggregate, m_communicator->Workers());
+            //aggregating the number of counts on samples, sweeps, and minibatches
             info.numberOfSamples = static_cast<size_t>(*valuesToAggregate.back()->WritableDataBuffer<double>());
+            sweepCount = static_cast<size_t>(*valuesToAggregate.at(valuesToAggregate.size() - 2)->WritableDataBuffer<double>());
+            minibatchCount  = static_cast<size_t>(*valuesToAggregate.at(valuesToAggregate.size() - 3)->WritableDataBuffer<double>());
 
             if (!sparseValuesToAggregate.empty())
             {
@@ -180,12 +195,27 @@ namespace CNTK
         auto profWeights = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainWeights);
 #endif
 
-        m_sampleCount += info.numberOfSamples;
         m_gradientBuffer.clear();
+        m_sampleCount += info.numberOfSamples;
+        if (minibatchCount > 0)
+            ++m_minibatchCount;
+        if (sweepCount > 0)
+            ++m_sweepCount;
 
         if (info.IsEmpty())
             return false;
 
-        return m_learner->Update(convertedGradientValues, info.numberOfSamples, info.atEndOfSweep);
+
+        bool res = m_learner->Update(convertedGradientValues, info.numberOfSamples, info.atEndOfSweep);
+        //m_minibatchCount = m_learner->TotalNumberOfMinibatchesSeen();
+        //m_sweepCount = m_learner->TotalNumberOfSweepsSeen();
+        std::ostringstream ostr2;
+        ostr2 << "inner leaner.sweep count: " << m_learner->TotalNumberOfSweepsSeen() << "\n"
+            << "inner leaner.minibatch count: " << m_learner->TotalNumberOfMinibatchesSeen() << "\n"
+            << "inner leaner.sample count: " << m_learner->TotalNumberOfSamplesSeen() << "\n";
+        ostr2 << "==end of worker #" << m_communicator->CurrentWorker().m_globalRank << "\n";
+        std::cerr << ostr2.str() << std::flush;
+
+        return res;
     }
 }
