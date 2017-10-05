@@ -298,25 +298,21 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
     // This is used for batched cross-entropy computation.
     if (op == ElementWiseOperator::opElementwiseProduct && reductionOp == ElementWiseOperator::opSum)
     {
+        // special case 1: dot product
         // Note: Because CNTK API does not allow ElementTimes with ReduceSum in one op, user writes Times() instead, and Dynamite will map it to this instead.
-        let IsDotProduct = [&]() -> bool // helper to decide
+        // must be reducing consecutive input values into one result value
+        // regularXX represents the map dimension; e.g. [13 x 3  x  42 x 5] * [13 x 3  x  42 x 5] --> [1 x 1  x  42 x 5]
+        // gets a reduction over 13*3 consecutive values, with result being consecutive in memory arranged in a 42 x 5 grid
+        if (reducingOpDims.size() != 1 || reducingStrides[0][0] != 1 || reducingStrides[1][0] != 1 || reducingStrides[2][0] != 0)
+            goto isNotDotProduct;
+        // inputs must be consecutive in memory also for the non-reduced axes (which gets flattened into one if condition is true)
+        if (regularOpDims.size() != 0) // (only if there are non-reduced axes)
         {
-            // must be reducing consecutive input values into one result value
-            // regularXX represents the map dimension; e.g. [13 x 3  x  42 x 5] * [13 x 3  x  42 x 5] --> [1 x 1  x  42 x 5]
-            // gets a reduction over 13*3 consecutive values, with result being consecutive in memory arranged in a 42 x 5 grid
-            if (reducingOpDims.size() != 1 || reducingStrides[0][0] != 1 || reducingStrides[1][0] != 1 || reducingStrides[2][0] != 0)
-                return false;
-            // inputs must be consecutive in memory also for the non-reduced axes (which gets flattened into one if condition is true)
-            if (regularOpDims.size() != 0) // (only if there are non-reduced axes)
-            {
-                let reducedElements = (int)reducingOpDims[0];
-                if (regularOpDims.size() != 1 || regularStrides[0][0] != reducedElements || regularStrides[1][0] != reducedElements || regularStrides[2][0] != 1)
-                    return false;
-            }
-            return true; // that's it
-        };
+            let reducedElements = (int)reducingOpDims[0];
+            if (regularOpDims.size() != 1 || regularStrides[0][0] != reducedElements || regularStrides[1][0] != reducedElements || regularStrides[2][0] != 1)
+                goto isNotDotProduct;
+        }
         // dot product
-        if (IsDotProduct())
         {
             let remainingElements =   GetShape().GetNumElements();                     // keeping this many elements
             let reducedElements   = a.GetShape().GetNumElements() / remainingElements; // summing up this many elements per result
@@ -327,32 +323,29 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
             auto C =   Reshaped(outShape).AsMatrix();
             return Matrix<ElemType>::InnerProduct(*A, *B, *C, true/*isColWise*/);
         }
-        let IsDotProductGradient = [&]() -> bool // helper to decide
+    isNotDotProduct:
+        // special case 2: gradient of dot product: scalar * vector -> vector
+        // there must be no reduction
+        if (reducingOpDims.size() != 0)
+            goto isNotDotProductGradient;
+        // at least one input must be broadcasting in the first flattened dimension, and must have at most one additional flattened dimension without broadcasting
+        if (regularOpDims.size() > 2) // input has too many non-flattened axes, not representable as a matrix
+            goto isNotDotProductGradient;
+        if (regularOpDims.size() > 0) // check the broadcasting dimension (may be missing to cater for degenerate case of all inputs being scalars)
         {
-            // there must be no reduction
-            if (reducingOpDims.size() != 0)
-                return false;
-            // at least one input must be broadcasting in the first flattened dimension, and must have at most one additional flattened dimension without broadcasting
-            if (regularOpDims.size() > 2) // input has too many non-flattened axes, not representable as a matrix
-                return false;
-            if (regularOpDims.size() > 0) // check the broadcasting dimension (may be missing to cater for degenerate case of all inputs being scalars)
-            {
-                if (regularStrides[0][0] != 0 && regularStrides[1][0] != 0) // one of them must broadcast
-                    return false;
-                if (regularStrides[0][0] > 1 || regularStrides[1][0] > 1) // broadcasting dimension must be consecutive
-                    return false;
-            }
-            if (regularOpDims.size() > 1) // check the "batch" dimension
-            {
-                let aHeight = regularStrides[0][0] == 0 ? 1 : (int)regularOpDims[0];
-                let bHeight = regularStrides[1][0] == 0 ? 1 : (int)regularOpDims[0];
-                if (regularStrides[0][1] != aHeight || regularStrides[1][1] != bHeight) // batch dimension must be consecutive in memory
-                    return false;
-            }
-            return true; // that's it
-        };
-        // gradient of dot product: scalar * vector -> vector
-        if (IsDotProductGradient())
+            if (regularStrides[0][0] != 0 && regularStrides[1][0] != 0) // one of them must broadcast
+                goto isNotDotProductGradient;
+            if (regularStrides[0][0] > 1 || regularStrides[1][0] > 1) // broadcasting dimension must be consecutive
+                goto isNotDotProductGradient;
+        }
+        if (regularOpDims.size() > 1) // check the "batch" dimension
+        {
+            let aHeight = regularStrides[0][0] == 0 ? 1 : (int)regularOpDims[0];
+            let bHeight = regularStrides[1][0] == 0 ? 1 : (int)regularOpDims[0];
+            if (regularStrides[0][1] != aHeight || regularStrides[1][1] != bHeight) // batch dimension must be consecutive in memory
+                goto isNotDotProductGradient;
+        }
+        // gradient of dot product
         {
             let aIsWeight = regularOpDims.size() == 0 || regularStrides[0][0] == 0; // which of the two inputs is the weight? We allow both ways.
             let&   data = !aIsWeight ? a : b;
@@ -366,6 +359,7 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
             auto C =        Reshaped(  dataShape).AsMatrix();
             return Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd((ElemType)1.0, *A, *B, beta, *C);
         }
+    isNotDotProductGradient:;
     }
 
     // regular case
