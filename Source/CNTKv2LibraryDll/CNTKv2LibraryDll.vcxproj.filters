@@ -37,6 +37,7 @@
     <ClCompile Include="ProgressWriter.cpp" />
     <ClCompile Include="Evaluator.cpp" />
     <ClCompile Include="UserDefinedFunction.cpp" />
+    <ClCompile Include="PrimitiveFunctionAttributes.cpp" />
     <ClCompile Include="proto\onnx\protobuf\graph.pb.cc.VS_wrapper.cpp">
       <Filter>proto\onnx\protobuf</Filter>
     </ClCompile>
@@ -132,6 +133,7 @@
     <ClInclude Include="Variable.h" />
     <ClInclude Include="UserFunctionFactory.h" />
     <ClInclude Include="UserDefinedFunction.h" />
+<<<<<<< HEAD
     <ClInclude Include="proto\onnx\CNTKToONNX.h">
       <Filter>proto\onnx</Filter>
     </ClInclude>
@@ -168,6 +170,9 @@
     <ClInclude Include="proto\onnx\core\utils.h">
       <Filter>proto\onnx\core</Filter>
     </ClInclude>
+=======
+    <ClInclude Include="SimpleUtils.h" />
+>>>>>>> Refactoring for inference work + adding Flatten method on function to be able to clone without blocks.
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

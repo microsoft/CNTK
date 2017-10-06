@@ -8,7 +8,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "PrimitiveFunction.h"
-#include "Utils.h"
+#include "SimpleUtils.h"
 #include "Variable.h"
 
 namespace CNTK

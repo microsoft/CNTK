@@ -3239,6 +3239,11 @@ namespace CNTK
         CNTK_API FunctionPtr Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Clone, const std::unordered_map<Variable, Variable>& replacements = {}) const;
 
         ///
+        /// Clones 'this' Function with flattening(removing all block functions). Parameters as above.
+        ///
+        CNTK_API FunctionPtr Flatten(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Share) const;
+
+        ///
         /// Deserializes a Function from the model dictionary, using the specified UDF deserializer to
         //  reconstruct user defined functions if the model contains any (in which case an exception will be raised
         /// if deserializer was omitted). If there are no user defined functions in the model, deserializer is ignored.
@@ -3607,7 +3612,19 @@ namespace CNTK
                                  const std::unordered_map<Variable, Variable>& replacements,
                                  std::unordered_map<const Function*, FunctionPtr>& cloneMap,
                                  std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
-                                 std::unordered_map<Variable, Variable>& placeholderReplacements);
+                                 std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                 std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&)> clone);
+
+        static FunctionPtr CloneFunction(const FunctionPtr& clonee,
+            const std::vector<Variable>& clonedInputs);
+
+        static FunctionPtr FlattenFunction(const FunctionPtr& clonee,
+            const std::vector<Variable>& clonedInputs);
+
+        FunctionPtr CloneImpl(
+            ParameterCloningMethod parameterCloneMethod,
+            const std::unordered_map<Variable, Variable>& replacements,
+            std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&)> clone) const;
 
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;

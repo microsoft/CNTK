@@ -12,6 +12,7 @@
 #include "Config.h"
 #include "ConvolutionEngine.h"
 #include "ReshapingNodes.h"
+#include "SimpleUtils.h"
 
 namespace CNTK
 {
@@ -551,11 +552,6 @@ namespace CNTK
         return var.IsConstant() && (var.Shape().TotalSize() == 1);
     }
 
-    inline Variable PlaceholderLike(const Variable& var)
-    {
-        return PlaceholderVariable(var.Shape(), var.GetDataType(), var.Name(), var.DynamicAxes());
-    }
-
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName);
 
     // Construct the dynamic axis name to be used internally for the CNTK InputNodes
@@ -692,23 +688,6 @@ namespace CNTK
         template <typename ElementType>
         static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
     };
-
-    template <typename Container>
-    inline std::wstring NamedListString(const Container& namedList)
-    {
-        std::wstringstream wss;
-        bool first = true;
-        for (auto namedObject : namedList)
-        {
-            if (!first)
-                wss << L", ";
-
-            wss << namedObject.AsString();
-            first = false;
-        }
-
-        return wss.str();
-    }
 
     class Accumulator : public Value
     {
