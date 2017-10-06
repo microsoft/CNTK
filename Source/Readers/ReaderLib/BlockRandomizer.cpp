@@ -158,7 +158,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t globalSampleCount, size_t loc
     return result;
 }
 
-std::pair<size_t, size_t> BlockRandomizer::LoadSequenceData(size_t globalSampleCount, size_t localSampleCount,
+std::pair<size_t /*numGlobalSamples*/, size_t /*numLocalSamples*/> BlockRandomizer::LoadSequenceData(size_t globalSampleCount, size_t localSampleCount,
     Sequences& sequences, bool atLeastOneSequenceNeeded)
 {
     ClosedOpenChunkInterval windowRange;
@@ -202,7 +202,8 @@ std::pair<size_t, size_t> BlockRandomizer::LoadSequenceData(size_t globalSampleC
         }
     }
 
-    auto process = [&](int i) -> void {
+    auto process = [&](int i) -> void
+    {
         const auto& description = m_sequenceBuffer[i];
         std::vector<SequenceDataPtr> sequenceData;
         auto it = m_chunks.find(description.m_chunk->m_original->m_id);

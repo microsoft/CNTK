@@ -499,6 +499,8 @@ public:
             LogicError("%s: Cannot migrate the matrix between devices because it is externally owned.", function);
     }
 
+    size_t GetNumViews() const { return m_sob.use_count(); } // number of views into the storage object (meant for debugging)
+
     // This is needed for Sparse Matrices to ensure they can write to the matrix. Note: writing to slices is not currently supported
     void VerifyWritable(const char* function) const 
     {

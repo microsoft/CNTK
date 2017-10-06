@@ -166,6 +166,7 @@ public:
     MatrixType GetMatrixType() const override;
     MatrixFormat GetFormat() const override;
     bool OwnBuffer() const { return m_baseMatrix->OwnBuffer(); }
+    size_t GetNumViews() const { return m_baseMatrix->GetNumViews(); } // (for debugging: how many Matrix objects share the same storage object)
     int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
     DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; // -1 if CPU, otherwise GPU CUDA device id
     void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId) { m_preferredDeviceId = preferredDeviceId; }
