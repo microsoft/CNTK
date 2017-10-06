@@ -74,10 +74,13 @@ RUN CONFIGURE_OPTS="\
     sed -i "s,libprotobuf.a,libprotobuf.so,g" configure && \
     sed -i "s,QWordVal qval = valQ.Quantize,QWordVal qval = valQ.template Quantize,g" Source/Math/ColumnQuantizer.h && \
     sed -i "s,libmpi.so.12,libmpi.so,g" bindings/python/cntk/train/distributed.py && \
+    cd Source/Multiverso && \
+    mkdir build && cd build && \
+    cmake .. && make && make install && cd /cntk && \
     mkdir -p build-mkl/gpu/release && \
     cd build-mkl/gpu/release && \
     ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
-    make -j"$(nproc)" all
+    make -j1" all
     
     # cd ../../.. && \    
     # mkdir -p build/gpu/release && \
