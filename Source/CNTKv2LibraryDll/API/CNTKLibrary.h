@@ -6009,7 +6009,7 @@ namespace CNTK
         ///
         /// Writes a summary of training progress since the last call to this function.
         ///
-        void WriteTrainingSummary(const ValuePtr& accumulatedLoss, const ValuePtr& accumulatedMetric);
+        void WriteTrainingSummary(const double accumulatedLoss, const double accumulatedMetric);
 
         ///
         /// Writes a summary of evaluation progress since the last call to this function.

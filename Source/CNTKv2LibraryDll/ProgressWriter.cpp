@@ -61,17 +61,17 @@ namespace CNTK
         }
 
         template<typename OnWriteSummaryFunc>
-        void WriteSummary(const ValuePtr& accumulatedLoss, const ValuePtr& accumulatedMetric,
+        void WriteSummary(const double accumulatedLoss, const double accumulatedMetric,
                           OnWriteSummaryFunc callback)
         {
-            if (accumulatedLoss && m_samples.second > 0)
+            if (m_samples.second > 0)
             {
-                m_loss.second = accumulatedLoss->AsScalar<double>();
+                m_loss.second = accumulatedLoss;
             }
 
-            if (accumulatedMetric && m_samples.second > 0)
+            if (m_samples.second > 0)
             {
-                m_metric.second = accumulatedMetric->AsScalar<double>();
+                m_metric.second = accumulatedMetric;
             }
 
             m_totalSummaries++;
@@ -170,7 +170,7 @@ namespace CNTK
         });
     }
     
-    void ProgressWriter::WriteTrainingSummary(const ValuePtr& accumulatedLoss, const ValuePtr& accumulatedMetric)
+    void ProgressWriter::WriteTrainingSummary(const double accumulatedLoss, const double accumulatedMetric)
     {
         m_training->WriteSummary(
             accumulatedLoss, accumulatedMetric,
