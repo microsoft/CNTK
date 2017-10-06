@@ -1518,7 +1518,7 @@ dnnError_t dnnInnerProductCreateBackwardBias<double>(
         pInnerProduct, attributes, dimensions, srcSize);
 }
 
-static void CHECK_MKL(dnnError_t err)
+inline void CHECK_MKL(dnnError_t err)
 {
     if (err != E_SUCCESS)
         RuntimeError("mkl err (%d)\n", err);
