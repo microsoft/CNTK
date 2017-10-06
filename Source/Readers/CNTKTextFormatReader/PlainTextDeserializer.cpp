@@ -475,8 +475,10 @@ private:
                 if (endOffsets.size() != chunkRef.m_numberOfSequences)
                     LogicError("PlainTextDeserializer: Chunk %d's actual sequence count inconsistent with underlying files.", (int)chunkId);
             }
-            m_onesFloatBuffer .resize(maxSequenceLength, 1); // dense data arrays for sparse data; constant 1 across all sequences and streams, hence has length of longest sequence
-            m_onesDoubleBuffer.resize(maxSequenceLength, 1);
+            m_onesFloatBuffer .reset(new float [maxSequenceLength], [](float  *p) { delete[] p; } ); // dense data arrays for sparse data; constant 1 across all sequences and streams, hence has length of longest sequence
+            m_onesDoubleBuffer.reset(new double[maxSequenceLength], [](double *p) { delete[] p; } );
+            for (size_t i = 0; i < maxSequenceLength; i++)
+                m_onesDoubleBuffer.get()[i] = m_onesFloatBuffer.get()[i] = 1;
         }
 
         // PlainTextSequenceData is the data structure returned by GetSequence().
@@ -486,15 +488,15 @@ private:
         public:
             PlainTextSequenceData(const vector<SparseIndexType>& data, size_t beginOffset, size_t numWords, SequenceKey key,
                                   const NDShape& sampleShape,
-                                  const vector<float>& onesFloatBuffer, const vector<double>& onesDoubleBuffer, DataType elementType) :
+                                  const shared_ptr<float>& onesFloatBuffer, const shared_ptr<double>& onesDoubleBuffer, DataType elementType) :
                 SparseSequenceData((unsigned int)numWords), m_sampleShape(sampleShape)
             {
                 // BUGBUG (API): SequenceDataBase should accept numberOfSamples as a size_t and check the range
                 m_elementType = elementType;
                 if (elementType == DataType::Float) // data must point to an array of 1.0 values with at least numWords elements
-                    m_dataPtr = onesFloatBuffer.data();
+                    m_dataPtr = static_pointer_cast<void>(onesFloatBuffer);
                 else if (elementType == DataType::Double)
-                    m_dataPtr = onesDoubleBuffer.data();
+                    m_dataPtr = onesDoubleBuffer;
                 else
                     LogicError("PlainTextDeserializer: Unsupported DataType.");
                 m_key = key;
@@ -504,10 +506,10 @@ private:
             }
             ~PlainTextSequenceData() { }
             virtual const NDShape& SparseSequenceData::GetSampleShape() override final { return m_sampleShape; } // BUGBUG (API): Shouldn't these be const?
-            virtual const void*    SparseSequenceData::GetDataBuffer()  override final { return m_dataPtr;     }
+            virtual const void*    SparseSequenceData::GetDataBuffer()  override final { return m_dataPtr.get(); }
         private:
             const NDShape& m_sampleShape;
-            const void* m_dataPtr;
+            shared_ptr<const void> m_dataPtr; // points to the constant array of ones (float or double)
         };
 
         ///
@@ -541,8 +543,8 @@ private:
         vector<vector<SparseIndexType>> m_data; // [streamIndex][n] concatenated data for all sequences for all streams
         vector<vector<size_t>> m_endOffsets;    // [streamIndex][lineNo] end offset of line (the begin offset is determined from lineNo-1)
         size_t m_firstSequenceId;               // sequence id of first sequence in this chunk
-        vector<float>  m_onesFloatBuffer; // dense buffer of ones for use as values for the sparse data; used across all sequences and streams, hence has length of longest sequence
-        vector<double> m_onesDoubleBuffer;
+        shared_ptr<float>  m_onesFloatBuffer;   // dense buffer of ones for use as values for the sparse data; used across all sequences and streams, hence has length of longest sequence
+        shared_ptr<double> m_onesDoubleBuffer;  // Note: It appears that PlainTextSequenceData lives longer than Chunk at the end of the data sweep; hence these are shared_ptrs
     };
     friend class PlainTextChunk;
 public:
