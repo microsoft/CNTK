@@ -891,10 +891,10 @@ protected:
 
             void Clear()
             {
-                if (primitive) { dnnDelete_F32(primitive); primitive = nullptr; }
+                if (primitive) { dnnDelete<ElemType>(primitive); primitive = nullptr; }
                 for (auto& i : inputs) i.Clear();
                 output.Clear();
-                if (attributes) { dnnPrimitiveAttributesDestroy_F32(attributes); attributes = nullptr; }
+                if (attributes) { dnnPrimitiveAttributesDestroy<ElemType>(attributes); attributes = nullptr; }
             }
 
             ~PrimitiveContext()
@@ -995,31 +995,31 @@ protected:
             switch (contextIndex)
             {
             case ContextIndex_Forward:
-                CHECK_MKL(dnnLayoutCreate_F32(&ltUserInputs[0], m_dimension, inputSize.begin(), inputStrides.begin()));
-                CHECK_MKL(dnnLayoutCreate_F32(&ltUserInputs[1], m_dimension, filterSize.begin(), filterStrides.begin()));
-                CHECK_MKL(dnnLayoutCreate_F32(&ltUserOutput, m_dimension, outputSize.begin(), outputStrides.begin()));
-                CHECK_MKL(dnnPrimitiveAttributesCreate_F32(&ctx.attributes));
-                CHECK_MKL(dnnConvolutionCreateForward_F32(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[0], m_dimension, inputSize.begin(), inputStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[1], m_dimension, filterSize.begin(), filterStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserOutput, m_dimension, outputSize.begin(), outputStrides.begin()));
+                CHECK_MKL(dnnPrimitiveAttributesCreate<ElemType>(&ctx.attributes));
+                CHECK_MKL(dnnConvolutionCreateForward<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
                 inputTypes[0] = dnnResourceSrc;
                 inputTypes[1] = dnnResourceFilter;
                 outputType = dnnResourceDst;
                 break;
             case ContextIndex_BackwardData:
-                CHECK_MKL(dnnLayoutCreate_F32(&ltUserInputs[0], m_dimension, outputSize.begin(), outputStrides.begin()));
-                CHECK_MKL(dnnLayoutCreate_F32(&ltUserInputs[1], m_dimension, filterSize.begin(), filterStrides.begin()));
-                CHECK_MKL(dnnLayoutCreate_F32(&ltUserOutput, m_dimension, inputSize.begin(), inputStrides.begin()));
-                CHECK_MKL(dnnPrimitiveAttributesCreate_F32(&ctx.attributes));
-                CHECK_MKL(dnnConvolutionCreateBackwardData_F32(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[0], m_dimension, outputSize.begin(), outputStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[1], m_dimension, filterSize.begin(), filterStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserOutput, m_dimension, inputSize.begin(), inputStrides.begin()));
+                CHECK_MKL(dnnPrimitiveAttributesCreate<ElemType>(&ctx.attributes));
+                CHECK_MKL(dnnConvolutionCreateBackwardData<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
                 inputTypes[0] = dnnResourceDiffDst;
                 inputTypes[1] = dnnResourceFilter;
                 outputType = dnnResourceDiffSrc;
                 break;
             case ContextIndex_BackwardFilter:
-                CHECK_MKL(dnnLayoutCreate_F32(&ltUserInputs[0], m_dimension, outputSize.begin(), outputStrides.begin()));
-                CHECK_MKL(dnnLayoutCreate_F32(&ltUserInputs[1], m_dimension, inputSize.begin(), inputStrides.begin()));
-                CHECK_MKL(dnnLayoutCreate_F32(&ltUserOutput, m_dimension, filterSize.begin(), filterStrides.begin()));
-                CHECK_MKL(dnnPrimitiveAttributesCreate_F32(&ctx.attributes));
-                CHECK_MKL(dnnConvolutionCreateBackwardFilter_F32(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[0], m_dimension, outputSize.begin(), outputStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[1], m_dimension, inputSize.begin(), inputStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserOutput, m_dimension, filterSize.begin(), filterStrides.begin()));
+                CHECK_MKL(dnnPrimitiveAttributesCreate<ElemType>(&ctx.attributes));
+                CHECK_MKL(dnnConvolutionCreateBackwardFilter<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
                 inputTypes[0] = dnnResourceDiffDst;
                 inputTypes[1] = dnnResourceSrc;
                 outputType = dnnResourceDiffFilter;
@@ -1030,11 +1030,11 @@ protected:
 
             for (int i = 0; i < NumInputs; i++)
             {
-                CHECK_MKL(dnnLayoutCreateFromPrimitive_F32(&ltPrimInputs[i], ctx.primitive, inputTypes[i]));
+                CHECK_MKL(dnnLayoutCreateFromPrimitive<ElemType>(&ltPrimInputs[i], ctx.primitive, inputTypes[i]));
                 ctx.inputs[i].Create(ltUserInputs[i], ltPrimInputs[i], inputTypes[i], true);
             }
 
-            CHECK_MKL(dnnLayoutCreateFromPrimitive_F32(&ltPrimOutput, ctx.primitive, outputType));
+            CHECK_MKL(dnnLayoutCreateFromPrimitive<ElemType>(&ltPrimOutput, ctx.primitive, outputType));
             ctx.output.Create(ltUserOutput, ltPrimOutput, outputType, false);
         }
 
@@ -1049,7 +1049,7 @@ protected:
 
             ctx.output.PrepareForExecution(userOutput, resources);
 
-            CHECK_MKL(dnnExecute_F32(ctx.primitive, resources));
+            CHECK_MKL(dnnExecute<ElemType>(ctx.primitive, resources));
 
             ctx.output.ConvertOutput(userOutput);
         }
