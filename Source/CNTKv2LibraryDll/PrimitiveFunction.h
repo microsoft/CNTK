@@ -287,6 +287,7 @@ namespace CNTK
 
     protected:
         // base constructor, called by all others except the move one
+    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
             : Function(inputs, std::move(functionConfig), nullptr, functionName, uid),
               m_op(op),

@@ -460,8 +460,8 @@ void Train(wstring outputDirectory)
     //wstring modelPath = L"d:/me/tmp_dynamite_model_wn.cmf";
     //wstring modelPath = L"d:/me/tmp_dynamite_model_attseq.cmf";
     wstring modelPath = outputDirectory + L"/model.dmf"; // DMF=Dynamite model file
-    size_t saveEvery = 100;
-    size_t startMbCount = 0;
+    size_t saveEvery = 2000;
+    size_t startMbCount = 0;// 12000;
     let ModelPath = [&](size_t currentMbCount) // helper to form the model filename
     {
         char currentMbCountBuf[20];
@@ -686,6 +686,13 @@ void Train(wstring outputDirectory)
         fprintf(stderr, "%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
                 (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                 lr0, learner->LearningRate() / lr0);
+#if 0   // log the sequences
+        for (size_t n = 0; n < numSeq; n++)
+        {
+            args[0][n].Value()->LogToFile(L"Source_" + to_wstring(n), stderr, SIZE_MAX);
+            args[1][n].Value()->LogToFile(L"Target_" + to_wstring(n), stderr, SIZE_MAX);
+        }
+#endif
         // train minibatch
         let numAPICalls0 = CountAPICalls(0);
         //criterion_fn(args[0], args[1]); // call it once before, to flush that thing that we otherwise also measure, whatever that is

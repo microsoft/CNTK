@@ -252,11 +252,13 @@ namespace CNTK
             return m_allPrimitiveFunctionsHolder;
         };
 
+    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         CompositeFunction(const FunctionPtr& rootFunction, FastFunctionCollectionPtr&& allPrimitiveFunctions, const std::wstring& name,
                           const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
             : Function({}, Dictionary(), rootFunction, name, uid),
             m_allPrimitiveFunctionsHolder(std::move(allPrimitiveFunctions))
         {}
+    private:
 
         std::vector<Variable> DetermineInputs(bool pythonOperandOrder = false) const
         {

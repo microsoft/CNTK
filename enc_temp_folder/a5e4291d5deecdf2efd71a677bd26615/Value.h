@@ -15,6 +15,13 @@ namespace CNTK
 {
     class PackedValue final : public Value
     {
+        //BefriendMakeSharedObject;
+        //template<typename T> friend class FixedSizePoolAllocatorT;
+        //template<typename T>
+        //typename FixedSizePoolAllocatorT<T>::pointer FixedSizePoolAllocatorT<T>::allocate(typename FixedSizePoolAllocatorT<T>::size_type cnt, typename std::allocator<void>::const_pointer = 0);
+
+
+
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 

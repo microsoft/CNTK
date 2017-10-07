@@ -1005,8 +1005,10 @@ namespace CNTK
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
     private:
+    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
         CNTK_API NDArrayView(::CNTK::DataType dataType, const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
+    private:
         CNTK_API NDArrayViewPtr Reviewed(const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool readOnly) const;
 
         //template <typename ElementType>
@@ -1163,7 +1165,9 @@ namespace CNTK
         CNTK_API void CopyFrom(const NDMask& source);
 
     private:
+    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         NDMask(const NDShape& shape, Microsoft::MSR::CNTK::Matrix<char>* matrix);
+    private:
 
         CNTK_API void MarkSectionAs(const std::vector<size_t>& sectionOffset, const NDShape& sectionShape, MaskKind maskKind);
 
@@ -5410,7 +5414,9 @@ namespace CNTK
         void UpdateTestProgress(size_t numSamples, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
 
     protected:
+    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         Evaluator(const FunctionPtr& evaluationFunction, const std::vector<ProgressWriterPtr>& progressWriters = {}, bool initializeCombined = true);
+    protected:
 
         // Helper functions.
         std::vector<Variable> GetCombinedEvalFunctionArgs() const;
@@ -5534,10 +5540,12 @@ namespace CNTK
 
         friend class TrainingSession;
 
+    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners,
                 const std::vector<ProgressWriterPtr>& progressWriters = {});
         Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners,
                 const std::vector<ProgressWriterPtr>& progressWriters = {});
+    private:
 
         void ExecuteForwardBackward(
             const std::unordered_map<Variable, ValuePtr>& arguments,

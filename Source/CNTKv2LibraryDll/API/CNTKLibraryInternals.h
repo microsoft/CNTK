@@ -135,10 +135,10 @@ namespace CNTK
 #endif
 
 #ifndef NOT_IMPLEMENTED
-#define NOT_IMPLEMENTED                                                                                                              \
-    {                                                                                                                                \
-        fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
-        CNTK::LogicError("Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__);      \
+#define NOT_IMPLEMENTED                                                                                                               \
+    {                                                                                                                                 \
+        fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__);  \
+        CNTK::LogicError("Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
     }
 #endif
 }
@@ -166,6 +166,196 @@ namespace CNTK
 
     class Serializer;
 
+#if 1
+    // first define a C++ allocator class to use for this, so that we
+    //  - get the benefit of a make_shared-like allocation with control block and actual object allocated together
+    //  - can be sure the correct deleter is called (on the correct heap)
+
+    // a pool for allocating objects of one specific size
+    template<typename T> struct FixedSizePoolItem : public T { unsigned short blockIndex; };
+    template<size_t itemByteSize>
+    class FixedSizePool
+    {
+        static void Assert(bool cond) { if (!cond) LogicError("FixedSizePool: An assertion failed."); }
+
+        // class to store objects of size itemByteSize in lists of char arrays
+        template<size_t itemByteSize>
+        class Storage
+        {
+            struct Block
+            {
+                static const size_t capacity = 65536; // we reserve this many at a time
+                std::vector<char> bytes = std::vector<char>(capacity * itemByteSize); // [byte offset]
+                std::vector<bool> used  = std::vector<bool>(capacity, false);         // [item index]  true if this entry is used
+                template<typename T>
+                T* TryAllocate(size_t& nextItemIndex)
+                {
+                    Assert(nextItemIndex <= capacity);
+                    while (nextItemIndex < capacity)
+                    {
+                        if (!used[nextItemIndex])
+                        {
+                            T* p = (T*)(bytes.data() + nextItemIndex * itemByteSize);
+                            used[nextItemIndex] = true; // and mark as allocated
+                            nextItemIndex++;
+                            return p;
+                        }
+                        nextItemIndex++;
+                    }
+                    return nullptr; // this block is full
+                }
+                template<typename T>
+                void Deallocate(T* p)
+                {
+                    size_t itemIndex = (((char*)p) - bytes.data()) / itemByteSize;
+                    Assert(itemIndex < capacity);
+                    Assert(p == (T*)(bytes.data() + itemIndex * itemByteSize));
+                    Assert(used[itemIndex]);
+                    used[itemIndex] = false;
+                }
+            };
+            // state of allocation
+            std::vector<std::shared_ptr<Block>> blocks; // all blocks we have currently allocated
+            size_t totalItemsAllocated = 0;   // we have presently this many live objects
+            size_t totalItemsReserved = 0;    // we are holding memory sufficient to hold this many
+            // state of scan
+            size_t currentBlockIndex;         // we are allocating from this block
+            size_t nextItemIndex;             // index of next item. If at end of block, this is equal to blockCapacity
+            void ResetScan()
+            {
+                currentBlockIndex = 0;
+                nextItemIndex = 0;
+            }
+        public:
+            Storage()
+            {
+                ResetScan();
+                //fprintf(stderr, "Scan reset for storage of elements of %d bytes\n", (int)itemByteSize);
+            }
+            template<typename T>
+            T* Allocate()
+            {
+                if (sizeof(FixedSizePoolItem<T>) != itemByteSize)
+                    LogicError("FixedSizePoolAllocator: Called for an object of the wrong size.");
+                Assert(totalItemsReserved >= totalItemsAllocated);
+                //fprintf(stderr, "allocate<%s>()  --> %d bytes (%d incl. index)\n", typeid(T).name(), (int)sizeof T, (int)itemByteSize);
+                // find next free location
+                for (;;)
+                {
+                    // all blocks are full: either reset the scan or grow
+                    if (currentBlockIndex == blocks.size())
+                    {
+                        if (totalItemsReserved > totalItemsAllocated * 2)
+                        {
+                            // if we have 50% utilization or below, we start over the scan in our existing allocated space
+                            // At 50%, on av. we need to scan 1 extra item to find a free one.
+                            ResetScan();
+                        }
+                        else
+                        {
+                            // too few free items, we'd scan lots of items to find one: instead use a fresh block
+                            if ((decltype(FixedSizePoolItem<T>::blockIndex))(currentBlockIndex + 1) != currentBlockIndex + 1)
+                                LogicError("FixedSizePoolAllocator: Too many blocks.");
+                            blocks.push_back(std::make_shared<Block>());
+                            totalItemsReserved += Block::capacity;
+                            // enter the newly created block
+                            nextItemIndex = 0;
+                        }
+                    }
+                    // try to allocate in current block
+                    T* p = blocks[currentBlockIndex]->TryAllocate<T>(nextItemIndex);
+                    if (p) // found one in the current block
+                    {
+                        totalItemsAllocated++; // account for it
+                        auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(p);
+                        pItem->blockIndex = (decltype(pItem->blockIndex))currentBlockIndex; // remember which block it came from
+                        Assert(pItem->blockIndex == currentBlockIndex); // (overflow)
+                        return p;
+                    }
+                    // current block is full: advance the scan to the next block
+                    currentBlockIndex++;
+                    nextItemIndex = 0;
+                }
+                LogicError("FixedSizePoolAllocator: Allocation in newly created block unexpectedly failed.");
+            }
+            template<typename T>
+            void Deallocate(T* p)
+            {
+                //fprintf(stderr, "deallocate<%s>()  --> %d bytes (%d incl. index)\n", typeid(T).name(), (int)sizeof T, (int)itemByteSize);
+                const auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(p);
+                Assert(pItem->blockIndex < blocks.size());
+                blocks[pItem->blockIndex]->Deallocate(p);
+                Assert(totalItemsAllocated > 0);
+                totalItemsAllocated--;
+            }
+        };
+    public:
+        // say FixedSizePool::get() to get access to a globally shared instance for all pools of the same itemByteSize
+        static Storage<itemByteSize>& get() { static Storage<itemByteSize> storage; return storage; }
+    };
+
+    // a C++ allocator that allocates objects of type <T> in FixedSizePool Storage objects shared across all types of the same size
+    template<typename T>
+    class FixedSizePoolAllocatorT
+    {
+    public: // required boilerplate
+        typedef T value_type;
+        typedef value_type* pointer; typedef const value_type* const_pointer;
+        typedef value_type& reference; typedef const value_type& const_reference;
+        typedef std::size_t size_type; typedef std::ptrdiff_t difference_type;
+        template<typename U> struct rebind { typedef FixedSizePoolAllocatorT<U> other; };
+        inline pointer address(reference r) { return &r; } inline const_pointer address(const_reference r) { return &r; }
+        inline explicit FixedSizePoolAllocatorT() {}
+        inline ~FixedSizePoolAllocatorT() {}
+        inline explicit FixedSizePoolAllocatorT(FixedSizePoolAllocatorT const&) {}
+        template<typename U>
+        inline explicit FixedSizePoolAllocatorT(FixedSizePoolAllocatorT<U> const&) {}
+        inline size_type max_size() const { return std::numeric_limits<size_type>::max() / sizeof(T); }
+        inline void construct(pointer p, const T& t) { new(p) T(t); }
+        inline void destroy(pointer p) { p->~T(); }
+        inline bool operator==(FixedSizePoolAllocatorT const&) { return true; }
+        inline bool operator!=(FixedSizePoolAllocatorT const& a) { return !operator==(a); }
+    public:
+        inline pointer allocate(size_type cnt, typename std::allocator<void>::const_pointer = 0)
+        {
+            if (cnt != 1)
+                InvalidArgument("FixedSizePoolAllocatorT: This allocator only supports allocation of single items.");
+            auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
+            return reinterpret_cast<pointer>(storage.Allocate<T>());
+        }
+        inline void deallocate(pointer p, size_type)
+        {
+            auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
+            storage.Deallocate<T>(p);
+        }
+    public:
+        static void SomeTest()
+        {
+            typedef FixedSizePoolAllocatorT<char> AllocatorUnderTest;
+            AllocatorUnderTest alloc;
+            std::vector<int, AllocatorUnderTest> x(1, 1);
+            std::list<int, AllocatorUnderTest> v1;
+            v1.push_back(13); v1.push_back(42); v1.push_back(13); v1.push_back(13); v1.push_back(13);
+            v1.erase(v1.begin()++++); v1.erase(v1.begin()++++); v1.erase(v1.begin()++++); v1.erase(v1.begin()++++);
+            v1.push_back(13); v1.push_back(13); v1.push_back(13); v1.push_back(13); v1.push_back(13);
+            v1.push_back(13); v1.push_back(13); v1.push_back(13); v1.push_back(13); v1.push_back(13);
+            std::list<int> v2(v1.begin(), v1.end());
+            auto ps = std::allocate_shared<string>(alloc, "test");
+            ps.reset();
+            auto pi = std::allocate_shared<int>(alloc, 1968);
+        }
+    };
+    typedef FixedSizePoolAllocatorT<char> FixedSizePoolAllocator; // turns out, the actual template argument does not matter here, it is never used this way
+
+    // Similar to make_shared except that it associates a custom allocator with the shared_ptr to ensure
+    // that objects are deleted on the same side of the library DLL where they are allocated
+    template <typename T, typename ...CtorArgTypes>
+    inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs)
+    {
+        FixedSizePoolAllocator objectAllocator;
+        return std::allocate_shared<T>(objectAllocator, std::forward<CtorArgTypes>(ctorArgs)...);
+    }
+#else
     template<class T>
     class ObjectPool
     {
@@ -226,6 +416,7 @@ namespace CNTK
         return std::shared_ptr<T>(objPtr, [](T* ptr) { delete ptr; });
 #endif
     }
+#endif
 
     // Forward declarations
     class NDArrayView;
