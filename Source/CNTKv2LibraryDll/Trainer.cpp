@@ -295,49 +295,49 @@ namespace CNTK
 
     void Trainer::SummarizeTrainingProgress()
     {
-		double localWorkerTrainingLoss = 0;
-		if (m_aggregatedTrainingLossValue)
-		{
-			localWorkerTrainingLoss = m_aggregatedTrainingLossValue->AsScalar<double>();
-		}
-		 
-		double localWorkerEvalCriterion = 0;
-		if (m_aggregatedTrainingEvalCriterionValue)
-		{
-			localWorkerEvalCriterion = m_aggregatedTrainingEvalCriterionValue->AsScalar<double>();
-		}
+        double localWorkerTrainingLoss = 0;
+        if (m_aggregatedTrainingLossValue)
+        {
+            localWorkerTrainingLoss = m_aggregatedTrainingLossValue->AsScalar<double>();
+        }
+         
+        double localWorkerEvalCriterion = 0;
+        if (m_aggregatedTrainingEvalCriterionValue)
+        {
+            localWorkerEvalCriterion = m_aggregatedTrainingEvalCriterionValue->AsScalar<double>();
+        }
 
-		// Aggregate across workers training loss and eval criteria if distributed
-		if (m_distributed)
-		{
-			DistributedCommunicatorPtr communicator = MPICommunicator();
-			double data[2] = { static_cast<double>(localWorkerTrainingLoss), static_cast<double>(localWorkerEvalCriterion) };
-			auto inputBuffer = std::make_shared<NDArrayView>(DataType::Double, NDShape{ 2 }, &data, sizeof(double) * 2, DeviceDescriptor::CPUDevice());
-			auto inputArray = std::vector<NDArrayViewPtr>{ inputBuffer };
-			auto outputArray = std::vector<NDArrayViewPtr>();
-			communicator->Concatenate(inputArray, outputArray, communicator->Workers());
-			assert(outputArray.size() == 1);
+        // Aggregate across workers training loss and eval criteria if distributed
+        if (m_distributed)
+        {
+            DistributedCommunicatorPtr communicator = MPICommunicator();
+            double data[2] = { static_cast<double>(localWorkerTrainingLoss), static_cast<double>(localWorkerEvalCriterion) };
+            auto inputBuffer = std::make_shared<NDArrayView>(DataType::Double, NDShape{ 2 }, &data, sizeof(double) * 2, DeviceDescriptor::CPUDevice());
+            auto inputArray = std::vector<NDArrayViewPtr>{ inputBuffer };
+            auto outputArray = std::vector<NDArrayViewPtr>();
+            communicator->Concatenate(inputArray, outputArray, communicator->Workers());
+            assert(outputArray.size() == 1);
 
-			auto outBuffer = outputArray.front()->DataBuffer<double>();
-			auto outBufferSize = outputArray.front()->Shape().TotalSize();
-			auto outBufferEnd = outBuffer + outBufferSize;
+            auto outBuffer = outputArray.front()->DataBuffer<double>();
+            auto outBufferSize = outputArray.front()->Shape().TotalSize();
+            auto outBufferEnd = outBuffer + outBufferSize;
 
-			double distributedAggregateTrainingLoss = 0;
-			double distributedAggregateEvalCriterion = 0;
-			for (const double* start = outBuffer; start != outBufferEnd; start += 2)
-			{
-				distributedAggregateTrainingLoss += static_cast<double>(*start);
-				distributedAggregateEvalCriterion += static_cast<double>(*(start + 1));
-			}
+            double distributedAggregateTrainingLoss = 0;
+            double distributedAggregateEvalCriterion = 0;
+            for (const double* start = outBuffer; start != outBufferEnd; start += 2)
+            {
+                distributedAggregateTrainingLoss += static_cast<double>(*start);
+                distributedAggregateEvalCriterion += static_cast<double>(*(start + 1));
+            }
 
-			localWorkerTrainingLoss = distributedAggregateTrainingLoss;
-			localWorkerEvalCriterion = distributedAggregateEvalCriterion;
-		}
+            localWorkerTrainingLoss = distributedAggregateTrainingLoss;
+            localWorkerEvalCriterion = distributedAggregateEvalCriterion;
+        }
 
         for (auto& progressWriter : m_progressWriters)
         {
-			auto lossNDArray = std::make_shared<Value>(std::make_shared<NDArrayView>(DataType::Double, NDShape{ 1 }, &localWorkerTrainingLoss, sizeof(double) * 1, DeviceDescriptor::CPUDevice()));
-			auto evalNDArray = std::make_shared<Value>(std::make_shared<NDArrayView>(DataType::Double, NDShape{ 1 }, &localWorkerEvalCriterion, sizeof(double) * 1, DeviceDescriptor::CPUDevice()));
+            auto lossNDArray = std::make_shared<Value>(std::make_shared<NDArrayView>(DataType::Double, NDShape{ 1 }, &localWorkerTrainingLoss, sizeof(double) * 1, DeviceDescriptor::CPUDevice()));
+            auto evalNDArray = std::make_shared<Value>(std::make_shared<NDArrayView>(DataType::Double, NDShape{ 1 }, &localWorkerEvalCriterion, sizeof(double) * 1, DeviceDescriptor::CPUDevice()));
             progressWriter->WriteTrainingSummary(lossNDArray, evalNDArray);
         }
 
