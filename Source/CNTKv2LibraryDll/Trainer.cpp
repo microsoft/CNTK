@@ -336,7 +336,9 @@ namespace CNTK
 
         for (auto& progressWriter : m_progressWriters)
         {
-            progressWriter->WriteTrainingSummary(localWorkerTrainingLoss, localWorkerEvalCriterion);
+			auto lossNDArray = std::make_shared<Value>(std::make_shared<NDArrayView>(DataType::Double, NDShape{ 1 }, &localWorkerTrainingLoss, sizeof(double) * 1, DeviceDescriptor::CPUDevice()));
+			auto evalNDArray = std::make_shared<Value>(std::make_shared<NDArrayView>(DataType::Double, NDShape{ 1 }, &localWorkerEvalCriterion, sizeof(double) * 1, DeviceDescriptor::CPUDevice()));
+            progressWriter->WriteTrainingSummary(lossNDArray, evalNDArray);
         }
 
         m_aggregatedTrainingLossValue->Reset();
