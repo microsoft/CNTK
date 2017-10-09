@@ -2,12 +2,12 @@
 #define _BUILDINFO_H 
 #define _GIT_EXIST 
 #define _BUILDBRANCH_  "fseide/dynamite"      
-#define _BUILDSHA1_    "406923e47f07403c3578bafb961d55a3e2a0f5d2 (modified)"
+#define _BUILDSHA1_    "89e969960d3233782cee8f5c1495df85d680569a (modified)"
 #define _MATHLIB_ "mkl"
 #define _BUILDER_ "fseide"     
 #define _BUILDMACHINE_ "FSEIDE-GPU"    
 #define _BUILDPATH_    "C:\\work\\cntk\\Source\\CNTKv2LibraryDll\\"     
-#define _BUILDTYPE_ "Release"
+#define _BUILDTYPE_ "Release_NoOpt"
 #define _BUILDTARGET_ "GPU"
 #define _WITH_1BITSGD_ "yes"
 #define _WITH_ASGD_ "yes"

@@ -1007,6 +1007,7 @@ namespace CNTK
     private:
     public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
+        CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, size_t beginElement, size_t endElement, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
         CNTK_API NDArrayView(::CNTK::DataType dataType, const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
     private:
         CNTK_API NDArrayViewPtr Reviewed(const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool readOnly) const;

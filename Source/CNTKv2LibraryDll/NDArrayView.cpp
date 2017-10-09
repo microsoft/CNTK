@@ -198,6 +198,31 @@ namespace CNTK
         ConstructTensorView(m_tensorViewUnion, dataType, sob, tensorShape);
     }
 
+    // constructor optimized for shape passed as NDShape with potential offset (this constructs a dense object)
+    // The elementOffset is currently not supported for sparse objects. (Easy if needed.)
+    NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, size_t beginOffset, size_t endOffset, bool readOnly, const shared_ptr<MatrixBase>& sob)
+        : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())), m_viewShape(viewShape), m_isReadOnly(readOnly)
+    {
+#ifdef LAZY_2D_PADDING
+        auto tensorShape = AsTensorShape(viewShape);
+        // TODO: Can we use a constructor that also sets the offset?
+#else
+        auto tensorShape = AsTensorShapeMin2D(viewShape); // not lazy (old version): sdo it here and bake it into teh object
+#endif
+        if (beginOffset)
+        {
+            // TODO: check the endOffset
+            if (sob->GetMatrixType() != MatrixType::DENSE)
+                InvalidArgument("This specific NDArayView constructor presently does not support sparse storage objects.");
+            //if (sob->GetNumRows() != 1) // seems this is not a virtual function...
+            //    InvalidArgument("This specific NDArayView constructor presently assumes a column vector.");
+            tensorShape.OverwriteOffsetAs(beginOffset);
+            // TODO: this is not nice, conflating two constructors, needing hacks like overwriting m_offset. Separate out the one for arena allocation.
+        }
+        //m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
+        ConstructTensorView(m_tensorViewUnion, dataType, sob, tensorShape);
+    }
+
     // constructor optimized for shape passed as TensorShape (allowing strides and offset for slicing)
     NDArrayView::NDArrayView(CNTK::DataType dataType, const TensorShape& tensorShape, bool readOnly, const shared_ptr<MatrixBase>& sob) :
         m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())),

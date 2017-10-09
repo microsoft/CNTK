@@ -749,10 +749,13 @@ static void ReplaceWithReshapedViewIfNeeded(NDArrayViewPtr& view, const NDShape&
 class NDArrayViewArena
 {
     // allocate a new tensor in a large arena
-    static NDArrayViewPtr s_currentArena;
+    static MatrixBasePtr s_currentArena;
+    static DataType s_currentArenaDataType;
+    static DeviceDescriptor s_currentArenaDevice;
+    static size_t s_currentArenaSize;
     static size_t s_currentArenaUsed;
-    static vector<unique_ptr<NDArrayView>> s_recycledArenas;
-    static const size_t ARENASIZE = 4*64000000; // we allocate in this chunk size
+    static vector<unique_ptr<MatrixBase>> s_recycledArenas;
+    static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
 public:
     // allocate an NDArrayView of a given shape, data type, and device
     // The returned memory region is a slice into a much larger NDArrayView; therefore,
@@ -761,14 +764,14 @@ public:
     // gradients (of embeddings) that can be kept around across minibatches, and thus not part of batched computation.
     NDArrayViewPtr NewNDArrayView(const NDShape& shape, const DataType& dataType, StorageFormat format, const DeviceDescriptor& device)
     {
-        let numElements = shape.TotalSize(/*check=*/false);
-        // if too large, or sparse, then plain alloc
-        if (numElements > ARENASIZE || format != StorageFormat::Dense)
+        // no arena allocation for sparse
+        if (format != StorageFormat::Dense)
         {
-            //fprintf(stderr, "allocating %d elements of format %d, outside arena\n", (int)shape.TotalSize(/*check=*/false), (int)format);
+            fprintf(stderr, "@@ allocating %d elements of sparse format, outside arena\n", (int)shape.TotalSize(/*check=*/false));
             //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"single NewNDArrayView", 3, numElements);
             return make_shared<NDArrayView>(dataType, format, shape, device);
         }
+        let numElements = shape.TotalSize(/*check=*/false);
         // If arena not large enough then waste its remainder and just allocate a fresh one.
         // This abandons the current m_arena. This will not cause a memory leak, however:
         // Since the slices into it that were returned before all hold a ref-count to that arena,
@@ -776,51 +779,71 @@ public:
         // The deleter, though, will intercept that and move it into the recycledArenas array.
         // Next time we need a new arena, we will look there first and recycle one.
         // If the data type is different, we drop the current arena. We can't presently mix data types, so this is ah-OK.
-        if (!s_currentArena || numElements > (s_currentArena->Shape()[0]/*ARENASIZE*/ - s_currentArenaUsed) ||
-            dataType != s_currentArena->GetDataType() || device != s_currentArena->Device())
+        if (!s_currentArena || numElements > (s_currentArenaSize - s_currentArenaUsed) || dataType != s_currentArenaDataType || device != s_currentArenaDevice)
         {
-            //CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
-#if 0       // BUGBUG: This does not work for unknown reasons. The code below works, but once I uncomment the SetValue(),
-            //         it produces a loss of 0. Somehow the buffer is still being referenced, likely by a CUDA
-            //         operation with output in a different arena. However, SetValue() calls cudaMemset(), which runs on the NULL stream,
-            //         so it should wait until whichever op is there has completed.
-            s_currentArena.reset(); // abandon current one. If no references, then this will go into recycledArenas right here
-            NDArrayView* viewPtr;
-            if (!s_recycledArenas.empty()) // recycle one
+            let requiredArenaSize = max(ARENASIZE, numElements);
+            s_currentArena.reset(); // abandon current one. If no references, then this will put itself into recycledArenas right here
+            // get hold of an arena; either by recycling an existing one, or creating a new one
+            MatrixBase* matrixPtr = nullptr;
+            for (auto iter = s_recycledArenas.begin(); iter != s_recycledArenas.end(); ++iter)
             {
-                viewPtr = s_recycledArenas.back().release(); // take back ownership
-                s_recycledArenas.pop_back(); // pop empty one
-            //    //fprintf(stderr, "..recycling arena of %d elements\n", (int)viewPtr->Shape().TotalSize(/*check=*/false));
-                //viewPtr->SetValue(0.0); // BUGBUG: without this, we get funky results
-                delete viewPtr;
-            //    viewPtr = new NDArrayView(dataType, StorageFormat::Dense, NDShape{ ARENASIZE }, device);
+                let& thisMatrixPtr = *iter;
+                // BUGBUG: Also need to check dataType here.
+                if (requiredArenaSize <= thisMatrixPtr->GetNumElements() && thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device))
+                {
+                    matrixPtr = iter->release(); // take back ownership
+                    s_recycledArenas.erase(iter); // remove from recycling buffer
+                    fprintf(stderr, "@@ recycling arena of %d elements\n", (int)matrixPtr->GetNumElements());
+                    break;
+                }
             }
-            //else
+            if (!matrixPtr) // create a new one
             {
-                //fprintf(stderr, "allocating arena of %d elements\n", (int)ARENASIZE);
-                viewPtr = new NDArrayView(dataType, StorageFormat::Dense, NDShape{ ARENASIZE }, device);
+                CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
+                fprintf(stderr, "@@ allocating arena of %d elements (recycle buffer has %d entries)\n", (int)requiredArenaSize, (int)s_recycledArenas.size());
+                switch (dataType)
+                {
+                case DataType::Float:  matrixPtr = new Matrix<float >(1, requiredArenaSize, AsCNTKImplDeviceId(device), MatrixType::DENSE, MatrixFormat::matrixFormatDense); break;
+                case DataType::Double: matrixPtr = new Matrix<double>(1, requiredArenaSize, AsCNTKImplDeviceId(device), MatrixType::DENSE, MatrixFormat::matrixFormatDense); break;
+                default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
+                }
             }
-            s_currentArena = shared_ptr<NDArrayView>(viewPtr, [](NDArrayView* viewPtr)
-            {
-                //fprintf(stderr, "..retiring arena of %d elements\n", (int)viewPtr->Shape().TotalSize(/*check=*/false));
-                //delete viewPtr;
-                s_recycledArenas.push_back(unique_ptr<NDArrayView>(viewPtr)); // don't release; rather keep it around
-            });
-#else
-            //fprintf(stderr, "..allocating arena of %d elements\n", (int)ARENASIZE);
-            s_currentArena = make_shared<NDArrayView>(dataType, StorageFormat::Dense, NDShape{ ARENASIZE }, device);
-#endif
+            s_currentArena = shared_ptr<MatrixBase>(matrixPtr,
+                [](MatrixBase* matrixPtr)
+                {
+                    fprintf(stderr, "@@ retiring arena of %d elements\n", (int)matrixPtr->GetNumElements());
+                    // check the sob's ref count; if > 1 then there are other views into it, we cannot recycle it. It's a workaround.
+                    if (matrixPtr->GetNumViews() == 1)
+                        s_recycledArenas.push_back(unique_ptr<MatrixBase>(matrixPtr)); // don't release; rather keep it around
+                    else
+                    {
+                        static bool errorShown = false;
+                        if (!errorShown)
+                        {
+                            fprintf(stderr, "WARNING: NewNDArrayView cannot recycle arena because it is still used by Matrix object not under the control of the arena allocator. This message will only be shown once.\n");
+                            errorShown = true;
+                        }
+                        delete matrixPtr;
+                    }
+                });
+            s_currentArenaDataType = dataType;
+            s_currentArenaDevice = device;
             s_currentArenaUsed = 0;
+            s_currentArenaSize = s_currentArena->GetNumElements();
         }
-        auto region = s_currentArena->SliceViewAsShape(s_currentArenaUsed, s_currentArenaUsed + numElements, shape);
-        s_currentArenaUsed += numElements;
+        size_t newArenaUsed = s_currentArenaUsed + numElements;
+        auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/s_currentArenaUsed, /*end*/newArenaUsed, /*readOnly=*/false, s_currentArena);
+        s_currentArenaUsed = newArenaUsed;
         return region;
     }
 };
 
-/*static*/ NDArrayViewPtr NDArrayViewArena::s_currentArena;
+/*static*/ MatrixBasePtr NDArrayViewArena::s_currentArena;
+/*static*/ DataType NDArrayViewArena::s_currentArenaDataType = DataType::Unknown;
+/*static*/ DeviceDescriptor NDArrayViewArena::s_currentArenaDevice = DeviceDescriptor::CPUDevice();
+/*static*/ size_t NDArrayViewArena::s_currentArenaSize = 0;
 /*static*/ size_t NDArrayViewArena::s_currentArenaUsed = 0;
-/*static*/ vector<unique_ptr<NDArrayView>> NDArrayViewArena::s_recycledArenas;
+/*static*/ vector<unique_ptr<MatrixBase>> NDArrayViewArena::s_recycledArenas;
 
 // ---------------------------------------------------------------------------
 // RuntimeStatistics -- helper class for collecting runtime statistics, for

@@ -706,6 +706,13 @@ public:
         return *this;
     }
 
+    // write accessor to m_offset.
+    // This is meant for arena allocation and has to be fast, not safe. Caller must ensure validity.
+    void OverwriteOffsetAs(size_t newOffset)
+    {
+        m_offset = newOffset;
+    }
+
     // reshape an existing one to a new shape
     // The input must be dense. (We could relax this if needed.) The offset is retained.
     template <class DimensionVector>

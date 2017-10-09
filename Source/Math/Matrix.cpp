@@ -4134,6 +4134,13 @@ void Matrix<ElemType>::VectorMin(Matrix<ElemType>& minIndices, Matrix<ElemType>&
 
 #pragma region Other helper Functions
 
+// (for debugging: how many Matrix objects share the same storage object)
+template <class ElemType>
+size_t Matrix<ElemType>::GetNumViews() const /*final*/
+{
+    return m_baseMatrix->GetNumViews();
+}
+
 template <class ElemType>
 int Matrix<ElemType>::GetDeviceId() const
 {
@@ -6365,6 +6372,8 @@ template void Matrix<char>::_transferToDevice(int id_to, bool isBeingMoved, bool
 template void Matrix<char>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
 template size_t Matrix<char>::GetNumRows() const;
 template size_t Matrix<char>::GetNumCols() const;
+template size_t Matrix<char>::GetNumElements() const;
+template size_t Matrix<char>::GetNumViews() const;
 template void Matrix<char>::SetValue(const char);
 template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags, DataTransferer* transferer);
 //template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
@@ -6391,6 +6400,8 @@ template void Matrix<short>::_transferToDevice(int id_to, bool isBeingMoved, boo
 template void Matrix<short>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
 template size_t Matrix<short>::GetNumRows() const;
 template size_t Matrix<short>::GetNumCols() const;
+template size_t Matrix<short>::GetNumElements() const;
+template size_t Matrix<short>::GetNumViews() const;
 template void Matrix<short>::SetValue(const short);
 template void Matrix<short>::SetValue(size_t numRows, const size_t numCols, int deviceId, short* pArray, size_t matrixFlags, DataTransferer* transferer);
 //template void Matrix<short>::SetValue(const Matrix<short>&, MatrixFormat);

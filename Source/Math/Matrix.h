@@ -59,6 +59,8 @@ struct /*interface*/ MATH_API MatrixBase
     virtual int GetDeviceId() const = 0;
     virtual MatrixType GetMatrixType() const = 0;
     virtual MatrixFormat GetFormat() const = 0;
+    virtual size_t GetNumElements() const = 0;
+    virtual size_t GetNumViews() const = 0;
     virtual void CastAssignValuesOf(const MatrixBase& other) = 0; // allows for mixed assignment with conversion
     // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
     virtual ~MatrixBase();
@@ -163,11 +165,11 @@ public:
         return node;
     }
 
-    MatrixType GetMatrixType() const override;
-    MatrixFormat GetFormat() const override;
+    MatrixType GetMatrixType() const final;
+    MatrixFormat GetFormat() const final;
     bool OwnBuffer() const { return m_baseMatrix->OwnBuffer(); }
-    size_t GetNumViews() const { return m_baseMatrix->GetNumViews(); } // (for debugging: how many Matrix objects share the same storage object)
-    int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
+    size_t GetNumViews() const final; // (for debugging: how many Matrix objects share the same storage object)
+    int GetDeviceId() const final; // -1 if CPU, otherwise GPU CUDA device id
     DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; // -1 if CPU, otherwise GPU CUDA device id
     void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId) { m_preferredDeviceId = preferredDeviceId; }
     // Moves matrix from device id_from to device with id_to.
@@ -179,7 +181,7 @@ public:
     void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues); // sets matrix type between dense and sparse
     size_t GetNumRows() const;
     size_t GetNumCols() const;
-    size_t GetNumElements() const;
+    size_t GetNumElements() const final;
     bool HasNoElements() const { return GetNumElements() == 0; }
     bool IsEmpty() const;
     size_t BufferSize() const;
@@ -281,7 +283,7 @@ public:
         assert(vals.size() == numRows * numCols);
         SetValue(numRows, numCols, GetDeviceId(), vals.data(), matrixFormatRowMajor);
     }
-    void CastAssignValuesOf(const MatrixBase& other) override; // allows for mixed assignment with conversion
+    void CastAssignValuesOf(const MatrixBase& other) final; // allows for mixed assignment with conversion
     static ElemType MakeNan(size_t payload);
     void Invalidate()
     {
