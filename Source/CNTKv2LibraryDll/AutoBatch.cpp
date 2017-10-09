@@ -750,12 +750,23 @@ class NDArrayViewArena
 {
     // allocate a new tensor in a large arena
     static MatrixBasePtr s_currentArena;
-    static DataType s_currentArenaDataType;
-    static DeviceDescriptor s_currentArenaDevice;
-    static size_t s_currentArenaSize;
-    static size_t s_currentArenaUsed;
+    static DataType s_currentArenaDataType;       // == s_currentArena's dataType
+    static DeviceDescriptor s_currentArenaDevice; // == s_currentArena's device
+    static size_t s_currentArenaSize;             // == s_currentArena's number of elements (== s_currentArena->GetNumElements())
+    // allocation state
+    static size_t s_currentArenaUsed; // allocation cursor. Elements below this are already allocated.
+    // arenas no longer referenced get remembered here for reuse, to avoid GPU syncs
     static vector<unique_ptr<MatrixBase>> s_recycledArenas;
     static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
+    static DataType GetMatrixType(const MatrixBase& matrix)
+    {
+        if (dynamic_cast<const Matrix<float>*>(&matrix))
+            return DataType::Float;
+        else if (dynamic_cast<const Matrix<double>*>(&matrix))
+            return DataType::Double;
+        else
+            LogicError("GetMatrixType: Unsupported element type.");
+    }
 public:
     // allocate an NDArrayView of a given shape, data type, and device
     // The returned memory region is a slice into a much larger NDArrayView; therefore,
@@ -779,7 +790,10 @@ public:
         // The deleter, though, will intercept that and move it into the recycledArenas array.
         // Next time we need a new arena, we will look there first and recycle one.
         // If the data type is different, we drop the current arena. We can't presently mix data types, so this is ah-OK.
-        if (!s_currentArena || numElements > (s_currentArenaSize - s_currentArenaUsed) || dataType != s_currentArenaDataType || device != s_currentArenaDevice)
+        if (!s_currentArena                                         ||
+            numElements > (s_currentArenaSize - s_currentArenaUsed) ||
+            dataType != s_currentArenaDataType                      ||
+            device != s_currentArenaDevice)
         {
             let requiredArenaSize = max(ARENASIZE, numElements);
             s_currentArena.reset(); // abandon current one. If no references, then this will put itself into recycledArenas right here
@@ -788,10 +802,11 @@ public:
             for (auto iter = s_recycledArenas.begin(); iter != s_recycledArenas.end(); ++iter)
             {
                 let& thisMatrixPtr = *iter;
-                // BUGBUG: Also need to check dataType here.
-                if (requiredArenaSize <= thisMatrixPtr->GetNumElements() && thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device))
+                if (requiredArenaSize <= thisMatrixPtr->GetNumElements()       &&
+                    thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device) &&
+                    GetMatrixType(*thisMatrixPtr) == dataType)
                 {
-                    matrixPtr = iter->release(); // take back ownership
+                    matrixPtr = iter->release();  // take back ownership from the unique_ptr
                     s_recycledArenas.erase(iter); // remove from recycling buffer
                     fprintf(stderr, "@@ recycling arena of %d elements\n", (int)matrixPtr->GetNumElements());
                     break;
