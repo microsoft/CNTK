@@ -827,7 +827,7 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
         // if requested size is smaller, make sure we still initialize to 0 as if it had been reallocated
         if (!keepExistingValues)
             CUDA_CALL(cudaMemsetAsync(Buffer(), 0, BufferSizeAllocated(), t_stream));
-        UpdateCachedNzCount(0);
+        UpdateCachedNzCount(0, /*shouldVerify=*/false);
     }
 }
 
@@ -913,12 +913,12 @@ void GPUSparseMatrix<ElemType>::ClearNzCount()
 {
     // We are now going to reset m_nz to 0. 
     // To reset m_nz to 0, we must do 2 things.
-    //    1. We must clear the secondary column index.
+    //    1. We must clear the secondary column index.    --TODO: Why? It should be considered virgin memory when reused!
     //    2. Set the block size to 0.
     // These requirements can be deduced by the NzCount method.
-    CUDA_CALL(cudaMemset(Buffer(), 0, BufferSizeAllocated()));
+    CUDA_CALL(cudaMemsetAsync(Buffer(), 0, BufferSizeAllocated(), t_stream));
     SetBlockSize(0);
-    UpdateCachedNzCount(0);
+    UpdateCachedNzCount(0, /*shouldVerify=*/false);
 }
 
 // copy features to GPU
@@ -3521,6 +3521,7 @@ template void GPUSparseMatrix<short>::ColumnwiseScaleAndWeightedAdd(short, const
 template GPUSparseMatrix<int>::GPUSparseMatrix(DEVICEID_TYPE, const MatrixFormat);
 template GPUSparseMatrix<int>::~GPUSparseMatrix();
 template void GPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
+template void GPUSparseMatrix<int>::Reset();
 
 template <class ElemType>
 MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)

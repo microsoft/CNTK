@@ -2041,6 +2041,12 @@ void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const 
         Invalidate(); // Fill the matrix with NaNs to detect using the content which is undefined. Unfortunately this won't work for sparse matrices.
 #endif
 }
+// MatrixBase version, which is necessary because a virtual Resize() causes link errors for unknown reasons. Other similar methods have no overloads, so that is the likely cause.
+template <class ElemType>
+void Matrix<ElemType>::Resize1(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
+{
+    Resize(numRows, numCols, numNZElemToReserve, growOnly);
+}
 
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::RepMat(const Matrix<ElemType>& frmMat, const size_t rowRatio, const size_t colRatio)
@@ -6374,6 +6380,7 @@ template size_t Matrix<char>::GetNumRows() const;
 template size_t Matrix<char>::GetNumCols() const;
 template size_t Matrix<char>::GetNumElements() const;
 template size_t Matrix<char>::GetNumViews() const;
+template void Matrix<char>::Reset();
 template void Matrix<char>::SetValue(const char);
 template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags, DataTransferer* transferer);
 //template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
@@ -6402,6 +6409,7 @@ template size_t Matrix<short>::GetNumRows() const;
 template size_t Matrix<short>::GetNumCols() const;
 template size_t Matrix<short>::GetNumElements() const;
 template size_t Matrix<short>::GetNumViews() const;
+template void Matrix<short>::Reset();
 template void Matrix<short>::SetValue(const short);
 template void Matrix<short>::SetValue(size_t numRows, const size_t numCols, int deviceId, short* pArray, size_t matrixFlags, DataTransferer* transferer);
 //template void Matrix<short>::SetValue(const Matrix<short>&, MatrixFormat);

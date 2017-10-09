@@ -61,6 +61,9 @@ struct /*interface*/ MATH_API MatrixBase
     virtual MatrixFormat GetFormat() const = 0;
     virtual size_t GetNumElements() const = 0;
     virtual size_t GetNumViews() const = 0;
+    virtual void Reset() = 0; // reset for sparse matrix
+    virtual void Resize1(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 0, bool growOnly = true) = 0;
+    // BUGBUG: ^^ This should just be Resize(), but that causes link errors for unknown reasons.
     virtual void CastAssignValuesOf(const MatrixBase& other) = 0; // allows for mixed assignment with conversion
     // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
     virtual ~MatrixBase();
@@ -228,6 +231,7 @@ public:
 
     void AdaDeltaUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon);
 
+    void Resize1(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true) final; // from MatrixBase. BUGBUG: This should just be the same Resize() method, but linking fails.
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow
     void Resize(const Matrix<ElemType>& other) // TODO: Should this carry over numNZElemToReserve for sparse matrices?
     {
@@ -261,7 +265,7 @@ public:
     // similarl to the repmat operation in matlab or octave
     static Matrix<ElemType> RepMat(const Matrix<ElemType>& frmMat, const size_t rows, const size_t cols);
     size_t GetAllocatedSize() const;
-    void Reset(); // reset for sparse matrix
+    void Reset() final; // reset for sparse matrix
 
     const ElemType operator()(const size_t row, const size_t col) const;
     ElemType& operator()(const size_t row, const size_t col);

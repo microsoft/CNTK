@@ -749,23 +749,24 @@ static void ReplaceWithReshapedViewIfNeeded(NDArrayViewPtr& view, const NDShape&
 class NDArrayViewArena
 {
     // allocate a new tensor in a large arena
-    static MatrixBasePtr s_currentArena;
-    static DataType s_currentArenaDataType;       // == s_currentArena's dataType
-    static DeviceDescriptor s_currentArenaDevice; // == s_currentArena's device
-    static size_t s_currentArenaSize;             // == s_currentArena's number of elements (== s_currentArena->GetNumElements())
+    static const size_t numStorageFormats = 3; // we index the arrays below by [(size_t)storageFormat]
+    static array<MatrixBasePtr                 , numStorageFormats> s_currentArenas;          // currently active arena (for the given storage format)
+    static array<DataType                      , numStorageFormats> s_currentArenaDataTypes;  // == s_currentArena's dataType
+    static array<DeviceDescriptor              , numStorageFormats> s_currentArenaDevices;    // == s_currentArena's device
+    static array<size_t                        , numStorageFormats> s_currentArenaSizes;      // == s_currentArena's number of elements (== s_currentArena->GetNumElements())
     // allocation state
-    static size_t s_currentArenaUsed; // allocation cursor. Elements below this are already allocated.
+    static array<size_t                        , numStorageFormats> s_currentArenaUseds;      // allocation cursor. Elements below this are already allocated.
     // arenas no longer referenced get remembered here for reuse, to avoid GPU syncs
-    static vector<unique_ptr<MatrixBase>> s_recycledArenas;
-    static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
-    static DataType GetMatrixType(const MatrixBase& matrix)
+    static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledArenass;
+    static const size_t defaultDenseArenaSize = 64000000; // we allocate in this chunk size (dense only)
+    static bool IsMatrixType(const MatrixBase& matrix, DataType dataType) // helper for checking the DataType of the MatrixBase object
     {
-        if (dynamic_cast<const Matrix<float>*>(&matrix))
-            return DataType::Float;
-        else if (dynamic_cast<const Matrix<double>*>(&matrix))
-            return DataType::Double;
-        else
-            LogicError("GetMatrixType: Unsupported element type.");
+        switch (dataType)
+        {
+        case DataType::Float:  return dynamic_cast<const Matrix<float>*>(&matrix) != nullptr;
+        case DataType::Double: return dynamic_cast<const Matrix<float>*>(&matrix) != nullptr;
+        default: LogicError("GetMatrixType: Unsupported element type.");
+        }
     }
 public:
     // allocate an NDArrayView of a given shape, data type, and device
@@ -773,69 +774,105 @@ public:
     // this operation short-circuits CUDA and is very fast.
     // Sparse objects cannot be arena-allocated. Which is fine, since they are inputs or
     // gradients (of embeddings) that can be kept around across minibatches, and thus not part of batched computation.
-    NDArrayViewPtr NewNDArrayView(const NDShape& shape, const DataType& dataType, StorageFormat format, const DeviceDescriptor& device)
+    NDArrayViewPtr NewNDArrayView(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
     {
-        // no arena allocation for sparse
-        if (format != StorageFormat::Dense)
-        {
-            fprintf(stderr, "@@ allocating %d elements of sparse format, outside arena\n", (int)shape.TotalSize(/*check=*/false));
-            //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"single NewNDArrayView", 3, numElements);
-            return make_shared<NDArrayView>(dataType, format, shape, device);
-        }
+        if (storageFormat != StorageFormat::Dense)
+            Break;
+        let isSparse = IsSparseStorageFormat(storageFormat);
+        let formatAsIndex = (size_t)storageFormat;
+        fail_if(formatAsIndex >= s_currentArenas.size(), "unexpected storageFormat int value??");
+        auto& s_currentArena         = s_currentArenas        [formatAsIndex];
+        auto& s_currentArenaSize     = s_currentArenaSizes    [formatAsIndex];
+        auto& s_currentArenaUsed     = s_currentArenaUseds    [formatAsIndex];
+        auto& s_currentArenaDataType = s_currentArenaDataTypes[formatAsIndex];
+        auto& s_currentArenaDevice   = s_currentArenaDevices  [formatAsIndex];
+        auto& s_recycledArenas       = s_recycledArenass      [formatAsIndex];
+        // TODO: This ^^ calls for a struct!
         let numElements = shape.TotalSize(/*check=*/false);
-        // If arena not large enough then waste its remainder and just allocate a fresh one.
-        // This abandons the current m_arena. This will not cause a memory leak, however:
-        // Since the slices into it that were returned before all hold a ref-count to that arena,
-        // it will be deallocated automatically as soon the last slice goes away.
-        // The deleter, though, will intercept that and move it into the recycledArenas array.
-        // Next time we need a new arena, we will look there first and recycle one.
-        // If the data type is different, we drop the current arena. We can't presently mix data types, so this is ah-OK.
+        // The logic below fuses two cases: Dense and sparse.
+        // Dense:
+        //  If arena not large enough then waste its remainder and just allocate a fresh one.
+        //  This abandons the current m_arena. This will not cause a memory leak, however:
+        //  Since the slices into it that were returned before all hold a ref-count to that arena,
+        //  it will be deallocated automatically as soon the last slice goes away.
+        //  The deleter, though, will intercept that and retire it into the recycledArenas array.
+        //  Next time we need a new arena, we will look there first and recycle one.
+        //  If the data type is different, we drop the current arena. CNTK can'really presently mix dataTypes properly anyway, so this is ah-OK.
+        // Sparse:
+        //  Arena allocation is not possible, because  sparse matrices cannot be appended to.
+        //  Sparse outputs are used rarely, and sparse CSC matrices are small, so for sparse, we just cache individual objects.
+        //  Practically, this is the same as using one "arena" per object, which is how it is implemented below.
         if (!s_currentArena                                         ||
+            isSparse                                                ||
             numElements > (s_currentArenaSize - s_currentArenaUsed) ||
             dataType != s_currentArenaDataType                      ||
             device != s_currentArenaDevice)
         {
-            let requiredArenaSize = max(ARENASIZE, numElements);
+            let requiredDenseArenaSize = max(defaultDenseArenaSize, numElements);
             s_currentArena.reset(); // abandon current one. If no references, then this will put itself into recycledArenas right here
             // get hold of an arena; either by recycling an existing one, or creating a new one
             MatrixBase* matrixPtr = nullptr;
             for (auto iter = s_recycledArenas.begin(); iter != s_recycledArenas.end(); ++iter)
             {
                 let& thisMatrixPtr = *iter;
-                if (requiredArenaSize <= thisMatrixPtr->GetNumElements()       &&
-                    thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device) &&
-                    GetMatrixType(*thisMatrixPtr) == dataType)
+                if ((isSparse || requiredDenseArenaSize <= thisMatrixPtr->GetNumElements()) &&
+                    thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device)              &&
+                    IsMatrixType(*thisMatrixPtr, dataType))
                 {
+                    if (storageFormat != StorageFormat::Dense)
+                        Break;
                     matrixPtr = iter->release();  // take back ownership from the unique_ptr
                     s_recycledArenas.erase(iter); // remove from recycling buffer
-                    fprintf(stderr, "@@ recycling arena of %d elements\n", (int)matrixPtr->GetNumElements());
+                    fprintf(stderr, "@@ recycling %s arena matrix of %d elements\n", isSparse ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
                     break;
                 }
+            }
+            // allocation size is arena size for dense, and the actual required size for sparse
+            size_t numRows, numCols;
+            if (isSparse)
+            {
+                if (shape.Rank() != 1 && shape.Rank() != 2)
+                    InvalidArgument("NewNDArrayView(): Currently, only sparse vectors and matrices are supported (no tensors of higher ranks)."), fflush(stderr);
+                numRows = shape[0];
+                numCols = shape.Rank() > 1 ? shape[1] : 1;
+            }
+            else
+            {
+                numRows = 1;
+                numCols = requiredDenseArenaSize;
             }
             if (!matrixPtr) // create a new one
             {
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
-                fprintf(stderr, "@@ allocating arena of %d elements (recycle buffer has %d entries)\n", (int)requiredArenaSize, (int)s_recycledArenas.size());
+                fprintf(stderr, "@@ allocating %s arena matrix of %d elements (recycle buffer has %d entries)\n", isSparse ? "sparse" : "dense", (int)requiredDenseArenaSize, (int)s_recycledArenas.size()), fflush(stderr);
                 switch (dataType)
                 {
-                case DataType::Float:  matrixPtr = new Matrix<float >(1, requiredArenaSize, AsCNTKImplDeviceId(device), MatrixType::DENSE, MatrixFormat::matrixFormatDense); break;
-                case DataType::Double: matrixPtr = new Matrix<double>(1, requiredArenaSize, AsCNTKImplDeviceId(device), MatrixType::DENSE, MatrixFormat::matrixFormatDense); break;
+                case DataType::Float:  matrixPtr = new Matrix<float >(numRows, numCols, AsCNTKImplDeviceId(device), isSparse ? MatrixType::SPARSE : MatrixType::DENSE, AsCNTKImplMatrixFormat(storageFormat), /*nnz=*/numCols); break;
+                case DataType::Double: matrixPtr = new Matrix<double>(numRows, numCols, AsCNTKImplDeviceId(device), isSparse ? MatrixType::SPARSE : MatrixType::DENSE, AsCNTKImplMatrixFormat(storageFormat), /*nnz=*/numCols); break;
                 default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
                 }
             }
+            else if (isSparse) // if reusing then resize it
+            {
+                matrixPtr->Resize1(numRows, numCols, /*reserveNzElems=*/numCols, /*growOnly=*/true);
+            }
             s_currentArena = shared_ptr<MatrixBase>(matrixPtr,
-                [](MatrixBase* matrixPtr)
+                [&s_recycledArenas](MatrixBase* matrixPtr)
                 {
-                    fprintf(stderr, "@@ retiring arena of %d elements\n", (int)matrixPtr->GetNumElements());
+                    fprintf(stderr, "@@ retiring %s arena of %d elements\n", matrixPtr->GetMatrixType() == MatrixType::SPARSE ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
                     // check the sob's ref count; if > 1 then there are other views into it, we cannot recycle it. It's a workaround.
                     if (matrixPtr->GetNumViews() == 1)
+                    {
+                        if (matrixPtr->GetMatrixType() == MatrixType::SPARSE)
+                            matrixPtr->Reset(); // this resets the sparse matrix, but does not release its (small) memory
                         s_recycledArenas.push_back(unique_ptr<MatrixBase>(matrixPtr)); // don't release; rather keep it around
+                    }
                     else
                     {
                         static bool errorShown = false;
                         if (!errorShown)
                         {
-                            fprintf(stderr, "WARNING: NewNDArrayView cannot recycle arena because it is still used by Matrix object not under the control of the arena allocator. This message will only be shown once.\n");
+                            fprintf(stderr, "WARNING: NewNDArrayView cannot recycle arena because it is still used by Matrix object not under the control of the arena allocator. This message will only be shown once.\n"), fflush(stderr);
                             errorShown = true;
                         }
                         delete matrixPtr;
@@ -847,18 +884,18 @@ public:
             s_currentArenaSize = s_currentArena->GetNumElements();
         }
         size_t newArenaUsed = s_currentArenaUsed + numElements;
-        auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/s_currentArenaUsed, /*end*/newArenaUsed, /*readOnly=*/false, s_currentArena);
+        auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/s_currentArenaUsed, /*end*/newArenaUsed, s_currentArena);
         s_currentArenaUsed = newArenaUsed;
         return region;
     }
 };
 
-/*static*/ MatrixBasePtr NDArrayViewArena::s_currentArena;
-/*static*/ DataType NDArrayViewArena::s_currentArenaDataType = DataType::Unknown;
-/*static*/ DeviceDescriptor NDArrayViewArena::s_currentArenaDevice = DeviceDescriptor::CPUDevice();
-/*static*/ size_t NDArrayViewArena::s_currentArenaSize = 0;
-/*static*/ size_t NDArrayViewArena::s_currentArenaUsed = 0;
-/*static*/ vector<unique_ptr<MatrixBase>> NDArrayViewArena::s_recycledArenas;
+/*static*/ array<MatrixBasePtr                 , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenas;
+/*static*/ array<DataType                      , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaDataTypes;// = { DataType::Unknown, DataType::Unknown };
+/*static*/ array<DeviceDescriptor              , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaDevices = { DeviceDescriptor::CPUDevice(), DeviceDescriptor::CPUDevice(), DeviceDescriptor::CPUDevice() };
+/*static*/ array<size_t                        , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaSizes;
+/*static*/ array<size_t                        , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaUseds;
+/*static*/ array<vector<unique_ptr<MatrixBase>>, NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledArenass;
 
 // ---------------------------------------------------------------------------
 // RuntimeStatistics -- helper class for collecting runtime statistics, for

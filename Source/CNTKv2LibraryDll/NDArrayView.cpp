@@ -198,10 +198,9 @@ namespace CNTK
         ConstructTensorView(m_tensorViewUnion, dataType, sob, tensorShape);
     }
 
-    // constructor optimized for shape passed as NDShape with potential offset (this constructs a dense object)
-    // The elementOffset is currently not supported for sparse objects. (Easy if needed.)
-    NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, size_t beginOffset, size_t endOffset, bool readOnly, const shared_ptr<MatrixBase>& sob)
-        : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())), m_viewShape(viewShape), m_isReadOnly(readOnly)
+    // constructor optimized for arena allocation (shape passed as NDShape; potential offset into Matrix object)
+    NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, size_t beginOffset, size_t endOffset, const shared_ptr<MatrixBase>& sob)
+        : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())), m_viewShape(viewShape), m_isReadOnly(false)
     {
 #ifdef LAZY_2D_PADDING
         auto tensorShape = AsTensorShape(viewShape);
