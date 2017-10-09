@@ -5174,6 +5174,7 @@ namespace CNTK
 
         void UpdateTrainingProgress(size_t numSamples, const ValuePtr& loss, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
         void AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters);
+        void DoDistributedLossEvalAveraging();
 
         FunctionPtr m_model;
         FunctionPtr m_combinedTrainingFunction;
