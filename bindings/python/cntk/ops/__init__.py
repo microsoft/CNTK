@@ -520,7 +520,16 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
 @typemap
 def local_response_normalization(operand, depth_radius, bias, alpha, beta, name=''):
     '''
-    Local Response Normalization layer.
+    Local Response Normalization layer. See Section 3.3 of the paper:
+
+    https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+
+    The mathematical equation is:
+
+    ``b_{x,y}^i=a_{x,y}^i/(bias+\alpha\sum_{j=max(0,i-depth_radius)}^{min(N-1, i+depth_radius)}(a_{x,y}^j)^2)^\beta``
+
+    where a_{x,y}^i is the activity of a neuron computed by applying kernel i at position (x,y)
+    N is the total number of kernels, depth_radius is half normalization width.
 
     Args:
         operand: input of the Local Response Normalization.
