@@ -786,8 +786,6 @@ void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
     size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
     bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
 
-    fprintf(stderr, "reallocate %d\n", (int)reallocate);
-
     if (reallocate)
         Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
 
