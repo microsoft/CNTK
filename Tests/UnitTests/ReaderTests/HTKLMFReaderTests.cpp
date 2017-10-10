@@ -4,8 +4,6 @@
 //
 #include "stdafx.h"
 #include "Common/ReaderTestHelper.h"
-
-#define FORCE_CPU_HALF
 #include "CPUMatrix.h"
 
 using namespace Microsoft::MSR::CNTK;

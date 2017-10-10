@@ -8,7 +8,7 @@
 
 #pragma once
 
-#if !defined(CPUONLY) && !defined(FORCE_CPU_HALF)
+#if !defined(CPUONLY) && __has_include("cuda_fp16.h")
 #include <cuda_fp16.h> // ASSUME CUDA9
 #else
 class __declspec(align(2)) __half

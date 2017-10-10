@@ -138,6 +138,7 @@ struct GridDim
             int numDevices;
             CUDA_CALL(cudaGetDeviceCount(&numDevices));
             s_cachedDeviceProps.resize(numDevices);
+            CUDA_CALL(cudaDeviceSynchronize());
             for (int i = 0; i < numDevices; i++)
                 CUDA_CALL(cudaGetDeviceProperties(&s_cachedDeviceProps[i], i));
         });
@@ -5394,7 +5395,7 @@ __global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
         return;
     auto blockid = sparseIndex / numRows;
     auto col = blockId2ColOrRow[blockid];
-    auto decay = pow_(rho, currentTimestamp - 1 - timestamps[col]);
+    auto decay = pow_(rho, (ElemType)(currentTimestamp - 1 - timestamps[col]));
     auto denseIndex = col * numRows + sparseIndex % numRows;
     ElemType g = grad_bsc[sparseIndex];
     ElemType adaSqr = rho * decay * smoothAda[denseIndex] + (1.0f - rho) * g * g;
@@ -5422,7 +5423,7 @@ __global__ void _adadeltaFlush(CUDA_LONG N, size_t rows, ElemType* smoothAda, El
     if (col >= N)
         return;
     
-    auto decay = pow_(rho, currentTimestamp - timestamps[col]);
+    auto decay = pow_(rho, (ElemType)(currentTimestamp - timestamps[col]));
     auto offset = rows * col;
     timestamps[col] = 0;
     for (auto row = 0; row < rows; ++row)
