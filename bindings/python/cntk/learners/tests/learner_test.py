@@ -11,6 +11,7 @@ from cntk import parameter
 
 import pytest
 import sys
+import itertools
 
 from cntk.logging import ProgressPrinter
 from cntk.learners import sgd, learning_rate_schedule, learning_parameter_schedule, UnitType, universal
@@ -48,7 +49,7 @@ MOMENTUM_SCHEDULE_PARAMS = [
         (([0.2,0.4], 5), [0.2]*5+[0.4]*20),
         (([(3,0.2),(2,0.4),(1,0.8)], 5), [0.2]*15+[0.4]*10+[0.8]*20),
         ]
-        
+
 LEARNER_LAMBDAS = [
     lambda params: C.adadelta(params),
     lambda params: C.adagrad(params, lr=learning_rate_schedule(1, UnitType.minibatch)),
@@ -460,11 +461,11 @@ def test_learner_update():
 def test_noise_injection_with_checkpointing():
     from cntk import initializer
     shape = (100,100)
-    
+
     w1 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
     w2 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
     w3 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
-    
+
     lr=learning_rate_schedule(0.5, UnitType.sample)
     m=C.momentum_schedule(0.99)
 
@@ -478,7 +479,7 @@ def test_noise_injection_with_checkpointing():
         checkpoint = learner1.create_checkpoint()
 
         v =  np.float32(np.random.rand(100,100))
-    
+
         learner1.update({w1: v}, 1)
         learner2.update({w2: v}, 1)
         assert not np.allclose(w1.value, w2.value)
@@ -520,7 +521,7 @@ def test_learner_logging():
 
     for i in range(10):
         trainer.train_minibatch({features: [[2.]], labels: [[1.]]})
-    
+
     assert len(writer.log_output) == len(lr_values + m_values)
 
     values = [j for i in zip(lr_values,m_values) for j in i] + [0]
@@ -581,7 +582,7 @@ def test_sweep_based_schedule(tmpdir, device_id):
     }
 
     # fetch minibatch (first sequence)
-    data = mbs.next_minibatch(1, input_map=input_map) 
+    data = mbs.next_minibatch(1, input_map=input_map)
     trainer.train_minibatch(data)
     assert learner.learning_rate() == 0.3
 
@@ -708,7 +709,7 @@ def test_restore_from_checkpoint(tmpdir, learner):
     last_avg_err1, avg_err1, trainer1 = ffnet(learner)
     np.random.seed(0)
     last_avg_err2, avg_err2, trainer2 = ffnet(learner)
-    
+
     assert np.allclose(last_avg_err1, last_avg_err2)
     assert np.allclose(avg_err1, avg_err2)
 
@@ -728,3 +729,55 @@ def test_restore_from_checkpoint(tmpdir, learner):
     last_avg_err2, avg_err2, _ = ffnet(None, trainer2)
     assert np.allclose(last_avg_err1, last_avg_err2)
     assert np.allclose(avg_err1, avg_err2)
+
+# The following learners work the same with sparse and dense gradients
+# After this is resolved: https://github.com/Microsoft/CNTK/issues/2411
+# this should be replaced with LEARNER_LAMBDAS
+SPARSE_AND_DENSE_LEARNER_LAMBDAS = [
+    (lambda params: C.adadelta(params), False),
+    (lambda params: C.adam(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)), True),
+    (lambda params: C.fsadagrad(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)), True),
+    (lambda params: C.rmsprop(params, lr=learning_rate_schedule(1, UnitType.minibatch), gamma=0.1, inc=3.0, dec=0.1, max=np.inf, min=1e-8), True),
+    (lambda params: C.sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch)), False)]
+
+@pytest.mark.parametrize("learner, gpu_only", SPARSE_AND_DENSE_LEARNER_LAMBDAS)
+@pytest.mark.parametrize("checkpoint", [True, False])
+def test_sparse_vs_dense_updates(tmpdir, learner, gpu_only, checkpoint, device_id):
+
+    if device_id == -1 and gpu_only:
+        pytest.skip('Test for adam, fsadagrad and rmspro currently only runs on GPU')
+
+    def session(is_sparse):
+        x = C.input_variable((200,), is_sparse=is_sparse)
+        w = C.parameter((200, 100))
+        y = C.times(x, w)
+
+        z = [0] * 100 + [1] * 100
+        for i in range(200):
+            j = (3 * i * i + 5 * i + 1) % 200  # just a random looking index
+            z[i], z[j] = z[j], z[i]
+
+        import scipy.sparse
+        x11 = scipy.sparse.csr_matrix(np.array([1] * 200).astype('f'))
+        x01 = scipy.sparse.csr_matrix(np.array(z).astype('f'))
+
+        t = C.Trainer(y, y, learner(y.parameters))
+
+        w.value = 0 * w.value
+        t.train_minibatch({x: [x11]})
+        t.train_minibatch({x: [x01]})
+        t.train_minibatch({x: [x01]})
+        if checkpoint:
+            t.save_checkpoint(str(tmpdir.join('checkpoint')))
+            t.train_minibatch({x: [x11]})
+            t.train_minibatch({x: [x01]})
+            t.train_minibatch({x: [x01]})
+            t.restore_from_checkpoint(str(tmpdir.join('checkpoint')))
+        t.train_minibatch({x: [x01]})
+        t.train_minibatch({x: [x01]})
+        t.train_minibatch({x: [x11]})
+        return w.value
+
+    s = session(is_sparse=False)
+    d = session(is_sparse=True)
+    assert(np.allclose(s, d))

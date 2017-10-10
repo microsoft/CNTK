@@ -228,7 +228,7 @@ namespace CNTK
                     break;
 
                 default:
-                    fprintf(stderr, "TensorBoardFileWriter: Unsupported data type: %d ", (int)dtype);
+                    fprintf(stderr, "TensorBoardFileWriter: Unsupported data type: %d ", static_cast<int>(dtype));
                     break;
                 }
 
