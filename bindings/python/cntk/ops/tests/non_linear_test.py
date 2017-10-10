@@ -613,6 +613,36 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
 
     unittest_helper(op_node, forward_input, expected_forward, expected_backward=None, device_id=device_id, precision=precision)
 
+def test_local_response_normalization(device_id, precision):
+    dtype = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    def lrn(x, depth_radius, bias, alpha, beta, name=''):
+        x2 = C.square(x)
+        # reshape to insert a fake singleton reduction dimension after the 3th axis (channel axis). Note Python axis order and BrainScript are reversed.
+        x2s = C.reshape(x2, (1, C.InferredDimension), 0, 1)
+        W = C.constant(alpha/(2*depth_radius+1), shape=(1,2*depth_radius+1,1,1), dtype=dtype, name='W')
+        # 3D convolution with a filter that has a non 1-size only in the 3rd axis, and does not reduce since the reduction dimension is fake and 1
+        y = C.convolution (W, x2s)
+        # reshape back to remove the fake singleton reduction dimension
+        b = C.reshape(y, C.InferredDimension, 0, 2)
+        den = C.exp(beta * C.log(bias + b))
+        return C.element_divide(x, den)
+
+    from cntk import local_response_normalization
+
+    img_shape = (64, 32, 32)
+    img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
+    x_gt = C.input_variable(shape=img_shape, dtype=dtype)
+    x_r = C.input_variable(shape=img_shape, dtype=dtype)
+
+    gt = lrn(x_gt, 2, 1.0, 0.0001, 0.75)
+    r = local_response_normalization(x_r, 2, 1.0, 0.0001, 0.75)
+    ss = gt.eval({x_gt:img})
+    sa = r.eval({x_r:img})
+
+    assert np.allclose(r.eval({x_r:img}), gt.eval({x_gt:img}))
+
 TENSOR_PAIRS = [
     ([0.3], [0.1]),
     ([[0.1]], [[0.3]]),

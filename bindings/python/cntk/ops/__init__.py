@@ -12,7 +12,7 @@ from __future__ import print_function
 import numpy as np
 import numbers
 from . import sequence
-from .functions import CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
+from .functions import ModelFormat, CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, sanitize_multi_axis_reduction_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
@@ -517,6 +517,25 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
                                normalization_time_constant, blend_time_constant,
                                epsilon, use_cudnn_engine, name)
 
+@typemap
+def local_response_normalization(operand, depth_radius, bias, alpha, beta, name=''):
+    '''
+    Local Response Normalization layer.
+
+    Args:
+        operand: input of the Local Response Normalization.
+        depth_radius (int): the radius on the channel dimension to apply the normalization.
+        bias (double): a bias term to avoid divide by zero.
+        alpha (double): the alpha term of the above equation.
+        beta (double): the beta term of the above equation.
+        name (str, optional): the name of the Function instance in the network.
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import local_response_normalization
+    operand = sanitize_input(operand)
+    return local_response_normalization(operand, depth_radius, bias, alpha, beta, name)
+
 ##########################################################################
 # comparison ops
 ##########################################################################
@@ -852,8 +871,6 @@ def element_times(left, right, name=''):
     right = sanitize_input(right, dtype)
     return cntk_py_element_times(left, right, name)
 
-
-# TODO: move element_max/min to C++
 @associative_multi_arg
 @typemap
 def element_max(left, right, name=''):
@@ -869,10 +886,11 @@ def element_max(left, right, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    gt = greater(left, right)
-    # TODO: use as_block()
-    return element_select(gt, left, right, name)
-
+    from cntk.cntk_py import element_max as cntk_py_element_max
+    dtype = get_data_type(left, right)
+    left = sanitize_input(left, dtype)
+    right = sanitize_input(right, dtype)
+    return cntk_py_element_max(left, right, name)
 
 @associative_multi_arg
 @typemap
@@ -889,10 +907,11 @@ def element_min(left, right, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    lt = less(left, right)
-    # TODO: use as_block()
-    return element_select(lt, left, right, name)
-
+    from cntk.cntk_py import element_min as cntk_py_element_min
+    dtype = get_data_type(left, right)
+    left = sanitize_input(left, dtype)
+    right = sanitize_input(right, dtype)
+    return cntk_py_element_min(left, right, name)
 
 @typemap
 def element_divide(left, right, name=''):

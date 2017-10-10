@@ -26,6 +26,24 @@ from cntk.internal.sanitize import is_byte_buffer
 from ..variables import Record, Variable
 
 
+
+@unique
+class ModelFormat(Enum):
+    '''
+    Describes the supported disk format for CNTK model.
+    '''
+
+    CNTKv2 = cntk_py.ModelFormat_CNTKv2
+    '''
+    Default CNTK version 2 format, it supports all CNTK functionalities.
+    '''
+
+    ONNX   = cntk_py.ModelFormat_ONNX
+    '''
+    Open Neural Network Exchange format from https://github.com/onnx/onnx, ONNX currently support
+    subset of CNTK functionalities.
+    '''
+
 @unique
 class CloneMethod(Enum):
     '''
@@ -1435,10 +1453,9 @@ class Function(cntk_py.Function):
         return collector.test_summaries[-1]
 
     @typemap
-    def save(self, filename):
+    def save(self, filename, format=ModelFormat.CNTKv2):
         '''
-        Save this function graph into a model file using protobuf-based
-        serialization.
+        Save this function graph into a model file using the specified format.
 
         Use distributed.Communicator.is_main() to gate your call to save()
         in distributed environment.
@@ -1446,7 +1463,7 @@ class Function(cntk_py.Function):
         Args:
             filename (str): model path
         '''
-        return super(Function, self).save(filename)
+        return super(Function, self).save(filename, format.value)
 
     @typemap
     def restore(self, filename):
@@ -1489,7 +1506,7 @@ class Function(cntk_py.Function):
 
     @staticmethod
     @typemap
-    def load(model, device=None):
+    def load(model, device=None, format=ModelFormat.CNTKv2):
         '''
         Load the ``model``, that has been saved using :func:`~cntk.ops.functions.Function.save`.
 
@@ -1498,6 +1515,8 @@ class Function(cntk_py.Function):
              containing the binary representation of a model.
             device (:class:`~cntk.device.DeviceDescriptor`, defaults to the current globally default device):
              specifies the device to allocate the model on.
+            format (:class:`~cntk.ModelFormat`, defaults to CNTKv2 format): specifies the format of the file to load.
+             if the specified format is ONNX, then model must be a filename.
 
         Returns:
             root node
@@ -1515,10 +1534,12 @@ class Function(cntk_py.Function):
                 pass
 
         if is_buffer:
+            if format != ModelFormat.CNTKv2:
+                raise ValueError('Loading from buffer only supported for CNTKv2 format.')
             return cntk_py.Function.load_from_buffer(model, device)
 
         if is_file:
-            return cntk_py.Function.load(str(model), device)
+            return cntk_py.Function.load(str(model), device, format.value)
 
         raise ValueError('Cannot load the model {} that is neither a file nor a byte buffer.'.format(model))
 
@@ -1600,11 +1621,11 @@ def native_user_function(op_id, operands, attributes=None, user_function_instanc
     return cntk_py.Function_native_user_function(op_id, operands, attributes, user_function_instance_name)
 
 @typemap
-def load_model(model, device=None):
+def load_model(model, device=None, format=ModelFormat.CNTKv2):
     '''
     Alias for :func:`~cntk.ops.functions.Function.load`.
     '''
-    return Function.load(model, device)
+    return Function.load(model, device, format)
 
 class UserFunction(Function):
     '''
