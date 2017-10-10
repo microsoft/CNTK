@@ -1296,7 +1296,7 @@ namespace ONNXIR
                     // A op_type refers to nothing.
                     Status status(false,
                         "Error: the operator or function (" + op_type
-                        + ") refered by node (" + nodeName
+                        + ") referred by node (" + nodeName
                         + ") does not exist.");
                     return status;
                 }
