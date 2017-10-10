@@ -786,6 +786,8 @@ void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
     size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
     bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
 
+    fprintf(stderr, "reallocate %d\n", (int)reallocate);
+
     if (reallocate)
         Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
 
@@ -2411,7 +2413,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUMatrix<
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
+void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, const int inputIndex)
 {
     if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
@@ -2421,15 +2423,27 @@ void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& 
         LogicError("GPUSparseMatrix: AddSparseColumnIndex: matrix dimension mismatch.");
     }
 
+    if (inputIndex == 0) {
+        GPUSPARSE_INDEX_TYPE *colzero = new GPUSPARSE_INDEX_TYPE[a.GetNumCols()+1]();
+        CUDA_CALL(cudaMemcpy(a.ColLocation(), colzero, sizeof(GPUSPARSE_INDEX_TYPE)*(a.GetNumCols() + 1), cudaMemcpyHostToDevice));
+        delete[] colzero;
+    }
     a.PrepareDevice();
     CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
     SyncGuard syncGuard;
     int nBlocks = (int)ceil(1.0 * n / 1024);
     _sparseCSCAddColumnIndexsparseCSC<ElemType> << <nBlocks, 1024 >> >(a.GetNumCols(), a.ColLocation(), b.ColLocation());
+
+    GPUSPARSE_INDEX_TYPE* col = new  GPUSPARSE_INDEX_TYPE[a.GetNumCols() + 1];
+    cudaMemcpy(col, a.ColLocation(), sizeof(GPUSPARSE_INDEX_TYPE)*(a.GetNumCols() + 1), cudaMemcpyDeviceToHost);
+    for (int i = 0; i <= a.GetNumCols(); i++) {
+        fprintf(stderr, "column %d:%d ", i, (int)col[i]);
+    }
+    delete[] col;
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
+void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const int inputIndex)
 {
     if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
@@ -2437,6 +2451,12 @@ void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& 
     if (a.GetNumCols() != b.GetNumCols())
     {
         LogicError("GPUSparseMatrix: AddSparseColumnIndex: matrix dimension mismatch.");
+    }
+
+    if (inputIndex == 0) {
+        GPUSPARSE_INDEX_TYPE *colzero = new GPUSPARSE_INDEX_TYPE[a.GetNumCols() + 1]();
+        CUDA_CALL(cudaMemcpy(a.ColLocation(), colzero, sizeof(GPUSPARSE_INDEX_TYPE)*(a.GetNumCols() + 1), cudaMemcpyHostToDevice));
+        delete[] colzero;
     }
 
     a.PrepareDevice();

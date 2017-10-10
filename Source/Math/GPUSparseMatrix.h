@@ -448,8 +448,8 @@ public:
     static GPUMatrix<ElemType> ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
     static GPUMatrix<ElemType> ElementProductOf(const GPUMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b);
 
-    static void AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b);
-    static void AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
+    static void AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, const int inputIndex);
+    static void AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const int inputIndex);
     static void AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset);
     static void AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset);
 

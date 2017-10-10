@@ -4995,18 +4995,18 @@ template <class ElemType>
 }
 
 template <class ElemType>
-/*static*/ void Matrix<ElemType>::AddSparseColumnIndex(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
+/*static*/ void Matrix<ElemType>::AddSparseColumnIndex(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const int inputIndex)
 {
     DecideAndMoveToRightDevice(a, b);
     if (a.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE)
     {
         if (b.GetMatrixType() == MatrixType::SPARSE)
         {
-            GPUSparseMatrix<ElemType>::AddSparseColumnIndex(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix);
+            GPUSparseMatrix<ElemType>::AddSparseColumnIndex(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, inputIndex);
         }
         else
         {
-            GPUSparseMatrix<ElemType>::AddSparseColumnIndex(*a.m_GPUSparseMatrix, *b.m_GPUMatrix);
+            GPUSparseMatrix<ElemType>::AddSparseColumnIndex(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, inputIndex);
         }
     }
     else

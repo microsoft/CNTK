@@ -632,7 +632,7 @@ public:
 
     static void SparseAssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset);
     static void AddSparseNumOfNZs(const Matrix<ElemType>& a, size_t* numNZs);
-    static void AddSparseColumnIndex(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
+    static void AddSparseColumnIndex(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const int inputIndex);
     static void ResizeAsSparseMatrix(Matrix<ElemType>& a, size_t numRows, size_t numCols, size_t numNZs);
 
     void TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,

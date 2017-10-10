@@ -1311,47 +1311,58 @@ template class RowStackNode<double>;
 // The output is a sparse matrix
 // -----------------------------------------------------------------------
 template <class ElemType>
-class SparseRowStackNode : public ComputationNode<ElemType> // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs
+class SparseRowStackNode : public ComputationNodeNonLooping<ElemType> // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"SparseRowStack"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"SparseRowStack";
+    }
 
 public:
+    DeclareConstructorFromConfig(SparseRowStackNode);
     SparseRowStackNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
+        //MarkValueNonSharable();
     }
 
-    SparseRowStackNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : SparseRowStackNode(configp->Get(L"deviceId"), L"<placeholder>")
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override
     {
-        AttachInputsFromConfig(configp);
-    }
+        auto& outputValuePtrRef = ValuePtrRef();
+        if (outputValuePtrRef->GetMatrixType() != MatrixType::SPARSE)
+        {
+            outputValuePtrRef = std::make_shared<Matrix<ElemType>>(outputValuePtrRef->GetNumRows(),
+                outputValuePtrRef->GetNumCols(),
+                outputValuePtrRef->GetPreferredDeviceId(),
+                MatrixType::SPARSE,
+                MatrixFormat::matrixFormatSparseCSC);
+        }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        Matrix<ElemType> result = ValueFor(fr);
-        // allocate memory for the output sparse matrix
+        auto& output = Value(); // output goes here
+
         size_t numCols = 0;
         size_t numRows = 0;
         size_t numNZs = 0;
 
         for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
         {
-            Matrix<ElemType> input = Input(inputIndex)->ValueFor(fr);
+            let& input = Input(inputIndex)->Value();
             Matrix<ElemType>::AddSparseNumOfNZs(input, &numNZs);
             numRows += input.GetNumRows();
-
             if (inputIndex == 0)
                 numCols = input.GetNumCols();
         }
+        
+        output.Resize(numRows, numCols, numNZs);
 
-        Matrix<ElemType>::ResizeAsSparseMatrix(result, numRows, numCols, numNZs);
+        fprintf(stderr, "nRows %d, nCols %d, nNZs %d\n", (int)numRows, (int)numCols, (int)numNZs);
 
         for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
         {
-            Matrix<ElemType> input = Input(inputIndex)->ValueFor(fr);
-            Matrix<ElemType>::AddSparseColumnIndex(result, input);
+            let& input = Input(inputIndex)->Value();
+            Matrix<ElemType>::AddSparseColumnIndex(output, input, inputIndex);
         }
 
         size_t *NzOffset = new size_t[numCols]();
@@ -1359,16 +1370,20 @@ public:
         size_t RowOffset = 0;
         for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
         {
-            Matrix<ElemType> input = Input(inputIndex)->ValueFor(fr);
-            Matrix<ElemType>::SparseAssignCopyOf(result, input, NzOffset, RowOffset);
+            let& input = Input(inputIndex)->Value();
+            Matrix<ElemType>::SparseAssignCopyOf(output, input, NzOffset, RowOffset);
             RowOffset += input.GetNumRows();
         }
+        delete[] NzOffset;
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
     {
         InvalidArgument("BackpropTo not supported for SparseRowStackNode");
     }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -1399,6 +1414,7 @@ public:
 
 template class SparseRowStackNode<float>;
 template class SparseRowStackNode<double>;
+
 
 // -----------------------------------------------------------------------
 // RowRepeatNode (input) -- duplicate row(s) of a matrix multiple times

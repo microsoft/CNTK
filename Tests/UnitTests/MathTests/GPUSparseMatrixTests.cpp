@@ -706,8 +706,8 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseAssignCopyOf, RandomSeedFixture)
     GPUSparseMatrix<float> tmp(matrixB.GetComputeDeviceId(), matrixFormatSparseCSC);
     tmp.Resize(tMatrixB.GetNumRows() + tMatrixA.GetNumRows(), tMatrixB.GetNumCols(), tMatrixA.NzCount() + tMatrixB.NzCount(), MatrixFormat::matrixFormatSparseCSC);
 
-    GPUSparseMatrix<float>::AddSparseColumnIndex(tmp, tMatrixA);
-    GPUSparseMatrix<float>::AddSparseColumnIndex(tmp, tMatrixB);
+    GPUSparseMatrix<float>::AddSparseColumnIndex(tmp, tMatrixA, 0);
+    GPUSparseMatrix<float>::AddSparseColumnIndex(tmp, tMatrixB, 1);
 
     size_t* NzOffset = new size_t[a_colCount]();
 
@@ -797,8 +797,8 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseAssignCopyOfDense, RandomSeedFixture)
     GPUSparseMatrix<float> tmp(matrixB.GetComputeDeviceId(), matrixFormatSparseCSC);
     tmp.Resize(tMatrixB.GetNumRows() + tMatrixA.GetNumRows(), tMatrixB.GetNumCols(), tMatrixA.NzCount() + tMatrixB.GetNumElements(), MatrixFormat::matrixFormatSparseCSC);
 
-    GPUSparseMatrix<float>::AddSparseColumnIndex(tmp, tMatrixA);
-    GPUSparseMatrix<float>::AddSparseColumnIndex(tmp, tMatrixB);
+    GPUSparseMatrix<float>::AddSparseColumnIndex(tmp, tMatrixA, 0);
+    GPUSparseMatrix<float>::AddSparseColumnIndex(tmp, tMatrixB, 1);
 
     size_t* NzOffset = new size_t[a_colCount]();
 
