@@ -1330,7 +1330,11 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override
     {
+#ifdef _MSC_VER
         auto& outputValuePtrRef = ValuePtrRef();
+#else
+        auto& outputValuePtrRef = this->template ValuePtrRef();
+#endif
         if (outputValuePtrRef->GetMatrixType() != MatrixType::SPARSE)
         {
             outputValuePtrRef = std::make_shared<Matrix<ElemType>>(outputValuePtrRef->GetNumRows(),
@@ -1356,8 +1360,6 @@ public:
         }
         
         output.Resize(numRows, numCols, numNZs);
-
-        fprintf(stderr, "nRows %d, nCols %d, nNZs %d\n", (int)numRows, (int)numCols, (int)numNZs);
 
         for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
         {
