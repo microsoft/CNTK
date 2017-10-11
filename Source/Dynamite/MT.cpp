@@ -37,23 +37,60 @@ using namespace Dynamite;
 //  - batch/length normalization
 //  - no weight norm
 
+// --- high-level configuration ---
+// all configurable items that vary across systems
+size_t srcVocabSize, tgtVocabSize;
+wstring srcTxtFile, srcVocabFile, tgtTxtFile, tgtVocabFile;
+//int srcPositionMin = -100;  // positions -100..100
+//int srcPositionMax = +100;
+//size_t srcPosition0 = 105; // 201 position embeddings, with 0 at this word index (they live in the same index space and embedding matrices as the word identities)
+//int tgtPositionMin = 0;    // positions 0..100
+//int tgtPositionMax = 100;
+//size_t tgtPosition0 = 5;
+
+size_t embeddingDim = 512;
+size_t attentionDim = 512;
+size_t numEncoderLayers = 3;
+size_t encoderRecurrentDim = 512;
+size_t decoderRecurrentDim = 1024;
+size_t numDecoderResNetProjections = 4;
+size_t decoderProjectionDim = 768;
+size_t topHiddenProjectionDim = 1024;
+
+static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
+{
+    if (systemId == "chs_eng")
+    {
+        srcVocabSize = 78440;
+        tgtVocabSize = 79439;
+        srcTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.CHS.txt"; srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
+        tgtTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.ENU.txt"; tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
+    }
+    else if (systemId == "chs_eng_small")
+    {
+        srcVocabSize = 78440;
+        tgtVocabSize = 79439;
+        srcTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.small.CHS.txt"; srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
+        tgtTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.small.ENU.txt"; tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
+    }
+    else if (systemId == "rom_eng")
+    {
+        srcVocabSize = 27579 + 3;
+        tgtVocabSize = 21163 + 3;
+        srcTxtFile = L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.shuf"; srcVocabFile = L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.vocab";
+        tgtTxtFile = L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.shuf"; tgtVocabFile = L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.vocab";
+    }
+    else if (systemId == "karnak_sample")
+    {
+        // what was the vocab size again here?
+        srcTxtFile = L"d:/work/Karnak/sample-model/data/train.src"; srcVocabFile = L"d:/work/Karnak/sample-model/data/vocab.src";
+        tgtTxtFile = L"d:/work/Karnak/sample-model/data/train.tgt"; tgtVocabFile = L"d:/work/Karnak/sample-model/data/vocab.tgt";
+    }
+    else
+        InvalidArgument("Invalid system id '%S'", systemId.c_str());
+}
+
 DeviceDescriptor device(DeviceDescriptor::CPUDevice()); // dummy; will be overwritten
-const size_t srcVocabSize = 78440;
-const size_t tgtVocabSize = 79439;
-//const int srcPositionMin = -100;  // positions -100..100
-//const int srcPositionMax = +100;
-//const size_t srcPosition0 = 105; // 201 position embeddings, with 0 at this word index (they live in the same index space and embedding matrices as the word identities)
-//const int tgtPositionMin = 0;    // positions 0..100
-//const int tgtPositionMax = 100;
-//const size_t tgtPosition0 = 5;
-const size_t embeddingDim = 512;
-const size_t attentionDim = 512;
-const size_t numEncoderLayers = 3;
-const size_t encoderRecurrentDim = 512;
-const size_t decoderRecurrentDim = 1024;
-const size_t numDecoderResNetProjections = 4;
-const size_t decoderProjectionDim = 768;
-const size_t topHiddenProjectionDim = 1024;
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
 #define DOLOG(var) (var)//((mbCount % 100 == 99) ? LOG(var) : 0)
@@ -230,7 +267,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     {
         // decoding loop
         CountAPICalls(2);
-        Variable state = Slice(hEncs[0], Axis(0), encoderRecurrentDim, 2 * encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
+        Variable state = Slice(hEncs[0], Axis(0), (int)encoderRecurrentDim, 2 * (int)encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
         state = initialStateProjection(state);      // match the dimensions
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
         // common subexpression of attention.
@@ -327,8 +364,9 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
     });
 }
 
-void Train(wstring outputDirectory)
+void Train(string systemId, wstring outputDirectory)
 {
+    SetConfigurationVariablesFor(systemId);
     let communicator = MPICommunicator();
 #if 1 // while we are running with MPI, we always start from start
     let numGpus = DeviceDescriptor::AllDevices().size() -1;
@@ -363,12 +401,8 @@ void Train(wstring outputDirectory)
     // data
     auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(
         {
-        //PlainTextStreamConfiguration(L"src", srcVocabSize, { L"d:/work/Karnak/sample-model/data/train.src" }, { L"d:/work/Karnak/sample-model/data/vocab.src", L"<s>", L"</s>", L"<unk>" }),
-        //PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/train.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk>" })
-        //PlainTextStreamConfiguration(L"src", srcVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.vocab", L"<s>", L"</s>", L"<unk>" }),
-        //PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.vocab", L"<s>", L"</s>", L"<unk>" })
-        PlainTextStreamConfiguration(L"src", srcVocabSize,{ L"f:/local/data/2017_10_05_21h_46m_39s/train.CHS.txt" },{ L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab",       L"<s>", L"</s>", L"<unk>" }),
-        PlainTextStreamConfiguration(L"tgt", tgtVocabSize,{ L"f:/local/data/2017_10_05_21h_46m_39s/train.ENU.txt" },{ L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab", L"<s>", L"</s>", L"<unk>" })
+        PlainTextStreamConfiguration(L"src", srcVocabSize, { srcTxtFile }, { srcVocabFile, L"<s>", L"</s>", L"<unk>" }),
+        PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { tgtTxtFile }, { tgtVocabFile, L"<s>", L"</s>", L"<unk>" })
     }) },
         /*randomize=*/true);
     minibatchSourceConfig.maxSamples = MinibatchSource::InfinitelyRepeat;
@@ -769,19 +803,69 @@ void Train(wstring outputDirectory)
     }
 }
 
+// minimalist command-line eargument parser, requires all arguments in order
+class GetCommandLineArguments
+{
+    size_t argc; char** argv;
+    string Front() const { if (argc == 0) LogicError("GetCommandLineArguments: out of command-line arguments??"); return *argv; }
+    string Pop() { let val = Front(); argc--, argv++; return val; }
+    string PopArg(const string& argTag) // check that next arg is argTag, Pop it, then Pop and return the subsequent arg
+    {
+        if (argc < 2 || Pop() != argTag)
+            InvalidArgument("command-line argument '%s' missing or out of order", argTag.c_str());
+        return Pop();
+    }
+    // recursive templates. Each one pops the next argument, where the C++ type selects the conversion
+    template <typename ...ArgTypes>
+    void Get(const string& argTag, wstring& argVal, ArgTypes&& ...remainingArgs)
+    {
+        let val = PopArg(argTag);
+        argVal = wstring(val.begin(), val.end()); // note: this only presently works for ASCII arguments, easy to fix if ever needed
+        Get(std::forward<ArgTypes>(remainingArgs)...); // recurse
+    }
+    template <typename ...ArgTypes>
+    void Get(const string& argTag, string& argVal, ArgTypes&& ...remainingArgs)
+    {
+        argVal = PopArg(argTag);
+        Get(std::forward<ArgTypes>(remainingArgs)...); // recurse
+    }
+    // if needed, we can add Get() for other types, and with defaults (triples)
+    void Get() // end of recursion
+    {
+        if (argc > 0)
+            InvalidArgument("unexpected extraneous command-line argument '%s'", Pop());
+    }
+public:
+    // call this way: GetCommandLineArguments(argc, argv, "--tag1", variable1, "--tag2", variable2...)
+    template <typename ...ArgTypes>
+    GetCommandLineArguments(int argc, char *argv[], ArgTypes&& ...remainingArgs) :
+        argc(argc), argv(argv)
+    {
+        Pop(); // pop program name itself
+        Get(std::forward<ArgTypes>(remainingArgs)...);
+    }
+};
 
 int mt_main(int argc, char *argv[])
 {
     Internal::PrintBuiltInfo();
     try
     {
-        // minimalistic argument parser, only to get a pathname
-        if (argc != 3)
-            throw invalid_argument("required command line: --id IDSTRING, where IDSTRING is used to form the log and model path for now");
-        let* pExpId = argv[2];
-        wstring experimentId(pExpId, pExpId + strlen(pExpId)); // (cheap conversion to wchar_t)
+        string systemId;
+        wstring experimentId;
+        try
+        {
+            GetCommandLineArguments(argc, argv, "--system", systemId, "--id", experimentId);
+        }
+        catch (const exception& e)
+        {
+            fprintf(stderr, "%s\n", e.what()), fflush(stderr);
+            throw invalid_argument("required command line: --system SYSTEMID --id IDSTRING\n SYSTEMID = chs_end, rom_eng, etc\n IDSTRING is used to form the log and model path for now");
+        }
+        //let* pExpId = argv[2];
+        //wstring experimentId(pExpId, pExpId + strlen(pExpId)); // (cheap conversion to wchar_t)
         wstring workingDirectory = L"d:/mt/experiments";       // output dir = "$workingDirectory/$experimentId/"
-        Train(workingDirectory + L"/" + experimentId);
+        Train(systemId, workingDirectory + L"/" + wstring(systemId.begin(), systemId.end()) + L"_" + experimentId);
     }
     catch (exception& e)
     {
