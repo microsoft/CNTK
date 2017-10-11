@@ -401,7 +401,7 @@ protected:
 
 protected:
     // **************************
-    // Variables requried by all matrices
+    // Variables required by all matrices
     // **************************
     MatrixFormat m_format;
     mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE

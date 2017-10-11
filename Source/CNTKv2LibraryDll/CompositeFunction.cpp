@@ -365,7 +365,7 @@ namespace CNTK
             return;
         }
 
-        // build a map of souce funtion to the destination (this) function UIDs.
+        // build a map of souce function to the destination (this) function UIDs.
         map<wstring, wstring> uidMap;
         for (auto i = 0; i < theirUIDs.size(); i++)
             uidMap[theirUIDs[i]] = ourUIDs[i];
@@ -1387,6 +1387,10 @@ namespace CNTK
             {
                 // This ComputationNode has at least one null input which now needs to be properly attached
                 const PrimitiveFunction* primitiveFunc = dynamic_cast<const PrimitiveFunction*>(currentVar.Owner().get());
+
+                if (primitiveFunc == nullptr) {
+                    LogicError("Non-primitive function '%S' cannot be a part of the CNTK recurrent loop.", currentVar.Owner()->Name().c_str());
+                }
 
                 // Skip block primitives since they do not directly map to a computation node
                 if (primitiveFunc->OpType() == PrimitiveOpType::Block)

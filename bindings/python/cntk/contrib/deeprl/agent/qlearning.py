@@ -107,7 +107,7 @@ class QLearning(AgentBaseClass):
             self._q.parameters,
             C.learners.learning_rate_schedule(
                 self._parameters.initial_eta, C.learners.UnitType.sample),
-            minibatch_size=minibatch_size,
+            use_mean_gradient=True,
             momentum=C.learners.momentum_schedule(self._parameters.momentum),
             variance_momentum=C.learners.momentum_schedule(0.999),
             gradient_clipping_threshold_per_sample=

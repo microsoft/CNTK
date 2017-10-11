@@ -38,7 +38,7 @@ namespace CNTK
             AdditionalLearningOptions additionalOptions,
             bool allocateSmoothGradients = true);
 
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const = 0;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) = 0;
 
         // Allows derived class may override this to perform per-minibatch update actions
         virtual void UpdateOnMinibatch(size_t /*trainingSampleCount*/) {}
@@ -121,7 +121,7 @@ namespace CNTK
         // Templatized update function, it invokes preprocess and postprocess using the provided
         // template parameter and also invokes virtual Update method implemented in one of the subclasses.
         template <typename ElementType>
-        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount);
 
         // TODO: make these functions friends of NDViewArray and move to Utils?
         static bool HasNan(const NDArrayViewPtr& value, const char* name);
@@ -145,7 +145,7 @@ namespace CNTK
 
     protected:
 
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
 
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
@@ -173,7 +173,7 @@ namespace CNTK
         }
 
     protected:
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
 
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
@@ -218,7 +218,7 @@ namespace CNTK
         {}
 
     protected:
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
 
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
@@ -235,7 +235,7 @@ namespace CNTK
     protected:
         bool m_needAveMultiplier;
 
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
 
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
@@ -251,13 +251,26 @@ namespace CNTK
             AdditionalLearningOptions additionalOptions);
 
     protected:
+        // If a gradient is sparse, we skip updating columns with zero gradients. This means some 
+        // columns will receive their updates when their gradient is non-zero. The only exception
+        // is that once every s_SyncInterval updates we will make sure all columns are up to date. 
+        static const int s_SyncInterval;
+
         double m_rho;
         double m_epsilon;
+        // If a gradient is sparse, we will maintain a timestamp per column with the last time that column was updated
+        std::unordered_map<Parameter, NDArrayViewPtr> m_lastUpdateTime;
+        // If a gradient is sparse we will use the current time and the timestamp to determine how to apply a bunch of delayed updates for this column.
+        // This allows us to skip updating many columns when the gradients are sparse.
+        std::unordered_map<Parameter, int> m_currentTime;
 
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
 
         template <typename ElementType>
-        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount);
+
+        virtual Dictionary CreateCheckpoint() override;
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
     };
 
     class LearnerFSAdaGrad : public LearnerMomentumSGD
@@ -279,7 +292,7 @@ namespace CNTK
 
     protected:
 
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
         virtual void UpdateOnMinibatch(size_t trainingSampleCount) override;
 
         template <typename ElementType>
@@ -320,7 +333,7 @@ namespace CNTK
 
     protected:
 
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
         virtual void UpdateOnMinibatch(size_t trainingSampleCount) override;
 
         template <typename ElementType>
@@ -367,7 +380,7 @@ namespace CNTK
         bool m_needAveMultiplier;
         double m_smoothedCount;
 
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
         virtual void UpdateOnMinibatch(size_t trainingSampleCount) override;
 
         template <typename ElementType>
@@ -401,6 +414,6 @@ namespace CNTK
 
     protected:
 
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
     };
 }

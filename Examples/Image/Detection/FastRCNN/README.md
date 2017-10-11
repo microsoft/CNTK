@@ -6,7 +6,8 @@ This folder contains an end-to-end solution for using Fast R-CNN to perform obje
 The original research paper for Fast R-CNN can be found at [https://arxiv.org/abs/1504.08083](https://arxiv.org/abs/1504.08083).
 Base models that are supported by the current configuration are AlexNet and VGG16. 
 Two image sets that are preconfigured are Pascal VOC 2007 and Grocery. 
-Other base models or image sets can be used by adding a configuration file similar to the examples in `utils/configs` and importing it in `run_fast_rcnn.py`.
+Other base models or image sets can be used by adding a configuration file similar to the examples in
+`Examples/Image/Detection/utils/configs` and importing it in `run_fast_rcnn.py`.
 
 ## Running the example
 
@@ -29,7 +30,7 @@ We use a toy dataset of images captured from a refrigerator to demonstrate Fast 
 
 `python install_data_and_model.py`
 
-After running the script, the toy dataset will be installed under the `Image/DataSets/Grocery` folder. The AlexNet model will be downloaded to the `Image/PretrainedModels` folder. 
+After running the script, the toy dataset will be installed under the `Examples/Image/DataSets/Grocery` folder. The AlexNet model will be downloaded to the `PretrainedModels` folder in the root CNTK folder. 
 We recommend you to keep the downloaded data in the respective folder while downloading, as the configuration files expect that by default.
 
 ### Running Fast R-CNN on the example data
@@ -62,7 +63,7 @@ After storing your images in the described folder structure and annotating them 
 
 `python Examples/Image/Detection/utils/annotations/annotations_helper.py`
 
-after changing the folder in that script to your data folder. Finally, create a `MyDataSet_config.py` in the `utils\configs` folder following the existing examples:
+after changing the folder in that script to your data folder. Finally, create a `MyDataSet_config.py` in the `utils/configs` folder following the existing examples:
 
 ```
 __C.CNTK.DATASET == "YourDataSet":

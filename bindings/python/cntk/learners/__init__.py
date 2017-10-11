@@ -62,19 +62,6 @@ def set_default_unit_gain_value(value):
     '''
     cntk_py.set_default_unit_gain_value(value)
 
-def default_use_mean_gradient_value():
-    '''
-    Returns true if by default input gradient to learner is averaged.
-    '''
-    return cntk_py.default_use_mean_gradient_value()
-
-
-def set_default_use_mean_gradient_value(value):
-    '''
-    Sets globally default use_mean_gradient_value.
-    '''
-    cntk_py.set_default_use_mean_gradient_value(value)
-
 # an internal method to verify that the learning rate schedule
 # has a proper (per-sample or per-MB schedule) type and raise
 # an exception otherwise
@@ -154,7 +141,7 @@ class Learner(cntk_py.Learner):
         _verify_learning_rate_type(learning_rate)
         if not learning_rate.is_minibatch_size_explicitly_specified:
             #If the schedule minibatch size is not explicitly specified, the learner's specification will take over
-            if self.minibatch_size is not None and self.minibatch_size != self.unspecified_minibatch_size:
+            if self.minibatch_size is not None and self.minibatch_size != self.ignored_minibatch_size:
                 learning_rate.minibatch_size = self.minibatch_size
         return super(Learner, self).reset_learning_rate(learning_rate)
 
@@ -164,7 +151,7 @@ class Learner(cntk_py.Learner):
         '''
         return super(Learner, self).learning_rate()
 
-IGNORE = Learner.unspecified_minibatch_size
+IGNORE = Learner.ignored_minibatch_size
 '''
 Indicate that the minibatch size is ignored in learning's hyper-parameter schedule.
 '''
@@ -288,7 +275,7 @@ def training_parameter_schedule(schedule, unit=UnitType.minibatch, epoch_size=No
     if unit == UnitType.sample:
         ref_minibatch_size = 1
     else: # unit == UnitType.minibatch
-        ref_minibatch_size = cntk_py.training_double_parameter_schedule.unspecified_minibatch_size
+        ref_minibatch_size = cntk_py.training_double_parameter_schedule.ignored_minibatch_size
 
     if isinstance(schedule, cntk_py.training_double_parameter_schedule):
         schedule.is_minibatch_size_explicitly_specified = True #legacy learning parameter always have the specification
@@ -325,9 +312,9 @@ def learning_parameter_schedule(schedule, minibatch_size=None, epoch_size=None):
          pair, i.e. [(num_epoch_1, p_1), (num_epoch_n, p_2), .., (num_epoch_n, p_n)], the i-th parameter is used as a 
          value from the (``epoch_size`` * (num_epoch_0 + ... + num_epoch_2 + ... + num_epoch_(i-1) + 1)-th sample to the 
          (``epoch_size`` * num_epoch_i)-th sample (taking num_epoch_0 = 0 as a special initialization).
-        minibatch_size (int): an integer to specify the reference minibatch size that schedule are designed for; 
+        minibatch_size (int): an integer to specify the minibatch size that schedule are designed for. 
          CNTK will scale the schedule internally so as to simulate the behavior of the schedule as much as possible
-         to match the designed effect. If it is not specified, CNTK will set to the special value cntk.learners.unspecified_minibatch_size.
+         to match the designed effect. If it is not specified, CNTK will set to the special value :attr:`IGNORE`.
         epoch_size (optional, int): number of samples as a scheduling unit.
          Parameters in the schedule change their values every ``epoch_size``
          samples. If no ``epoch_size`` is provided, this parameter is substituted
@@ -514,17 +501,17 @@ def _infer_ref_minibatch_size_from_legacy_use_mean_gradient(ref_minibatch_size, 
         #if ref_minibatch_size and the legacy use_mean_gradient are neither specified
         return None
     if ref_minibatch_size is not None:
-        if use_mean_gradient == True and ref_minibatch_size != cntk_py.Learner.unspecified_minibatch_size:
+        if use_mean_gradient == True and ref_minibatch_size != cntk_py.Learner.ignored_minibatch_size:
             Warning(
                 'Learner reference minibatch size is specified while use_mean_gradient (depreated option) is specified to True. Learner reference minibatch size will override the mean gradient behavior')
         #if the ref_minibatch_size is specified, it overrides the legacay use_mean_gradient specification
         return ref_minibatch_size
     elif use_mean_gradient is not None:
         #if the ref_minibatch_size is NOT specified, the legacay use_mean_gradient specification take in the effect
-        return cntk_py.Learner.unspecified_minibatch_size if use_mean_gradient is True else None
+        return cntk_py.Learner.ignored_minibatch_size if use_mean_gradient is True else None
     return None
 
-def _infer_learning_parameter_schedule(number_or_schedule, ref_minibatch_size, epoch_size):
+def _infer_learning_parameter_schedule(number_or_schedule, ref_minibatch_size, epoch_size, use_mean_gradient=None):
     #the input is a number, create a new training parameter
     if isinstance(number_or_schedule, (int, float)) or \
             (isinstance(number_or_schedule, list) and all(isinstance(r, (int, float, tuple)) for r in number_or_schedule)):
@@ -538,6 +525,13 @@ def _infer_learning_parameter_schedule(number_or_schedule, ref_minibatch_size, e
         if not number_or_schedule.is_minibatch_size_explicitly_specified and ref_minibatch_size is not None:
             #If the schedule minibatch size is not explicitly specified, the learner's specification will take over
             number_or_schedule.minibatch_size = ref_minibatch_size
+        #for backward compatibility: use_mean_gradient = True and lr.unit = UnitType.sample
+        #this combination was there to avoid the double-scaling of gradients when the gradients are already mean gradients
+        if use_mean_gradient and number_or_schedule.minibatch_size == 1:
+            #override the learning rate's minibatch_size to IGNORE
+            number_or_schedule.minibatch_size = IGNORE
+            Warning('use_mean_gradient=True and learning_rate_schedule.unit=UnitType.sample is a deprecated combination. '
+                    'Please use the new learner APIs: see https://www.cntk.ai/pythondocs/cntk.learners.html for details.')
         return number_or_schedule
     else:
         raise ValueError('training parameter schedule type (%s) not supported. '
@@ -549,7 +543,7 @@ def _infer_learning_rate_schedule_and_ref_minibatch_size(use_mean_gradient, ref_
     #if non-None reference_minibatch_size will take precedence otherwise according use_mean_gradient if it is True
     ref_minibatch_size = _infer_ref_minibatch_size_from_legacy_use_mean_gradient(ref_minibatch_size, use_mean_gradient)
     #if minibatch_size is not None, any schedules that are with unspecified reference minibatch size will be overrided.
-    schedule = _infer_learning_parameter_schedule(schedule, ref_minibatch_size, epoch_size)
+    schedule = _infer_learning_parameter_schedule(schedule, ref_minibatch_size, epoch_size, use_mean_gradient)
     _verify_learning_rate_type(schedule)
     return schedule, ref_minibatch_size
 
@@ -579,17 +573,16 @@ def sgd(parameters, lr,
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
-        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+        use_mean_gradient (bool, optional): use averaged gradient as input to learner.
 
             deprecated:: 2.2
-                Use minibatch_size parameter to specify the reference minbiatch size.
+                Use minibatch_size parameter to specify the reference minibatch size.
         minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
          size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
          to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
          In case that minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
-         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to 1. Setting minibatch_size to 0
-         will have the parameters apply as it is preventing CNTK performing any parameter scaling. See also:  :func:`learning_parameter_schedule`
+         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
+         will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
 
 
@@ -649,17 +642,16 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
-        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+        use_mean_gradient (bool, optional): use averaged gradient as input to learner.
 
             deprecated:: 2.2
-                Use minibatch_size parameter to specify the reference minbiatch size.
+                Use minibatch_size parameter to specify the reference minibatch size.
         minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
          size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
          to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
          In case that minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
-         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to 1. Setting minibatch_size to 0
-         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
+         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
+         will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate and momentum. See also:  :func:`learning_parameter_schedule`
 
     Returns:
@@ -718,17 +710,16 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
-        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+        use_mean_gradient (bool, optional): use averaged gradient as input to learner.
 
             deprecated:: 2.2
-                Use minibatch_size parameter to specify the reference minbiatch size.
+                Use minibatch_size parameter to specify the reference minibatch size.
         minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
          size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
          to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
          In case that minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
-         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to 1. Setting minibatch_size to 0
-         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
+         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
+         will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate and momentum. See also:  :func:`learning_parameter_schedule`
 
     Returns:
@@ -792,18 +783,16 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
-        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+        use_mean_gradient (bool, optional): use averaged gradient as input to learner.
 
             deprecated:: 2.2
-                Use minibatch_size parameter to specify the reference minbiatch size.
+                Use minibatch_size parameter to specify the reference minibatch size.
         minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
          size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
          to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
          In case that minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
-         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to 1. Setting minibatch_size to 0
-         will have the parameters apply as it is preventing CNTK performing any parameter scaling. If the learner's learning rate 
-         schedule ``lr`` has its own specification of reference minibatch size, the learning rate schedule's specification takes precedence. 
+         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
+         will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
 
     Returns:
@@ -861,17 +850,16 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
-        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+        use_mean_gradient (bool, optional): use averaged gradient as input to learner.
 
             deprecated:: 2.2
-                Use minibatch_size parameter to specify the reference minbiatch size.
+                Use minibatch_size parameter to specify the reference minibatch size.
         minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
          size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
          to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
          In case that minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
-         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to 1. Setting minibatch_size to 0
-         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
+         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
+         will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
 
     Returns:
@@ -936,17 +924,16 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
-        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+        use_mean_gradient (bool, optional): use averaged gradient as input to learner.
 
             deprecated:: 2.2
-                Use minibatch_size parameter to specify the reference minbiatch size.
+                Use minibatch_size parameter to specify the reference minibatch size.
         minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
          size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
          to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
          In case that minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
-         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to 1. Setting minibatch_size to 0
-         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
+         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
+         will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate, momentum and variance_momentum. See also:  :func:`learning_parameter_schedule`
 
     Returns:
@@ -1001,7 +988,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
          to the value returned by :func:`default_unit_gain_value`.
         variance_momentum (float, list, output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. 
-         Note that this is the beta1 parameter in the Adam paper [1]. Defaults to ``momentum_as_time_constant_schedule(720000)``. 
+         Note that this is the beta2 parameter in the Adam paper [1]. Defaults to ``momentum_as_time_constant_schedule(720000)``. 
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
         l2_regularization_weight (float, optional): the L2 regularization weight per sample,
@@ -1012,11 +999,10 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
-        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+        use_mean_gradient (bool, optional): use averaged gradient as input to learner.
 
             deprecated:: 2.2
-                Use minibatch_size parameter to specify the reference minbiatch size.
+                Use minibatch_size parameter to specify the reference minibatch size.
         epsilon (float, optional): numerical stability constant,
          defaults to 1e-8
         adamax: when ``True``, use infinity-norm variance momentum update instead of L2. Defaults
@@ -1025,8 +1011,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
          to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
          In case that minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
-         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to 1. Setting minibatch_size to 0
-         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
+         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
+         will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate, momentum and variance_momentum. See also:  :func:`learning_parameter_schedule`
 
     Returns:
@@ -1095,17 +1081,16 @@ def rmsprop(parameters, lr,
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
-        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+        use_mean_gradient (bool, optional): use averaged gradient as input to learner.
 
             deprecated:: 2.2
-                Use minibatch_size parameter to specify the reference minbiatch size.
+                Use minibatch_size parameter to specify the reference minibatch size.
         minibatch_size (int, default ``None``): The minibatch size that the learner's parameters are designed or pre-tuned for. This
          size is usually set to the same as the minibatch data source's size. CNTK will perform automatic scaling of the parameters
          to enable efficient model parameter update implementation while approximate the behavior of pre-designed and pre-tuned parameters.
          In case that minibatch_size is not specified, CNTK will inherit the minibatch size from the learning rate schedule;
-         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to 1. Setting minibatch_size to 0
-         will have the parameters apply as it is preventing CNTK performing any parameter scaling.
+         if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
+         will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
 
     Returns:

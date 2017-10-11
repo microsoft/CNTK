@@ -279,7 +279,7 @@ ORIGINDIR:='$$ORIGIN'
 # Components VERSION info
 ########################################
 
-CNTK_COMPONENT_VERSION := 2.1
+CNTK_COMPONENT_VERSION := 2.2
 ifeq ("$(BUILDTYPE)","debug")
 CNTK_COMPONENT_VERSION := $(CNTK_COMPONENT_VERSION)d
 endif
@@ -493,6 +493,27 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardFileWriter.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardUtils.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/protobuf/graph.pb.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/experiments/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/generator/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/logical/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/math/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/nn/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/reduction/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/rnn/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/tensor/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/constants.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/status.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/utils.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/opsignature.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/op.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/shape_inference.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/model.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/Operators.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/CNTKToONNX.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/ONNXToCNTK.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/ONNX.cpp \
 
 CNTKLIBRARY_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/ComputeInputStatistics.cpp \

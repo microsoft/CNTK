@@ -88,6 +88,7 @@
     <Compile Include="SwigProxyClasses\MinibatchInfo.cs" />
     <Compile Include="SwigProxyClasses\MinibatchSource.cs" />
     <Compile Include="SwigProxyClasses\MinibatchSourceConfig.cs" />
+    <Compile Include="SwigProxyClasses\ModelFormat.cs" />
     <Compile Include="SwigProxyClasses\PaddingMode.cs" />
     <Compile Include="SwigProxyClasses\PairDoubleDouble.cs" />
     <Compile Include="SwigProxyClasses\PairFloatFloat.cs" />

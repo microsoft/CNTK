@@ -79,7 +79,7 @@ private:
     size_t m_ioFeatureDimension = 0;
     std::string m_featureKind;
 
-    // A flag that indicates whether the utterance should be extended to match the lenght of the utterance from the primary deserializer.
+    // A flag that indicates whether the utterance should be extended to match the length of the utterance from the primary deserializer.
     // TODO: This should be moved to the packers when deserializers work in sequence mode only.
     bool m_expandToPrimary;
 };
