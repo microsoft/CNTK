@@ -776,8 +776,6 @@ public:
     // gradients (of embeddings) that can be kept around across minibatches, and thus not part of batched computation.
     NDArrayViewPtr NewNDArrayView(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
     {
-        if (storageFormat != StorageFormat::Dense)
-            Break;
         let isSparse = IsSparseStorageFormat(storageFormat);
         let formatAsIndex = (size_t)storageFormat;
         fail_if(formatAsIndex >= s_currentArenas.size(), "unexpected storageFormat int value??");
@@ -819,11 +817,9 @@ public:
                     thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device)              &&
                     IsMatrixType(*thisMatrixPtr, dataType))
                 {
-                    if (storageFormat != StorageFormat::Dense)
-                        Break;
                     matrixPtr = iter->release();  // take back ownership from the unique_ptr
                     s_recycledArenas.erase(iter); // remove from recycling buffer
-                    fprintf(stderr, "@@ recycling %s arena matrix of %d elements\n", isSparse ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
+                    //fprintf(stderr, "@@ reactivating %s arena matrix of %d elements\n", isSparse ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
                     break;
                 }
             }
@@ -844,7 +840,7 @@ public:
             if (!matrixPtr) // create a new one
             {
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
-                fprintf(stderr, "@@ allocating %s arena matrix of %d elements (recycle buffer has %d entries)\n", isSparse ? "sparse" : "dense", (int)requiredDenseArenaSize, (int)s_recycledArenas.size()), fflush(stderr);
+                //fprintf(stderr, "@@ allocating %s arena matrix of %d elements (recycle buffer has %d entries)\n", isSparse ? "sparse" : "dense", (int)requiredDenseArenaSize, (int)s_recycledArenas.size()), fflush(stderr);
                 switch (dataType)
                 {
                 case DataType::Float:  matrixPtr = new Matrix<float >(numRows, numCols, AsCNTKImplDeviceId(device), isSparse ? MatrixType::SPARSE : MatrixType::DENSE, AsCNTKImplMatrixFormat(storageFormat), /*nnz=*/numCols); break;
@@ -859,7 +855,7 @@ public:
             s_currentArena = shared_ptr<MatrixBase>(matrixPtr,
                 [&s_recycledArenas](MatrixBase* matrixPtr)
                 {
-                    fprintf(stderr, "@@ retiring %s arena of %d elements\n", matrixPtr->GetMatrixType() == MatrixType::SPARSE ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
+                    //fprintf(stderr, "@@ retiring %s arena of %d elements\n", matrixPtr->GetMatrixType() == MatrixType::SPARSE ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
                     // check the sob's ref count; if > 1 then there are other views into it, we cannot recycle it. It's a workaround.
                     if (matrixPtr->GetNumViews() == 1)
                     {
@@ -1734,8 +1730,8 @@ class Variable::AutoBatch
                 LogicError("should not get here??");
         mustBatch: // problem case: we cannot batch
             // We get here if the operation touches the stacking axis, or if it is a scalar op.
-            if (hasSparse)
-                Break;
+            //if (hasSparse)
+            //    Break;
             if (hasSparse && maxRank != 1)
                 InvalidArgument("DetermineBatchAxis: Sparse matrices cannot be batched.");
             return{ StackingMode::BATCHING, maxRank, 1 }; // if we batch, the batch dimension is 1
@@ -1833,8 +1829,8 @@ class Variable::AutoBatch
                 for (let bnId : *composite->m_basicBlockInfo.m_batchNormIds)
                     if (m_bnPendingCounts[bnId] > 0)
                         return true;
-                if (!composite->m_basicBlockInfo.m_batchNormIds->empty())
-                    Break;
+                //if (!composite->m_basicBlockInfo.m_batchNormIds->empty())
+                //    Break;
             }
             return false;
         }
@@ -3356,8 +3352,8 @@ class Variable::AutoBatch
                 batchSize += input.Shape().Dimensions().back();
             }
         }
-        if (batchAxis != commonInputBatchAxis)
-            Break;
+        //if (batchAxis != commonInputBatchAxis)
+        //    Break;
 #else
         //if (f0.m_uniqueIdForDebugging == 77581)
         //    Break;

@@ -38,8 +38,14 @@ using namespace Dynamite;
 //  - no weight norm
 
 DeviceDescriptor device(DeviceDescriptor::CPUDevice()); // dummy; will be overwritten
-const size_t srcVocabSize = 27579 + 3;
-const size_t tgtVocabSize = 21163 + 3;
+const size_t srcVocabSize = 78440;
+const size_t tgtVocabSize = 79439;
+//const int srcPositionMin = -100;  // positions -100..100
+//const int srcPositionMax = +100;
+//const size_t srcPosition0 = 105; // 201 position embeddings, with 0 at this word index (they live in the same index space and embedding matrices as the word identities)
+//const int tgtPositionMin = 0;    // positions 0..100
+//const int tgtPositionMax = 100;
+//const size_t tgtPosition0 = 5;
 const size_t embeddingDim = 512;
 const size_t attentionDim = 512;
 const size_t numEncoderLayers = 3;
@@ -359,9 +365,11 @@ void Train(wstring outputDirectory)
         {
         //PlainTextStreamConfiguration(L"src", srcVocabSize, { L"d:/work/Karnak/sample-model/data/train.src" }, { L"d:/work/Karnak/sample-model/data/vocab.src", L"<s>", L"</s>", L"<unk>" }),
         //PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"d:/work/Karnak/sample-model/data/train.tgt" }, { L"d:/work/Karnak/sample-model/data/vocab.tgt", L"<s>", L"</s>", L"<unk>" })
-        PlainTextStreamConfiguration(L"src", srcVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.vocab", L"<s>", L"</s>", L"<unk>" }),
-        PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.vocab", L"<s>", L"</s>", L"<unk>" })
-        }) },
+        //PlainTextStreamConfiguration(L"src", srcVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.vocab", L"<s>", L"</s>", L"<unk>" }),
+        //PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.shuf" }, { L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.vocab", L"<s>", L"</s>", L"<unk>" })
+        PlainTextStreamConfiguration(L"src", srcVocabSize,{ L"f:/local/data/2017_10_05_21h_46m_39s/train.CHS.txt" },{ L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab",       L"<s>", L"</s>", L"<unk>" }),
+        PlainTextStreamConfiguration(L"tgt", tgtVocabSize,{ L"f:/local/data/2017_10_05_21h_46m_39s/train.ENU.txt" },{ L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab", L"<s>", L"</s>", L"<unk>" })
+    }) },
         /*randomize=*/true);
     minibatchSourceConfig.maxSamples = MinibatchSource::InfinitelyRepeat;
     minibatchSourceConfig.isMultithreaded = false;
