@@ -89,11 +89,22 @@ namespace CNTK
             return composite;
         }
 
+#ifdef DYNAMITE_ONLY // Dynamite: We don't need the Composite wrapper of dynamic parts of the graph.
+        // This version is used for all the primitive ops. It inherits the root's name.
+        // Note: For Dynamite graphs (no Placeholders), this function is a no-op. BUGBUG: Some CNTK Static code may get confused by this.
+        static /*Composite*/FunctionPtr Create(const PrimitiveFunctionPtr& rootFunction)
+        {
+            if (rootFunction->m_isKnownToBeAcyclic)
+                return rootFunction;
+            return Create(rootFunction, rootFunction->Name(), wstring());//Internal::GenerateUid(L"CompositeFunction"));
+        }
+#else
         // This version is used for all the primitive ops. It inherits the root's name.
         static CompositeFunctionPtr Create(const PrimitiveFunctionPtr& rootFunction)
         {
             return Create(rootFunction, rootFunction->Name(), wstring());//Internal::GenerateUid(L"CompositeFunction"));
         }
+#endif
 
         BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                  std::unordered_map<Variable, ValuePtr>& outputs,

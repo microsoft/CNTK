@@ -54,60 +54,64 @@ namespace CNTK
 
     std::vector<Variable>& Function::InitOutputs()
     {
+#ifndef DYNAMITE_ONLY
         if (std::this_thread::get_id() == m_outputInitializingByThreadId)
         {
             // std::call_once may deadlock when re-entering from the same thread that's running the lambda, early exit
             RuntimeError("Re-enter Function::InitOutputs() from Function::InitOutputs(), outputs are not initialized yet");
         }
+#endif
         // HACK: temporarily changed so that we can see it in the profiler
-        //std::call_once(m_outputsInitFlag, [this]() {
+#ifdef DYNAMITE_ONLY
         if (m_outputsInitFlag++ == 0)
+#else
+        std::call_once(m_outputsInitFlag, [this]()
+#endif
         {
+#ifndef DYNAMITE_ONLY // TODO: Not clear why this is needed. Aren't the outputs always immediately initialized? Why be lazy across threads, i.e. return uninitialized objects to user code?
             m_outputInitializingByThreadId = std::this_thread::get_id();
+#endif
             std::vector<Variable> outputs;
+#ifndef DYNAMITE_ONLY // This is only needed for user functions, which are not defined in Dynamite
             if (!IsPrimitive()) // if not primitive then items may be pushed by external code that lives with a different CRT heap
                 outputs.reserve(Function::MaxNumOutputs);
+#endif
             InferOutputs(outputs); // gives us a full copy of all those Variable objects
+#ifndef DYNAMITE_ONLY // This is only needed for user functions, which are not defined in Dynamite
             if (!IsPrimitive())
                 assert(outputs.capacity() == Function::MaxNumOutputs); // must not have touched this
-            //m_outputs.reserve(outputs.size());
-            //for (auto& outputVar : outputs)
+#endif
             for (size_t i = 0; i < outputs.size(); i++)
             {
                 auto& outputVar = outputs[i];
 
                 if (outputVar.IsOutput()/*could be something else for Combine()*/ && outputVar.OwnerIs(nullptr))
                 {
+#ifndef DYNAMITE_ONLY // This is only needed for user functions, which are not defined in Dynamite
                     auto prOwner = dynamic_pointer_cast<PrimitiveFunction>(shared_from_this());
                     if (!prOwner)
                         LogicError("InitOutputs: Cannot initialize an output's owner to be a Composite.");
                     outputVar.SetOwner(prOwner);
+#else
+                    outputVar.SetOwner(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
+#endif
                 }
 
-                //if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.OwnerIs(this))
-                //{
-                //    // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
-                //    outputVar.m_dataFields->m_uid = Uid() + L"_" + VariableKindName(outputVar.Kind()) + L"_" + std::to_wstring(i/*m_outputs.size()*/);
-                //}
-
-                outputVar.m_outputComposite = FunctionPtr(); // .reset(); Supposedly this is faster
-//#if 1
-//                m_outputs.emplace_back(std::move(outputVar.NonCompositePreservingCopy()));
-//#else
-//                m_outputs.push_back(outputVar);
-//                if (m_outputs.back().m_outputComposite != nullptr)
-//                {
-//                    // Nuke the composite ptr to allow release of cyclic graphs.
-//                    m_outputs.back().m_outputComposite = nullptr;
-//                }
-//#endif
+                outputVar.m_outputComposite.reset();
             }
+#ifndef DYNAMITE_ONLY // This is only needed for user functions, which are not defined in Dynamite
             if (outputs.size() < outputs.capacity())
                 m_outputs = outputs; // free some memory
             else
+#endif
                 m_outputs = std::move(outputs);
+#ifndef DYNAMITE_ONLY // TODO: Not clear why this is needed. Aren't the outputs always immediately initialized? Why be lazy across threads, i.e. return uninitialized objects to user code?
             m_outputInitializingByThreadId = std::thread::id();
-        }//);
+#endif
+        }
+#ifndef DYNAMITE_ONLY
+        );
+#endif
 
         return m_outputs;
     }
@@ -145,13 +149,24 @@ namespace CNTK
         : Function(inputs, std::move(functionConfig), nullptr, name, uid)
     {}
 
-    Variable Function::OutputImpl() const // optimized version of OutputsImpl()[0]
+    Variable Function::Output() const // optimized version of OutputsImpl()[0]
     {
+#ifdef DYNAMITE_ONLY
+        const auto& outputs = RawOutputs(); // = InitOutputs(), m_outputs
+        //if (outputs.size() != 1)
+        //    RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
+        let output = outputs[0];
+        if (output.m_acyclicOutputPrimitiveReference)
+            return outputs.front(); // no ref count needed
+        else
+            return outputs.front().CompositePreservingCopy(shared_from_this()); // this implants a ref count
+#else
         const auto& outputs = RawOutputs();
         if (outputs.size() != 1)
             RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
         std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(const_cast<Function*>(this)->shared_from_this()));
         return outputs.front().CompositePreservingCopy(composite);
+#endif
     }
 
     std::shared_ptr<std::vector<Variable>> Function::OutputsImpl() const

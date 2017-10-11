@@ -4489,7 +4489,9 @@ void PrimitiveFunction::MemoizeKnowableValue() const
 void PrimitiveFunction::InitOutput(Variable&& output)
 {
     //std::call_once(m_outputsInitFlag, [this]() {});
+#ifndef DYNAMITE_ONLY
     m_outputInitializingByThreadId = std::thread::id();
+#endif
     fail_if(m_outputsInitFlag || !m_outputs.empty(), "InitOutput called twice??");
     m_outputsInitFlag++;
     output.SetOwner(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
@@ -4532,9 +4534,9 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     for (let& p : fPtr->Parameters())
         fprintf(stderr, "    %S : %S\n", p.Name().c_str(), p.Shape().AsString().c_str());
 #endif
-    let fCompositePtr = dynamic_pointer_cast<CompositeFunction>(fPtr);
-    if (!fCompositePtr)
-        InvalidArgument("Invocable() must only be called on CompositeFunctions.");
+    auto fCompositePtr = dynamic_pointer_cast<CompositeFunction>(fPtr);
+    if (!fCompositePtr) // If the static graphs has no Placeholder (e.g. weight norm), then it won't be a composite. Make it one.
+        fCompositePtr = CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(fPtr), fPtr->Name(), /*uid=*/wstring());
     // precompute some additional info for basic blocks
     // Some of these are used for composites that are declared as basic blocks, but also for those
     // invoked by basic blocks even if not declared as such. Hence, we must initialize this always.

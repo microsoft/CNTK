@@ -24,6 +24,8 @@
 #include <cstddef>
 #include <cmath>
 
+#define DYNAMITE_ONLY // define this to remove some code paths that can never be executed. Note: Currently not testing without it.
+
 #ifdef SWIG
 #define final
 #define explicit
@@ -2212,9 +2214,12 @@ namespace CNTK
 
     private:
         std::shared_ptr<const Function> m_outputComposite; // Outputs() returns copies with this set.
+#ifdef DYNAMITE_ONLY
+        // Note: This ^^ is called outputComposite, but there is no assumption that it actually is a composite. Maybe we can even merge this with vv.
+#endif
         std::shared_ptr<const PrimitiveFunction> m_acyclicOutputPrimitiveReference; // Output: ref to Primitive if known to be acyclic.
         // for debugging:
-        const std::vector<size_t>* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in tehd ebugger
+        const std::vector<size_t>* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in the debugger
     };
 
     // TODO: Variable equality should be based on uids.
@@ -3561,15 +3566,7 @@ namespace CNTK
         ///
         /// Returns the Output variable of 'this' Function. Throws an exception of 'this' Function has more that one output.
         ///
-        Variable Output() const
-        {
-            return OutputImpl();
-            //auto outputs = Outputs();
-            //if (outputs.size() > 1)
-            //    RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
-            //
-            //return outputs[0];
-        }
+        CNTK_API Variable Output() const;
 
         ///
         /// Returns a vector consisting of all Output variables of 'this' Function.
@@ -3830,7 +3827,6 @@ namespace CNTK
 
         CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl(bool pythonOperandOrder = false) const;
         CNTK_API std::shared_ptr<std::vector<Variable>> OutputsImpl() const;
-        CNTK_API Variable Function::OutputImpl() const;
 
         void ValidateOrUpdateOutputs();
         void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<Variable>& buffer);
@@ -3870,8 +3866,12 @@ namespace CNTK
         Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
 
         std::vector<Variable> m_inputs; // primitives: direct input variables; composites: empty (Inputs() determines all leaves on the fly); block: all leaves as if it was a composite
-        size_t/*std::once_flag*/ m_outputsInitFlag = 0;
+#ifdef DYNAMITE_ONLY
+        unsigned int m_outputsInitFlag = 0;
+#else
+        std::once_flag m_outputsInitFlag = 0;
         std::thread::id m_outputInitializingByThreadId;
+#endif
         std::vector<Variable> m_outputs;
 
         FunctionPtr m_rootFunction; // This is a PrimitiveFunctionPtr for composites, or a nullptr for PrimitiveFunction instances
