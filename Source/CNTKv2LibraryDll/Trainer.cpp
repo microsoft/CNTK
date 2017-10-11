@@ -345,7 +345,7 @@ namespace CNTK
         // Aggregate across workers training loss and eval criteria if distributed
         if (m_distributed)
         {
-            DoDistributedLossEvalAveraging();            
+            DoDistributedLossEvalAveraging();
         }
 
         for (auto& progressWriter : m_progressWriters)
