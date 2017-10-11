@@ -327,15 +327,15 @@ namespace CNTK
             distributedAggregateEvalCriterion += static_cast<double>(*(start + 1));
         }
 
-        averageTrainingLoss = distributedAggregateTrainingLoss / communicator->Workers().size();
-        averageEvalCriterion = distributedAggregateEvalCriterion / communicator->Workers().size();
+        double distributedAverageTrainingLoss = distributedAggregateTrainingLoss / communicator->Workers().size();
+        double distributedAverageEvalCriterion = distributedAggregateEvalCriterion / communicator->Workers().size();
 
-        NDArrayViewPtr lossNDArrayView = std::make_shared<NDArrayView>(DataType::Double, NDShape{ 1 }, &averageTrainingLoss, sizeof(double) * 1, DeviceDescriptor::CPUDevice());
+        NDArrayViewPtr lossNDArrayView = std::make_shared<NDArrayView>(distributedAverageTrainingLoss, NDShape{ 1 }, DeviceDescriptor::CPUDevice());
         m_aggregatedTrainingLossValue = std::make_shared<Accumulator>(lossNDArrayView, m_aggregatedTrainingLossValue->GetNumUpdates(), m_aggregatedTrainingLossValue->GetIsUninitialized());
 
         if (m_aggregatedTrainingEvalCriterionValue)
         {
-            NDArrayViewPtr evalNDArrayView = std::make_shared<NDArrayView>(DataType::Double, NDShape{ 1 }, &averageEvalCriterion, sizeof(double) * 1, DeviceDescriptor::CPUDevice());
+            NDArrayViewPtr evalNDArrayView = std::make_shared<NDArrayView>(distributedAverageEvalCriterion, NDShape{ 1 }, DeviceDescriptor::CPUDevice());
             m_aggregatedTrainingEvalCriterionValue = std::make_shared<Accumulator>(evalNDArrayView, m_aggregatedTrainingEvalCriterionValue->GetNumUpdates(), m_aggregatedTrainingEvalCriterionValue->GetIsUninitialized());
         }
     }
@@ -345,7 +345,7 @@ namespace CNTK
         // Aggregate across workers training loss and eval criteria if distributed
         if (m_distributed)
         {
-            DoDistributedLossEvalAveraging();
+            DoDistributedLossEvalAveraging();            
         }
 
         for (auto& progressWriter : m_progressWriters)
