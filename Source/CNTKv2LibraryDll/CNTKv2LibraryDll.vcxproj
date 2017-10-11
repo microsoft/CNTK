@@ -185,7 +185,6 @@
     <ClInclude Include="proto\onnx\ONNXToCNTK.h" />
     <ClInclude Include="proto\onnx\Operators.h" />
     <ClInclude Include="Serialization.h" />
-    <ClInclude Include="SimpleUtils.h" />
     <ClInclude Include="tensorboard\TensorBoardUtils.h" />
     <ClInclude Include="UserDefinedFunction.h" />
     <ClInclude Include="UserFunctionFactory.h" />

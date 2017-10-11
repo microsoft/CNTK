@@ -133,7 +133,6 @@
     <ClInclude Include="Variable.h" />
     <ClInclude Include="UserFunctionFactory.h" />
     <ClInclude Include="UserDefinedFunction.h" />
-<<<<<<< HEAD
     <ClInclude Include="proto\onnx\CNTKToONNX.h">
       <Filter>proto\onnx</Filter>
     </ClInclude>
@@ -170,9 +169,6 @@
     <ClInclude Include="proto\onnx\core\utils.h">
       <Filter>proto\onnx\core</Filter>
     </ClInclude>
-=======
-    <ClInclude Include="SimpleUtils.h" />
->>>>>>> Refactoring for inference work + adding Flatten method on function to be able to clone without blocks.
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">
