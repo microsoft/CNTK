@@ -56,25 +56,25 @@ size_t decoderRecurrentDim = 1024;
 size_t numDecoderResNetProjections = 4;
 size_t decoderProjectionDim = 768;
 size_t topHiddenProjectionDim = 1024;
-size_t subMinibatches = 10;
+size_t subMinibatches = 1;// 0;
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
-    if (systemId == "chs_eng")
+    if (systemId == "chs_enu")
     {
         srcVocabSize = 78440;
         tgtVocabSize = 79439;
         srcTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.CHS.txt"; srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.ENU.txt"; tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
     }
-    else if (systemId == "chs_eng_small")
+    else if (systemId == "chs_enu_small")
     {
         srcVocabSize = 78440;
         tgtVocabSize = 79439;
         srcTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.small.CHS.txt"; srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.small.ENU.txt"; tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
     }
-    else if (systemId == "rom_eng")
+    else if (systemId == "rom_enu")
     {
         srcVocabSize = 27579 + 3;
         tgtVocabSize = 21163 + 3;
@@ -127,80 +127,38 @@ fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutI
     });
 }
 
-// Bahdanau attention model
-// (query, keys as tensor, data sequence as tensor) -> interpolated data vector
-//  - keys used for the weights
-//  - data gets interpolated
-// Here they are the same.
-fun AttentionModelBahdanau(size_t attentionDim1)
-{
-    auto Q = Parameter({ attentionDim1, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"Q"); // query projection
-    auto v = Parameter({ attentionDim1 }, DTYPE, GlorotUniformInitializer(), device, L"v"); // tanh projection
-    let normQ = LengthNormalization(device);
-    return Dynamite::Model({ Q, /*K,*/ v }, { { L"normQ", normQ } },
-    [=](const Variable& query, const Variable& projectedKeys/*keys*/, const Variable& data) -> Variable
-    {
-        // compute attention weights
-        CountAPICalls(3);
-        let projectedQuery = normQ(Times(Q, query, Named("Q"))); // [A x 1]
-        let tanh = Tanh((projectedQuery + projectedKeys), Named("attTanh")); // [A x T]
-#if 0
-        CountAPICalls(1);
-        let u = InnerProduct(tanh, v, Axis(0), Named("vProj")); // [1 x T] col vector
-        let w = Dynamite::Softmax(u, Axis(1));
-        CountAPICalls(2);
-        let res = Reshape(InnerProduct(data, w, Axis(1), Named("att")), NDShape{ attentionDim1 }); // [A]
-#else
-        CountAPICalls(1);
-        let u = TransposeTimes(tanh, v, Named("vProj")); // [T] col vector
-        let w = Dynamite::Softmax(u);
-        CountAPICalls(1);
-        let res = Times(data, w, Named("att")); // [A]
-#endif
-        return res;
-     });
-}
-
-// simple helper for temporary conversions; inefficient
-vector<Variable> AsVector(const Variable& seq)
-{
-    vector<Variable> res;
-    as_vector(res, seq);
-    return res;
-}
-
 // reference attention model
+// Returns the attention probabilities. Caller must do the weighted average.
 fun AttentionModelReference(size_t attentionDim1)
 {
     let projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize, device);
     let normH = LengthNormalization(device); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
     let zBarrier   = Barrier(20, Named("zBarrier"));
-    let resBarrier = Barrier(20, Named("resBarrier"));
     let doToTanh = StaticModel(/*isBasicBlock=*/false, [=](const Variable& h, const Variable& historyProjectedKey)
     {
         let hProjected = projectQuery(h); // [A]. Batched.
-        CountAPICalls(2);
-        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); // [A]. Batched.
+        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); CountAPICalls(2); // [A]. Batched.
         return tanh;
     });
     return Dynamite::Model({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
-        [=](const Variable& h,                        // [A] decoder hidden state
-            const Variable& historyProjectedKey,      // [A] previous output, embedded
-            const Variable& encodingProjectedKeysSeq, // [A x T] encoder hidden state seq, projected as key >> tanh
-            const Variable& encodingProjectedDataSeq  // [A x T] encoder hidden state seq, projected as data
+        [=](const Variable& h,                       // [A] decoder hidden state
+            const Variable& historyProjectedKey,     // [A] previous output, embedded
+            const Variable& encodingProjectedKeysSeq // [A x T] encoder hidden state seq, projected as key >> tanh
+           ,const Variable& encodingProjectedDataSeq  // [A x T] encoder hidden state seq, projected as data
            ) -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false);
-        // compute attention weights
         let tanh = doToTanh(h, historyProjectedKey); // [A]
-        CountAPICalls(1);
-        let uSeq = InnerProduct(tanh, encodingProjectedKeysSeq, Axis(0), Named("u")); // [1 x T]
-        let wSeq = Dynamite::Softmax(uSeq, Axis(1), Named("attSoftmax"), zBarrier);   // [1 x T]
-        CountAPICalls(1);
-        let res = resBarrier(InnerProduct(encodingProjectedDataSeq, wSeq, Axis_DropLastAxis, Named("attContext"))); // [.] inner product over a vectors
+        let uSeq = InnerProduct(tanh, encodingProjectedKeysSeq, Axis(0), Named("u")); CountAPICalls(1); // [1 x T]
+        let wSeq = Dynamite::Softmax(uSeq, Axis(1), Named("attSoftmax"), zBarrier);                     // [1 x T]
         Function::SetDynamicProfiler(prevProfiler);
+#if 0
+        return wSeq;
+#else
+        let res = /*resBarrier*/(InnerProduct(encodingProjectedDataSeq, wSeq, Axis_DropLastAxis, Named("attContext"))); // [.] inner product over a vectors
         return res;
+#endif
     });
 }
 
@@ -217,6 +175,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     let stepBarrier = Barrier(20, Named("stepBarrier"));
     let stepFunction = GRU(decoderRecurrentDim, device);
     auto attentionModel = AttentionModelReference(attentionDim);
+    let attBarrier = Barrier(20, Named("attBarrier"));
     let firstHiddenProjection = Barrier(600, Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return ReLU(x, Named("firstHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
     vector<UnaryBroadcastingModel> resnets;
     for (size_t n = 0; n < numDecoderResNetProjections; n++)
@@ -273,30 +232,37 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
         // common subexpression of attention.
         // We pack the result into a dense matrix; but only after the matrix product, to allow for it to be batched.
-        let encodingProjectedKeys = encoderKeysProjection(hEncs); // this projects the entire sequence
-        let encodingProjectedData = encoderDataProjection(hEncs);
+        let encodingProjectedKeysSeq = encoderKeysProjection(hEncs); // this projects the entire sequence
+        let encodingProjectedDataSeq = encoderDataProjection(hEncs);
         vector<Variable> states(history.size());           // we put the time steps here
         vector<Variable> attentionContexts(states.size()); // and the attentionContexts
         let historyEmbedded = embedTarget(history);
         for (size_t t = 0; t < history.size(); t++)
         {
             // do recurrent step (in inference, history[t] would become states[t-1])
-            CountAPICalls(1);
-            let historyProjectedKey = historyEmbedded[t];
+            let historyProjectedKey = historyEmbedded[t]; CountAPICalls(1);
             let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
-            CountAPICalls(1);
-            let input = stepBarrier(Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput")));
+            let input = stepBarrier(Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput"))); CountAPICalls(1);
             state = stepFunction(state, input);
+
             // compute attention vector
-            //attentionContext = attentionModel(state, /*keys=*/projectedKeys, /*data=*/hEncsTensor);
-            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeys, encodingProjectedData);
+#if 0
+            let attentionWeightSeq = attentionModel(state, historyProjectedKey, encodingProjectedKeysSeq);
+            let attentionContext = attBarrier(InnerProduct(encodingProjectedDataSeq, attentionWeightSeq, Axis_DropLastAxis, Named("attContext"))); CountAPICalls(1); // [.] inner product over a vectors
+#else
+            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeysSeq, encodingProjectedDataSeq);
+#endif
             Function::SetDynamicProfiler(prevProfiler);
+
+            // save the results
+            // TODO: This has now become just a recurrence with a tuple state. Let's have a function for that. Or an iterator!
             states[t] = state;
             attentionContexts[t] = attentionContext;
-            // TODO: This has now become just a recurrence with a tuple state. Let's have a function for that.
         }
+        let stateSeq = Splice(move(states)/*state*/, Axis::EndStaticAxis());
+        let attenContextSeq = Splice(move(attentionContexts), Axis::EndStaticAxis());
         // stack of output transforms
-        let z = doToOutput(Splice(move(states)/*state*/, Axis::EndStaticAxis()), Splice(move(attentionContexts), Axis::EndStaticAxis()));
+        let z = doToOutput(stateSeq, attenContextSeq);
         return z;
     });
 }
@@ -658,6 +624,7 @@ void Train(string systemId, wstring outputDirectory)
         // We get 10 x the minibatch, sort it by source length, and then process it in consecutive chunks of 1/10, which form the actual minibatch for training
         for (let& subBatchArgs : args)
         {
+            timer.Restart();
 #if 0       // for debugging: reduce #sequences to 3, and reduce their lengths
             subBatchArgs[0].resize(3);
             subBatchArgs[1].resize(3);
@@ -741,14 +708,6 @@ void Train(string systemId, wstring outputDirectory)
             //partTimer.Log("Update", numLabels);
             let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
             totalLabels += info.numberOfSamples;
-            // I once saw a strange (impossible) -1e23 or so CE loss, no idea where that comes from. Skip it in smoothed loss. Does not seem to hurt the convergence.
-            if (lossPerLabel < 0)
-            {
-                fprintf(stderr, "%d STRANGE CrossEntropy loss = %.7f, not counting in accumulative loss, seenLabels=%d, words/sec=%.1f\n",
-                    (int)mbCount, lossPerLabel, (int)totalLabels,
-                    info.numberOfSamples / timer.ElapsedSeconds());
-                continue;
-            }
             let smoothedLossVal = smoothedLoss.Update(lossPerLabel, info.numberOfSamples);
             let elapsed = timer.ElapsedSeconds(); // [sec]
             if (communicator->CurrentWorker().IsMain())
@@ -826,12 +785,12 @@ int mt_main(int argc, char *argv[])
         catch (const exception& e)
         {
             fprintf(stderr, "%s\n", e.what()), fflush(stderr);
-            throw invalid_argument("required command line: --system SYSTEMID --id IDSTRING\n SYSTEMID = chs_end, rom_eng, etc\n IDSTRING is used to form the log and model path for now");
+            throw invalid_argument("required command line: --system SYSTEMID --id IDSTRING\n SYSTEMID = chs_enu, rom_enu, etc\n IDSTRING is used to form the log and model path for now");
         }
         //let* pExpId = argv[2];
         //wstring experimentId(pExpId, pExpId + strlen(pExpId)); // (cheap conversion to wchar_t)
         wstring workingDirectory = L"d:/mt/experiments";       // output dir = "$workingDirectory/$experimentId/"
-        Train(systemId, workingDirectory + L"/" + wstring(systemId.begin(), systemId.end()) + L"_" + experimentId);
+        Train(systemId, workingDirectory + L"/" + experimentId + L"_" + wstring(systemId.begin(), systemId.end()));
     }
     catch (exception& e)
     {

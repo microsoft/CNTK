@@ -374,7 +374,7 @@ class wrapper
 {
     const F& f;
     const size_t N;
-    struct iterator
+    struct iterator : public std::iterator<std::input_iterator_tag, FReturnType>
     {
         iterator(const F& f, size_t index) : f(f), index(index) {}
         const F& f;
@@ -395,8 +395,111 @@ auto create_wrapper(size_t N, const F& f)
 }
 #endif
 
+#if 0
+template<typename T, size_t N>
+class FixedVectorWithBuffer
+{
+    T *bufp, *endp; // TODO: How about debugging? Use a fake data structure of a few hundred elements?
+    union // using a union will prevent automatic construction/destruction
+    {
+        //char buffer[N * sizeof(T)];
+        T items[N];
+    } u;
+    void ConstructBuffer(size_t len, size_t elemSize = sizeof(T))
+    {
+        if (len >= N) // too large: use dynamic allocation
+            bufp = reinterpret_cast<T*>(new char[elemSize * len]); // TODO: How about alignment?
+        else // fits: use the built-in buffer
+            bufp = &u.items[0];
+        endp = bufp; // we will increment it to the correct length during construction
+    }
+    void ConstructAppendElement(const T& item) { new (endp)(item); endp++; } // we do it this way so that the object is always in proper state
+    void ConstructAppendElement(T&& item) { new (endp)(move(item)); endp++; }
+    T& Item(size_t index) const
+    {
+        T* itemp = begin() + index;
+        if (itemp >= end())
+            LogicError("index out of bounds");
+        return *itemp;
+    }
+    void DestructBuffer()
+    {
+        if (bufp != &u.items[0]) // we used a dynamically allocated buffer
+            delete[] reinterpret_cast<char*>(bufp);
+        // we leave bufp and endp dangling, since this is part of destruction
+    }
+    char* BufAddress() const { return reinterpret_cast<char*>(bufp); }
+    char* EndAddress() const { return reinterpret_cast<char*>(endp); }
+public:
+    // dummy constructor
+    FixedVectorWithBuffer() { ConstructBuffer(0); }
+    // construct from items
+    // TODO: How to avoid conflicting with the constructors below?
+    FixedVectorWithBuffer(const T& item) { ConstructBuffer(1); ConstructAppendElement(item); }
+    FixedVectorWithBuffer(const T& item, const T& item2) { ConstructBuffer(1); ConstructAppendElement(item); ConstructAppendElement(item2); }
+    FixedVectorWithBuffer(T&& item) { ConstructBuffer(1); ConstructAppendElement(move(item)); }
+    FixedVectorWithBuffer(T&& item, const T&& item2) { ConstructBuffer(1); ConstructAppendElement(move(item)); ConstructAppendElement(move(item2)); }
+    // from iterator pair
+    template<typename IteratorType>
+    FixedVectorWithBuffer(const IteratorType& beginIter, const IteratorType& endIter)
+    {
+        ConstructBuffer(endIter - beginIter);
+        for (auto iter = beginIter; iter != endIter; ++iter)
+            ConstructAppendElement(*iter); // this will increment endp. In case of an exception, endp is valid so that we can destruct.
+    }
+    // move constructor
+    FixedVectorWithBuffer(FixedVectorWithBuffer&& other)
+    {
+        ConstructBuffer(other.EndAddress() - other.BufAddress(), /*elemSize=*/1); // this construct avoids the division by sizeof(T)
+        auto* p = begin();
+        for (auto iter = other.begin(); iter != other.end(); ++iter)
+        {
+            new (p++)(move(*iter));
+            *iter.~T(); // destruct other. Hopefully the compiler will understand it is already dead due to move()
+        }
+        other.DestructBuffer();
+        other.bufp = other.endp = &other.u.items[0]; // bring it into defined state. Hopefully the compiler will short-circuit a potential subsequent destructor call
+    }
+    // from any container
+    template<typename ContainerType>
+    FixedVectorWithBuffer(const ContainerType& other) : FixedVectorWithBuffer(other.begin(), other.end()) { }
+    ~FixedVectorWithBuffer()
+    {
+        // note: If construction failed half-way, then endp is valid w.r.t. the last successfully placed item
+        for (auto iter = begin(); iter != end(); ++iter)
+            *iter.~T();
+        DestructBuffer();
+    }
+    // the vector interface
+    const T* begin() const  { return reinterpret_cast<T*>(bufp); }
+    T* begin()              { return reinterpret_cast<T*>(bufp); }
+    const T* end() const    { return reinterpret_cast<T*>(endp); }
+    T* end()                { return reinterpret_cast<T*>(endp); }
+    const T* cbegin() const { return begin(); }
+    const T* cbegin()       { return begin(); }
+    const T* cend() const   { return end(); }
+    const T* cend()         { return end(); }
+    const T* data() const   { return begin(); }
+    T* data()               { return begin(); }
+    const T& front() const  { return *begin(); }
+    T& front()              { return *begin(); }
+    const T& back() const   { return *(end() - 1); }
+    T& back()               { return *(end() - 1); }
+    size_t size() const     { return end() - begin(); }
+    const T& operator[](size_t index) const { return Item(index); }
+    T& operator[](size_t index)             { return Item(index); }
+    const T& at(size_t index) const { return Item(index); }
+    T& at(size_t index)             { return Item(index); }
+    // type cast to std::vector. This is used temporarily.
+    operator vector<T>() const { return vector<T>(begin(), end()); }
+};
+#endif
+
 int main(int argc, char *argv[])
 {
+    //FixedVectorWithBuffer<string, 2> vec1("s1"s);
+    //FixedVectorWithBuffer<string, 2> vec2("s1"s, "s2"s);
+    //vector<string> sv(vec2);
 #if 0
     struct T { shared_ptr<int> x, y, z; };
     let e1 = T{ make_shared<int>(13), make_shared<int>(13), make_shared<int>(42) };

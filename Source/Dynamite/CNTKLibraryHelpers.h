@@ -176,6 +176,10 @@ namespace Dynamite {
         for (let& streamName : streamNames)
             valuePtrs.push_back(minibatchData[minibatchSource->StreamInfo(streamName)].data);
         Dynamite::FromCNTKMB(subBatch0, valuePtrs, /*isSequence[]=*/vector<bool>(numStreams, true), dataType, device);
+#if 1   // for compat with old loss progressions, don't reorder if no sub-minibatching
+        if (numSubMinibatches == 1)
+            return;
+#endif
 
         // gather its statistics
         let& labelSequences = subBatch0.back(); // last stream has the labels
