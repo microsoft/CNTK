@@ -56,6 +56,7 @@ size_t decoderRecurrentDim = 1024;
 size_t numDecoderResNetProjections = 4;
 size_t decoderProjectionDim = 768;
 size_t topHiddenProjectionDim = 1024;
+size_t subMinibatches = 10;
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
@@ -451,7 +452,7 @@ void Train(string systemId, wstring outputDirectory)
     for (let& p : parameters)
         gradients[p] = nullptr;
 
-    vector<vector<Variable>> args;
+    vector<vector<vector<Variable>>> args; // [subMinibatchIndex, streamIndex, sequenceIndex]
     size_t totalLabels = 0;
     class SmoothedVar
     {
@@ -565,12 +566,15 @@ void Train(string systemId, wstring outputDirectory)
     }
     fflush(stderr);
     // MINIBATCH LOOP
-    for (mbCount = startMbCount; true; mbCount++)
+    mbCount = startMbCount;
+    for (;;)
     {
         // checkpoint
+        // BUGBUG: For now, 'saveEvery' must be a multiple of subMinibatches, otherwise it won't save
         if (mbCount % saveEvery == 0 &&
             (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
         {
+            // TODO: Move this to a separate function.
             let path = ModelPath(mbCount);
             fprintf(stderr, "%ssaving: %S\n", communicator->CurrentWorker().IsMain() ? "" : "not ", path.c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
             //model_fn.SaveParameters(path);
@@ -643,163 +647,125 @@ void Train(string systemId, wstring outputDirectory)
             //model_fn.RestoreParameters(path);
         }
         timer.Restart();
+
         // get next minibatch
         partTimer.Restart();
-#if 0   // hack (until we fix the reader): pack sequences of similar length
-        //  - get 10 x the minibatch
-        //  - pick a length, e.g. of the first  --use target length here
-        //  - pick the 10% that are closest
-        //  - sort them by length --use source length to aid the attention model
-        auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, 5 * (size_t)minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);
-        Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
-        auto& sourceSents = args[0];
-        auto& targetSents = args[1];
-        let desiredLength = targetSents[0].size(); // length of first entry
-        vector<size_t> indices; // (sentIndex, someValue) array to sort
-        for (let& _ : targetSents)
-            indices.push_back(indices.size()), _;
-        // keep the N closest in target length
-        sort(indices.begin(), indices.end(), [&](size_t i, size_t j) { return abs((int)targetSents[i].size() - (int)desiredLength) < abs((int)targetSents[j].size() - (int)desiredLength); });
-        size_t numTargetWordsInBatch = 0;
-        let desiredNumWords = minibatchSize / communicator->Workers().size();
-        for (size_t i = 0; i < indices.size(); i++)
-        {
-            let len = targetSents[indices[i]].size();
-            if (i > 0 && numTargetWordsInBatch + len > desiredNumWords)
-            {
-                indices.resize(i);
-                break;
-            }
-            numTargetWordsInBatch += len;
-        }
-        // now sort by source length, longest first
-        sort(indices.begin(), indices.end(), [&](size_t i, size_t j) { return (int)sourceSents[i].size() > (int)sourceSents[j].size(); }); // longest first
-        // and update the args
-        let updateSents = [&](vector<Variable>& sents)
-        {
-            vector<Variable> newSents;
-            for (auto index : indices)
-                newSents.push_back(sents[index]);
-            sents = move(newSents);
-        };
-        updateSents(sourceSents);
-        updateSents(targetSents);
-#else
-        auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, (size_t)minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);
-        if (minibatchData.empty()) // finished one data pass--TODO: really? Depends on config. We really don't care about data sweeps.
-            break;
-        Dynamite::FromCNTKMB(args, { minibatchData[minibatchSource->StreamInfo(L"src")].data, minibatchData[minibatchSource->StreamInfo(L"tgt")].data }, { true, true }, DTYPE, device);
-#endif
+        Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, minibatchSize, communicator, DTYPE, device);
         let timeGetNextMinibatch = partTimer.Elapsed();
         //partTimer.Log("FromCNTKMB", minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
-        //args[0].resize(1);
-        //args[1].resize(1);
-#if 0   // for debugging: reduce #sequences to 3, and reduce their lengths
-        args[0].resize(3);
-        args[1].resize(3);
-        let TrimLength = [](Variable& seq, size_t len) // chop off all frames after 'len', assuming the last axis is the length
+
+        // SUB-MINIBATCH LOOP
+        // We get 10 x the minibatch, sort it by source length, and then process it in consecutive chunks of 1/10, which form the actual minibatch for training
+        for (let& subBatchArgs : args)
         {
-            seq = Slice(seq, Axis((int)seq.Shape().Rank()-1), 0, (int)len);
-        };
-        // input
-        TrimLength(args[0][0], 2);
-        TrimLength(args[0][1], 4);
-        TrimLength(args[0][2], 3);
-        // target
-        TrimLength(args[1][0], 3);
-        TrimLength(args[1][1], 2);
-        TrimLength(args[1][2], 2);
+#if 0       // for debugging: reduce #sequences to 3, and reduce their lengths
+            subBatchArgs[0].resize(3);
+            subBatchArgs[1].resize(3);
+            let TrimLength = [](Variable& seq, size_t len) // chop off all frames after 'len', assuming the last axis is the length
+            {
+                seq = Slice(seq, Axis((int)seq.Shape().Rank()-1), 0, (int)len);
+            };
+            // input
+            TrimLength(subBatchArgs[0][0], 2);
+            TrimLength(subBatchArgs[0][1], 4);
+            TrimLength(subBatchArgs[0][2], 3);
+            // target
+            TrimLength(subBatchArgs[1][0], 3);
+            TrimLength(subBatchArgs[1][1], 2);
+            TrimLength(subBatchArgs[1][2], 2);
 #endif
-        let numSeq = args[0].size();
-        size_t numLabels = 0, numSamples = 0, maxSamples = 0, maxLabels = 0;
-        for (let& seq : args[0])
-        {
-            let len = seq.Shape().Dimensions().back();
-            numSamples += len;
-            maxSamples = max(maxSamples, len);
-        }
-        for (let& seq : args[1])
-        {
-            let len = seq.Shape().Dimensions().back();
-            numLabels += len;
-            maxLabels = max(maxLabels, len);
-        }
-        //partTimer.Log("GetNextMinibatch", numLabels);
-        fprintf(stderr, "%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
-                (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
-                lr0, learner->LearningRate() / lr0);
-#if 0   // log the sequences
-        for (size_t n = 0; n < numSeq; n++)
-        {
-            args[0][n].Value()->LogToFile(L"Source_" + to_wstring(n), stderr, SIZE_MAX);
-            args[1][n].Value()->LogToFile(L"Target_" + to_wstring(n), stderr, SIZE_MAX);
-        }
+            let numSeq = subBatchArgs[0].size();
+            size_t numLabels = 0, numSamples = 0, maxSamples = 0, maxLabels = 0;
+            for (let& seq : subBatchArgs[0])
+            {
+                let len = seq.Shape().Dimensions().back();
+                numSamples += len;
+                maxSamples = max(maxSamples, len);
+            }
+            for (let& seq : subBatchArgs[1])
+            {
+                let len = seq.Shape().Dimensions().back();
+                numLabels += len;
+                maxLabels = max(maxLabels, len);
+            }
+            //partTimer.Log("GetNextMinibatch", numLabels);
+            fprintf(stderr, "%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
+                    (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
+                    lr0, learner->LearningRate() / lr0);
+#if 0       // log the sequences
+            for (size_t n = 0; n < numSeq; n++)
+            {
+                subBatchArgs[0][n].Value()->LogToFile(L"Source_" + to_wstring(n), stderr, SIZE_MAX);
+                subBatchArgs[1][n].Value()->LogToFile(L"Target_" + to_wstring(n), stderr, SIZE_MAX);
+            }
 #endif
-        // train minibatch
-        let numAPICalls0 = CountAPICalls(0);
-        //criterion_fn(args[0], args[1]); // call it once before, to flush that thing that we otherwise also measure, whatever that is
-        partTimer.Restart();
-        auto mbLoss = criterion_fn(args[0], args[1]);
-        //mbLoss = criterion_fn(args[0], args[1]);
-        //mbLoss = criterion_fn(args[0], args[1]);
-        //mbLoss = criterion_fn(args[0], args[1]);
-        //mbLoss = criterion_fn(args[0], args[1]);
-        //mbLoss = criterion_fn(args[0], args[1]);
-        //mbLoss = criterion_fn(args[0], args[1]);
-        //mbLoss = criterion_fn(args[0], args[1]);
-        //mbLoss = criterion_fn(args[0], args[1]);
-        //mbLoss = criterion_fn(args[0], args[1]);
-        let timeBuildGraph = partTimer.Elapsed();
-        let numAPICalls = CountAPICalls(0) - numAPICalls0;
-        numAPICalls;
-        //fprintf(stderr, "#API calls = %d\n", (int)numAPICalls), fflush(stderr);
-        //exit(1);
-        //partTimer.Log("criterion_fn", numLabels);
-        // backprop and model update
-        partTimer.Restart();
-        mbLoss.Value()->AsScalar<float>();
-        let timeForward = partTimer.Elapsed();
-        //fprintf(stderr, "%.7f\n", mbLoss.Value()->AsScalar<float>()), fflush(stderr);
-        //exit(1);
-        //partTimer.Log("ForwardProp", numLabels);
-        // note: we must use numScoredLabels here
-        let numScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
-        fprintf(stderr, "{%.2f, %d-%d}\n", mbLoss.Value()->AsScalar<float>(), (int)numLabels, (int)numSeq), fflush(stderr);
-        partTimer.Restart();
-        mbLoss.Backward(gradients);
-        let timeBackward = partTimer.Elapsed();
-        //partTimer.Log("BackProp", numLabels);
-        MinibatchInfo info{ /*atEndOfData=*/false, /*sweepEnd=*/false, /*numberOfSamples=*/numScoredLabels, mbLoss.Value(), mbLoss.Value() };
-        info.trainingLossValue->AsScalar<float>();
-        partTimer.Restart();
-        learner->Update(gradients, info);
-        let timePerUpdate = partTimer.Elapsed();
-        //partTimer.Log("Update", numLabels);
-        let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
-        totalLabels += info.numberOfSamples;
-        // I once saw a strange (impossible) -1e23 or so CE loss, no idea where that comes from. Skip it in smoothed loss. Does not seem to hurt the convergence.
-        if (lossPerLabel < 0)
-        {
-            fprintf(stderr, "%d STRANGE CrossEntropy loss = %.7f, not counting in accumulative loss, seenLabels=%d, words/sec=%.1f\n",
-                (int)mbCount, lossPerLabel, (int)totalLabels,
-                info.numberOfSamples / timer.ElapsedSeconds());
-            continue;
+            // train minibatch
+            let numAPICalls0 = CountAPICalls(0);
+            //criterion_fn(subBatchArgs[0], subBatchArgs[1]); // call it once before, to flush that thing that we otherwise also measure, whatever that is
+            partTimer.Restart();
+            auto mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+            //mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+            //mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+            //mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+            //mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+            //mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+            //mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+            //mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+            //mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+            //mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+            let timeBuildGraph = partTimer.Elapsed();
+            let numAPICalls = CountAPICalls(0) - numAPICalls0;
+            numAPICalls;
+            //fprintf(stderr, "#API calls = %d\n", (int)numAPICalls), fflush(stderr);
+            //exit(1);
+            //partTimer.Log("criterion_fn", numLabels);
+            // backprop and model update
+            partTimer.Restart();
+            mbLoss.Value()->AsScalar<float>();
+            let timeForward = partTimer.Elapsed();
+            //fprintf(stderr, "%.7f\n", mbLoss.Value()->AsScalar<float>()), fflush(stderr);
+            //exit(1);
+            //partTimer.Log("ForwardProp", numLabels);
+            // note: we must use numScoredLabels here
+            let numScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
+            fprintf(stderr, "{%.2f, %d-%d}\n", mbLoss.Value()->AsScalar<float>(), (int)numLabels, (int)numSeq), fflush(stderr);
+            partTimer.Restart();
+            mbLoss.Backward(gradients);
+            let timeBackward = partTimer.Elapsed();
+            //partTimer.Log("BackProp", numLabels);
+            MinibatchInfo info{ /*atEndOfData=*/false, /*sweepEnd=*/false, /*numberOfSamples=*/numScoredLabels, mbLoss.Value(), mbLoss.Value() };
+            info.trainingLossValue->AsScalar<float>();
+            partTimer.Restart();
+            learner->Update(gradients, info);
+            let timePerUpdate = partTimer.Elapsed();
+            //partTimer.Log("Update", numLabels);
+            let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
+            totalLabels += info.numberOfSamples;
+            // I once saw a strange (impossible) -1e23 or so CE loss, no idea where that comes from. Skip it in smoothed loss. Does not seem to hurt the convergence.
+            if (lossPerLabel < 0)
+            {
+                fprintf(stderr, "%d STRANGE CrossEntropy loss = %.7f, not counting in accumulative loss, seenLabels=%d, words/sec=%.1f\n",
+                    (int)mbCount, lossPerLabel, (int)totalLabels,
+                    info.numberOfSamples / timer.ElapsedSeconds());
+                continue;
+            }
+            let smoothedLossVal = smoothedLoss.Update(lossPerLabel, info.numberOfSamples);
+            let elapsed = timer.ElapsedSeconds(); // [sec]
+            if (communicator->CurrentWorker().IsMain())
+                fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f ms\n",
+                                (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
+                                info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples,
+                                1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeBackward, 1000.0 * timePerUpdate);
+            // log
+            // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
+            if (mbCount < 400 || mbCount % 5 == 0)
+                fflush(stderr);
+            if (std::isnan(lossPerLabel))
+                throw runtime_error("Loss is NaN.");
+            //if (mbCount == 10)
+            //    exit(0);
+            mbCount++;
         }
-        let smoothedLossVal = smoothedLoss.Update(lossPerLabel, info.numberOfSamples);
-        let elapsed = timer.ElapsedSeconds(); // [sec]
-        if (communicator->CurrentWorker().IsMain())
-            fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f ms\n",
-                            (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
-                            info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples,
-                            1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeBackward, 1000.0 * timePerUpdate);
-        // log
-        // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
-        if (mbCount < 400 || mbCount % 5 == 0)
-            fflush(stderr);
-        if (std::isnan(lossPerLabel))
-            throw runtime_error("Loss is NaN.");
-        //if (mbCount == 10)
-        //    exit(0);
     }
 }
 
