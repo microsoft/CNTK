@@ -33,7 +33,7 @@ public class CNTKNativeUtils {
     private static File tempDir;
     static{
         try{
-            tempDir = Files.createTempDirectory("tmp").toFile();
+            tempDir = Files.createTempDirectory("cntk-natives").toFile();
             tempDir.deleteOnExit();
         }
         catch (IOException e){
