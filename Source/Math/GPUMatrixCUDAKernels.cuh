@@ -136,9 +136,10 @@ struct GridDim
     {
         std::call_once(s_cachedDevicePropsInitFlag, [=]{
             int numDevices;
+            // must wait GPU idle, otherwise cudaGetDeviceProperties might fail
+            CUDA_CALL(cudaDeviceSynchronize());
             CUDA_CALL(cudaGetDeviceCount(&numDevices));
             s_cachedDeviceProps.resize(numDevices);
-            CUDA_CALL(cudaDeviceSynchronize());
             for (int i = 0; i < numDevices; i++)
                 CUDA_CALL(cudaGetDeviceProperties(&s_cachedDeviceProps[i], i));
         });
