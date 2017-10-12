@@ -174,24 +174,14 @@ namespace CNTK
         return std::shared_ptr<std::vector<Variable>>(new std::vector<Variable>(std::move(outputs)), [](std::vector<Variable>* ptr) { delete ptr; });
     }
 
-    // this is the base constructor, called by all constructors except for the move one
+    // this is the base constructor, called by all constructors except for the move one, and except for the speed-optimized 1 and 2-argument variant
     Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid)
         : m_rootFunction(rootFunction), m_name(name), m_uid(uid), m_attributes(std::move(functionConfig))
     {
         m_inputs.reserve(inputs.size());
         for (const auto& inputVar : inputs)
         {
-#if 1
             m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy()));
-#else
-            m_inputs.push_back(inputVar);
-            if (m_inputs.back().m_outputComposite != nullptr)
-            {
-                // Nuke the composite ptr to allow release of cyclic graphs.
-                m_inputs.back().m_outputComposite = nullptr;
-            }
-#endif
-
 #if 0
             if (!inputVar.IsInput() &&
                 !inputVar.IsOutput() &&
@@ -204,7 +194,23 @@ namespace CNTK
 #endif
         }
     }
+    // speed-optimized version with 2 operands
+    Function::Function(const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name)
+        : m_rootFunction(rootFunction), m_name(name), m_attributes(std::move(functionConfig))
+    {
+        m_inputs.resize(2);
+        m_inputs.front() = input0.NonCompositePreservingCopy();
+        m_inputs.back()  = input1.NonCompositePreservingCopy();
+    }
+    // speed-optimized version with 1 operand
+    Function::Function(const Variable& input0, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name)
+        : m_rootFunction(rootFunction), m_name(name), m_attributes(std::move(functionConfig))
+    {
+        m_inputs.resize(1);
+        m_inputs.front() = input0.NonCompositePreservingCopy();
+    }
 
+    // TODO: The overload resolution by && seems not safe. Better change this signature. E.g. pass only a single output by &&
     Function::Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid)
         : m_inputs(std::move(inputs)), m_outputs(std::move(outputs)), m_rootFunction(std::move(rootFunction)), m_name(std::move(name)), m_uid(std::move(uid)), m_attributes(std::move(functionConfig))
     {}

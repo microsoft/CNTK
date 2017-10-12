@@ -3866,6 +3866,8 @@ namespace CNTK
     private:
         //CNTK_API Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
+        CNTK_API Function(const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name);
+        CNTK_API Function(const Variable& input0, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name);
         // move constructor where everything is prepared outside; used in auto-batching
         Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
 

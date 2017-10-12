@@ -296,6 +296,26 @@ namespace CNTK
             // set inputs' acyclic strong references if possible
             UpdateAcyclicReferences();
         }
+
+        PrimitiveFunction(PrimitiveOpType op, const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const std::wstring& functionName = std::wstring())
+            : Function(input0, input1, std::move(functionConfig), nullptr, functionName),
+            m_op(op),
+            m_profiler(CurrentDynamicProfiler())
+        {
+            // set inputs' acyclic strong references if possible
+            //UpdateAcyclicReferences();
+            m_isKnownToBeAcyclic = UpdateAcyclicReference(m_inputs.front()) && UpdateAcyclicReference(m_inputs.back());
+        }
+
+        PrimitiveFunction(PrimitiveOpType op, const Variable& input0, Dictionary&& functionConfig, const std::wstring& functionName = std::wstring())
+            : Function(input0, std::move(functionConfig), nullptr, functionName),
+            m_op(op),
+            m_profiler(CurrentDynamicProfiler())
+        {
+            // set inputs' acyclic strong references if possible
+            //UpdateAcyclicReferences();
+            m_isKnownToBeAcyclic = UpdateAcyclicReference(m_inputs.front());
+        }
     public:
         ~PrimitiveFunction()
         {
@@ -328,45 +348,52 @@ namespace CNTK
         void InitOutput(Variable&& output);
     private:
 
+        bool UpdateAcyclicReference(Variable& input) // returns true if this input is known to be acyclic
+        {
+            // Implant a strong ref to the input's PrimitiveFunction into the input if it is
+            // known that it can never be part of a cycle.
+            if (input.IsOutput())// && !input.m_acyclicOutputPrimitiveReference)
+            {
+                auto owner = input.OutputOwner();
+                if (owner->m_isKnownToBeAcyclic)
+                {
+                    input.m_acyclicOutputPrimitiveReference = std::move(owner);
+                    return true;
+                }
+                else
+                {
+                    // If any input already is not guaranteed to be cyclic, this PrimitiveFunction is neither.
+                    return false;
+                }
+            }
+            else
+            {
+                // If any input is a Placeholder, it is for sure not dynamic, and may eventually
+                // be looped back through ReplacePlaceholder().
+                // Whereas Parameters and Constants are acyclic, as are Inputs.
+                return !input.IsPlaceholder();
+            }
+        }
+
         // implant the acyclic strong reference if it is safe
         void UpdateAcyclicReferences()
         {
             for (auto& input : m_inputs)
             {
-                // Implant a strong ref to the input's PrimitiveFunction into the input if it is
-                // known that it can never be part of a cycle.
-                if (input.IsOutput())// && !input.m_acyclicOutputPrimitiveReference)
+                if (!UpdateAcyclicReference(input)) // returns false if we cannot guarantee that this input is acyclic
                 {
-                    auto owner = input.OutputOwner();
-                    if (owner->m_isKnownToBeAcyclic)
-                        input.m_acyclicOutputPrimitiveReference = std::move(owner);
-                    else
-                        // If any input already is not guaranteed to be cyclic, this PrimitiveFunction is neither.
-                        goto isAcyclic;
+                    // Found an input that cannot be guaranteed to be acyclic.
+                    // If acyclic, we exit the loop above even if we don't implant all possible
+                    // acyclic references into inputs, since it won't help anyway.
+                    m_isKnownToBeAcyclic = false;
+                    return;
                 }
-                else if (input.IsPlaceholder())
-                    // If any input is a Placeholder, it is for sure not dynamic, and may eventually
-                    // be looped back through ReplacePlaceholder().
-                    goto isAcyclic;
             }
-            return;
-            // If acyclic, we exit the loop above even if we don't implant all possible
-            // acyclic references into inputs, since it won't help anyway.
-        isAcyclic:
-            m_isKnownToBeAcyclic = false;
         }
 
     public:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
             : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, std::wstring())//GenerateUid(op))
-        {}
-
-        PrimitiveFunction(PrimitiveOpType op, const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const std::wstring& functionName = L"")
-            : PrimitiveFunction(op, { input0, input1 }, std::move(functionConfig), functionName, std::wstring())//GenerateUid(op))
-        {}
-
-        PrimitiveFunction(PrimitiveOpType op, const Variable& input0, Dictionary&& functionConfig, const std::wstring& functionName = L"")
-            : PrimitiveFunction(op, { input0 }, std::move(functionConfig), functionName, std::wstring())//GenerateUid(op))
         {}
 
         // Primitive functions are currently implemented using the core CNTK engine ComputationNode types
