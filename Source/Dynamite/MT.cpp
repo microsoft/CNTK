@@ -145,7 +145,6 @@ fun AttentionModelReference(size_t attentionDim1)
         [=](const Variable& h,                       // [A] decoder hidden state
             const Variable& historyProjectedKey,     // [A] previous output, embedded
             const Variable& encodingProjectedKeysSeq // [A x T] encoder hidden state seq, projected as key >> tanh
-           //,const Variable& encodingProjectedDataSeq  // [A x T] encoder hidden state seq, projected as data
            ) -> Variable
         {
             let prevProfiler = Function::SetDynamicProfiler(profiler, false);
@@ -153,12 +152,7 @@ fun AttentionModelReference(size_t attentionDim1)
             let uSeq = InnerProduct(tanh, encodingProjectedKeysSeq, Axis(0), Named("u")); CountAPICalls(1); // [1 x T]
             let wSeq = Dynamite::Softmax(uSeq, Axis(1), Named("attSoftmax"), zBarrier);                     // [1 x T]
             Function::SetDynamicProfiler(prevProfiler);
-#if 1
             return wSeq;
-#else
-            let res = /*resBarrier*/(InnerProduct(encodingProjectedDataSeq, wSeq, Axis_DropLastAxis, Named("attContext"))); // [.] inner product over a vectors
-            return res;
-#endif
         });
 }
 
@@ -223,17 +217,17 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     }, Named("doToOutput"));
 
     return /*Dynamite::Model*/BinaryModel({ }, nestedLayers,
-    [=](const Variable& history, const Variable& hEncs) -> Variable
+    [=](const Variable& history, const Variable& hEncoderSeq) -> Variable
     {
         // decoding loop
         CountAPICalls(2);
-        Variable state = Slice(hEncs[0], Axis(0), (int)encoderRecurrentDim, 2 * (int)encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
+        Variable state = Slice(hEncoderSeq[0], Axis(0), (int)encoderRecurrentDim, 2 * (int)encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
         state = initialStateProjection(state);      // match the dimensions
         Variable attentionContext = initialContext; // note: this is almost certainly wrong
         // common subexpression of attention.
         // We pack the result into a dense matrix; but only after the matrix product, to allow for it to be batched.
-        let encodingProjectedKeysSeq = encoderKeysProjection(hEncs); // this projects the entire sequence
-        let encodingProjectedDataSeq = encoderDataProjection(hEncs);
+        let encodingProjectedKeysSeq = encoderKeysProjection(hEncoderSeq); // this projects the entire sequence
+        let encodingProjectedDataSeq = encoderDataProjection(hEncoderSeq);
         vector<Variable> states(history.size());           // we put the time steps here
         vector<Variable> attentionContexts(states.size()); // and the attentionContexts
         let historyEmbedded = embedTarget(history);
@@ -246,13 +240,8 @@ fun AttentionDecoder(double dropoutInputKeepProb)
             state = stepFunction(state, input);
 
             // compute attention vector
-#if 0
             let attentionWeightSeq = attentionModel(state, historyProjectedKey, encodingProjectedKeysSeq);
-            let attentionContext = attBarrier(InnerProduct(encodingProjectedDataSeq, attentionWeightSeq, Axis_DropLastAxis, Named("attContext"))); CountAPICalls(1); // [.] inner product over a vectors
-#else
-            let attentionWeightSeq = attentionModel(state, historyProjectedKey, encodingProjectedKeysSeq/*, encodingProjectedDataSeq*/);
             attentionContext = attBarrier(InnerProduct(encodingProjectedDataSeq, attentionWeightSeq, Axis_DropLastAxis, Named("attContext"))); CountAPICalls(1); // [.] inner product over a vectors
-#endif
             Function::SetDynamicProfiler(prevProfiler);
 
             // save the results
