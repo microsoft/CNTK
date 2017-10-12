@@ -255,7 +255,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         # print progress no sooner than 10s apart
         if timer_delta > 10 and self.gen_heartbeat:
             # print to stdout
-            print("PROGRESS: 0.00%")
+            print("PROGRESS: %f%%" % self.epochs/self.num_epochs*100.0)
             self.progress_timer_time = time.time()
 
     def update(self, loss, minibatch_size, metric=None):
@@ -401,6 +401,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         elapsed_seconds = elapsed_milliseconds / 1000
         speed = _avg(samples, elapsed_seconds)
         avg_loss = _avg(aggregate_loss, samples)
+        self.epochs = summaries
 
         of_epochs = " of " + str(self.num_epochs) if self.num_epochs is not None else ''
         if aggregate_metric is not None:
