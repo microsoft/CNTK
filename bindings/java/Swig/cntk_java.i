@@ -150,7 +150,7 @@
         VariableVector varVect = new VariableVector();
         for (int i = 0; i < outputVariable.size(); ++i)
         {
-            varVect.add(varVect.get(i));
+            varVect.add(outputVariable.get(i));
         }
         return CNTKLib.Combine(varVect);
     }

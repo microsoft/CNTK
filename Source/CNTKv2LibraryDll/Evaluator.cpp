@@ -86,27 +86,27 @@ namespace CNTK
         return inputs;
     }
 
-    double Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    double Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/, bool distributed /*= false*/)
     {
         std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
-        return TestMinibatch(GetInputs(arguments), outputsToFetch, computeDevice);
+        return TestMinibatch(GetInputs(arguments), outputsToFetch, computeDevice, distributed);
     }
 
-    double Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    double Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/, bool distributed /*= false*/)
     {
         std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
-        return TestMinibatch(arguments, outputsToFetch, computeDevice);
+        return TestMinibatch(arguments, outputsToFetch, computeDevice, distributed);
     }
 
-    double Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice)
+    double Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, bool distributed /*= false*/)
     {
-        return TestMinibatch(GetInputs(arguments), outputsToFetch, computeDevice);
+        return TestMinibatch(GetInputs(arguments), outputsToFetch, computeDevice, distributed);
     }
 
-    double Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice)
+    double Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, bool distributed /*= false*/)
     {
         std::pair<ValuePtr, size_t> evalMinibatchValue;
-        TestMinibatch(arguments, outputsToFetch, evalMinibatchValue, computeDevice, false);
+        TestMinibatch(arguments, outputsToFetch, evalMinibatchValue, computeDevice, distributed);
         return evalMinibatchValue.first->AsScalar<double>() / evalMinibatchValue.second;
     }
 

@@ -542,9 +542,9 @@ void fgetText(FILE* f, T& v)
 {
     int rc = ftrygetText(f, v);
     if (rc == 0)
-        RuntimeError("error reading value from file (invalid format)");
+        Microsoft::MSR::CNTK::RuntimeError("error reading value from file (invalid format)");
     else if (rc == EOF)
-        RuntimeError("error reading from file: %s", strerror(errno));
+        Microsoft::MSR::CNTK::RuntimeError("error reading from file: %s", strerror(errno));
     assert(rc == 1);
 }
 
@@ -575,9 +575,9 @@ void fputText(FILE* f, T v)
     const wchar_t* formatString = GetFormatString(v);
     int rc = fwprintf(f, formatString, v);
     if (rc == 0)
-        RuntimeError("error writing value to file, no values written");
+        Microsoft::MSR::CNTK::RuntimeError("error writing value to file, no values written");
     else if (rc < 0)
-        RuntimeError("error writing to file: %s", strerror(errno));
+        Microsoft::MSR::CNTK::RuntimeError("error writing to file: %s", strerror(errno));
 }
 
 // ----------------------------------------------------------------------------
@@ -723,7 +723,7 @@ class auto_file_ptr
 #pragma warning(disable : 4996)
     void openfailed(const std::string& path)
     {
-        RuntimeError("auto_file_ptr: error opening file '%s': %s", path.c_str(), strerror(errno));
+        Microsoft::MSR::CNTK::RuntimeError("auto_file_ptr: error opening file '%s': %s", path.c_str(), strerror(errno));
     }
 #pragma warning(pop)
 protected:
