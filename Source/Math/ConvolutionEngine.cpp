@@ -130,7 +130,7 @@ void ConvolutionEngine<ElemType>::MaxUnpooling(const Mat& out, const Mat& poolIn
 //------------------------------------------------------------------
 // Reference convolution engine implementation.
 // This engine supports arbitrary convolution geometry but does not provide efficient implementation.
-// Its main purpose is to serve as a baseline for optmized engines (e.g. cuDNN) that 
+// Its main purpose is to serve as a baseline for optmized engines (e.g. cuDNN) that
 // usually implement only a subset of a general convolution geometry.
 //------------------------------------------------------------------
 template <class ElemType>
@@ -142,7 +142,7 @@ public:
 
 public:
     ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad), 
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad),
         m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
     {
     }
@@ -166,11 +166,11 @@ protected:
         if (m_mpRowIwht == nullptr)
         {
             auto flags = IsGpu(m_deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer;
-            m_mpRowIwht = std::make_unique<Matrix<int>>(m_geometry->MpRowIwht().size(), 1, 
+            m_mpRowIwht = std::make_unique<Matrix<int>>(m_geometry->MpRowIwht().size(), 1,
                                                         const_cast<int*>(m_geometry->MpRowIwht().data()), m_deviceId, flags);
             m_mpRowRun = std::make_unique<Matrix<int>>(m_geometry->MpRowRun().size(), 1,
                                                        const_cast<int*>(m_geometry->MpRowRun().data()), m_deviceId, flags);
-            m_runs = std::make_unique<Matrix<int>>(m_geometry->Runs().size(), 1, 
+            m_runs = std::make_unique<Matrix<int>>(m_geometry->Runs().size(), 1,
                                                    const_cast<int*>(m_geometry->Runs().data()), m_deviceId, flags);
         }
     }
@@ -261,7 +261,7 @@ public:
 
 public:
     LegacyConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad), 
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad),
         m_inT(m_geometry->InputShape(), ImageLayoutKind::CHW), m_outT(m_geometry->OutputShape(), ImageLayoutKind::CHW),
         m_kernelT(m_geometry->KernelShape(), ImageLayoutKind::CHW), m_strideT(m_geometry->Stride(), ImageLayoutKind::CHW)
     {
@@ -547,7 +547,7 @@ private:
 //------------------------------------------------------------------
 // GEMM convolution engine implementation.
 // This engine supports arbitrary convolution configuration with full
-// sharing and implemented using unroll + GEMM technique 
+// sharing and implemented using unroll + GEMM technique
 // (High performance convolutional neural networks for document processing; Chellapilla, Puri, Simard)
 // Uses reference engine for pooling operations.
 //------------------------------------------------------------------
@@ -586,7 +586,7 @@ protected:
             LogicError("GEMM convolution engine currently supports only CPU device.");
     }
 
-    // A note on notation used in the documentation for the next 3 functions: 
+    // A note on notation used in the documentation for the next 3 functions:
     // for simplicity we use cuDNN-style notation for 2D convolutions (though this engine supports arbitrary convolution configuration)
     // where N - is the number of samples in a batch, C, H, W are number of channels, height and width of the input respectively.
     // For the output we use K as the number of output feature maps and H', W' as height and width of the output.
@@ -614,7 +614,7 @@ protected:
         size_t mapOutSize = m_geometry->OutputShape().GetNumElements() / mapCount;
         size_t unrollRows = mapOutSize * subBatchSize;
         size_t unrollCols = m_geometry->KernelShape().GetNumElements();
-        // Reserve space for unrolled inputs and, if needed, intermediate outputs. 
+        // Reserve space for unrolled inputs and, if needed, intermediate outputs.
         // Intermediate outputs will be transposed to final outputs after GEMM operation.
         // Transpose is not required if subBatchSize == 1.
         workspace.Resize(unrollRows, unrollCols + (subBatchSize > 1 ? mapCount : 0));
@@ -664,7 +664,7 @@ protected:
             }
         }
     }
-    
+
     // The backward data method works by representing this operation as a "reverse" convolution
     // in case kernel's last dimension is equal to input dimension. Gradients matrix (grad) becomes
     // an output of such reverse convolution.
@@ -710,7 +710,7 @@ protected:
         workspace.Resize(1, kernCols + unrollRows * (unrollCols + (subBatchSize > 1 ? mapInCount : 0)));
 
         auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
-        size_t kernTCols = kernT.GetNumElements(); 
+        size_t kernTCols = kernT.GetNumElements();
         // cudnn layout uses row-major kernel weight matrix.
         kern.Reshape(kernTCols, kernCols/kernTCols);
         // Now transpose and reshape to [KXY x C].
@@ -832,7 +832,7 @@ protected:
 
             // cudnn layout uses row-major kernel weight matrix.
             auto kernGrad = kernelGrad.ColumnSlice(0, kernelGrad.GetNumCols());
-            kernGrad.Reshape(unrollRows, kernGrad.GetNumElements() / unrollRows); 
+            kernGrad.Reshape(unrollRows, kernGrad.GetNumElements() / unrollRows);
             // 3. Multiply.
             Mat::MultiplyAndAdd(unrolledInputSlice, true, srcGradSlice, false, kernGrad);
         }
@@ -849,7 +849,7 @@ public:
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
                                                                                  ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
-                                                                                 ConvolutionEngineKind enabledEngines, std::wstring logPrefix, 
+                                                                                 ConvolutionEngineKind enabledEngines, std::wstring logPrefix,
                                                                                  bool forceDeterministicAlgorithms, bool poolIncludePad,
                                                                                  bool inputHasFreeDimension)
 {
@@ -858,7 +858,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
 
     auto isEnabled = [=](ConvolutionEngineKind eng) { return ((int)enabledEngines & (int)eng) != 0; };
     // Note: in some cases do not throw exception even if parameters do not match as Create
-    // can be called from places like MEL with default parameters and never be used. 
+    // can be called from places like MEL with default parameters and never be used.
     // The check will be done later in engine's EnsureCompatible call if the egnine is actually used.
     auto engStr = (std::string)(*geometry);
     // Only legacy engine supports HWC layout.
@@ -880,7 +880,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "%lsusing cuDNN convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, 
+        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind,
                                                                forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
     }
 
@@ -903,5 +903,6 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
 
 template class ConvolutionEngine<float>;
 template class ConvolutionEngine<double>;
+template class ConvolutionEngine<half>;
 
 }}}

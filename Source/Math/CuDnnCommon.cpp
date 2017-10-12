@@ -20,13 +20,20 @@ const float Consts<float>::One = 1;
 template <>
 const double Consts<double>::One = 1;
 template <>
-const half Consts<half>::One = 1;
-template <>
 const float Consts<float>::Zero = 0;
 template <>
 const double Consts<double>::Zero = 0;
+
 template <>
-const half Consts<half>::Zero = 0;
+struct Consts<half>
+{
+    static const float Zero;
+    static const float One;
+};
+
+const float Consts<half>::Zero = 0;
+const float Consts<half>::One = 1;
+
 
 CuDnnTensor::CuDnnTensor()
     : m_tensor(nullptr)

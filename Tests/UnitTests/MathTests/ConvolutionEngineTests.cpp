@@ -11,6 +11,7 @@
 #include <boost/random/uniform_int_distribution.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
 #include "../../../Source/Math/Matrix.h"
+#include "../../../Source/Math/half.hpp"
 #include "../../../Source/Math/CPUMatrix.h"
 #include "../../../Source/Math/GPUMatrix.h"
 #include "../../../Source/Math/ConvolutionEngine.h"
@@ -20,8 +21,10 @@
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 using vec = std::vector<float>;
+using vecHalf = std::vector<half>;
 
 using ConvEng = ConvolutionEngine<float>;
+using ConvEngHalf = ConvolutionEngine<half>;
 
 bool AreEqual(float a, float b, float maxRelError, float maxAbsError)
 {
@@ -50,6 +53,16 @@ size_t CountNans(const SingleMatrix& src)
     return n;
 }
 
+size_t CountNans(const HalfMatrix& src)
+{
+    size_t n = 0;
+    foreach_coord (i, j, src)
+    {
+        n += std::isnan((float)src(i, j)) ? 1 : 0;
+    }
+    return n;
+}
+
 // Returns vector of engine config parameters: <kind, device, maxTempMemSizeInSamples>
 std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> GetTestEngineConfigs()
 {
@@ -62,6 +75,16 @@ std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> GetTestEng
     res.push_back(std::make_tuple(ConvolutionEngineKind::Gemm, -1, 0));
     res.push_back(std::make_tuple(ConvolutionEngineKind::Gemm, -1, 1));
     res.push_back(std::make_tuple(ConvolutionEngineKind::Gemm, -1, 3));
+    return res;
+}
+
+// Half version, only test against GPU reference since CPU code is not modified for fp16
+std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> GetTestEngineConfigsHalf()
+{
+    std::vector<std::tuple<ConvolutionEngineKind, DEVICEID_TYPE, size_t>> res;
+    // Reference engine. The engine does not use temp memory so safe to set it to 0.
+    res.push_back(std::make_tuple(ConvolutionEngineKind::Reference, 0, 0));
+
     return res;
 }
 
@@ -137,7 +160,7 @@ std::vector<ConvolveGeometryPtr> GeneratePoolTestConfigs()
                 {
                     for (size_t stride : {1, min((int)kW, min((int)kH, 2))})
                     {
-                        // Note: must always use autopadding otherwise there might be configurations that 
+                        // Note: must always use autopadding otherwise there might be configurations that
                         // require negative padding that cuDNN does not support.
                         res.push_back(std::make_shared<ConvolveGeometry>(TensorShape(inW, max(kH, inW) + 1, inC),
                             TensorShape(kW, kH, 1), TensorShape(1), TensorShape(stride, stride, 1),
@@ -228,6 +251,74 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
 
             BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
             BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr * 4, absErr * 14), "out" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(Half_ConvolutionForward)
+{
+    std::mt19937 rng(0);
+    boost::random::uniform_int_distribution<> batchSizeG(1, 8);
+    boost::random::normal_distribution<float> nd;
+
+    auto initMat = [&](HalfMatrix& buf, size_t r, size_t c, vecHalf& data) -> HalfMatrix
+    {
+        data.resize(r * 3 * c);
+        std::fill(begin(data), end(data), half(std::numeric_limits<float>::quiet_NaN()));
+        std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return half(nd(rng)); });
+        buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
+        // Get center slice.
+        return buf.ColumnSlice(c, c);
+    };
+
+    int baseDeviceId = 0;
+    for (const auto& engCfg : GetTestEngineConfigsHalf())
+    {
+        auto engKind = std::get<0>(engCfg);
+        auto deviceId = std::get<1>(engCfg);
+        auto maxTempMem = std::get<2>(engCfg);
+        for (const auto& g : GenerateConvTestConfigs())
+        {
+            auto baseEng = ConvEngHalf::Create(g, baseDeviceId, ImageLayoutKind::CHW, 0, PoolKind::None, ConvolutionEngineKind::CuDnn);
+            auto testEng = ConvEngHalf::Create(g, deviceId, ImageLayoutKind::CHW, maxTempMem, PoolKind::None, engKind);
+
+            size_t n = batchSizeG(rng);
+            vecHalf buf;
+            buf.resize(g->InputShape().GetNumElements() * n);
+            std::generate(begin(buf), end(buf), [&] { return half(nd(rng)); });
+            HalfMatrix in(g->InputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
+            HalfMatrix inB(g->InputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
+
+            size_t mapCount = g->GetMapCount(g->InputShape().GetRank() - 1);
+            buf.resize(g->KernelShape().GetNumElements() * mapCount);
+            std::generate(begin(buf), end(buf), [&] { return half(nd(rng)); });
+            HalfMatrix kernel(mapCount, g->KernelShape().GetNumElements(), buf.data(), deviceId, matrixFlagNormal);
+            HalfMatrix kernelB(mapCount, g->KernelShape().GetNumElements(), buf.data(), baseDeviceId, matrixFlagNormal);
+
+            size_t crowOut = g->OutputShape().GetNumElements();
+            HalfMatrix outBuf(deviceId);
+            HalfMatrix out = initMat(outBuf, crowOut, n, buf);
+            HalfMatrix outB(out.DeepClone(), baseDeviceId);
+
+            HalfMatrix workspace(deviceId);
+            HalfMatrix workspaceB(baseDeviceId);
+
+            testEng->Forward(in, kernel, out, workspace);
+            baseEng->Forward(inB, kernelB, outB, workspaceB);
+
+            std::stringstream tmsg;
+            tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId << ", MaxTempMem: " << maxTempMem;
+            std::string msg = " are not equal, " + tmsg.str();
+            std::string msgNan = " has NaNs, " + tmsg.str();
+            std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+
+            half relErr = half(4 * Err<float>::Rel);
+            half absErr = half(14 * Err<float>::Abs);
+            std::string emsg;
+
+            BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr, absErr), "out" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
         }
     }
@@ -349,10 +440,10 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardKernel)
 
             SingleMatrix workspace(deviceId);
             SingleMatrix workspaceB(baseDeviceId);
-            
+
             testEng->BackwardKernel(grad, in, kernel, true, false, workspace);
             baseEng->BackwardKernel(gradB, inB, kernelB, true, false, workspaceB);
-            
+
             std::stringstream tmsg;
             tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId;
             std::string msg = " are not equal, " + tmsg.str();
@@ -553,7 +644,7 @@ BOOST_AUTO_TEST_CASE(MaxUnpooling)
 
         cpuEng->ForwardPooling(inC, outC);
         gpuEng->ForwardPooling(inG, outG);
-        
+
         // Second, do the unpooling.
         size_t crowIn = g->InputShape().GetNumElements();
         SingleMatrix inUBufC(cpuDeviceId);
