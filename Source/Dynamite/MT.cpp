@@ -134,32 +134,32 @@ fun AttentionModelReference(size_t attentionDim1)
     let projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize, device);
     let normH = LengthNormalization(device); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
-    let zBarrier   = Barrier(20, Named("zBarrier"));
+    let zBarrier = Barrier(20, Named("zBarrier"));
     let doToTanh = StaticModel(/*isBasicBlock=*/false, [=](const Variable& h, const Variable& historyProjectedKey)
     {
         let hProjected = projectQuery(h); // [A]. Batched.
         let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); CountAPICalls(2); // [A]. Batched.
         return tanh;
     });
-    return Dynamite::Model({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
+    return /*Dynamite::Model*/TernaryModel({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
         [=](const Variable& h,                       // [A] decoder hidden state
             const Variable& historyProjectedKey,     // [A] previous output, embedded
             const Variable& encodingProjectedKeysSeq // [A x T] encoder hidden state seq, projected as key >> tanh
-           ,const Variable& encodingProjectedDataSeq  // [A x T] encoder hidden state seq, projected as data
+           //,const Variable& encodingProjectedDataSeq  // [A x T] encoder hidden state seq, projected as data
            ) -> Variable
-    {
-        let prevProfiler = Function::SetDynamicProfiler(profiler, false);
-        let tanh = doToTanh(h, historyProjectedKey); // [A]
-        let uSeq = InnerProduct(tanh, encodingProjectedKeysSeq, Axis(0), Named("u")); CountAPICalls(1); // [1 x T]
-        let wSeq = Dynamite::Softmax(uSeq, Axis(1), Named("attSoftmax"), zBarrier);                     // [1 x T]
-        Function::SetDynamicProfiler(prevProfiler);
-#if 0
-        return wSeq;
+        {
+            let prevProfiler = Function::SetDynamicProfiler(profiler, false);
+            let tanh = doToTanh(h, historyProjectedKey); // [A]
+            let uSeq = InnerProduct(tanh, encodingProjectedKeysSeq, Axis(0), Named("u")); CountAPICalls(1); // [1 x T]
+            let wSeq = Dynamite::Softmax(uSeq, Axis(1), Named("attSoftmax"), zBarrier);                     // [1 x T]
+            Function::SetDynamicProfiler(prevProfiler);
+#if 1
+            return wSeq;
 #else
-        let res = /*resBarrier*/(InnerProduct(encodingProjectedDataSeq, wSeq, Axis_DropLastAxis, Named("attContext"))); // [.] inner product over a vectors
-        return res;
+            let res = /*resBarrier*/(InnerProduct(encodingProjectedDataSeq, wSeq, Axis_DropLastAxis, Named("attContext"))); // [.] inner product over a vectors
+            return res;
 #endif
-    });
+        });
 }
 
 // TODO: Break out initial step and recurrent step layers. Decoder will later pull them out frmo here.
@@ -222,7 +222,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         return z;
     }, Named("doToOutput"));
 
-    return Dynamite::Model/*BinaryModel*/({ }, nestedLayers,
+    return /*Dynamite::Model*/BinaryModel({ }, nestedLayers,
     [=](const Variable& history, const Variable& hEncs) -> Variable
     {
         // decoding loop
@@ -250,7 +250,8 @@ fun AttentionDecoder(double dropoutInputKeepProb)
             let attentionWeightSeq = attentionModel(state, historyProjectedKey, encodingProjectedKeysSeq);
             let attentionContext = attBarrier(InnerProduct(encodingProjectedDataSeq, attentionWeightSeq, Axis_DropLastAxis, Named("attContext"))); CountAPICalls(1); // [.] inner product over a vectors
 #else
-            attentionContext = attentionModel(state, historyProjectedKey, encodingProjectedKeysSeq, encodingProjectedDataSeq);
+            let attentionWeightSeq = attentionModel(state, historyProjectedKey, encodingProjectedKeysSeq/*, encodingProjectedDataSeq*/);
+            attentionContext = attBarrier(InnerProduct(encodingProjectedDataSeq, attentionWeightSeq, Axis_DropLastAxis, Named("attContext"))); CountAPICalls(1); // [.] inner product over a vectors
 #endif
             Function::SetDynamicProfiler(prevProfiler);
 
