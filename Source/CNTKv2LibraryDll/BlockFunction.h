@@ -98,7 +98,7 @@ namespace CNTK
                 LogicError("GetPlaceholderMapping can only be used for Placeholders.");
             if (!m_compositeIsShared) // not shared: pretend value is stored in m_blockFunctionVariableMapping
             {
-                if (argument.m_dataFields->m_compositeArgumentIndex != SIZE_MAX)
+                if (argument.m_dataFields->m_compositeArgumentIndex != VariableFields::m_compositeArgumentIndexUndefined)
                     LogicError("m_compositeArgumentIndex should not be used when !m_compositeIsShared");
                 if (!argument.m_dataFields->m_blockFunctionVariableMapping.m_dataFields)
                     LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
@@ -108,7 +108,7 @@ namespace CNTK
             {
                 if (argument.m_dataFields->m_blockFunctionVariableMapping.m_dataFields)
                     LogicError("m_blockFunctionVariableMapping should not be set when m_compositeIsShared");
-                if (argument.m_dataFields->m_compositeArgumentIndex == SIZE_MAX)
+                if (argument.m_dataFields->m_compositeArgumentIndex == VariableFields::m_compositeArgumentIndexUndefined)
                     LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for shared-composite argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
                 if (argument.m_dataFields->m_compositeArgumentIndex >= m_inputs.size())
                     LogicError("m_compositeArgumentIndex out of bounds??");

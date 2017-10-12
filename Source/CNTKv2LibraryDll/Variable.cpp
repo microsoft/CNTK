@@ -17,6 +17,22 @@ namespace CNTK
     {
     }
 
+    // move-constructor variant, for Dynamite only
+    Variable::Variable(FunctionPtr&& function) :
+#ifdef DYNAMITE_ONLY // It's OK if user-held Variables are no outputs of composites as long as the graph is acyclic. That is always true in Dynamite.
+        Variable(CompositePreservingCopy(*this, move(function)))
+        // Note: Detour via static needed to allow for a sequence point between function->RawOutputs() and move(function).
+#else
+        Variable(function->Output())
+#endif
+    {
+    }
+    /*static*/ Variable Variable::CompositePreservingCopy(const Variable& other, std::shared_ptr<const Function>&& composite)
+    {
+        const auto& output = composite->RawOutputs().front();
+        return output.CompositePreservingCopy(move(composite));
+    }
+
     const NDShape& Variable::Shape() const
     {
         return m_dataFields->m_shape; 
@@ -97,10 +113,27 @@ namespace CNTK
 
     Variable Variable::CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const
     {
+#if 1
+        // TODO: This breakpoint was never hit. Is it ever called? If not, remove.
+        return CompositePreservingCopy(move(std::shared_ptr<const Function>(composite))); // will call the move version below
+#else
         // We have to preserve the whole subgraph.
         Variable result;
         // This must copy all data members except m_outputComposite.
         result.m_outputComposite = composite;
+        result.m_dataFields = m_dataFields;
+        result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
+        result.m_shapeDims = &m_dataFields->m_shape.Dimensions();
+        return result;
+#endif
+    }
+
+    Variable Variable::CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const
+    {
+        // We have to preserve the whole subgraph.
+        Variable result;
+        // This must copy all data members except m_outputComposite.
+        result.m_outputComposite = move(composite);
         result.m_dataFields = m_dataFields;
         result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
         result.m_shapeDims = &m_dataFields->m_shape.Dimensions();

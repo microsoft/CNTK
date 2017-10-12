@@ -158,8 +158,8 @@ namespace CNTK
     class Parameter;
     class Axis;
     class DeviceDescriptor;
-    enum class PrimitiveOpType : unsigned int;
-    enum class DataType : unsigned int;
+    enum class PrimitiveOpType : unsigned char;
+    enum class DataType : unsigned char;
 
     struct MinibatchInfo;
     struct MinibatchData;
@@ -172,7 +172,7 @@ namespace CNTK
     //  - can be sure the correct deleter is called (on the correct heap)
 
     // a pool for allocating objects of one specific size
-    template<typename T> struct FixedSizePoolItem : public T { unsigned short blockIndex; };
+    template<typename T> struct FixedSizePoolItem : public T { unsigned short blockIndex; }; // TODO: just store a pointer to the block; in most cases, this is aligned to 8 bytes anyway
     template<size_t itemByteSize>
     class FixedSizePool
     {

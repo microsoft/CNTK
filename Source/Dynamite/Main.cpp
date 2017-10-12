@@ -368,15 +368,51 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 extern int mt_main(int argc, char *argv[]);
 extern void RunDynamiteTests();
 
+#if 0
+template<typename F, typename FReturnType>
+class wrapper
+{
+    const F& f;
+    const size_t N;
+    struct iterator
+    {
+        iterator(const F& f, size_t index) : f(f), index(index) {}
+        const F& f;
+        size_t index;
+        FReturnType operator *() const { return f(index); }
+        size_t operator-(const iterator& other) const { return other.index - index; }
+        iterator operator++() { return iterator(F, index+1); }
+    };
+public:
+    iterator begin() const { return iterator{ f, 0 }; }
+    iterator end() const { return iterator{ f, N }; }
+    wrapper(size_t N, const F& f) : N(N), f(f) {}
+};
+template<typename F>
+auto create_wrapper(size_t N, const F& f)
+{
+    return wrapper<F, decltype(f(0))>(N, f);
+}
+#endif
+
 int main(int argc, char *argv[])
 {
-    argc; argv;
+#if 0
+    struct T { shared_ptr<int> x, y, z; };
+    let e1 = T{ make_shared<int>(13), make_shared<int>(13), make_shared<int>(42) };
+    let e2 = T{ make_shared<int>(42), make_shared<int>(13), make_shared<int>(42) };
+    auto w = create_wrapper((size_t)2, [&](size_t i) -> const T& { if (i == 0) return e1; else return e2; });
+    let b = w.begin();
+    let e = w.end();
+    vector<T> vec(b, e);
+#endif
     try
     {
         RunDynamiteTests();
 #if 1
         return mt_main(argc, argv);
 #else
+        argc; argv;
         TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
         //TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
         // BUGBUG: CPU currently outputs loss=0??

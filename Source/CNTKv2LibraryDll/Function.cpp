@@ -152,14 +152,9 @@ namespace CNTK
     Variable Function::Output() const // optimized version of OutputsImpl()[0]
     {
 #ifdef DYNAMITE_ONLY
+        // It's OK if user-held Variables are no outputs of composites as long as the graph is acyclic. That is always true in Dynamite.
         const auto& outputs = RawOutputs(); // = InitOutputs(), m_outputs
-        //if (outputs.size() != 1)
-        //    RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
-        let output = outputs[0];
-        if (output.m_acyclicOutputPrimitiveReference)
-            return outputs.front(); // no ref count needed
-        else
-            return outputs.front().CompositePreservingCopy(shared_from_this()); // this implants a ref count
+        return outputs.front().CompositePreservingCopy(shared_from_this()); // this implants a ref count
 #else
         const auto& outputs = RawOutputs();
         if (outputs.size() != 1)

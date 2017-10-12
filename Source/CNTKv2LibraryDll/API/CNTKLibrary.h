@@ -43,7 +43,7 @@ namespace CNTK
     ///
     /// Enumeration type denoting data type of symbolic data entities or actual data.
     ///
-    enum class DataType : unsigned int
+    enum class DataType : unsigned char
     {
         Unknown = 0,
         Float = 1,
@@ -1917,7 +1917,7 @@ namespace CNTK
     ///
     /// Enumeration type denoting the kind of a symbolic Variable object
     ///
-    enum class VariableKind : unsigned int
+    enum class VariableKind : unsigned char
     {
         Input = 0,
         Output = 1,
@@ -2020,6 +2020,7 @@ namespace CNTK
         /// Throws an exception if called for a Function instance with multiple outputs
         ///
         CNTK_API Variable(const FunctionPtr& function);
+        CNTK_API Variable(FunctionPtr&& function);
 
         ///
         /// Implicit conversion to a FunctionPtr; creates a pass through primitive Function
@@ -2195,6 +2196,8 @@ namespace CNTK
         void SetOwner(std::weak_ptr<PrimitiveFunction>&& ownerFunction);
 
         Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
+        Variable CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const;
+        static Variable CompositePreservingCopy(const Variable& other, std::shared_ptr<const Function>&& composite);
 
         Variable NonCompositePreservingCopy() const;
 
@@ -3799,6 +3802,7 @@ namespace CNTK
         static bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate);
 
         // Returns a outputs without ref-counting the owner.
+        friend class Variable;
         CNTK_API std::vector<Variable>& RawOutputs() const;
 
     private:
