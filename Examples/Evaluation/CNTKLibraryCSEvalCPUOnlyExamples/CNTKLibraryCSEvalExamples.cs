@@ -230,54 +230,62 @@ namespace CNTKLibraryCSEvalExamples
 
             // Start to evaluate samples in parallel.
             Console.WriteLine(string.Format("Evaluate {0} images in parallel using {1} model instances.", imageList.Count, numOfModelInstances));
-            var taskList = new List<Task>();
             var results = new ConcurrentDictionary<string, IList<IList<float>>>();
-            foreach (var evalFunc in modelPool)
+            int count = 0;
+            while (count++ < 100000)
             {
-                taskList.Add(Task.Factory.StartNew(() =>
+                var taskList = new List<Task>();
+                foreach (var evalFunc in modelPool)
                 {
+                    taskList.Add(Task.Factory.StartNew(() =>
+                    {
                     // Get input and output variables
                     Variable inputVar = evalFunc.Arguments.Single();
-                    NDShape inputShape = inputVar.Shape;
-                    int imageWidth = inputShape[0];
-                    int imageHeight = inputShape[1];
-                    Variable outputVar = evalFunc.Output;
+                        NDShape inputShape = inputVar.Shape;
+                        int imageWidth = inputShape[0];
+                        int imageHeight = inputShape[1];
+                        Variable outputVar = evalFunc.Output;
 
-                    string image;
+                        string image = imageList.Take();
                     // The task exits when no image is available for evaluation.
-                    while (imageList.TryTake(out image) == true)
-                    {
-                        Console.WriteLine(string.Format("Evaluating image {0} using thread {1}.", image, Thread.CurrentThread.ManagedThreadId));
+                        {
+                            Console.WriteLine(string.Format("Evaluating image {0} using thread {1}.", image, Thread.CurrentThread.ManagedThreadId));
 
-                        Bitmap bmp = new Bitmap(Bitmap.FromFile(image));
-                        var resized = bmp.Resize(imageWidth, imageHeight, true);
-                        List<float> resizedCHW = resized.ParallelExtractCHW();
+                            Bitmap bmp = new Bitmap(Bitmap.FromFile(image));
+                            var resized = bmp.Resize(imageWidth, imageHeight, true);
+                            List<float> resizedCHW = resized.ParallelExtractCHW();
 
                         // Create input data map.
                         var inputDataMap = new Dictionary<Variable, Value>();
-                        var inputVal = Value.CreateBatch(inputShape, resizedCHW, device);
-                        inputDataMap.Add(inputVar, inputVal);
+                            var inputVal = Value.CreateBatch(inputShape, resizedCHW, device);
+                            inputDataMap.Add(inputVar, inputVal);
 
                         // Create output data map.
                         var outputDataMap = new Dictionary<Variable, Value>();
-                        outputDataMap.Add(outputVar, null);
+                            outputDataMap.Add(outputVar, null);
 
                         // Start evaluation on the device
                         evalFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                         // Get evaluate result as dense output
                         var outputVal = outputDataMap[outputVar];
-                        var outputData = outputVal.GetDenseData<float>(outputVar);
+                            var outputData = outputVal.GetDenseData<float>(outputVar);
 
-                        // Add result to the buffer for output at a later time.
-                        if (results.TryAdd(image, outputData) == false)
-                           throw new ArgumentException(string.Format("The image {0} has already been evaluated.", image));
-                   }
-               }));
+                            PrintOutput(evalFunc.Output.Shape.TotalSize, outputData);
+
+
+                            //// Add result to the buffer for output at a later time.
+                            //if (results.TryAdd(image, outputData) == false)
+                            //    throw new ArgumentException(string.Format("The image {0} has already been evaluated.", image));
+                        }
+                        imageList.Add(image);
+
+                    }));
+                }
+                // Await until all images have been evaluated.
+                await Task.WhenAll(taskList);
             }
 
-            // Await until all images have been evaluated.
-            await Task.WhenAll(taskList);
 
             var sampleSize = modelFunc.Output.Shape.TotalSize;
             foreach (var file in imageFiles)
