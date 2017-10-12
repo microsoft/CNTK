@@ -353,6 +353,9 @@ public:
     GPUMatrix<ElemType>& InplaceTanh();
     GPUMatrix<ElemType>& AssignTanhOf(const GPUMatrix<ElemType>& a);
 
+    GPUMatrix<ElemType>& InplaceAtanh();
+    GPUMatrix<ElemType>& AssignAtanhOf(const GPUMatrix<ElemType>& a);
+
     GPUMatrix<ElemType>& InplaceLogSoftmax(const bool isColWise);
     GPUMatrix<ElemType>& AssignLogSoftmaxOf(const GPUMatrix<ElemType>& a, const bool isColWise);
 

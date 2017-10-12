@@ -118,6 +118,7 @@ public:
 // AcosNode (input)
 // CoshNode (input)
 // SinhNode (input)
+// AtanhNode (input)
 // Abs(input)
 // Negate (input)
 // Sqrt (input)
@@ -151,6 +152,7 @@ public:
 DeclareUnaryElementWiseWithOpCodeNode(Abs,                   Abs,                   ElementwiseProductWithAbsDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Acos,                  Acos,                  ElementwiseProductWithAcosDerivative,                            binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Asin,                  Asin,                  ElementwiseProductWithAsinDerivative,                            binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Atanh,                 Atanh,                 ElementwiseProductWithAtanhDerivative,                           binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Cosh,                  Cosh,                  ElementwiseProductWithCoshDerivative,                            binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Cosine,                Cosine,                ElementwiseProductWithCosDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Exp,                   Exp,                   ElementwiseProduct,                                              binaryWithOutputGradient);

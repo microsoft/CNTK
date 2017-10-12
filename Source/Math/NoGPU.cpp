@@ -597,6 +597,18 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTanhOf(const GPUSpar
 }
 
 template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceAtanh()
+{
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignAtanhOf(const GPUMatrix<ElemType>& /*a*/)
+{
+    return *this;
+}
+
+template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSqrt()
 {
     return *this;

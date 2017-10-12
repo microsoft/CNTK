@@ -398,6 +398,7 @@ namespace CNTK
                         case PrimitiveOpType::Negate:
                         case PrimitiveOpType::Sigmoid:
                         case PrimitiveOpType::Tanh:
+                        case PrimitiveOpType::Atanh:
                         case PrimitiveOpType::ReLU:
                         case PrimitiveOpType::Exp:
                         case PrimitiveOpType::Log:

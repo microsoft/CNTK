@@ -634,6 +634,7 @@ Delay = PastValue
 
 Acos(x, tag='') = new ComputationNode [ operation = 'Acos' ; inputs = _AsNodes (x) /*plus the function args*/ ]
 Asin(x, tag='') = new ComputationNode [ operation = 'Asin' ; inputs = _AsNodes (x) /*plus the function args*/ ]
+Atanh(x, tag='') = new ComputationNode [ operation = 'Atanh' ; inputs = _AsNodes (x) /*plus the function args*/ ]
 BatchNormalization(input, scale, bias, runMean, runVariance, runCount=None, spatial=false, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode
 {
     operation = 'BatchNormalization'
