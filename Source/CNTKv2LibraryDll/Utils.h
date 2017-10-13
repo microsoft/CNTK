@@ -13,12 +13,11 @@
 #include "ConvolutionEngine.h"
 #include "ReshapingNodes.h"
 
-
 namespace CNTK
 {
     // Forward declarations
     class Dictionary;
-    
+
     // Helper to get the size of an element of the specified DataType
     inline size_t ElementSize(DataType dataType)
     {
@@ -657,9 +656,7 @@ namespace CNTK
 
         std::vector<LearnerPtr> m_learners;
         bool m_isDistributed;
-
-        // Whether learner is implementing block momentum update and filtering BMUF algorithm.
-        bool m_isLossEvalAggregationNeededBeforeReporting;
+        bool m_isLossEvalAggregationNeededBeforeReporting;  //Needed in case of BMUF like algorithms
     };
 
     class Utils
