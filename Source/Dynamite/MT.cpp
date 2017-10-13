@@ -205,9 +205,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         for (auto& resnet : resnets)
             state1 = resnet(state1);
         // one more transform, bringing back the attention context
-        CountAPICalls(1);
-        let topHidden = topHiddenProjection(Splice({ state1, attentionContext }, Axis(0)));
-        // ^^ batchable; currently one per target word in MB (e.g. 600); could be one per batch (2 launches)
+        let topHidden = topHiddenProjection(Splice({ state1, attentionContext }, Axis(0))); CountAPICalls(1);
         // TODO: dropout layer here
         dropoutInputKeepProb;
         // compute output
@@ -291,7 +289,6 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
     {
         // convert sequence tensors into sequences of tensors
         // and strip the corresponding boundary markers
-        //  - features: strip any?
         //  - labels: strip leading <s>
         //  - history: strip training </s>
         let labelsSeq  = Slice(targetSeq, Axis(-1), 1, (int)targetSeq.size()    ); CountAPICalls(); // labels  = targets without leading <s>
@@ -300,9 +297,8 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
         // returns the sequence of output log probs over words
         let zSeq = model_fn(sourceSeq, historySeq);
         // compute loss per word
-        let lossSeq = Dynamite::CrossEntropyWithSoftmax(zSeq, labelsSeq, Axis(0));
-        let loss = ReduceSum(lossSeq, Axis_DropLastAxis); CountAPICalls(1);
-        return loss;
+        let lossSeq = Dynamite::CrossEntropyWithSoftmax(zSeq, labelsSeq);
+        return lossSeq;
     };
     let profiler = Function::CreateDynamicProfiler(1, L"all");
     // create a batch mapper (which will eventually allow suspension)
@@ -312,9 +308,9 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
     [=](const /*batch*/vector<Variable>& features, const /*batch*/vector<Variable>& labels) -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
-        vector<Variable> lossesPerSequence;
-        batchModel(lossesPerSequence, features, labels);             // batch-compute the criterion
-        let collatedLosses = Splice(move(lossesPerSequence), Axis(0), Named("seqLosses")); CountAPICalls(1);    // collate all seq lossesPerSequence
+        vector<Variable> lossSequences;
+        batchModel(lossSequences, features, labels);             // batch-compute the criterion
+        let collatedLosses = Splice(move(lossSequences), Axis(-1), Named("seqLosses")); CountAPICalls(1);    // concatenate all seq lossSequences
         let mbLoss = ReduceSum(collatedLosses, Axis_DropLastAxis, Named("batchLoss")); CountAPICalls(1); // aggregate over entire minibatch
         Function::SetDynamicProfiler(prevProfiler);
         return mbLoss;
