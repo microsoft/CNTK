@@ -2348,7 +2348,7 @@ private:
 // BatchNormalizationNode (input, scale, bias, runMean, runVariance, runCount,
 //                         spatial, normalizationTimeConstant = 0, blendTimeConstant = 0,
 //                         epsilon = 0.00001, useCntkEngine = true, 
-//                         bool disableRegularization, imageLayout = 'cudnn')
+//                         disableRegularization = false, imageLayout = 'cudnn')
 //
 // Implements batch normalization technique as described in:
 // Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift [S. Ioffe, C. Szegedy]
