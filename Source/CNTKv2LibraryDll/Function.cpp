@@ -1794,6 +1794,9 @@ namespace CNTK
 
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
+#ifdef DYNAMITE_ONLY
+        InvalidArgument("PastValue: Loopy static graphs are not supported in Dynamite-optimized builds.");
+#endif
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOffset] = DictionaryValue(offset);
         return BinaryOp(PrimitiveOpType::PastValue, operand, initialState, std::move(additionalProperties), name);
@@ -1801,6 +1804,9 @@ namespace CNTK
 
     FunctionPtr FutureValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
+#ifdef DYNAMITE_ONLY
+        InvalidArgument("FutureValue: Loopy static graphs are not supported in Dynamite-optimized builds.");
+#endif
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOffset] = DictionaryValue(offset);
         return BinaryOp(PrimitiveOpType::FutureValue, operand, initialState, std::move(additionalProperties), name);

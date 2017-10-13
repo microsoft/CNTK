@@ -4536,7 +4536,7 @@ void PrimitiveFunction::InitOutput(Variable&& output)
 #endif
     auto fCompositePtr = dynamic_pointer_cast<CompositeFunction>(fPtr);
     if (!fCompositePtr) // If the static graphs has no Placeholder (e.g. weight norm), then it won't be a composite. Make it one.
-        fCompositePtr = CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(fPtr), fPtr->Name(), /*uid=*/wstring());
+        fCompositePtr = dynamic_pointer_cast<CompositeFunction>(CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(fPtr), fPtr->Name(), /*uid=*/wstring()));
     // precompute some additional info for basic blocks
     // Some of these are used for composites that are declared as basic blocks, but also for those
     // invoked by basic blocks even if not declared as such. Hence, we must initialize this always.

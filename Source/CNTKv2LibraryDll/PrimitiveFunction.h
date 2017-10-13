@@ -304,7 +304,10 @@ namespace CNTK
         {
             // set inputs' acyclic strong references if possible
             //UpdateAcyclicReferences();
-            m_isKnownToBeAcyclic = UpdateAcyclicReference(m_inputs.front()) && UpdateAcyclicReference(m_inputs.back());
+#ifndef DYNAMITE_ONLY
+            m_isKnownToBeAcyclic =
+#endif
+            UpdateAcyclicReference(m_inputs.front()) && UpdateAcyclicReference(m_inputs.back());
         }
 
         PrimitiveFunction(PrimitiveOpType op, const Variable& input0, Dictionary&& functionConfig, const std::wstring& functionName = std::wstring())
@@ -314,7 +317,10 @@ namespace CNTK
         {
             // set inputs' acyclic strong references if possible
             //UpdateAcyclicReferences();
-            m_isKnownToBeAcyclic = UpdateAcyclicReference(m_inputs.front());
+#ifndef DYNAMITE_ONLY
+            m_isKnownToBeAcyclic =
+#endif
+            UpdateAcyclicReference(m_inputs.front());
         }
     public:
         ~PrimitiveFunction()
@@ -348,6 +354,8 @@ namespace CNTK
         void InitOutput(Variable&& output);
     private:
 
+        // Note: This code is to allow bypassing the composite pointer in a hybrid build that maintains
+        // back compat with static CNTK that allows loopy graphs. With DYNAMITE_ONLY defined, this is never called.
         bool UpdateAcyclicReference(Variable& input) // returns true if this input is known to be acyclic
         {
             // Implant a strong ref to the input's PrimitiveFunction into the input if it is
@@ -363,18 +371,25 @@ namespace CNTK
                 else
                 {
                     // If any input already is not guaranteed to be cyclic, this PrimitiveFunction is neither.
+#ifdef DYNAMITE_ONLY
+                    LogicError("should never get here in Dynamite-optimized build??");
+#else
                     return false;
+#endif
                 }
             }
             else
             {
+#ifdef DYNAMITE_ONLY    // loops are not possible in Dynamite-optimized builds
+                return true;
+#else
                 // If any input is a Placeholder, it is for sure not dynamic, and may eventually
                 // be looped back through ReplacePlaceholder().
                 // Whereas Parameters and Constants are acyclic, as are Inputs.
                 return !input.IsPlaceholder();
+#endif
             }
         }
-
         // implant the acyclic strong reference if it is safe
         void UpdateAcyclicReferences()
         {
@@ -385,7 +400,11 @@ namespace CNTK
                     // Found an input that cannot be guaranteed to be acyclic.
                     // If acyclic, we exit the loop above even if we don't implant all possible
                     // acyclic references into inputs, since it won't help anyway.
+#ifdef DYNAMITE_ONLY
+                    LogicError("should never get here in Dynamite-optimized build??");
+#else
                     m_isKnownToBeAcyclic = false;
+#endif
                     return;
                 }
             }
@@ -932,7 +951,11 @@ namespace CNTK
         static const size_t s_serializationVersion = 18;
 
         // Dynamite
+#ifdef DYNAMITE_ONLY    // for Dynamite, we never allow loops, and can therefore short-circuit this whole business
+        static const bool m_isKnownToBeAcyclic = true; // true if it is guaranteed that this PrimitiveFunction can never be part of a cycle (==has no Placeholder leaves)
+#else
         bool m_isKnownToBeAcyclic = true; // true if it is guaranteed that this PrimitiveFunction can never be part of a cycle (==has no Placeholder leaves)
+#endif
         friend class NonOwningFunctionList;
         friend class NonOwningFunctionListBuilder;
         enum class StackingMode { STACKING, BATCHING, STACKING_BUT_MAY_BATCH };

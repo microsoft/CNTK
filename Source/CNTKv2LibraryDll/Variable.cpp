@@ -329,7 +329,7 @@ namespace CNTK
         // we create the uid string lazily, since we don't look at it for most nodes
         if (m_uid.empty())
         {
-            if (m_varKind == VariableKind::Output && Owner() && Owner()->IsPrimitive())
+            if (m_varKind == VariableKind::Output && !IsObjectExpired(m_ownerFunction) && Owner() && Owner()->IsPrimitive())
             {
                 // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
                 auto owner = Owner();
