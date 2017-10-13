@@ -1000,7 +1000,8 @@ namespace CNTK
         std::unordered_set<Parameter> learnerParameters;
         for (const auto& learner : m_learners)
         {
-            if (DistributedLearnerPtr distLearner = dynamic_pointer_cast<DistributedLearner>(learner))
+            DistributedLearnerPtr distLearner = dynamic_pointer_cast<DistributedLearner>(learner);
+            if (distLearner)
             {
                 m_isDistributed = true;
                 m_isLossEvalAggregationNeededBeforeReporting = distLearner->IsLossEvalAggregationNeededBeforeReporting();
