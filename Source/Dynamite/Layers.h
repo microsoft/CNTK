@@ -25,9 +25,6 @@
 using namespace CNTK;
 using namespace std;
 
-#define DTYPE DataType::Float
-//#define DTYPE DataType::Double
-
 #pragma warning(push)
 #pragma warning(disable: 4505) // unreferenced function was removed
 
@@ -41,6 +38,23 @@ static inline size_t CountAPICalls(size_t n = 1)
 }
 
 namespace Dynamite {
+
+// globally set options
+// Use these to set the DataType and Device to be used for any call onwards.
+static auto& CurrentOptions()
+{
+    static struct
+    {
+        DataType         dataType = DataType::Float;
+        DeviceDescriptor device   = DeviceDescriptor::UseDefaultDevice();
+    } s_currentOptions;
+    return s_currentOptions;
+};
+
+static inline DeviceDescriptor CurrentDevice()                                  { return CurrentOptions().device; }
+static inline void             SetCurrentDevice(const DeviceDescriptor& device) { CurrentOptions().device = device; }
+static inline DataType         CurrentDataType()                                { return CurrentOptions().dataType; }
+static inline void             SetCurrentDataType(DataType dataType)            { CurrentOptions().dataType = dataType; }
 
 // debugging helper
 static inline NDArrayViewPtr GetValueAsTensor(const Variable& var) { return var.Value(); }
@@ -486,12 +500,12 @@ enum ProjectionOptions
     weightNormalize = 0x10
 };
 static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { return (ProjectionOptions)(((size_t)a) | ((size_t)b)); }
-static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device, const wstring& name = wstring());
+static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const wstring& name = wstring());
 // TODO: sort these functions vv after Linear()
-static UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device, const wstring& name = wstring())
+static UnaryBroadcastingModel Embedding(size_t embeddingDim, const wstring& name = wstring())
 {
     // BUGBUG: We would not want a bias here, right? (but BN always comes with one)
-    auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device, name);
+    auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, name);
     return UnaryModel({ }, { { L"embed", embed } }, [=](const Variable& x)
     {
         return embed(x);
@@ -518,7 +532,7 @@ public:
 };
 
 // layer normalization without bias term (which makes not much sense since we have a bias outside anyway in many cases)
-static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device, const Axis& axis = Axis(0))
+static UnaryBroadcastingModel LengthNormalization(const Axis& axis = Axis(0))
 {
 #ifdef DISABLE_NORMALIZATIONS
     axis; device;
@@ -527,9 +541,9 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
         return x;
     });
 #else
-    auto scale = Parameter({ }, DTYPE, 1.0, device, L"scale");
-    let eps = Constant::Scalar(DTYPE, 1e-16, device);
-    let minusHalf = Constant::Scalar(DTYPE, -0.5, device);
+    auto scale    = Parameter({ },   CurrentDataType(), 1.0,   CurrentDevice(), L"scale");
+    let eps       = Constant::Scalar(CurrentDataType(), 1e-16, CurrentDevice());
+    let minusHalf = Constant::Scalar(CurrentDataType(), -0.5,  CurrentDevice());
     let profiler = Function::CreateDynamicProfiler(1, L"lnorm");
 #if 1
 
@@ -600,11 +614,11 @@ static UnaryBroadcastingModel LengthNormalization(const DeviceDescriptor& device
 #endif
 }
 
-static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
+static BinaryModel RNNStep(size_t outputDim)
 {
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
-    auto R = Parameter({ outputDim, outputDim                  }, DTYPE, GlorotUniformInitializer(), device, L"R");
-    auto b = Parameter({ outputDim }, DTYPE, 0.0, device, L"b");
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto R = Parameter({ outputDim, outputDim                  }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
+    auto b = Parameter({ outputDim },                             CurrentDataType(), 0.0,                        CurrentDevice(), L"b");
     return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
     {
         CountAPICalls(5);
@@ -613,19 +627,19 @@ static BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
 }
 
 #if 0
-static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
+static BinaryModel GRU(size_t outputDim)
 {
     let activation = [](const Variable& x) { return Tanh(x); };
-    auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
-    auto R  = Parameter({ outputDim * 2, outputDim }, DTYPE, GlorotUniformInitializer(), device, L"R");
-    auto R1 = Parameter({ outputDim    , outputDim }, DTYPE, GlorotUniformInitializer(), device, L"R1");
-    auto b  = Parameter({ outputDim * 3 }, DTYPE, 0.0f, device, L"b");
-    let normW = LengthNormalization(device);
-    let normR = LengthNormalization(device);
-    let normR1 = LengthNormalization(device);
+    auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto R  = Parameter({ outputDim * 2, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
+    auto R1 = Parameter({ outputDim    , outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R1");
+    auto b  = Parameter({ outputDim * 3 }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
+    let normW = LengthNormalization();
+    let normR = LengthNormalization();
+    let normR1 = LengthNormalization();
     let stackAxis = Axis(0);
     let stackedDim = (int)outputDim;
-    let one = Constant::Scalar(DTYPE, 1.0, device); // for "1 -"...
+    let one = Constant::Scalar(CurrentDataType(), 1.0, CurrentDevice()); // for "1 -"...
     // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
     return BinaryModel({ W, R, R1, b },
     {
@@ -662,14 +676,14 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 #else
-static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
+static BinaryModel GRU(size_t outputDim)
 {
     // matrices are stacked in order (i, r, h)
-    auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, device, Named("projectInput"));
-    //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, device);
-    auto R  = Parameter({ outputDim * 3, outputDim }, DTYPE, GlorotUniformInitializer(), device, L"R");
-    //auto b  = Parameter({ outputDim * 3            }, DTYPE, 0.0f, device, L"b");
-    let normR = LengthNormalization(device);
+    auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectInput"));
+    //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, CurrentDevice());
+    auto R  = Parameter({ outputDim * 3, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
+    //auto b  = Parameter({ outputDim * 3            }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
+    let normR = LengthNormalization();
     let stackAxis = Axis(0);
     let stackedDim = (int)outputDim;
     let profiler = Function::CreateDynamicProfiler(1, L"GRU");
@@ -731,11 +745,11 @@ static BinaryModel GRU(size_t outputDim, const DeviceDescriptor& device)
 }
 #endif
 
-static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
+static TernaryModel LSTM(size_t outputDim)
 {
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
-    auto R = Parameter({ outputDim, outputDim }, DTYPE, GlorotUniformInitializer(), device, L"R");
-    auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto R = Parameter({ outputDim, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
+    auto b = Parameter({ outputDim }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
     return TernaryModel({ W, R, b }, [=](const Variable& prevH, const Variable& prevC, const Variable& input)
     {
         // TODO: complete this
@@ -745,9 +759,9 @@ static TernaryModel LSTM(size_t outputDim, const DeviceDescriptor& device)
     });
 }
 
-static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, size_t axis, const wstring& name = wstring());
+static UnaryBroadcastingModel BatchNormalization(size_t axis, const wstring& name = wstring());
 
-static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const DeviceDescriptor& device, const wstring& name = wstring())
+static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const wstring& name = wstring())
 {
     let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize )) != 0;
     let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
@@ -762,13 +776,13 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         InvalidArgument("Dense: ProjectionOptions::batchNormalize requires ProjectionOptions::bias to be specified as well");
     if (hasScale && (hasBatchNorm || hasLengthNorm))
         InvalidArgument("Dense: ProjectionOptions::stabilize is not meaningful (will cancel out) with batch or layer normalization");
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device, L"W");
-    auto b = Parameter({ outputDim }, DTYPE, 0.0f, device, L"b");
-    auto scale = Parameter({}, DTYPE, 1.0, device, L"scale");
-    auto weightNormRescale = Parameter({ outputDim }, DTYPE, 1.0, device, L"weightNormRescale");
-    let weightNormMinusHalf = Constant::Scalar(DTYPE, -0.5, device);
-    let batchNorm = hasBatchNorm ? BatchNormalization(device, /*axis=*/1, Named("DenseBN")) : Identity;
-    let lengthNorm = hasLengthNorm ? LengthNormalization(device) : Identity;
+    auto W                  = Parameter({ outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto b                  = Parameter({ outputDim },                             CurrentDataType(), 0.0f,                       CurrentDevice(), L"b");
+    auto scale              = Parameter({},                                        CurrentDataType(), 1.0,                        CurrentDevice(), L"scale");
+    auto weightNormRescale  = Parameter({ outputDim },                             CurrentDataType(), 1.0,                        CurrentDevice(), L"weightNormRescale");
+    let weightNormMinusHalf = Constant::Scalar(                                    CurrentDataType(), -0.5,                       CurrentDevice());
+    let batchNorm = hasBatchNorm ? BatchNormalization(/*axis=*/1, Named("DenseBN")) : Identity;
+    let lengthNorm = hasLengthNorm ? LengthNormalization() : Identity;
     vector<Parameter> parameters{ W };
     if (hasBias && !hasBatchNorm) // batchNorm supplies its own bias
         parameters.push_back(b);
@@ -823,14 +837,14 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     });
 }
 
-static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const DeviceDescriptor& device, const wstring& name /*= wstring()*/)
+static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const wstring& name /*= wstring()*/)
 {
-    return Dense(outputDim, Identity, opts, device, name);
+    return Dense(outputDim, Identity, opts, name);
 }
 
 // create a BatchNormalization layer
 // TODO: the API must take an axis parameter to declare where the axis is.
-static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device, const size_t axis, const wstring& name /*= wstring()*/)
+static UnaryBroadcastingModel BatchNormalization(const size_t axis, const wstring& name /*= wstring()*/)
 {
 #ifdef DISABLE_NORMALIZATIONS
     device; name; axis;
@@ -838,11 +852,11 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
 #else
     static size_t id = 0; // unique id
     auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
-    auto scale = Parameter({ NDShape::InferredDimension }, DTYPE, 1.0, device, L"scale");
-    auto bias  = Parameter({ NDShape::InferredDimension }, DTYPE, 0.0, device, L"bias");
-    auto runningMean   = Parameter({ NDShape::InferredDimension }, DTYPE, 0.0, device, L"runningMean");
-    auto runningInvStd = Parameter({ NDShape::InferredDimension }, DTYPE, 1.0, device, L"runningInvStd");
-    auto runningCount  = Parameter({                            }, DTYPE, 0.0, device, L"runningCount");
+    auto scale = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"scale");
+    auto bias  = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"bias");
+    auto runningMean   = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"runningMean");
+    auto runningInvStd = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"runningInvStd");
+    auto runningCount  = Parameter({                            }, CurrentDataType(), 0.0, CurrentDevice(), L"runningCount");
     axis;
     //vector<Variable> buffer;
     // TODO: figure out this Parameter mess for BN
@@ -864,10 +878,10 @@ static UnaryBroadcastingModel BatchNormalization(const DeviceDescriptor& device,
 
 // ResNet layer
 // Two Dense(ReLU) with skip connection and batch normalization after the matrix product.
-static UnaryBroadcastingModel ResidualNet(size_t outputDim, const DeviceDescriptor& device)
+static UnaryBroadcastingModel ResidualNet(size_t outputDim)
 {
-    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device, Named("project1"));
-    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, device, Named("project2"));
+    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, Named("project1"));
+    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, Named("project2"));
     let doResidualNet = StaticModel(/*isBasicBlock=*/false, [=](const Variable& x)
     {
         CountAPICalls(3);

@@ -28,12 +28,12 @@ using namespace std;
 using namespace Dynamite;
 
 // baseline model for CNTK Static
-UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
+UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim)
 {
     return StaticSequential({
-        Embedding(embeddingDim, device),
-        StaticSequence::Fold(RNNStep(hiddenDim, device)),
-        Linear(numOutputClasses, ProjectionOptions::stabilize | ProjectionOptions::bias, device)
+        Embedding(embeddingDim),
+        StaticSequence::Fold(RNNStep(hiddenDim)),
+        Linear(numOutputClasses, ProjectionOptions::stabilize | ProjectionOptions::bias)
     });
 }
 
@@ -53,13 +53,13 @@ BinaryModel CreateCriterionFunction(UnaryModel model)
 }
 
 // CNTK Dynamite model
-UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
+UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim)
 {
-    auto embed   = Embedding(embeddingDim, device);
-    auto step    = RNNStep(hiddenDim, device);
-    auto zero = Constant({ hiddenDim }, 0.0f, device);
+    auto embed   = Embedding(embeddingDim);
+    auto step    = RNNStep(hiddenDim);
+    auto zero = Constant({ hiddenDim }, 0.0f, CurrentDevice());
     auto fold = Dynamite::Sequence::Fold(step, zero);
-    auto linear  = Linear(numOutputClasses, ProjectionOptions::stabilize | ProjectionOptions::bias, device);
+    auto linear  = Linear(numOutputClasses, ProjectionOptions::stabilize | ProjectionOptions::bias);
     vector<Variable> xvec;
     vector<Variable> evec;
     return UnaryModel({},
@@ -104,100 +104,6 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
     };
 }
 
-#if 0
-Variable softmax(const Variable& z)
-{
-    //let Z = ReduceLogSum(z, Axis::AllStaticAxes());
-    let Z = ReduceLogSum(z, Axis(0));
-    let P = Exp(z - Z);
-    return P;
-}
-
-void Flush(const Variable& x)
-{
-    x.Value();
-}
-void Flush(const FunctionPtr& f)
-{
-    f->Output().Value();
-}
-
-function<Variable(const vector<Variable>&, const Variable&)> AttentionModel(size_t attentionDim, const DeviceDescriptor& device)
-{
-    auto Wenc = Parameter({ attentionDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device);
-    auto Wdec = Parameter({ attentionDim, NDShape::InferredDimension }, DTYPE, GlorotUniformInitializer(), device);
-    auto v    = Parameter({ attentionDim }, DTYPE, GlorotUniformInitializer(), device);
-    return [=](const vector<Variable>& hEncs, const Variable& hDec)
-    {
-        // BUGBUG: suboptimal, redoing attention projection for inputs over again; need CSE
-        Variable hEncsTensor = Splice(hEncs, Axis(1)); // [hiddenDim, inputLen]
-        let hEncsProj = Times(Wenc, hEncsTensor, /*outputRank=*/1);
-        let hDecProj  = Times(Wdec, hDec);
-        let u = Tanh(hEncsProj + hDecProj); // // [hiddenDim, inputLen]
-        let u1 = Times(v, u, /*outputRank=*/0); // [inputLen]   --BUGBUG: fails, but no need
-        let w = softmax(u1);  // [inputLen] these are the weights
-        let hEncsAv = Times(hEncsTensor, w);
-        return hEncsAv;
-    };
-}
-
-// create a s2s translator
-//     auto d_model_fn1 = CreateModelFunctionS2SAtt(inputDim, embeddingDim, 2 * hiddenDim, attentionDim, device); // (Splice cannot concat, so hidden and embedding must be the same)
-BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, size_t attentionDim, const DeviceDescriptor& device)
-{
-    numOutputClasses; hiddenDim;
-    let embed = Embedding(embeddingDim, device);
-    let fwdEnc = RNNStep(hiddenDim, device);
-    let bwdEnc = RNNStep(hiddenDim, device);
-    let zero = Constant({ hiddenDim }, 0.0f, device);
-    //let encoder = BiRecurrence(fwdEnc, bwdEnc, zero);
-    let encoder = Recurrence(fwdEnc, zero);
-    let outEmbed = Embedding(embeddingDim, device);
-    let bos = Constant({ numOutputClasses }, 0.0f, device); // one-hot representation of BOS symbol --TODO currently using zero for simplicity
-    let fwdDec = RNNStep(hiddenDim, device);
-    let attentionModel = AttentionModel(attentionDim, device);
-    let outProj = Linear(numOutputClasses, device);
-    let decode = [=](const vector<Variable>& encoded, const Variable& recurrenceState, const Variable& prevWord)
-    {
-        // compute the attention state
-        let attentionAugmentedState = attentionModel(encoded, recurrenceState);
-        // combine attention abnd previous state
-        let prevWordEmbedded = outEmbed(prevWord);
-        //Flush(prevWordEmbedded);
-        //Flush(attentionAugmentedState);
-        let input1 = Splice({ prevWordEmbedded, attentionAugmentedState }, Axis(1));
-        let input = Reshape(input1, { prevWordEmbedded.Shape().Dimensions()[0] * 2});
-        // Splice is not implemented yet along existing axis, so splice into new and flatten
-        //Flush(input);
-        return fwdDec(recurrenceState, input);
-    };
-    return [=](const vector<Variable>& input, const vector<Variable>& label) -> vector<Variable>
-    {
-        // embed the input sequence
-        let seq = embed(input);
-        // bidirectional recurrence
-        let encoded = encoder(seq); // vector<Variable>
-        // decode, this version emits unnormalized log probs and uses labels as history
-        let outLen = label.size();
-        auto losses = vector<Variable>(outLen);
-        //auto state = encoded.back(); // RNN initial state --note: bidir makes little sense here
-        Variable state = zero; // RNN initial state
-        for (size_t t = 0; t < outLen; t++)
-        {
-            let& prevOut = t == 0 ? bos : label[t - 1];
-            state = decode(encoded, state, prevOut);
-            let z = outProj(state);
-            //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label[t], z, /*outputRank=*/0));
-            //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label[t], z, /*outputRank=*/0));
-            let loss = Minus(ReduceLogSum(z, Axis(0)), Times(label[t], z, /*outputRank=*/0));
-            Flush(loss);
-            losses[t] = loss;
-        }
-        return losses;
-    };
-}
-#endif
-
 // helper for logging a Variable's value
 void LogVal(const Variable& x)
 {
@@ -213,6 +119,7 @@ void LogVal(const Variable& x)
 
 void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabels)
 {
+    SetCurrentDevice(device);
     const size_t inputDim         = 2000; // TODO: it's only 1000??
     const size_t embeddingDim     = 500;
     const size_t hiddenDim        = 250;
@@ -222,11 +129,11 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
 
     // static model and criterion function
-    auto model_fn = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
+    auto model_fn = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim);
     auto criterion_fn = CreateCriterionFunction(model_fn);
 
     // dynamic model and criterion function
-    auto d_model_fn = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
+    auto d_model_fn = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim);
     auto d_criterion_fn = CreateCriterionFunctionUnrolled(d_model_fn);
 
     // data
@@ -256,8 +163,8 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     // build the graph
     useSparseLabels;
-    auto features = InputVariable({ inputDim },         true/*false*/ /*isSparse*/, DTYPE, featuresName);
-    auto labels   = InputVariable({ numOutputClasses }, false/*useSparseLabels*/,   DTYPE, labelsName, { Axis::DefaultBatchAxis() });
+    auto features = InputVariable({ inputDim },         true/*false*/ /*isSparse*/, CurrentDataType(), featuresName);
+    auto labels   = InputVariable({ numOutputClasses }, false/*useSparseLabels*/,   CurrentDataType(), labelsName, { Axis::DefaultBatchAxis() });
 
     auto criterion = criterion_fn(features, labels); // this sets the shapes and initializes all parameters
     auto loss   = criterion;
@@ -293,15 +200,15 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     // This is a hack for profiling only.
     // Without this, an expensive CUDA call will show up as part of the GatherBatch kernel
     // and distort the measurement.
-    auto t1 = make_shared<NDArrayView>(DTYPE, NDShape({  1,42 }), device);
-    auto t2 = make_shared<NDArrayView>(DTYPE, NDShape({ 13,42 }), device);
-    auto t3 = make_shared<NDArrayView>(DTYPE, NDShape({ 13,42 }), device);
+    auto t1 = make_shared<NDArrayView>(CurrentDataType(), NDShape({  1,42 }), CurrentDevice());
+    auto t2 = make_shared<NDArrayView>(CurrentDataType(), NDShape({ 13,42 }), CurrentDevice());
+    auto t3 = make_shared<NDArrayView>(CurrentDataType(), NDShape({ 13,42 }), CurrentDevice());
     t3->NumericOperation({ t1, t2 }, 1.0, 26/*PrimitiveOpType::Plus*/);
 
     const size_t minibatchSize = 200;  // use 10 for ~3 sequences/batch
     for (size_t repeats = 0; true; repeats++)
     {
-        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, CurrentDevice());
         if (minibatchData.empty())
             break;
         fprintf(stderr, "#seq: %d, #words: %d\n", (int)minibatchData[featureStreamInfo].numberOfSequences, (int)minibatchData[featureStreamInfo].numberOfSamples);
@@ -317,7 +224,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         Variable mbLoss;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "FromCNTKMB:     %.6f sec\n");
-            FromCNTKMB(args, { minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, { true, false }, DataType::Float, device);
+            FromCNTKMB(args, { minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, { true, false }, DataType::Float, CurrentDevice());
         }
         //vector<vector<vector<Variable>>> vargs(args.size());
         //for (size_t i = 0; i < args.size(); i++)
@@ -357,7 +264,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         double crit;// = trainer->PreviousMinibatchLossAverage();
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "\\\\\\ ### CNTK Static:    %.6f sec\n");
-            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, CurrentDevice());
             crit = trainer->PreviousMinibatchLossAverage(); // note: this does the GPU sync
         }
         PrintTrainingProgress(trainer, repeats, /*outputFrequencyInMinibatches=*/ 1);

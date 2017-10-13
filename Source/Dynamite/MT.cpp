@@ -91,8 +91,6 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         InvalidArgument("Invalid system id '%S'", systemId.c_str());
 }
 
-DeviceDescriptor device(DeviceDescriptor::CPUDevice()); // dummy; will be overwritten
-
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
 #define DOLOG(var) (var)//((mbCount % 100 == 99) ? LOG(var) : 0)
 
@@ -101,11 +99,11 @@ fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutI
     dropoutInputKeepProb;
     vector<BinaryModel> layers;
     for (size_t i = 0; i < numLayers; i++)
-        layers.push_back(Dynamite::Sequence::BiRecurrence(GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, Named("fwdInitialValue")),
-                                                          GRU(hiddenDim, device), Constant({ hiddenDim }, DTYPE, 0.0, device, Named("bwdInitialValue"))));
+        layers.push_back(Dynamite::Sequence::BiRecurrence(GRU(hiddenDim), Constant({ hiddenDim }, CurrentDataType(), 0.0, CurrentDevice(), Named("fwdInitialValue")),
+                                                          GRU(hiddenDim), Constant({ hiddenDim }, CurrentDataType(), 0.0, CurrentDevice(), Named("bwdInitialValue"))));
     vector<UnaryBroadcastingModel> bns;
     for (size_t i = 0; i < numLayers-1; i++)
-        bns.push_back(Dynamite::BatchNormalization(device, 1, Named("bnBidi")));
+        bns.push_back(Dynamite::BatchNormalization(1, Named("bnBidi")));
     vector<ModelParametersPtr> nested;
     nested.insert(nested.end(), layers.begin(), layers.end());
     nested.insert(nested.end(), bns.begin(), bns.end());
@@ -131,8 +129,8 @@ fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutI
 // Returns the attention probabilities. Caller must do the weighted average.
 fun AttentionModelReference(size_t attentionDim1)
 {
-    let projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize, device);
-    let normH = LengthNormalization(device); // note: can't move this inside Linear since it is applied after adding two factors
+    let projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize);
+    let normH = LengthNormalization(); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
     let zBarrier = Barrier(20, Named("zBarrier"));
     let doToTanh = StaticModel(/*isBasicBlock=*/false, [=](const Variable& h, const Variable& historyProjectedKey)
@@ -161,21 +159,21 @@ fun AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(600, Named("encBarrier"));
-    let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // keys projection for attention
-    let encoderDataProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderDataProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias, device); // data projection for attention
-    let embedTarget = Barrier(600, Named("embedTargetBarrier")) >> Embedding(embeddingDim, device, Named("embedTarget"));     // target embeddding
-    let initialContext = Constant({ attentionDim }, DTYPE, 0.0, device, L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
-    let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier")) >> Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("initialStateProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
+    let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias); // keys projection for attention
+    let encoderDataProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderDataProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias); // data projection for attention
+    let embedTarget = Barrier(600, Named("embedTargetBarrier")) >> Embedding(embeddingDim, Named("embedTarget"));     // target embeddding
+    let initialContext = Constant({ attentionDim }, CurrentDataType(), 0.0, CurrentDevice(), L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
+    let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier")) >> Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("initialStateProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias);
     let stepBarrier = Barrier(20, Named("stepBarrier"));
-    let stepFunction = GRU(decoderRecurrentDim, device);
+    let stepFunction = GRU(decoderRecurrentDim);
     auto attentionModel = AttentionModelReference(attentionDim);
     let attBarrier = Barrier(20, Named("attBarrier"));
-    let firstHiddenProjection = Barrier(600, Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return ReLU(x, Named("firstHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
+    let firstHiddenProjection = Barrier(600, Named("projBarrier")) >> Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return ReLU(x, Named("firstHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias);
     vector<UnaryBroadcastingModel> resnets;
     for (size_t n = 0; n < numDecoderResNetProjections; n++)
-        resnets.push_back(ResidualNet(decoderProjectionDim, device));
-    let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("topHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);
-    let outputProjection = Linear(tgtVocabSize, ProjectionOptions::weightNormalize | ProjectionOptions::bias, device);  // output layer without non-linearity (no sampling yet)
+        resnets.push_back(ResidualNet(decoderProjectionDim));
+    let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("topHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias);
+    let outputProjection = Linear(tgtVocabSize, ProjectionOptions::weightNormalize | ProjectionOptions::bias);  // output layer without non-linearity (no sampling yet)
 
     // decode from a top layer of an encoder, using history as history
     map<wstring, ModelParametersPtr> nestedLayers =
@@ -257,8 +255,8 @@ fun AttentionDecoder(double dropoutInputKeepProb)
 
 fun CreateModelFunction()
 {
-    let embedFwd = Embedding(embeddingDim, device, Named("embedFwd"));
-    let embedBwd = Embedding(embeddingDim, device, Named("embedBwd"));
+    let embedFwd = Embedding(embeddingDim, Named("embedFwd"));
+    let embedBwd = Embedding(embeddingDim, Named("embedBwd"));
     let encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
     return BinaryModel({},
@@ -325,11 +323,9 @@ void Train(string systemId, wstring outputDirectory)
     let numGpus = DeviceDescriptor::AllDevices().size() -1;
     let ourRank = communicator->CurrentWorker().m_globalRank;
     if (numGpus > 0)
-        device = DeviceDescriptor::GPUDevice((unsigned int)(ourRank % numGpus));
+        SetCurrentDevice(DeviceDescriptor::GPUDevice((unsigned int)(ourRank % numGpus)));
     else
-        device = DeviceDescriptor::CPUDevice();
-#else
-    device = DeviceDescriptor::UseDefaultDevice();
+        SetCurrentDevice(DeviceDescriptor::CPUDevice());
 #endif
     // open log file
     // Log path = "$workingDirectory/$experimentId.log.$ourRank" where $ourRank is missing for rank 0
@@ -369,11 +365,7 @@ void Train(string systemId, wstring outputDirectory)
     // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep in a single expression
 
     // run something through to get the parameter matrices shaped --ugh!
-    //vector<Variable> d1{ Constant({ srcVocabSize }, DTYPE, 0.0, device) };
-    //vector<Variable> d2{ Constant({ tgtVocabSize }, DTYPE, 0.0, device) };
-    //vector<Variable> d3;
-    //model_fn(d3, d1, d2);
-    model_fn(Constant({ srcVocabSize, 1 }, DTYPE, 0.0, device), Constant({ tgtVocabSize, 1 }, DTYPE, 0.0, device));
+    model_fn(Constant({ srcVocabSize, 1 }, CurrentDataType(), 0.0, CurrentDevice()), Constant({ tgtVocabSize, 1 }, CurrentDataType(), 0.0, CurrentDevice()));
 
     model_fn.LogParameters();
 
@@ -427,7 +419,7 @@ void Train(string systemId, wstring outputDirectory)
     class // helper for timing GPU-side operations
     {
         Microsoft::MSR::CNTK::Timer m_timer;
-        double syncGpu() { return CNTK::NDArrayView::Sync(device); }
+        double syncGpu() { return CNTK::NDArrayView::Sync(CurrentDevice()); }
     public:
         void Restart(bool syncGPU = false)
         {
@@ -602,7 +594,7 @@ void Train(string systemId, wstring outputDirectory)
 
         // get next minibatch
         partTimer.Restart();
-        Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, minibatchSize, communicator, DTYPE, device);
+        Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, minibatchSize, communicator, CurrentDataType(), CurrentDevice());
         let timeGetNextMinibatch = partTimer.Elapsed();
         //partTimer.Log("FromCNTKMB", minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
 
