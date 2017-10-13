@@ -24,13 +24,6 @@ const float Consts<float>::Zero = 0;
 template <>
 const double Consts<double>::Zero = 0;
 
-template <>
-struct Consts<half>
-{
-    static const float Zero;
-    static const float One;
-};
-
 const float Consts<half>::Zero = 0;
 const float Consts<half>::One = 1;
 
