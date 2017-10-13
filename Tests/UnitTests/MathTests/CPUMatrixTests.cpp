@@ -303,6 +303,9 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixElementOperations, RandomSeedFixture)
     m2(1, 2) = 1.0000;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 
+    m3.InplaceAtanh();
+    BOOST_CHECK(m3.IsEqualTo(m0, c_epsilonFloatE4));
+
     m3.SetValue(m0);
     m3.InplaceLogSoftmax(true);
     m3.InplaceExp();
