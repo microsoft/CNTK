@@ -719,12 +719,9 @@ namespace CNTK
     {
     public:
         Accumulator() : Value(nullptr), m_numUpdates(0), m_isUninitialized(true) {}
-        Accumulator(NDArrayViewPtr initValue, size_t numUpdates, bool isInitialized) : Value(initValue), m_numUpdates(numUpdates), m_isUninitialized(isInitialized) {}
 
         void Update(const ValuePtr& delta, const DeviceDescriptor& device);
         void Reset();
-        bool GetIsUninitialized() { return m_isUninitialized; }
-        size_t GetNumUpdates() { return m_numUpdates; }
 
     private:
         void ResetToZero();
