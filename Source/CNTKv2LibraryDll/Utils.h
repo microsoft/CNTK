@@ -13,11 +13,12 @@
 #include "ConvolutionEngine.h"
 #include "ReshapingNodes.h"
 
+
 namespace CNTK
 {
     // Forward declarations
     class Dictionary;
-
+    
     // Helper to get the size of an element of the specified DataType
     inline size_t ElementSize(DataType dataType)
     {
@@ -645,13 +646,20 @@ namespace CNTK
         {
             return m_isDistributed;
         }
-
+        bool IsLossEvalAggregationNeededBeforeReporting() const
+        {
+            return m_isLossEvalAggregationNeededBeforeReporting;
+        }
+        
     private:
         void GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients);
         void CheckDistributedLearners();
 
         std::vector<LearnerPtr> m_learners;
         bool m_isDistributed;
+
+        // Whether learner is implementing block momentum update and filtering BMUF algorithm.
+        bool m_isLossEvalAggregationNeededBeforeReporting;
     };
 
     class Utils

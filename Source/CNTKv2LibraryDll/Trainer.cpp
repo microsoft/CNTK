@@ -295,55 +295,39 @@ namespace CNTK
 
     void Trainer::DoDistributedLossEvalAveraging()
     {
-        double averageTrainingLoss = 0;
+        float averageTrainingLoss = 0;
         if (m_aggregatedTrainingLossValue)
         {
-            averageTrainingLoss = m_aggregatedTrainingLossValue->AsScalar<double>();
+            averageTrainingLoss = m_aggregatedTrainingLossValue->AsScalar<float>();
         }
 
-        double averageEvalCriterion = 0;
+        float averageEvalCriterion = 0;
         if (m_aggregatedTrainingEvalCriterionValue)
         {
-            averageEvalCriterion = m_aggregatedTrainingEvalCriterionValue->AsScalar<double>();
+            averageEvalCriterion = m_aggregatedTrainingEvalCriterionValue->AsScalar<float>();
         }
 
+        NDArrayViewPtr inPlaceAggregateTrainingLoss = std::make_shared<NDArrayView>(averageTrainingLoss, NDShape{ }, DeviceDescriptor::CPUDevice());
+        NDArrayViewPtr inPlaceAggregateEvalCriterion = std::make_shared<NDArrayView>(averageEvalCriterion, NDShape{ }, DeviceDescriptor::CPUDevice());
+        vector<NDArrayViewPtr> inPlaceAggregateVector = { inPlaceAggregateTrainingLoss, inPlaceAggregateEvalCriterion };
+        
         DistributedCommunicatorPtr communicator = MPICommunicator();
-        double data[2] = { static_cast<double>(averageTrainingLoss), static_cast<double>(averageEvalCriterion) };
-        auto inputBuffer = std::make_shared<NDArrayView>(DataType::Double, NDShape{ 2 }, &data, sizeof(double) * 2, DeviceDescriptor::CPUDevice());
-        auto inputArray = std::vector<NDArrayViewPtr>{ inputBuffer };
-        auto outputArray = std::vector<NDArrayViewPtr>();
-        communicator->Concatenate(inputArray, outputArray, communicator->Workers());
-        assert(outputArray.size() == 1);
-
-        auto outBuffer = outputArray.front()->DataBuffer<double>();
-        auto outBufferSize = outputArray.front()->Shape().TotalSize();
-        auto outBufferEnd = outBuffer + outBufferSize;
-
-        double distributedAggregateTrainingLoss = 0;
-        double distributedAggregateEvalCriterion = 0;
-        for (const double* start = outBuffer; start != outBufferEnd; start += 2)
-        {
-            distributedAggregateTrainingLoss += static_cast<double>(*start);
-            distributedAggregateEvalCriterion += static_cast<double>(*(start + 1));
-        }
-
-        double distributedAverageTrainingLoss = distributedAggregateTrainingLoss / communicator->Workers().size();
-        double distributedAverageEvalCriterion = distributedAggregateEvalCriterion / communicator->Workers().size();
-
-        NDArrayViewPtr lossNDArrayView = std::make_shared<NDArrayView>(distributedAverageTrainingLoss, NDShape{ 1 }, DeviceDescriptor::CPUDevice());
-        m_aggregatedTrainingLossValue = std::make_shared<Accumulator>(lossNDArrayView, m_aggregatedTrainingLossValue->GetNumUpdates(), m_aggregatedTrainingLossValue->GetIsUninitialized());
+        communicator->AggregateInPlace(inPlaceAggregateVector, communicator->Workers());
+        
+        inPlaceAggregateTrainingLoss->SetValue(inPlaceAggregateTrainingLoss->AsScalar<float>() / communicator->Workers().size());
+        m_aggregatedTrainingLossValue->CopyFrom(Value(inPlaceAggregateTrainingLoss));
 
         if (m_aggregatedTrainingEvalCriterionValue)
-        {
-            NDArrayViewPtr evalNDArrayView = std::make_shared<NDArrayView>(distributedAverageEvalCriterion, NDShape{ 1 }, DeviceDescriptor::CPUDevice());
-            m_aggregatedTrainingEvalCriterionValue = std::make_shared<Accumulator>(evalNDArrayView, m_aggregatedTrainingEvalCriterionValue->GetNumUpdates(), m_aggregatedTrainingEvalCriterionValue->GetIsUninitialized());
+        {        
+            inPlaceAggregateEvalCriterion->SetValue(inPlaceAggregateEvalCriterion->AsScalar<float>() / communicator->Workers().size());
+            m_aggregatedTrainingEvalCriterionValue->CopyFrom(Value(inPlaceAggregateEvalCriterion));
         }
     }
 
     void Trainer::SummarizeTrainingProgress()
     {
-        // Aggregate across workers training loss and eval criteria if distributed
-        if (m_distributed)
+        // Aggregate across workers training loss and eval criteria if BMUF like learner.
+        if (m_distributed && m_parameterLearners->IsLossEvalAggregationNeededBeforeReporting())
         {
             DoDistributedLossEvalAveraging();
         }

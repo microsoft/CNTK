@@ -4922,6 +4922,12 @@ namespace CNTK
             return 1;
         }
 
+        // Whether the loss and eval metrics should be aggregated across workers before summarization or not. Eg BlockMomentumUpdateAndFiltering BMUF needs an aggregation
+        virtual bool IsLossEvalAggregationNeededBeforeReporting()
+        {
+            return false;
+        }
+
     protected:
         DistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
             : Learner(learner? learner->Parameters() : std::vector<Parameter>(),

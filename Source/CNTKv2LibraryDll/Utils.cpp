@@ -991,7 +991,8 @@ namespace CNTK
 
     Learners::Learners(const std::vector<LearnerPtr>& learners) :
         m_learners(learners),
-        m_isDistributed(false)
+        m_isDistributed(false),
+        m_isLossEvalAggregationNeededBeforeReporting(false)
     {
         if (learners.empty())
             InvalidArgument("These must be at least one learner.");
@@ -999,8 +1000,11 @@ namespace CNTK
         std::unordered_set<Parameter> learnerParameters;
         for (const auto& learner : m_learners)
         {
-            if (dynamic_pointer_cast<DistributedLearner>(learner) != nullptr)
+            if (DistributedLearnerPtr distLearner = dynamic_pointer_cast<DistributedLearner>(learner))
+            {
                 m_isDistributed = true;
+                m_isLossEvalAggregationNeededBeforeReporting = distLearner->IsLossEvalAggregationNeededBeforeReporting();
+            }
 
             const auto& currentLearnerParameters = learner->Parameters();
             for (const auto& parameter : currentLearnerParameters)
