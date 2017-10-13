@@ -4027,7 +4027,7 @@ MatrixFormat Matrix<ElemType>::GetFormat() const
 // BUGBUG: This performs a copy operation even for the output matrix that gets overwritten right away.
 //         We should (1) define which is the output and (2) whether it will be completely overwritten (so we won't actually copy it).
 // bring two matrices onto the same device
-// If different and prefered devices are the same, move to preferred device.
+// If different and preferred devices are the same, move to preferred device.
 // Otherwise GPU takes precedence over CPU, and if both are GPU move to a's device.
 // The inputs are only distinguished in that a's GPU takes precedence over b's in case they differ.
 // TODO: This is called somewhat inconsistently, sometimes with a=*this, sometimes with b=*this.
