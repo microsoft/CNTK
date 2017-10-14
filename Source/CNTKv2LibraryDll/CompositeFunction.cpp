@@ -64,7 +64,7 @@ namespace CNTK
 
             // TODO: same for BatchNorm
 
-            auto& outputs = primitiveFunction->RawOutputs();
+            const auto& outputs = primitiveFunction->RawOutputs();
             if (outputs.size() != 1)
                 LogicError("Function '%S' UpdateInternalState: a stateful primitive function must have a single output.", AsString().c_str());
 
@@ -609,7 +609,7 @@ namespace CNTK
         for (auto inputNode : inputNodes)
             inputNodesBasePtrs.push_back(inputNode);
 
-        auto outputs = function->RawOutputs();
+        const auto& outputs = function->RawOutputs();
         if (variable == outputs[0])
         {
             if (primitiveFunction)
@@ -1316,7 +1316,7 @@ namespace CNTK
 
         // Now recursively create the network in a top-down fashion
         auto rootFunction = compositeFunction->RootFunction();
-        auto rootFunctionOutputs = rootFunction->RawOutputs();
+        const auto& rootFunctionOutputs = rootFunction->RawOutputs();
         for (auto rootOutput : rootFunctionOutputs)
             GetNode(rootOutput, computationNetwork, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsExcludedFromGradientComputation, useMangledNamesForComputationNodes);
 
@@ -1550,7 +1550,7 @@ namespace CNTK
 
             // Now recursively traverse the network in a top-down fashion
             auto rootFunction = RootFunction();
-            auto rootFunctionOutputs = rootFunction->RawOutputs();
+            const auto& rootFunctionOutputs = rootFunction->RawOutputs();
             ExecVars().m_allNetworkRoots.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
             std::vector<ComputationNodeBasePtr> forwardRootNodes;
             for (auto rootOutput : rootFunctionOutputs)
@@ -1708,7 +1708,8 @@ namespace CNTK
     // Assign the supplied gradients corresponding to the root(s) of the network to be backpropagated through the graph
     void CompositeFunction::PopulateNetworkGradients(const std::unordered_map<Variable, ValuePtr>& gradients)
     {
-        auto functionOutputs = RawOutputs();
+        //const auto& functionOutputs = // Note: RawOutputs() was called, but its return value unused. It does have a side-effect though, so let's keep calling until we are sure it is not needed anymore.
+        RawOutputs();
         for (auto gradientVarValuePair : gradients)
         {
             auto outputComputationNode = ExecVars().m_variableToNodeMap.at(gradientVarValuePair.first);

@@ -116,7 +116,7 @@ namespace CNTK
         return m_outputs;
     }
 
-    std::vector<Variable>& Function::RawOutputs() const
+    const VectorSpan<Variable> Function::RawOutputs() const
     {
         return const_cast<Function*>(this)->InitOutputs();
     }
@@ -514,11 +514,11 @@ namespace CNTK
 
         outputsUsingNewInputs.clear();
         this->InferOutputs(outputsUsingNewInputs);
-        auto currentOutputs = RawOutputs();
+        const auto& currentOutputs = RawOutputs();
         for (size_t i = 0; i < currentOutputs.size(); ++i)
         {
-            auto newOutputVar = outputsUsingNewInputs[i];
-            auto currentOutputVar = currentOutputs[i];
+            const auto& newOutputVar = outputsUsingNewInputs[i];
+            const auto& currentOutputVar = currentOutputs[i];
 
             bool isRecurrent = (visitedFunctions[this] > 1);
             bool outputUpdated = ValidateOrUpdateOutput(currentOutputVar, newOutputVar, !isRecurrent);
@@ -922,9 +922,9 @@ namespace CNTK
         auto compositeRootFunction = compositeFunction->RootFunction();
 
         // Handle the scenario when the root Function outputs themselves are specified to be replaced.
-        auto compositeRootFunctionOutputs = compositeRootFunction->RawOutputs();
+        const auto& compositeRootFunctionOutputs = compositeRootFunction->RawOutputs();
         std::vector<Variable> rootFunctionOutputReplacements;
-        for (auto output : compositeRootFunctionOutputs)
+        for (const auto& output : compositeRootFunctionOutputs)
         {
             if (replacements.find(output) != replacements.end())
                 rootFunctionOutputReplacements.push_back(replacements.at(output));
@@ -981,8 +981,8 @@ namespace CNTK
                     {
                         if (cloneMap.find(visitedFunction.get()) != cloneMap.end())
                         {
-                            auto visitedFunctionOutputs = visitedFunction->RawOutputs();
-                            for (auto visitedFunctionOutput : visitedFunctionOutputs)
+                            const auto& visitedFunctionOutputs = visitedFunction->RawOutputs();
+                            for (const auto& visitedFunctionOutput : visitedFunctionOutputs)
                                 cloningReplacementsForPlaceholderReplacement[visitedFunctionOutput] = GetCorrespondingOutputVariableFromClone(visitedFunctionOutput, visitedFunction, cloneMap.at(visitedFunction.get()));
                         }
                     }

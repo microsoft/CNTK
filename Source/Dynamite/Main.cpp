@@ -304,9 +304,8 @@ auto create_wrapper(size_t N, const F& f)
 
 #if 0
 template<typename T, size_t N>
-class FixedVectorWithBuffer
+class FixedVectorWithBuffer : public VectorSpan<T>
 {
-    T *bufp, *endp; // TODO: How about debugging? Use a fake data structure of a few hundred elements?
     union // using a union will prevent automatic construction/destruction
     {
         //char buffer[N * sizeof(T)];
@@ -322,13 +321,6 @@ class FixedVectorWithBuffer
     }
     void ConstructAppendElement(const T& item) { new (endp)(item); endp++; } // we do it this way so that the object is always in proper state
     void ConstructAppendElement(T&& item) { new (endp)(move(item)); endp++; }
-    T& Item(size_t index) const
-    {
-        T* itemp = begin() + index;
-        if (itemp >= end())
-            LogicError("index out of bounds");
-        return *itemp;
-    }
     void DestructBuffer()
     {
         if (bufp != &u.items[0]) // we used a dynamically allocated buffer
@@ -377,33 +369,19 @@ public:
             *iter.~T();
         DestructBuffer();
     }
-    // the vector interface
-    const T* begin() const  { return reinterpret_cast<T*>(bufp); }
-    T* begin()              { return reinterpret_cast<T*>(bufp); }
-    const T* end() const    { return reinterpret_cast<T*>(endp); }
-    T* end()                { return reinterpret_cast<T*>(endp); }
-    const T* cbegin() const { return begin(); }
-    const T* cbegin()       { return begin(); }
-    const T* cend() const   { return end(); }
-    const T* cend()         { return end(); }
-    const T* data() const   { return begin(); }
-    T* data()               { return begin(); }
-    const T& front() const  { return *begin(); }
-    T& front()              { return *begin(); }
-    const T& back() const   { return *(end() - 1); }
-    T& back()               { return *(end() - 1); }
-    size_t size() const     { return end() - begin(); }
-    const T& operator[](size_t index) const { return Item(index); }
-    T& operator[](size_t index)             { return Item(index); }
-    const T& at(size_t index) const { return Item(index); }
-    T& at(size_t index)             { return Item(index); }
-    // type cast to std::vector. This is used temporarily.
-    operator vector<T>() const { return vector<T>(begin(), end()); }
 };
 #endif
 
+template<typename T>
+static inline VectorSpan<T> MakeVectorSpan(const std::vector<T>& vec) { return vec; }
+
 int main(int argc, char *argv[])
 {
+    //vector<int> x(13, 42);
+    //x[5] = 12;
+    //let s = MakeVectorSpan(x);
+    //for (let& e : s)
+    //    fprintf(stderr, "%d\n", (int)e);
     //FixedVectorWithBuffer<string, 2> vec1("s1"s);
     //FixedVectorWithBuffer<string, 2> vec2("s1"s, "s2"s);
     //vector<string> sv(vec2);

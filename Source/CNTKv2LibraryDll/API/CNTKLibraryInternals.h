@@ -36,6 +36,7 @@
 #include <unordered_map>
 #include <stdlib.h>
 #include <string.h>
+#include "CNTKHelperTypes.h"
 
 #pragma warning(disable: 4702 4127)
 
