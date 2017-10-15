@@ -5526,6 +5526,10 @@ namespace CNTK
 
     typedef Dictionary ImageTransform;
 
+
+    CNTK_API ImageTransform ReaderResize(int resized_length,
+                                         const wchar_t* resize_type = L"ResizeMin");
+
     ///
     /// Create a crop transform with the specified options to be used with a reader
     ///
