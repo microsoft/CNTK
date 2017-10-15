@@ -172,6 +172,23 @@ private:
     cv::Mat m_meanImg;
 };
 
+class ResizeTransformer : public ImageTransformerBase
+ {
+ public:
+   explicit ResizeTransformer(const Microsoft::MSR::CNTK::ConfigParameters& config);
+
+ private:
+   enum class ResizeMode
+   {
+     ResizeMin = 0,
+     ResizeMax = 0
+    };
+
+   ResizeMode resize_mode;
+   size_t resized_length;
+   void Apply(uint8_t copyId, cv::Mat &mat) override;
+ };
+
 // Transpose transformation from HWC to CHW (note: row-major notation).
 class TransposeTransformer : public TransformBase
 {

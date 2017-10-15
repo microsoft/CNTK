@@ -7,6 +7,28 @@
 from .. import cntk_py
 from cntk.internal import sanitize_2d_number, sanitize_range
 
+def resize(resized_length, resize_type='ResizeMin'):
+    '''
+    Resize transform that can be used to pass to `map_features`
+    Given an input image, it will resize a given dimension to
+    a fixed size (resized_length), while preserving the aspect ratio.
+
+
+    Args:
+        resized_length (int): A positive integer. It is the resized value of the
+           dimension which has to be resized. The other dimension is resized while
+           maintaining the aspect ratio.
+        resize_type (str, default 'ResizeMin'): 'ResizeMin' or 'ResizeMax'.
+           When 'ResizeMin', the smaller dimension of the image is resized to a fixed size
+           given by resized_length, with the larger dimension resized in a way to preserve
+           the priginal aspect ratio. When 'ResizeMax', the same operation is performed
+           but now the larger dimension of the image is resized to a fixed size.
+   Returns:
+       A dictionary like object describing the ResizeTransform.
+    '''
+    return cntk_py.reader_resize(resized_length, resize_type)
+
+
 def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect_ratio=1.0, jitter_type='none'):
     '''
     Crop transform that can be used to pass to `map_features`

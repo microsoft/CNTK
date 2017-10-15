@@ -64,6 +64,7 @@ ImageReader::ImageReader(const ConfigParameters& config)
     ConfigParameters featureStream = config(featureName);
 
     std::vector<Transformation> transformations;
+    transformations.push_back(Transformation{ std::make_shared<ResizeTransformer>(featureStream), featureName });
     transformations.push_back(Transformation{ std::make_shared<CropTransformer>(featureStream), featureName });
     transformations.push_back(Transformation{ std::make_shared<ScaleTransformer>(featureStream), featureName });
     transformations.push_back(Transformation{ std::make_shared<ColorTransformer>(featureStream), featureName });

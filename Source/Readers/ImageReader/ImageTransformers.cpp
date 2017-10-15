@@ -471,6 +471,57 @@ void MeanTransformer::Apply(uint8_t, cv::Mat &mat)
     }
 }
 
+ResizeTransformer::ResizeTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
+{
+  resized_length = config(L"resized_length");
+  if (resized_length <= 0)
+    RuntimeError("Cannot resize any dimension of an image to zero or negative number.");
+
+  string resize_type = config(L"resize_type", "ResizeMin");
+  if (resize_type == "ResizeMin")
+    resize_mode = ResizeMode::ResizeMin;
+  else if (resize_type == "ResizeMax")
+    resize_mode = ResizeMode::ResizeMax;
+  else RuntimeError("Invalid resize_type. Must be one of ResizeMin and ResizeMax");
+}
+
+void ResizeTransformer::Apply(uint8_t, cv::Mat &mat)
+{
+  float height = mat.rows;
+  float width = mat.cols;
+  float aspectratio = height/width;
+  float newheight{};
+  float newwidth{};
+  if (resize_mode == ResizeMode::ResizeMin)
+    {
+      if(height <=width)
+    {
+      newheight = resized_length;
+      newwidth = newheight/aspectratio;
+    }
+      else
+    {
+      newheight = aspectratio * resized_length;
+      newwidth = resized_length;
+    }
+    }
+  else
+    {
+      if(height <=width)
+    {
+      newheight = aspectratio * resized_length;
+      newwidth = resized_length;
+    }
+      else
+    {
+      newheight = resized_length;
+      newwidth = newheight/aspectratio;
+    }
+    }
+  resize(mat, mat, cv::Size2f(newwidth, newheight));
+}
+
+
 TransposeTransformer::TransposeTransformer(const ConfigParameters& config) : TransformBase(config),
     m_floatTransform(this), m_doubleTransform(this)
 {}

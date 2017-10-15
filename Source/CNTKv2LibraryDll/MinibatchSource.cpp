@@ -331,7 +331,16 @@ namespace CNTK
         m_prevMinibatchSize = 0;
     }
 
-    /* static */ ImageTransform ReaderCrop(const wchar_t* cropType,
+  /* static */ ImageTransform ReaderResize(int resized_length, const wchar_t* resize_type)
+  {
+    ImageTransform resize;
+
+    resize.Add(L"type", L"Resize",
+	       L"resized_length", resized_length,
+	       L"resize_type", resize_type);
+    return resize;
+  }
+  /* static */ ImageTransform ReaderCrop(const wchar_t* cropType,
             std::pair<int, int> cropSize, std::pair<float, float> sideRatio, std::pair<float, float> areaRatio,
             std::pair<float, float> aspectRatio, const wchar_t* jitterType)
     {
