@@ -28,6 +28,7 @@ namespace CNTK
         {PrimitiveOpType::Negate, L"Negate"},
         {PrimitiveOpType::Sigmoid, L"Sigmoid"},
         {PrimitiveOpType::Tanh, L"Tanh"},
+        {PrimitiveOpType::Atanh, L"Atanh"},
         {PrimitiveOpType::ReLU, L"ReLU"},
         {PrimitiveOpType::Exp, L"Exp"},
         {PrimitiveOpType::Log, L"Log"},
