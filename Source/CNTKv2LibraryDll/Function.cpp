@@ -121,6 +121,8 @@ namespace CNTK
     //    return const_cast<Function*>(this)->InitOutputs();
     //}
 
+    // note: this returns a shared_ptr to a copy, not a reference
+    // It is meant for external consumption.
     std::shared_ptr<std::vector<Variable>> Function::InputsImpl(bool pythonOperandOrder) const
     {
         std::vector<Variable> inputs;
@@ -175,14 +177,20 @@ namespace CNTK
     }
 
     // this is the base constructor, called by all constructors except for the move one, and except for the speed-optimized 1 and 2-argument variant
-    Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid)
-        : m_rootFunction(rootFunction), m_name(name), m_uid(uid), m_attributes(std::move(functionConfig))
+    Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid) :
+        m_inputs(Transform(inputs, [](const Variable& inputVar) { return std::move(inputVar.NonCompositePreservingCopy()); })),
+        m_rootFunction(rootFunction), m_name(name), m_uid(uid), m_attributes(std::move(functionConfig))
     {
+#if 0
         m_inputs.reserve(inputs.size());
-        for (const auto& inputVar : inputs)
+        for (const auto& inputVar : m_inputs)
         {
             m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy()));
+        }
+#endif
 #if 0
+        for (const auto& inputVar : m_inputs)
+        {
             if (!inputVar.IsInput() &&
                 !inputVar.IsOutput() &&
                 !inputVar.IsParameter() &&
@@ -191,8 +199,8 @@ namespace CNTK
             {
                 InvalidArgument("Function '%S' input has invalid VariableKind.", inputVar.AsString().c_str());
             }
-#endif
         }
+#endif
     }
     // speed-optimized version with 2 operands
     Function::Function(const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name)
