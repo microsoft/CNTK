@@ -116,10 +116,10 @@ namespace CNTK
         return m_outputs;
     }
 
-    const VectorSpan<Variable> Function::RawOutputs() const
-    {
-        return const_cast<Function*>(this)->InitOutputs();
-    }
+    //const VectorSpan<Variable> Function::RawOutputs() const
+    //{
+    //    return const_cast<Function*>(this)->InitOutputs();
+    //}
 
     std::shared_ptr<std::vector<Variable>> Function::InputsImpl(bool pythonOperandOrder) const
     {
@@ -196,18 +196,18 @@ namespace CNTK
     }
     // speed-optimized version with 2 operands
     Function::Function(const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name)
-        : m_rootFunction(rootFunction), m_name(name), m_attributes(std::move(functionConfig))
+        : m_inputs(MakeTwoElementVector(input0, input1)), m_rootFunction(rootFunction), m_name(name), m_attributes(std::move(functionConfig))
     {
-        m_inputs.resize(2);
-        m_inputs.front() = input0.NonCompositePreservingCopy();
-        m_inputs.back()  = input1.NonCompositePreservingCopy();
+        //m_inputs.resize(2);
+        //m_inputs.front() = input0.NonCompositePreservingCopy();
+        //m_inputs.back()  = input1.NonCompositePreservingCopy();
     }
     // speed-optimized version with 1 operand
     Function::Function(const Variable& input0, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name)
-        : m_rootFunction(rootFunction), m_name(name), m_attributes(std::move(functionConfig))
+        : m_inputs(MakeOneElementVector(input0)), m_rootFunction(rootFunction), m_name(name), m_attributes(std::move(functionConfig))
     {
-        m_inputs.resize(1);
-        m_inputs.front() = input0.NonCompositePreservingCopy();
+        //m_inputs.resize(1);
+        //m_inputs.front() = input0.NonCompositePreservingCopy();
     }
 
     // TODO: The overload resolution by && seems not safe. Better change this signature. E.g. pass only a single output by &&

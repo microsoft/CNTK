@@ -3803,7 +3803,7 @@ namespace CNTK
 
         // Returns a outputs without ref-counting the owner.
         friend class Variable;
-        CNTK_API const VectorSpan<Variable> RawOutputs() const;
+        CNTK_API const auto RawOutputs() const { const auto& outputs = const_cast<Function*>(this)->InitOutputs(); return MakeSpan(outputs); }
 
     private:
         CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
