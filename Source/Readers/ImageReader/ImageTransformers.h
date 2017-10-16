@@ -1,4 +1,3 @@
-//
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
@@ -146,7 +145,10 @@ private:
     {
         Fill = 0,
         Crop = 1,
-        Pad  = 2
+	Pad  = 2,
+	ResizeMin = 3,
+	ResizeMax = 4
+	  
     };
     void Apply(uint8_t copyId, cv::Mat &mat) override;
 

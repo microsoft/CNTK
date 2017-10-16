@@ -81,6 +81,8 @@ def scale(width, height, channels, interpolations='linear', scale_mode="fill", p
           'fill' - warp the image to the given target size.
           'crop' - resize the image's shorter side to the given target size and crop the overlap.
           'pad'  - resize the image's larger side to the given target size, center it and pad the rest
+          'resizemin' - resize the image's shorter side to the given target size while maintaining the aspect ratio.
+          'resizemax' - resize the image's longer size to the given target size while maintaining the aspect ratio.
         pad_value (int, default -1): -1 or int value. The pad value used for the 'pad' mode.
          If set to -1 then the border will be replicated.
 
