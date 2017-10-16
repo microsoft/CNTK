@@ -19,6 +19,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <deque>
 
 #define let const auto
 
@@ -371,20 +372,106 @@ public:
     }
 };
 #endif
+#if 1
+namespace X{
 
-template<typename T>
-static inline VectorSpan<T> MakeVectorSpan(const std::vector<T>& vec) { return vec; }
+template<typename T, size_t N>
+class FixedVectorWithBuffer : public Span<T*>
+{
+    typedef Span<T*> Base;
+    union U
+    {
+        T buffer[N];
+        std::vector<T> vector;
+        ~U() {}
+        U() {}
+    } u;
+    const size_t len;
+    FixedVectorWithBuffer(size_t len, std::vector<T>&& vec) : // nothrow
+        len(len),
+        Base(len > N ? vec.data() : u.buffer, (len > N ? vec.data() : u.buffer) + len) // nothrow
+    {
+        if (len > N)
+            new (&u.vector) std::vector<T>(std::move(vec));
+    }
+    FixedVectorWithBuffer(size_t len) : // nothrow
+        len(len),
+        Base(u.buffer, u.buffer + len) // nothrow
+    {
+    }
+public:
+    FixedVectorWithBuffer()             : FixedVectorWithBuffer(0) {}
+    FixedVectorWithBuffer(T&& a)        : FixedVectorWithBuffer(1) { new (&u.buffer[0]) T(std::move(a)); }
+    FixedVectorWithBuffer(T&& a, T&& b) : FixedVectorWithBuffer(2) // BUGBUG: This version should only be defined if N > 1.
+    {
+        //if (N < 2)
+        //    throw logic_error("FixedVectorWithBuffer(a,b) should only be used for N >= 2");
+        new (&u.buffer[0]) T(std::move(a));
+        new (&u.buffer[1]) T(std::move(b));
+    }
+    // this constructor steals all elements out from vec, but does vec's buffer itself
+    // This is useful where we want to avoid reallocation of vec, while its members get recreated upon each use.
+    FixedVectorWithBuffer(std::vector<T>& vec) :
+        FixedVectorWithBuffer(vec.size(), len > N ? Transform(vec, [](T& elem) { return std::move(elem); }) : std::vector<T>())
+    {
+        if (len <= N)
+            for (size_t i = 0; i < len; i++)
+                new (&u.buffer[i]) T(std::move(vec[i])); // nothrow
+        else
+            vec.clear(); // nothrow
+    }
+    ~FixedVectorWithBuffer()
+    {
+        if (len <= N)
+            for (size_t i = 0; i < len; i++)
+                u.buffer[i].~T();
+        else
+            u.vector.~vector();
+    }
+};
+
+}
+#endif
 
 int main(int argc, char *argv[])
 {
-    //vector<int> x(13, 42);
-    //x[5] = 12;
-    //let s = MakeVectorSpan(x);
-    //for (let& e : s)
-    //    fprintf(stderr, "%d\n", (int)e);
-    //FixedVectorWithBuffer<string, 2> vec1("s1"s);
-    //FixedVectorWithBuffer<string, 2> vec2("s1"s, "s2"s);
-    //vector<string> sv(vec2);
+    using namespace CNTK;
+    {
+        string a("test");
+        string b("test2");
+        string c("test3");
+        vector<string> vv{ a, b, c };
+        X::FixedVectorWithBuffer<string, 2> xx(vv);
+        for (let e : xx)
+            fprintf(stderr, "%s\n", e.c_str());
+    }
+    {
+        string a("test");
+        string b("test2");
+        auto b2 = MakeTwoElementVector(a, b);
+        auto b1 = MakeOneElementVector(a);
+        vector<string> ab = Transform(NumericRangeSpan<size_t, IntConstant<0>, IntConstant<2>>(), [&](size_t _) -> const string&{ return _ ? b : a; });
+        ab.push_back("test3");
+        ab.push_back("test4");
+        ////vector<int> x = X::NumericRangeSpan<int>(13, 42);
+        ////x[5] = 12;
+        let& abs = MakeSpan(ab, 1, (size_t)3);
+        for (let& e : abs)
+            fprintf(stderr, "%s\n", e.c_str());
+        let s = Transform(NumericRangeSpan<int, IntConstant<13>, IntConstant<42>>(), [](int _) { return _ + 1; }, [](int _) { return _ + 1; });
+        for (let e : s)
+            fprintf(stderr, "%d\n", (int)e);
+        struct C { string s; };
+        vector<C> c{ { "test" }, C{ "test2" } };
+        let cs = MakeSet(Transform(c,
+                                   [](const C& _) -> const string&{ return _.s; },
+                                   [](const string& _) { return _ + "!"; }));
+        fprintf(stderr, "");
+        //vector<string> cs(w.begin(), w.end());
+        //FixedVectorWithBuffer<string, 2> vec1("s1"s);
+        //FixedVectorWithBuffer<string, 2> vec2("s1"s, "s2"s);
+        //vector<string> sv(vec2);
+    }
 #if 0
     struct T { shared_ptr<int> x, y, z; };
     let e1 = T{ make_shared<int>(13), make_shared<int>(13), make_shared<int>(42) };

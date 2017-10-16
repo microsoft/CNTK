@@ -85,7 +85,7 @@ class TransformingSpan
     typedef typename CollectionType::value_type T;
     typedef typename CollectionType::const_iterator CollectionConstIterator;
     typedef typename std::iterator_traits<CollectionConstIterator>::iterator_category CollectionConstIteratorCategory;
-    typedef decltype(std::declval<Lambda>()(std::declval<const T&>())) TLambda; // type of result of lambda call
+    typedef decltype(std::declval<Lambda>()(std::declval<T&&>())) TLambda; // type of result of lambda call (the T&& does not harm since we only get the result type here)
     typedef typename std::remove_reference<TLambda>::type TValue;
     typedef typename std::remove_cv<TValue>::type TValueNonConst;
     CollectionConstIterator beginIter, endIter;
@@ -103,13 +103,14 @@ public:
         const_iterator(const CollectionConstIterator& argIter, const Lambda& lambda) : argIter(argIter), lambda(lambda) { }
         const_iterator operator++() { auto cur = *this; argIter++; return cur; }
         const_iterator operator++(int) { argIter++; return *this; }
-        TLambda operator*() { return lambda(*argIter); }
-        auto operator->() { return &operator*(); }
-        bool operator==(const const_iterator& other) { return argIter == other.argIter; }
-        bool operator!=(const const_iterator& other) { return argIter != other.argIter; }
-        const_iterator operator+(difference_type offset) { return const_iterator(argIter + offset, lambda); }
-        const_iterator operator-(difference_type offset) { return const_iterator(argIter - offset, lambda); }
-        difference_type operator-(const const_iterator& other) { return argIter - other.argIter; }
+        TLambda operator*() const { return lambda(*argIter); }
+        TLambda operator*() { const auto& arg = *argIter; return lambda(const_cast<T&>(arg)); } // yak. To allow lambda to move() arg. TODO: Clean this up!! const iter is wrong.
+        auto operator->() const { return &operator*(); }
+        bool operator==(const const_iterator& other) const { return argIter == other.argIter; }
+        bool operator!=(const const_iterator& other) const { return argIter != other.argIter; }
+        const_iterator operator+(difference_type offset) const { return const_iterator(argIter + offset, lambda); }
+        const_iterator operator-(difference_type offset) const { return const_iterator(argIter - offset, lambda); }
+        difference_type operator-(const const_iterator& other) const { return argIter - other.argIter; }
     };
     const_iterator cbegin() const { return const_iterator(beginIter, lambda); }
     const_iterator cend()   const { return const_iterator(endIter  , lambda); }
@@ -160,13 +161,13 @@ public:
         const_iterator(const T& value/*, const T& stepValue*/) : value(value)/*,stepValue(stepValue)*/ { }
         const_iterator operator++() { auto cur = *this; value += stepValue; return cur; }
         const_iterator operator++(int) { value += stepValue; return *this; }
-        __forceinline T operator*() { return value; }
-        auto operator->() { return &operator*(); } // (who knows whether this is defined for the type)
-        bool operator==(const const_iterator& other) { return value == other.value; }
-        bool operator!=(const const_iterator& other) { return value != other.value; }
-        const_iterator operator+(difference_type offset) { return const_iterator(value + offset * stepValue, stepValue); }
-        const_iterator operator-(difference_type offset) { return const_iterator(value - offset * stepValue, stepValue); }
-        difference_type operator-(const const_iterator& other) { return ((difference_type)value - (difference_type)other.value) / stepValue; }
+        __forceinline T operator*() const { return value; }
+        auto operator->() const { return &operator*(); } // (who knows whether this is defined for the type)
+        bool operator==(const const_iterator& other) const { return value == other.value; }
+        bool operator!=(const const_iterator& other) const { return value != other.value; }
+        const_iterator operator+(difference_type offset) const { return const_iterator(value + offset * stepValue, stepValue); }
+        const_iterator operator-(difference_type offset) const { return const_iterator(value - offset * stepValue, stepValue); }
+        difference_type operator-(const const_iterator& other) const { return ((difference_type)value - (difference_type)other.value) / stepValue; }
     };
     const_iterator cbegin() const { return const_iterator(beginValue); }
     const_iterator cend()   const { return const_iterator(endValue);   }
