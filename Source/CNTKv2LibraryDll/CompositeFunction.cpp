@@ -1049,8 +1049,13 @@ namespace CNTK
                     auto blendTimeConstant = functionConfig[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>();
                     auto epsilon = functionConfig[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                     auto useCuDNNEngine = functionConfig[PrimitiveFunction::AttributeNameUseCuDNNEngine].Value<bool>();
-                    auto disableRegulariztion = functionConfig[PrimitiveFunction::AttributeNameDisableRegularization].Value<bool>();
-
+                    
+                    bool disableRegulariztion = false;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameDisableRegularization))
+                    {
+                        disableRegulariztion = functionConfig[PrimitiveFunction::AttributeNameDisableRegularization].Value<bool>();
+                    }
+                    
                     computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, disableRegulariztion, ImageLayoutKind::CHW);
                     break;
                 }
