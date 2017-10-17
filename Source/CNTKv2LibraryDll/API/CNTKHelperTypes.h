@@ -30,7 +30,6 @@ protected:
     typedef typename std::iterator_traits<IteratorType>::value_type T;
     typedef typename std::remove_reference<T>::type TValue;
     typedef typename std::remove_cv<TValue>::type TValueNonConst;
-    //void Reset(const IteratorType& newBeginIter, const IteratorType& newEndIter) { beginIter = newBeginIter; endIter = newEndIter; } // for use by FixedVectorWithBuffer
 public:
     typedef TValue value_type;
     typedef IteratorType const_iterator; // TODO: some template magic to define the correct one
@@ -40,7 +39,7 @@ public:
     Span(const IteratorType& beginIter, const IteratorType& endIter) : beginIter(beginIter), endIter(endIter) { }
     // Cannot be copied. Pass this as a reference only, to avoid ambiguity.
     Span(const Span&) = delete; void operator=(const Span&) = delete;
-    Span& operator=(Span&& other) { beginIter = std::move(other.beginIter); endIter = std::move(other.endIter); return *this; }
+    //Span& operator=(Span&& other) { beginIter = std::move(other.beginIter); endIter = std::move(other.endIter); return *this; }
     Span(Span&& other) : beginIter(std::move(other.beginIter)), endIter(std::move(other.endIter)) { }
     // the collection interface
     const IteratorType& begin()       const { return beginIter; }
@@ -90,11 +89,7 @@ class TransformingSpan
     typedef typename CollectionType::value_type T;
     typedef typename std::conditional<std::is_const<CollectionType>::value, typename CollectionType::const_iterator, typename CollectionType::iterator>::type CollectionIterator; // TODO: template magic to make this const only if the input is const, otherwise ::iterator
     typedef typename std::iterator_traits<CollectionIterator>::iterator_category CollectionIteratorCategory;
-    //static auto Lambda2(T t) { return std::declval<Lambda>()(t); }
-    //static auto Lambda2(T&& t) { return std::declval<Lambda>()(std::move(t)); }
-    //static auto Lambda2(const T& t) { return std::declval<Lambda>()(t); }
     typedef decltype(std::declval<Lambda>()(std::forward<T>(std::declval<T>()))) TLambda; // type of result of lambda call
-    //typedef decltype(Lambda2(std::declval<T>())) TLambda; // type of result of lambda call (the T&& does not harm since we only get the result type here)
     typedef typename std::remove_reference<TLambda>::type TValue;
     typedef typename std::remove_cv<TValue>::type TValueNonConst;
     CollectionIterator beginIter, endIter;
@@ -118,10 +113,8 @@ class TransformingSpan
     };
 public:
     typedef TLambda value_type;
-    //TransformingSpan(const CollectionType& collection, const Lambda& lambda) : beginIter(collection.cbegin()), endIter(collection.cend()), lambda(lambda) { }
     // note: constness must be contained in CollectionType
     TransformingSpan(CollectionType& collection, const Lambda& lambda) : beginIter(collection.begin()), endIter(collection.end()), lambda(lambda) { }
-    //TransformingSpan(const CollectionIterator& beginIter, const CollectionIterator& endIter, const Lambda& lambda) : beginIter(beginIter), endIter(endIter), lambda(lambda) { }
     typedef Iterator const_iterator;
     typedef Iterator iterator;
     const_iterator cbegin() const { return const_iterator(beginIter, lambda); }
@@ -207,7 +200,8 @@ public:
 
 ///
 /// Assembly-optimized constructors for creating 1- and 2-element std::vector.
-/// Note that the embedded iterators only work for std::vector.
+/// Note that the embedded iterators only work for std::vector, since operator!= and operator-
+/// blindly assume that 'other' is end().
 ///
 template<typename T>
 static inline std::vector<T> MakeTwoElementVector(const T& a, const T& b)
@@ -312,7 +306,7 @@ public:
         }
     }
 #endif
-    template<typename Collection>
+    template<typename Collection, typename = std::enable_if_t<std::is_rvalue_reference_v<Collection&&>>> // [thanks to Billy O'Neal for the tip]
     FixedVectorWithBuffer(Collection&& other) :
         FixedVectorWithBuffer(other.size(), // construct via Transform() here for correct destruction upon an exception
                               other.size() > N ? Transform(other, [](T&& item) { return std::move(item); }) : std::vector<T>())
@@ -322,7 +316,6 @@ public:
             auto otherIter = other.begin();
             for (auto& iter : *this)
             {
-                //for (size_t i = 0; i < size(); i++, iter++)
                 new (&iter) T(std::move(*otherIter)); // nothrow
                 otherIter++;
             }
@@ -337,11 +330,11 @@ public:
             u.vector.~vector();
     }
     // this is a stop-gap; in most cases, this should not be called at all
-    template<typename Collection>
-    void assign(Collection& other)
+    template<typename Collection, typename = std::enable_if_t<std::is_rvalue_reference_v<Collection&&>>> // [thanks to Billy O'Neal for the tip]
+    void assign(Collection&& other)
     {
         this->~FixedVectorWithBuffer();
-        new (this) FixedVectorWithBuffer(other);
+        new (this) FixedVectorWithBuffer(move(other));
     }
     // this is a common use case
     void assign(T&& a)
@@ -349,40 +342,6 @@ public:
         this->~FixedVectorWithBuffer();
         new (this) FixedVectorWithBuffer(std::move(a));
     }
-#if 0
-private:
-    FixedVectorWithBuffer& MoveConstructValuesFrom(FixedVectorWithBuffer& other)
-    {
-        // we must destruct other's items immediately, since after this we will clear other's span to 0 elements
-        if (size() <= N)
-        {
-            auto* iter = &u.buffer[0];
-            for (auto& otherIter : other)
-            {
-                new (iter++) T(std::move(otherIter));
-                otherIter.~T();
-            }
-        }
-        else
-        {
-            new (&u.vector) std::vector<T>(std::move(other.u.vector));
-            other.u.vector.~vector();
-        }
-        // BUGBUG: This is borked. The pointers need to be set up anew.
-        return other;
-    }
-public:
-    FixedVectorWithBuffer& operator=(FixedVectorWithBuffer&& other)
-    {
-        if (&other != this)
-        {
-            this->~FixedVectorWithBuffer(); // clear out our current state
-            new (this) Base(std::move(MoveConstructValuesFrom(other)));
-        }
-        return *this;
-    }
-    FixedVectorWithBuffer(FixedVectorWithBuffer&& other) : Base(std::move(MoveConstructValuesFrom(other))) { }
-#endif
 };
 
 } // namespace

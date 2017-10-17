@@ -401,7 +401,7 @@ int main(int argc, char *argv[])
         string b("test2");
         string c("test3");
         vector<string> vv{ a, b, c };
-        FixedVectorWithBuffer<string, 2> xx(vv);
+        FixedVectorWithBuffer<string, 2> xx(move(vv));
         for (let e : xx)
             fprintf(stderr, "%s\n", e.c_str());
     }

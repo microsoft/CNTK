@@ -203,13 +203,13 @@ namespace CNTK
 #endif
     }
     // speed-optimized version with 2 operands
-    Function::Function(const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const std::wstring& name)
-        : m_inputs(input0, input1), m_name(name), m_attributes(std::move(functionConfig))
+    Function::Function(const Variable& input0, const Variable& input1, Dictionary&& functionConfig,/* const FunctionPtr& rootFunction,*/ const std::wstring& name)
+        : m_inputs(input0, input1), /*m_rootFunction(rootFunction),*/ m_name(name), m_attributes(std::move(functionConfig))
     {
     }
     // speed-optimized version with 1 operand
-    Function::Function(const Variable& input0, Dictionary&& functionConfig, const std::wstring& name)
-        : m_inputs(input0), m_name(name), m_attributes(std::move(functionConfig))
+    Function::Function(const Variable& input0, Dictionary&& functionConfig, /*const FunctionPtr& rootFunction,*/ const std::wstring& name)
+        : m_inputs(input0), /*m_rootFunction(rootFunction),*/ m_name(name), m_attributes(std::move(functionConfig))
     {
     }
 

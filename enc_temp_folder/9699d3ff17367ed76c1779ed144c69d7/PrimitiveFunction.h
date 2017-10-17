@@ -298,7 +298,7 @@ namespace CNTK
         }
 
         PrimitiveFunction(PrimitiveOpType op, const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const std::wstring& functionName = std::wstring())
-            : Function(input0, input1, std::move(functionConfig), functionName),
+            : Function(input0, input1, std::move(functionConfig), /*nullptr,*/ functionName),
             m_op(op),
             m_profiler(CurrentDynamicProfiler())
         {
@@ -311,7 +311,7 @@ namespace CNTK
         }
 
         PrimitiveFunction(PrimitiveOpType op, const Variable& input0, Dictionary&& functionConfig, const std::wstring& functionName = std::wstring())
-            : Function(input0, std::move(functionConfig), functionName),
+            : Function(input0, std::move(functionConfig), /*nullptr,*/ functionName),
             m_op(op),
             m_profiler(CurrentDynamicProfiler())
         {
