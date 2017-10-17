@@ -375,61 +375,6 @@ public:
 #if 1
 namespace X{
 
-template<typename T, size_t N>
-class FixedVectorWithBuffer : public Span<T*>
-{
-    typedef Span<T*> Base;
-    union U
-    {
-        T buffer[N];
-        std::vector<T> vector;
-        ~U() {}
-        U() {}
-    } u;
-    const size_t len;
-    FixedVectorWithBuffer(size_t len, std::vector<T>&& vec) : // nothrow
-        len(len),
-        Base(len > N ? vec.data() : u.buffer, (len > N ? vec.data() : u.buffer) + len) // nothrow
-    {
-        if (len > N)
-            new (&u.vector) std::vector<T>(std::move(vec));
-    }
-    FixedVectorWithBuffer(size_t len) : // nothrow
-        len(len),
-        Base(u.buffer, u.buffer + len) // nothrow
-    {
-    }
-public:
-    FixedVectorWithBuffer()             : FixedVectorWithBuffer(0) {}
-    FixedVectorWithBuffer(T&& a)        : FixedVectorWithBuffer(1) { new (&u.buffer[0]) T(std::move(a)); }
-    FixedVectorWithBuffer(T&& a, T&& b) : FixedVectorWithBuffer(2) // BUGBUG: This version should only be defined if N > 1.
-    {
-        //if (N < 2)
-        //    throw logic_error("FixedVectorWithBuffer(a,b) should only be used for N >= 2");
-        new (&u.buffer[0]) T(std::move(a));
-        new (&u.buffer[1]) T(std::move(b));
-    }
-    // this constructor steals all elements out from vec, but does vec's buffer itself
-    // This is useful where we want to avoid reallocation of vec, while its members get recreated upon each use.
-    FixedVectorWithBuffer(std::vector<T>& vec) :
-        FixedVectorWithBuffer(vec.size(), len > N ? Transform(vec, [](T& elem) { return std::move(elem); }) : std::vector<T>())
-    {
-        if (len <= N)
-            for (size_t i = 0; i < len; i++)
-                new (&u.buffer[i]) T(std::move(vec[i])); // nothrow
-        else
-            vec.clear(); // nothrow
-    }
-    ~FixedVectorWithBuffer()
-    {
-        if (len <= N)
-            for (size_t i = 0; i < len; i++)
-                u.buffer[i].~T();
-        else
-            u.vector.~vector();
-    }
-};
-
 }
 #endif
 
@@ -441,7 +386,7 @@ int main(int argc, char *argv[])
         string b("test2");
         string c("test3");
         vector<string> vv{ a, b, c };
-        X::FixedVectorWithBuffer<string, 2> xx(vv);
+        FixedVectorWithBuffer<string, 2> xx(vv);
         for (let e : xx)
             fprintf(stderr, "%s\n", e.c_str());
     }

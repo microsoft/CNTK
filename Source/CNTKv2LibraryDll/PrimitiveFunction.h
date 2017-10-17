@@ -920,6 +920,8 @@ namespace CNTK
             std::vector<Axis>& dynamicAxesToReduce,
             bool & isAllAxesReduced);
 
+        Variable InferOutput();
+
     public:
         NDArrayViewPtr BatchedForward() const;
         void BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;

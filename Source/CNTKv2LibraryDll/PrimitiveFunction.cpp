@@ -311,12 +311,32 @@ namespace CNTK
         return outputDynamicAxes;
     }
 
+    // infers multiple outputs
+    // There are only two functions that have multiple.
     void PrimitiveFunction::InferOutputs(std::vector<Variable>& outputs)
     {
-        if (m_op == PrimitiveOpType::Combine)
+        if (m_op == PrimitiveOpType::Combine) // special case: Combine() can have more than one output
+        {
             outputs.assign(m_inputs.begin(), m_inputs.end());
-        else if (m_op == PrimitiveOpType::NoOp)
-            outputs.push_back(OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), m_inputs[0].IsSparse(), Name()));
+            return;
+        }
+        outputs.emplace_back(InferOutput());
+        if (m_op == PrimitiveOpType::UnpackSequence) // special case: UnpackSequence() has two outputs
+        {
+            auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
+            if (!suppressMaskOutput)
+            {
+                auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputs.back().GetDataType(), outputs.back().DynamicAxes(), /*needsGradient =*/ false, /*isSparse =*/ false, Name().empty() ? Name() : Name() + L"_UnpackSequenceMask");
+                outputs.push_back(maskOutput);
+            }
+        }
+    }
+
+    // output type inference for the case of a single output
+    Variable PrimitiveFunction::InferOutput()
+    {
+        if (m_op == PrimitiveOpType::NoOp)
+            return OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), m_inputs[0].IsSparse(), Name());
         else
         {
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
@@ -846,7 +866,8 @@ namespace CNTK
                         {
                             assert(m_inputs.size() == 2);
 
-                            auto transposeShapeFunc = [](const NDShape& shape) {
+                            auto transposeShapeFunc = [](const NDShape& shape)
+                            {
                                 NDShape transposedShape(std::max<size_t>(2, shape.Rank()), 1);
                                 for (size_t i = 0; i < shape.Rank(); ++i)
                                     transposedShape[transposedShape.Rank() - i - 1] = shape[i];
@@ -1172,17 +1193,7 @@ namespace CNTK
                 }
             }
 
-            auto primaryOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, isSparse, Name());// .empty() ? L"" : Name());
-            outputs.push_back(primaryOutput);
-            if (m_op == PrimitiveOpType::UnpackSequence)
-            {
-                auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
-                if (!suppressMaskOutput)
-                {
-                    auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, /*isSparse =*/ false, Name().empty() ? Name() : Name() + L"_UnpackSequenceMask");
-                    outputs.push_back(maskOutput);
-                }
-            }
+            return OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, isSparse, Name());// .empty() ? L"" : Name());
         }
     }
 
