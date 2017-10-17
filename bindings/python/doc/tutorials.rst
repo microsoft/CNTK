@@ -60,6 +60,9 @@ Tutorials
 
 #.  *Recognize flowers and animals in natural scene images using deep transfer learning*
      CNTK 301: `Deep transfer learning with pre-trained ResNet model <CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.html>`_ (:cntktut:`source <CNTK_301_Image_Recognition_with_Deep_Transfer_Learning>`)    
+     
+#.  *Compare the similarity between a pair of documents*
+     CNTK 303: `Deep structured semantic modeling with LSTM <CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks.html>`_ (:cntktut:`source <CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks>`)   
 
 Try these notebooks pre-installed on `CNTK Azure Notebooks`_ for free.
 

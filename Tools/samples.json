@@ -574,5 +574,14 @@
         "language": ["Python"],
         "type": ["Recipe"],
         "dataadded": "07/21/2017"
+    },
+    {
+        "category": ["Text"],
+        "name":  "Deep semantic modeling",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks.ipynb",
+        "description":  "Compare two documents using deep semantic similarity.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	    "dateadded": "10/11/2017"
     }
 ]
