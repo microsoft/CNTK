@@ -1192,6 +1192,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     bool noMoreSamplesToProcess = false;
     bool isFirstMinibatch = true;
+    bool autoScaleMessageGiven = false;
     for (;;)
     {
         auto profMinibatch = ProfilerTimeBegin();
@@ -1236,7 +1237,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // TODO: original code did not call this for actualMBSize == 0
         ComputationNetwork::BumpEvalTimeStamp(featureNodes);
         ComputationNetwork::BumpEvalTimeStamp(labelNodes);
-
+        
         if (actualMBSize > 0)
         {
             assert(wasDataRead);
@@ -1271,7 +1272,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 {
                     int nsmb = (actualMBSize + m_maxSamplesInRAM - 1) / m_maxSamplesInRAM;
                     actualNumSubminibatches = smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, nsmb);
-                    fprintf(stderr, "Node %02d auto-scaled to %d subminibatches (actualMBSize=%d, m_maxSamplesInRam=%d)\n", (int)m_mpi->CurrentNodeRank(), (int)actualNumSubminibatches, (int)actualMBSize, (int)m_maxSamplesInRAM);
+                    if (!autoScaleMessageGiven) {
+                        autoScaleMessageGiven = true;
+                        fprintf(stderr, "Node %02d auto-scaled to %d subminibatches (actualMBSize=%d, m_maxSamplesInRam=%d) (future messages suppressed)\n", (int)m_mpi->CurrentNodeRank(), (int)actualNumSubminibatches, (int)actualMBSize, (int)m_maxSamplesInRAM);
+                    }
                 }
             }
             else
