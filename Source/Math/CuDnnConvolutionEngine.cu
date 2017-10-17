@@ -58,6 +58,9 @@ public:
         // Set map count(aka K) dimension.
         dims[0] = (int)mapCount;
         dims[1] = (int)filt[filt_size - 1];
+        int numElems = 1;
+        for(int i=0; i<(int)dim_size;i++) numElems *= dims[i];
+        m_isOdd = (numElems%2==1);
         CUDNN_CALL(cudnnSetFilterNdDescriptor(m_kernel, dataType, FILTER_FORMAT, (int)dim_size, dims.data()));
     }
 
@@ -75,10 +78,16 @@ public:
         return m_kernel;
     }
 
+    bool isOdd()
+    {
+        return m_isOdd;
+    }
+
     DISABLE_COPY_AND_MOVE(CuDnnKernel);
 
 private:
     cudnnFilterDescriptor_t m_kernel;
+    bool m_isOdd;
 };
 
 class CuDnnConv
@@ -403,6 +412,15 @@ protected:
         {
             if(!noMem)
                 return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT, workspace.BufferSize(), &algo);
+            // special case for half/odd filter
+            if(m_kernelT->isOdd() && m_dataType == CUDNN_DATA_HALF)
+            {
+                size_t tmpSize = 0;
+                algo = (cudnnConvolutionBwdFilterAlgo_t) 1;
+                auto err = cudnnGetConvolutionBackwardFilterWorkspaceSize(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, algo, &tmpSize);
+                workspace.Resize((tmpSize + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
+                return err;
+            }
             return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE, 0, &algo);
         };
         // find deterministic algorithm
