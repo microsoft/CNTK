@@ -12,6 +12,10 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_302A_Evaluation_of_Pretrained_Super-resolution_Models.ipynb")
 datadir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "DataSets", "BerkeleySegmentationDataset")
 
+# Run this on GPU only
+notebook_deviceIdsToRun = [0]
+notebook_timeoutSeconds = 600
+
 def test_cntk_302a_evaluation_superresolution_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
