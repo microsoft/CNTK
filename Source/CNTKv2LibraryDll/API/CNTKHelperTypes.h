@@ -53,7 +53,8 @@ public:
     T&       front()                        { return *begin(); }
     const T& back()                   const { return *(end() - 1); }
     T&       back()                         { return *(end() - 1); }
-    size_t   size()                   const { return end() - begin(); }
+    size_t   size()                   const { return cend() - cbegin(); }
+    bool     empty()                  const { return cend() == cbegin(); }
     const T& at(size_t index)         const { return *(beginIter + index); }
     T&       at(size_t index)               { return *(beginIter + index); }
     const T& operator[](size_t index) const { return at(index); }
@@ -83,39 +84,45 @@ template<typename CollectionType, typename Lambda>
 class TransformingSpan
 {
     typedef typename CollectionType::value_type T;
-    typedef typename CollectionType::const_iterator CollectionConstIterator;
-    typedef typename std::iterator_traits<CollectionConstIterator>::iterator_category CollectionConstIteratorCategory;
-    typedef decltype(std::declval<Lambda>()(std::declval<T&&>())) TLambda; // type of result of lambda call (the T&& does not harm since we only get the result type here)
+    typedef typename CollectionType::const_iterator CollectionIterator; // TODO: template magic to make this const only if the input is const, otherwise ::iterator
+    typedef typename std::iterator_traits<CollectionIterator>::iterator_category CollectionIteratorCategory;
+    typedef decltype(std::declval<Lambda>()(std::declval<T&>())) TLambda; // type of result of lambda call (the T&& does not harm since we only get the result type here)
     typedef typename std::remove_reference<TLambda>::type TValue;
     typedef typename std::remove_cv<TValue>::type TValueNonConst;
-    CollectionConstIterator beginIter, endIter;
+    CollectionIterator beginIter, endIter;
     const Lambda& lambda;
-public:
-    typedef TLambda value_type;
-    TransformingSpan(const CollectionType& collection, const Lambda& lambda) : beginIter(collection.cbegin()), endIter(collection.cend()), lambda(lambda) { }
-    TransformingSpan(const CollectionConstIterator& beginIter, const CollectionConstIterator& endIter, const Lambda& lambda) : beginIter(beginIter), endIter(endIter), lambda(lambda) { }
     // transforming iterator
-    class const_iterator : public std::iterator<CollectionConstIteratorCategory, TValue>
+    class Iterator : public std::iterator<CollectionIteratorCategory, TValue>
     {
         const Lambda& lambda;
-        CollectionConstIterator argIter;
+        CollectionIterator argIter;
     public:
-        const_iterator(const CollectionConstIterator& argIter, const Lambda& lambda) : argIter(argIter), lambda(lambda) { }
-        const_iterator operator++() { auto cur = *this; argIter++; return cur; }
-        const_iterator operator++(int) { argIter++; return *this; }
+        Iterator(const CollectionIterator& argIter, const Lambda& lambda) : argIter(argIter), lambda(lambda) { }
+        Iterator operator++() { auto cur = *this; argIter++; return cur; }
+        Iterator operator++(int) { argIter++; return *this; }
         TLambda operator*() const { return lambda(*argIter); }
         TLambda operator*() { const auto& arg = *argIter; return lambda(const_cast<T&>(arg)); } // yak. To allow lambda to move() arg. TODO: Clean this up!! const iter is wrong.
         auto operator->() const { return &operator*(); }
-        bool operator==(const const_iterator& other) const { return argIter == other.argIter; }
-        bool operator!=(const const_iterator& other) const { return argIter != other.argIter; }
-        const_iterator operator+(difference_type offset) const { return const_iterator(argIter + offset, lambda); }
-        const_iterator operator-(difference_type offset) const { return const_iterator(argIter - offset, lambda); }
-        difference_type operator-(const const_iterator& other) const { return argIter - other.argIter; }
+        bool operator==(const Iterator& other) const { return argIter == other.argIter; }
+        bool operator!=(const Iterator& other) const { return argIter != other.argIter; }
+        Iterator operator+(difference_type offset) const { return Iterator(argIter + offset, lambda); }
+        Iterator operator-(difference_type offset) const { return Iterator(argIter - offset, lambda); }
+        difference_type operator-(const Iterator& other) const { return argIter - other.argIter; }
     };
+public:
+    typedef TLambda value_type;
+    TransformingSpan(const CollectionType& collection, const Lambda& lambda) : beginIter(collection.cbegin()), endIter(collection.cend()), lambda(lambda) { }
+    TransformingSpan(const CollectionIterator& beginIter, const CollectionIterator& endIter, const Lambda& lambda) : beginIter(beginIter), endIter(endIter), lambda(lambda) { }
+    typedef Iterator const_iterator;
+    typedef Iterator iterator;
     const_iterator cbegin() const { return const_iterator(beginIter, lambda); }
     const_iterator cend()   const { return const_iterator(endIter  , lambda); }
     const_iterator begin()  const { return cbegin(); }
     const_iterator end()    const { return cend();   }
+    iterator       begin()        { return iterator(beginIter, lambda); }
+    iterator       end()          { return iterator(endIter,   lambda); }
+    size_t         size()   const { return (size_t)(endIter - beginIter); }
+    bool           empty()  const { return endIter == beginIter; }
     // construct certain collection types directly
     operator std::vector      <TValueNonConst>() const { return std::vector      <TValueNonConst>(cbegin(), cend()); } // note: don't call as_vector etc., will not be inlined! in VS 2015!
     operator std::list        <TValueNonConst>() const { return std::list        <TValueNonConst>(cbegin(), cend()); }
@@ -126,9 +133,9 @@ public:
 // main entry point
 // E.g. call as Transform(collection, lambda1, lambda2, ...).as_vector();
 template<typename CollectionType, typename Lambda>
-static inline auto Transform(const CollectionType& collection, const Lambda& lambda) { return TransformingSpan<CollectionType, Lambda>(collection, lambda); }
+static inline const auto Transform(const CollectionType& collection, const Lambda& lambda) { return TransformingSpan<CollectionType, Lambda>(collection, lambda); }
 template<typename CollectionType, typename Lambda, typename ...MoreLambdas>
-static inline auto Transform(const CollectionType& collection, const Lambda& lambda, MoreLambdas&& ...moreLambdas) { return Transform(TransformingSpan<CollectionType, Lambda>(collection, lambda), std::forward<MoreLambdas>(moreLambdas)...); }
+static inline const auto Transform(const CollectionType& collection, const Lambda& lambda, MoreLambdas&& ...moreLambdas) { return Transform(TransformingSpan<CollectionType, Lambda>(collection, lambda), std::forward<MoreLambdas>(moreLambdas)...); }
 
 ///
 /// Implement a range like Python's range.
@@ -173,6 +180,8 @@ public:
     const_iterator cend()   const { return const_iterator(endValue);   }
     const_iterator begin()  const { return cbegin(); }
     const_iterator end()    const { return cend();   }
+    size_t         size()   const { return ((difference_type)endValue - (difference_type)beginValue) / stepValue; }
+    bool           empty()  const { return endValue == beginValue; }
     // construct certain collection types directly, to support TransformToVector() etc.
     operator std::vector      <TValueNonConst>() const { return std::vector      <TValueNonConst>(cbegin(), cend()); } // note: don't call as_vector etc., will not be inlined! in VS 2015!
     operator std::list        <TValueNonConst>() const { return std::list        <TValueNonConst>(cbegin(), cend()); }
@@ -231,5 +240,82 @@ template<typename Container>
 static inline auto MakeDeque(const Container& container) { return std::deque<Container::value_type>(container.cbegin(), container.cend()); }
 template<typename Container>
 static inline auto MakeSet(const Container& container) { return std::set<Container::value_type>(container.cbegin(), container.cend()); }
+
+///
+/// Class that stores a vector with "small-vector optimization," that is, if it has N or less elements,
+/// they are stored in the object itself, without malloc(), while more elements use a std::vector.
+///
+template<typename T, size_t N>
+class FixedVectorWithBuffer : public Span<T*>
+{
+    typedef Span<T*> Base;
+    union U
+    {
+        T buffer[N];
+        std::vector<T> vector;
+        U() {}  // C++ requires these in order to be happy
+        ~U() {}
+    } u;
+    // constructor that constructs either for fixed length or from a given vector, which we steal
+    FixedVectorWithBuffer(size_t len, std::vector<T>&& vec) : // nothrow
+        Base(len > N ? vec.data() : u.buffer, (len > N ? vec.data() : u.buffer) + len) // nothrow
+    {
+        if (len > N)
+            new (&u.vector) std::vector<T>(std::move(vec));
+    }
+public:
+    typedef T value_type;
+    // short-circuit constructors that construct from up to 2 arguments which are taken ownership of
+    FixedVectorWithBuffer()             : Base(u.buffer, u.buffer + 0) {}
+    FixedVectorWithBuffer(T&& a)        : Base(u.buffer, u.buffer + 1) { new (&u.buffer[0]) T(std::move(a)); }
+    FixedVectorWithBuffer(T&& a, T&& b) : Base(u.buffer, u.buffer + 2) { new (&u.buffer[0]) T(std::move(a)); new (&u.buffer[1]) T(std::move(b)); } // BUGBUG: This version should only be defined if N > 1.
+    FixedVectorWithBuffer(const T& a)   : Base(u.buffer, u.buffer + 1) { new (&u.buffer[0]) T(a); }
+    FixedVectorWithBuffer(const T& a, const T& b) : Base(u.buffer, u.buffer + 2)
+    {
+        new (&u.buffer[0]) T(a);
+        try { new (&u.buffer[1]) T(b); } // if second one fails, we must clean up the first one
+        catch (...) { u.buffer[0].~T(); throw; }
+    } // BUGBUG: This version should only be defined if N > 1.
+    // constructor from a vector
+    // This constructor steals all elements out from the passed vector, but not the vector's buffer itself.
+    // This is meant for the use case where we want to avoid reallocation of the vector, while its members
+    // are small movable objects that get created upon each use.
+#if 0   // this const& constructor is wrong, since we don't handle errors correctly at present
+    template<typename Collection>
+    FixedVectorWithBuffer(const Collection& vec) :
+        FixedVectorWithBuffer(vec.cend() - vec.cbegin(), // construct via Transform() here for correct destruction upon an exception
+                              vec.cend() - vec.cbegin() > N ? Transform(vec, [](const T& elem) { return elem; }) : std::vector<T>())
+    {
+        if (size() <= N)
+        {
+            auto iter = vec.cbegin();
+            for (size_t i = 0; i < size(); i++, iter++)
+                new (&u.buffer[i]) T(*iter); // nothrow
+        }
+    }
+#endif
+    template<typename Collection>
+    FixedVectorWithBuffer(Collection& vec) :
+        FixedVectorWithBuffer(vec.end() - vec.begin(), // construct via Transform() here for correct destruction upon an exception
+                              vec.end() - vec.begin() > N ? Transform(vec, [](T& elem) { return std::move(elem); }) : std::vector<T>())
+    {
+        if (size() <= N)
+        {
+            auto iter = vec.begin();
+            for (size_t i = 0; i < size(); i++, iter++)
+                new (&u.buffer[i]) T(std::move(*iter)); // nothrow
+        }
+        //else // can't do that since not all containers allow that
+        //    vec.clear(); // nothrow
+    }
+    ~FixedVectorWithBuffer()
+    {
+        if (size() <= N)
+            for (size_t i = 0; i < size(); i++)
+                u.buffer[i].~T();
+        else
+            u.vector.~vector();
+    }
+};
 
 } // namespace

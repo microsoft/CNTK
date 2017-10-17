@@ -204,7 +204,7 @@ namespace CNTK
     }
     // speed-optimized version with 2 operands
     Function::Function(const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name)
-        : m_inputs(MakeTwoElementVector(input0, input1)), m_rootFunction(rootFunction), m_name(name), m_attributes(std::move(functionConfig))
+        : m_inputs(input0, input1), m_rootFunction(rootFunction), m_name(name), m_attributes(std::move(functionConfig))
     {
         //m_inputs.resize(2);
         //m_inputs.front() = input0.NonCompositePreservingCopy();
@@ -212,7 +212,7 @@ namespace CNTK
     }
     // speed-optimized version with 1 operand
     Function::Function(const Variable& input0, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name)
-        : m_inputs(MakeOneElementVector(input0)), m_rootFunction(rootFunction), m_name(name), m_attributes(std::move(functionConfig))
+        : m_inputs(input0), m_rootFunction(rootFunction), m_name(name), m_attributes(std::move(functionConfig))
     {
         //m_inputs.resize(1);
         //m_inputs.front() = input0.NonCompositePreservingCopy();
@@ -220,7 +220,7 @@ namespace CNTK
 
     // TODO: The overload resolution by && seems not safe. Better change this signature. E.g. pass only a single output by &&
     Function::Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid)
-        : m_inputs(std::move(inputs)), m_outputs(std::move(outputs)), m_rootFunction(std::move(rootFunction)), m_name(std::move(name)), m_uid(std::move(uid)), m_attributes(std::move(functionConfig))
+        : m_inputs(inputs), m_outputs(std::move(outputs)), m_rootFunction(std::move(rootFunction)), m_name(std::move(name)), m_uid(std::move(uid)), m_attributes(std::move(functionConfig))
     {}
 
     /*virtual*/ Function::~Function() {}

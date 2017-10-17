@@ -113,7 +113,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePaddingConstantValue = L"paddingConstantValue";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSyncId = L"syncId";
 
-    /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
+    /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, decltype(m_inputs)& inputs, bool inferDimensions)
     {
 
         // We use the first non-constant input operand's DataType as the output DataType
@@ -162,7 +162,7 @@ namespace CNTK
         return outputDataType;
     }
 
-    /*static*/ std::vector<Axis> PrimitiveFunction::GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, PrimitiveFunction* owner, Dictionary& functionConfig)
+    /*static*/ std::vector<Axis> PrimitiveFunction::GetOutputDynamicAxes(PrimitiveOpType op, decltype(m_inputs)& inputs, PrimitiveFunction* owner, Dictionary& functionConfig)
     {
         auto reduceAxis = [](Axis reductionAxis, Variable input, std::vector<Axis>& outputDynamicAxes)
         {
@@ -1524,7 +1524,7 @@ namespace CNTK
         return anyParameterOperandDimsInferred;
     }
 
-    /*static*/ NDShape PrimitiveFunction::NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool inferInputDimensions)
+    /*static*/ NDShape PrimitiveFunction::NaryElementwiseOpOutputShape(PrimitiveOpType op, decltype(m_inputs)& operands, bool inferInputDimensions)
     {
         assert(operands.size() > 1);
 

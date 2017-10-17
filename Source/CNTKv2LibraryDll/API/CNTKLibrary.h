@@ -3871,7 +3871,8 @@ namespace CNTK
         // move constructor where everything is prepared outside; used in auto-batching
         Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
 
-        std::vector<Variable> m_inputs; // primitives: direct input variables; composites: empty (Inputs() determines all leaves on the fly); block: all leaves as if it was a composite
+        //std::vector<Variable> m_inputs; // primitives: direct input variables; composites: empty (Inputs() determines all leaves on the fly); block: all leaves as if it was a composite
+        FixedVectorWithBuffer<Variable, 2> m_inputs; // primitives: direct input variables; composites: empty (Inputs() determines all leaves on the fly); block: all leaves as if it was a composite
 #ifdef DYNAMITE_ONLY
         unsigned int m_outputsInitFlag = 0;
 #else

@@ -687,7 +687,7 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool inferInputDimensions);
+        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, decltype(m_inputs)& operands, bool inferInputDimensions);
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
         static NDShape TimesOpOutputShape(Variable& leftOperand, Variable& rightOperand, size_t outputRank, int inferInputRankToMap, bool inferInputDimensions)
@@ -844,7 +844,7 @@ namespace CNTK
                                                 std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
                                                 bool transpose, bool inferDimensions, NDShape& dilation, bool ceilOutputDim = false);
 
-        static NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions)
+        static NDShape BatchNormalizationOutputShape(decltype(m_inputs)& operands, bool spatial, bool inferDimensions)
         {
             NDShape mainOperandShape = operands[0].Shape();
             for (size_t i = 1; i < operands.size(); i++) // all but first and last arguments must match the first; last one must be a scalar
@@ -899,8 +899,9 @@ namespace CNTK
 
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
         // Returns a pair of determined output variables and a bool indicating if any input operand shape was modified
-        static DataType GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions);
-        static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, PrimitiveFunction* owner, Dictionary& functionConfig);
+        static DataType GetOutputDataType(PrimitiveOpType op, decltype(m_inputs)& inputs, bool inferDimensions);
+        // TODO: can inputs be const?
+        static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, decltype(m_inputs)& inputs, PrimitiveFunction* owner, Dictionary& functionConfig);
 
         void InferOutputs(std::vector<Variable>& outputs) override;
 
