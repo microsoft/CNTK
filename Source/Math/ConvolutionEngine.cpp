@@ -877,7 +877,7 @@ protected:
         int m_contextFlags = 0;
 
         // fixed dimension for MKL for now
-        const int m_dimension = 4;
+        static const int m_dimension = 4;
 
         static const int NumInputs = 2;
 
@@ -906,6 +906,7 @@ protected:
         static void GetSizesAndStrides(const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides)
         {
             sizes = shape.GetDims();
+            while (sizes.size() < m_dimension - 1) sizes.push_back(1);
             sizes.push_back(lastDim);
             strides.clear();
             strides.push_back(1);
