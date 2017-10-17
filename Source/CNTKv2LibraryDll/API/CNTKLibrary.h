@@ -3250,7 +3250,7 @@ namespace CNTK
         ///
         /// Returns the name of 'this' Function.
         ///
-        const std::wstring& Name() const { return m_name; }
+        CNTK_API const std::wstring& Name() const { return m_name; }
 
         ///
         /// Sets the name of 'this' Function.
@@ -6124,6 +6124,8 @@ namespace CNTK
     /// ancestorReferent: ancestor of nodeReferent which is treated as equal to ancestorInput for the purpose of computing crop offsets.
     ///
     CNTK_API FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, const Variable& ancestorInput, const Variable& ancestorReferent, const std::wstring& name = L"");
+
+    CNTK_API void PrintGraphEx(FunctionPtr function, int spaces, bool useName = false);
 
 #endif // !CNTK_HEADERONLY_DEFINITIONS
 }

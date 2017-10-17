@@ -12,6 +12,8 @@
 #include "UserFunctionFactory.h"
 #include "TrainingNodes.h"
 #include "proto/onnx/ONNX.h"
+#include <iostream>
+#include <cstdio>
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -2699,4 +2701,31 @@ namespace CNTK
             return AsBlock(std::move(splicedConv), { { operandPlaceholder, operand } }, L"Convolution", name);
         }
     }
+
+    CNTK_API void PrintGraphEx(FunctionPtr function, int spaces, bool useName)
+    {
+        if (function->Inputs().size() == 0)
+        {
+            std::cout << std::string(spaces, '.') + "(" + ToString(useName ? function->Name() : function->Uid()) + ")" +
+                "(" + ToString(function->OpName()) + ")" + ToString(function->AsString()) << std::endl;
+            return;
+        }
+
+        for (auto input : function->Inputs())
+        {
+            std::cout << std::string(spaces, '.') + "(" + ToString(useName ? function->Name() : function->Uid()) + ")" +
+                "(" + ToString(function->OpName()) + ")" + "->" +
+                "(" + ToString(useName ? input.Name() : input.Uid()) + ")" + ToString(input.AsString()) << std::endl;
+        }
+
+        for (Variable input : function->Inputs())
+        {
+            if (input.Owner() != NULL)
+            {
+                FunctionPtr f = input.Owner();
+                PrintGraphEx(f, spaces + 4, useName);
+            }
+        }
+    }
+
 }

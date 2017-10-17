@@ -9,8 +9,6 @@
 #include <functional>
 #include "Common.h"
 
-#include <iostream>
-#include <cstdio>
 
 using namespace CNTK;
 using namespace std::placeholders;
@@ -23,8 +21,20 @@ void TrainTruncatedLSTMAcousticModelClassifier();
 void TestFrameMode();
 void TestDistributedCheckpointing();
 
+#include <locale>
+#include <codecvt>
+
+
 int main(int argc, char *argv[])
 {
+    // FunctionPtr rootFunc = Function::Load(L"E:/cntk/CNTK/PretrainedModels/ResNet20_CIFAR10_CNTK.model");
+    FunctionPtr rootFunc = Function::Load(L"E:/cntk/CNTK/Examples/Image/Classification/ResNet/Python/Models/resnet20_159.dnn");
+
+    PrintGraphEx(rootFunc->RootFunction(), 0, true);
+    std::wstring intermediateLayerName = L"final_avg_pooling"; 
+    FunctionPtr interLayerPrimitiveFunc = rootFunc->FindByName(intermediateLayerName);
+    return 0;
+
 #if defined(_MSC_VER)
     // in case of asserts in debug mode, print the message into stderr and throw exception
     if (_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, HandleDebugAssert) == -1) {

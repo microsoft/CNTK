@@ -39,7 +39,8 @@ void EvaluationSingleSampleUsingDense(const wchar_t* modelFile, const DeviceDesc
     // Load the model.
     // The model is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
     // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-    FunctionPtr modelFunc = Function::Load(modelFile, device);
+    // FunctionPtr modelFunc = Function::Load(modelFile, device);
+    FunctionPtr modelFunc = Function::Load(L"E:/LiqunWA/CNTKIssues/2398/x64/CNTKLibraryCSEvalCPUOnlyExamples.Debug/inception_cntk", device);
 
     // Get input variable. The model has only one single input.
     Variable inputVar = modelFunc->Arguments()[0];

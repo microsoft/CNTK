@@ -53,6 +53,8 @@ namespace CNTKLibraryCSEvalExamples
             {
                 var device = DeviceDescriptor.CPUDevice;
 
+                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallelAsync(device).Wait();
+
                 CNTKLibraryManagedExamples.EvaluationSingleImage(device);
 
                 // Run memory tests.

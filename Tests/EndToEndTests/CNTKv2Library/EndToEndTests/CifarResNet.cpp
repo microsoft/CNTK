@@ -94,7 +94,7 @@ FunctionPtr ResNetClassifier(Variable input, size_t numOutputClasses, const Devi
     size_t poolH = 8;
     size_t poolhStride = 1;
     size_t poolvStride = 1;
-    auto pool = Pooling(rn3_3, PoolingType::Average, { poolW, poolH, 1 }, { poolhStride, poolvStride, 1 });
+    auto pool = Pooling(rn3_3, PoolingType::Average, { poolW, poolH, 1 }, { poolhStride, poolvStride, 1 }, { false }, false, false, L"final_avg_pooling");
 
     // Output DNN layer
     auto outTimesParams = Parameter({ numOutputClasses, 1, 1, cMap3 }, DataType::Float, GlorotUniformInitializer(fc1WScale, 1, 0), device);

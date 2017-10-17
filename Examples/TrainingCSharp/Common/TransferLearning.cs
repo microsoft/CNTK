@@ -144,7 +144,7 @@ namespace CNTK.CSTrainingExamples
                 out imageInput, out labelInput, out trainingLoss, out predictionError);
 
             // prepare for training
-            int numMinibatches = 5;
+            int numMinibatches = 5000000;
             float learningRatePerMinibatch = 0.2F;
             float learningmomentumPerMinibatch = 0.9F;
             float l2RegularizationWeight = 0.1F;

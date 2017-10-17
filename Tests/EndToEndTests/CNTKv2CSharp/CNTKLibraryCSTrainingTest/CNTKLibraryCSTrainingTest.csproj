@@ -58,6 +58,7 @@
     <Reference Include="Cntk.Core.Managed-$(CntkCsAssemblyVersion), Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64" />
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\..\..\Examples\Evaluation\ImageExtension\CNTKImageProcessing.cs">
@@ -81,6 +82,7 @@
     <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\TransferLearning.cs">
       <Link>TransferLearning.cs</Link>
     </Compile>
+    <Compile Include="CNTKModelEvaluator.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleFeedForwardClassifierTest.cs" />

@@ -13,7 +13,7 @@ namespace CNTK.CSTrainingExamples
     /// </summary>
     public class LogisticRegression
     {
-        static int inputDim = 3;
+        static int inputDim = 300000;
         static int numOutputClasses = 2;
 
         static public void TrainAndEvaluate(DeviceDescriptor device)
@@ -32,7 +32,7 @@ namespace CNTK.CSTrainingExamples
             var trainer = Trainer.CreateTrainer(classifierOutput, loss, evalError, parameterLearners);
 
             int minibatchSize = 64;
-            int numMinibatchesToTrain = 1000;
+            int numMinibatchesToTrain = 1000000;
             int updatePerMinibatches = 50;
 
             // train the model
