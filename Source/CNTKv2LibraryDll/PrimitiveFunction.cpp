@@ -318,17 +318,21 @@ namespace CNTK
         if (m_op == PrimitiveOpType::Combine) // special case: Combine() can have more than one output
         {
             outputs.assign(m_inputs.begin(), m_inputs.end());
-            return;
         }
-        outputs.emplace_back(InferOutput());
-        if (m_op == PrimitiveOpType::UnpackSequence) // special case: UnpackSequence() has two outputs
+        else if (m_op == PrimitiveOpType::UnpackSequence) // special case: UnpackSequence() has two outputs
         {
             auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
             if (!suppressMaskOutput)
             {
-                auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputs.back().GetDataType(), outputs.back().DynamicAxes(), /*needsGradient =*/ false, /*isSparse =*/ false, Name().empty() ? Name() : Name() + L"_UnpackSequenceMask");
-                outputs.push_back(maskOutput);
+                outputs.emplace_back(InferOutput());
+                outputs.emplace_back(OutputVariable({ NDShape::FreeDimension }, outputs.back().GetDataType(), outputs.back().DynamicAxes(), /*needsGradient =*/ false, /*isSparse =*/ false, Name().empty() ? Name() : Name() + L"_UnpackSequenceMask"));
             }
+            else
+                outputs.emplace_back(InferOutput());
+        }
+        else // normal case
+        {
+            outputs.emplace_back(InferOutput());
         }
     }
 
