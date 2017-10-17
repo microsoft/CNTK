@@ -107,7 +107,7 @@ public:
         // Passing in two empty node lists so the dispatcher can work for the evalNodes.
         std::list<ComputationNodeBasePtr> learnableNodes;
         std::vector<ComputationNodeBasePtr> criterionNodes;
-        if (numSubminibatchesNeeded > 1)
+        if (numSubminibatchesNeeded > 1 || m_maxSamplesInRAM < SIZE_MAX)
             smbDispatcher.Init(m_net, learnableNodes, criterionNodes, evalNodes);
 
         CriterionAccumulator<ElemType> localEpochEvalErrors(
@@ -117,6 +117,7 @@ public:
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
         bool noMoreSamplesToProcess = false;
+        bool autoScaleMessageGiven = false;
         for (;;)
         {
             size_t actualMBSize = 0;
@@ -134,7 +135,26 @@ public:
             if (actualMBSize > 0)
             {
 
-            size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
+                // We optionally break the minibatch into sub-minibatches.
+                // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
+                size_t actualNumSubminibatches = 1;
+                if (numSubminibatchesNeeded <= 1)
+                { // auto-scale subminibatches based on actualMBSize
+                    if (actualMBSize > m_maxSamplesInRAM)
+                    {
+                        int nsmb = (actualMBSize + m_maxSamplesInRAM - 1) / m_maxSamplesInRAM;
+                        actualNumSubminibatches = smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, nsmb);
+                        if (!autoScaleMessageGiven) {
+                            autoScaleMessageGiven = true;
+                            fprintf(stderr, "Node %02d auto-scaled to %d subminibatches (actualMBSize=%d, m_maxSamplesInRam=%d) (future messages suppressed)\n", (int)m_mpi->CurrentNodeRank(), (int)actualNumSubminibatches, (int)actualMBSize, (int)m_maxSamplesInRAM);
+                        }
+                    }
+                }
+                else
+                {
+                    actualNumSubminibatches = smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
+                }
+                
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
                 if (actualNumSubminibatches > 1)
