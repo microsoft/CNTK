@@ -12,7 +12,7 @@ from __future__ import print_function
 import numpy as np
 import numbers
 from . import sequence
-from .functions import CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
+from .functions import ModelFormat, CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, sanitize_multi_axis_reduction_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
@@ -22,6 +22,10 @@ from ..default_options import get_default_override, default_override_or
 
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
+
+CONSTANT_PAD = cntk_py.PaddingMode_CONSTANTPAD
+REFLECT_PAD = cntk_py.PaddingMode_REFLECTPAD
+SYMMETRIC_PAD = cntk_py.PaddingMode_SYMMETRICPAD
 
 @typemap
 def combine(*operands, **kw_name):
@@ -216,7 +220,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-                auto_padding=[True], max_temp_mem_size_in_samples=0, name=''):
+                auto_padding=[True], dilation=(1,), reduction_rank=1, groups=1, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -230,7 +234,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     `convolution` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
     ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
     The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
-    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input.
+    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input, which can be ignored if `reduction_rank` is `0`.
     The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
     dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
 
@@ -259,6 +263,12 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          pixels outside the area are assumed zero ("padded with zeroes"). Without padding, the kernels are only shifted over
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
+        dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+        reduction_rank (`int`, default 1): must be 0 or 1, 0 mean no depth or channel dimension in the input and 1 mean the input has channel or depth dimension.
+        groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+         which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
+         divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
+         Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0. 
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -270,12 +280,13 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
     strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
-    return convolution(convolution_map, operand, strides, sharing, auto_padding,
-                       max_temp_mem_size_in_samples, name)
+    dilation = sanitize_shape(dilation)
+    return convolution(convolution_map, operand, strides, sharing, auto_padding, dilation,
+                       reduction_rank, groups, max_temp_mem_size_in_samples, name)
 
 @typemap
 def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
-                          auto_padding=[True], output_shape=None, max_temp_mem_size_in_samples=0, name=''):
+                          auto_padding=[True], output_shape=None, dilation=(1,), reduction_rank=1, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the transposed convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -320,6 +331,8 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
         output_shape: user expected output shape after convolution transpose.
+        dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+        reduction_rank (`int`, default 1): must be 0 or 1, 0 mean no depth or channel dimension in the input and 1 mean the input has channel or depth dimension.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -334,8 +347,9 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     if output_shape is None:
         output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
+    dilation = sanitize_shape(dilation)
     return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
-                                 output_shape, max_temp_mem_size_in_samples, name)
+                                 output_shape, dilation, reduction_rank, max_temp_mem_size_in_samples, name)
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
@@ -502,6 +516,34 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
     return batch_normalization(operand, scale, bias, running_mean, running_inv_std, running_count, spatial,
                                normalization_time_constant, blend_time_constant,
                                epsilon, use_cudnn_engine, name)
+
+@typemap
+def local_response_normalization(operand, depth_radius, bias, alpha, beta, name=''):
+    '''
+    Local Response Normalization layer. See Section 3.3 of the paper:
+
+    https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+
+    The mathematical equation is:
+
+    ``b_{x,y}^i=a_{x,y}^i/(bias+\alpha\sum_{j=max(0,i-depth_radius)}^{min(N-1, i+depth_radius)}(a_{x,y}^j)^2)^\beta``
+
+    where a_{x,y}^i is the activity of a neuron computed by applying kernel i at position (x,y)
+    N is the total number of kernels, depth_radius is half normalization width.
+
+    Args:
+        operand: input of the Local Response Normalization.
+        depth_radius (int): the radius on the channel dimension to apply the normalization.
+        bias (double): a bias term to avoid divide by zero.
+        alpha (double): the alpha term of the above equation.
+        beta (double): the beta term of the above equation.
+        name (str, optional): the name of the Function instance in the network.
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import local_response_normalization
+    operand = sanitize_input(operand)
+    return local_response_normalization(operand, depth_radius, bias, alpha, beta, name)
 
 ##########################################################################
 # comparison ops
@@ -838,8 +880,6 @@ def element_times(left, right, name=''):
     right = sanitize_input(right, dtype)
     return cntk_py_element_times(left, right, name)
 
-
-# TODO: move element_max/min to C++
 @associative_multi_arg
 @typemap
 def element_max(left, right, name=''):
@@ -855,10 +895,11 @@ def element_max(left, right, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    gt = greater(left, right)
-    # TODO: use as_block()
-    return element_select(gt, left, right, name)
-
+    from cntk.cntk_py import element_max as cntk_py_element_max
+    dtype = get_data_type(left, right)
+    left = sanitize_input(left, dtype)
+    right = sanitize_input(right, dtype)
+    return cntk_py_element_max(left, right, name)
 
 @associative_multi_arg
 @typemap
@@ -875,10 +916,11 @@ def element_min(left, right, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    lt = less(left, right)
-    # TODO: use as_block()
-    return element_select(lt, left, right, name)
-
+    from cntk.cntk_py import element_min as cntk_py_element_min
+    dtype = get_data_type(left, right)
+    left = sanitize_input(left, dtype)
+    right = sanitize_input(right, dtype)
+    return cntk_py_element_min(left, right, name)
 
 @typemap
 def element_divide(left, right, name=''):
@@ -1431,6 +1473,28 @@ def tanh(x, name=''):
     from cntk.cntk_py import tanh
     x = sanitize_input(x)
     return tanh(x, name)
+
+@typemap
+def atanh(x, name=''):
+    '''
+    Computes the element-wise atanh of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.atanh([[0.9,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 1.47222,  0.54931],
+               [-0.25541, -0.97296]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import atanh
+    x = sanitize_input(x)
+    return atanh(x, name)
 
 @typemap
 def sin(x, name=''):
@@ -1994,6 +2058,50 @@ def swapaxes(x, axis1=0, axis2=1, name=''):
     axis2 = sanitize_axis(axis2)
     return transpose_axes(x, axis1, axis2, name)
 
+
+@typemap
+def pad(x, pattern, mode=CONSTANT_PAD, constant_value = 0, name=''):
+    '''
+    Pads a tensor according to the specified patterns.
+    Three padding modes are supported: CONSTANT / REFLECT / SYMMETRIC.
+
+    Example:
+        >>> data = np.arange(6, dtype=np.float32).reshape((2,3))
+        >>> x = C.constant(value=data)
+        >>> C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.CONSTANT_PAD, constant_value=1).eval()
+        array([[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
+               [ 1.,  1.,  0.,  1.,  2.,  1.,  1.],
+               [ 1.,  1.,  3.,  4.,  5.,  1.,  1.],
+               [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]], dtype=float32)
+        >>> C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.REFLECT_PAD).eval()
+        array([[ 5.,  4.,  3.,  4.,  5.,  4.,  3.],
+               [ 2.,  1.,  0.,  1.,  2.,  1.,  0.],
+               [ 5.,  4.,  3.,  4.,  5.,  4.,  3.],
+               [ 2.,  1.,  0.,  1.,  2.,  1.,  0.]], dtype=float32)
+        >>> C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.SYMMETRIC_PAD).eval()
+        array([[ 1.,  0.,  0.,  1.,  2.,  2.,  1.],
+               [ 1.,  0.,  0.,  1.,  2.,  2.,  1.],
+               [ 4.,  3.,  3.,  4.,  5.,  5.,  4.],
+               [ 4.,  3.,  3.,  4.,  5.,  5.,  4.]], dtype=float32)
+
+    Args:
+        x: tensor to be padded.
+        pattern (list of tuple with 2 integers): how many values to add before and after the contents of the tensor in each dimension.
+        mode (int): padding mode: C.ops.CONSTANT_PAD, C.ops.REFLECT_PAD and C.ops.SYMMETRIC_PAD
+        constant_value: the value used to fill the padding cells, only meaningful under CONSTANT mode.
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import pad
+    if (any([len(_) != 2 for _  in pattern])):
+        raise ValueError("padding pattern should be a integer list with shape [n, 2]")
+    x = sanitize_input(x)
+    head = [p[0] for p in reversed(pattern)]
+    foot = [p[1] for p in reversed(pattern)]
+    return pad(x, mode, head, foot, constant_value, name)
+
+
 @typemap
 def slice(x, axis, begin_index, end_index, strides=None, name=''):
     '''
@@ -2061,9 +2169,9 @@ def slice(x, axis, begin_index, end_index, strides=None, name=''):
         axis (int or :class:`~cntk.axis.Axis`): axis along which ``begin_index`` and ``end_index``
          will be used. If it is of type int it will be used as a static axis.
         begin_index (int): the index along axis where the slicing starts
-        end_index (int): the index along axis where the slicing ends
-        name (str, optional): the name of the Function instance in the network
+        end_index (int): the index along axis where the slicing ends (exclusive)
         strides(int): step sizes when applying slice, negative value means in reverse order
+        name (str, optional): the name of the Function instance in the network
 
     See also:
         Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
@@ -2703,7 +2811,7 @@ def random_sample_inclusion_frequency(
     seed = SentinelValueForAutoSelectRandomSeed,
     name=''):
     '''
-    For weighted sampling with the specifed sample size (`num_samples`)
+    For weighted sampling with the specified sample size (`num_samples`)
     this operation computes the expected number of occurrences of each class
     in the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the
@@ -2826,7 +2934,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
     Args:
         shape (tuple or int): the shape of the input tensor
         dtype (np.float32 or np.float64): data type. Default is np.float32.
-        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
+        needs_gradient (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
         name (str, optional): the name of the Function instance in the network
@@ -2852,7 +2960,7 @@ def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=
     Args:
         shape (tuple or int): the shape of the input tensor
         dtype (np.float32 or np.float64): data type. Default is np.float32.
-        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
+        needs_gradient (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
         name (str, optional): the name of the Function instance in the network
@@ -3102,3 +3210,77 @@ def assign(ref, input, name=''):
     operand = sanitize_input(input, dtype)
     ref_operand = sanitize_input(ref, dtype)
     return assign(ref_operand, operand, name)
+
+@typemap
+def crop_manual(node_input, node_referent, offset_x, offset_y, name = ''):
+    '''
+    Crops input along spatial dimensions so that it matches spatial size of reference input.
+    Crop offsets are given in pixels.
+
+    Args:
+        node_input: class:`~cntk.ops.functions.Function` that outputs the tensor to be cropped
+        node_referent: class:`~cntk.ops.functions.Function` that outputs the reference tensor
+        offset_x (int): horizontal crop offset
+        offset_y (int): vertical crop offset
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import crop
+    arg_input = sanitize_input(node_input, get_data_type(node_input))
+    arg_ref = sanitize_input(node_referent,  get_data_type(node_referent))
+    return crop(arg_input, arg_ref, offset_x, offset_y, name)
+
+@typemap
+def crop_automatic(node_input, node_referent, name = ''):
+    '''
+    Crops input along spatial dimensions so that it matches spatial size of reference input.
+
+    Crop offsets are computed by traversing the network graph and computing affine transform
+    between the two inputs. Translation part of the transform determines the offsets. The transform
+    is computed as composition of the transforms between each input and their common ancestor.
+    The common ancestor is expected to exist.
+
+    Args:
+        node_input: class:`~cntk.ops.functions.Function` that outputs the tensor to be cropped
+        node_referent: class:`~cntk.ops.functions.Function` that outputs the reference tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import crop
+    arg_input = sanitize_input(node_input, get_data_type(node_input))
+    arg_ref = sanitize_input(node_referent,  get_data_type(node_referent))
+    return crop(arg_input, arg_ref, name)
+
+@typemap
+def crop_automatic_with_ancestors(node_input, node_referent, ancestor_input, ancestor_referent, name = ''):
+    '''
+    Crops input along spatial dimensions so that it matches spatial size of reference input.
+
+    Crop offsets are computed by traversing the network graph and computing affine transform
+    between the two inputs. Translation part of the transform determines the offsets. The transform
+    is computed as composition of the transforms between each input and their common ancestor.
+
+    ancestor_input and ancestor_referent are expected to be ancestors of node_input and
+    node_referent, respectively. They act like the same node for the purpose of finding a common
+    ancestor. They are used in cases when node_input and node_referent do not have a common
+    ancestor in the network. Typically, the ancestor nodes have the same spatial size. For example, in
+    pixelwise semantic labeling, ancestor_input would be the input image, and ancestor_referent would
+    be the ground truth image containing pixelwise labels.
+
+    Args:
+        node_input: class:`~cntk.ops.functions.Function` that outputs the tensor to be cropped
+        node_referent: class:`~cntk.ops.functions.Function` that outputs the reference tensor
+        ancestor_input (optional): class:`~cntk.ops.functions.Function` that outputs ancestor of node_input
+        ancestor_referent (optional): class:`~cntk.ops.functions.Function` that outputs ancestor of node_referent
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import crop
+    arg_node_input = sanitize_input(node_input, get_data_type(node_input))
+    arg_node_ref = sanitize_input(node_referent,  get_data_type(node_referent))
+    arg_ancestor_input = sanitize_input(ancestor_input, get_data_type(ancestor_input))
+    arg_ancestor_ref = sanitize_input(ancestor_referent,  get_data_type(ancestor_referent))
+    return crop(arg_node_input, arg_node_ref, arg_ancestor_input, arg_ancestor_ref, name)

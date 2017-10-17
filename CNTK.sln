@@ -1165,7 +1165,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FastRCNN", "FastRCNN", "{4E
 		Examples\Image\Detection\FastRCNN\cntk_helpers.py = Examples\Image\Detection\FastRCNN\cntk_helpers.py
 		Examples\Image\Detection\FastRCNN\fastrcnn.cntk = Examples\Image\Detection\FastRCNN\fastrcnn.cntk
 		Examples\Image\Detection\FastRCNN\imdb_data.py = Examples\Image\Detection\FastRCNN\imdb_data.py
-		Examples\Image\Detection\FastRCNN\install_fastrcnn.py = Examples\Image\Detection\FastRCNN\install_fastrcnn.py
+		Examples\Image\Detection\FastRCNN\install_data_and_model.py = Examples\Image\Detection\FastRCNN\install_data_and_model.py
 		Examples\Image\Detection\FastRCNN\LabelMeConverter.py = Examples\Image\Detection\FastRCNN\LabelMeConverter.py
 		Examples\Image\Detection\FastRCNN\PARAMETERS.py = Examples\Image\Detection\FastRCNN\PARAMETERS.py
 		Examples\Image\Detection\FastRCNN\README.md = Examples\Image\Detection\FastRCNN\README.md
@@ -1595,6 +1595,27 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageRecognitionAppCS", "Te
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageRecognitionLib", "Tests\EndToEndTests\EvalClientTests\UWPImageRecognitionTest\ImageRecognizerLib\ImageRecognizerLib.vcxproj", "{C5E944BA-A7C4-482F-BE01-077A7DFC159C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "V2LibraryCSTests", "Tests\UnitTests\V2LibraryCSTests\V2LibraryCSTests.csproj", "{B6DED59B-B52A-4D44-9B61-26FF0382764A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{50EF9EE6-5018-453E-A063-F77044EF1A97} = {50EF9EE6-5018-453E-A063-F77044EF1A97}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CNTKv2CSharp", "CNTKv2CSharp", "{B3B46744-DBB5-42C2-BAD7-9151D9486045}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKLibraryCSTrainingTest", "Tests\EndToEndTests\CNTKv2CSharp\CNTKLibraryCSTrainingTest\CNTKLibraryCSTrainingTest.csproj", "{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7B7A563D-AA8E-4660-A805-D50235A02120} = {7B7A563D-AA8E-4660-A805-D50235A02120}
+		{91973E60-A7BE-4C86-8FDB-59C88A0B3715} = {91973E60-A7BE-4C86-8FDB-59C88A0B3715}
+		{50EF9EE6-5018-453E-A063-F77044EF1A97} = {50EF9EE6-5018-453E-A063-F77044EF1A97}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ProposalLayer", "ProposalLayer", "{3631994A-59E6-4CD6-99A4-6D332F8DABE2}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProposalLayerLib", "Examples\Extensibility\ProposalLayer\ProposalLayerLib\ProposalLayerLib.vcxproj", "{91EA9F28-B9B6-4FC7-A47D-9838F5915700}"
 	ProjectSection(ProjectDependencies) = postProject
 		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
 	EndProjectSection
@@ -2259,6 +2280,42 @@ Global
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Release_UWP|x64.ActiveCfg = Release_UWP|x64
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Release_UWP|x64.Build.0 = Release_UWP|x64
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C}.Release|x64.ActiveCfg = Release_UWP|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Debug_UWP|x64.ActiveCfg = Debug_CpuOnly|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Debug|x64.ActiveCfg = Debug|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Debug|x64.Build.0 = Debug|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Release_UWP|x64.ActiveCfg = Release_NoOpt|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Release|x64.ActiveCfg = Release|x64
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A}.Release|x64.Build.0 = Release|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Debug_UWP|x64.ActiveCfg = Debug_CpuOnly|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Debug|x64.ActiveCfg = Debug|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Debug|x64.Build.0 = Debug|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Release_UWP|x64.ActiveCfg = Release_NoOpt|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Release|x64.ActiveCfg = Release|x64
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Release|x64.Build.0 = Release|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Debug_UWP|x64.ActiveCfg = Debug_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Debug|x64.ActiveCfg = Debug|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Debug|x64.Build.0 = Debug|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release_UWP|x64.ActiveCfg = Release_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release|x64.ActiveCfg = Release|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2480,5 +2537,10 @@ Global
 		{D5CB8825-0D1F-4940-9906-9BD87614B24E} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
 		{EA6DC625-7AD7-44A8-BDE9-4620D01B3AA5} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
 		{C5E944BA-A7C4-482F-BE01-077A7DFC159C} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
+		{B6DED59B-B52A-4D44-9B61-26FF0382764A} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
+		{B3B46744-DBB5-42C2-BAD7-9151D9486045} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
+		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3} = {B3B46744-DBB5-42C2-BAD7-9151D9486045}
+		{3631994A-59E6-4CD6-99A4-6D332F8DABE2} = {3BF56127-6F0F-41CF-BFCE-31165A0A5E73}
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700} = {3631994A-59E6-4CD6-99A4-6D332F8DABE2}
 	EndGlobalSection
 EndGlobal

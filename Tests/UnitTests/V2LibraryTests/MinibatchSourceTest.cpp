@@ -56,6 +56,10 @@ public:
         const std::unordered_set<DistributedWorkerDescriptor>&) override
     {}
 
+    virtual void AllReduceSparseBlockColumn(
+        std::vector<NDArrayViewPtr>&) override
+    {}
+
     virtual void Aggregate(
         const std::vector<NDArrayViewPtr>&,
         std::vector<NDArrayViewPtr>&,

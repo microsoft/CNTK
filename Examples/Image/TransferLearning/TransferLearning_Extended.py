@@ -13,7 +13,7 @@ from TransferLearning import *
 
 # define base model location and characteristics
 base_folder = os.path.dirname(os.path.abspath(__file__))
-base_model_file = os.path.join(base_folder, "..", "PretrainedModels", "ResNet_18.model")
+base_model_file = os.path.join(base_folder, "..", "..", "..", "PretrainedModels", "ResNet18_ImageNet_CNTK.model")
 feature_node_name = "features"
 last_hidden_node_name = "z.x"
 image_height = 224

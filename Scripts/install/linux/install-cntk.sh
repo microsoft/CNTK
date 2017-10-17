@@ -121,7 +121,7 @@ else
 fi
 
 # Additional packages for ImageReader
-PACKAGES+=" libjasper1 libjpeg8 libpng12-0"
+PACKAGES+=" libjasper1 libjpeg8 libpng12-0 libtiff5"
 
 if dpkg -s $PACKAGES 1>/dev/null 2>/dev/null; then
   printf "Packages already installed, skipping.\n"
@@ -230,6 +230,7 @@ set -x
 
 LD_LIBRARY_PATH_SETTING="$CNTK_LIB_PATH:$CNTK_DEP_LIB_PATH"
 if [ "$BUILD_OPENMPI" = "1" ]; then
+  OPEN_MPI_PATH_SETTINGS=":$OPENMPI_PREFIX/bin"
   LD_LIBRARY_PATH_SETTING+=":$OPENMPI_PREFIX/lib"
 fi
 LD_LIBRARY_PATH_SETTING+=":\$LD_LIBRARY_PATH"
@@ -241,7 +242,7 @@ if [ -z "\$BASH_VERSION" ]; then
 elif [ "\$(basename "\$0" 2> /dev/null)" == "$ACTIVATE_SCRIPT_NAME" ]; then
   echo Error: this script is meant to be sourced. Run 'source activate-cntk'
 else
-  export PATH="$CNTK_BIN_PATH:\$PATH"
+  export PATH="$CNTK_BIN_PATH:\$PATH$OPEN_MPI_PATH_SETTINGS"
   export LD_LIBRARY_PATH="$LD_LIBRARY_PATH_SETTING"
   source "$PY_ACTIVATE" "$CNTK_PY_ENV_PREFIX"
 

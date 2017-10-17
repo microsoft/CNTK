@@ -812,7 +812,7 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     fstream << FormSpecialNodes(dotcfg.m_featuresStyle, m_featureNodes);
     // labels
     fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labelNodes);
-    // critera
+    // criteria
     fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_criterionNodes);
     // pre-compute nodes
     fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, preComputedNodes);

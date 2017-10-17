@@ -10,12 +10,7 @@ import numpy as np
 import yaml
 from utils.rpn.generate_anchors import generate_anchors
 from utils.rpn.bbox_transform import bbox_transform_inv, clip_boxes
-from utils.nms.nms_wrapper import nms
-
-try:
-    from config import cfg
-except ImportError:
-    from utils.default_config import cfg
+from utils.nms_wrapper import nms
 
 DEBUG = False
 
@@ -25,14 +20,14 @@ class ProposalLayer(UserFunction):
     transformations to a set of regular boxes (called "anchors").
     '''
 
-    def __init__(self, arg1, arg2, arg3, name='ProposalLayer', param_str=None):
-        super(ProposalLayer, self).__init__([arg1, arg2, arg3], name=name)
-        self.param_str_ = param_str if param_str is not None else "'feat_stride': 16\n'scales':\n - 8 \n - 16 \n - 32"
+    def __init__(self, arg1, arg2, arg3, layer_config, name='ProposalLayer'):
+        super(ProposalLayer, self).__init__([arg1, arg2, arg3], attributes=layer_config, name=name)
+
+        self._layer_config = layer_config
+        self._feat_stride = 16 if 'feat_stride' not in layer_config else layer_config['feat_stride']
+        anchor_scales = [8, 16, 32] if 'scales' not in layer_config else layer_config['scales']
 
         # parse the layer parameter string, which must be valid YAML
-        layer_params = yaml.load(self.param_str_)
-        self._feat_stride = layer_params['feat_stride']
-        anchor_scales = layer_params.get('scales', (8, 16, 32))
         self._anchors = generate_anchors(scales=np.array(anchor_scales))
         self._num_anchors = self._anchors.shape[0]
 
@@ -68,15 +63,15 @@ class ProposalLayer(UserFunction):
         # use potentially different number of proposals for training vs evaluation
         if len(outputs_to_retain) == 0:
             # print("EVAL")
-            pre_nms_topN = cfg["TEST"].RPN_PRE_NMS_TOP_N
-            post_nms_topN = cfg["TEST"].RPN_POST_NMS_TOP_N
-            nms_thresh = cfg["TEST"].RPN_NMS_THRESH
-            min_size = cfg["TEST"].RPN_MIN_SIZE
+            pre_nms_topN = self._layer_config['test_pre_nms_topN']
+            post_nms_topN = self._layer_config['test_post_nms_topN']
+            nms_thresh = self._layer_config['test_nms_thresh']
+            min_size = self._layer_config['test_min_size']
         else:
-            pre_nms_topN = cfg["TRAIN"].RPN_PRE_NMS_TOP_N
-            post_nms_topN = cfg["TRAIN"].RPN_POST_NMS_TOP_N
-            nms_thresh = cfg["TRAIN"].RPN_NMS_THRESH
-            min_size = cfg["TRAIN"].RPN_MIN_SIZE
+            pre_nms_topN = self._layer_config['train_pre_nms_topN']
+            post_nms_topN = self._layer_config['train_post_nms_topN']
+            nms_thresh = self._layer_config['train_nms_thresh']
+            min_size = self._layer_config['train_min_size']
 
         bottom = arguments
         assert bottom[0].shape[0] == 1, \
@@ -151,7 +146,7 @@ class ProposalLayer(UserFunction):
 
         # 4. sort all (proposal, score) pairs by score from highest to lowest
         # 5. take top pre_nms_topN (e.g. 6000)
-        order = scores.ravel().argsort()[::-1]
+        order = scores.ravel().argsort(kind='mergesort')[::-1]
         if pre_nms_topN > 0:
             order = order[:pre_nms_topN]
         proposals = proposals[order, :]
@@ -188,20 +183,16 @@ class ProposalLayer(UserFunction):
         pass
 
     def clone(self, cloned_inputs):
-        return ProposalLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], param_str=self.param_str_)
+        return ProposalLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], layer_config=self._layer_config)
 
     def serialize(self):
         internal_state = {}
-        internal_state['param_str'] = self.param_str_
-
+        internal_state['layer_config'] = self._layer_config
         return internal_state
 
     @staticmethod
     def deserialize(inputs, name, state):
-        param_str = state['param_str']
-
-        return ProposalLayer(inputs[0], inputs[1], inputs[2], name=name, param_str=param_str)
-
+        return ProposalLayer(inputs[0], inputs[1], inputs[2], layer_config=state['layer_config'], name=name)
 
 def _filter_boxes(boxes, min_size):
     """Remove all boxes with any side smaller than min_size."""

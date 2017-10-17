@@ -778,6 +778,172 @@ void ValueCopyToSparseCSCTest(const DeviceDescriptor& device)
     }, "The expected exception has not been caught: The Value cannot be copied to buffers in sparse format, since it contains multiple sequences. Only single sequence is supported now.");
 }
 
+void ValueCopyToWithUnboundDimension(DeviceDescriptor device)
+{
+    std::vector<std::vector<float>> output;
+    std::vector<size_t> expectedSeqLens;
+    std::vector<std::vector<float>> input;
+    Variable sampleVariable;
+    NDShape sampleShape;
+    size_t batchCount;
+    std::default_random_engine generator;
+    std::uniform_int_distribution<size_t> distribution(1,10);
+
+    // Prepare value with 1 batch and 1 sequence.
+    sampleShape = CreateShape(3, 10);
+    input = GenerateSequences<float>({ 1 }, sampleShape);
+    auto val = Value::Create(sampleShape, input, device);
+
+    // Test variable having shape with 1 InferredDimentsion, no dynamic axis.
+    sampleVariable = CreateVariable<float>({ sampleShape[0], sampleShape[1], NDShape::InferredDimension }, 0);
+    val->CopyVariableValueTo(sampleVariable, output);
+    CheckCopyToOutput(input, output);
+
+    // Test variable having shape with 1 InferredDimentsion, 1 dynamic axis.
+    sampleVariable = CreateVariable<float>({ sampleShape[0], NDShape::InferredDimension, sampleShape[2] }, 1);
+    val->CopyVariableValueTo(sampleVariable, output);
+    CheckCopyToOutput(input, output);
+
+    // Test variable having shape with 1 InferredDimentsion, 2 dynamic axes.
+    sampleShape = CreateShape(3, 10);
+    input = GenerateSequences<float>({ 1 }, sampleShape);
+    val = Value::Create(sampleShape, input, device);
+
+    sampleVariable = CreateVariable<float>({ NDShape::InferredDimension, sampleShape[1], sampleShape[2] }, 2);
+    val->CopyVariableValueTo(sampleVariable, output);
+    CheckCopyToOutput(input, output);
+
+    // Prepare value with batch length >= 1, but each batch has only 1 sequence.
+    sampleShape = CreateShape(3, 10);
+    batchCount = distribution(generator);
+    expectedSeqLens.clear();
+    for (size_t i = 0; i < batchCount; i++)
+        expectedSeqLens.push_back(1);
+    input = GenerateSequences<float>(expectedSeqLens, sampleShape);
+    val = Value::Create(sampleShape, input, device);
+
+    // Test variable having shape with 1 InferredDimentsion, 1 dynamic axis.
+    sampleVariable = CreateVariable<float>({ NDShape::InferredDimension, sampleShape[1], sampleShape[2] }, 1);
+    val->CopyVariableValueTo(sampleVariable, output);
+    CheckCopyToOutput(input, output);
+
+    sampleShape = CreateShape(3, 10);
+    batchCount = distribution(generator);
+    expectedSeqLens.clear();
+    for (size_t i = 0; i < batchCount; i++)
+        expectedSeqLens.push_back(1);
+    input = GenerateSequences<float>(expectedSeqLens, sampleShape);
+    val = Value::Create(sampleShape, input, device);
+
+    sampleVariable = CreateVariable<float>({ sampleShape[0], NDShape::InferredDimension,  sampleShape[2] }, 1);
+    val->CopyVariableValueTo(sampleVariable, output);
+    CheckCopyToOutput(input, output);
+
+    // Test variable having shape with 1 InferredDimentsion, 2 dynamic axes.
+    sampleVariable = CreateVariable<float>({ sampleShape[0], sampleShape[1], NDShape::InferredDimension }, 2);
+    val->CopyVariableValueTo(sampleVariable, output);
+    CheckCopyToOutput(input, output);
+
+    // Test exception for variable without dynamic axis
+    sampleShape = CreateShape(3, 10);
+    // make sure the batch length > 1.
+    batchCount = distribution(generator) + 1;
+    expectedSeqLens.clear();
+    for (size_t i = 0; i < batchCount; i++)
+        expectedSeqLens.push_back(1);
+    input = GenerateSequences<float>(expectedSeqLens, sampleShape);
+    val = Value::Create(sampleShape, input, device);
+
+    sampleVariable = CreateVariable<float>({ sampleShape[0], sampleShape[1], NDShape::InferredDimension }, 0);
+    VerifyException([&val, &sampleVariable, &output]() {
+        val->CopyVariableValueTo(sampleVariable, output);
+    }, "The expected exception has not been caught: The dimension size of the Value must be 1, because this axis is not specified as a dynamic axis of the Variable.");
+
+    // Prepare value with batch length >= 1 and sequence length >= 1.
+    sampleShape = CreateShape(2, 10);
+    batchCount = distribution(generator);
+    expectedSeqLens = GenerateSequenceLengths(batchCount, 15);
+    input = GenerateSequences<float>(expectedSeqLens, sampleShape);
+    val = Value::Create(sampleShape, input, device);
+
+    // Test variable having shape with 1 InferredDimentsion, 2 dynamic axes.
+    sampleVariable = CreateVariable<float>({ NDShape::InferredDimension, sampleShape[1] }, 2);
+    val->CopyVariableValueTo(sampleVariable, output);
+    CheckCopyToOutput(input, output);
+
+    sampleVariable = CreateVariable<float>({ sampleShape[0], NDShape::InferredDimension }, 2);
+    val->CopyVariableValueTo(sampleVariable, output);
+    CheckCopyToOutput(input, output);
+
+    // Test variable having shape with 2 InferredDimentsions.
+    sampleShape = CreateShape(2, 10);
+    batchCount = distribution(generator);
+    expectedSeqLens = GenerateSequenceLengths(batchCount, 15);
+    input = GenerateSequences<float>(expectedSeqLens, sampleShape);
+    val = Value::Create(sampleShape, input, device);
+
+    sampleVariable = CreateVariable<float>(NDShape(2), 2);
+    val->CopyVariableValueTo(sampleVariable, output);
+    CheckCopyToOutput(input, output);
+
+    // Test exception if the variable having only 1 dynamic axis.
+    sampleShape = CreateShape(2, 10);
+    // Ensure that batch length > 1.
+    batchCount = distribution(generator) + 1;
+    // The length of sequences returned by GenerateSequenceLengths is > 1.
+    expectedSeqLens = GenerateSequenceLengths(batchCount, 15);
+    input = GenerateSequences<float>(expectedSeqLens, sampleShape);
+    val = Value::Create(sampleShape, input, device);
+    sampleVariable = CreateVariable<float>({ sampleShape[0], NDShape::InferredDimension }, 1);
+    VerifyException([&val, &sampleVariable, &output]() {
+        val->CopyVariableValueTo(sampleVariable, output);
+    }, "The expected exception has not been caught: The dimension size of the Value must be 1, because this axis is not specified as a dynamic axis of the Variable.");
+
+    // Test exception if the variable having only 0 dynamic axis.
+    sampleVariable = CreateVariable<float>({ sampleShape[0], NDShape::InferredDimension }, 0);
+    VerifyException([&val, &sampleVariable, &output]() {
+        val->CopyVariableValueTo(sampleVariable, output);
+    }, "The expected exception has not been caught: The dimension size of the Value must be 1, because this axis is not specified as a dynamic axis of the Variable.");
+
+    // Test exception if the variable having only 0 dynamic axis, batch length > 1 but sequence length == 1.
+    sampleShape = CreateShape(2, 10);
+    // Ensure that batch length > 1.
+    batchCount = distribution(generator) + 1;
+    expectedSeqLens.clear();
+    for (size_t i = 0; i < batchCount; i++)
+        expectedSeqLens.push_back(1);
+    input = GenerateSequences<float>(expectedSeqLens, sampleShape);
+    val = Value::Create(sampleShape, input, device);
+
+    sampleVariable = CreateVariable<float>({ sampleShape[0], NDShape::InferredDimension }, 0);
+    VerifyException([&val, &sampleVariable, &output]() {
+        val->CopyVariableValueTo(sampleVariable, output);
+    }, "The expected exception has not been caught: The dimension size of the Value must be 1, because this axis is not specified as a dynamic axis of the Variable.");
+
+    // Test variable with 1 free dimension.
+    sampleShape = CreateShape(2, 10);
+    batchCount = distribution(generator);
+    expectedSeqLens = GenerateSequenceLengths(batchCount, 15);
+    input = GenerateSequences<float>(expectedSeqLens, sampleShape);
+    val = Value::Create(sampleShape, input, device);
+
+    sampleVariable = CreateVariable<float>({ sampleShape[0], NDShape::FreeDimension }, 2);
+    val->CopyVariableValueTo(sampleVariable, output);
+    CheckCopyToOutput(input, output);
+
+    // Test variable with 2 free dimensions.
+    sampleShape = CreateShape(2, 10);
+    batchCount = distribution(generator);
+    expectedSeqLens.clear();
+    for (size_t i = 0; i < batchCount; i++)
+        expectedSeqLens.push_back(1);
+    input = GenerateSequences<float>(expectedSeqLens, sampleShape);
+    val = Value::Create(sampleShape, input, device);
+    sampleVariable = CreateVariable<float>({ NDShape::FreeDimension, NDShape::FreeDimension }, 2);
+    val->CopyVariableValueTo(sampleVariable, output);
+    CheckCopyToOutput(input, output);
+}
+
 void ValueCopyToExceptionsTest(const DeviceDescriptor& device)
 {
     std::vector<size_t> expectedSeqLens = {1};
@@ -793,12 +959,6 @@ void ValueCopyToExceptionsTest(const DeviceDescriptor& device)
 
     // Test variable with unknown shape
     auto sampleVariable = CreateVariable<float>(NDShape::Unknown(), 0);
-    VerifyException([&val, &sampleVariable, &output]() {
-        val->CopyVariableValueTo(sampleVariable, output);
-    }, "The expected exception has not been caught: It is not supported that the outputVariable has a unknown shape or inferred dimension.");
-
-    // Test variable having shape with InferredDimentsion.
-    sampleVariable = CreateVariable<float>(NDShape(2), 0);
     VerifyException([&val, &sampleVariable, &output]() {
         val->CopyVariableValueTo(sampleVariable, output);
     }, "The expected exception has not been caught: It is not supported that the outputVariable has a unknown shape or inferred dimension.");
@@ -1448,6 +1608,24 @@ BOOST_AUTO_TEST_CASE(ValueCopyToDenseInGPU)
         ValueCopyToDenseTest<double>(DeviceDescriptor::GPUDevice(0));
     }
 }
+
+BOOST_AUTO_TEST_CASE(ValueCopyWithUnboundDimensionInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    ValueCopyToWithUnboundDimension(DeviceDescriptor::CPUDevice());
+}
+
+
+BOOST_AUTO_TEST_CASE(ValueCopyWithUnboundDimensionInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        ValueCopyToWithUnboundDimension(DeviceDescriptor::GPUDevice(0));
+    }
+}
+
 
 BOOST_AUTO_TEST_CASE(ValueCopyToOneHotInCPU)
 {

@@ -165,8 +165,8 @@ IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefini
 
     for (auto vl : outputLayouts)
     {
-        fprintf(stderr, "Output dimension: %" PRIu64 "\n", vl.m_numElements);
-        fprintf(stderr, "Output name: %ls\n", vl.m_name.c_str());
+        printf("Output dimension: %" PRIu64 "\n", vl.m_numElements);
+        printf("Output name: %ls\n", vl.m_name.c_str());
     }
 
     eval->StartForwardEvaluation({ outputLayouts[0].m_name });
@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
         eval->Destroy();
        
         // This pattern is used by End2EndTests to check whether the program runs to complete.
-        fprintf(stdout, "Evaluation complete.\n");
+        printf("Evaluation complete.\n");
         ret = 0;
     }
     catch (const std::exception& err)

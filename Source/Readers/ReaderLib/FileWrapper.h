@@ -30,7 +30,13 @@ public:
 
     FileWrapper(const std::wstring& filename, const wchar_t* mode)
         : m_filename(filename), 
-        m_file(_wfopen(filename.c_str(), mode), std::fclose)
+        m_file(_wfopen(filename.c_str(), mode), [](FILE* m_file)
+        {
+            if (m_file)
+            {
+                std::fclose(m_file);
+            }
+        })
     {}
 
     // This variant of the FileWrapper does not own the file pointer
@@ -131,7 +137,7 @@ public:
 
     // This method should not be used if T has bare pointers as its members.
     template <typename T, typename std::enable_if<std::is_pod<T>::value>::type* = nullptr>
-    inline bool ReadOrDie(T& value)
+    inline void ReadOrDie(T& value)
     {
         if (!TryRead(value))
             RuntimeError("Error reading file '%ls': %s.", m_filename.c_str(), strerror(errno));
@@ -183,6 +189,16 @@ public:
     {
         if (!IsOpen())
             RuntimeError("Input file '%ls' is not open.", Filename().c_str());
+    }
+
+    inline bool CheckUnicode() const
+    {
+        return funicode(File());
+    }
+
+    inline bool CheckError() const
+    {
+        return (ferror(File()) != 0);
     }
 
     inline FILE* File() const

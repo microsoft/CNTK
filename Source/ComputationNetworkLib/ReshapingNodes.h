@@ -154,7 +154,12 @@ public:
     {
         auto result     =             ValueFor(fr);
         auto inputValue = InputRef(0).ValueFor(fr);
-        result.AssignValuesOf(inputValue.Reshaped(result.GetNumRows(), result.GetNumCols()));
+        ForwardPropImpl(result, inputValue);
+    }
+
+    static void ForwardPropImpl(Matrix<ElemType> &result, Matrix<ElemType> &input)
+    {
+        result.AssignValuesOf(input.Reshaped(result.GetNumRows(), result.GetNumCols()));
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -162,9 +167,14 @@ public:
         auto gradient      =                      GradientFor(fr);
         auto inputGradient = InputRef(inputIndex).GradientFor(fr);
 
-        if (Input(inputIndex)->IsGradientOptimized(this))
+        BackpropImpl(gradient, inputGradient, Input(inputIndex)->IsGradientOptimized(this), Input(inputIndex)->ParentGradientReused());
+    }
+
+    static void BackpropImpl(Matrix<ElemType> &gradient, Matrix<ElemType> &inputGradient, bool isGradientOptimized, bool isParentGradientReused)
+    {
+        if (isGradientOptimized)
         {
-            if (Input(inputIndex)->ParentGradientReused())
+            if (isParentGradientReused)
             {
                 if (gradient.Data() != inputGradient.Data() ||
                     gradient.GetNumRows() != inputGradient.GetNumRows() ||
@@ -531,10 +541,7 @@ public:
         auto& inputValue = InputRef(0).Value();
         auto& outputValue = Value();
 
-        auto origin_rows = outputValue.GetNumRows();
-        auto origin_cols = outputValue.GetNumCols();
-        outputValue.AssignValuesOf(inputValue);
-        outputValue.Resize(origin_rows, origin_cols);
+        ReshapeNode<ElemType>::ForwardPropImpl(outputValue, inputValue);
     }
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
@@ -542,20 +549,7 @@ public:
         auto& gradient = Gradient();
         auto& inputGradient = Input(0)->Gradient();
 
-        if (Input(0)->IsGradientOptimized(this))
-        {
-            if (Input(0)->ParentGradientReused())
-            {
-                if (gradient.Data() != inputGradient.Data() ||
-                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
-                    gradient.GetNumCols() != inputGradient.GetNumCols())
-                    LogicError("Gradient should be reused");
-            }
-            else
-                inputGradient.AssignValuesOf(gradient);
-        }
-        else
-            inputGradient += gradient;
+        ReshapeNode<ElemType>::BackpropImpl(gradient, inputGradient, Input(0)->IsGradientOptimized(this), Input(0)->ParentGradientReused());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -614,14 +608,14 @@ template class ToBatchAxisNode<double>;
 
 
 template <class ElemType>
-class UnpackBatchAixsNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+class UnpackBatchAxisNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() {
-        return L"UnpackBatchAixs";
+        return L"UnpackBatchAxis";
     }
 public:
-    UnpackBatchAixsNode(DEVICEID_TYPE deviceId, const wstring& name)
+    UnpackBatchAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
     }
@@ -631,11 +625,7 @@ public:
         auto& inputValue = InputRef(0).Value();
         auto& outputValue = Value();
 
-        auto origin_rows = outputValue.GetNumRows();
-        auto origin_cols = outputValue.GetNumCols();
-
-        outputValue.AssignValuesOf(inputValue);
-        outputValue.Resize(origin_rows, origin_cols);
+        ReshapeNode<ElemType>::ForwardPropImpl(outputValue, inputValue);
     }
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
@@ -643,20 +633,7 @@ public:
         auto& gradient = Gradient();
         auto& inputGradient = Input(0)->Gradient();
 
-        if (Input(0)->IsGradientOptimized(this))
-        {
-            if (Input(0)->ParentGradientReused())
-            {
-                if (gradient.Data() != inputGradient.Data() ||
-                    gradient.GetNumRows() != inputGradient.GetNumRows() ||
-                    gradient.GetNumCols() != inputGradient.GetNumCols())
-                    LogicError("Gradient should be reused");
-            }
-            else
-                inputGradient.AssignValuesOf(gradient);
-        }
-        else
-            inputGradient += gradient;
+        ReshapeNode<ElemType>::BackpropImpl(gradient, inputGradient, Input(0)->IsGradientOptimized(this), Input(0)->ParentGradientReused());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override 
@@ -708,8 +685,8 @@ public:
     }
 };
 
-template class UnpackBatchAixsNode<float>;
-template class UnpackBatchAixsNode<double>;
+template class UnpackBatchAxisNode<float>;
+template class UnpackBatchAxisNode<double>;
 
 // -----------------------------------------------------------------------
 // SliceNode (input)
@@ -880,6 +857,197 @@ private:
 
 template class SliceNode<float>;
 template class SliceNode<double>;
+
+enum class PaddingType
+{
+    CONSTANTPAD = 0, // the default, fill the padding cells with 0
+    REFLECTPAD = 1, // Padding with reflect mode
+    SYMMETRICPAD = 2, // Padding with symmetric mode
+};
+
+template <class ElemType>
+class PaddingNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; 
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() 
+    {
+        return L"Padding";
+    }
+public:
+    
+
+public:
+    PaddingNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<size_t> head, std::vector<size_t> foot, PaddingType mode = PaddingType::CONSTANTPAD, ElemType constantValue = 0)
+        : Base(deviceId, name), m_head(head), m_foot(foot), m_mode(mode), m_constant_value(constantValue)
+    {
+    }
+
+    PaddingNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name)
+    {
+    }
+    
+public:
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
+        let input = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        int maxRank = (int)(Input(0)->GetSampleLayout().GetRank());
+        let dims = Input(0)->GetSampleLayout().GetDims();
+        let outputDims = GetSampleLayout().GetDims();
+        auto outputSubSlice = outputSlice;
+        for (int index = maxRank - 1; index >= 0; index--)
+        {
+            outputSubSlice.NarrowTo(index, m_head[index], dims[index] + m_head[index]);
+        }
+
+        if (m_mode == PaddingType::CONSTANTPAD)
+        {
+            Value().SetValue(m_constant_value);
+        }
+
+        auto output = TensorView<ElemType>(ValuePtr(), outputSubSlice);
+        output.AssignCopyOf(input);
+
+        if (m_mode == PaddingType::REFLECTPAD)
+        {
+            for (int index = maxRank - 1; index >= 0; index--)
+            {
+                FillPaddingCells(fr, rank, index, 0, m_head[index] + 1, m_head[index], false);
+                FillPaddingCells(fr, rank, index, outputDims[index] - m_foot[index], outputDims[index] - 2 * m_foot[index] - 1, m_foot[index], true);
+            }
+        }
+        else if (m_mode == PaddingType::SYMMETRICPAD)
+        {
+            for (int index = maxRank - 1; index >= 0; index--)
+            {
+                FillPaddingCells(fr, rank, index, 0, m_head[index], m_head[index], false);
+                FillPaddingCells(fr, rank, index, outputDims[index] - m_foot[index], outputDims[index] - 2 * m_foot[index], m_foot[index], true);
+            }
+        }
+    }
+    
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        let outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
+
+        auto inputGrad = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
+        int maxRank = (int)(Input(inputIndex)->GetSampleLayout().GetRank());
+        let dims = Input(inputIndex)->GetSampleLayout().GetDims();
+        let outputDims = GetSampleLayout().GetDims();
+        // first folder the gradients if its padding mode is reflect or symmetric
+        if (m_mode == PaddingType::REFLECTPAD)
+        {
+            for (int index = maxRank - 1; index >= 0; index--)
+            {
+                AddPaddingGradients(fr, rank, index, 0, m_head[index] + 1, m_head[index], false);
+                AddPaddingGradients(fr, rank, index, outputDims[index] - m_foot[index], outputDims[index] - 2 * m_foot[index] - 1, m_foot[index], true);
+            }
+        }
+        else if (m_mode == PaddingType::SYMMETRICPAD)
+        {
+            for (int index = maxRank - 1; index >= 0; index--)
+            {
+                AddPaddingGradients(fr, rank, index, 0, m_head[index], m_head[index], false);
+                AddPaddingGradients(fr, rank, index, outputDims[index] - m_foot[index], outputDims[index] - 2 * m_foot[index], m_foot[index], true);
+            }
+        }
+        // copy to input gradient
+        auto outputSubSlice = outputSlice;
+        for (int index = maxRank - 1; index >= 0; index--)
+        {
+            outputSubSlice.NarrowTo(index, m_head[index], dims[index] + m_head[index]);
+        }
+
+        let outputGrad = TensorView<ElemType>(GradientPtr(), outputSubSlice);
+        inputGrad.AddCopyOf(outputGrad);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override 
+    {
+        return false;
+    }
+    
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override 
+    {
+        return false;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        TensorShape inputShape = Input(0)->GetSampleLayout();
+        auto inputDims = inputShape.GetDims();
+        if (inputDims.size() != m_head.size() || m_head.size() != m_foot.size())
+            LogicError("The padding op's pattern doesn't match the sample layout of its input");
+
+        SmallVector<size_t> outDims;
+        for (int i = 0; i < inputDims.size(); i++)
+            outDims.push_back(inputDims[i] + m_head[i] + m_foot[i]);
+
+        if (isFinalValidationPass)
+        {
+            if (m_mode == PaddingType::REFLECTPAD)
+            {
+                for (int i = 0; i < outDims.size(); i++)
+                    if (m_head[i] > outDims[i] - 1 || m_foot[i] > outDims[i] - 1)
+                        LogicError("Pad: with REFLECTPAD mode, the head and foot length must be no greater than input dimension - 1.");
+            }
+            else if (m_mode == PaddingType::SYMMETRICPAD)
+            {
+                for (int i = 0; i < outDims.size(); i++)
+                    if (m_head[i] > outDims[i] || m_foot[i] > outDims[i])
+                        LogicError("Pad: with SYMMETRICPAD mode, the head and foot length must be no greater than input dimension.");
+            }
+        }
+
+        SetDims(TensorShape(outDims), HasMBLayout());
+    }
+
+private:
+
+    void FillPaddingCells(const FrameRange& fr, size_t rank, size_t axis, size_t outputIndex, size_t inputIndex, size_t size, bool reverse)
+    {
+        if (size > 0)
+        {
+            auto outputOriginSlice = GetTensorSliceFor(rank, fr);
+            auto outputSlice = outputOriginSlice.NarrowTo(axis, outputIndex, outputIndex + size, reverse ? 1 : -1);
+            auto inputOriginSlice = GetTensorSliceFor(rank, fr);
+            auto inputSlice = inputOriginSlice.NarrowTo(axis, inputIndex, inputIndex + size, reverse ? -1 : 1);
+
+            auto outputTensor = TensorView<ElemType>(ValuePtr(), outputSlice);
+            auto inputTensor = TensorView<ElemType>(ValuePtr(), inputSlice);
+            outputTensor.AssignCopyOf(inputTensor);
+        }
+    }
+
+    void AddPaddingGradients(const FrameRange& fr, size_t rank, size_t axis, size_t outputIndex, size_t inputIndex, size_t size, bool reverse)
+    {
+        if (size > 0)
+        {
+            auto outputOriginSlice = GetTensorSliceFor(rank, fr);
+            auto outputSlice = outputOriginSlice.NarrowTo(axis, outputIndex, outputIndex + size, reverse ? 1 : -1);
+            auto inputOriginSlice = GetTensorSliceFor(rank, fr);
+            auto inputSlice = inputOriginSlice.NarrowTo(axis, inputIndex, inputIndex + size, reverse ? -1 : 1);
+
+            auto outputTensor = TensorView<ElemType>(GradientPtr(), outputSlice);
+            auto inputTensor = TensorView<ElemType>(GradientPtr(), inputSlice);
+            inputTensor.AssignSumOf(outputTensor, inputTensor);
+        }
+    }
+
+    std::vector<size_t> m_head;
+    std::vector<size_t> m_foot;
+    PaddingType m_mode;
+    ElemType m_constant_value;
+};
+
+template class PaddingNode<float>;
+template class PaddingNode<double>;
 
 // -----------------------------------------------------------------------
 // CropNode
@@ -1944,8 +2112,8 @@ public:
     virtual bool OutputUsedInComputingInputNodesGradients() const override {
         return false;
     }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {
-        return false;
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override {
+        return childIndex == 0;
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override

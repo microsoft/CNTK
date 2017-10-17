@@ -41,10 +41,6 @@
 #define CUDA_LONG int32_t
 #endif
 
-// special markers in BlockId2ColOrRow()/ColOrRow2BlockId()
-static const GPUSPARSE_INDEX_TYPE Id_NotAssigned = -1;
-static const GPUSPARSE_INDEX_TYPE Id_Pending = INT_MAX;
-
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 
 // On older GPUs, CUDA atomicAdd() only exists for 'float'. This is the 'double' version.
@@ -314,6 +310,16 @@ __global__ void _elementWiseTanhOnCuda(
 {
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     res[id] = tanh_(a[id]);
+};
+
+template <class ElemType>
+__global__ void _elementWiseAtanhOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = atanh_(a[id]);
 };
 
 //to prevent negative values caused by floating operations, we force inputs to be >=0
@@ -1461,9 +1467,8 @@ __global__ void _adagrad4BlockSparse(
 
 template <class ElemType>
 __global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-                           ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+                           ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType unitGainFactor)
 {
-    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
@@ -1505,7 +1510,7 @@ inline __device__ ElemType _getvalue4BlockSparseCol(ElemType* v, const GPUSPARSE
     CUDA_LONG col = idx / len;
     CUDA_LONG row = idx - col * len;
     CUDA_LONG blockid = colOrRow2blockId[col];
-    return (blockid == Id_NotAssigned) ? 0 : v[blockid * len + row];
+    return (blockid == SparseIndex_NotAssigned) ? 0 : v[blockid * len + row];
 }
 
 template<class ElemType>
@@ -1514,7 +1519,7 @@ inline __device__ void _scalevalue4BlockSparseCol(ElemType* v, const GPUSPARSE_I
     CUDA_LONG col = idx / len;
     CUDA_LONG row = idx - col * len;
     CUDA_LONG blockid = colOrRow2blockId[col];
-    if (blockid != Id_NotAssigned)
+    if (blockid != SparseIndex_NotAssigned)
     {
         v[blockid * len + row] *= s;
     }
@@ -1524,9 +1529,8 @@ template <class ElemType>
 __global__ void _fsadagrad4BlockSparseCol(CUDA_LONG size, 
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType unitGainFactor)
 {
-    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
@@ -3253,6 +3257,50 @@ __global__ void _columnwiseScaleAndWeightedAdd4CSC(
     }
 }
 
+///
+/// adjusts the sparse block column matrix with the new Col2BlockId
+/// For each column, if new Col2BlockId contains valid index, a corresponding block exists at the index
+/// if old col2BlockId[i] contains value at that column, it would be copied over; otherwise the block would be filled with zeros
+///
+template <class ElemType>
+__global__ void _adjustCol2BlockId(
+    const int numRows,
+    const int numCols,
+    const GPUSPARSE_INDEX_TYPE* oldCol2BlockId,
+    const ElemType* oldNZ,
+    const GPUSPARSE_INDEX_TYPE* newCol2BlockId,
+    ElemType* newNZ,
+    GPUSPARSE_INDEX_TYPE* newBlockId2Col)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numCols)
+        return;
+
+    int newBlockId = newCol2BlockId[id];
+    if (newBlockId != SparseIndex_NotAssigned)
+    {
+        newBlockId2Col[newBlockId] = id;
+        int oldBlockId = oldCol2BlockId[id];
+        if (oldBlockId != SparseIndex_NotAssigned)
+        {
+            const ElemType* oldValue = oldNZ + numRows * oldBlockId;
+            ElemType* newValue = newNZ + numRows * newBlockId;
+            for (int row = 0; row < numRows; row++)
+            {
+                newValue[row] = oldValue[row];
+            }
+        }
+        else
+        {
+            ElemType* newValue = newNZ + numRows * newBlockId;
+            for (int row = 0; row < numRows; row++)
+            {
+                newValue[row] = 0;
+            }
+        }
+    }
+}
+
 template <class ElemType>
 __global__ void _reshape(
     const int oldNumRows,                       // old row count
@@ -3324,8 +3372,8 @@ __global__ void _findColsWithValues(
     if (nzIndex >= nnz)
         return;
 
-    if (col2BlockIds[rowIndexes[nzIndex]] == Id_NotAssigned)
-        col2BlockIds[rowIndexes[nzIndex]] = Id_Pending; // this row has value.
+    if (col2BlockIds[rowIndexes[nzIndex]] == SparseIndex_NotAssigned)
+        col2BlockIds[rowIndexes[nzIndex]] = SparseIndex_Pending; // this row has value.
 }
 
 //called before _denseMulSparseCSCTransposeToSparseBlockCol and after _findColsWithValuesto determine which columns have values and
@@ -3343,7 +3391,7 @@ __global__ void _determineBlockIds(
     if (col >= numCols)
         return;
 
-    if (col2BlockId[col] == Id_Pending)
+    if (col2BlockId[col] == SparseIndex_Pending)
     {
         GPUSPARSE_INDEX_TYPE blockIndex = atomicAdd((unsigned int*)blockSize, (unsigned int)1);
         col2BlockId[col] = blockIndex;
@@ -4145,9 +4193,8 @@ __global__ void _normalGradForSparseBlock(
     ElemType* lhsValues, // lhs is blockCol or blockRow
     const GPUSPARSE_INDEX_TYPE* blockIds,
     ElemType* rhs,
-    bool unitGainMomentum)
+    ElemType unitGainFactor)
 {
-    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - momentum) : 1.0;
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG row, col;
     if (blockCol)
@@ -5258,9 +5305,8 @@ __global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LON
 
 template <class ElemType>
 __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
 {
-    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
@@ -5306,9 +5352,8 @@ template <class ElemType>
 __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
 {
-    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
@@ -5380,32 +5425,54 @@ __global__ void _adadelta(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, E
 
 template <class ElemType>
 __global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
-    ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    const ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* blockId2ColOrRow, size_t numRows,
     ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
-    ElemType learningRate, ElemType rho, ElemType epsilon)
+    ElemType learningRate, ElemType rho, ElemType epsilon, 
+    const int* timestamps, int currentTimestamp)
 {
-    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
-    CUDA_LONG stride = blockDim.x * gridDim.x;
-    for (; idx < size; idx += stride)
+    auto sparseIndex = blockDim.x * blockIdx.x + threadIdx.x;
+    if (sparseIndex >= size)
+        return;
+    auto blockid = sparseIndex / numRows;
+    auto col = blockId2ColOrRow[blockid];
+    auto decay = pow_(rho, currentTimestamp - 1 - timestamps[col]);
+    auto denseIndex = col * numRows + sparseIndex % numRows;
+    ElemType g = grad_bsc[sparseIndex];
+    ElemType adaSqr = rho * decay * smoothAda[denseIndex] + (1.0f - rho) * g * g;
+    smoothAda[denseIndex] = adaSqr;
+    ElemType x2 = decay * smoothX2[denseIndex];
+    ElemType deltaX;
+    if (sizeof(ElemType) == sizeof(double))
     {
-        ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
-        ElemType adaSqr = rho * smoothAda[idx] + (1.0f - rho) * g * g;
-        smoothAda[idx] = adaSqr;
-        ElemType x2 = smoothX2[idx];
-        ElemType deltaX;
-        if (sizeof(ElemType) == sizeof(double))
-        {
-            deltaX = -sqrt(x2 + epsilon) * rsqrt(adaSqr + epsilon) * g;
-        }
-        else
-        {
-            deltaX = -sqrtf(x2 + epsilon) * rsqrtf(adaSqr + epsilon) * g;
-        }
+        deltaX = -sqrt(x2 + epsilon) * rsqrt(adaSqr + epsilon) * g;
+    }
+    else
+    {
+        deltaX = -sqrtf(x2 + epsilon) * rsqrtf(adaSqr + epsilon) * g;
+    }
+    smoothX2[denseIndex] = rho * x2 + (1.0f - rho) * deltaX * deltaX;
+    val[denseIndex] += learningRate * deltaX;
+}
 
-        smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
-        val[idx] += learningRate * deltaX;
+
+template <class ElemType>
+__global__ void _adadeltaFlush(CUDA_LONG N, size_t rows, ElemType* smoothAda, ElemType* smoothX2, 
+    ElemType rho, int* timestamps, int currentTimestamp)
+{
+    auto col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (col >= N)
+        return;
+    
+    auto decay = pow_(rho, currentTimestamp - timestamps[col]);
+    auto offset = rows * col;
+    timestamps[col] = 0;
+    for (auto row = 0; row < rows; ++row)
+    {
+        smoothAda[offset + row] *= decay;
+        smoothX2[offset + row] *= decay;
     }
 }
+
 
 // Calculate alpha in forward-backward calculation. equation (6), (7) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance

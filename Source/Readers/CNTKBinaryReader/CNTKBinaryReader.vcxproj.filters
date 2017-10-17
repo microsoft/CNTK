@@ -25,7 +25,7 @@
     <ClInclude Include="BinaryChunkDeserializer.h" />
     <ClInclude Include="BinaryDataChunk.h" />
     <ClInclude Include="BinaryDataDeserializer.h" />
-    <ClInclude Include="FileHelper.h" />
+    <ClInclude Include="CBFUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />

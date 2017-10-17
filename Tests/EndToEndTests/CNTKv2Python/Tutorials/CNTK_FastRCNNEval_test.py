@@ -10,7 +10,7 @@ import sys
 import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Examples","Image","Detection","FastRCNN", "CNTK_FastRCNN_Eval.ipynb")
+notebook = os.path.join(abs_path, "..", "..", "..", "..", "Examples","Image","Detection","FastRCNN", "BrainScript", "CNTK_FastRCNN_Eval.ipynb")
 
 sys.path.append(abs_path)
 

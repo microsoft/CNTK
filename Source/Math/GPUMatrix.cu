@@ -444,6 +444,8 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
         return _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opTanh:
         return _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opAtanh:
+        return _elementWiseAtanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opSqrt:
         return _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opExp:
@@ -1525,7 +1527,7 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
                                     ElemType momentum,
                                     ElemType adaWeight,
                                     ElemType adaMul,
-                                    bool unitGainMomentum)
+                                    ElemType unitGainFactor)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1540,7 +1542,7 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _fsadagrad<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(n, gradients.Data(), Data(), Data()+ n, functionValues.Data(),
-                                                                         learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
+                                                                         learnRatePerSample, momentum, adaWeight, adaMul, unitGainFactor);
 }
 
 template <class ElemType>
@@ -1551,7 +1553,7 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     ElemType adaWeight,
     ElemType adaMul,
     ElemType epsilon,
-    bool unitGainMomentum,
+    ElemType unitGainFactor,
     bool adamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
@@ -1567,7 +1569,7 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _adam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainMomentum, adamax);
+        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainFactor, adamax);
 }
 
 template <class ElemType>
@@ -1668,6 +1670,18 @@ void GPUMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<Ele
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _adadelta<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(), learningRate, rho, epsilon);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int* timestamps, int currentTimestamp)
+{
+    // Sets all timestamps to 0 and updates the two logical buffers that this object holds
+    // so that their values are the same as if a dense implementation of adadelta had been used.
+    // This basically means that the values of these buffers are set to decay * original value 
+    // where decay is rho ** (currentTimestamp - timestamp for that column)
+    size_t rows = GetNumRows();
+    int blocksPerGrid = (cols + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+    _adadeltaFlush<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (cols, rows, Data(), Data() + cols * rows, rho, timestamps, currentTimestamp);
 }
 
 template <class ElemType>
@@ -2352,6 +2366,9 @@ DEF_ELEMWISE_ASSIGN_FUNC(Cosh)
 
 DEF_ELEMWISE_INPLACE_FUNC(Sinh)
 DEF_ELEMWISE_ASSIGN_FUNC(Sinh)
+
+DEF_ELEMWISE_INPLACE_FUNC(Atanh)
+DEF_ELEMWISE_ASSIGN_FUNC(Atanh)
 
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)

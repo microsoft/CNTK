@@ -199,10 +199,10 @@ def test_ext_train(tmpdir):
     z = C.user_function(m) + p
 
     momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
-    lr_per_sample = C.learning_rate_schedule(0.007, C.UnitType.sample)
+    lr_per_sample = C.learning_parameter_schedule(0.007, minibatch_size = 1)
     trainer = C.Trainer(z, (z + 0, z + 0),
                         [C.momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
-                                        True)])
+                                        True, minibatch_size = 0)])
 
     i = 0
     while i < 100:
@@ -276,7 +276,7 @@ def test_ext_backpropstate(payload):
     m = C.user_function(TestBackPropState(in1, payload))
     z = m + p
 
-    lr_per_sample = C.learning_rate_schedule(0.007, C.UnitType.sample)
+    lr_per_sample = C.learning_parameter_schedule(0.007, minibatch_size=1)
     trainer = C.Trainer(None, (z), [C.sgd(z.parameters, lr_per_sample)])
 
     for i in range(100):
@@ -342,7 +342,7 @@ def test_ext_lambdafunc(tmpdir):
     z = Function.load(filepath)
 
     momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
-    lr_per_sample = C.learning_rate_schedule(0.007, C.UnitType.sample)
+    lr_per_sample = C.learning_parameter_schedule(0.007, minibatch_size = 1)
     trainer = C.Trainer(z, (z + 0, z + 0), [C.momentum_sgd(z.parameters,
                                                            lr_per_sample,
                                                            momentum_time_constant,
@@ -596,8 +596,8 @@ def test_udf_checkpointing(tmpdir):
     loss = C.cross_entropy_with_softmax(op, label)
     eval_error = C.classification_error(op, label)
 
-    lr_schedule = C.learning_rate_schedule(0.5, C.UnitType.minibatch)
-    learner = C.sgd(op.parameters, lr_schedule)
+    lr_schedule = C.learning_parameter_schedule(0.5)
+    learner = C.sgd(op.parameters, lr_schedule, minibatch_size = 0)
     trainer = C.Trainer(op, (loss, eval_error), [learner])
 
     trainer.train_minibatch({op.arguments[0]: np.random.random((2, 2)).astype(np.float32)}, device=dev)
@@ -704,3 +704,41 @@ def test_no_deadlock_init_outputs():
     from cntk import user_function
     with pytest.raises(RuntimeError):
         s = user_function(FaultyUserFunc(x))
+
+class DummyLayer(UserFunction):
+    def __init__(self, x, y, name='NewLayer'):
+        super(DummyLayer, self).__init__([x, y], name=name)
+
+    def forward(self, arguments, device=None, as_numpy=True):
+        return None, arguments
+
+    def backward(self, state, root_gradients, variables=None, as_numpy=True):
+        return root_gradients
+
+    def infer_outputs(self):
+        outputVar = [C.output_variable(self.inputs[idx].shape, self.inputs[idx].dtype,
+            self.inputs[idx].dynamic_axes, name='outDummyLayer') for idx in range(len(self.inputs))]
+        return outputVar
+
+    def serialize(self):
+        return None
+
+    @staticmethod
+    def deserialize(inputs, name, state):
+        return DummyLayer(inputs, name=name)
+
+def test_udf_in_recurrent_loop():
+    x = C.sequence.input_variable(1)
+
+    name = "NewLayer"
+    @C.layers.blocks.BlockFunction('NewLayer', name)
+    def newFunc(x, y):
+        return C.user_function(DummyLayer(x, y, name=name))
+
+    with C.layers.default_options(initial_state = 0.1):
+        m = C.layers.Recurrence(C.layers.LSTM(5) >> newFunc)(x)
+        m = C.sequence.last(m)
+        m = C.layers.Dense(1)(m)
+
+    with pytest.raises(RuntimeError):
+        m.eval([np.arange(10, dtype=np.float32)])

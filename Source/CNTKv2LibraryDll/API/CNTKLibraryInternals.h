@@ -83,7 +83,7 @@ namespace CNTK
 #define __declspec_noreturn __attribute__((noreturn))
 #endif
 
-// Some projects require only some generic data types/interfaces from this file, and do not want to link explicitely to CNTKv2Library.
+// Some projects require only some generic data types/interfaces from this file, and do not want to link explicitly to CNTKv2Library.
 // In this case they have to define CNTK_HEADERONLY_DEFINITIONS before including CNTKLibrary.h
 #ifndef CNTK_HEADERONLY_DEFINITIONS
 
@@ -143,7 +143,7 @@ namespace CNTK
 {
     // Forward declarations
     class Utils;
-    class NDShape; 
+    class NDShape;
     class PrimitiveFunction;
     class CompositeFunction;
     class BlockFunction;
@@ -251,7 +251,13 @@ namespace CNTK
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::vector<Axis>& axes, bool keepReducedDimensions, const std::wstring& name = L"");
         CNTK_API FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, const Variable& shiftWindow, const Variable& numberOfNegativeSamples, const std::wstring& name = L"");
         CNTK_API FunctionPtr Convolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
-                                         bool transpose, const NDShape& outputShape, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
+                                         const NDShape& dilation, bool transpose, const NDShape& outputShape, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
+        CNTK_API FunctionPtr SpatialConvolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing,
+                                                const std::vector<bool>& autoPadding, const NDShape& dilation, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
+        CNTK_API FunctionPtr GroupConvolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing,
+                                              const std::vector<bool>& autoPadding, const NDShape& dilation, size_t groups, size_t maxTempMemSizeInSamples,
+                                              const std::wstring& name = L"");
+                                         
 
         // This is meant for debugging purposes only and is very likely to be deprecated in the future.
         CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
@@ -286,6 +292,9 @@ namespace CNTK
 
         CNTK_API void EnableSynchronousGPUKernelExecution();
         CNTK_API bool IsSynchronousGPUKernelExecutionEnabled();
+
+        CNTK_API void UseSparseGradientAggregationInDataParallelSGD(bool enable);
+        CNTK_API bool ShouldUseSparseGradientAggregationInDataParallelSGD();
 
         CNTK_API unsigned long GetRandomSeed();
         CNTK_API void SetFixedRandomSeed(unsigned long value);
@@ -322,8 +331,8 @@ namespace CNTK
         LearnerPtr UniversalLearner(const std::vector<::CNTK::Parameter>& parameters, const std::vector<std::pair<::CNTK::Variable, ::CNTK::FunctionPtr> >& updates);
 #else
         /// Convenience constructor that should be used by foreign language bindings.
-        /// Workaround declaration for SWIG. 
-        /// This is for now necessary because it has been elusive to find an equivalent of 
+        /// Workaround declaration for SWIG.
+        /// This is for now necessary because it has been elusive to find an equivalent of
         /// %template() std::vector<std::pair<CNTK::Variable, std::shared_ptr<CNTK::Function>>>;
         /// which will generate correct code (i.e. code that will accept a list of tuples in the foreign language)
         /// when the proper declaration is processed by SWIG.
@@ -374,6 +383,13 @@ namespace CNTK
             ///
             CNTK_API void WriteValue(const std::wstring& name, float value, uint64_t step);
 
+#ifndef CNTK_UWP // doesn't support UWP due to compatibablity of opencv libs
+            ///
+            /// Record an image for a CNTK NDArrayViewPtr at a particular step.
+            ///
+            CNTK_API void WriteImage(const std::wstring& name, NDArrayViewPtr NDPtr, uint64_t step);
+#endif
+
             ///
             /// Flushes any outstanding records to disk. Returns true on success, false otherwise.
             ///
@@ -410,7 +426,7 @@ namespace CNTK
         };
 
         typedef std::shared_ptr<UDFDeserializeCallbackWrapper> UDFDeserializeCallbackWrapperPtr;
-        
+
         CNTK_API void RegisterUDFDeserializeCallbackWrapper(UDFDeserializeCallbackWrapperPtr callbackPtr);
 
 
@@ -450,7 +466,7 @@ namespace CNTK
             }
 
             Optional(const Optional&) = default; Optional& operator=(const Optional&) = default;
-            Optional(Optional&&) = delete; Optional& operator=(Optional&&) = delete; 
+            Optional(Optional&&) = delete; Optional& operator=(Optional&&) = delete;
         private:
              T m_value;
              bool m_initialized { false };
@@ -458,7 +474,7 @@ namespace CNTK
     }
 
     // Forward-declare test fixtures, so that they can be used as friends.
-    namespace Test 
+    namespace Test
     {
         struct DeviceSelectionTestFixture;
     }

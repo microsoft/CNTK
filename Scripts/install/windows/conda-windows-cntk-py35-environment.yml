@@ -11,6 +11,7 @@ dependencies:
 - numpy=1.11.2=py35_0
 - pandas=0.19.1=np111py35_0
 - pandas-datareader=0.2.1=py35_0
+- pandoc=1.19.2.1
 - pillow=3.2.0=py35_1
 - pip=8.1.2=py35_0
 - python=3.5.2=0
@@ -23,6 +24,7 @@ dependencies:
 - six=1.10.0=py35_0
 - wheel=0.29.0=py35_0
 - opencv=3.1.0=np111py35_1
+- dlib=19.0=np111py35_200
 - pip:
   - gym==0.5.2
   - keras==2.0.6
@@ -31,6 +33,7 @@ dependencies:
   - pytest==3.0.3
   - sphinx-rtd-theme==0.2.4
   - sphinx==1.5.4
+  - nbsphinx==0.2.14
   - twine==1.8.1
   - protobuf==3.2.0
   - gym==0.5.2

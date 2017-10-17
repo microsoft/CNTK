@@ -25,7 +25,7 @@
   <!-- Explicitly defines the version of the dependent assemblies to avoid build errors or stale binaries. -->
   <!-- The change of CntkComponentVersion in CNTK.Common.props cannot be populated correctly without restarting VS and cleaning solution. -->
   <PropertyGroup>
-    <CntkCsAssemblyVersion>2.1</CntkCsAssemblyVersion>
+    <CntkCsAssemblyVersion>2.2</CntkCsAssemblyVersion>
     <CntkCsAssemblyVersion Condition="$(DebugBuild)">$(CntkCsAssemblyVersion)d</CntkCsAssemblyVersion>
   </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)">
@@ -62,6 +62,9 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCSEvalCPUOnlyExamples\CNTKExtensions.cs">
+      <Link>CNTKExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\..\Examples\Evaluation\ImageExtension\CNTKImageProcessing.cs">
       <Link>CNTKImageProcessing.cs</Link>
     </Compile>

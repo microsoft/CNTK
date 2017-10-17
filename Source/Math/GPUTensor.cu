@@ -264,7 +264,7 @@ struct TensorOps
 };
 
 // ----------------------------------------------------------------------------
-// Function to update an aggregate value for the specifed reduction operation
+// Function to update an aggregate value for the specified reduction operation
 // ----------------------------------------------------------------------------
 
 template <typename ElemType> __device__ ElemType AggregateNeutralValue(ElementWiseOperator op)

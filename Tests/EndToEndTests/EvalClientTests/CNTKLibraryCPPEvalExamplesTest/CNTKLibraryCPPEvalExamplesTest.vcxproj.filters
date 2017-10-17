@@ -18,10 +18,13 @@
     <ClCompile Include="CNTKLibraryCPPEvalExamplesTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\CNTKv2Library\Common\Common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="EvalMultithreads.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Common.cpp">
+    <ClCompile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalCPUOnlyExamples\CNTKLibraryCPPEvalExamples.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

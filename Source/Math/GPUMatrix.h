@@ -60,6 +60,7 @@ void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+MATH_API std::size_t GetCUDNNVersion();
 
 class DataTransferer;
 
@@ -227,10 +228,10 @@ public:
     ElemType Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
 
     void FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-                   ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+                   ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType unitGainFactor);
 
     void Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax=false);
+              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax=false);
 
     ElemType RmsProp(GPUMatrix<ElemType>& gradients, 
                      ElemType RMS_GAMMA, 
@@ -242,6 +243,7 @@ public:
                      const bool initialized);
 
     void AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
+    void AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int* timestamps, int currentTimestamp);
 
     void Reshape(const size_t numRows, const size_t numCols);
 
@@ -350,6 +352,9 @@ public:
 
     GPUMatrix<ElemType>& InplaceTanh();
     GPUMatrix<ElemType>& AssignTanhOf(const GPUMatrix<ElemType>& a);
+
+    GPUMatrix<ElemType>& InplaceAtanh();
+    GPUMatrix<ElemType>& AssignAtanhOf(const GPUMatrix<ElemType>& a);
 
     GPUMatrix<ElemType>& InplaceLogSoftmax(const bool isColWise);
     GPUMatrix<ElemType>& AssignLogSoftmaxOf(const GPUMatrix<ElemType>& a, const bool isColWise);

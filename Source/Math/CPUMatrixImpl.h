@@ -1265,10 +1265,8 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
                                     ElemType momentum,
                                     ElemType adaWeight,
                                     ElemType adaMul,
-                                    bool unitGainMomentum)
+                                    ElemType unitGainFactor)
 {
-    auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
-
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
     if (IsEmpty() || (GetNumCols() < numColsNeeded))
@@ -1315,10 +1313,9 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
 
 template <class ElemType>
 void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
+    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
-    auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
 
     if (IsEmpty() || (GetNumCols() < numColsNeeded))
     {
@@ -1484,6 +1481,30 @@ void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<Ele
         ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
         smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
         val[i] += learningRate * deltaX;
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int* timestamps, int currentTimestamp)
+{
+    // Sets all timestamps to 0 and updates the two logical buffers that this object holds
+    // so that their values are the same as if a dense implementation of adadelta had been used.
+    // This basically means that the values of these buffers are set to decay * original value 
+    // where decay is rho ** (currentTimestamp - timestamp for that column)
+    auto rows = GetNumRows();
+    auto smoothAda = Data();
+    auto smoothX2 = Data() + cols * rows;
+#pragma omp parallel for
+    for (auto col = 0; col < cols; ++col)
+    {
+        auto decay = std::pow(rho, ElemType(currentTimestamp - timestamps[col]));
+        auto offset = rows * col;
+        timestamps[col] = 0;
+        for (auto row = 0; row < rows; ++row)
+        {
+            smoothAda[offset + row] *= decay;
+            smoothX2[offset + row] *= decay;
+        }
     }
 }
 
@@ -2360,6 +2381,45 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTanhOf(const CPUMatrix<ElemType>
         for (long i = m & ~3; i < m; i++)
         {
             us(i, j) = tanh(a(i, j));
+        }
+    }
+
+    return *this;
+}
+
+//[this]=atanh([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceAtanh()
+{
+    return AssignAtanhOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAtanhOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAtanhOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+    long m = (long) GetNumRows(), n = (long) GetNumCols();
+#pragma omp parallel for
+    for (long j = 0; j < n; j++)
+    {
+        // four-way unrolling
+        for (long i = 0; i < (m & ~3); i += 4)
+        {
+            us(i, j) = atanh(a(i, j));
+            us(i + 1, j) = atanh(a(i + 1, j));
+            us(i + 2, j) = atanh(a(i + 2, j));
+            us(i + 3, j) = atanh(a(i + 3, j));
+        }
+        // handle remaining stuffs
+        for (long i = m & ~3; i < m; i++)
+        {
+            us(i, j) = atanh(a(i, j));
         }
     }
 
@@ -7332,12 +7392,12 @@ template <class ElemType>
 int CPUMatrix<ElemType>::Argmax() const
 {
     int maxArg = -1;
-    ElemType maxValue = std::numeric_limits<ElemType>::min();
+    ElemType maxValue = std::numeric_limits<ElemType>::lowest();
 
 #pragma omp parallel 
     {
         int localMaxArg = -1;
-        ElemType localMaxValue = std::numeric_limits<ElemType>::min();
+        ElemType localMaxValue = std::numeric_limits<ElemType>::lowest();
 
 #pragma omp for
         for (int index = 0; index < (int)GetNumElements(); ++index)

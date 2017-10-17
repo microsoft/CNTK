@@ -226,3 +226,14 @@ def test_rng_seeding_in_dropout():
     C.cntk_py.reset_random_seed(789)
     seed2 = get_dropout_rng_seed()
     assert seed1 == seed2 and seed1 == 789
+
+def test_setting_py_value_to_dict():
+    config = C.cntk_py.Dictionary()
+
+    for value in [True, False]:
+        config['cacheIndex'] = value
+        assert config['cacheIndex'] == value
+
+    for traceLevel in [1,2]:
+        config['traceLevel'] = traceLevel
+        assert config['traceLevel'] == traceLevel

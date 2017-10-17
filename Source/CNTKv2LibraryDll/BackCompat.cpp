@@ -140,6 +140,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Sigmoid;
                 else if (node->OperationName() == OperationNameOf(StableSigmoidNode))
                     opType = PrimitiveOpType::StableSigmoid;
+                else if (node->OperationName() == OperationNameOf(AtanhNode))
+                    opType = PrimitiveOpType::Atanh;
                 else if (node->OperationName() == OperationNameOf(TanhNode))
                     opType = PrimitiveOpType::Tanh;
                 else if (node->OperationName() == OperationNameOf(AsinNode))
@@ -515,6 +517,10 @@ namespace CNTK
                     std::tie(uid, name) = UidAndNameFromCNTKInternalNodeName(node->NodeName());
 
                     return PerDimMeanVarianceNormalize(inputVars[0], meanValue, invStdDevValue, name);
+                }
+                else if (node->OperationName() == OperationNameOf(CropNode))
+                {
+                    opType = PrimitiveOpType::Crop;
                 }
                 else
                     InvalidArgument("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model.\n"

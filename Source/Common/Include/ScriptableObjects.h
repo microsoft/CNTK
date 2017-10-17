@@ -427,7 +427,7 @@ public:
 
     const ConfigValuePtr &ResolveValue() const // (this is const but mutates the value if it resolves)
     {
-        // call this when a a member might be as-of-yet unresolved, to evaluate it on-demand
+        // call this when a member might be as-of-yet unresolved, to evaluate it on-demand
         // get() is a pointer to a Thunk in that case, that is, a function object that yields the value
         const auto thunkp = GetThunk(); // is it a Thunk?
         if (thunkp)                     // value is a Thunk: we need to resolve

@@ -73,9 +73,36 @@ public:
     // Returns true if no more data is available (reached EOF).
     inline bool Empty() const { return m_done; }
 
+
+    // File offset that correspond to the current position to read from.
+    void SetFileOffset(const size_t& fileOffset)
+    {
+        // We reset the current buffer only if the new fileOffset is out of the buffer limits.
+        // If not, we just go to the index corresponding to the offset.
+        if (fileOffset >= (m_buffer.size() + m_fileOffset) || fileOffset < m_fileOffset) {
+            m_file.SeekOrDie(fileOffset, SEEK_SET);
+            Reset();
+        }
+        else
+        {
+            m_index = fileOffset - m_fileOffset;
+            m_done = false;
+        }
+    }
+
 private:
     // Read up to m_maxSize bytes from file into the buffer.
     void Refill();
+
+    // Resets the buffer: clears the current buffer content and refills starting at the current file position.
+    void Reset()
+    {
+        m_buffer.clear();
+        m_index = 0;
+        m_lineNumber = 0;
+        m_done = false;
+        Refill();
+    }
 
     // Maximum allowed buffer size. 
     // Also, it defines the maximum number of bytes that we'll attempt to read at one time.

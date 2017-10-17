@@ -97,7 +97,8 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalCPUOnlyExamples\EvalMultithreads.cpp" />
+    <ClCompile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalCPUOnlyExamples\CNTKLibraryCPPEvalExamples.cpp" />
+    <ClCompile Include="..\CNTKLibraryCPPEvalExamplesTest\EvalMultithreads.cpp" />
     <ClCompile Include="UnitTestApp.xaml.cpp">
       <DependentUpon>UnitTestApp.xaml</DependentUpon>
     </ClCompile>

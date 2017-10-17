@@ -62,6 +62,7 @@
 %rename(_register_udf_deserialize_callback) CNTK::Internal::RegisterUDFDeserializeCallbackWrapper;
 %rename(base64_image_deserializer) CNTK::Base64ImageDeserializer;
 %rename(_none) CNTK::DictionaryValue::Type::None;
+%rename(nce_loss) CNTK::NCELoss;
 
 %rename(_register_deserializer_factory) CNTK::RegisterDeserializerFactory;
 %rename(_stream_infos) CNTK::SwigDataDeserializer::_GetStreamInfos;
@@ -88,12 +89,21 @@
 %ignore CNTK::Dictionary::operator=;
 %ignore CNTK::Dictionary::operator[];
 
+%ignore CNTK::TrainingParameterSchedule::TrainingParameterSchedule(TrainingParameterSchedule<T>&&); 
+%ignore CNTK::TrainingParameterSchedule(const std::vector<T>&, std::size_t);
 %ignore CNTK::TrainingParameterSchedule::operator=;
 %ignore CNTK::TrainingParameterSchedule::operator[];
+%attribute(CNTK::TrainingParameterSchedule<double>, std::size_t, minibatch_size, GetMinibatchSize, SetMinibatchSize);
+%attribute(CNTK::TrainingParameterSchedule<std::size_t>, std::size_t, minibatch_size, GetMinibatchSize, SetMinibatchSize);
+%attribute(CNTK::Learner, std::size_t, minibatch_size, GetMinibatchSize, SetMinibatchSize);
+// for internal test purpose
+%attribute(CNTK::Learner, CNTK::LearningRateSchedule, _learning_rate_schedule, GetLearningRateSchedule, SetLearningRateSchedule);
 
 %ignore CNTK::GetCheckedMode;
 
 %ignore CNTK::Internal::Optional::operator=;
+
+%ignore CNTK::NDArrayView::AdjustSparseBlockColumn;
 
 // renaming overloads for TrainMinibatch and TestMinibatch that take a map
 // of Variables and MinibatchData as their first parameter. If this is not done,
@@ -102,11 +112,17 @@
 // consumption in proxy objects.
 %rename(train_minibatch_overload_for_minibatchdata) CNTK::Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
 %rename(train_minibatch_overload_for_minibatchdata) CNTK::Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>&, std::unordered_map<Variable, ValuePtr>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
-%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
-%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, std::unordered_map<Variable, ValuePtr>& , const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
+%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice(), bool distributed = false);
+%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, std::unordered_map<Variable, ValuePtr>& , const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice(), bool distributed = false);
 
 %rename(l1_regularization_weight) CNTK::AdditionalLearningOptions::l1RegularizationWeight;
 %rename(l2_regularization_weight) CNTK::AdditionalLearningOptions::l2RegularizationWeight;
+%rename(ignored_minibatch_size) CNTK::TrainingParameterSchedule<double>::IgnoredMinibatchSize;
+%rename(ignored_minibatch_size) CNTK::TrainingParameterSchedule<std::size_t>::IgnoredMinibatchSize;
+%rename(_MINIBATCH_SIZE) CNTK::Learner::MinibatchSizeKey; // L"MinibatchSize"
+%rename(ignored_minibatch_size)  CNTK::Learner::IgnoredMinibatchSize;
+%rename(_options) CNTK::Learner::GetOptions;
+
 %rename(ndcg_at_1) CNTK::NDCGAt1;
 
 // if we don't except RandomUniform the corresponding template functions will not be generated
@@ -457,6 +473,13 @@ fail:   return false;
             case CNTK::DictionaryValue::Type::NDShape:
                 val = NDShapeToTuple(dictVal.Value<CNTK::NDShape>());
                 break;
+            case CNTK::DictionaryValue::Type::TrainingParameterSchedule:
+            {
+                CNTK::TrainingParameterSchedule<double>* schedulePtr = new CNTK::TrainingParameterSchedule<double>(dictVal.Value<CNTK::TrainingParameterSchedule<double>>());
+                
+                val = SWIG_NewPointerObj(schedulePtr, $descriptor(CNTK::TrainingParameterSchedule<double>), 1);
+                break;
+            }
             case CNTK::DictionaryValue::Type::Axis:
                 val = PyTuple_New(3);
                 if (val == NULL)
@@ -756,6 +779,12 @@ public:
 
 %typemap(out, fragment="NDShapeToTuple") CNTK::NDShape {
     $result = NDShapeToTuple($1);
+}
+
+%extend CNTK::TrainingParameterSchedule {
+   T __getitem__(size_t count) {
+    return (*$self)[count];
+  }
 }
 
 %extend CNTK::NDShape {
@@ -1458,6 +1487,9 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::SwigMinibatchSource)
 %shared_ptr(CNTK::SwigDataDeserializer)
 %shared_ptr(CNTK::SwigChunk)
+%shared_ptr(CNTK::TrainingParameterSchedule<double>)
+%shared_ptr(CNTK::TrainingParameterSchedule<size_t>)
+
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibraryExperimental.h"
@@ -1917,12 +1949,12 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 %template(DictionaryValueFromNDArrayView) CNTK::DictionaryValue::DictionaryValue<CNTK::NDArrayView>;
+%template(DictionaryValueFromTrainingDoubleParameterSchedule) CNTK::DictionaryValue::DictionaryValue<CNTK::TrainingParameterSchedule<double>>;
 
-%template(training_parameter_per_sample_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
-%template(training_parameter_per_minibatch_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Minibatch>;
-
-typedef CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample> MinibatchSizeSchedule;
-%template(minibatch_size_schedule) CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample>;
+typedef CNTK::TrainingParameterSchedule<size_t> MinibatchSizeSchedule;
+%template(minibatch_size_schedule)  CNTK::TrainingParameterSchedule<size_t>;
+typedef CNTK::TrainingParameterSchedule<double> TrainingDoubleParameterSchedule;
+%template(training_double_parameter_schedule) CNTK::TrainingParameterSchedule<double>;
 
 %template(OptionalBool) CNTK::Internal::Optional<bool>;
 

@@ -53,6 +53,7 @@ namespace CNTK
                       is_same<T, wstring>::value ||
                       is_same<T, vector<DictionaryValue>>::value ||
                       is_same<T, Dictionary>::value ||
+                      is_same<T, TrainingParameterSchedule<double>>::value ||
                       is_same<T, NDArrayView>::value,
                       "AllocateDataPtr called with invalid type");
         m_data.m_ptr = CreateDataPtr<T>(value);
@@ -126,8 +127,13 @@ namespace CNTK
         {
             NDArrayView* viewPtr1 = reinterpret_cast<NDArrayView*>(m_data.m_ptr);
             NDArrayView* viewPtr2 = reinterpret_cast<NDArrayView*>(other.m_data.m_ptr);
-
             return Internal::AreEqual(*viewPtr1, *viewPtr2);
+        }
+        case DictionaryValue::Type::TrainingParameterSchedule:
+        {
+            TrainingParameterSchedule<double>* schedulePtr1 = reinterpret_cast<TrainingParameterSchedule<double>*>(m_data.m_ptr);
+            TrainingParameterSchedule<double>* schedulePtr2 = reinterpret_cast<TrainingParameterSchedule<double>*>(other.m_data.m_ptr);
+            return (*schedulePtr1) == (*schedulePtr2);
         }
         default:
             NOT_IMPLEMENTED;
@@ -245,14 +251,14 @@ namespace CNTK
     }
 
     template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(T value, UnitType unit) 
-        : m_schedule({ make_pair(0, value) }), m_unit(unit), m_epochSize(FullDataSweep)
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(T value, size_t minibatchSize)
+        : m_schedule({ make_pair(0, value) }), m_epochSize(FullDataSweep), m_minibatchSize(minibatchSize)
     {
     }
 
     template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<T>& schedule, UnitType unit, size_t epochSize) 
-        : m_unit(unit), m_epochSize(epochSize)
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<T>& schedule, size_t epochSize, size_t ref_mbsize)
+        : m_epochSize(epochSize), m_minibatchSize(ref_mbsize)
     {
         std::vector<std::pair<size_t, T>> s(schedule.size());
         for (auto i = 0; i < schedule.size(); ++i)
@@ -264,8 +270,8 @@ namespace CNTK
     }
 
     template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<std::pair<size_t, T>>& schedule, UnitType unit, size_t epochSize)
-        : m_unit(unit), m_epochSize(epochSize)
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<std::pair<size_t, T>>& schedule, size_t epochSize, size_t minibatchSize)
+        :  m_epochSize(epochSize), m_minibatchSize(minibatchSize)
     {
         ConstructSchedule(schedule);
     }
@@ -292,7 +298,16 @@ namespace CNTK
             m_schedule[unitSize * unitCount] = pair.second;
         }
     }
-
+    template <typename T>
+    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::Transform(std::function<T(const T&)> func)
+    {
+        for (auto& entry : m_schedule)
+        {
+            T newVal = func(entry.second);
+            entry.second = newVal;
+        }
+        return *this;
+    }
     template <typename T>
     /*virtual*/ TrainingParameterSchedule<T>::~TrainingParameterSchedule()
     {
@@ -313,27 +328,16 @@ namespace CNTK
     }
 
     template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(const TrainingParameterSchedule<T>&) = default;
-
-    // cannot be defaulted due to a bug in VS2013 (https://connect.microsoft.com/VisualStudio/feedback/details/1255564)
-    template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(TrainingParameterSchedule<T>&& that)
-        :m_schedule(move(that.m_schedule)), m_unit(that.m_unit), m_epochSize(that.m_epochSize)
-    {
-    }
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(const TrainingParameterSchedule<T>& that) = default;
 
     template <typename T>
-    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::operator=(const TrainingParameterSchedule<T>&) = default;
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(TrainingParameterSchedule<T>&& that) = default;
 
-    // cannot be defaulted due to a bug in VS2013 (https://connect.microsoft.com/VisualStudio/feedback/details/1255564)
     template <typename T>
-    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::operator=(TrainingParameterSchedule<T>&& that)
-    {
-        m_schedule = move(that.m_schedule);
-        m_epochSize = that.m_epochSize;
-        m_unit = that.m_unit;
-        return *this;
-    }
+    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::operator=(const TrainingParameterSchedule<T>& that) = default;
+ 
+    template <typename T>
+    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::operator=(TrainingParameterSchedule<T>&& that) = default;
 
     static const std::wstring s_trainingParameterScheduleTypeValue = L"TrainingParameterSchedule";
 
@@ -349,7 +353,7 @@ namespace CNTK
         dict[versionKey] = CurrentVersion();
         dict[typeKey] = s_trainingParameterScheduleTypeValue;
         dict[epochSizeKey] = m_epochSize;
-        dict[unitKey] = static_cast<size_t>(m_unit);
+        dict[refMBSizeKey] = m_minibatchSize;
         dict[scheduleKey] = schedule;
         return dict;
     }
@@ -357,18 +361,37 @@ namespace CNTK
      template <typename T>
     /*static*/ TrainingParameterSchedule<T>  TrainingParameterSchedule<T>::Deserialize(const Dictionary& dict)
     {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, unitKey, epochSizeKey, scheduleKey };
-
-        ValidateDictionary<TrainingParameterSchedule<T>>(dict, s_requiredDictionaryKeys, s_trainingParameterScheduleTypeValue, s_serializationVersion);
-
+        auto version = ValidateDictionary<TrainingParameterSchedule<T>>(dict, { typeKey, epochSizeKey, scheduleKey}, s_trainingParameterScheduleTypeValue, s_serializationVersion);
+        //Validate additional keys and make necessary change to the dictionary:
+        if (version == 1)
+        {
+            ValidateDictionary<TrainingParameterSchedule<T>>(dict, { unitKey }, s_trainingParameterScheduleTypeValue, s_serializationVersion);
+            /*
+            //legacy definition:
+            enum class UnitType : unsigned int
+            {
+            Sample = 0,
+            Minibatch = 1,
+            };
+            */
+            size_t unit = dict[unitKey].Value<std::size_t>();
+            Dictionary dict_v2 = dict;
+            dict_v2[refMBSizeKey] = (size_t) (unit == 0? 1: 0);
+            return TrainingParameterSchedule<T>(dict_v2);
+        }
+        else //if (version >=2)
+        {
+            ValidateDictionary<TrainingParameterSchedule<T>>(dict, { refMBSizeKey }, s_trainingParameterScheduleTypeValue, s_serializationVersion);
+            return TrainingParameterSchedule<T>(dict);
+        }
         return TrainingParameterSchedule<T>(dict);
     }
 
     template <typename T>
     TrainingParameterSchedule<T>::TrainingParameterSchedule(const Dictionary& dictionary)
     {
-        m_unit = UnitType(dictionary[unitKey].Value<size_t>());
         m_epochSize = dictionary[epochSizeKey].Value<size_t>();
+        m_minibatchSize = dictionary[refMBSizeKey].Value<size_t>();
         Dictionary schedule = dictionary[scheduleKey].Value<Dictionary>();
         for (const auto& kv : schedule)
         {
@@ -376,14 +399,33 @@ namespace CNTK
         }
     }
 
-    void MomentumAsTimeConstantSchedule::ConvertToPerSampleValues()
+
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(double time_constant)
     {
-        for (auto& it : m_schedule)
-        {
-            double momTC = it.second;
-            double momPS = momTC == 0.0 ? 0 : exp(-1.0 / momTC);
-            it.second = momPS;
-        }
+        //momentum constant schedule's reference minibatch size is always per sample: 1
+        //TODO: Need to record the original rate and the reference mbsize so that the unit gain factor can be computed correctly.
+        return MomentumSchedule(MomentumFromTimeConstant(time_constant), 1);
+    }
+
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const MomentumSchedule& schedule)
+    {
+        MomentumSchedule res(schedule);
+        res.Transform(MomentumFromTimeConstant);
+        return res;
+    }
+
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const std::vector<double>& schedule, size_t epoch_size)
+    {
+        MomentumSchedule res(schedule, epoch_size, 1);
+        res.Transform(MomentumFromTimeConstant);
+        return res;
+    }
+
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epoch_size)
+    {
+        MomentumSchedule res(schedule, epoch_size, 1);
+        res.Transform(MomentumFromTimeConstant);
+        return res;
     }
 
     std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
@@ -561,20 +603,25 @@ namespace CNTK
             ((valueShape.Rank() < varShape.Rank()) || (valueShape.SubShape(0, varShape.Rank()) != varShape)) &&
             (valueShape.SubShape(1).Rank() <= maxAddionalValueAxes))
         {
-            // If the leading dim of the value shape is same as the total size of the varShape,
-            // lets expand the leading dim to varShape for the purposes of the rest of the validation
-            if (allowFreeOrInferredDimensionsInVar && varShape.HasUnboundDimension())
+            auto numberOfDynamicAxesInPackedValue = std::dynamic_pointer_cast<PackedValue>(value)->DynamicAxes().size();
+            // Further check whether the packed Value is really from the reader, which always provides sequence and batch axes in value and 1 additional axis for the flattened sample layout.
+            if ((numberOfDynamicAxesInPackedValue == 2) && (numberOfDynamicAxesInPackedValue + 1 == valueShape.Rank()))
             {
-                auto newVarShape = varShape;
-                for (size_t i = 0; i < newVarShape.Rank(); ++i)
-                    if (newVarShape[i] == NDShape::FreeDimension)
-                        newVarShape[i] = NDShape::InferredDimension;
+                // If the leading dim of the value shape is same as the total size of the varShape,
+                // lets expand the leading dim to varShape for the purposes of the rest of the validation
+                if (allowFreeOrInferredDimensionsInVar && varShape.HasUnboundDimension())
+                {
+                    auto newVarShape = varShape;
+                    for (size_t i = 0; i < newVarShape.Rank(); ++i)
+                        if (newVarShape[i] == NDShape::FreeDimension)
+                            newVarShape[i] = NDShape::InferredDimension;
 
-                PrimitiveFunction::ReshapeOutputShape({ valueShape[0] }, newVarShape, Axis(0), Axis(1), /*inferDimensions =*/ true);
-                valueShape = newVarShape.AppendShape(valueShape.SubShape(1));
+                    PrimitiveFunction::ReshapeOutputShape({ valueShape[0] }, newVarShape, Axis(0), Axis(1), /*inferDimensions =*/ true);
+                    valueShape = newVarShape.AppendShape(valueShape.SubShape(1));
+                }
+                else if (valueShape[0] == varShape.TotalSize())
+                    valueShape = varShape.AppendShape(valueShape.SubShape(1));
             }
-            else if (valueShape[0] == varShape.TotalSize())
-                valueShape = varShape.AppendShape(valueShape.SubShape(1));
         }
 
         if (valueShape.Rank() < varShape.Rank())
@@ -590,8 +637,8 @@ namespace CNTK
             for (size_t i = 0; i < (valueShape.Rank() - (varShape.Rank() + numDynamicAxes)); ++i)
             {
                 if (valueShape[varShape.Rank() + i] != 1)
-                    InvalidArgument("Value rank (%d) should be larger than the Variable rank (%d) at most by number of dynamic axes (%d); Variable = '%S', Value shape = '%S'.",
-                                    (int)valueShape.Rank(), (int)varShape.Rank(), (int)numDynamicAxes, var.AsString().c_str(), valueShape.AsString().c_str());
+                    InvalidArgument("The dimension size (%d) of the axis (%d) of the Value ('%S') must be 1, because this axis is not specified as a dynamic axis of the Variable ('%S').",
+                                    (int)valueShape[varShape.Rank() + i], (int)(varShape.Rank() + i), valueShape.AsString().c_str(), var.AsString().c_str());
             }
         }
 
@@ -927,6 +974,7 @@ namespace CNTK
     template void DictionaryValue::AllocateDataPtr<wstring>(const wstring& value);
     template void DictionaryValue::AllocateDataPtr<Dictionary>(const Dictionary& value);
     template void DictionaryValue::AllocateDataPtr<NDArrayView>(const NDArrayView& value);
+    template void DictionaryValue::AllocateDataPtr<CNTK::TrainingParameterSchedule<double >>(const CNTK::TrainingParameterSchedule<double>& value);
 
     template void DictionaryValue::FreePtrAsType<NDShape>();
     template void DictionaryValue::FreePtrAsType<Axis>();
@@ -934,6 +982,9 @@ namespace CNTK
     template void DictionaryValue::FreePtrAsType<wstring>();
     template void DictionaryValue::FreePtrAsType<Dictionary>();
     template void DictionaryValue::FreePtrAsType<NDArrayView>();
+    template void DictionaryValue::FreePtrAsType<CNTK::TrainingParameterSchedule<double >>();
+    template void DictionaryValue::FreePtrAsType<Function>();
+
 
     template class TrainingParameterSchedule<double>;
     template class TrainingParameterSchedule<size_t>;

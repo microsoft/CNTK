@@ -567,6 +567,23 @@ namespace CNTK
             return SyncGuard::IsSyncEnabled();
         }
 
+#ifdef CPUONLY
+        // CPU SBC aggregation not implemented yet, so fall back to conversion of sparse to dense 
+        std::atomic<bool> s_useSparseGradientAggregationInDataParallelSGD(false);
+#else
+        std::atomic<bool> s_useSparseGradientAggregationInDataParallelSGD(true);
+#endif
+
+        void UseSparseGradientAggregationInDataParallelSGD(bool enable)
+        {
+            s_useSparseGradientAggregationInDataParallelSGD = enable;
+        }
+
+        bool ShouldUseSparseGradientAggregationInDataParallelSGD()
+        {
+            return s_useSparseGradientAggregationInDataParallelSGD;
+        }
+
         static std::atomic<bool> s_threadsAreSet(false);
         bool MaxNumCPUThreadsSet()
         {
@@ -907,18 +924,6 @@ namespace CNTK
         s_defaultUnitGainValue.store(value);
     }
 
-    static std::atomic<bool> s_defaultUseMeanGradient(false);
-
-    bool DefaultUseMeanGradientValue()
-    {
-        return s_defaultUseMeanGradient;
-    }
-
-    void SetDefaultUseMeanGradientValue(bool value)
-    {
-        s_defaultUseMeanGradient.store(value);
-    }
-
     template <class E>
     __declspec_noreturn void ThrowFormatted(const char* format, ...)
     {
@@ -930,6 +935,14 @@ namespace CNTK
 
     namespace Internal
     {
+        void ExtractCUDAVersion(int version, int& major, int& minor, int& patch_level)
+        {
+            //e.g. #define CUDNN_VERSION    (CUDNN_MAJOR * 1000 + CUDNN_MINOR * 100 + CUDNN_PATCHLEVEL)
+            major = version / 1000;
+            minor = (version - major * 1000) / 100;
+            patch_level = version % 100;
+        }
+
         void PrintBuiltInfo()
         {
             LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
@@ -952,23 +965,23 @@ namespace CNTK
             LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
 #endif
 #ifdef _CUDA_PATH_
-            LOGPRINTF(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
-#endif
-#ifdef _CUB_PATH_
-            LOGPRINTF(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
+            int cudaVersion = 0;
+            if (cudaDriverGetVersion(&cudaVersion) == cudaSuccess)
+            {
+                int major = 0, minor = 0, patchLevel = 0;
+                ExtractCUDAVersion(cudaVersion, major, minor, patchLevel);
+                LOGPRINTF(stderr, "\t\tCUDA version: %d.%d.%d\n", major, minor, patchLevel);
+            }
 #endif
 #ifdef _CUDNN_PATH_
-            LOGPRINTF(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
+            size_t cudnnVersion = GetCUDNNVersion();
+            int cudnnMajor = 0, cudnnMinor = 0, cudnnPatchLevel = 0;
+            ExtractCUDAVersion(cudnnVersion, cudnnMajor, cudnnMinor, cudnnPatchLevel);
+            LOGPRINTF(stderr, "\t\tCUDNN version: %d.%d.%d\n", cudnnMajor, cudnnMinor, cudnnPatchLevel);
 #endif
 #ifdef _GIT_EXIST
             LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
             LOGPRINTF(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
-#endif
-#ifdef _BUILDER_
-            LOGPRINTF(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
-#endif
-#ifdef _BUILDPATH_
-            LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
 #endif
 #ifdef _MPI_NAME_
             LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);

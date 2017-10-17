@@ -16,21 +16,35 @@ namespace CNTK {
 
 void ChunkDescriptor::AddSequence(const IndexedSequence& sequence)
 {
-    auto offsetInChunk = sequence.offset - m_startOffset;
-    m_sequences.emplace_back(sequence.key, sequence.numberOfSamples, sequence.size, offsetInChunk);
+    size_t offsetInChunk = sequence.offset - m_startOffset;
+
+    if (offsetInChunk != static_cast<uint32_t>(offsetInChunk))
+        RuntimeError("Sequence offset in chunk overflows uint32_t type "
+            "(while adding a sequence with key = %zu, offset = %zu, number of samples = %u, size = %u "
+            "to chunk with the start offset = %zu).",
+            sequence.key, sequence.offset, sequence.numberOfSamples, sequence.size, m_startOffset);
+
+    m_sequences.emplace_back(sequence.key, sequence.numberOfSamples, sequence.size, static_cast<uint32_t>(offsetInChunk));
     m_numberOfSamples += sequence.numberOfSamples;
     m_endOffset = sequence.offset + sequence.size;
     if (m_sequences.size() > std::numeric_limits<uint32_t>::max())
-        RuntimeError("Exceeded maximum number of sequences in a chunk");
+        RuntimeError("Exceeded maximum number of sequences in a chunk "
+            "(while adding a sequence with key = %zu, offset = %zu, number of samples = %u, size = %u "
+            "to chunk with the start offset = %zu).",
+            sequence.key, sequence.offset, sequence.numberOfSamples, sequence.size, m_startOffset);
 }
 
 void Index::AddSequence(const IndexedSequence& sequence) 
 {
     if (sequence.numberOfSamples == 0)
-        RuntimeError("Invalid sequence: number of samples == 0");
+        RuntimeError("Invalid sequence: number of samples == 0 "
+            "(key = %zu, offset = %zu, size = %u)",
+            sequence.key, sequence.offset, sequence.size);
 
     if (sequence.size == 0)
-        RuntimeError("Invalid sequence: size in bytes == 0");
+        RuntimeError("Invalid sequence: size in bytes == 0 "
+            "(key = %zu, offset = %zu, number of samples = %u)",
+            sequence.key, sequence.offset, sequence.numberOfSamples);
 
     m_sizeInBytes += sequence.size;
     m_numberOfSamples += sequence.numberOfSamples;
@@ -47,7 +61,7 @@ void Index::AddSequence(const IndexedSequence& sequence)
         m_chunks.push_back(ChunkDescriptor(sequence.offset));
 
         if (std::numeric_limits<ChunkIdType>::max() < m_chunks.size())
-            RuntimeError("Maximum number of chunks exceeded.");
+            RuntimeError("Exceeded the maximum number of chunks.");
 
         // reserve the space for sequences up-front, using the average sequence size to 
         // estimate the number of sequences in a chunk. 

@@ -102,7 +102,7 @@
     <ClInclude Include="BinaryDataChunk.h" />
     <ClInclude Include="BinaryDataDeserializer.h" />
     <ClInclude Include="CNTKBinaryReader.h" />
-    <ClInclude Include="FileHelper.h" />
+    <ClInclude Include="CBFUtils.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClCompile Include="BinaryConfigHelper.cpp" />

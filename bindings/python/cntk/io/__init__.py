@@ -359,13 +359,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
         super(MinibatchSource, self).restore_from_checkpoint(_py_dict_to_cntk_dict(checkpoint))
 
     @property
-    def is_distributed(self):
-        '''
-        Whether the minibatch source is running distributed
-        '''
-        return super(MinibatchSource, self).is_distributed()
-
-    @property
     def current_position(self):
         '''
         Gets current position in the minibatch source.
@@ -807,7 +800,7 @@ def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
         streams: any dictionary-like object that contains a mapping from stream
           names to :class:`StreamDef` objects. Each StreamDef object configures
           a label stream.
-        phoneBoundaries (bool): if phone boundaries should be considered (should be set to True for CTC training, False otherwise)
+        phoneBoundaries (`bool`, defaults to False): if phone boundaries should be considered (should be set to True for CTC training, False otherwise)
     '''
     if len(streams) != 1:
         raise ValueError("HTKMLFDeserializer only accepts a single stream")

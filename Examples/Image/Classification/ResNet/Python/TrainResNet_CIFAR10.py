@@ -59,7 +59,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
-    input_var = C.input_variable((num_channels, image_height, image_width))
+    input_var = C.input_variable((num_channels, image_height, image_width), name='features')
     label_var = C.input_variable((num_classes))
 
     # create model, and configure learning parameters
@@ -70,7 +70,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
         z = create_cifar10_model(input_var, 18, num_classes)
         lr_per_mb = [0.1]*1+[1.0]*80+[0.1]*40+[0.01]
     else:
-        return RuntimeError("Unknown model name!")
+        raise RuntimeError("Unknown model name!")
 
     # loss and metric
     ce = cross_entropy_with_softmax(z, label_var)

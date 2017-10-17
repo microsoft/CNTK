@@ -183,34 +183,6 @@ Test module "MathTests" has passed with:
     Test case "BatchNormalizationSuite/BatchNormalizationBackward" has passed with:
       1809 assertions out of 1809 passed
 
-  Test suite "BlockMultiplierSuite" has passed with:
-    8 test cases out of 8 passed
-    500 assertions out of 500 passed
-
-    Test case "BlockMultiplierSuite/BlockMultiplyTest8x128x8SingleThread" has passed with:
-      128 assertions out of 128 passed
-
-    Test case "BlockMultiplierSuite/BlockMultiplyTest7x128x8SingleThread" has passed with:
-      112 assertions out of 112 passed
-
-    Test case "BlockMultiplierSuite/BlockMultiplyTestAllKSingleRowSingleThread" has passed with:
-      2 assertions out of 2 passed
-
-    Test case "BlockMultiplierSuite/BlockMultiplyTestAllKFourRowsSingleThread" has passed with:
-      8 assertions out of 8 passed
-
-    Test case "BlockMultiplierSuite/BlockMultiplyTest8x128x8MultiThread" has passed with:
-      128 assertions out of 128 passed
-
-    Test case "BlockMultiplierSuite/BlockMultiplyTest7x128x8MultiThread" has passed with:
-      112 assertions out of 112 passed
-
-    Test case "BlockMultiplierSuite/BlockMultiplyTestAllKSingleRowMultiThread" has passed with:
-      2 assertions out of 2 passed
-
-    Test case "BlockMultiplierSuite/BlockMultiplyTestAllKFourRowsMultiThread" has passed with:
-      8 assertions out of 8 passed
-
   Test suite "ConvolutionSuite" has passed with:
     6 test cases out of 6 passed
     7955 assertions out of 7955 passed
