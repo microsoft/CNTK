@@ -4948,24 +4948,15 @@ void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, M
         { NOT_IMPLEMENTED; });
 }
 
-
 // AssginCopyOf matix b to a
 template <class ElemType>
 /*static*/ void Matrix<ElemType>::SparseAssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
 {
     DecideAndMoveToRightDevice(a, b);
 
-    if (b.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE)
+    if (b.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE && b.GetMatrixType() == MatrixType::SPARSE)
     {
-
-        if (b.GetMatrixType() == MatrixType::SPARSE)
-        {
-            GPUSparseMatrix<ElemType>::AssignCopyOf(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, NzOffset, RowOffset);
-        }
-        else
-        {
-            GPUSparseMatrix<ElemType>::AssignCopyOf(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, NzOffset, RowOffset);
-        }
+        GPUSparseMatrix<ElemType>::AssignCopyOf(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, NzOffset, RowOffset);
     }
     else
     {
@@ -4977,16 +4968,9 @@ template <class ElemType>
 /*static*/ void Matrix<ElemType>::AddSparseNumOfNZs(const Matrix<ElemType>& a, size_t* numNZs)
 {
 
-    if (a.GetDeviceId() >= 0 /*GPU*/)
+    if (a.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE)
     {
-        if (a.GetMatrixType() == MatrixType::SPARSE)
-        {
-            *numNZs += (*a.m_GPUSparseMatrix).NzCount();
-        }
-        else
-        {
-            *numNZs += (*a.m_GPUMatrix).GetNumElements();
-        }
+        *numNZs += (*a.m_GPUSparseMatrix).NzCount();
     }
     else
     {
@@ -4998,35 +4982,10 @@ template <class ElemType>
 /*static*/ void Matrix<ElemType>::AddSparseColumnIndex(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const int inputIndex)
 {
     DecideAndMoveToRightDevice(a, b);
-    if (a.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE)
+    if (a.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE && b.GetMatrixType() == MatrixType::SPARSE)
     {
-        if (b.GetMatrixType() == MatrixType::SPARSE)
-        {
-            GPUSparseMatrix<ElemType>::AddSparseColumnIndex(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, inputIndex);
-        }
-        else
-        {
-            GPUSparseMatrix<ElemType>::AddSparseColumnIndex(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, inputIndex);
-        }
+        GPUSparseMatrix<ElemType>::AddSparseColumnIndex(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, inputIndex);
     }
-    else
-    {
-        NOT_IMPLEMENTED;
-    }
-
-}
-
-template <class ElemType>
-/*static*/ void Matrix<ElemType>::ResizeAsSparseMatrix(Matrix<ElemType>& a, size_t numRows, size_t numCols, size_t numNZs)
-{
-    if (a.GetDeviceId() >= 0 /*GPU*/)
-    {
-        if (a.GetMatrixType() != MatrixType::SPARSE && a.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
-        {
-            a.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
-        }
-        a.m_GPUSparseMatrix->Resize(numRows, numCols, numNZs);
-    } 
     else
     {
         NOT_IMPLEMENTED;
@@ -6097,44 +6056,6 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
     return *this;
 }
 
-// assign the element wise max of matrix a and matrix b to matrix a
-template <class ElemType>
-/*static*/ void Matrix<ElemType>::DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b)
-{
-    DecideAndMoveToRightDevice(a, b);
-
-    if (a.GetMatrixType() == DENSE && b.GetMatrixType() == DENSE)
-    {
-        GPUMatrix<ElemType>::DoElementMaxOf(*a.m_GPUMatrix, *b.m_GPUMatrix);
-    }
-    else
-    {
-        NOT_IMPLEMENTED;
-    }
-}
-
-template <class ElemType>
-void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient, Matrix<ElemType>& inputSum, Matrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex)
-{
-    if (this->GetDeviceId() < 0)
-    {
-        NOT_IMPLEMENTED;
-    }
-    else
-    {
-        DecideAndMoveToRightDevice(*this, inputValue, outputVale, outputGradient);
-
-        if (inputValue.GetMatrixType() == DENSE && outputVale.GetMatrixType() == DENSE &&
-            outputVale.GetMatrixType() == DENSE && this->GetMatrixType() == DENSE)
-        {
-            m_GPUMatrix->AddElementMaxGradient(*inputValue.m_GPUMatrix, *outputVale.m_GPUMatrix, *outputGradient.m_GPUMatrix, *inputSum.m_GPUMatrix, *randomSplit.m_GPUMatrix, numInputs, inputIndex);
-        }
-        else
-        {
-            NOT_IMPLEMENTED;
-        }
-    }
-}
 // Calculate CTC score
 // prob (input): the posterior output from the network
 // alpha, beta (output): alpha and beta for forward-backward calculation. 

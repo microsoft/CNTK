@@ -2839,46 +2839,6 @@ __global__ void _addElementToElement(
 }
 
 template <class ElemType>
-__global__ void _doElementMaxOf(
-    ElemType *a,
-    const ElemType *b,
-    CUDA_LONG N)
-{
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= N)
-        return;
-    a[id] = max(a[id], b[id]);
-}
-
-template <class ElemType>
-__global__ void _addElementMaxGradient(
-    ElemType *inputValue,
-    ElemType *outputValue,
-    ElemType *outputGradient,
-    ElemType *inputGradient,
-    ElemType *inputSum,
-    ElemType *randomSplit,
-    size_t numInputs,
-    size_t inputIndex,
-    CUDA_LONG N)
-{
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= N)
-        return;
-
-    if (inputValue[id] == outputValue[id])
-    {
-        size_t setIndex = (size_t)(ceil(randomSplit[id])) % numInputs;
-        if (inputSum[id] == (ElemType)0 && setIndex != inputIndex)
-            inputGradient[id] = 0;
-        else
-            inputGradient[id] = outputGradient[id];
-    }
-    else
-        inputGradient[id] = 0;
-}
-
-template <class ElemType>
 __global__ void _assignNumOfDiff1024Threads(
     const ElemType* a,
     const ElemType* b,
@@ -3049,19 +3009,6 @@ __global__ void _sparseCSCAddColumnIndexsparseCSC(
 }
 
 template <class ElemType>
-__global__ void _sparseCSCAddColumnIndexsparseCSC(
-    const size_t n,
-    GPUSPARSE_INDEX_TYPE *aColIndex,
-    const size_t bNumRows
-    )
-{
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= n)
-        return;
-    aColIndex[id + 1] += (GPUSPARSE_INDEX_TYPE)(bNumRows*(id + 1));
-}
-
-template <class ElemType>
 __global__ void _sparseCSCAssignCopyOfsparseCSC(
     const size_t RowOffset,
     const size_t n,
@@ -3089,33 +3036,6 @@ __global__ void _sparseCSCAssignCopyOfsparseCSC(
         aData[start + NzOffset[id]] = bData[startB];
         NzOffset[id]++;
         startB++;
-    }
-}
-
-template <class ElemType>
-__global__ void _sparseCSCAssignCopyOfdense(
-    const size_t RowOffset,
-    const size_t bNumRows,
-    const size_t n,
-    size_t* NzOffset,
-    GPUSPARSE_INDEX_TYPE* aRowIndex,
-    GPUSPARSE_INDEX_TYPE* aColIndex,
-    ElemType* aData,
-    const ElemType* bData
-    )
-{
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= n)
-        return;
-
-    int start = aColIndex[id];
-    //int end = aColIndex[id + 1];
-
-    for (int iRow = 0; iRow < bNumRows; iRow++)
-    {
-        aRowIndex[start + NzOffset[id]] = iRow + RowOffset;
-        aData[start + NzOffset[id]] = bData[IDX2C(iRow, id, bNumRows)];
-        NzOffset[id]++;
     }
 }
 

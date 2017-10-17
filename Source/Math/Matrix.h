@@ -626,14 +626,10 @@ public:
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
-    // assign the element wise max of matrix a and matrix b to matrix a
-    static void DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b);
-    void AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient, Matrix<ElemType>& inputSum, Matrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex);
-
+    
     static void SparseAssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset);
     static void AddSparseNumOfNZs(const Matrix<ElemType>& a, size_t* numNZs);
     static void AddSparseColumnIndex(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const int inputIndex);
-    static void ResizeAsSparseMatrix(Matrix<ElemType>& a, size_t numRows, size_t numCols, size_t numNZs);
 
     void TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
                      const std::array<size_t, 2>& offsets,

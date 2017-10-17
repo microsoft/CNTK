@@ -438,17 +438,7 @@ void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& 
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
-{
-}
-
-template <class ElemType>
 void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
-{
-}
-
-template <class ElemType>
-void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
 {
 }
 

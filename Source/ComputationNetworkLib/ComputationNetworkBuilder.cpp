@@ -111,7 +111,6 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(SparseRowStackNode))                   return New<SparseRowStackNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ScatterPackedNode))                    return New<ScatterPackedNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))              return New<SequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ElementMaxNode))                       return New<ElementMaxNode<ElemType>>(forward<_Types>(_Args)...);
 #ifdef COMING_SOON
     else if (nodeType == OperationNameOf(SequenceDecoderNode))                  return New<SequenceDecoderNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
@@ -904,15 +903,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Spars
     for (size_t i = 0; i < inputs.size(); i++)
         inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
     return net.AddNodeToNetAndAttachInputs(New<SparseRowStackNode<ElemType>>(net.GetDeviceId(), nodeName), { inputs });
-}
-
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ElementMax(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName)
-{
-    vector<ComputationNodeBasePtr> inputs(pinputs.size());
-    for (size_t i = 0; i < inputs.size(); i++)
-        inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
-    return net.AddNodeToNetAndAttachInputs(New<ElementMaxNode<ElemType>>(net.GetDeviceId(), nodeName), { inputs });
 }
 
 template <class ElemType>
