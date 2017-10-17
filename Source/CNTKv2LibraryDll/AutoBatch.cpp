@@ -4496,8 +4496,9 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     m_outputsInitFlag++;
     output.SetOwner(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
     // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
-    m_outputs.resize(1);
-    m_outputs.front() = move(output);
+    //m_outputs.resize(1);
+    //m_outputs.front() = move(output);
+    m_outputs.assign(move(output));
 }
 
 /*Internal::*/Invocable::Invocable(size_t arity, size_t freeAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :

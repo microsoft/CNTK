@@ -331,7 +331,7 @@ namespace CNTK
     protected: // special short-circuited versions private to auto-batcher (also called via BlockFunction(), hence 'protected')
         // This must not be used for anything else.
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, Dictionary&& functionConfig, std::wstring&& name)
-            : Function(std::move(inputs), std::vector<Variable>(), std::move(functionConfig), nullptr, std::move(name), std::wstring()),
+            : Function(std::move(inputs), std::move(functionConfig), std::move(name), std::wstring()),
               m_op(op),
               m_profiler(CurrentDynamicProfiler())
         {

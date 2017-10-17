@@ -122,7 +122,7 @@ namespace CNTK
 
         void InferOutputs(std::vector<Variable>& outputs) override
         {
-            auto& inferred = m_rootFunction->InitOutputs();
+            const auto& inferred = m_rootFunction->InitOutputs();
             outputs.assign(inferred.begin(), inferred.end()); // note: not just assigning as to keep existing memory allocation, as needed in case of user-defined functions
         }
 
@@ -172,7 +172,7 @@ namespace CNTK
         static void TraverseVariables(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor, bool pythonOperandOrder, bool preOrder)
         {
             visitedFunctions.insert(rootFunction);
-            auto rootFunctionOutputs = rootFunction->InitOutputs();
+            const auto& rootFunctionOutputs = rootFunction->InitOutputs();
 
             if (preOrder)
             {
@@ -291,13 +291,16 @@ namespace CNTK
             vector<FunctionPtr> functions;
             std::vector<Variable> inputs;
             std::unordered_set<Variable> uniqueInputs;
-            TraverseVariables(rootFunction, visitedFunctions, [&inputs, &uniqueInputs](const Variable& var) {
-                if (!var.IsOutput() && uniqueInputs.find(var) == uniqueInputs.end())
+            TraverseVariables(rootFunction, visitedFunctions,
+                [&inputs, &uniqueInputs](const Variable& var)
                 {
-                    inputs.push_back(var);
-                    uniqueInputs.insert(var);
-                }
-           }, pythonOperandOrder, /*preOrder =*/ true);
+                    if (!var.IsOutput() && uniqueInputs.find(var) == uniqueInputs.end())
+                    {
+                        inputs.push_back(var);
+                        uniqueInputs.insert(var);
+                    }
+                },
+                pythonOperandOrder, /*preOrder =*/ true);
 
             return inputs;
         }

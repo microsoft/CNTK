@@ -3805,11 +3805,14 @@ namespace CNTK
         friend class Variable;
         CNTK_API const auto RawOutputs() const { const auto& outputs = const_cast<Function*>(this)->InitOutputs(); return MakeSpan(outputs); }
 
+    public:
+        typedef FixedVectorWithBuffer<Variable, 2> InputsVectorType;
+        typedef FixedVectorWithBuffer<Variable, 1> OutputsVectorType;
     private:
         CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
 
         // Lazily initialize the Function's outputs on first invocation
-        CNTK_API std::vector<Variable>& InitOutputs();
+        CNTK_API /*std::vector<Variable>*/OutputsVectorType& InitOutputs();
 
         template <typename VariableType, typename FilterFunction>
         std::vector<VariableType> FilteredInputs(FilterFunction&& filterFunc, bool rowMajor = false) const
@@ -3869,17 +3872,19 @@ namespace CNTK
         CNTK_API Function(const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name);
         CNTK_API Function(const Variable& input0, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name);
         // move constructor where everything is prepared outside; used in auto-batching
-        Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
+        //Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
+        Function(std::vector<Variable>&& inputs, Variable&& output, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
+        Function(std::vector<Variable>&& inputs, Dictionary&& functionConfig, std::wstring&& name, std::wstring&& uid);
 
         //std::vector<Variable> m_inputs; // primitives: direct input variables; composites: empty (Inputs() determines all leaves on the fly); block: all leaves as if it was a composite
-        FixedVectorWithBuffer<Variable, 2> m_inputs; // primitives: direct input variables; composites: empty (Inputs() determines all leaves on the fly); block: all leaves as if it was a composite
+        InputsVectorType m_inputs; // primitives: direct input variables; composites: empty (Inputs() determines all leaves on the fly); block: all leaves as if it was a composite
 #ifdef DYNAMITE_ONLY
         unsigned int m_outputsInitFlag = 0;
 #else
         std::once_flag m_outputsInitFlag = 0;
         std::thread::id m_outputInitializingByThreadId;
 #endif
-        std::vector<Variable> m_outputs;
+        /*std::vector<Variable>*/OutputsVectorType m_outputs;
 
         FunctionPtr m_rootFunction; // This is a PrimitiveFunctionPtr for composites, or a nullptr for PrimitiveFunction instances
         std::wstring m_name;

@@ -52,7 +52,7 @@ namespace CNTK
         return udfCallbackMap.at(uniqueOpName);
     }
 
-    std::vector<Variable>& Function::InitOutputs()
+    /*std::vector<Variable>*/Function::OutputsVectorType& Function::InitOutputs()
     {
 #ifndef DYNAMITE_ONLY
         if (std::this_thread::get_id() == m_outputInitializingByThreadId)
@@ -104,7 +104,7 @@ namespace CNTK
                 m_outputs = outputs; // free some memory
             else
 #endif
-                m_outputs = std::move(outputs);
+                m_outputs.assign(outputs); // TODO: change to only moving it
 #ifndef DYNAMITE_ONLY // TODO: Not clear why this is needed. Aren't the outputs always immediately initialized? Why be lazy across threads, i.e. return uninitialized objects to user code?
             m_outputInitializingByThreadId = std::thread::id();
 #endif
@@ -219,8 +219,14 @@ namespace CNTK
     }
 
     // TODO: The overload resolution by && seems not safe. Better change this signature. E.g. pass only a single output by &&
-    Function::Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid)
-        : m_inputs(inputs), m_outputs(std::move(outputs)), m_rootFunction(std::move(rootFunction)), m_name(std::move(name)), m_uid(std::move(uid)), m_attributes(std::move(functionConfig))
+    //Function::Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid)
+    //    : m_inputs(inputs), m_outputs(outputs), m_rootFunction(std::move(rootFunction)), m_name(std::move(name)), m_uid(std::move(uid)), m_attributes(std::move(functionConfig))
+    //{}
+    Function::Function(std::vector<Variable>&& inputs, Variable&& output, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid)
+        : m_inputs(inputs), m_outputs(move(output)), m_rootFunction(std::move(rootFunction)), m_name(std::move(name)), m_uid(std::move(uid)), m_attributes(std::move(functionConfig))
+    {}
+    Function::Function(std::vector<Variable>&& inputs, Dictionary&& functionConfig, std::wstring&& name, std::wstring&& uid)
+        : m_inputs(inputs), m_name(std::move(name)), m_uid(std::move(uid)), m_attributes(std::move(functionConfig))
     {}
 
     /*virtual*/ Function::~Function() {}
