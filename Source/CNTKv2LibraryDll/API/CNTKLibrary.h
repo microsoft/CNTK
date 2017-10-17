@@ -1797,6 +1797,7 @@ namespace CNTK
         friend class Trainer;
         friend class PrimitiveFunction;
         friend class Utils;
+        friend class CNTKToONNXHelper;
 
         template <typename T>
         friend struct std::hash;
@@ -1873,6 +1874,14 @@ namespace CNTK
         /// Returns a boolean value indicating if 'this' variable is a Placeholder
         ///
         bool IsPlaceholder() const { return Kind() == VariableKind::Placeholder; }
+
+        ///
+        /// Returns a boolean value indicating if 'this' variable has a batch axis or not.
+        ///
+        bool HasBatchAxis() const { 
+            return std::any_of(DynamicAxes().begin(), DynamicAxes().end(),
+                [](const Axis& axis) { return (axis == Axis::DefaultBatchAxis()); });
+        }
 
         ///
         /// Returns the name of 'this' variable
@@ -2735,7 +2744,7 @@ namespace CNTK
         virtual void Erase();
 
         ///
-        /// Unpacks sequences in 'this' Value as a vector of NDArrayView objects, each represeting a sequence in the
+        /// Unpacks sequences in 'this' Value as a vector of NDArrayView objects, each representing a sequence in the
         /// batch of sequences that 'this' Value object contains data for.
         /// Besides the NDArrayView objects (that represent contents of each sequence), this method also returns
         /// the sequence start information for each sequence, which indicates whether that sequence is the start of
@@ -2779,7 +2788,7 @@ namespace CNTK
         }
 
         ///
-        /// Unpacks sequences in 'this' Value as a vector of NDArrayView objects, each represeting a sequence in the
+        /// Unpacks sequences in 'this' Value as a vector of NDArrayView objects, each representing a sequence in the
         /// batch of sequences that 'this' Value object contains data for.
         /// Besides the NDArrayView objects (that represent contents of each sequence), this method also returns
         /// the sequence start information for each sequence, which indicates whether that sequence is the start of
@@ -2994,6 +3003,24 @@ namespace CNTK
         std::unordered_map<Variable, ValuePtr> m_savedForwardPropValues;
     };
     typedef std::shared_ptr<BackPropState> BackPropStatePtr;
+
+    ///
+    /// List of supported disk formats for CNTK model.
+    ///
+    enum class ModelFormat
+    {
+        ///
+        /// Default CNTK version 2 format, support all CNTK features.
+        ///
+        CNTKv2,
+
+        ///
+        /// Open Neural Network Exchange format from https://github.com/onnx/onnx
+        /// ONNX support limited subset of CNTK.
+        ///
+        ONNX,
+    };
+
 
     ///
     /// How are Parameters handled when cloning a Function
@@ -3406,7 +3433,7 @@ namespace CNTK
         ///
         /// Save this Function graph into a model file.
         ///
-        CNTK_API void Save(const std::wstring& filepath);
+        CNTK_API void Save(const std::wstring& filepath, ModelFormat format = ModelFormat::CNTKv2);
 
         ///
         /// Restore the models parameters (in-place) from a model file
@@ -3417,7 +3444,8 @@ namespace CNTK
         /// Load a Function from a model file
         ///
         CNTK_API static FunctionPtr Load(const std::wstring& filepath,
-                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
+                                         ModelFormat format = ModelFormat::CNTKv2);
 
         ///
         /// Load a Function from a memory buffer
@@ -3635,6 +3663,11 @@ namespace CNTK
     /// Create an instance of the CNTK built-in elementwise sigmoid operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise atanh operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Atanh(const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise tanh operation with the specified input operand.
@@ -3893,6 +3926,17 @@ namespace CNTK
     /// Create an instance of the CNTK built-in elementwise division operation on specified tensor input operands.
     ///
     CNTK_API FunctionPtr ElementDivide(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Compute the element wise maximum operation between the given operands.
+    ///
+    CNTK_API FunctionPtr ElementMax(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name);
+
+
+    ///
+    /// Compute the element wise minimum operation between the given operands.
+    ///
+    CNTK_API FunctionPtr ElementMin(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name);
 
     ///
     /// Create an instance of the CNTK built-in elementwise equality comparison operation on specified tensor input operands.
@@ -4270,7 +4314,6 @@ namespace CNTK
     ///
     /// TODO:
     ///
-    // TODO: Do we need a separate "spatial" parameter or can it be inferred from the tensor dimensions
     CNTK_API FunctionPtr BatchNormalization(const Variable& operand,
                                             const Variable& scale,
                                             const Variable& bias,
@@ -4284,6 +4327,17 @@ namespace CNTK
                                             bool useCuDNNEngine = true,
                                             const std::wstring& name = L"");
 
+    //
+    // Local response normalization as described in http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks 
+    //
+    CNTK_API FunctionPtr LocalResponseNormalization(const Variable& operand, 
+                                                    size_t depthRadius, 
+                                                    double bias, 
+                                                    double alpha, 
+                                                    double beta, 
+                                                    const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in OptimizedRNNStack operation on specified input operands
     ///
     CNTK_API FunctionPtr OptimizedRNNStack(const Variable& operand, const Variable& weights, size_t hiddenSize, size_t numLayers, bool bidirectional = false, const std::wstring& recurrentOp = L"lstm", const std::wstring& name = L"");
@@ -4323,6 +4377,12 @@ namespace CNTK
     CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = L"");
 
     ///
+    /// Creates a Block Function that encapsulates a composite to create an opaque Function object that
+    /// appears as any other primitive Function
+    ///
+    CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, Dictionary&& attributes, const std::wstring& blockOpName, const std::wstring& blockName);
+
+    ///
     /// Creates a new Function instance which output its input as it is and previent any gradient contribution from its output.
     ///
     CNTK_API FunctionPtr StopGradient(const Variable& operand, const std::wstring& name = L"");
@@ -4352,7 +4412,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in elementwise scaled exponential linear unit operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr SELU(const Variable& operand, double scale = 1.0507009873554804934193349852946, double alpha = 1.6732632423543772848170429916717, const std::wstring& name = L"");
+    CNTK_API FunctionPtr SELU(const Variable& operand, double gamma = 1.0507009873554804934193349852946, double alpha = 1.6732632423543772848170429916717, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise leaky linear rectifier operation with the specified input operand.
@@ -5870,7 +5930,7 @@ namespace CNTK
         /// Disallow copy and move construction and assignment
         TrainingSession(const TrainingSession&) = delete; TrainingSession& operator=(const TrainingSession&) = delete; TrainingSession& operator=(TrainingSession&&) = delete; TrainingSession(TrainingSession&&) = delete;
 
-        // Auxilary functions.
+        // Auxiliary functions.
         void GetNextMinibatch(const MinibatchSourcePtr& source,
             std::unordered_map<Variable, ValuePtr>& minibatch,
             const std::unordered_map<Variable, StreamInformation>& inputVarToStream,

@@ -57,6 +57,7 @@ OverloadUnaryMathFns(asin);
 OverloadUnaryMathFns(acos);
 OverloadUnaryMathFns(sinh);
 OverloadUnaryMathFns(cosh);
+OverloadUnaryMathFns(atanh);
 
 // Add overload for half math functions(Assume CUDA 9)
 // Only enable fp16 math for sm_60(P100) and sm_70+(V100)
@@ -411,6 +412,7 @@ DefUnaryOp(Asin, asin_(a));
 DefUnaryOp(Acos, acos_(a));
 DefUnaryOp(Sinh, sinh_(a));
 DefUnaryOp(Cosh, cosh_(a));
+DefUnaryOp(Atanh, atanh_(a));
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
@@ -456,6 +458,7 @@ DefBinaryOp(SqrOfDifference, Sqr(a - b));
 DefBinaryOp(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, b >= 0 ? a : a*((ElemType)1+b)); // b = output;
 DefBinaryOp(ElementwiseProductWithSinhDerivative, a * cosh_(b)); // note: b = input for sinh()
 DefBinaryOp(ElementwiseProductWithCoshDerivative, a * sinh_(b)); // note: b = input for cosh()
+DefBinaryOp(ElementwiseProductWithAtanhDerivative, a / (1 - b * b)); // note: b = input for atanh()
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")

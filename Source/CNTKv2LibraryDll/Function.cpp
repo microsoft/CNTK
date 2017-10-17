@@ -11,6 +11,7 @@
 #include "Utils.h"
 #include "UserFunctionFactory.h"
 #include "TrainingNodes.h"
+#include "proto/onnx/ONNX.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -467,27 +468,53 @@ namespace CNTK
         vectorBuf.assign(s.begin(), s.end());
     }
 
-    void Function::Save(const std::wstring& filepath)
+    void Function::Save(const std::wstring& filepath, ModelFormat format)
     {
-        Dictionary model = Serialize();
-        auto stream = GetFstream(filepath, false);
-        *stream << model;
-        stream->flush();
+        switch (format)
+        {
+            case ModelFormat::CNTKv2:
+            {
+                Dictionary model = Serialize();
+                auto stream = GetFstream(filepath, false);
+                *stream << model;
+                stream->flush();
+                break;
+            }
+
+            case ModelFormat::ONNX:
+            {
+                ONNXFormat::Save(RootFunction(), filepath);
+                break;
+            }
+        }
     }
 
-    /*static*/ FunctionPtr Function::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice)
+    /*static*/ FunctionPtr Function::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice, ModelFormat format)
     {
-        auto stream = GetFstream(filepath, true);
-        if (!Internal::IsLegacyModel(*stream))
+        switch (format)
         {
-            Dictionary model;
-            *stream >> model;
-            return Function::Deserialize(model, computeDevice);
+            case ModelFormat::CNTKv2:
+            {
+                auto stream = GetFstream(filepath, true);
+                if (!Internal::IsLegacyModel(*stream))
+                {
+                    Dictionary model;
+                    *stream >> model;
+                    return Function::Deserialize(model, computeDevice);
+                }
+                else
+                {
+                    return Internal::LoadLegacyModel(filepath, computeDevice); // throw an exception if deserializer != nullptr?
+                }
+                break;
+            }
+
+            case ModelFormat::ONNX:
+                return ONNXFormat::Load(filepath, computeDevice);
+                break;
         }
-        else
-        {
-            return Internal::LoadLegacyModel(filepath, computeDevice); // throw an exception if deserializer != nullptr?
-        }
+
+        return nullptr;
     }
 
     /*static*/ FunctionPtr Function::Load(const char *buffer, size_t length, const DeviceDescriptor& computeDevice)
@@ -1050,6 +1077,11 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::StableSigmoid, operand, Dictionary(), name);
     }
 
+    FunctionPtr Atanh(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Atanh, operand, Dictionary(), name);
+    }
+
     FunctionPtr Tanh(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Tanh, operand, Dictionary(), name);
@@ -1145,10 +1177,13 @@ namespace CNTK
         if (!axis.IsStaticAxis() && (axis != Axis::AllStaticAxes()))
             LogicError("Softmax: support only static axes.");
 
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
+
         if (((operand.Shape().Rank() == 1) && (axis.StaticAxisIndex() == 0)) ||
             (axis == Axis::AllStaticAxes()))
         {
-            return UnaryOp(PrimitiveOpType::Softmax, operand, Dictionary(), name);
+            return UnaryOp(PrimitiveOpType::Softmax, operand, std::move(additionalProperties), name);
         }
         else
         {
@@ -1157,7 +1192,7 @@ namespace CNTK
             auto expOperandDelta = Exp(operandDelta);
             auto result = ElementDivide(expOperandDelta, ReduceSum(expOperandDelta, axis));
 
-            return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Softmax", name);
+            return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"Softmax", name);
         }
     }
 
@@ -1414,6 +1449,28 @@ namespace CNTK
     FunctionPtr ElementDivide(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return ElementTimes(leftOperand, Reciprocal(rightOperand), name);
+    }
+
+    FunctionPtr ElementMax(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+    {
+        auto leftOperandPlaceholder = PlaceholderVariable();
+        auto rightOperandPlaceholder = PlaceholderVariable();
+
+        auto result = ElementSelect(Greater(leftOperandPlaceholder, rightOperandPlaceholder),
+                                    leftOperandPlaceholder,
+                                    rightOperandPlaceholder);
+        return AsBlock(std::move(result), { { leftOperandPlaceholder, leftOperand },{ rightOperandPlaceholder, rightOperand } }, L"ElementMax", name);
+    }
+
+    FunctionPtr ElementMin(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+    {
+        auto leftOperandPlaceholder = PlaceholderVariable();
+        auto rightOperandPlaceholder = PlaceholderVariable();
+
+        auto result = ElementSelect(Less(leftOperandPlaceholder, rightOperandPlaceholder),
+                                    leftOperandPlaceholder,
+                                    rightOperandPlaceholder);
+        return AsBlock(std::move(result), { { leftOperandPlaceholder, leftOperand },{ rightOperandPlaceholder, rightOperand } }, L"ElementMin", name);
     }
 
     FunctionPtr Equal(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
@@ -1966,6 +2023,26 @@ namespace CNTK
                                          name);
     }
 
+    FunctionPtr LocalResponseNormalization(const Variable& operand, size_t depthRadius, double bias, double alpha, double beta, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameDepthRadius] = depthRadius;
+        additionalProperties[PrimitiveFunction::AttributeNameBias] = bias;
+        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
+        additionalProperties[PrimitiveFunction::AttributeNameBeta] = beta;
+
+        auto operandPlaceholder = PlaceholderVariable();
+        auto operandSquare = Square(operandPlaceholder);
+        operandSquare = Reshape(operandSquare, { NDShape::InferredDimension, 1 }, Axis(2), Axis(3));
+        auto weights = Constant({ 1, 1, 2 * depthRadius + 1, 1 }, operand.GetDataType(), alpha / (2 * depthRadius + 1));
+        auto convResult = Convolution(weights, operandSquare);
+        convResult = Reshape(convResult, { NDShape::InferredDimension }, Axis(2), Axis(4));
+        auto denom = Exp(ElementTimes(Constant::Scalar(operand.GetDataType(), beta), Log(Plus(Constant::Scalar(operand.GetDataType(), bias), convResult))));
+
+        auto result = ElementDivide(operandPlaceholder, denom);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"LocalResponseNormalization", name);
+    }
+
     FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand, min, max };
@@ -2000,10 +2077,15 @@ namespace CNTK
 
     FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName)
     {
+        return AsBlock(std::move(composite), argumentsMap, Dictionary(), blockOpName, blockName);
+    }
+
+    FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, Dictionary&& attributes, const std::wstring& blockOpName, const std::wstring& blockName)
+    {
         if (!composite->IsComposite())
             InvalidArgument("Composite argument '%S' to AsBlock is not a composite Function.", composite->AsString().c_str());
 
-        return AsComposite(MakeSharedObject<BlockFunction>(std::move(composite), argumentsMap, blockOpName, Dictionary(), blockName), blockName);
+        return AsComposite(MakeSharedObject<BlockFunction>(std::move(composite), argumentsMap, blockOpName, std::move(attributes), blockName), blockName);
     }
 
     FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name)
@@ -2027,26 +2109,33 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
     }
 
-    FunctionPtr SELU(const Variable& operand, double scale, double alpha, const std::wstring& name)
+    FunctionPtr SELU(const Variable& operand, double gamma, double alpha, const std::wstring& name)
     {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameGamma] = gamma;
+        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
+
         auto operandPlaceholder = PlaceholderVariable();
         auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
         auto result = ElementSelect(lessThanZero,
             ElementTimes(Constant::Scalar(operand.GetDataType(), alpha), ELU(operandPlaceholder)),
             operandPlaceholder);
-        result = ElementTimes(Constant::Scalar(operand.GetDataType(), scale), result);
-        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"SELU", name);
+        result = ElementTimes(Constant::Scalar(operand.GetDataType(), gamma), result);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"SELU", name);
     }
 
     FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)
     {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = 0.01;
+
         auto operandPlaceholder = PlaceholderVariable();
         auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
         auto result = ElementSelect(lessThanZero,
             ElementTimes(Constant::Scalar(operand.GetDataType(), 0.01), operandPlaceholder),
             operandPlaceholder);
 
-        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"LeakyReLU", name);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"LeakyReLU", name);
     }
 
     FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name)
@@ -2530,6 +2619,7 @@ namespace CNTK
             additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
             additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
             additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
+            additionalProperties[PrimitiveFunction::AttributeNameKernelShape] = NDShape({0});
             additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
 
             return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);

@@ -382,6 +382,9 @@ public:
     Matrix<ElemType>& InplaceTanh();
     Matrix<ElemType>& AssignTanhOf(const Matrix<ElemType>& a);
 
+    Matrix<ElemType>& InplaceAtanh();
+    Matrix<ElemType>& AssignAtanhOf(const Matrix<ElemType>& a);
+
     Matrix<ElemType>& InplaceLogSoftmax(const bool isColWise);
     Matrix<ElemType>& AssignLogSoftmaxOf(const Matrix<ElemType>& a, const bool isColWise);
 
