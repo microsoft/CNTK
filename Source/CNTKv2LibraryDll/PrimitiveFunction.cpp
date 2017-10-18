@@ -338,7 +338,7 @@ namespace CNTK
 #endif
         else // normal case (fast path)
         {
-            return OutputsVectorType(InferOutput()); // construct from a single element (fast)
+            return OutputsVectorType(1, InferOutput()); // construct from a single element (fast)
         }
     }
 

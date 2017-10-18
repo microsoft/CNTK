@@ -153,6 +153,7 @@ namespace CNTK
     ///
     typedef unsigned int NDShapeDimension;
     typedef std::vector<NDShapeDimension> NDShapeDimensions;
+    //typedef FixedVectorWithBuffer<NDShapeDimension,4> NDShapeDimensions;
     class NDShape final
     {
         friend bool operator==(const NDShape& first, const NDShape& second);

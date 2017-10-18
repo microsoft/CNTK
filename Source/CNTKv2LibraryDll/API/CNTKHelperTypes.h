@@ -265,28 +265,61 @@ class FixedVectorWithBuffer : public Span<T*>
         U() {}  // C++ requires these in order to be happy
         ~U() {}
     } u;
+    T* Allocate(size_t len) // get or allocate the buffer
+    {
+        if (len > N)
+            return (T*)malloc(len * sizeof(T)); // dynamic case
+        else
+            return &u.fixedBuffer[0]; // fixed case
+    }
+    void DestructAndFree(const T* eValid) // call destructor items (of possibly partially constructed range); then free
+    {
+        T* b = begin();
+        const T* e = end();
+        for (auto* p = b; p != eValid; p++)
+            p->~T();
+        if (e > b + N) // (write it this way to avoid the division)
+            free(b);   // Span::beginIter holds the result of malloc()
+    }
 public:
     typedef T value_type;
-    // not copyable
-    FixedVectorWithBuffer(const FixedVectorWithBuffer&) = delete; void operator=(const FixedVectorWithBuffer&) = delete;
     // short-circuit constructors that construct from up to 2 arguments which are taken ownership of
-    FixedVectorWithBuffer()             : Base(u.fixedBuffer, (size_t)0) {}
-    FixedVectorWithBuffer(T&& a)        : Base(u.fixedBuffer, 1) { new (&u.fixedBuffer[0]) T(std::move(a)); }
-    FixedVectorWithBuffer(T&& a, T&& b) : Base(u.fixedBuffer, 2) { new (&u.fixedBuffer[0]) T(std::move(a)); new (&u.fixedBuffer[1]) T(std::move(b)); } // BUGBUG: This version should only be defined if N > 1.
-    FixedVectorWithBuffer(const T& a)   : Base(u.fixedBuffer, 1) { new (&u.fixedBuffer[0]) T(a); }
-    FixedVectorWithBuffer(const T& a, const T& b) : Base(u.fixedBuffer, 2)
+    FixedVectorWithBuffer()                       : Base(nullptr, nullptr) {} // (pointer value does not matter as long as it is the same; this is a tiny bit faster than passing the actual u.fixedBuffer)
+    // construct by moving elements in
+    // BUGBUG: These && interfaces should check their length to be 1 and 2, respectively. Can we use template magic to only match these if the correct values are passed as constants?
+    FixedVectorWithBuffer(size_t, T&& a)          : Base(u.fixedBuffer, 1) { new (&u.fixedBuffer[0]) T(std::move(a)); }
+    FixedVectorWithBuffer(size_t, T&& a, T&& b)   : Base(u.fixedBuffer, 2) { new (&u.fixedBuffer[0]) T(std::move(a)); new (&u.fixedBuffer[1]) T(std::move(b)); } // BUGBUG: This version should only be defined if N > 1. Use template magic.
+    FixedVectorWithBuffer(size_t len, const T& a) : Base(Allocate(len), len)
+    {
+        auto* b = begin();
+        const auto* e = end();
+        for (auto* p = b; p != e; p++)
+        {
+            try
+            {
+                new (p) T(a);
+            }
+            catch (...)
+            {
+                DestructAndFree(/*end of constructed range=*/p);
+                throw;
+            }
+        }
+    }
+    FixedVectorWithBuffer(size_t, const T& a, const T& b) : Base(u.fixedBuffer, 2)
     {
         new (&u.fixedBuffer[0]) T(a);
         try { new (&u.fixedBuffer[1]) T(b); } // if second one fails, we must clean up the first one
         catch (...) { u.fixedBuffer[0].~T(); throw; }
     } // BUGBUG: This version should only be defined if N > 1.
-    // constructor from a vector
-    // This constructor steals all elements out from the passed vector, but not the vector's fixedBuffer itself.
+
+    // constructor from a collection (other than ourselves, for which we have a specialization below)
+    // This constructor steals all elements out from the passed collection, but not the collection's buffer itself.
     // This is meant for the use case where we want to avoid reallocation of the vector, while its members
     // are small movable objects that get created upon each use.
-    template<typename Collection, typename = std::enable_if_t<!std::is_lvalue_reference_v<Collection&&>>> // [thanks to Billy O'Neal for the tip]
-    FixedVectorWithBuffer(Collection&& other) :
-        Base(other.size() > N ? (T*)malloc(other.size() * sizeof(T)) : &u.fixedBuffer[0], other.size())
+    // This is an unusual interpretation of && (since it only half-destructs the input), but it should be valid.
+    template<typename Collection, typename = std::enable_if_t<!std::is_lvalue_reference_v<Collection&&>>> // move construction from rvalue [thanks to Billy O'Neal for the tip]
+    FixedVectorWithBuffer(Collection&& other) : Base(Allocate(other.size()), other.size())
     {
         auto* b = begin();
         const auto* e = end();
@@ -297,28 +330,68 @@ public:
             otherIter++;
         }
     }
-    ~FixedVectorWithBuffer()
+    template<typename Collection, typename = std::enable_if_t<std::is_lvalue_reference_v<Collection&&>>> // copy construction from lvalue
+    FixedVectorWithBuffer(const Collection& other) : Base(Allocate(other.size()), other.size())
     {
         auto* b = begin();
         const auto* e = end();
+        auto otherIter = other.begin();
         for (auto* p = b; p != e; p++)
-            p->~T();
-        if (e > b + N) // (write it this way to avoid the division)
-            free(b);   // Span::beginIter holds the result of malloc()
+        {
+            try
+            {
+                new (p) T(*otherIter);
+                otherIter++;
+            }
+            catch (...) // in case of error must undo partially constructed vector
+            {
+                DestructAndFree(/*end of constructed range=*/p);
+                throw;
+            }
+        }
+    }
+    FixedVectorWithBuffer(FixedVectorWithBuffer&& other) : Base(other.size() > N ? other.begin() : u.fixedBuffer, other.size())
+    {
+        // if dynamic, we are done; if static, we must move the elements themselves
+        auto* b = begin();
+        const auto* e = end();
+        if (e <= b + N) // static case (if dynamiy
+        {
+            auto otherIter = other.begin();
+            for (auto* p = b; p != e; p++)
+            {
+                auto& otherItem = *otherIter;
+                new (p) T(std::move(otherItem)); // steal the item
+                otherItem.~T();                  // destruct right away to allow optimizer to short-circuit it
+                otherIter++;
+            }
+        }
+        ((Base&)other).~Base();                     // other is now empty, all elements properly destructed (this call does nothing actually)
+        new ((Base*)&other) Base(nullptr, nullptr); // and construct other to empty
     }
     FixedVectorWithBuffer& operator=(FixedVectorWithBuffer&& other)
     {
         this->~FixedVectorWithBuffer();
-        new (this) FixedVectorWithBuffer(std::move(other));
-        other.~FixedVectorWithBuffer(); // this destructs the freshly moved-out objects right away --TODO: do it inside the loop?
-        new (&other) FixedVectorWithBuffer(); // this writes two pointers
+        new (this) FixedVectorWithBuffer(move(other));
         return *this;
     }
+    FixedVectorWithBuffer& operator=(const FixedVectorWithBuffer& other)
+    {
+        // Note: We could optimize mallocs if both sizes are the same (then just copy over the elements)
+        // However, this class should not be used this way, so for now we won't.
+        this->~FixedVectorWithBuffer();
+        new (this) FixedVectorWithBuffer(other);
+        return *this;
+    }
+    ~FixedVectorWithBuffer()
+    {
+        DestructAndFree(/*end of constructed range=*/end());
+    }
     // this is a common use case
-    void assign(T&& a)
+    void assign(size_t, T&& a)
     {
         this->~FixedVectorWithBuffer();
-        new (this) FixedVectorWithBuffer(std::move(a));
+        new (this) FixedVectorWithBuffer(1, std::move(a));
     }
 };
 
