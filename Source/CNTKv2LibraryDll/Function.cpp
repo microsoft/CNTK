@@ -1055,6 +1055,20 @@ namespace CNTK
         }
     }
 
+    Dictionary& Function::GetCustomAttributes()
+    {
+        if (!m_attributes.Contains(PrimitiveFunction::AttributeNameCustomAttributes))
+        {
+            ResetCustomAttributes();
+        }
+        return m_attributes[PrimitiveFunction::AttributeNameCustomAttributes].Value<Dictionary>();
+    }
+
+    void Function::ResetCustomAttributes()
+    {
+        m_attributes[PrimitiveFunction::AttributeNameCustomAttributes] = Dictionary();
+    }
+
     FunctionPtr NullaryOp(PrimitiveOpType op, Dictionary&& opConfig, const std::wstring& name)
     {
         std::vector<Variable> operands{};
