@@ -195,13 +195,9 @@ namespace CNTK
             const auto dtype = imageData->GetDataType();
 
             NDShapeDimensions start(4, 0);
-            NDShapeDimensions extent;
-            extent.push_back(height);
-            extent.push_back(width);
-            extent.push_back(depth);
-            extent.push_back(1);
+            NDShapeDimensions extent{ height, width, depth, (NDShapeDimension)1 };
             const int compression = -1;
-            
+
             const std::vector<size_t> imageDim({height, width, depth});
             NDShape imageShape(imageDim);
 

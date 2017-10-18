@@ -837,9 +837,9 @@ namespace CNTK
                         case PrimitiveOpType::Gather:
                         {
                             assert(m_inputs.size() == 2);
-                            auto inputShape1 = m_inputs[0].Shape();
-                            auto inputShape2 = m_inputs[1].Shape();
-                            auto inputDim2 = inputShape2.Dimensions();
+                            const auto& inputShape1 = m_inputs[0].Shape();
+                            const auto& inputShape2 = m_inputs[1].Shape();
+                            auto inputDim2 = MakeVector(inputShape2.Dimensions()); // TODO: could be done more cheaply with SubShape()
                             inputDim2.pop_back();
                             outputShape = NDShape(inputDim2);
                             outputShape = outputShape.AppendShape(inputShape1);
@@ -848,8 +848,8 @@ namespace CNTK
                         case PrimitiveOpType::ToBatch:
                         {
                             assert(m_inputs.size() == 1);
-                            auto inputShape = m_inputs[0].Shape();
-                            auto inputDims = inputShape.Dimensions();
+                            const auto& inputShape = m_inputs[0].Shape();
+                            auto inputDims = MakeVector(inputShape.Dimensions()); // TODO: could be done more cheaply with SubShape()
                             if (inputDims.size() == 0)
                                 LogicError("Function '%S': Input can't be scalar", AsString().c_str());
                             inputDims.pop_back();
@@ -1457,9 +1457,9 @@ namespace CNTK
         }
     }
 
-    /*static*/ void PrimitiveFunction::FixNDShape(size_t filterRank, size_t inputRank, NDShape& shape, size_t deflt, const NDShape& from/* = NDShape()*/)
+    /*static*/ void PrimitiveFunction::FixNDShape(size_t filterRank, size_t inputRank, NDShape& shape, NDShapeDimension deflt, const NDShape& from/* = NDShape()*/)
     {
-        auto dims = shape.Dimensions();
+        auto dims = MakeVector(shape.Dimensions()); // PERF BUGBUG: This can be done without vector() in the loop.
         Microsoft::MSR::CNTK::ConvolutionNodeBase<float>::FixVectorShape(filterRank, inputRank, dims, deflt, from.Dimensions());
         shape = NDShape(dims);
         if (shape.HasFreeDimension())

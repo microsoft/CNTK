@@ -112,7 +112,11 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         {
             let& shape = val->Shape();
             if (shape.Rank() > totalShape.size())
-                totalShape.resize(shape.Rank(), 1);
+            {
+                auto paddedShape = MakeVector(totalShape);
+                paddedShape.resize(shape.Rank(), 1); // (NDShapeDimensions is not resizable, so need to take a detour)
+                totalShape = move(paddedShape);
+            }
             for (size_t k = 0; k < shape.Rank(); k++)
             {
                 if (totalShape[k] != shape[k] && totalShape[k] != 1 && shape[k] != 1) // shapes must match, considering broadcasting
@@ -488,7 +492,7 @@ void RunDynamiteTests()
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true,  DeviceDescriptor::GPUDevice(0));
-#if 0 // only do a batched one on the GPU by default
+#if 1 // only do a batched one on the GPU by default
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::CPUDevice());

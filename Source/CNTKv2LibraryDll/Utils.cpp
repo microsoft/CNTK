@@ -940,7 +940,7 @@ namespace CNTK
                         mask->MarkSequenceBegin({ 0, i });
 
                 for (auto shortSequenceIdx : sequencesShorterThanLongestSequence)
-                    mask->InvalidateSection({ sequenceLengths[shortSequenceIdx], shortSequenceIdx }, { NDShape::InferredDimension, 1 });
+                    mask->InvalidateSection({ sequenceLengths[shortSequenceIdx], shortSequenceIdx }, { NDShape::InferredDimension, (NDShapeDimension)1 });
             }
 
             return mask;
@@ -1014,7 +1014,7 @@ namespace CNTK
             {
                 if (actualStarts[i])
                     deviceValueMask->MarkSequenceBegin({ 0, i });
-                deviceValueMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+                deviceValueMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, (NDShapeDimension)1 });
             }
         }
 

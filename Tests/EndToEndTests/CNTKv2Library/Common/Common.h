@@ -219,7 +219,7 @@ std::pair<FunctionPtr, FunctionPtr> LSTMPCellWithSelfStabilization(Variable inpu
 
     unsigned long seed2 = 1;
     auto createProjectionParam = [device, &seed2](size_t outputDim) {
-        return Parameter({ outputDim, NDShape::InferredDimension }, AsDataType<ElementType>(), GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
+        return Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, AsDataType<ElementType>(), GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
     };
 
     auto createDiagWeightParam = [device, &seed2](size_t dim) {

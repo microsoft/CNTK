@@ -152,8 +152,8 @@ namespace CNTK
     /// Denotes a multi-dimensional rectangular shape.
     ///
     typedef unsigned int NDShapeDimension;
-    typedef std::vector<NDShapeDimension> NDShapeDimensions;
-    //typedef FixedVectorWithBuffer<NDShapeDimension,4> NDShapeDimensions;
+    //typedef std::vector<NDShapeDimension> NDShapeDimensions;
+    typedef FixedVectorWithBuffer<NDShapeDimension,4> NDShapeDimensions;
     class NDShape final
     {
         friend bool operator==(const NDShape& first, const NDShape& second);
@@ -216,8 +216,9 @@ namespace CNTK
         ///
         /// Construct a NDShape instance with specified dimensions.
         ///
-        NDShape(const std::initializer_list<size_t>& dimensions)
-            : m_shapeDims(Transform(dimensions, [](size_t dim) { return (NDShapeDimension)dim; }))
+        template<typename T>
+        NDShape(const std::initializer_list<T>& dimensions)
+            : m_shapeDims(dimensions)
         {}
 
         ///
@@ -261,7 +262,7 @@ namespace CNTK
                 InvalidArgument("NDShape::SubShape: The specified endAxisId (%zu) must not exceed the rank (%zu) of 'this' NDShape and must be >= than the specified beginAxisId (%zu)", endAxisId, Rank(), beginAxisId);
 
             NDShapeDimensions subShapeDims(m_shapeDims.begin() + beginAxisId, m_shapeDims.begin() + endAxisId);
-            return move(subShapeDims);
+            return std::move(subShapeDims);
         }
 
         ///

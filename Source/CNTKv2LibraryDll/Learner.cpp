@@ -573,7 +573,7 @@ namespace CNTK
         for (const auto& parameter : parameters)
         {
             // When needAveMultiplier == true, CPU and GPU implementations of LearnerAdaGrad require different number of columns.
-            size_t factor = 1;
+            NDShapeDimension factor = 1;
             if (needAveMultiplier && parameter.Value()->Device().Type() == DeviceKind::GPU)
             {
                 factor = 2;
@@ -822,7 +822,7 @@ namespace CNTK
         for (const auto& parameter : parameters)
         {
             // When needAveMultiplier == true, CPU and GPU implementations of RMSProp require different number of columns.
-            size_t factor = 3;
+            NDShapeDimension factor = 3;
             if (needAveMultiplier && parameter.Value()->Device().Type() == DeviceKind::GPU)
             {
                 factor = 4;

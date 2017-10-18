@@ -173,8 +173,8 @@ public:
     bool PoolIncludePad() const { return m_poolIncludePad; }
 
     // bottomlessly expand shape to filterRank, then expand to inputRank using defaults or given 'from' values
-    template<class V, typename T>
-    static void FixVectorShape(size_t filterRank, size_t inputRank, V& shape, T deflt, const V& from = V())
+    template<class V, class VFrom, typename T>
+    static void FixVectorShape(size_t filterRank, size_t inputRank, V& shape, T deflt, const VFrom& from)
     {
         if (shape.size() == 0)
             return; // let ComputeOutputShape() deal with this special case
@@ -185,6 +185,11 @@ public:
         // If 'from' is given then clone the value from there. This is meant to be the input dimensions for convolution.
         while (shape.size() < inputRank)
             shape.push_back(shape.size() < from.size() ? from[shape.size()] : deflt);
+    }
+    template<class V, typename T>
+    static void FixVectorShape(size_t filterRank, size_t inputRank, V& shape, T deflt)
+    {
+        FixVectorShape(filterRank, inputRank, shape, deflt, V());
     }
 
 private:

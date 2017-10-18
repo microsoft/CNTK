@@ -85,10 +85,7 @@ namespace CNTK
                 assert(outputs.capacity() == Function::MaxNumOutputs); // must not have touched this
 #endif
             for (auto& outputVar : outputs)
-            //for (size_t i = 0; i < outputs.size(); i++)
             {
-                //auto& outputVar = outputs[i];
-
                 if (outputVar.IsOutput()/*could be something else for Combine()*/ && outputVar.OwnerIs(nullptr))
                 {
 #ifndef DYNAMITE_ONLY // This is only needed for user functions, which are not defined in Dynamite

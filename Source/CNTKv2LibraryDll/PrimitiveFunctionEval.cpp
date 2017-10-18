@@ -432,7 +432,8 @@ namespace CNTK
                 if (axis >= gradientRank) // this was a splice along a new axis: we can index directly
                 {
                     startOffset[axis] = i;
-                    extent.resize(gradientRank); // chop off the trailing dims, which will lead to the slice to not have them either; which will in turn opCopy correctly
+                    extent = NDShapeDimensions(extent.begin(), extent.begin() + gradientRank); // chop off the trailing dims, which will lead to the slice to not have them either; which will in turn opCopy correctly
+                    //extent.resize(gradientRank); // chop off the trailing dims, which will lead to the slice to not have them either; which will in turn opCopy correctly
                 }
                 else // splice along an existing axis: we must find out the start and extent by aggregation
                 {

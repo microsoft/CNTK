@@ -2261,7 +2261,8 @@ class Variable::AutoBatch
     // and then returns the result in the form of a Variable suitable as an input to the next PimitiveFunction
     // by setting its m_acyclicOutputPrimitiveReference field.
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
-    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const wstring& name,
+    template<typename ShapeType>
+    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, vector<Variable>&& inputs, const ShapeType& shape, Dictionary&& attributes, const wstring& name,
                                        const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                        bool isFree = false, bool logSpliceAsGather = false)
     {
@@ -2308,7 +2309,8 @@ class Variable::AutoBatch
     // create a PrimitiveFunction and execute it right away
     // This executes RawPrimitiveFunction() and MemoizeKnowableValueInArena().
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
-    PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes, const wstring& name,
+    template<typename ShapeType>
+    PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, vector<Variable>&& inputs, const ShapeType& shape, Dictionary&& attributes, const wstring& name,
                                             const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                             bool isFree = false, bool logSpliceAsGather = false)
     {
@@ -3060,7 +3062,7 @@ class Variable::AutoBatch
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"intermediate reshape", 3, numBatchItems);
                 // TODO: Any way we can fold the reshape in using m_redirection? ... no need, this will become part of Gather.
                 // start with actual shape we have, and make it the one we want
-                auto outputShape = batchedInput.Shape().Dimensions();
+                auto outputShape = MakeVector(batchedInput.Shape().Dimensions()); // PERF BUGBUG!
                 if (batchAxis < fromSliceAxis)
                 {
                     if (batchAxis + 1 != fromSliceAxis)
@@ -3107,7 +3109,7 @@ class Variable::AutoBatch
                 {
                     // if this input broadcasts in the batch-axis dimension, we must manually unroll it.
                     // This implements broadcasting with non-uniform dimensions in the stacking case.
-                    auto broadcastShape = inputFields.m_shape.Dimensions();
+                    auto broadcastShape = MakeVector(inputFields.m_shape.Dimensions()); // PERF BUGBUG: Do this without malloc
                     broadcastShape.resize(batchAxis);
                     broadcastShape.push_back(f.m_autoBatchState.m_batchDim); // this is the shape we want
                     // insert a ReduceElements op, which in fact ignores its axes and therefore can also be used to broadcast
@@ -4699,32 +4701,44 @@ static NDShapeDimension DetermineInvokeFreeDim(const vector<Variable>& inputs)
 // helper to replace actual the batch dimension of inputShape by FreeDimension
 static inline NDShapeDimensions ReplaceWithFreeDim(const NDShapeDimensions& inShape)
 {
-    auto shape = inShape;
     // BUGBUG: We must honor the declared freeAxis here.
-    let rank = shape.size();
+    let rank = inShape.size();
     if (rank < 1 || rank > 2)
         InvalidArgument("Invoke: Shapes with rank < 1 or > 2 currently not supported here.");
     if (rank == 1)
+    {
+        auto shape = MakeVector(inShape); // PERF BUGBUG: Do this without malloc
         shape.push_back(NDShape::FreeDimension);
+        return shape;
+    }
     else
+    {
+        auto shape = inShape;
         shape.back() = NDShape::FreeDimension;
-    return shape;
+        return shape;
+    }
 }
 
 // helper to replace the batch dimension of inputShape by the given value
 // The batch dim must be present. If the given value is ABSENT_FREE_DIMENSION, it strips the axis.
 static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape, NDShapeDimension batchDimValue)
 {
-    auto shape = inShape;
     fail_if(batchDimValue == NDShape::FreeDimension, "use ReplaceWithFreeDim() instead");
-    fail_if(shape.back() != NDShape::FreeDimension, "ReplaceFreeDim called on shape that has no FreeDimension??");
+    fail_if(inShape.back() != NDShape::FreeDimension, "ReplaceFreeDim called on shape that has no FreeDimension??");
     //let rank = shape.size();
     if (batchDimValue == ABSENT_FREE_DIMENSION)
+    {
+        auto shape = MakeVector(inShape); // PERF BUGBUG: Do this without malloc --> SubShape()
         //shape.resize(rank - 1); // no batch dimension: drop the axis
         shape.pop_back(); // no batch dimension: drop the axis
+        return shape;
+    }
     else
+    {
+        auto shape = inShape;
         shape.back() = batchDimValue;
-    return shape;
+        return shape;
+    }
 }
 
 // TODO: make the interface nicer. The composite should be locked away in a struct Invocable.

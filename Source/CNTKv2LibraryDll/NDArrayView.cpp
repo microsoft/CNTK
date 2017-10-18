@@ -984,9 +984,9 @@ namespace CNTK
         // TODO: This is old code which may be simplified by merging with the TensorShape code above.
         // TODO: We should change NDArrayView::Slice() to never update the Matrix view, but do that on the fly in GetMatrixImpl() (AsMatrix() probably already does most of the work).
         bool anyPrevAxisSliced = false;
-        NDShape sliceViewShape(extent);       // note: has same #dims as extent
-        NDShapeDimensions endOffset(rank);  // note: these have same #dims as 'this', not extent
-        NDShapeDimensions lastOffset(rank);
+        NDShape sliceViewShape(extent);        // note: has same rank as extent
+        NDShapeDimensions endOffset(rank, 0);  // note: these have same rank as 'this', not extent
+        NDShapeDimensions lastOffset(rank, 0);
         for (size_t i = 0; i < rank; ++i)
         {
             if ((i < sliceViewShape.Rank()) && (sliceViewShape[i] == NDShape::InferredDimension))

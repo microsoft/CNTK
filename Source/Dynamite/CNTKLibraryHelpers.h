@@ -29,11 +29,12 @@ namespace Dynamite {
     {
         auto dims = data->Shape().Dimensions();
         auto startOffset = NDShapeDimensions(dims.size(), 0);
-        auto extent = dims;
+        let& extent = dims;
         if (startOffset.back() != i || extent.back() != 1)
         {
             startOffset.back() = i;
-            extent.pop_back(); // missing extend values default to 1 but do not generate an output axis
+            let lesserExtent = NDShapeDimensions(extent.begin(), extent.end() - 1); // missing extend values default to 1 but do not generate an output axis
+            //extent.pop_back(); // missing extend values default to 1 but do not generate an output axis
             data = data->SliceView(startOffset, extent, true); // slice it
             dims = data->Shape().Dimensions();
         }

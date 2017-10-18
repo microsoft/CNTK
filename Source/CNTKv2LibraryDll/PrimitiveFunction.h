@@ -838,7 +838,7 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static void FixNDShape(size_t filterRank, size_t inputRank, NDShape& shape, size_t deflt, const NDShape& from = NDShape());
+        static void FixNDShape(size_t filterRank, size_t inputRank, NDShape& shape, NDShapeDimension deflt, const NDShape& from = NDShape());
 
         static NDShape ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
                                                 std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,

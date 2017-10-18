@@ -616,9 +616,9 @@ static UnaryBroadcastingModel LengthNormalization(const Axis& axis = Axis(0))
 
 static BinaryModel RNNStep(size_t outputDim)
 {
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
-    auto R = Parameter({ outputDim, outputDim                  }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
-    auto b = Parameter({ outputDim },                             CurrentDataType(), 0.0,                        CurrentDevice(), L"b");
+    auto W = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto R = Parameter({ outputDim,        outputDim                             }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
+    auto b = Parameter({ outputDim        },                                        CurrentDataType(), 0.0,                        CurrentDevice(), L"b");
     return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
     {
         CountAPICalls(5);
@@ -747,7 +747,7 @@ static BinaryModel GRU(size_t outputDim)
 
 static TernaryModel LSTM(size_t outputDim)
 {
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto W = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
     auto R = Parameter({ outputDim, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
     auto b = Parameter({ outputDim }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
     return TernaryModel({ W, R, b }, [=](const Variable& prevH, const Variable& prevC, const Variable& input)
@@ -776,10 +776,10 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         InvalidArgument("Dense: ProjectionOptions::batchNormalize requires ProjectionOptions::bias to be specified as well");
     if (hasScale && (hasBatchNorm || hasLengthNorm))
         InvalidArgument("Dense: ProjectionOptions::stabilize is not meaningful (will cancel out) with batch or layer normalization");
-    auto W                  = Parameter({ outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
-    auto b                  = Parameter({ outputDim },                             CurrentDataType(), 0.0f,                       CurrentDevice(), L"b");
-    auto scale              = Parameter({},                                        CurrentDataType(), 1.0,                        CurrentDevice(), L"scale");
-    auto weightNormRescale  = Parameter({ outputDim },                             CurrentDataType(), 1.0,                        CurrentDevice(), L"weightNormRescale");
+    auto W                  = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto b                  = Parameter({                   outputDim                             }, CurrentDataType(), 0.0f,                       CurrentDevice(), L"b");
+    auto scale              = Parameter({                                                         },            CurrentDataType(), 1.0,                        CurrentDevice(), L"scale");
+    auto weightNormRescale  = Parameter({                   outputDim                             }, CurrentDataType(), 1.0,                        CurrentDevice(), L"weightNormRescale");
     let weightNormMinusHalf = Constant::Scalar(                                    CurrentDataType(), -0.5,                       CurrentDevice());
     let batchNorm = hasBatchNorm ? BatchNormalization(/*axis=*/1, Named("DenseBN")) : Identity;
     let lengthNorm = hasLengthNorm ? LengthNormalization() : Identity;

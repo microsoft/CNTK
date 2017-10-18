@@ -365,7 +365,7 @@ void Train(string systemId, wstring outputDirectory)
     // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep in a single expression
 
     // run something through to get the parameter matrices shaped --ugh!
-    model_fn(Constant({ srcVocabSize, 1 }, CurrentDataType(), 0.0, CurrentDevice()), Constant({ tgtVocabSize, 1 }, CurrentDataType(), 0.0, CurrentDevice()));
+    model_fn(Constant({ srcVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()), Constant({ tgtVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()));
 
     model_fn.LogParameters();
 
