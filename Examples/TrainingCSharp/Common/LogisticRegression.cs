@@ -40,8 +40,9 @@ namespace CNTK.CSTrainingExamples
             {
                 Value features, labels;
                 GenerateValueData(minibatchSize, inputDim, numOutputClasses, out features, out labels, device);
+                //TODO: sweepEnd should be set properly instead of false.
                 trainer.TrainMinibatch(
-                    new Dictionary<Variable, Value>() { { featureVariable, features }, { labelVariable, labels } }, device);
+                    new Dictionary<Variable, Value>() { { featureVariable, features }, { labelVariable, labels } }, false, device);
                 TestHelper.PrintTrainingProgress(trainer, minibatchCount, updatePerMinibatches);
             }
 

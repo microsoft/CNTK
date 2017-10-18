@@ -167,9 +167,10 @@ namespace CNTK.CSTrainingExamples
                 while (GetImageAndLabelMinibatch(trainingDataMap, batchSize, batchCount++,
                     imageDims, animalModelNumClasses, device, out imageBatch, out labelBatch))
                 {
+                    //TODO: sweepEnd should be set properly.
                     trainer.TrainMinibatch(new Dictionary<Variable, Value>() {
                         { imageInput, imageBatch },
-                        { labelInput, labelBatch } }, device);
+                        { labelInput, labelBatch } }, false, device);
                     TestHelper.PrintTrainingProgress(trainer, minibatchCount, 1);
                 }
             }

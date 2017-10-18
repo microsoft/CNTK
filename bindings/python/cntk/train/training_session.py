@@ -4,9 +4,51 @@
 # ==============================================================================
 
 import sys
+from enum import Enum, unique
 from .. import cntk_py
 from ..device import use_default_device
 from cntk.internal import sanitize_var_map, sanitize_function, typemap, _as_tuple
+import enum
+
+class DataUnit(enum.IntEnum):
+
+    '''
+    Indicates that whether the processing steps in the training data is counted by samples, minibatch or epoch.
+    '''
+
+    sample = cntk_py.DataUnit_Sample
+    '''
+    Steps on data are counted by samples.
+    '''
+
+    minibatch = cntk_py.DataUnit_Minibatch
+    '''
+    Steps on data are counted by samples.
+    '''
+
+    sweep = cntk_py.DataUnit_Sweep
+    '''
+    Steps on data are counted by sweeps of epochs.
+    '''
+
+
+def _unpack_parameter_frequency(frequency):
+    '''
+    Return the a tuple (frequency, frequency_unit).
+    The frequency_unit is either DataUnit_Sample, DataUnit_Minibatch, DataUnit_Sweep and default is DataUnit_Sample.
+    '''
+    if frequency is not None:
+        if isinstance(frequency, int):
+            #default to sample unit
+            return frequency, DataUnit.sample
+        elif isinstance(frequency, tuple) and isinstance(frequency[0], int) and isinstance(frequency[1], DataUnit):
+            return frequency
+        else:
+            raise('Unsupported frequency specification: %s' % frequency)
+    else:
+        #default to sample unit
+        return None, DataUnit.sample
+
 
 __doc__ = '''\
 A training session encapsulates a typical training loop and binds together a minibatch source that is used for training, a :class:`~cntk.train.trainer.Trainer` and an optional cross validation minibatch source. A training session takes care of consistent checkpointing and progress printing with specified frequencies.
@@ -17,8 +59,11 @@ class CheckpointConfig(cntk_py.CheckpointConfig):
 
     Args:
         filename (str): checkpoint file name.
-        frequency (int): checkpointing period (number samples between checkpoints). If `None`, no checkpointing takes place. 
+        frequency (int, tuple): checkpointing period (number samples between checkpoints).
+          If `None`, no checkpointing takes place. 
           If ``sys.maxsize``, a single checkpoint is taken at the end of the training.
+          If a tuple of (`frequency`, :class:`DataUnit`), the `frequency` is in terms of either `DataUnit.sample`, `DataUnit.minibatch` or `DataUnit.sweep`.
+          See :class:`DataUnit` for more information on frequency data unit.
         restore (bool): flag, indicating whether to restore from available checkpoint before the start of the training
         preserve_all (bool): saves all checkpoints, using ``filename`` as prefix and checkpoint index as a suffix.
     '''
@@ -28,14 +73,18 @@ class CheckpointConfig(cntk_py.CheckpointConfig):
 
         Args:
             filename (str): checkpoint file name.
-            frequency (int): checkpoint period (number samples between checkpoints). If 0, no checkpointing takes place. 
+            frequency (int, tuple): checkpoint period (number samples between checkpoints). If 0, no checkpointing takes place.
               If ``sys.maxsize``, a single checkpoint is taken at the end of the training.
+              If a tuple of (`frequency`, :class:`DataUnit`), the `frequency` is in terms of either `DataUnit.sample`, `DataUnit.minibatch` or `DataUnit.sweep`.
+              See also:
+                 :class:`DataUnit`
             restore (bool): flag, indicating whether to restore from available checkpoint before the start of the training
             preserve_all (bool): saves all checkpoints, using ``filename`` as prefix and checkpoint index as a suffix.
 
         Returns:
             Reconfigured self.
         '''
+        frequency, frequency_unit = _unpack_parameter_frequency(frequency)
         if filename is None:
             if frequency is not None and frequency != 0:
                 raise ValueError(
@@ -46,7 +95,7 @@ class CheckpointConfig(cntk_py.CheckpointConfig):
         if frequency is None:
             frequency = sys.maxsize
 
-        super(CheckpointConfig, self).__init__(filename, frequency,
+        super(CheckpointConfig, self).__init__(filename, frequency, frequency_unit,
                                                restore, preserve_all)
 
 class CrossValidationConfig(cntk_py.CrossValidationConfig):
@@ -55,8 +104,10 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
 
     Args:
         minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for cross validation
-        frequency (int): frequency in samples for cross validation
-          If None or ``sys.maxsize``, a single cross validation is performed at the end of training.
+        frequency (int, tuple): frequency in samples for cross validation
+         If None or ``sys.maxsize``, a single cross validation is performed at the end of training.
+         If a tuple of (`frequency`, :class:`DataUnit`), the `frequency` is in terms of either `DataUnit.sample`, `DataUnit.minibatch` or `DataUnit.sweep`.
+         See :class:`DataUnit` for more information on frequency data unit.
         minibatch_size(int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): minibatch schedule for cross validation
         callback (func (index, average_error, cv_num_samples, cv_num_minibatches)): Callback that will
           be called with frequency which can implement custom cross validation logic,
@@ -74,6 +125,7 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
     def __init__(self, minibatch_source=None, frequency=None, minibatch_size=32,
             callback=None, max_samples=None, model_inputs_to_streams=None, criterion=None, source=None, mb_size=None):
         self.callback = callback
+        frequency, frequency_unit = _unpack_parameter_frequency(frequency)
 
         if source is not None:
             self._warn_deprecated('"source" parameter is deprecated, please use "minibatch_source" instead')
@@ -113,10 +165,10 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
 
         if model_inputs_to_streams is not None:
             super(CrossValidationConfig, self).__init__(
-                minibatch_source, schedule, frequency, max_samples, model_inputs_to_streams)
+                minibatch_source, schedule, frequency, frequency_unit, max_samples, model_inputs_to_streams)
         else:
             super(CrossValidationConfig, self).__init__(
-                minibatch_source, schedule, frequency, max_samples)
+                minibatch_source, schedule, frequency, frequency_unit, max_samples)
 
     def _warn_deprecated(self, message):
         from warnings import warn
@@ -182,7 +234,9 @@ class TrainingSession(cntk_py.TrainingSession):
         mb_size (:class:`~cntk.cntk_py.minibatch_size_schedule` or int): minibatch size schedule for training
         model_inputs_to_streams (dict): mapping between input variables and input streams
         max_samples (int): maximum number of samples used for training
-        progress_frequency (int): frequency in samples for aggregated progress printing
+        progress_frequency (int, tuple): the number of samples, minibatches, sweeps of epochs per which aggregated progress is printed
+         If a tuple of (`frequency`, :class:`DataUnit`), the `frequency` is in terms of either `DataUnit.sample`, `DataUnit.minibatch` or `DataUnit.sweep`.
+         See :class:`DataUnit` for more information on frequency data unit.
         checkpoint_config (:class:`CheckpointConfig`): checkpoint configuration
         cv_config (:class:`CrossValidationConfig`): cross validation configuration
         test_config (:class:`TestConfig`): test configuration
@@ -199,6 +253,8 @@ class TrainingSession(cntk_py.TrainingSession):
 
         if mb_source is None:
             raise ValueError("Training minibatch source must not be None.")
+
+        progress_frequency, progress_frequency_unit = _unpack_parameter_frequency(progress_frequency)
 
         mb_source, model_inputs_to_streams = TrainingSession._sanitize_minibatch_source(mb_source, model_inputs_to_streams, trainer.loss_function)
 
@@ -229,7 +285,8 @@ class TrainingSession(cntk_py.TrainingSession):
 
         super(TrainingSession, self).__init__(trainer, mb_source, schedule,
             model_inputs_to_streams, max_samples,  
-            progress_frequency, 
+            progress_frequency,
+            progress_frequency_unit,
             checkpoint_config,
             cv_config,
             test_config)
@@ -355,7 +412,9 @@ def training_session(trainer,
         mb_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for training
         mb_size (:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for training
         model_inputs_to_streams (dict): mapping between input variables and input streams
-        progress_frequency (int): frequency in samples for aggregated progress printing
+        progress_frequency (int, tuple): frequency in samples for aggregated progress printing
+         If a tuple of (`frequency`, :class:`DataUnit`), the `frequency` is in terms of either `DataUnit.sample`, `DataUnit.minibatch` or `DataUnit.sweep`.
+         See :class:`DataUnit` for more information on frequency data unit.
         max_samples (int): maximum number of samples used for training
         checkpoint_config (:class:`~CheckpointConfig`): checkpoint configuration
         cv_config (:class:`~CrossValidationConfig`): cross validation configuration

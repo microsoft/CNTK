@@ -77,6 +77,7 @@
     <Compile Include="SwigProxyClasses\CNTKDictionary.cs" />
     <Compile Include="SwigProxyClasses\Constant.cs" />
     <Compile Include="SwigProxyClasses\ConstantVector.cs" />
+    <Compile Include="SwigProxyClasses\DataUnit.cs" />
     <Compile Include="SwigProxyClasses\DictionaryValue.cs" />
     <Compile Include="SwigProxyClasses\DictionaryVector.cs" />
     <Compile Include="SwigProxyClasses\HTKFeatureConfiguration.cs" />
