@@ -172,7 +172,7 @@ namespace CNTK.CSTrainingExamples
                         { labelInput, labelBatch } }, device);
                     TestHelper.PrintTrainingProgress(trainer, minibatchCount, 1);
                 }
-            }
+            }                       
 
             // save the trained model
             transferLearningModel.Save(animalsModelFile);
@@ -212,7 +212,7 @@ namespace CNTK.CSTrainingExamples
             {
                 // randomize 
                 int n = trainingDataMap.Count;
-                Random random = new Random();
+                Random random = new Random(0);
                 while (n > 1)
                 {
                     n--;

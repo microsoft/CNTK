@@ -3325,6 +3325,9 @@ namespace CNTK
             if (outputs.size() > 1)
                 RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
 
+            if (outputs.empty())
+                RuntimeError("A Function instance '%S' with no output cannot be implicitly converted to a Variable.", AsString().c_str());
+
             return outputs[0];
         }
 
@@ -3428,7 +3431,7 @@ namespace CNTK
         CNTK_API FunctionPtr ReplacePlaceholder(const Variable& placeholderReplacement);
 
         ///
-        CNTK_API void Save(std::vector<char> &vectorBuf);
+        CNTK_API void Save(std::vector<unsigned char> &vectorBuf);
 
         ///
         /// Save this Function graph into a model file.
