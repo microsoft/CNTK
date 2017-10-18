@@ -17,8 +17,8 @@ namespace CNTK
         friend class AutoBatch;
 
         // variable type
-        NDShape m_shape;
-        std::vector<Axis> m_dynamicAxes;
+        NDShape m_shape; // TODO: use fixed vector up to 6 or so (vector is 24 bytes)
+        std::vector<Axis> m_dynamicAxes; // TODO: make an object
         ::CNTK::DataType m_dataType;
         bool m_needsGradient;
         bool m_isSparse;
@@ -42,9 +42,9 @@ namespace CNTK
 
         // graph
         std::weak_ptr<PrimitiveFunction> m_ownerFunction; // OutputVariables only: Primitive that owns this output.
-        std::wstring m_name;
-        mutable std::wstring m_uid;
-        Variable m_blockFunctionVariableMapping;
+        std::wstring m_name; // TODO: make a unique_ptr
+        mutable std::wstring m_uid; // TODO: make a unique_ptr
+        Variable m_blockFunctionVariableMapping; // TODO: make a unique_ptr, so save those 3 shared_ptrs
 
         // debugging aid for identifying objects
         unsigned int m_uniqueIdForDebugging = GetUniqueId(); static unsigned int GetUniqueId() { static unsigned int id = 0; return ++id; }

@@ -37,6 +37,7 @@ public:
     // can be instantiated from any vector
     // We don't preserve const-ness for this class. Wait for a proper STL version of this :)
     Span(const IteratorType& beginIter, const IteratorType& endIter) : beginIter(beginIter), endIter(endIter) { }
+    Span(const IteratorType& beginIter, size_t len) : beginIter(beginIter), endIter(beginIter + len) { }
     // Cannot be copied. Pass this as a reference only, to avoid ambiguity.
     Span(const Span&) = delete; void operator=(const Span&) = delete;
     //Span& operator=(Span&& other) { beginIter = std::move(other.beginIter); endIter = std::move(other.endIter); return *this; }
@@ -260,79 +261,57 @@ class FixedVectorWithBuffer : public Span<T*>
     typedef Span<T*> Base;
     union U
     {
-        T buffer[N];
-        std::vector<T> vector;
+        T fixedBuffer[N]; // stored inside a union so that we get away without automatic construction yet correct alignment
         U() {}  // C++ requires these in order to be happy
         ~U() {}
     } u;
-    // constructor that constructs either for fixed length or from a given vector, which we steal
-    FixedVectorWithBuffer(size_t len, std::vector<T>&& vec) : // nothrow
-        Base(len > N ? vec.data() : u.buffer, (len > N ? vec.data() : u.buffer) + len) // nothrow
-    {
-        if (len > N)
-            new (&u.vector) std::vector<T>(std::move(vec));
-    }
 public:
     typedef T value_type;
     // not copyable
     FixedVectorWithBuffer(const FixedVectorWithBuffer&) = delete; void operator=(const FixedVectorWithBuffer&) = delete;
     // short-circuit constructors that construct from up to 2 arguments which are taken ownership of
-    FixedVectorWithBuffer()             : Base(u.buffer, u.buffer + 0) {}
-    FixedVectorWithBuffer(T&& a)        : Base(u.buffer, u.buffer + 1) { new (&u.buffer[0]) T(std::move(a)); }
-    FixedVectorWithBuffer(T&& a, T&& b) : Base(u.buffer, u.buffer + 2) { new (&u.buffer[0]) T(std::move(a)); new (&u.buffer[1]) T(std::move(b)); } // BUGBUG: This version should only be defined if N > 1.
-    FixedVectorWithBuffer(const T& a)   : Base(u.buffer, u.buffer + 1) { new (&u.buffer[0]) T(a); }
-    FixedVectorWithBuffer(const T& a, const T& b) : Base(u.buffer, u.buffer + 2)
+    FixedVectorWithBuffer()             : Base(u.fixedBuffer, (size_t)0) {}
+    FixedVectorWithBuffer(T&& a)        : Base(u.fixedBuffer, 1) { new (&u.fixedBuffer[0]) T(std::move(a)); }
+    FixedVectorWithBuffer(T&& a, T&& b) : Base(u.fixedBuffer, 2) { new (&u.fixedBuffer[0]) T(std::move(a)); new (&u.fixedBuffer[1]) T(std::move(b)); } // BUGBUG: This version should only be defined if N > 1.
+    FixedVectorWithBuffer(const T& a)   : Base(u.fixedBuffer, 1) { new (&u.fixedBuffer[0]) T(a); }
+    FixedVectorWithBuffer(const T& a, const T& b) : Base(u.fixedBuffer, 2)
     {
-        new (&u.buffer[0]) T(a);
-        try { new (&u.buffer[1]) T(b); } // if second one fails, we must clean up the first one
-        catch (...) { u.buffer[0].~T(); throw; }
+        new (&u.fixedBuffer[0]) T(a);
+        try { new (&u.fixedBuffer[1]) T(b); } // if second one fails, we must clean up the first one
+        catch (...) { u.fixedBuffer[0].~T(); throw; }
     } // BUGBUG: This version should only be defined if N > 1.
     // constructor from a vector
-    // This constructor steals all elements out from the passed vector, but not the vector's buffer itself.
+    // This constructor steals all elements out from the passed vector, but not the vector's fixedBuffer itself.
     // This is meant for the use case where we want to avoid reallocation of the vector, while its members
     // are small movable objects that get created upon each use.
-#if 0   // this const& constructor is wrong, since we don't handle errors correctly at present
-    template<typename Collection>
-    FixedVectorWithBuffer(const Collection& other) :
-        FixedVectorWithBuffer(other.cend() - other.cbegin(), // construct via Transform() here for correct destruction upon an exception
-                              other.cend() - other.cbegin() > N ? Transform(other, [](const T& elem) { return elem; }) : std::vector<T>())
-    {
-        if (size() <= N)
-        {
-            auto iter = other.cbegin();
-            for (size_t i = 0; i < size(); i++, iter++)
-                new (&u.buffer[i]) T(*iter++); // nothrow
-        }
-    }
-#endif
     template<typename Collection, typename = std::enable_if_t<!std::is_lvalue_reference_v<Collection&&>>> // [thanks to Billy O'Neal for the tip]
     FixedVectorWithBuffer(Collection&& other) :
-        FixedVectorWithBuffer(other.size(), // construct via Transform() here for correct destruction upon an exception
-                              other.size() > N ? Transform(other, [](T&& item) { return std::move(item); }) : std::vector<T>())
+        Base(other.size() > N ? (T*)malloc(other.size() * sizeof(T)) : &u.fixedBuffer[0], other.size())
     {
-        if (size() <= N)
+        auto* b = begin();
+        const auto* e = end();
+        auto otherIter = other.begin();
+        for (auto* p = b; p != e; p++)
         {
-            auto otherIter = other.begin();
-            for (auto& iter : *this)
-            {
-                new (&iter) T(std::move(*otherIter)); // nothrow
-                otherIter++;
-            }
+            new (p) T(std::move(*otherIter)); // nothrow
+            otherIter++;
         }
     }
     ~FixedVectorWithBuffer()
     {
-        if (size() <= N)
-            for (auto& iter : *this)
-                iter.~T();
-        else
-            u.vector.~vector();
+        auto* b = begin();
+        const auto* e = end();
+        for (auto* p = b; p != e; p++)
+            p->~T();
+        if (e > b + N) // (write it this way to avoid the division)
+            free(b);   // Span::beginIter holds the result of malloc()
     }
     FixedVectorWithBuffer& operator=(FixedVectorWithBuffer&& other)
     {
         this->~FixedVectorWithBuffer();
         new (this) FixedVectorWithBuffer(std::move(other));
-        // TODO: We could resize the span here, and destruct the objects immediately. Won't harm if we don't.
+        other.~FixedVectorWithBuffer(); // this destructs the freshly moved-out objects right away --TODO: do it inside the loop?
+        new (&other) FixedVectorWithBuffer(); // this writes two pointers
         return *this;
     }
     // this is a common use case
