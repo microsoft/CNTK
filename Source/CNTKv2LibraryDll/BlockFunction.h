@@ -217,8 +217,9 @@ namespace CNTK
             return blockFunctionInputs; // this goes into m_inputs
         }
 
-        void InferOutputs(std::vector<Variable>& outputs) override
+        OutputsVectorType InferOutputs() override
         {
+            std::vector<Variable> outputs;
             // We determine the outputs by replacing the arguments of the composite with new placeholders with updated 
             // shape etc. information matching the corresponding mapped input
             auto currentArguments = m_composite->Arguments(); // (this is an expensive operation, requiring a full traversal and a full copy+shared_ptr of the inputs array)
@@ -244,6 +245,8 @@ namespace CNTK
 
                 outputs.push_back(output);
             }
+
+            return std::move(outputs); // note: not super-efficient, but only used for static composites, so it's OK for now
         }
 
     private:

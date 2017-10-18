@@ -3330,6 +3330,8 @@ namespace CNTK
         friend bool Internal::IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName);
 
     public:
+        typedef FixedVectorWithBuffer<Variable, 2> InputsVectorType;
+        typedef FixedVectorWithBuffer<Variable, 1> OutputsVectorType;
 
         ///
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values corresponding
@@ -3394,7 +3396,7 @@ namespace CNTK
         /// The passed "outputs" vector should also reserve 128 elements in order to not cause memory allocation during
         /// crossing of dll boundary.
         ///
-        CNTK_API virtual void InferOutputs(std::vector<Variable>& /*out*/outputs) = 0;
+        CNTK_API virtual OutputsVectorType InferOutputs() = 0;
 
         ///
         /// Returns the name of the module (dll/so) containing this function. For native functions registered through
@@ -3805,9 +3807,6 @@ namespace CNTK
         friend class Variable;
         CNTK_API const auto RawOutputs() const { const auto& outputs = const_cast<Function*>(this)->InitOutputs(); return MakeSpan(outputs); }
 
-    public:
-        typedef FixedVectorWithBuffer<Variable, 2> InputsVectorType;
-        typedef FixedVectorWithBuffer<Variable, 1> OutputsVectorType;
     private:
         CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
 

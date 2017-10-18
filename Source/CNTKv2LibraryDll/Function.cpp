@@ -71,12 +71,15 @@ namespace CNTK
 #ifndef DYNAMITE_ONLY // TODO: Not clear why this is needed. Aren't the outputs always immediately initialized? Why be lazy across threads, i.e. return uninitialized objects to user code?
             m_outputInitializingByThreadId = std::this_thread::get_id();
 #endif
-            std::vector<Variable> outputs;
 #ifndef DYNAMITE_ONLY // This is only needed for user functions, which are not defined in Dynamite
+            std::vector<Variable> outputs;
             if (!IsPrimitive()) // if not primitive then items may be pushed by external code that lives with a different CRT heap
                 outputs.reserve(Function::MaxNumOutputs);
-#endif
             InferOutputs(outputs); // gives us a full copy of all those Variable objects
+#else
+            m_outputs = move(InferOutputs());
+            auto& outputs = m_outputs;
+#endif
 #ifndef DYNAMITE_ONLY // This is only needed for user functions, which are not defined in Dynamite
             if (!IsPrimitive())
                 assert(outputs.capacity() == Function::MaxNumOutputs); // must not have touched this
@@ -103,8 +106,8 @@ namespace CNTK
             if (outputs.size() < outputs.capacity())
                 m_outputs = outputs; // free some memory
             else
+                m_outputs = std::move(outputs);
 #endif
-            m_outputs.assign(std::move(outputs));
 #ifndef DYNAMITE_ONLY // TODO: Not clear why this is needed. Aren't the outputs always immediately initialized? Why be lazy across threads, i.e. return uninitialized objects to user code?
             m_outputInitializingByThreadId = std::thread::id();
 #endif
@@ -514,8 +517,7 @@ namespace CNTK
             }
         }
 
-        outputsUsingNewInputs.clear();
-        this->InferOutputs(outputsUsingNewInputs);
+        outputsUsingNewInputs = MakeVector(InferOutputs()); // note: not super-efficient, but only used for static composites, so it's OK for now
         const auto& currentOutputs = RawOutputs();
         for (size_t i = 0; i < currentOutputs.size(); ++i)
         {

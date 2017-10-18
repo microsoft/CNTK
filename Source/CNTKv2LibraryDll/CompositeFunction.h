@@ -120,10 +120,11 @@ namespace CNTK
             NOT_IMPLEMENTED;
         }
 
-        void InferOutputs(std::vector<Variable>& outputs) override
+        OutputsVectorType InferOutputs() override
         {
             const auto& inferred = m_rootFunction->InitOutputs();
-            outputs.assign(inferred.begin(), inferred.end()); // note: not just assigning as to keep existing memory allocation, as needed in case of user-defined functions
+            std::vector<Variable> outputs(inferred.begin(), inferred.end()); // note: not just assigning as to keep existing memory allocation, as needed in case of user-defined functions
+            return std::move(outputs); // note: not super-efficient, but only used for static composites, so it's OK for now
         }
 
         virtual void Backward(const BackPropStatePtr& state,

@@ -903,7 +903,7 @@ namespace CNTK
         // TODO: can inputs be const?
         static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, decltype(m_inputs)& inputs, PrimitiveFunction* owner, Dictionary& functionConfig);
 
-        void InferOutputs(std::vector<Variable>& outputs) override;
+        OutputsVectorType InferOutputs() override;
 
         FunctionPtr Clone(const std::vector<Variable>& clonedInputs) override
         {

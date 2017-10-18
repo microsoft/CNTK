@@ -276,7 +276,6 @@ public:
     typedef T value_type;
     // not copyable
     FixedVectorWithBuffer(const FixedVectorWithBuffer&) = delete; void operator=(const FixedVectorWithBuffer&) = delete;
-    FixedVectorWithBuffer(FixedVectorWithBuffer&&) = delete; void operator=(FixedVectorWithBuffer&&) = delete;
     // short-circuit constructors that construct from up to 2 arguments which are taken ownership of
     FixedVectorWithBuffer()             : Base(u.buffer, u.buffer + 0) {}
     FixedVectorWithBuffer(T&& a)        : Base(u.buffer, u.buffer + 1) { new (&u.buffer[0]) T(std::move(a)); }
@@ -306,7 +305,7 @@ public:
         }
     }
 #endif
-    template<typename Collection, typename = std::enable_if_t<std::is_rvalue_reference_v<Collection&&>>> // [thanks to Billy O'Neal for the tip]
+    template<typename Collection, typename = std::enable_if_t<!std::is_lvalue_reference_v<Collection&&>>> // [thanks to Billy O'Neal for the tip]
     FixedVectorWithBuffer(Collection&& other) :
         FixedVectorWithBuffer(other.size(), // construct via Transform() here for correct destruction upon an exception
                               other.size() > N ? Transform(other, [](T&& item) { return std::move(item); }) : std::vector<T>())
@@ -329,12 +328,12 @@ public:
         else
             u.vector.~vector();
     }
-    // this is a stop-gap; in most cases, this should not be called at all
-    template<typename Collection, typename = std::enable_if_t<std::is_rvalue_reference_v<Collection&&>>> // [thanks to Billy O'Neal for the tip]
-    void assign(Collection&& other)
+    FixedVectorWithBuffer& operator=(FixedVectorWithBuffer&& other)
     {
         this->~FixedVectorWithBuffer();
-        new (this) FixedVectorWithBuffer(move(other));
+        new (this) FixedVectorWithBuffer(std::move(other));
+        // TODO: We could resize the span here, and destruct the objects immediately. Won't harm if we don't.
+        return *this;
     }
     // this is a common use case
     void assign(T&& a)

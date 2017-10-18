@@ -313,14 +313,17 @@ namespace CNTK
 
     // infers multiple outputs
     // There are only two functions that have multiple.
-    void PrimitiveFunction::InferOutputs(std::vector<Variable>& outputs)
+    Function::OutputsVectorType PrimitiveFunction::InferOutputs()
     {
         if (m_op == PrimitiveOpType::Combine) // special case: Combine() can have more than one output
         {
+            std::vector<Variable> outputs;
             outputs.assign(m_inputs.begin(), m_inputs.end());
+            return std::move(outputs); // PERF BUGBUG: This is time-critical and must just construct the output vector directly
         }
         else if (m_op == PrimitiveOpType::UnpackSequence) // special case: UnpackSequence() has two outputs
         {
+            std::vector<Variable> outputs;
             auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
             if (!suppressMaskOutput)
             {
@@ -329,10 +332,13 @@ namespace CNTK
             }
             else
                 outputs.emplace_back(InferOutput());
+            return std::move(outputs); // PERF BUGBUG: This is time-critical and must just construct the output vector directly
         }
         else // normal case
         {
+            std::vector<Variable> outputs;
             outputs.emplace_back(InferOutput());
+            return std::move(outputs); // PERF BUGBUG: This is time-critical and must just construct the output vector directly
         }
     }
 

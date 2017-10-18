@@ -378,23 +378,8 @@ namespace X{
 }
 #endif
 
-class TT
-{
-public:
-    TT() {}
-    TT(TT&& other)
-    {
-        fprintf(stderr, "oops\n");
-    }
-};
-TT tt0;
-TT& tt()
-{
-    return tt0;
-}
 int main(int argc, char *argv[])
 {
-    //auto x = /*move*/(tt());
     using namespace CNTK;
     {
         string a("test");
