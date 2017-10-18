@@ -173,7 +173,7 @@ namespace CNTK
     //  - can be sure the correct deleter is called (on the correct heap)
 
     // a pool for allocating objects of one specific size
-    template<typename T> struct FixedSizePoolItem : public T { unsigned short blockIndex; }; // TODO: just store a pointer to the block; in most cases, this is aligned to 8 bytes anyway
+    template<typename T> struct FixedSizePoolItem : public T { char* flagPtr; };
     template<size_t itemByteSize>
     class FixedSizePool
     {
@@ -187,33 +187,41 @@ namespace CNTK
             {
                 static const size_t capacity = 65536; // we reserve this many at a time
                 std::vector<char> bytes = std::vector<char>(capacity * itemByteSize); // [byte offset]
-                std::vector<bool> used  = std::vector<bool>(capacity, false);         // [item index]  true if this entry is used
+                std::vector<char> used  = std::vector<char>(capacity, false);         // [item index]  true if this entry is used
+                // Note: time measurement comparing vector<bool> vs. vector<char> vs. using flagptr was inconclusive
                 template<typename T>
-                T* TryAllocate(size_t& nextItemIndex)
+                inline std::pair<T*, char*> TryAllocate(size_t& nextItemIndex)
                 {
-                    Assert(nextItemIndex <= capacity);
+                    //Assert(nextItemIndex <= capacity);
                     while (nextItemIndex < capacity)
                     {
                         if (!used[nextItemIndex])
                         {
                             T* p = (T*)(bytes.data() + nextItemIndex * itemByteSize);
-                            used[nextItemIndex] = true; // and mark as allocated
+                            char* flagPtr = &used[nextItemIndex];
+                            *flagPtr = true; // and mark as allocated
+                            //used[nextItemIndex] = true; // and mark as allocated
                             nextItemIndex++;
-                            return p;
+                            return std::make_pair(p, flagPtr);
                         }
                         nextItemIndex++;
                     }
-                    return nullptr; // this block is full
+                    return std::make_pair(nullptr, nullptr); // this block is full
                 }
-                template<typename T>
-                void Deallocate(T* p)
+                static void Deallocate(char* flagPtr)
                 {
-                    size_t itemIndex = (((char*)p) - bytes.data()) / itemByteSize;
-                    Assert(itemIndex < capacity);
-                    Assert(p == (T*)(bytes.data() + itemIndex * itemByteSize));
-                    Assert(used[itemIndex]);
-                    used[itemIndex] = false;
+                    Assert(*flagPtr == (char)true);
+                    *flagPtr = false;
                 }
+                //template<typename T>
+                //void Deallocate(T* p)
+                //{
+                //    size_t itemIndex = (((char*)p) - bytes.data()) / itemByteSize;
+                //    Assert(itemIndex < capacity);
+                //    Assert(p == (T*)(bytes.data() + itemIndex * itemByteSize));
+                //    Assert(!!used[itemIndex]);
+                //    used[itemIndex] = false;
+                //}
             };
             // state of allocation
             std::vector<std::shared_ptr<Block>> blocks; // all blocks we have currently allocated
@@ -255,8 +263,8 @@ namespace CNTK
                         else
                         {
                             // too few free items, we'd scan lots of items to find one: instead use a fresh block
-                            if ((decltype(FixedSizePoolItem<T>::blockIndex))(currentBlockIndex + 1) != currentBlockIndex + 1)
-                                LogicError("FixedSizePoolAllocator: Too many blocks.");
+                            //if ((decltype(FixedSizePoolItem<T>::blockIndex))(currentBlockIndex + 1) != currentBlockIndex + 1)
+                            //    LogicError("FixedSizePoolAllocator: Too many blocks.");
                             blocks.push_back(std::make_shared<Block>());
                             totalItemsReserved += Block::capacity;
                             // enter the newly created block
@@ -264,13 +272,15 @@ namespace CNTK
                         }
                     }
                     // try to allocate in current block
-                    T* p = blocks[currentBlockIndex]->TryAllocate<T>(nextItemIndex);
+                    auto res = blocks[currentBlockIndex]->TryAllocate<T>(nextItemIndex);
+                    auto* p = res.first;
                     if (p) // found one in the current block
                     {
                         totalItemsAllocated++; // account for it
                         auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(p);
-                        pItem->blockIndex = (decltype(pItem->blockIndex))currentBlockIndex; // remember which block it came from
-                        Assert(pItem->blockIndex == currentBlockIndex); // (overflow)
+                        //pItem->blockIndex = (decltype(pItem->blockIndex))currentBlockIndex; // remember which block it came from
+                        pItem->flagPtr = res.second; // remember flag location for trivial deallocation
+                        //Assert(pItem->blockIndex == currentBlockIndex); // (overflow)
                         return p;
                     }
                     // current block is full: advance the scan to the next block
@@ -284,9 +294,11 @@ namespace CNTK
             {
                 //fprintf(stderr, "deallocate<%s>()  --> %d bytes (%d incl. index)\n", typeid(T).name(), (int)sizeof T, (int)itemByteSize);
                 const auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(p);
-                Assert(pItem->blockIndex < blocks.size());
-                blocks[pItem->blockIndex]->Deallocate(p);
-                Assert(totalItemsAllocated > 0);
+                auto* flagPtr = pItem->flagPtr;
+                Block::Deallocate(flagPtr);
+                //Assert(pItem->blockIndex < blocks.size());
+                //blocks[pItem->blockIndex]->Deallocate(p);
+                //Assert(totalItemsAllocated > 0);
                 totalItemsAllocated--;
             }
         };

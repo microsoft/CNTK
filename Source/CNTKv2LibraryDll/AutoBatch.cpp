@@ -2456,19 +2456,10 @@ class Variable::AutoBatch
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
         // clone it
         PrimitiveFunctionPtr fCloned =
-        /*if*/ (clonee.m_op == PrimitiveOpType::Block) ?
-        //{
-            //let& fAsBlock = static_cast<BlockFunction&>(clonee);
-            MakeSharedObject<BlockFunction>(static_cast<BlockFunction&>(clonee).Composite(), move(newInputs), static_cast<BlockFunction&>(clonee).IsBasicBlock(), wstring(static_cast<BlockFunction&>(clonee).OpName()), wstring(clonee.Name()))
-            // PERF BUGBUG: (?) If not basic block then we should expand it right here.
-        //}
-        /*else*/:
-        //{
-            // clone the attributes
-            //Dictionary attributes;
-            //clonee.m_attributes.ShallowCloneTo(attributes); // note: shallow clone will not copy the map, just a shared_ptr. This only works if attributes are immutable, which is true inside auto-batch
-            MakeSharedObject<PrimitiveFunction>(clonee.m_op, move(newInputs), move(ShallowCloneDictionary(clonee.m_attributes)));// , wstring(clonee.Name()));
-        //}
+            /*if*/ (clonee.m_op == PrimitiveOpType::Block) ?
+                MakeSharedObject<BlockFunction>(static_cast<BlockFunction&>(clonee).Composite(), move(newInputs), static_cast<BlockFunction&>(clonee).IsBasicBlock(), wstring(static_cast<BlockFunction&>(clonee).OpName()), wstring(clonee.Name()))
+            /*else*/:
+                MakeSharedObject<PrimitiveFunction>(clonee.m_op, move(newInputs), move(ShallowCloneDictionary(clonee.m_attributes)));// , wstring(clonee.Name()));
         // Note: We can use make_shared since no shared_ptrs to these clones are ever exposed across the DLL boundary.
         //if (fCloned->m_uniqueIdForDebugging == 20000)
         //    fprintf(stderr, "");
