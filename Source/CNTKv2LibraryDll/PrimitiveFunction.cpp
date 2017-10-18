@@ -317,10 +317,11 @@ namespace CNTK
     {
         if (m_op == PrimitiveOpType::Combine) // special case: Combine() can have more than one output
         {
-            std::vector<Variable> outputs;
-            outputs.assign(m_inputs.begin(), m_inputs.end());
-            return std::move(outputs); // PERF BUGBUG: This is time-critical and must just construct the output vector directly
+            //std::vector<Variable> outputs;
+            //outputs.assign(m_inputs.begin(), m_inputs.end());
+            return MakeVector(m_inputs); // not super-efficient, but OK for now for static graphs
         }
+#ifndef DYNAMITE_ONLY
         else if (m_op == PrimitiveOpType::UnpackSequence) // special case: UnpackSequence() has two outputs
         {
             std::vector<Variable> outputs;
@@ -332,13 +333,12 @@ namespace CNTK
             }
             else
                 outputs.emplace_back(InferOutput());
-            return std::move(outputs); // PERF BUGBUG: This is time-critical and must just construct the output vector directly
+            return std::move(outputs);
         }
-        else // normal case
+#endif
+        else // normal case (fast path)
         {
-            std::vector<Variable> outputs;
-            outputs.emplace_back(InferOutput());
-            return std::move(outputs); // PERF BUGBUG: This is time-critical and must just construct the output vector directly
+            return OutputsVectorType(InferOutput()); // construct from a single element (fast)
         }
     }
 

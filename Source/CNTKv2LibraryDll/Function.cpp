@@ -52,7 +52,7 @@ namespace CNTK
         return udfCallbackMap.at(uniqueOpName);
     }
 
-    /*std::vector<Variable>*/Function::OutputsVectorType& Function::InitOutputs()
+    Function::OutputsVectorType& Function::InitOutputs()
     {
 #ifndef DYNAMITE_ONLY
         if (std::this_thread::get_id() == m_outputInitializingByThreadId)
@@ -84,9 +84,10 @@ namespace CNTK
             if (!IsPrimitive())
                 assert(outputs.capacity() == Function::MaxNumOutputs); // must not have touched this
 #endif
-            for (size_t i = 0; i < outputs.size(); i++)
+            for (auto& outputVar : outputs)
+            //for (size_t i = 0; i < outputs.size(); i++)
             {
-                auto& outputVar = outputs[i];
+                //auto& outputVar = outputs[i];
 
                 if (outputVar.IsOutput()/*could be something else for Combine()*/ && outputVar.OwnerIs(nullptr))
                 {
@@ -100,7 +101,7 @@ namespace CNTK
 #endif
                 }
 
-                outputVar.m_outputComposite.reset();
+                outputVar.m_outputComposite.reset(); // TODO: Can this be done in InferOutputs? I think this only applies to Combine().
             }
 #ifndef DYNAMITE_ONLY // This is only needed for user functions, which are not defined in Dynamite
             if (outputs.size() < outputs.capacity())
