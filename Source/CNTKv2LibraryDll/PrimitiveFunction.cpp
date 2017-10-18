@@ -717,8 +717,6 @@ namespace CNTK
                             assert(m_inputs.size() == 2);
 
                             auto inputShape = m_inputs[0].Shape();
-                            if (inputShape.HasFreeDimension())
-                                LogicError("Function '%S': Currently unpooling does not support operands with free static axes dimensions.", AsString().c_str());
 
                             outputShape = m_inputs[1].Shape();
                             PoolingType unpoolingType = (PoolingType)(m_attributes[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
