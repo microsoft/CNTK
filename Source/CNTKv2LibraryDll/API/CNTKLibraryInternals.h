@@ -224,15 +224,15 @@ namespace CNTK
                 //}
             };
             // state of allocation
-            std::vector<std::shared_ptr<Block>> blocks; // all blocks we have currently allocated
-            size_t totalItemsAllocated = 0;   // we have presently this many live objects
-            size_t totalItemsReserved = 0;    // we are holding memory sufficient to hold this many
+            std::list<Block> blocks;                          // all blocks we have currently allocated
+            size_t totalItemsAllocated = 0;                   // we have presently this many live objects
+            size_t totalItemsReserved = 0;                    // we are holding memory sufficient to hold this many
             // state of scan
-            size_t currentBlockIndex;         // we are allocating from this block
-            size_t nextItemIndex;             // index of next item. If at end of block, this is equal to blockCapacity
+            typename std::list<Block>::iterator currentBlock; // we are allocating from this block
+            size_t nextItemIndex;                             // index of next item. If at end of block, this is equal to blockCapacity
             void ResetScan()
             {
-                currentBlockIndex = 0;
+                currentBlock = blocks.begin();
                 nextItemIndex = 0;
             }
         public:
@@ -244,15 +244,15 @@ namespace CNTK
             template<typename T>
             T* Allocate()
             {
-                if (sizeof(FixedSizePoolItem<T>) != itemByteSize)
-                    LogicError("FixedSizePoolAllocator: Called for an object of the wrong size.");
-                Assert(totalItemsReserved >= totalItemsAllocated);
+                //if (sizeof(FixedSizePoolItem<T>) != itemByteSize)
+                //    LogicError("FixedSizePoolAllocator: Called for an object of the wrong size.");
+                //Assert(totalItemsReserved >= totalItemsAllocated);
                 //fprintf(stderr, "allocate<%s>()  --> %d bytes (%d incl. index)\n", typeid(T).name(), (int)sizeof T, (int)itemByteSize);
                 // find next free location
                 for (;;)
                 {
                     // all blocks are full: either reset the scan or grow
-                    if (currentBlockIndex == blocks.size())
+                    if (currentBlock == blocks.end())
                     {
                         if (totalItemsReserved > totalItemsAllocated * 2)
                         {
@@ -265,14 +265,16 @@ namespace CNTK
                             // too few free items, we'd scan lots of items to find one: instead use a fresh block
                             //if ((decltype(FixedSizePoolItem<T>::blockIndex))(currentBlockIndex + 1) != currentBlockIndex + 1)
                             //    LogicError("FixedSizePoolAllocator: Too many blocks.");
-                            blocks.push_back(std::make_shared<Block>());
+                            blocks.emplace_back(Block());
                             totalItemsReserved += Block::capacity;
-                            // enter the newly created block
+                            // enter the new block
+                            currentBlock = blocks.end();
+                            currentBlock--;
                             nextItemIndex = 0;
                         }
                     }
                     // try to allocate in current block
-                    auto res = blocks[currentBlockIndex]->TryAllocate<T>(nextItemIndex);
+                    auto res = currentBlock->TryAllocate<T>(nextItemIndex);
                     auto* p = res.first;
                     if (p) // found one in the current block
                     {
@@ -284,7 +286,7 @@ namespace CNTK
                         return p;
                     }
                     // current block is full: advance the scan to the next block
-                    currentBlockIndex++;
+                    currentBlock++;
                     nextItemIndex = 0;
                 }
                 LogicError("FixedSizePoolAllocator: Allocation in newly created block unexpectedly failed.");
