@@ -728,7 +728,7 @@ namespace CNTK
             bool found = false;
             for (size_t i = 0; i < sampleSize; i++)
             {
-                if (*currentp == 1)
+                if (*currentp == (ElementType)1)
                 {
                     if (found)
                         RuntimeError("CopyDenseToOneHot: Cannot convert to onehot vector; more than one non-zero value in the sample.");
@@ -736,7 +736,7 @@ namespace CNTK
                     index = i;
                     found = true;
                 }
-                else if (*currentp != 0)
+                else if (*currentp != (ElementType)0)
                     RuntimeError("CopyDenseToOneHot: Cannot convert to onehot vector; contains value other than 0/1.");
 
                 currentp++;

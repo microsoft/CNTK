@@ -38,6 +38,38 @@
 
 namespace CNTK
 {
+    void halfbits2float(const unsigned short*, float*);
+    void float2halfbits(float*, unsigned short*);
+
+    class alignas(2) float16
+    {
+    protected:
+        unsigned short __x;
+
+    public:
+        float16() = default;
+        float16(const float16& other) { __x = other.__x; }
+        float16& operator=(const float16& other) { __x = other.__x; return *this; }
+        float16(float16&& other) { *this = std::move(other); }
+
+        // construction from build-in types
+        float16(float f) { float2halfbits(&f, &__x); }
+        float16& operator=(float f) { float2halfbits(&f, &__x); return *this; }
+        float16(double d) : float16((float)d) {}
+        float16& operator=(double d) { *this = ((float)d); return *this; }
+        float16(int i) : float16((float)i) {}
+        float16& operator=(int i) { *this = ((float)i); return *this; }
+        float16(size_t u) : float16((float)u) {}
+        float16& operator=(size_t u) { *this = ((float)u); return *this; }
+
+        // cast to build-in types
+        operator float() const { float f; halfbits2float(&__x, &f); return f; }
+
+        // compare functions
+        inline bool operator==(const float16& rhs) const { return (__x == rhs.__x); }
+        inline bool operator!=(const float16& rhs) const { return (__x != rhs.__x); }
+    };
+
     ///
     /// Enumeration type denoting data type of symbolic data entities or actual data.
     ///
@@ -47,6 +79,7 @@ namespace CNTK
         Float = 1,
         Double = 2,
         UChar = 3, // So far only used internally in deserializers.
+        Float16 = 4,
 
         /* TODO:
         Bit,
@@ -74,6 +107,8 @@ namespace CNTK
             return DataType::Float;
         else if (std::is_same<ElementType, double>())
             return DataType::Double;
+        else if (std::is_same<ElementType, float16>())
+            return DataType::Float16;
         else
             NOT_IMPLEMENTED;
     }
@@ -84,6 +119,8 @@ namespace CNTK
             return "Float";
         else if (dataType == DataType::Double)
             return "Double";
+        else if (dataType == DataType::Float16)
+            return "Float16";
         else
             LogicError("Unknown DataType.");
     }
@@ -94,6 +131,8 @@ namespace CNTK
             return sizeof(float);
         else if (dataType == DataType::Double)
             return sizeof(double);
+        else if (dataType == DataType::Float16)
+            return sizeof(float16);
         else
             LogicError("Unknown DataType.");
     }
@@ -2829,6 +2868,10 @@ namespace CNTK
             else if (dataType == DataType::Double)
             {
                 CopyVariableValueToVector<double>(outputVariable, sequences);
+            }
+            else if (dataType == DataType::Float16)
+            {
+                CopyVariableValueToVector<float16>(outputVariable, sequences);
             }
         }
 
