@@ -327,6 +327,8 @@ cv::Rect CropTransformer::GetCropRectMultiView10(int viewIndex, int crow, int cc
 // scaleMode = "fill" (default) - warp the image to the given target size
 // scaleMode = "crop" - resize the image's shorter side to the given target size and crops the overlap
 // scaleMode = "pad"  - resize the image's larger side to the given target size, center it and pad the rest
+// scaleMode = "resizemin" - resize the smaller dimension of the image to a given target size, preserving the aspect ratio.
+// scaleMode = "resizemax" - resize the larger dimension of the image to a given target size, preserving the aspect ratio.
 ScaleTransformer::ScaleTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
     m_imgWidth    = config(L"width");
@@ -392,11 +394,13 @@ void NewSizeMax(int& height, int& width, float& aspectratio, int& newheight, int
     {
       newwidth = scalewidth;
       newheight = (int)(std::ceil(newwidth * aspectratio));
+
     }
   else
     {
       newheight = scaleheight;
       newwidth = (int)(std::ceil(newheight / aspectratio));
+
     }
 }
 void ScaleTransformer::Apply(uint8_t, cv::Mat &mat)
@@ -409,7 +413,8 @@ void ScaleTransformer::Apply(uint8_t, cv::Mat &mat)
       {
 	int height{mat.rows};
 	int width{mat.cols};
-	float aspectratio = height / width;
+	int channels{mat.channels()};
+	float aspectratio = (float)height/(float)width;
 	int newheight{};
 	int newwidth{};
 	if (m_scaleMode == ScaleMode::ResizeMin)
@@ -417,6 +422,7 @@ void ScaleTransformer::Apply(uint8_t, cv::Mat &mat)
 	else
 	  NewSizeMax(height, width, aspectratio, newheight, newwidth, (int)m_imgHeight, (int)m_imgWidth);
 
+	
 	cv::resize(mat, mat, cv::Size(newwidth, newheight), 0, 0, m_interp);
 	  
       }
