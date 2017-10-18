@@ -1501,7 +1501,7 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Reshape, operand, std::move(additionalProperties), name);
     }
 
-    std::vector<Variable> AutoBroadcastSequence(const Variable& left, const Variable& right)
+    std::vector<Variable> AutoBroadcastSequence(PrimitiveOpType op, const Variable& left, const Variable& right)
     {
         auto left_axis = left.DynamicAxes();
         int left_num_seqs = (int)std::count_if(left_axis.begin(), left_axis.end(), [](Axis a) {return a.IsSequenceAxis(); });
@@ -1509,7 +1509,13 @@ namespace CNTK
         int right_num_seqs = (int)std::count_if(right_axis.begin(), right_axis.end(), [](Axis a) {return a.IsSequenceAxis(); });
 
         vector<Variable> result;
-        if ((left_num_seqs + right_num_seqs) == 1)
+        if ( op != PrimitiveOpType::PastValue &&
+             op != PrimitiveOpType::FutureValue &&
+             op != PrimitiveOpType::ToSequence &&
+             op != PrimitiveOpType::ToSequenceLike &&
+             left_axis.size() > 0 &&
+             right_axis.size() > 0 &&
+            (left_num_seqs + right_num_seqs) == 1)
         {
             if (left_num_seqs == 1)
             {
@@ -1537,7 +1543,7 @@ namespace CNTK
 
     FunctionPtr BinaryOp(PrimitiveOpType op, const Variable& leftOperand, const Variable& rightOperand, Dictionary&& opConfig, const std::wstring& name)
     {
-        std::vector<Variable> operands = AutoBroadcastSequence(leftOperand, rightOperand);
+        std::vector<Variable> operands = AutoBroadcastSequence(op, leftOperand, rightOperand);
         return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
     }
 
