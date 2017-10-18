@@ -1050,13 +1050,13 @@ namespace CNTK
                     auto epsilon = functionConfig[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                     auto useCuDNNEngine = functionConfig[PrimitiveFunction::AttributeNameUseCuDNNEngine].Value<bool>();
                     
-                    bool disableRegulariztion = false;
+                    bool disableRegularization = false;
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameDisableRegularization))
                     {
-                        disableRegulariztion = functionConfig[PrimitiveFunction::AttributeNameDisableRegularization].Value<bool>();
+                        disableRegularization = functionConfig[PrimitiveFunction::AttributeNameDisableRegularization].Value<bool>();
                     }
                     
-                    computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, disableRegulariztion, ImageLayoutKind::CHW);
+                    computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, disableRegularization, ImageLayoutKind::CHW);
                     break;
                 }
                 case PrimitiveOpType::Combine:

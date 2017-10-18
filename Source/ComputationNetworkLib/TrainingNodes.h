@@ -2384,6 +2384,7 @@ private:
 //      Value 1#INF (infinity) means only running mean / var will be used(this is used, for example, in evaluation phase).
 // * epsilon is a conditioner constant used in computing inverse standard deviation
 // * useCntkEngine is a Boolean flag that specifies which batch normalization implementation to use: CNTK or cuDNN-based.
+// * disableRegularization is a Boolean flag that specifies this batch normalization node turns off regularization or not.
 // * imageLayout is the image layout. Only cudnn is supported at present.
 // -----------------------------------------------------------------------
 template <class ElemType>
@@ -2406,7 +2407,7 @@ public:
                            double normalizationTimeConstant=0, double blendTimeConstant=0,
                            double epsilon = 0, bool useCntkEngine = true, bool disableRegularization = false, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_disableRegulariztion(disableRegularization), m_imageLayoutKind(imageLayoutKind),
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_disableRegularization(disableRegularization), m_imageLayoutKind(imageLayoutKind),
         m_runCountUntied(0),
         m_one(1, 1, deviceId),
         m_convertRunningVariancePending(false)
@@ -2537,13 +2538,14 @@ public:
             auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeP);
             assert(node != nullptr);
 
-            node->m_spatial         = m_spatial;
-            node->m_normTimeConst   = m_normTimeConst;
-            node->m_blendTimeConst  = m_blendTimeConst;
-            node->m_imageLayoutKind = m_imageLayoutKind;
-            node->m_runCountUntied  = m_runCountUntied;
-            node->m_epsilon         = m_epsilon;
-            node->m_useCntkEngine   = m_useCntkEngine;
+            node->m_spatial               = m_spatial;
+            node->m_normTimeConst         = m_normTimeConst;
+            node->m_blendTimeConst        = m_blendTimeConst;
+            node->m_imageLayoutKind       = m_imageLayoutKind;
+            node->m_runCountUntied        = m_runCountUntied;
+            node->m_epsilon               = m_epsilon;
+            node->m_useCntkEngine         = m_useCntkEngine;
+            node->m_disableRegularization = m_disableRegularization;
         }
     }
 
@@ -2904,7 +2906,7 @@ public:
                                                             m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn);
             }
 
-            if (m_disableRegulariztion)
+            if (m_disableRegularization)
             {
                 this->DisableRegInBatchNormalization();
             }
@@ -2978,6 +2980,7 @@ public:
     bool Spatial() const { return m_spatial; }
     double Epsilon() const { return m_epsilon; }
     bool UseCNTKEngine() const { return m_useCntkEngine; }
+    bool DisableRegularization() const { return m_disableRegularization; }
 
 private:
     // Old versioning - do not use. Do not remove until we're sure there are no old models around.
@@ -3025,7 +3028,7 @@ private:
     // Whether to use CNTK or cuDNN BN implementation.
     bool m_useCntkEngine;
     // Whether to disable regulararization in Batch Normalization.
-    bool m_disableRegulariztion;
+    bool m_disableRegularization;
     // Layout (e.g. CHW).
     ImageLayoutKind m_imageLayoutKind;
 
