@@ -4728,10 +4728,11 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape,
     //let rank = shape.size();
     if (batchDimValue == ABSENT_FREE_DIMENSION)
     {
-        auto shape = MakeVector(inShape); // PERF BUGBUG: Do this without malloc --> SubShape()
         //shape.resize(rank - 1); // no batch dimension: drop the axis
-        shape.pop_back(); // no batch dimension: drop the axis
-        return shape;
+        //auto shape = MakeVector(inShape); // PERF BUGBUG: Do this without malloc --> SubShape()
+        //shape.pop_back(); // no batch dimension: drop the axis
+        //return shape;
+        return inShape.BackPopped(); // this creates a copy, but all uses of this copy it on
     }
     else
     {

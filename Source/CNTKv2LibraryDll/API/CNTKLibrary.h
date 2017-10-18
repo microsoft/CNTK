@@ -153,7 +153,9 @@ namespace CNTK
     ///
     typedef unsigned int NDShapeDimension;
     //typedef std::vector<NDShapeDimension> NDShapeDimensions;
+    //typedef std::vector<NDShapeDimension> NDShapeDimensionsSpan;
     typedef FixedVectorWithBuffer<NDShapeDimension,4> NDShapeDimensions;
+    typedef NDShapeDimensions::Span NDShapeDimensionsSpan;
     class NDShape final
     {
         friend bool operator==(const NDShape& first, const NDShape& second);
@@ -199,7 +201,7 @@ namespace CNTK
         ///
         /// Construct a NDShape instance with specified dimensions.
         ///
-        NDShape(const NDShapeDimensions& dimensions)
+        NDShape(const NDShapeDimensionsSpan& dimensions)
             : m_shapeDims(dimensions)
         {}
         NDShape(const std::vector<size_t>& dimensions)
@@ -904,7 +906,7 @@ namespace CNTK
         /// This expresses the common case of indexing the batch (=trailing) axis.
         /// If the tensor is sparse, the leading axis (which is the sparse one) cannot be slice-viewed.
         ///
-        CNTK_API NDArrayViewPtr SliceView(const NDShapeDimensions& startOffset, const NDShapeDimensions& extent, bool readOnly = false) const
+        CNTK_API NDArrayViewPtr SliceView(const NDShapeDimensionsSpan& startOffset, const NDShapeDimensionsSpan& extent, bool readOnly = false) const
         {
             return Slice(startOffset, extent, NDShapeDimensions(), SliceMode::ContiguousView, readOnly);
         }
@@ -924,7 +926,7 @@ namespace CNTK
             ContiguousView,       // tensor and matrix view. Fails if not -contiguous. Matrix compatible (e.g. MatrixProduct).
             ContiguousViewOrCopy, // like ContiguousView but makes a copy if not memory-contiguous. Matrix compatible, but not always a view.
         };
-        CNTK_API NDArrayViewPtr Slice(const NDShapeDimensions& startOffset, const NDShapeDimensions& extent, const NDShapeDimensions& strides = NDShapeDimensions(),
+        CNTK_API NDArrayViewPtr Slice(const NDShapeDimensionsSpan& startOffset, const NDShapeDimensionsSpan& extent, const NDShapeDimensionsSpan& strides = NDShapeDimensions(),
                                       SliceMode sliceMode = SliceMode::View, bool readOnly = false) const;
 
         ///
@@ -942,7 +944,7 @@ namespace CNTK
         ///
         /// Same as Slice(), but always makes a copy. Non-contiguous slices and strides are allowed (except for sparse input).
         ///
-        NDArrayViewPtr SliceCopy(const NDShapeDimensions& startOffset, const NDShapeDimensions& extent, const NDShapeDimensions& strides = NDShapeDimensions(), bool readOnly = false) const
+        NDArrayViewPtr SliceCopy(const NDShapeDimensionsSpan& startOffset, const NDShapeDimensionsSpan& extent, const NDShapeDimensionsSpan& strides = NDShapeDimensions(), bool readOnly = false) const
         {
             return Slice(startOffset, extent, strides, SliceMode::View, readOnly)->DeepClone();
         }
@@ -2229,7 +2231,7 @@ namespace CNTK
 #endif
         std::shared_ptr<const PrimitiveFunction> m_acyclicOutputPrimitiveReference; // Output: ref to Primitive if known to be acyclic.
         // for debugging:
-        const NDShapeDimensions* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in the debugger
+        const NDShapeDimensionsSpan* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in the debugger
     };
 
     // TODO: Variable equality should be based on uids.

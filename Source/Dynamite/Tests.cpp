@@ -178,13 +178,13 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         { ValOpWithRed(ElementwiseProduct, NDShape({ 1           })), VarExpr(                CNTK::ReduceSum(CNTK::ElementTimes(args[0], args[1]), Axis(0))          ), { { 13           }, { 13           } } },
         // splicing. NDArrayView::Slice() and SliceView() differ in also slicing the matrix or not. Test both.
         // slicing, reshaping   --TODO: reshaping (should be easy)
-        { { ValExpr(argValues[0]->Slice    ({ 0, 3 }, { 13     })), "Index" }, VarExpr(CNTK::Index(args[0], 3)),{ { 13, 42 } } }, // index of rank > 1; also testing SlicedTensorView()
-        { { ValExpr(argValues[0]->SliceView({    1 }, {        })), "Index" }, VarExpr(CNTK::Index(args[0], 1)),{ { 13 } } }, // index of rank 1
-        { { ValExpr(argValues[0]->SliceView({ 0, 1 }, { 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0), Axis(1) }, { 0, 1 }, { 13, 1+4 })),{ { 13, 42 } } }, // multi-axis slice
-        { { ValExpr(argValues[0]->Slice    ({ 2, 0 }, {  3, 42 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0)          }, { 2    }, { 2+3     })),{ { 13, 42 } } }, // non-contiguous slice
-        { { ValExpr(argValues[0]->SliceView({ 0, 1 }, { 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(1)          }, { 1    }, { 1+4     })),{ { 13, 42 } } }, // contiguous slice of rank > 1
-        { { ValExpr(argValues[0]->Slice    ({ 0, 1 }, { 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(1)          }, { 1    }, { 1+4     })),{ { 13, 42 } } }, // same but testing SlicedTensorView() on the reference path
-        { { ValExpr(argValues[0]->SliceView({    1 }, {      3 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0)          }, { 1    }, { 1+3     })),{ { 13     } } }, // slice of rank 1
+        { { ValExpr(argValues[0]->Slice    (NDShapeDimensions{ 0, 3 }, NDShapeDimensions{ 13     })), "Index" }, VarExpr(CNTK::Index(args[0], 3)),{ { 13, 42 } } }, // index of rank > 1; also testing SlicedTensorView()
+        { { ValExpr(argValues[0]->SliceView(NDShapeDimensions{    1 }, NDShapeDimensions{        })), "Index" }, VarExpr(CNTK::Index(args[0], 1)),{ { 13 } } }, // index of rank 1
+        { { ValExpr(argValues[0]->SliceView(NDShapeDimensions{ 0, 1 }, NDShapeDimensions{ 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0), Axis(1) }, { 0, 1 }, { 13, 1+4 })),{ { 13, 42 } } }, // multi-axis slice
+        { { ValExpr(argValues[0]->Slice    (NDShapeDimensions{ 2, 0 }, NDShapeDimensions{  3, 42 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0)          }, { 2    }, { 2+3     })),{ { 13, 42 } } }, // non-contiguous slice
+        { { ValExpr(argValues[0]->SliceView(NDShapeDimensions{ 0, 1 }, NDShapeDimensions{ 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(1)          }, { 1    }, { 1+4     })),{ { 13, 42 } } }, // contiguous slice of rank > 1
+        { { ValExpr(argValues[0]->Slice    (NDShapeDimensions{ 0, 1 }, NDShapeDimensions{ 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(1)          }, { 1    }, { 1+4     })),{ { 13, 42 } } }, // same but testing SlicedTensorView() on the reference path
+        { { ValExpr(argValues[0]->SliceView(NDShapeDimensions{    1 }, NDShapeDimensions{      3 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0)          }, { 1    }, { 1+3     })),{ { 13     } } }, // slice of rank 1
         // matrix product
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times_shared"   }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9    } } },
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9    } } },

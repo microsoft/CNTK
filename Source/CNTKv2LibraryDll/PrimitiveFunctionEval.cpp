@@ -432,8 +432,11 @@ namespace CNTK
                 if (axis >= gradientRank) // this was a splice along a new axis: we can index directly
                 {
                     startOffset[axis] = i;
-                    extent = NDShapeDimensions(extent.begin(), extent.begin() + gradientRank); // chop off the trailing dims, which will lead to the slice to not have them either; which will in turn opCopy correctly
+                    let& lesserExtent = NDShapeDimensionsSpan(extent.begin(), extent.begin() + gradientRank); // chop off the trailing dims, which will lead to the slice to not have them either; which will in turn opCopy correctly
                     //extent.resize(gradientRank); // chop off the trailing dims, which will lead to the slice to not have them either; which will in turn opCopy correctly
+                    // note: we are doing this here instead of in the shared code below (arg1=outputGradientSlice) only because arg1 is a naked pointer, but we must manage lifetime of 'outputGradientSlice'
+                    NDArrayView::NumericOperation({ outputGradientValue->Slice(startOffset, lesserExtent, /*strides=*/NDShapeDimensions()) }, alpha,
+                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
                 }
                 else // splice along an existing axis: we must find out the start and extent by aggregation
                 {
@@ -446,10 +449,10 @@ namespace CNTK
                     }
                     let& inputShape = inputValues[i]->Shape();
                     extent[axis] = axis < inputShape.Rank() ? inputShape[axis] : 1;
+                    // note: we are doing this here instead of in the shared code below (arg1=outputGradientSlice) only because arg1 is a naked pointer, but we must manage lifetime of 'outputGradientSlice'
+                    NDArrayView::NumericOperation({ outputGradientValue->Slice(startOffset, extent, /*strides=*/NDShapeDimensions()) }, alpha,
+                                                  Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
                 }
-                // note: we are doing this here instead of in the shared code below (arg1=outputGradientSlice) only because arg1 is a naked pointer, but we must manage lifetime of 'outputGradientSlice'
-                NDArrayView::NumericOperation({ outputGradientValue->Slice(startOffset, extent, /*strides=*/NDShapeDimensions()) }, alpha,
-                                              Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
                 handled = true;
             }
             break;

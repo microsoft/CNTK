@@ -904,7 +904,7 @@ namespace CNTK
         return view;
     }
 
-    NDArrayViewPtr NDArrayView::Slice(const NDShapeDimensions& startOffset, const NDShapeDimensions& extent, const NDShapeDimensions& strides, SliceMode sliceMode, bool readOnly) const
+    NDArrayViewPtr NDArrayView::Slice(const NDShapeDimensionsSpan& startOffset, const NDShapeDimensionsSpan& extent, const NDShapeDimensionsSpan& strides, SliceMode sliceMode, bool readOnly) const
     {
         let rank = Shape().Rank();
         if (startOffset.size() != rank)

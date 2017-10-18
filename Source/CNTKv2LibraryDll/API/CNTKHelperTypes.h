@@ -69,6 +69,23 @@ public:
     operator std::forward_list<TValueNonConst>() const { return std::forward_list<TValueNonConst>(cbegin(), cend()); }
     operator std::deque       <TValueNonConst>() const { return std::deque       <TValueNonConst>(cbegin(), cend()); }
     operator std::set         <TValueNonConst>() const { return std::set         <TValueNonConst>(cbegin(), cend()); }
+    // others
+    bool operator==(const Span& other) const
+    {
+        if (this == &other)
+            return true;
+        IteratorType b      =       begin();
+        IteratorType e      =       end();
+        IteratorType bOther = other.begin();
+        IteratorType eOther = other.end();
+        if (e - b != eOther - bOther) // size must be the same
+            return false;
+        for (; b != e; b++, bOther++)
+            if (*b != *bOther)
+                return false; // all elements must be the same
+        return true;
+    }
+    bool operator!=(const Span& other) const { return !operator==(other); }
 };
 // MakeSpan(collection[, beginIndex[, endIndex]])
 template<typename CollectionType>
@@ -258,7 +275,6 @@ static inline auto MakeSet(const Container& container) { return std::set<Contain
 template<typename T, size_t N>
 class FixedVectorWithBuffer : public Span<T*>
 {
-    typedef Span<T*> Base;
     union U
     {
         T fixedBuffer[N]; // stored inside a union so that we get away without automatic construction yet correct alignment
@@ -282,12 +298,13 @@ class FixedVectorWithBuffer : public Span<T*>
             free(b);   // Span::beginIter holds the result of malloc()
     }
 public:
+    typedef Span<T*> Span;
     typedef T value_type;
     // short-circuit constructors that construct from up to 2 arguments which are taken ownership of
-    FixedVectorWithBuffer()                       : Base(nullptr, nullptr) {} // (pointer value does not matter as long as it is the same; this is a tiny bit faster than passing the actual u.fixedBuffer)
+    FixedVectorWithBuffer()                       : Span(nullptr, nullptr) {} // (pointer value does not matter as long as it is the same; this is a tiny bit faster than passing the actual u.fixedBuffer)
     // construct by moving elements in
     // BUGBUG: These && interfaces should check their length to be 1 and 2, respectively. Can we use template magic to only match these if the correct values are passed as constants?
-    FixedVectorWithBuffer(size_t len, T&& a)        : Base(Allocate(len)/*u.fixedBuffer*/, len)
+    FixedVectorWithBuffer(size_t len, T&& a)        : Span(Allocate(len)/*u.fixedBuffer*/, len)
     {
         new (&u.fixedBuffer[0]) T(std::move(a));
         auto* b = begin();
@@ -295,8 +312,8 @@ public:
         for (auto* p = b + 1; p != e; p++) // if more than one element then duplicate  --TODO: once I know how to restrict the first arg to constant 1, remove this again.
             new (p) T(*b);
     }
-    FixedVectorWithBuffer(size_t    , T&& a, T&& b) : Base(u.fixedBuffer, 2) { new (&u.fixedBuffer[0]) T(std::move(a)); new (&u.fixedBuffer[1]) T(std::move(b)); } // BUGBUG: This version should only be defined if N > 1. Use template magic.
-    FixedVectorWithBuffer(size_t len, const T& a)   : Base(Allocate(len), len)
+    FixedVectorWithBuffer(size_t    , T&& a, T&& b) : Span(u.fixedBuffer, 2) { new (&u.fixedBuffer[0]) T(std::move(a)); new (&u.fixedBuffer[1]) T(std::move(b)); } // BUGBUG: This version should only be defined if N > 1. Use template magic.
+    FixedVectorWithBuffer(size_t len, const T& a)   : Span(Allocate(len), len)
     {
         auto* b = begin();
         const auto* e = end();
@@ -313,7 +330,7 @@ public:
             }
         }
     }
-    FixedVectorWithBuffer(size_t, const T& a, const T& b) : Base(u.fixedBuffer, 2)
+    FixedVectorWithBuffer(size_t, const T& a, const T& b) : Span(u.fixedBuffer, 2)
     {
         new (&u.fixedBuffer[0]) T(a);
         try { new (&u.fixedBuffer[1]) T(b); } // if second one fails, we must clean up the first one
@@ -328,8 +345,9 @@ public:
 #define WHERE_IS_TEMPORARY(Type) , typename = std::enable_if_t<!std::is_lvalue_reference_v<Type&&>>
 #define WHERE_IS_ITERATOR(Type)  , typename = std::enable_if_t<!std::is_same<typename std::iterator_traits<Type>::value_type, void>::value>
 #define WHERE_IS_ITERABLE(Type)  , typename = std::enable_if_t<!std::is_same<typename Type::const_iterator, void>::value>
+    // BUGBUG: This is still not correct. It also test whether the iterator is temporary. Otherwise we must not move stuff out.
     template<typename Collection WHERE_IS_TEMPORARY(Collection)> // move construction from rvalue [thanks to Billy O'Neal for the tip]
-    FixedVectorWithBuffer(Collection&& other) : Base(Allocate(other.size()), other.size())
+    FixedVectorWithBuffer(Collection&& other) : Span(Allocate(other.size()), other.size())
     {
         auto* b = begin();
         const auto* e = end();
@@ -347,7 +365,7 @@ public:
     // construct from iterator pair. All variable-length copy construction/assignment (that is, except for C(2,a,b)) goes through this.
     template<typename CollectionIterator WHERE_IS_ITERATOR(CollectionIterator)>
     FixedVectorWithBuffer(const CollectionIterator& beginIter, const CollectionIterator& endIter) :
-        Base(Allocate(endIter - beginIter), endIter - beginIter)
+        Span(Allocate(endIter - beginIter), endIter - beginIter)
     {
         auto* b = begin();
         const auto* e = end();
@@ -367,7 +385,7 @@ public:
         }
     }
 
-    FixedVectorWithBuffer(FixedVectorWithBuffer&& other) : Base(other.size() > N ? other.begin() : u.fixedBuffer, other.size())
+    FixedVectorWithBuffer(FixedVectorWithBuffer&& other) : Span(other.size() > N ? other.begin() : u.fixedBuffer, other.size())
     {
         // if dynamic, we are done; if static, we must move the elements themselves
         auto* b = begin();
@@ -383,11 +401,13 @@ public:
                 otherIter++;
             }
         }
-        ((Base&)other).~Base();                     // other is now empty, all elements properly destructed (this call does nothing actually)
-        new ((Base*)&other) Base(nullptr, nullptr); // and construct other to empty
+        ((Span&)other).~Span();                     // other is now empty, all elements properly destructed (this call does nothing actually)
+        new ((Span*)&other) Span(nullptr, nullptr); // and construct other to empty
     }
 
     FixedVectorWithBuffer(const FixedVectorWithBuffer& other) : FixedVectorWithBuffer(other.begin(), other.end()) { }
+
+    //FixedVectorWithBuffer(const Span& other) : FixedVectorWithBuffer(other.begin(), other.end()) { } // TODO: Is this needed, or captured by template above?
 
     FixedVectorWithBuffer(const std::initializer_list<T>& other) : FixedVectorWithBuffer(other.begin(), other.end()) { }
 
@@ -402,7 +422,7 @@ public:
         new (this) FixedVectorWithBuffer(move(other));
         return *this;
     }
-    FixedVectorWithBuffer& operator=(const FixedVectorWithBuffer& other)
+    FixedVectorWithBuffer& operator=(const Span& other)
     {
         // Note: We could optimize mallocs if both sizes are the same (then just copy over the elements)
         // However, this class should not be used this way, so for now we won't.
@@ -410,6 +430,8 @@ public:
         new (this) FixedVectorWithBuffer(other);
         return *this;
     }
+    FixedVectorWithBuffer& operator=(const FixedVectorWithBuffer& other) { return operator=((const Span&)other); }
+
     ~FixedVectorWithBuffer()
     {
         DestructAndFree(/*end of constructed range=*/end());
@@ -420,22 +442,7 @@ public:
         this->~FixedVectorWithBuffer();
         new (this) FixedVectorWithBuffer(1, std::move(a));
     }
-    bool operator==(const FixedVectorWithBuffer& other) const
-    {
-        if (this == &other)
-            return true;
-        T*       b      =       begin();
-        const T* e      =       end();
-        T*       bOther = other.begin();
-        const T* eOther = other.end();
-        if (e - b != eOther - bOther) // size must be the same
-            return false;
-        for (; b != e; b++, bOther++)
-            if (*b != *bOther)
-                return false; // all elements must be the same
-        return true;
-    }
-    bool operator!=(const FixedVectorWithBuffer& other) const { return !operator==(other); }
+    FixedVectorWithBuffer BackPopped() const { return FixedVectorWithBuffer(begin(), end() - 1); }
 };
 
 } // namespace
