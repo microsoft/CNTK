@@ -623,13 +623,13 @@ void Train(string systemId, wstring outputDirectory)
             size_t numLabels = 0, numSamples = 0, maxSamples = 0, maxLabels = 0;
             for (let& seq : subBatchArgs[0])
             {
-                let len = seq.Shape().Dimensions().back();
+                let len = seq.size();
                 numSamples += len;
                 maxSamples = max(maxSamples, len);
             }
             for (let& seq : subBatchArgs[1])
             {
-                let len = seq.Shape().Dimensions().back();
+                let len = seq.size();
                 numLabels += len;
                 maxLabels = max(maxLabels, len);
             }
@@ -665,6 +665,8 @@ void Train(string systemId, wstring outputDirectory)
             //exit(1);
             //partTimer.Log("criterion_fn", numLabels);
             // backprop and model update
+            let numScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
+#if 1       // use 0 to measure graph building only
             partTimer.Restart();
             mbLoss.Value()->AsScalar<float>();
             let timeForward = partTimer.Elapsed();
@@ -672,7 +674,6 @@ void Train(string systemId, wstring outputDirectory)
             //exit(1);
             //partTimer.Log("ForwardProp", numLabels);
             // note: we must use numScoredLabels here
-            let numScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
             fprintf(stderr, "{%.2f, %d-%d}\n", mbLoss.Value()->AsScalar<float>(), (int)numLabels, (int)numSeq), fflush(stderr);
             partTimer.Restart();
             mbLoss.Backward(gradients);
@@ -699,6 +700,18 @@ void Train(string systemId, wstring outputDirectory)
                 fflush(stderr);
             if (std::isnan(lossPerLabel))
                 throw runtime_error("Loss is NaN.");
+#else
+            partTimer.Restart();
+            mbLoss = Variable();
+            let timeDeleteGraph = partTimer.Elapsed();
+            let elapsed = timer.ElapsedSeconds(); // [sec]
+            double lossPerLabel = 0, smoothedLossVal = 0;
+            fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, d=%.0f ms\n",
+                            (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
+                            numScoredLabels / elapsed, 1000.0/*ms*/ * elapsed / numScoredLabels,
+                            1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeDeleteGraph);
+            totalLabels;
+#endif
             //if (mbCount == 10)
             //    exit(0);
             mbCount++;

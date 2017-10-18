@@ -28,9 +28,9 @@ namespace CNTK
             let& extent = outputShape.Dimensions(); // note: last dimension is missing; this will strip it in the output
             if (extent.size() + 1 != arg->Shape().Rank())
                 LogicError("Variable '%S' Value(): The input and output rank for op Slice when indexing must differ by 1.", funcForErrMsg.AsString().c_str());
-            auto startOffset = vector<size_t>(extent.size() + 1, 0);
+            auto startOffset = NDShapeDimensions(extent.size() + 1, 0);
             startOffset.back() = (size_t) index;
-            return arg->Slice(startOffset, extent, vector<size_t>(), NDArrayView::SliceMode::View, readOnly); // slice it
+            return arg->Slice(startOffset, extent, NDShapeDimensions(), NDArrayView::SliceMode::View, readOnly); // slice it
         }
         else
         {
@@ -42,7 +42,7 @@ namespace CNTK
                 if (attributes.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
                     LogicError("Variable '%S' Value(): Strided slicing not yet implemented.", funcForErrMsg.AsString().c_str());
                 auto extent = arg->Shape().Dimensions();
-                auto startOffset = vector<size_t>(extent.size(), 0);
+                auto startOffset = NDShapeDimensions(extent.size(), 0);
                 for (size_t i = 0; i < axes.size(); i++)
                 {
                     let axisIndex  = axes[i].StaticAxisIndex();
@@ -52,8 +52,8 @@ namespace CNTK
                     extent[axisIndex] = endIndex - beginIndex;
                 }
                 // TODO: use IndexLastAxis()
-                if (extent != arg->Shape().Dimensions() || any_of(startOffset.begin(), startOffset.end(), [](size_t v) { return v != 0; }))
-                    return arg->Slice(startOffset, extent, vector<size_t>(), NDArrayView::SliceMode::View, readOnly); // slice it
+                if (extent != arg->Shape().Dimensions() || any_of(startOffset.begin(), startOffset.end(), [](NDShapeDimension v) { return v != 0; }))
+                    return arg->Slice(startOffset, extent, NDShapeDimensions(), NDArrayView::SliceMode::View, readOnly); // slice it
             }
             else // single slice
             {
@@ -65,11 +65,11 @@ namespace CNTK
                 let axisIndex = axis.StaticAxisIndex();
                 // TODO: implement a special version without std::vectors
                 auto extent = arg->Shape().Dimensions();
-                auto startOffset = vector<size_t>(extent.size(), 0);
+                auto startOffset = NDShapeDimensions(extent.size(), 0);
                 startOffset[axisIndex] = beginIndex;
                 extent[axisIndex] = endIndex - beginIndex;
-                if (extent != arg->Shape().Dimensions() || any_of(startOffset.begin(), startOffset.end(), [](size_t v) { return v != 0; }))
-                    return arg->Slice(startOffset, extent, vector<size_t>(), NDArrayView::SliceMode::View, readOnly); // slice it
+                if (extent != arg->Shape().Dimensions() || any_of(startOffset.begin(), startOffset.end(), [](NDShapeDimension v) { return v != 0; }))
+                    return arg->Slice(startOffset, extent, NDShapeDimensions(), NDArrayView::SliceMode::View, readOnly); // slice it
             }
         }
         return arg;
@@ -426,8 +426,8 @@ namespace CNTK
                 if (i >= outputGradientShape[axis])
                     LogicError("Variable '%S' Value(): Input index %d exceeds dimension[%d]=%d.", funcForErrMsg.AsString().c_str(), (int)i, (int)axis, (int)outputGradientShape[axis]);
                 // determine the slice of the incoming gradient that we should copy
-                vector<size_t> startOffset(outputGradientRank, 0);
-                vector<size_t> extent = outputGradientShape.Dimensions();
+                NDShapeDimensions startOffset(outputGradientRank, 0);
+                NDShapeDimensions extent = outputGradientShape.Dimensions();
                 let gradientRank = gradient->Shape().Rank();
                 if (axis >= gradientRank) // this was a splice along a new axis: we can index directly
                 {
@@ -447,7 +447,7 @@ namespace CNTK
                     extent[axis] = axis < inputShape.Rank() ? inputShape[axis] : 1;
                 }
                 // note: we are doing this here instead of in the shared code below (arg1=outputGradientSlice) only because arg1 is a naked pointer, but we must manage lifetime of 'outputGradientSlice'
-                NDArrayView::NumericOperation({ outputGradientValue->Slice(startOffset, extent, /*strides=*/vector<size_t>()) }, alpha,
+                NDArrayView::NumericOperation({ outputGradientValue->Slice(startOffset, extent, /*strides=*/NDShapeDimensions()) }, alpha,
                                               Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
                 handled = true;
             }

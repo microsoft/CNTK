@@ -105,9 +105,9 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
     // for testing splicing
     let doSplice = [&](const vector<NDArrayViewPtr>& argValues, size_t axis) -> NDArrayViewPtr
     {
-        vector<size_t> totalShape(axis+1, 1); // total shape
+        NDShapeDimensions totalShape(axis+1, 1); // total shape
         // first check all dims and determinethe shared shape
-        size_t splicedDim = 0;
+        NDShapeDimension splicedDim = 0;
         for (let& val : argValues)
         {
             let& shape = val->Shape();
@@ -128,13 +128,13 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         let& val0 = argValues[0];
         let out = make_shared<NDArrayView>(0, val0->GetDataType(), totalShape, val0->Device());
         // copy all items one by one
-        size_t sliceStart = 0;
+        NDShapeDimension sliceStart = 0;
         for (let& val : argValues)
         {
             let& shape = val->Shape();
             let sliceHeight = axis < shape.Rank() ? shape[axis] : 1;
             // slice in output
-            auto startOffsets = vector<size_t>(totalShape.size(), 0);
+            auto startOffsets = NDShapeDimensions(totalShape.size(), 0);
             auto extents = totalShape;
             startOffsets[axis] = sliceStart;
             extents[axis] = sliceHeight;
@@ -278,7 +278,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
                         (!isTimes || rank > 1) && // first axis of a Times input is not a batch axis
                         !argShape.empty() && argShape.back() != 1)     // 1 could be meant to be broadcast, so don't break that
                     {
-                        argShape.back() += n; // increase the batch dimension
+                        argShape.back() += (NDShapeDimension)n; // increase the batch dimension
                     }
                 }
                 allArgValues[n][j] =
@@ -484,7 +484,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
 
 void RunDynamiteTests()
 {
-#if 0 // (interferes with logging for profiling and reprodible Parameter initialization)
+#if 1 // (interferes with logging for profiling and reprodible Parameter initialization)
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true,  DeviceDescriptor::GPUDevice(0));

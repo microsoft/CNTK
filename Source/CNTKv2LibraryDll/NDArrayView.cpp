@@ -904,7 +904,7 @@ namespace CNTK
         return view;
     }
 
-    NDArrayViewPtr NDArrayView::Slice(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides, SliceMode sliceMode, bool readOnly) const
+    NDArrayViewPtr NDArrayView::Slice(const NDShapeDimensions& startOffset, const NDShapeDimensions& extent, const NDShapeDimensions& strides, SliceMode sliceMode, bool readOnly) const
     {
         let rank = Shape().Rank();
         if (startOffset.size() != rank)
@@ -985,8 +985,8 @@ namespace CNTK
         // TODO: We should change NDArrayView::Slice() to never update the Matrix view, but do that on the fly in GetMatrixImpl() (AsMatrix() probably already does most of the work).
         bool anyPrevAxisSliced = false;
         NDShape sliceViewShape(extent);       // note: has same #dims as extent
-        std::vector<size_t> endOffset(rank);  // note: these have same #dims as 'this', not extent
-        std::vector<size_t> lastOffset(rank);
+        NDShapeDimensions endOffset(rank);  // note: these have same #dims as 'this', not extent
+        NDShapeDimensions lastOffset(rank);
         for (size_t i = 0; i < rank; ++i)
         {
             if ((i < sliceViewShape.Rank()) && (sliceViewShape[i] == NDShape::InferredDimension))
@@ -1104,11 +1104,11 @@ namespace CNTK
             if (beginIndex == 0 && endIndex == viewDims.back())
                 return AsShape(shape);
 
-            std::vector<size_t> startOffset(rank, 0);
-            std::vector<size_t> extent(viewDims);
+            NDShapeDimensions startOffset(rank, 0);
+            NDShapeDimensions extent(viewDims);
             startOffset.back() = beginIndex;
             extent     .back() = endIndex - beginIndex;
-            return Slice(startOffset, extent, vector<size_t>(), SliceMode::ContiguousView, readOnly)->AsShape(shape);
+            return Slice(startOffset, extent, NDShapeDimensions(), SliceMode::ContiguousView, readOnly)->AsShape(shape);
         }
 
         // determine an updated TensorShape object
@@ -1139,10 +1139,10 @@ namespace CNTK
                 return AsShape(sliceViewShape);
             // set startOffset to 0 except for the last axis
 
-            std::vector<size_t> startOffset(rank, 0);
+            NDShapeDimensions startOffset(rank, 0);
             startOffset[axis] = index;
 
-            return Slice(startOffset, /*extent=*/ sliceViewShape.Dimensions(), vector<size_t>(), SliceMode::ContiguousView, readOnly);
+            return Slice(startOffset, /*extent=*/ sliceViewShape.Dimensions(), NDShapeDimensions(), SliceMode::ContiguousView, readOnly);
         }
 
         auto tensorShape = GetTensorShape();          // get current actual shape

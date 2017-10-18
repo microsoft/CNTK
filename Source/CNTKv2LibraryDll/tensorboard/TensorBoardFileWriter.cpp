@@ -187,15 +187,15 @@ namespace CNTK
             event.set_wall_time(static_cast<double>(std::time(0)));
             tensorflow::Summary* summary = event.mutable_summary();
 
-            std::vector<size_t> dimensions = imageData->Shape().Dimensions();
-            const size_t batch_size = dimensions.at(3);
-            const size_t depth = dimensions.at(2);
-            const size_t width = dimensions.at(1);
-            const size_t height = dimensions.at(0);
-            const DataType dtype = imageData->GetDataType();
+            auto dimensions = imageData->Shape().Dimensions();
+            const auto batch_size = dimensions.at(3);
+            const auto depth = dimensions.at(2);
+            const auto width = dimensions.at(1);
+            const auto height = dimensions.at(0);
+            const auto dtype = imageData->GetDataType();
 
-            std::vector<size_t> start(4, 0);
-            std::vector<size_t> extent;
+            NDShapeDimensions start(4, 0);
+            NDShapeDimensions extent;
             extent.push_back(height);
             extent.push_back(width);
             extent.push_back(depth);

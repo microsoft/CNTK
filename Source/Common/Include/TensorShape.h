@@ -509,7 +509,8 @@ public:
 
     // Determines the offset into the underlying element array for a given multi-dimensional index.
     // This function is for reference. Probably not often used.
-    size_t Locate(const SmallVector<size_t>& index) const
+    template<typename VectorType>
+    size_t Locate(const VectorType/*SmallVector<size_t>*/& index) const
     {
         ptrdiff_t location = m_offset;
         for (size_t k = 0; k < index.size(); k++)

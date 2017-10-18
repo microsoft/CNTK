@@ -483,7 +483,7 @@ namespace CNTK
             auto operandSubshapeToReshape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
             auto inferredReplacementShape = replacementShape;
             size_t inferredAxisIndex = SIZE_MAX;
-            size_t targetElementsCount = 1;
+            NDShapeDimension targetElementsCount = 1;
             for (size_t k = 0; k < inferredReplacementShape.Rank(); k++)
             {
                 if (inferredReplacementShape[k] != NDShape::InferredDimension)
@@ -498,7 +498,7 @@ namespace CNTK
             {
                 if (!operandSubshapeToReshape.HasUnboundDimension())
                 {
-                    size_t inputElementsCount = operandSubshapeToReshape.TotalSize();
+                    auto inputElementsCount = operandSubshapeToReshape.TotalSize();
                     inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
                 }
                 else
@@ -562,7 +562,7 @@ namespace CNTK
                 auto& shape = inputs[i].Shape();
                 for (size_t k = 0; k < maxRank; k++)
                 {
-                    size_t dim = (k >= shape.Rank()) ? 1 : shape[k];
+                    auto dim = (k >= shape.Rank()) ? 1 : shape[k];
                     // accumulate the spliced dimension
                     if (k == index)
                     {
@@ -875,7 +875,7 @@ namespace CNTK
                     {
                         // BUGBUG: This uses a flat vector for the stats in case of spatial? E.g. data : [W x H x C] -> mean : [C] instead of [1 x 1 x C].
                         //         I guess the engine does not care, but it is wrong. Maybe this is needed to support the legacy tensor format?
-                        size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
+                        auto total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
                         paramShape[0] = total;
                         std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
                         UpdateOperandShapes(newParamShape);
@@ -976,7 +976,7 @@ namespace CNTK
             size_t m_batchNormId = INT_MAX-1; // 0 if none   --TODO: INT_MAX chosen as to cause an access violation if left unchanged
             StackingMode m_stacking;          // true if batch axis is the last axis, rather than a new one
             size_t m_batchAxis = INT_MAX - 1; // max over ranks of batchable inputs; minus 1 if stacking. Computed upon Schedule().
-            size_t m_batchDim;                // max m_shape[m_batchAxis] over all batchable inputs. Computed upon Schedule().
+            NDShapeDimension m_batchDim;      // max m_shape[m_batchAxis] over all batchable inputs. Computed upon Schedule().
         } m_autoBatchState;
         mutable DynamicProfilerPtr m_profiler;   // profile using this profiler if set
         static const DynamicProfilerPtr& CurrentDynamicProfiler();

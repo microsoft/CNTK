@@ -25,10 +25,10 @@ namespace Dynamite {
 
     // slice the last dimension if an NDArrayView (index with index i; then drop the axis)
     // This is used for MB conversion.
-    static NDArrayViewPtr Index(NDArrayViewPtr data, size_t i)
+    static NDArrayViewPtr Index(NDArrayViewPtr data, NDShapeDimension i)
     {
         auto dims = data->Shape().Dimensions();
-        auto startOffset = vector<size_t>(dims.size(), 0);
+        auto startOffset = NDShapeDimensions(dims.size(), 0);
         auto extent = dims;
         if (startOffset.back() != i || extent.back() != 1)
         {

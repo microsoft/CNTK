@@ -243,10 +243,10 @@ namespace CNTK
         template <typename T>
         static void WriteData(const NDArrayView& src, io::CodedOutputStream& output)
         {
-            auto size = src.Shape().TotalSize();
+            size_t size = src.Shape().TotalSize();
             const T* buffer = src.DataBuffer<T>();
             auto tSize = sizeof(T);
-            for (auto i = 0; i < size; i++) 
+            for (size_t i = 0; i < size; i++) 
             {
                 auto value = buffer[i];
                 if (tSize <= sizeof(uint32))
@@ -259,9 +259,9 @@ namespace CNTK
         template <typename T>
         static bool ReadData(RenewableCodedStream& input, NDArrayView& dst)
         {
-            auto size = dst.Shape().TotalSize();
+            size_t size = dst.Shape().TotalSize();
             T* buffer = dst.WritableDataBuffer<T>();
-            for (auto i = 0; i < size; i++)
+            for (size_t i = 0; i < size; i++)
             {
                 if (!input.Read<T>(buffer+i))
                     return false;
@@ -273,7 +273,7 @@ namespace CNTK
         static void CopyData(const RepeatedField<T>& src, NDArrayView* dst)
         {
             auto size = src.size();
-            assert(size == dst->Shape().TotalSize());;
+            assert(size == (int)dst->Shape().TotalSize());;
             T* buffer = dst->WritableDataBuffer<T>();
             memcpy(buffer, src.data(), size * sizeof(T));
         }
@@ -434,14 +434,14 @@ namespace CNTK
 
         if (dataType == DataType::Float)
         {
-            if (src.float_values().value().size() == shape->TotalSize())
+            if (src.float_values().value().size() == (int)shape->TotalSize())
                 CopyData<float>(src.float_values().value(), dst);
             else 
                 m_arrayViews.push_back({ dst, nullptr });
         }
         else if (dataType == DataType::Double)
         {
-            if (src.double_values().value().size() == shape->TotalSize())
+            if (src.double_values().value().size() == (int)shape->TotalSize())
                 CopyData<double>(src.double_values().value(), dst);
             else
                 m_arrayViews.push_back({ dst, nullptr });

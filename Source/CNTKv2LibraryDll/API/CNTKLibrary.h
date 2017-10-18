@@ -151,25 +151,27 @@ namespace CNTK
     ///
     /// Denotes a multi-dimensional rectangular shape.
     ///
+    typedef unsigned int NDShapeDimension;
+    typedef std::vector<NDShapeDimension> NDShapeDimensions;
     class NDShape final
     {
         friend bool operator==(const NDShape& first, const NDShape& second);
         friend class PrimitiveFunction;
 
-        static const size_t SentinelDimValueForUnknownShape = (size_t)-2;
+        static const NDShapeDimension SentinelDimValueForUnknownShape = (NDShapeDimension)-2;
     public:
 
         ///
         /// A placeholder value to use for an axis whose dimension is unknown and is to be inferred by the system.
         ///
-        static const size_t InferredDimension = (size_t)-1;
+        static const NDShapeDimension InferredDimension = (NDShapeDimension)-1;
 
         ///
         /// A placeholder value to use for an axis whose dimension is unbound and is only determined
         /// when actual data is bound to the variable. Note that since the actual dimension is bound
         /// from actual minibatch data, the dimension can vary across different evaluations.
         ///
-        static const size_t FreeDimension = (size_t)-3;
+        static const NDShapeDimension FreeDimension = (NDShapeDimension)-3;
 
         ///
         /// A placeholder shape to use to denote an unknown shape
@@ -189,21 +191,24 @@ namespace CNTK
         ///
         /// Construct a NDShape instance with the specified rank and dimensionality in each axis.
         ///
-        explicit NDShape(size_t numAxes, size_t dimension = InferredDimension)
+        explicit NDShape(size_t numAxes, NDShapeDimension dimension = InferredDimension)
             : m_shapeDims(numAxes, dimension)
         {}
 
         ///
         /// Construct a NDShape instance with specified dimensions.
         ///
-        NDShape(const std::vector<size_t>& dimensions)
+        NDShape(const NDShapeDimensions& dimensions)
             : m_shapeDims(dimensions)
+        {}
+        NDShape(const std::vector<size_t>& dimensions)
+            : m_shapeDims(Transform(dimensions, [](size_t dim) { return (NDShapeDimension)dim; }))
         {}
 
         ///
         /// Construct a NDShape instance with specified dimensions.
         ///
-        NDShape(const std::vector<size_t>&& dimensions)
+        NDShape(NDShapeDimensions&& dimensions)
             : m_shapeDims(std::move(dimensions))
         {}
 
@@ -211,13 +216,13 @@ namespace CNTK
         /// Construct a NDShape instance with specified dimensions.
         ///
         NDShape(const std::initializer_list<size_t>& dimensions)
-            : m_shapeDims(dimensions)
+            : m_shapeDims(Transform(dimensions, [](size_t dim) { return (NDShapeDimension)dim; }))
         {}
 
         ///
         /// Returns the dimensions of 'this' shape as a std::vector<size_t>
         ///
-        const std::vector<size_t>& Dimensions() const { return m_shapeDims; }
+        const auto& Dimensions() const { return m_shapeDims; }
 
         ///
         /// Returns a boolean indicating if 'this' shape is the special Unknown shape
@@ -232,7 +237,7 @@ namespace CNTK
         ///
         /// Returns a reference to dimension size for the specified axis.
         ///
-        size_t& operator[](size_t axisId)
+        auto& operator[](size_t axisId)
         {
             return m_shapeDims.at(axisId);
         }
@@ -240,7 +245,7 @@ namespace CNTK
         ///
         /// Returns the dimension size for the specified axis.
         ///
-        size_t operator[](size_t axisId) const
+        auto operator[](size_t axisId) const
         {
             return m_shapeDims.at(axisId);
         }
@@ -254,8 +259,8 @@ namespace CNTK
             if ((endAxisId < beginAxisId) || (endAxisId > Rank()))
                 InvalidArgument("NDShape::SubShape: The specified endAxisId (%zu) must not exceed the rank (%zu) of 'this' NDShape and must be >= than the specified beginAxisId (%zu)", endAxisId, Rank(), beginAxisId);
 
-            std::vector<size_t> subShapeDims(m_shapeDims.begin() + beginAxisId, m_shapeDims.begin() + endAxisId);
-            return subShapeDims;
+            NDShapeDimensions subShapeDims(m_shapeDims.begin() + beginAxisId, m_shapeDims.begin() + endAxisId);
+            return move(subShapeDims);
         }
 
         ///
@@ -263,7 +268,7 @@ namespace CNTK
         ///
         bool HasInferredDimension() const
         {
-            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), (size_t)InferredDimension) != m_shapeDims.end());
+            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), InferredDimension) != m_shapeDims.end());
         }
 
         ///
@@ -271,7 +276,7 @@ namespace CNTK
         ///
         bool HasFreeDimension() const
         {
-            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), (size_t)FreeDimension) != m_shapeDims.end());
+            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), FreeDimension) != m_shapeDims.end());
         }
 
         ///
@@ -286,7 +291,7 @@ namespace CNTK
         ///
         /// Returns the total size of the rectangular shape that 'this' shape denotes.
         ///
-        size_t TotalSize(bool check = true) const
+        NDShapeDimension TotalSize(bool check = true) const
         {
             if (check && HasUnboundDimension())
                 RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension or FreeDimension.", AsString().c_str());
@@ -295,7 +300,7 @@ namespace CNTK
             size_t rank = dims.size();
             if (rank == 0) // this function must be fast
                 return 1;
-            size_t totalSize = dims.front();
+            NDShapeDimension totalSize = dims.front();
             if (rank > 1)
                 for (size_t k = 1; k < rank; k++)
                     totalSize *= dims[k];
@@ -312,13 +317,13 @@ namespace CNTK
             std::copy(m_shapeDims.begin(), m_shapeDims.end(), newShapeDims.begin());
             std::copy(shape.m_shapeDims.begin(), shape.m_shapeDims.end(), newShapeDims.begin() + m_shapeDims.size());
 
-            return newShapeDims;
+            return NDShape(newShapeDims);
         }
 
         ///
         /// Creates and returns a new shape constructed by appending an axis of the given dimension, padding if needed.
         ///
-        NDShape AppendAxis(size_t axisIndex, size_t dim) const
+        NDShape AppendAxis(size_t axisIndex, NDShapeDimension dim) const
         {
             if (axisIndex < Rank())
                 LogicError("AppendAxis: invalid axisIndex.");
@@ -326,7 +331,7 @@ namespace CNTK
             std::copy(m_shapeDims.begin(), m_shapeDims.end(), newShapeDims.begin());
             std::fill(newShapeDims.begin() + Rank(), newShapeDims.begin() + axisIndex, 1);
             newShapeDims[axisIndex] = dim;
-            return newShapeDims;
+            return NDShape(newShapeDims);
         }
 
         ///
@@ -368,7 +373,7 @@ namespace CNTK
         }
 
     private:
-        std::vector<size_t> m_shapeDims;
+        NDShapeDimensions m_shapeDims;
     };
 
     inline bool operator==(const NDShape& first, const NDShape& second)
@@ -897,9 +902,9 @@ namespace CNTK
         /// This expresses the common case of indexing the batch (=trailing) axis.
         /// If the tensor is sparse, the leading axis (which is the sparse one) cannot be slice-viewed.
         ///
-        CNTK_API NDArrayViewPtr SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly = false) const
+        CNTK_API NDArrayViewPtr SliceView(const NDShapeDimensions& startOffset, const NDShapeDimensions& extent, bool readOnly = false) const
         {
-            return Slice(startOffset, extent, std::vector<size_t>(), SliceMode::ContiguousView, readOnly);
+            return Slice(startOffset, extent, NDShapeDimensions(), SliceMode::ContiguousView, readOnly);
         }
 
         ///
@@ -917,7 +922,7 @@ namespace CNTK
             ContiguousView,       // tensor and matrix view. Fails if not -contiguous. Matrix compatible (e.g. MatrixProduct).
             ContiguousViewOrCopy, // like ContiguousView but makes a copy if not memory-contiguous. Matrix compatible, but not always a view.
         };
-        CNTK_API NDArrayViewPtr Slice(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides = std::vector<size_t>(),
+        CNTK_API NDArrayViewPtr Slice(const NDShapeDimensions& startOffset, const NDShapeDimensions& extent, const NDShapeDimensions& strides = NDShapeDimensions(),
                                       SliceMode sliceMode = SliceMode::View, bool readOnly = false) const;
 
         ///
@@ -935,7 +940,7 @@ namespace CNTK
         ///
         /// Same as Slice(), but always makes a copy. Non-contiguous slices and strides are allowed (except for sparse input).
         ///
-        NDArrayViewPtr SliceCopy(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, const std::vector<size_t>& strides = std::vector<size_t>(), bool readOnly = false) const
+        NDArrayViewPtr SliceCopy(const NDShapeDimensions& startOffset, const NDShapeDimensions& extent, const NDShapeDimensions& strides = NDShapeDimensions(), bool readOnly = false) const
         {
             return Slice(startOffset, extent, strides, SliceMode::View, readOnly)->DeepClone();
         }
@@ -2222,7 +2227,7 @@ namespace CNTK
 #endif
         std::shared_ptr<const PrimitiveFunction> m_acyclicOutputPrimitiveReference; // Output: ref to Primitive if known to be acyclic.
         // for debugging:
-        const std::vector<size_t>* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in the debugger
+        const NDShapeDimensions* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in the debugger
     };
 
     // TODO: Variable equality should be based on uids.
@@ -3033,14 +3038,14 @@ namespace CNTK
                 if (!sequenceSegmentsAllowed && (sequenceBeginIndices[i] != 0))
                     RuntimeError("Value::UnpackVariableValue: Only Value objects containing the entire sequence (no segments) are supported.");
 
-                std::vector<size_t> offset(valueShapeWithSequenceAndBatchAxes.Rank(), 0);
-                offset.back() = i;
+                NDShapeDimensions offset(valueShapeWithSequenceAndBatchAxes.Rank(), 0);
+                offset.back() = (NDShapeDimension)i;
 
-                std::vector<size_t> extent(valueShapeWithSequenceAndBatchAxes.Rank() - 1, NDShape::InferredDimension);
-                extent.back() = sequenceLengths[i];
+                NDShapeDimensions extent(valueShapeWithSequenceAndBatchAxes.Rank() - 1, NDShape::InferredDimension);
+                extent.back() = (NDShapeDimension)sequenceLengths[i];
 
                 //sequences[i] = valueData->SliceView(offset, extent, valueData->IsReadOnly());
-                sequences[i] = valueData->Slice(offset, extent, std::vector<size_t>(), NDArrayView::SliceMode::View, valueData->IsReadOnly());
+                sequences[i] = valueData->Slice(offset, extent, NDShapeDimensions(), NDArrayView::SliceMode::View, valueData->IsReadOnly());
                 sequenceStartFlags[i] = (sequenceBeginIndices[i] == 0);
             }
 

@@ -758,6 +758,7 @@ namespace CNTK
             PrimitiveFunctionPtr m_functionHolder;     // holds shared_ptr to owner if it was added by auto-batching
             class SliceRange
             {
+                // TODO: change to NDShapeDimension... which is not known here :(
                 size_t m_begin = SIZE_MAX - 1;      // and we take this slice on the way (SIZE_MAX if none)
                 size_t m_width = SIZE_MAX - 1;      // of this width (stacking case). SIZE_MAX if drop axis (batching case).
             public:
