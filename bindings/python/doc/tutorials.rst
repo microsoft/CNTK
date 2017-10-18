@@ -47,10 +47,11 @@ Tutorials
 #.  *Teach a computer to paint like Picasso or van Gogh*
      CNTK 205: `Artistic Style Transfer <CNTK_205_Artistic_Style_Transfer.html>`_ (:cntktut:`source <CNTK_205_Artistic_Style_Transfer>`)
 
-#.  *Produce realistic data (MNIST images) with no human input (unsupervised learning)*
+#.  *Produce realistic images with no human input (unsupervised learning)*
      CNTK 206 Part A:  `MNIST data preparation <CNTK_103A_MNIST_DataLoader.html>`_ (:cntktut:`source <CNTK_103A_MNIST_DataLoader>`),
      Part B: `Basic Generative Adversarial Networks (GAN) <CNTK_206A_Basic_GAN.html>`_ (:cntktut:`source <CNTK_206A_Basic_GAN>`),
      Part C: `Deep Convolutional GAN <CNTK_206B_DCGAN.html>`_ (:cntktut:`source <CNTK_206B_DCGAN>`)
+     Part D: `Wasserstein GAN and Loss Sensitive GAN <CNTK_206C_WGAN_LSGAN.html>`_ (:cntktut:`source <CNTK_206C_WGAN_LSGAN>`)
 
 #.  *Training with Sampled Softmax*
      CNTK 207: `Training with Sampled Softmax <CNTK_207_Training_with_Sampled_Softmax.html>`_ (:cntktut:`source <CNTK_207_Training_with_Sampled_Softmax>`)
@@ -60,6 +61,9 @@ Tutorials
 
 #.  *Recognize flowers and animals in natural scene images using deep transfer learning*
      CNTK 301: `Deep transfer learning with pre-trained ResNet model <CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.html>`_ (:cntktut:`source <CNTK_301_Image_Recognition_with_Deep_Transfer_Learning>`)    
+     
+#.  *Compare the similarity between a pair of documents*
+     CNTK 303: `Deep structured semantic modeling with LSTM <CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks.html>`_ (:cntktut:`source <CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks>`)   
 
 Try these notebooks pre-installed on `CNTK Azure Notebooks`_ for free.
 

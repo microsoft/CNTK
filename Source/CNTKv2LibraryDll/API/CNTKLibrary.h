@@ -3479,6 +3479,16 @@ namespace CNTK
         CNTK_API void SetAttribute(const std::wstring& name, const DictionaryValue& value);
 
         ///
+        /// Get function custom attributes.
+        ///
+        CNTK_API Dictionary& GetCustomAttributes();
+
+        ///
+        /// Reset function custom attributes.
+        ///
+        CNTK_API void ResetCustomAttributes();
+
+        ///
         /// Maximum number of outputs that is currently supported.
         ///
         static const int MaxNumOutputs = 64;
