@@ -166,7 +166,6 @@ static inline auto Transform(CollectionType& collection, const Lambda& lambda, M
 /// Implement a range like Python's range.
 /// Can be used with variable or constant bounds (use IntConstant<val> as the second and third type args).
 ///
-#if 1 // does not compile under nvcc. Not used presently, so commenting it out.
 template<int val>
 struct IntConstant
 {
@@ -215,7 +214,6 @@ public:
     operator std::deque       <TValueNonConst>() const { return std::deque       <TValueNonConst>(cbegin(), cend()); }
     operator std::set         <TValueNonConst>() const { return std::set         <TValueNonConst>(cbegin(), cend()); }
 };
-#endif
 
 ///
 /// Assembly-optimized constructors for creating 1- and 2-element std::vector.
@@ -259,12 +257,11 @@ static inline std::vector<T> MakeOneElementVector(const T& a)
 ///
 /// Helpers to construct the standard STL from the above.
 ///
-// note: Container::value_type fails to compiler under nvcc, and only this weird combination works (e.g. remove_pointer::type does not).
-template<typename Container> static inline auto MakeVector     (const Container& container) { return std::vector      <std::remove_pointer_t<std::remove_reference_t<decltype(container.cbegin())>>>/*Container::value_type*/(container.cbegin(), container.cend()); }
-template<typename Container> static inline auto MakeList       (const Container& container) { return std::list        <std::remove_pointer_t<std::remove_reference_t<decltype(container.cbegin())>>>/*Container::value_type*/(container.cbegin(), container.cend()); }
-template<typename Container> static inline auto MakeForwardList(const Container& container) { return std::forward_list<std::remove_pointer_t<std::remove_reference_t<decltype(container.cbegin())>>>/*Container::value_type*/(container.cbegin(), container.cend()); }
-template<typename Container> static inline auto MakeDeque      (const Container& container) { return std::deque       <std::remove_pointer_t<std::remove_reference_t<decltype(container.cbegin())>>>/*Container::value_type*/(container.cbegin(), container.cend()); }
-template<typename Container> static inline auto MakeSet        (const Container& container) { return std::set         <std::remove_pointer_t<std::remove_reference_t<decltype(container.cbegin())>>>/*Container::value_type*/(container.cbegin(), container.cend()); }
+template<typename Container> static inline auto MakeVector     (const Container& container) { return std::vector      <typename Container::value_type>(container.cbegin(), container.cend()); }
+template<typename Container> static inline auto MakeList       (const Container& container) { return std::list        <typename Container::value_type>(container.cbegin(), container.cend()); }
+template<typename Container> static inline auto MakeForwardList(const Container& container) { return std::forward_list<typename Container::value_type>(container.cbegin(), container.cend()); }
+template<typename Container> static inline auto MakeDeque      (const Container& container) { return std::deque       <typename Container::value_type>(container.cbegin(), container.cend()); }
+template<typename Container> static inline auto MakeSet        (const Container& container) { return std::set         <typename Container::value_type>(container.cbegin(), container.cend()); }
 
 ///
 /// Class that stores a vector with "small-vector optimization," that is, if it has N or less elements,
@@ -340,11 +337,11 @@ public:
     // This is meant for the use case where we want to avoid reallocation of the vector, while its members
     // are small movable objects that get created upon each use.
     // This is an unusual interpretation of && (since it only half-destructs the input), but it should be valid.
-#define WHERE_IS_TEMPORARY(Type) , typename = std::enable_if<!std::is_lvalue_reference_v<Type&&>>::type
+#define WHERE_IS_TEMPORARY(Type) , typename = std::enable_if<!std::is_lvalue_reference<Type&&>::value>::type
 #define WHERE_IS_ITERATOR(Type)  , typename = std::enable_if<!std::is_same<typename std::iterator_traits<Type>::value_type, void>::value>::type
 #define WHERE_IS_ITERABLE(Type)  , typename = std::enable_if<!std::is_same<typename Type::const_iterator, void>::value>::type
     // BUGBUG: This is still not correct. It also test whether the iterator is temporary. Otherwise we must not move stuff out.
-    template<typename Collection /*WHERE_IS_TEMPORARY(Collection)*/> // move construction from rvalue [thanks to Billy O'Neal for the tip]
+    template<typename Collection WHERE_IS_TEMPORARY(Collection)> // move construction from rvalue [thanks to Billy O'Neal for the tip]
     FixedVectorWithBuffer(Collection&& other) : Span(Allocate(other.size()), other.size())
     {
         auto* b = begin();

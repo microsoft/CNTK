@@ -410,10 +410,9 @@ int main(int argc, char *argv[])
 #endif
         struct C { string s; };
         vector<C> c{ { "test" }, C{ "test2" } };
-        // BUGBUG: This no longer works, after the template hackery for nvcc.
-        //let cs = MakeVector(Transform(c,
-        //                           [](const C& _) -> const string&{ return _.s; },
-        //                           [](const string& _) { return _ + "!"; }));
+        let cs = MakeSet(Transform(c,
+                                   [](const C& _) -> const string&{ return _.s; },
+                                   [](const string& _) { return _ + "!"; }));
         fprintf(stderr, "");
         //vector<string> cs(w.begin(), w.end());
         //FixedVectorWithBuffer<string, 2> vec1("s1"s);
