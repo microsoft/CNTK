@@ -28,6 +28,8 @@
 #define final
 #define explicit
 #define static_assert(condition, message)
+#else
+#include "HalfConverter.hpp"
 #endif
 
 #include "CNTKLibraryInternals.h"
@@ -38,10 +40,7 @@
 
 namespace CNTK
 {
-    void halfbits2float(const unsigned short*, float*);
-    void float2halfbits(float*, unsigned short*);
-
-    class alignas(2) float16
+    class float16
     {
     protected:
         unsigned short __x;
@@ -49,18 +48,13 @@ namespace CNTK
     public:
         float16() = default;
         float16(const float16& other) { __x = other.__x; }
-        float16& operator=(const float16& other) { __x = other.__x; return *this; }
-        float16(float16&& other) { *this = std::move(other); }
 
+#ifndef SWIG
         // construction from build-in types
         float16(float f) { float2halfbits(&f, &__x); }
-        float16& operator=(float f) { float2halfbits(&f, &__x); return *this; }
         float16(double d) : float16((float)d) {}
-        float16& operator=(double d) { *this = ((float)d); return *this; }
         float16(int i) : float16((float)i) {}
-        float16& operator=(int i) { *this = ((float)i); return *this; }
         float16(size_t u) : float16((float)u) {}
-        float16& operator=(size_t u) { *this = ((float)u); return *this; }
 
         // cast to build-in types
         operator float() const { float f; halfbits2float(&__x, &f); return f; }
@@ -68,6 +62,7 @@ namespace CNTK
         // compare functions
         inline bool operator==(const float16& rhs) const { return (__x == rhs.__x); }
         inline bool operator!=(const float16& rhs) const { return (__x != rhs.__x); }
+#endif
     };
 
     ///
@@ -659,8 +654,7 @@ namespace CNTK
         /// Construct a NDArrayView with newly allocated sparse storage in SparseCSC format on the specified 'device' and initialize its contents
         /// with the specified Sparse CSC format data.
         ///
-        template <typename ElementType>
-        CNTK_API NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false);
+        CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const void* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false);
 
         ///
         /// Construct a NDArrayView over newly allocated storage in the specified format on the specified 'device'.
@@ -835,6 +829,11 @@ namespace CNTK
         CNTK_API void SetValue(double value);
 
         ///
+        /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Double.
+        ///
+        CNTK_API void SetValue(float16 value);
+
+        ///
         /// Creates a new NDArrayView with newly allocated storage on the specified device and copies 'this' view's contents into the newly allocated view.
         ///
         CNTK_API NDArrayViewPtr DeepClone(const DeviceDescriptor& device, bool readOnly = false) const;
@@ -908,6 +907,25 @@ namespace CNTK
     private:
         // Disallow copy and move construction and assignment
         NDArrayView(const NDArrayView&) = delete; NDArrayView& operator=(const NDArrayView&) = delete; NDArrayView& operator=(NDArrayView&&) = delete; NDArrayView(NDArrayView&& other) = delete;
+
+        // template functions connecting V1ElemType and ElementType
+        template <typename ElementType, typename V1ElemType>
+        const ElementType* _DataBuffer() const;
+
+        template <typename ElementType, typename V1ElemType>
+        std::tuple<const ElementType *, const SparseIndexType*, const SparseIndexType*, size_t> _SparseCSCDataBuffers() const;
+
+        template <typename ElementType, typename V1ElemType>
+        std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> _SparseBlockColumnDataBuffers() const;
+
+        template <typename ElementType, typename V1ElemType>
+        static NDArrayViewPtr _RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device);
+
+        template <typename ElementType, typename V1ElemType>
+        static NDArrayViewPtr _RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed, const DeviceDescriptor& device);
+
+        template<typename ElementType, typename V1ElemType>
+        ElementType _AsScalar() const;
 
     private:
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;

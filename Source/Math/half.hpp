@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "../CNTKv2LibraryDll/API/HalfConverter.hpp"
+
 #if !defined(CPUONLY) && __has_include("cuda_fp16.h")
 #include <cuda_fp16.h> // ASSUME CUDA9
 #else
@@ -27,11 +29,6 @@ protected:
 #endif
 
 #define __FP16_DECL__ __INLINE__ __CUDA_HOSTDEVICE__
-
-namespace CNTK {
-void halfbits2float(const unsigned short*, float*);
-void float2halfbits(float*, unsigned short*);
-}
 
 class alignas(2) half : public __half {
 public:

@@ -161,6 +161,7 @@
     <ClInclude Include="API\CNTKLibrary.h" />
     <ClInclude Include="API\CNTKLibraryExperimental.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
+    <ClInclude Include="API\HalfConverter.hpp" />
     <ClInclude Include="BackCompat.h" />
     <ClInclude Include="BlockFunction.h" />
     <ClInclude Include="CompositeFunction.h" />
