@@ -16,7 +16,7 @@ FunctionPtr LinearLayerBlock(Variable input, size_t outputDim, const DeviceDescr
 {
     auto inputPlaceholder = PlaceholderVariable();
 
-    auto timesParam = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(DefaultParamInitScale, SentinelValueForInferParamInitRank, SentinelValueForInferParamInitRank, 1), device, L"timesParam");
+    auto timesParam = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(DefaultParamInitScale, SentinelValueForInferParamInitRank, SentinelValueForInferParamInitRank, 1), device, L"timesParam");
     auto timesFunction = Times(timesParam, inputPlaceholder, L"times");
 
     auto plusParam = Parameter({ outputDim }, 0.0f, device, L"plusParam");
@@ -38,7 +38,7 @@ FunctionPtr SimpleRecurrentBlock(const Variable& prevOutput, const Variable& inp
 
 FunctionPtr SimpleRecurrentLayerBlock(const Variable& input, size_t outputDim, const DeviceDescriptor& device, const std::wstring& outputName = L"")
 {
-    auto placeholderOutput = PlaceholderVariable(NDShape(1, outputDim));
+    auto placeholderOutput = PlaceholderVariable(NDShape(1, (NDShapeDimension)outputDim));
     auto inputPlaceholder = PlaceholderVariable();
     auto recurrenceBlock = SimpleRecurrentBlock(PastValue(placeholderOutput), inputPlaceholder, device);
     auto recurrentComposite = recurrenceBlock->ReplacePlaceholders({ { placeholderOutput, recurrenceBlock->Output()} });
@@ -104,7 +104,7 @@ void TestBlocksWithRecurrence(size_t inputDim, size_t outputDim, const DeviceDes
     for (size_t i = 0; i < numSequences; ++i)
     {
         inputMask->MarkSequenceBegin({ 0, i });
-        inputMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+        inputMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, (NDShapeDimension)1 });
     }
 
     inputValue = MakeSharedObject<Value>(inputValueData, inputMask);

@@ -111,8 +111,9 @@ public:
     size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
 
 private:
-    void InferOutputs(std::vector<Variable>& outputs) override
+    OutputsVectorType InferOutputs() override
     {
+        std::vector<Variable> outputs;
         auto leftOperand = Inputs()[0];
         auto rightOperand = Inputs()[1];
         auto tempFunc = m_isTimes ? Times(leftOperand, rightOperand) : Plus(leftOperand, rightOperand);
@@ -120,8 +121,10 @@ private:
 
         for (auto tempFuncOutput : tempFuncOutputs)
             outputs.push_back(OutputVariable(tempFuncOutput.Shape(), tempFuncOutput.GetDataType(), tempFuncOutput.DynamicAxes()));
+        return  outputs;
     }
 
+public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
     UserDefinedTimesOrPlusFunction(const Variable& leftOperand, const Variable& rightOperand, bool isTimes, const std::wstring& name)
         : Function({ leftOperand, rightOperand }, Dictionary(), name), m_isTimes(isTimes)
     {
@@ -188,10 +191,10 @@ void TestTimesAndPlus(size_t inputDim,
         for (size_t i = 0; i < inputData.size(); ++i)
             inputData[i] = ((ElementType)rand()) / RAND_MAX;
 
-        NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
+        NDShape inputShape = inputVar.Shape().AppendShape({ (size_t)1, numSamples });
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
-        NDShape outputShape = timesAndPlusFunc->Output().Shape().AppendShape({ 1, numSamples });
+        NDShape outputShape = timesAndPlusFunc->Output().Shape().AppendShape({ (size_t)1, numSamples });
         std::vector<ElementType> outputData(outputShape.TotalSize());
         ValuePtr outputValue;
         if (usePreAllocatedOutputs)
@@ -313,10 +316,10 @@ void TestDuplicateVariablesInInputs(size_t dim, const DeviceDescriptor& device)
     for (size_t i = 0; i < inputData.size(); ++i)
         inputData[i] = ((float)rand()) / RAND_MAX;
 
-    NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
+    NDShape inputShape = inputVar.Shape().AppendShape({ (size_t)1, numSamples });
     ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
-    NDShape outputShape = plusFunc->Output().Shape().AppendShape({ 1, numSamples });
+    NDShape outputShape = plusFunc->Output().Shape().AppendShape({ (size_t)1, numSamples });
     std::unordered_map<Variable, ValuePtr> outputs = { { plusFunc->Output(), nullptr } };
     auto backpropState = plusFunc->Forward({ { inputVar, inputValue } }, outputs, device, { plusFunc->Output() });
 

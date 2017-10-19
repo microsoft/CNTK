@@ -225,7 +225,7 @@ void TestSimpleRecurrence(size_t inputDim,
             for (size_t i = 0; i < numSequences; ++i)
             {
                 inputMask->MarkSequenceBegin({0, i});
-                inputMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+                inputMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, (NDShapeDimension)1 });
             }
 
             inputValue = MakeSharedObject<Value>(inputValueData, inputMask);

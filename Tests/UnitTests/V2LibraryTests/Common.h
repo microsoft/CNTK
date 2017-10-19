@@ -246,7 +246,7 @@ std::pair<FunctionPtr, FunctionPtr> LSTMPCellWithSelfStabilization(Variable inpu
 
     unsigned long seed2 = 1;
     auto createProjectionParam = [device, &seed2](size_t outputDim) {
-        return Parameter({ outputDim, NDShape::InferredDimension }, AsDataType<ElementType>(), GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
+        return Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, AsDataType<ElementType>(), GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
     };
 
     auto createDiagWeightParam = [device, &seed2](size_t dim) {
@@ -503,7 +503,7 @@ inline NDShape CreateShape(size_t numAxes, size_t maxDimSize)
     NDShape shape(numAxes);
     for (size_t i = 0; i < numAxes; ++i)
     {
-        shape[i] = (rng() % maxDimSize) + 1;
+        shape[i] = (NDShapeDimension)(rng() % maxDimSize) + 1;
     }
 
     return shape;
@@ -556,10 +556,10 @@ inline NDShape UnflattenedShape(size_t flatennedIdx, const std::vector<size_t>& 
     size_t remainder = flatennedIdx;
     for (int i = (int)strides.size() - 1; i >= 0; --i)
     {
-        unflattenedShape[i + 1] = remainder / strides[i];
+        unflattenedShape[i + 1] = (NDShapeDimension)(remainder / strides[i]);
         remainder = remainder % strides[i];
     }
-    unflattenedShape[0] = remainder;
+    unflattenedShape[0] = (NDShapeDimension)remainder;
 
     return unflattenedShape;
 }

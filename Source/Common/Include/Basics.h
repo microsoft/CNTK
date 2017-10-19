@@ -23,7 +23,7 @@
 #endif
 #include <cctype>
 #include <cwctype>
-#include "../CNTKv2LibraryDll/API/CNTKHelperTypes.h" // these are also used by the V2 API, but have no dependency on it
+#include "../../CNTKv2LibraryDll/API/CNTKHelperTypes.h" // these are also used by the V2 API, but have no dependency on it
 
 #define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 

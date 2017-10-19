@@ -67,14 +67,14 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
         for (size_t i2 = 0; i2 < inputData.size(); ++i2)
             inputData[i2] = ((float)rand()) / RAND_MAX;
 
-        NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
+        NDShape inputShape = inputVar.Shape().AppendShape({ (size_t)1, numSamples });
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
         std::vector<float> labelData(numOutputClasses * numSamples, 0);
         for (size_t i3 = 0; i3 < numSamples; ++i3)
             labelData[(i3*numOutputClasses) + (rand() % numOutputClasses)] = 1;
 
-        NDShape labelShape = labelsVar.Shape().AppendShape({ 1, numSamples });
+        NDShape labelShape = labelsVar.Shape().AppendShape({ (size_t)1, numSamples });
         ValuePtr labelValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(labelShape, labelData.data(), labelData.size(), DeviceDescriptor::CPUDevice(), true));
 
         ValuePtr outputValue, predictionErrorValue;
@@ -128,10 +128,10 @@ void TestTimesAndPlus(size_t inputDim,
         for (size_t i = 0; i < inputData.size(); ++i)
             inputData[i] = ((ElementType)rand()) / RAND_MAX;
 
-        NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
+        NDShape inputShape = inputVar.Shape().AppendShape({ (size_t)1, numSamples });
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
-        NDShape outputShape = timesAndPlusFunc->Output().Shape().AppendShape({ 1, numSamples });
+        NDShape outputShape = timesAndPlusFunc->Output().Shape().AppendShape({ (size_t)1, numSamples });
         std::vector<ElementType> outputData(outputShape.TotalSize());
         ValuePtr outputValue;
         if (usePreAllocatedOutputs)
@@ -263,10 +263,10 @@ void TestReduceableTransposeTimes(size_t inputDim,
         for (size_t i = 0; i < inputData.size(); ++i)
             inputData[i] = ((ElementType)rand()) / RAND_MAX;
 
-        NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
+        NDShape inputShape = inputVar.Shape().AppendShape({ (size_t)1, numSamples });
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
-        NDShape outputShape = dotFunc->Output().Shape().AppendShape({ 1, numSamples });
+        NDShape outputShape = dotFunc->Output().Shape().AppendShape({ (size_t)1, numSamples });
         std::vector<ElementType> outputData(outputShape.TotalSize());
         ValuePtr outputValue;
 

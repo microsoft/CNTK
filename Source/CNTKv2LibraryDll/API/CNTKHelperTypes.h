@@ -417,7 +417,7 @@ public:
     FixedVectorWithBuffer& operator=(FixedVectorWithBuffer&& other)
     {
         this->~FixedVectorWithBuffer();
-        new (this) FixedVectorWithBuffer(move(other));
+        new (this) FixedVectorWithBuffer(std::move(other));
         return *this;
     }
     FixedVectorWithBuffer& operator=(const Span& other)

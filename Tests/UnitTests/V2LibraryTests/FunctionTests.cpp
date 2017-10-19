@@ -146,8 +146,8 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
 {
     size_t numSequences = 7;
     size_t maxAllowedSequenceLength = 11;
-    size_t maxDimSize = 23;
-    size_t minDimSize = 5;
+    NDShapeDimension maxDimSize = 23;
+    NDShapeDimension minDimSize = 5;
     NDShape inputShape(sampleRank);
     for (size_t i = 0; i < sampleRank; ++i)
         inputShape[i] = (rand() % maxDimSize) + minDimSize;
@@ -193,7 +193,7 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
                     {
                         auto outputIdx = UnflattenedShape(k, outputShapeStrides);
                         auto inputIdx = outputIdx;
-                        inputIdx[sliceAxis] += sliceStartOffset;
+                        inputIdx[sliceAxis] += (NDShapeDimension)sliceStartOffset;
                         auto flatInputIdx = FlattenedIndex(inputIdx, inputShapeStrides);
                         expectedOutputValues[(((i * maxActualSequenceLength) + j) * outputShape.TotalSize()) + k] = sequences[i][(j * inputShape.TotalSize()) + flatInputIdx];
                     }
@@ -364,8 +364,8 @@ void TestTranspose(size_t numAxes, int axis1, int axis2, const DeviceDescriptor&
 // the axis to splice with axis 0 for each of the inputs and then splices along axis0
 void TestSplice(size_t numInputs, size_t maxNumInputAxes, size_t spliceAxis, const DeviceDescriptor& device)
 {
-    size_t maxDimSize = 15;
-    size_t minDimSize = 3;
+    NDShapeDimension maxDimSize = 15;
+    NDShapeDimension minDimSize = 3;
     NDShape maxRankInputShape(maxNumInputAxes);
     for (size_t i = 0; i < maxNumInputAxes; ++i)
         maxRankInputShape[i] = (rand() % maxDimSize) + minDimSize; // We have each axis dimensionality be at least 2
@@ -533,7 +533,7 @@ void TestTimesIndirectSparseInputGradientSparse(const DeviceDescriptor& device)
     size_t dim = 5;
     size_t numSequences = 1;
 
-    auto timesParam = Parameter(NDShape({ 1, dim }), DataType::Float, 0.0, device);
+    auto timesParam = Parameter(NDShape({ (size_t)1, dim }), DataType::Float, 0.0, device);
 
     auto input = InputVariable(NDShape({ dim }), /* isSparse*/ true, DataType::Float);
     auto timesFunction = Times(timesParam, Sequence::First(input));
@@ -543,7 +543,7 @@ void TestTimesIndirectSparseInputGradientSparse(const DeviceDescriptor& device)
     inputMap.insert(std::make_pair(input, inputValue));
 
     std::vector<float> outputData(numSequences);
-    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ 1, numSequences }), outputData, false));
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ (size_t)1, numSequences }), outputData, false));
     std::unordered_map<Variable, ValuePtr> outputMap;
     outputMap.insert(std::make_pair(timesFunction->Output(), outputValue));
 
@@ -594,7 +594,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
 
     auto parameterData = getParameterData(param);
 
-    for (int i = 0; i < numElements; i++)
+    for (size_t i = 0; i < numElements; i++)
     {
         FloatingPointCompare<ElementType>(outputData[i], 2 * parameterData[i],
                                           "Function output does not match the expected value.");
@@ -608,7 +608,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
     {
         auto data = param.Value()->WritableDataBuffer<ElementType>();
 
-        for (int i = 0; i < numElements; i++)
+        for (size_t i = 0; i < numElements; i++)
         {
             data[i] *= i;
         }
@@ -616,9 +616,8 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
         param.RecordValueUpdate();
         plus->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
         parameterData = getParameterData(param);
-        for (int i = 0; i < numElements; i++)
+        for (size_t i = 0; i < numElements; i++)
         {
-
             FloatingPointCompare<ElementType>(outputData[i], 2 * parameterData[i],
                                               "Function output does not match the expected value.");
         }
@@ -626,7 +625,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
 
     // Change parameter values directly by calling Parameter::SetValue.
     std::vector<ElementType> newValues(numElements);
-    for (int i = 0; i < numElements; i++)
+    for (size_t i = 0; i < numElements; i++)
     {
         newValues[i] = ElementType(1.0) / (i + ElementType(1.0));
     }
@@ -635,7 +634,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
     param.SetValue(newValuesNDarray);
     plus->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
     parameterData = getParameterData(param);
-    for (int i = 0; i < numElements; i++)
+    for (size_t i = 0; i < numElements; i++)
     {
         auto denom = (i + ElementType(1.0));
         FloatingPointCompare<ElementType>(parameterData[i], ElementType(1.0) / denom,

@@ -249,7 +249,7 @@ void CreateFunctionAndEvaluateWithSharedParameters(size_t inputDim,
             inputData[i] = ((float)rand()) / RAND_MAX;
         }
 
-        NDShape inputShape = {inputDim, 1, numSamples};
+        NDShape inputShape = {inputDim, (size_t)1, numSamples};
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
         std::vector<float> labelData(numOutputClasses * numSamples, 0);
@@ -258,7 +258,7 @@ void CreateFunctionAndEvaluateWithSharedParameters(size_t inputDim,
             labelData[(i*numOutputClasses) + (rand() % numOutputClasses)] = 1;
         }
 
-        NDShape labelShape = {numOutputClasses, 1, numSamples};
+        NDShape labelShape = {numOutputClasses, (size_t)1, numSamples};
         ValuePtr labelValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(labelShape, labelData.data(), labelData.size(), DeviceDescriptor::CPUDevice(), true));
 
         ValuePtr outputValue, predictionErrorValue;
@@ -350,7 +350,7 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
         // Create input data shape. Adding sequence length and numSamples as axes.
         // Todo: remove sequence length when only numSamples is supported.
         // Todo: add convenience APIs to simplify data preparation here.
-        NDShape inputShape = inputVar.Shape().AppendShape({1, numSamples});
+        NDShape inputShape = inputVar.Shape().AppendShape({(size_t)1, numSamples});
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData, true));
 
         // Define output.
@@ -366,7 +366,7 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
 
         // Todo: remove sequence length when only numSamples is supported.
         // Todo: add convenience APIs to simplify retrieval of output results.
-        NDShape outputShape = outputVar.Shape().AppendShape({1, numSamples});
+        NDShape outputShape = outputVar.Shape().AppendShape({(size_t)1, numSamples});
         std::vector<float> outputData(outputShape.TotalSize());
         NDArrayViewPtr cpuArrayOutput = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
         cpuArrayOutput->CopyFrom(*outputValue->Data());
@@ -380,7 +380,7 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
             printf("Iteration:%lu, Sample %lu:\n", (unsigned long)t, (unsigned long)i);
             printf("    ");
             dataIndex = i * outputDim;
-            for (size_t j = 0; j < std::min((size_t)10, outputDim); j++)
+            for (size_t j = 0; j < std::min((NDShapeDimension)10, outputDim); j++)
             {
                 printf("%f ", outputData[dataIndex++]);
             }
@@ -423,7 +423,7 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
             inputData[i] = static_cast<float>(i % 255);
         }
 
-        NDShape inputShape = inputVar.Shape().AppendShape({1, numSamples});
+        NDShape inputShape = inputVar.Shape().AppendShape({(size_t)1, numSamples});
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData, true));
 
         ValuePtr outputValue;
@@ -431,7 +431,7 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
         evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
 
         outputValue = outputs[outputVar];
-        NDShape outputShape = outputVar.Shape().AppendShape({1, numSamples});
+        NDShape outputShape = outputVar.Shape().AppendShape({(size_t)1, numSamples});
         std::vector<float> outputData(outputShape.TotalSize());
         NDArrayViewPtr cpuArrayOutput = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
         cpuArrayOutput->CopyFrom(*outputValue->Data());

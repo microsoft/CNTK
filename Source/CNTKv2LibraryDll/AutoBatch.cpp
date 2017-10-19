@@ -3060,13 +3060,13 @@ class Variable::AutoBatch
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"intermediate reshape", 3, numBatchItems);
                 // TODO: Any way we can fold the reshape in using m_redirection? ... no need, this will become part of Gather.
                 // start with actual shape we have, and make it the one we want
+                let& batchedInputDims = batchedInput.Shape().Dimensions();
                 if (batchAxis < fromSliceAxis)
                 {
-                    auto outputShape = MakeVector(batchedInput.Shape().Dimensions()); // PERF BUGBUG!
                     if (batchAxis + 1 != fromSliceAxis)
                         LogicError("stacking axis not adjacent to batch axis??"); // TODO: Can this legally happen?
-                    fail_if(outputShape[batchAxis] * outputShape[batchAxis + 1] != batchDim, "batch axis cannot be absorbed into stacking axis??");
-                    outputShape.pop_back();
+                    fail_if(batchedInputDims[batchAxis] * batchedInputDims[batchAxis + 1] != batchDim, "batch axis cannot be absorbed into stacking axis??");
+                    auto outputShape = batchedInputDims.BackPopped();
                     outputShape.back() = batchDim;
                     // insert a Reshape() op
                     batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape,
@@ -3075,7 +3075,7 @@ class Variable::AutoBatch
                 }
                 else // batchAxis > fromSliceAxis
                 {
-                    auto outputShape = MakeVector(batchedInput.Shape().Dimensions()); // PERF BUGBUG!
+                    auto outputShape = MakeVector(batchedInputDims); // PERF BUGBUG--can we do better than this? E.g. use a shared vector class member for this?
                     if (outputShape.back() == batchDim)
                         outputShape.insert(outputShape.end() - 1, batchAxis - fromSliceAxis, 1);
                     else

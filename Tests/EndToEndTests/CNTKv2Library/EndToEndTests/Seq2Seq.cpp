@@ -38,8 +38,8 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     bool forceEmbedding = useSparseInputs;
 
     /* Embeddings */
-    auto inputEmbeddingWeights = Parameter({ inputEmbeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"inputEmbeddingWeights");
-    auto labelEmbeddingWeights = Parameter({ labelEmbeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"labelEmbeddingWeights");
+    auto inputEmbeddingWeights = Parameter({ (NDShapeDimension)inputEmbeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"inputEmbeddingWeights");
+    auto labelEmbeddingWeights = Parameter({ (NDShapeDimension)labelEmbeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"labelEmbeddingWeights");
 
     auto inputEmbedding = Alias((!forceEmbedding && (inputVocabDim <= inputEmbeddingDim)) ? inputSequence : Times(inputEmbeddingWeights, inputSequence), L"inputEmbedding");
     auto labelEmbedding = Alias((!forceEmbedding && (labelVocabDim <= labelEmbeddingDim)) ? labelSequence : Times(labelEmbeddingWeights, labelSequence), L"labelEmbedding");

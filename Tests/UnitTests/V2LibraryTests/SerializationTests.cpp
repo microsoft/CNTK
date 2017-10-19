@@ -112,7 +112,7 @@ DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t maxSize
         NDShape shape(size);
         for (auto i = 0; i < size; i++)
         {
-            shape[i] = rng();
+            shape[i] = (NDShapeDimension)rng();
         }
         return DictionaryValue(shape);
     }
