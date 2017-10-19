@@ -1525,6 +1525,7 @@ inline void CHECK_MKL(dnnError_t err)
 }
 
 // adapter that converts data between user layout and primitive required layout
+template<typename ElemType>
 class MKLDnnResourceAdapter
 {
     dnnLayout_t userLayout = nullptr;
@@ -1541,14 +1542,14 @@ public:
         tempBuffer = nullptr;
         isInput = userToPrim;
         resourceType = rt;
-        if (!dnnLayoutCompare_F32(ltUser, ltPrim))
+        if (!dnnLayoutCompare<ElemType>(ltUser, ltPrim))
         {
             userLayout = ltUser;
             primLayout = ltPrim;
             dnnLayout_t from = userToPrim ? ltUser : ltPrim;
             dnnLayout_t to = userToPrim ? ltPrim : ltUser;
-            CHECK_MKL(dnnConversionCreate_F32(&convertPrim, from, to));
-            CHECK_MKL(dnnAllocateBuffer_F32(&tempBuffer, ltPrim)); // always allocate temp buffer for primLayout
+            CHECK_MKL(dnnConversionCreate<ElemType>(&convertPrim, from, to));
+            CHECK_MKL(dnnAllocateBuffer<ElemType>(&tempBuffer, ltPrim)); // always allocate temp buffer for primLayout
         }
     }
 
@@ -1558,7 +1559,7 @@ public:
         {
             if (convertPrim)
             {
-                CHECK_MKL(dnnConversionExecute_F32(convertPrim, userData, tempBuffer));
+                CHECK_MKL(dnnConversionExecute<ElemType>(convertPrim, userData, tempBuffer));
                 resources[resourceType] = tempBuffer;
             }
             else
@@ -1576,15 +1577,15 @@ public:
             RuntimeError("Cannot execute output ResourceAdapter for input");
 
         if (convertPrim)
-            CHECK_MKL(dnnConversionExecute_F32(convertPrim, tempBuffer, userData));
+            CHECK_MKL(dnnConversionExecute<ElemType>(convertPrim, tempBuffer, userData));
     }
 
     void Clear()
     {
-        if (convertPrim) { dnnDelete_F32(convertPrim); convertPrim = nullptr; }
-        if (userLayout) { dnnLayoutDelete_F32(userLayout); userLayout = nullptr; }
-        if (primLayout) { dnnLayoutDelete_F32(primLayout); primLayout = nullptr; }
-        if (tempBuffer) { dnnReleaseBuffer_F32(tempBuffer); tempBuffer = nullptr; }
+        if (convertPrim) { dnnDelete<ElemType>(convertPrim); convertPrim = nullptr; }
+        if (userLayout) { dnnLayoutDelete<ElemType>(userLayout); userLayout = nullptr; }
+        if (primLayout) { dnnLayoutDelete<ElemType>(primLayout); primLayout = nullptr; }
+        if (tempBuffer) { dnnReleaseBuffer<ElemType>(tempBuffer); tempBuffer = nullptr; }
     }
 
     ~MKLDnnResourceAdapter()

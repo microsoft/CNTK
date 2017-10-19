@@ -883,8 +883,8 @@ protected:
 
         struct PrimitiveContext
         {
-            MKLDnnResourceAdapter inputs[NumInputs];
-            MKLDnnResourceAdapter output;
+            MKLDnnResourceAdapter<ElemType> inputs[NumInputs];
+            MKLDnnResourceAdapter<ElemType> output;
 
             dnnPrimitive_t primitive = nullptr;
             dnnPrimitiveAttributes_t attributes = nullptr;
