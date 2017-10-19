@@ -177,10 +177,10 @@ inline cublasStatus_t cublasTransposeHelper(cublasHandle_t, cublasOperation_t, c
 {
     if(C != A)
     {
-        dim3 dimGrid((m+TRANS_TILE_DIM-1)/TRANS_TILE_DIM, (n+TRANS_TILE_DIM-1)/TRANS_TILE_DIM, 1);
+        dim3 dimGrid((n+TRANS_TILE_DIM-1)/TRANS_TILE_DIM, (m+TRANS_TILE_DIM-1)/TRANS_TILE_DIM, 1);
         dim3 dimBlock(TRANS_TILE_DIM, BLOCK_ROWS, 1);
 
-        transposeNoOverlap<<<dimGrid, dimBlock>>>(C, A, m, n);
+        transposeNoOverlap<<<dimGrid, dimBlock>>>(C, A, n, m);
     }
     else
         RuntimeError("In place transpose(half) not supported."); // cublas do not support this either. There might be bug if this actually get called.
