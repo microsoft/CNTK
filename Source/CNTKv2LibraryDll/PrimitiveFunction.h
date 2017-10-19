@@ -333,7 +333,7 @@ namespace CNTK
         // This must not be used for anything else.
     public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         PrimitiveFunction(PrimitiveOpType op, InputsVectorType&& inputs, Dictionary&& functionConfig/*, std::wstring&& name*/)
-            : Function(MakeVector(inputs), std::move(functionConfig), std::wstring()/*move(name)*/, std::wstring()),
+            : Function(std::move(inputs), std::move(functionConfig)/*, std::wstring(), std::wstring())*/),
               m_op(op),
               m_profiler(CurrentDynamicProfiler())
         {

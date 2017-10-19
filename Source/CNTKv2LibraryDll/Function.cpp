@@ -214,8 +214,8 @@ namespace CNTK
     {
     }
 
-    Function::Function(std::vector<Variable>&& inputs, Dictionary&& functionConfig, std::wstring&& name, std::wstring&& uid)
-        : m_inputs(std::move(inputs)), m_name(std::move(name)), m_uid(std::move(uid)), m_attributes(std::move(functionConfig))
+    Function::Function(InputsVectorType&& inputs, Dictionary&& functionConfig/*, std::wstring&& name, std::wstring&& uid*/)
+        : m_inputs(std::move(inputs))/*, m_name(std::move(name)), m_uid(std::move(uid))*/, m_attributes(std::move(functionConfig))
     {}
 
     /*virtual*/ Function::~Function() {}

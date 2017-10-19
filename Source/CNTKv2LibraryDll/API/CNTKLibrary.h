@@ -3889,7 +3889,7 @@ namespace CNTK
         CNTK_API Function(const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const std::wstring& name);
         CNTK_API Function(const Variable& input0, Dictionary&& functionConfig, const std::wstring& name);
         // move constructor where everything is prepared outside; used in auto-batching
-        Function(std::vector<Variable>&& inputs, Dictionary&& functionConfig, std::wstring&& name, std::wstring&& uid);
+        Function(InputsVectorType&& inputs, Dictionary&& functionConfig/*, std::wstring&& name, std::wstring&& uid*/);
 
         //std::vector<Variable> m_inputs; // primitives: direct input variables; composites: empty (Inputs() determines all leaves on the fly); block: all leaves as if it was a composite
         InputsVectorType m_inputs; // primitives: direct input variables; composites: empty (Inputs() determines all leaves on the fly); block: all leaves as if it was a composite
