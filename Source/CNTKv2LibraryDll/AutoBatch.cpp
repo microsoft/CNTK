@@ -2262,7 +2262,7 @@ class Variable::AutoBatch
     // by setting its m_acyclicOutputPrimitiveReference field.
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
     template<typename ShapeType>
-    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, vector<Variable>&& inputs, const ShapeType& shape, Dictionary&& attributes, const wstring& name,
+    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, Function::InputsVectorType&& inputs, const ShapeType& shape, Dictionary&& attributes, const wstring& name,
                                        const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                        bool isFree = false, bool logSpliceAsGather = false)
     {
@@ -2303,20 +2303,21 @@ class Variable::AutoBatch
         if (IsMatrixProduct(clonee.m_op))
             fail_if(inputs.front().Shape() != clonee.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
 #endif
-        return CreateAndMemoizeOp(clonee.m_op, vector<Variable>(inputs), shape, move(attributes), clonee.m_name, clonee.m_profiler, L"*"/*clonee*/, isFree);
+        return CreateAndMemoizeOp(clonee.m_op, move(inputs), shape, move(attributes), clonee.m_name, clonee.m_profiler, L"*"/*clonee*/, isFree);
     }
 
     // create a PrimitiveFunction and execute it right away
     // This executes RawPrimitiveFunction() and MemoizeKnowableValueInArena().
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
     template<typename ShapeType>
-    PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, vector<Variable>&& inputs, const ShapeType& shape, Dictionary&& attributes, const wstring& name,
+    PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, Function::InputsVectorType&& inputs, const ShapeType& shape, Dictionary&& attributes, const wstring& name,
                                             const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                             bool isFree = false, bool logSpliceAsGather = false)
     {
         // create the object
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Pass, L"RawPrimitiveFunction", 3);
-        auto fPtr = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(attributes), std::move(name));
+        vector<Variable> inputs1(inputs); // PERF BUGBUG
+        auto fPtr = MakeSharedObject<PrimitiveFunction>(op, move(inputs1), move(attributes), move(name));
         // unfortunately output initialization must be separated out since it requires s shared_ptr to f
         let& fInputs = fPtr->m_inputs;
         fPtr->InitOutput(OutputVariable(NDShape(shape)/*it's a &&*/, fInputs.front().GetDataType(),
@@ -3039,7 +3040,7 @@ class Variable::AutoBatch
                 // create a new PrimitiveFunction Slice()
                 auto outputShape = fromDims; // determine output shape
                 outputShape.back()/*[fromSliceAxis]*/ = endIndex - beginIndex; // narrow it down to the range of the slice we are taking
-                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, vector<Variable>{ fromOutput }, outputShape,
+                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, Function::InputsVectorType(1, fromOutput), outputShape,
                                                          Dictionary(
                                                              PrimitiveFunction::AttributeNameAxis,       Axis((int)fromSliceAxis),
                                                              PrimitiveFunction::AttributeNameBeginIndex, (int)beginIndex,
@@ -3070,7 +3071,7 @@ class Variable::AutoBatch
                     auto outputShape = batchedInputDims.BackPopped();
                     outputShape.back() = batchDim;
                     // insert a Reshape() op
-                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape,
+                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(1, move(batchedInput)), outputShape,
                                                              Dictionary(),
                                                              f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 }
@@ -3088,7 +3089,7 @@ class Variable::AutoBatch
                         outputShape.push_back(batchDim);
                     }
                     // insert a Reshape() op
-                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape,
+                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(1, move(batchedInput)), outputShape,
                                                              Dictionary(),
                                                              f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 }
@@ -3102,7 +3103,7 @@ class Variable::AutoBatch
             //if (stackingMode == StackingMode::STACKING)
             //    Break;
             // create the arguments to the gather operation
-            vector<Variable> gatherInputs;
+            vector<Variable> gatherInputs; // TODO: Use a Transform
             gatherInputs.reserve(numBatchItems);
             for (let& f : ops)
             {
@@ -3117,7 +3118,7 @@ class Variable::AutoBatch
                     broadcastShape.resize(batchAxis);
                     broadcastShape.push_back(f.m_autoBatchState.m_batchDim); // this is the shape we want
                     // insert a ReduceElements op, which in fact ignores its axes and therefore can also be used to broadcast
-                    gatherInputs.push_back(CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, vector<Variable>{ input }, broadcastShape,
+                    gatherInputs.push_back(CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, Function::InputsVectorType(1, input), broadcastShape,
                                                                      Dictionary(PrimitiveFunction::AttributeNameReductionOpName, PrimitiveFunction::InternalSumReductionOpName),
                                                                      f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/false));
                     // Note that at this point, the inputs to the Gather operation will have inconsistent
@@ -3142,7 +3143,7 @@ class Variable::AutoBatch
             // BUGBUG: vv The move(gatherInputs) is ineffective because ultimately, the copy (not move) constructor of PrimtiveFunction ends up being called.
             //if (f0.m_op == PrimitiveOpType::ElementTimes && f0.m_attributes.Size() > 0 && stackingMode == StackingMode::STACKING) // we were batched for batching
             //    Break;
-            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs), outputShape,
+            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, Function::InputsVectorType(gatherInputs), outputShape, // PERF BUGBUG: use a Transform
                                              Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)batchAxis)),
                                              f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                              /*isFree=*/false, /*logSpliceAsGather=*/true);
@@ -3490,7 +3491,7 @@ class Variable::AutoBatch
                 arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
 
                 // Reshape() here does not need the properties at this level anymore; output shape is sufficient
-                let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, vector<Variable>{ arg }, batchedOutputShape, Dictionary(), f0.m_name, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
+                let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, Function::InputsVectorType(1, move(arg)), batchedOutputShape, Dictionary(), f0.m_name, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
 
                 batchedOp = reshapeOp; // this is the result that we redistribute from to the individual consumers
             }
@@ -4588,7 +4589,7 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
 
 // argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
 // operands     = what the arguments should prerent to be. Must currently include a copy of Parameters at the end.
-Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee, vector<Variable>& argumentList, const vector<Variable>& operands, bool isBasicBlock, bool& needToDetermineShapes, const std::wstring& name /*= std::wstring()*/) const
+Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee, /*mutable*/ vector<Variable>& argumentList, const vector<Variable>& operands, bool isBasicBlock, bool& needToDetermineShapes, const std::wstring& name /*= std::wstring()*/) const
 {
     let composite = static_pointer_cast<CompositeFunction>(callee); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
 #if 0   // This baloney, at least in the case of isBasicBlock.
@@ -4761,7 +4762,8 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape,
 // Special case: Invoke() may also be called while building a composite (static graph) that uses another.
 // In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
 // is inferred. This is controlled by the determineShapes flag.
-BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, std::vector<Variable>& argumentList, std::vector<Variable>&& operands, bool isBasicBlock, bool determineShapes, wstring&& blockName) :
+// PERF BUGBUG: Can we change operands to InputsVectorType?
+BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, /*mutable*/std::vector<Variable>& argumentList, std::vector<Variable>&& operands, bool isBasicBlock, bool determineShapes, wstring&& blockName) :
     PrimitiveFunction(PrimitiveOpType::Block, move(operands), Dictionary(), move(blockName)), m_composite(callee),
     m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
 {
