@@ -906,8 +906,9 @@ def test_usermbsource_training(tmpdir, with_checkpoint_impl):
     ce = cross_entropy_with_softmax(z, label)
     errs = classification_error(z, label)
 
-    lr_per_sample = learning_rate_schedule(
-        [0.3, 0.2, 0.1, 0.0], UnitType.sample)
+    #having a large learning rate to prevent the model from converging earlier where not all the intended samples are fed
+    #note that training session can end earlier if there is no updates
+    lr_per_sample = learning_rate_schedule(0.3, UnitType.sample)
     learner = sgd(z.parameters, lr_per_sample)
     trainer = Trainer(z, (ce, errs), [learner])
     input_map = {
