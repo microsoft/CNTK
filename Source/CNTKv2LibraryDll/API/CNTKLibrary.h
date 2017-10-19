@@ -231,7 +231,13 @@ namespace CNTK
         ///
         /// Returns a boolean indicating if 'this' shape is the special Unknown shape
         ///
-        bool IsUnknown() const { return (*this == NDShape::Unknown()); }
+        //bool IsUnknown() const { return (*this == NDShape::Unknown()); }
+        bool IsUnknown() const
+        {
+            return
+                m_shapeDims.end() == m_shapeDims.begin() + 1 &&
+                m_shapeDims.front() == SentinelDimValueForUnknownShape;
+        }
 
         ///
         /// Returns the rank of 'this' shape.

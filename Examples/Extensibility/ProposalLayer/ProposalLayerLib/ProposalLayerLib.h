@@ -41,7 +41,7 @@ class ProposalLayer final : public Function
     
 public:
     ProposalLayer(const std::vector<Variable>& inputs, const Dictionary& attributes, const std::wstring& name = L"ProposalLayer")
-        : Function(inputs, attributes, name),
+        : Function(inputs, Dictionary(attributes), name),
         m_preNMSTopN{ 0 }, m_postNMSTopN{ 0 }, m_NMSThresh{ 0 }, m_minSize{0}, m_trainMode(true)
     {
         if (attributes.Contains(L"feat_stride"))
@@ -129,11 +129,11 @@ private:
         auto width = scoresShape[1];
         // the first set of N (= m_anchors.size()) channels are bg probs
         // the second set are the fg probs, which we want
-        std::vector<size_t> offsets{ 0,0,0,0 };
-        offsets[2] = m_anchors.size();
+        NDShapeDimensions offsets{ 0,0,0,0 };
+        offsets[2] = (NDShapeDimension)m_anchors.size();
 
         auto extent = scoresShape.Dimensions();
-        extent[2] -= m_anchors.size();
+        extent[2] -= (NDShapeDimension)m_anchors.size();
 
         auto fgSlice = inputValues[Inputs::SCORES]->Data()->SliceView(offsets, extent, true);
         auto scores = fgSlice->DataBuffer<float>();
@@ -197,11 +197,11 @@ private:
             proposals.resize(numFoundProposals, Rectangle2D(0, 0, 0, 0));
 
         // 7. create the output value and copy the data.
-        NDArrayView outputData(DataType::Float, NDShape({ 4, numFoundProposals }),
+        NDArrayView outputData(DataType::Float, NDShape({ (size_t)4, numFoundProposals }),
             proposals.data(), numFoundProposals * 4 * sizeof(float), computeDevice);
 
         auto outputValue = MakeSharedObject<Value>(
-            MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ 4, numFoundProposals }), computeDevice));
+            MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ (size_t)4, numFoundProposals }), computeDevice));
 
         outputValue->Data()->CopyFrom(outputData);
 
@@ -227,13 +227,15 @@ private:
 
     size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
 
-    void InferOutputs(std::vector<Variable>& outputs) override
+    OutputsVectorType InferOutputs() override
     {
+        std::vector<Variable> outputs;
         auto firstOperand = Function::Inputs()[0];
         auto proposalShape = NDShape({ 4, NDShape::FreeDimension });
         auto dtype = firstOperand.GetDataType();
         auto dynamicAxes = firstOperand.DynamicAxes();
         outputs.push_back(OutputVariable(proposalShape, dtype, dynamicAxes , false, L"rpn_rois_raw"));
+        return outputs;
     }
 
     FunctionPtr Clone(const std::vector<Variable>& clonedInputs) override

@@ -191,6 +191,14 @@ public:
         DebugWipe();
         assign(l.begin(), l.end());
     }
+    template<typename Collection WHERE_IS_ITERABLE(Collection)>
+    SmallVector(const Collection& v)
+    {
+        DebugWipe();
+        clear();
+        for (auto& val : v)
+            push_back((T)val);
+    }
     bool operator==(const SmallVector& other) const
     {
         return size() == other.size() && !memcmp(data(), other.data(), other.m_size * sizeof(T));

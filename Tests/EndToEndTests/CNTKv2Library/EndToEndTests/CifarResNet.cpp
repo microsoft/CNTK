@@ -49,8 +49,8 @@ Constant GetProjectionMap(size_t outputDim, size_t inputDim, const DeviceDescrip
     for (size_t i = 0; i < inputDim; ++i)
         projectionMapValues[(i * inputDim) + i] = 1.0f;
 
-    auto projectionMap = MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ 1, 1, inputDim, outputDim }), device);
-    projectionMap->CopyFrom(NDArrayView(NDShape({ 1, 1, inputDim, outputDim }), projectionMapValues));
+    auto projectionMap = MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ (size_t)1, (size_t)1, inputDim, outputDim }), device);
+    projectionMap->CopyFrom(NDArrayView(NDShape({ (size_t)1, (size_t)1, inputDim, outputDim }), projectionMapValues));
 
     return Constant(projectionMap);
 }
@@ -94,10 +94,10 @@ FunctionPtr ResNetClassifier(Variable input, size_t numOutputClasses, const Devi
     size_t poolH = 8;
     size_t poolhStride = 1;
     size_t poolvStride = 1;
-    auto pool = Pooling(rn3_3, PoolingType::Average, { poolW, poolH, 1 }, { poolhStride, poolvStride, 1 });
+    auto pool = Pooling(rn3_3, PoolingType::Average, { poolW, poolH, (size_t)1 }, { poolhStride, poolvStride, (size_t)1 });
 
     // Output DNN layer
-    auto outTimesParams = Parameter({ numOutputClasses, 1, 1, cMap3 }, DataType::Float, GlorotUniformInitializer(fc1WScale, 1, 0), device);
+    auto outTimesParams = Parameter({ numOutputClasses, (size_t)1, (size_t)1, cMap3 }, DataType::Float, GlorotUniformInitializer(fc1WScale, 1, 0), device);
     auto outBiasParams = Parameter({ numOutputClasses }, (float)fc1BValue, device);
 
     return Plus(Times(outTimesParams, pool), outBiasParams, outputName);

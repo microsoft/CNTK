@@ -122,8 +122,9 @@ private:
 
     size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
 
-    void InferOutputs(std::vector<Variable>& outputs) override
+    OutputsVectorType InferOutputs() override
     {
+        std::vector<Variable> outputs;
         auto leftOperand = Inputs()[0];
         auto rightOperand = Inputs()[1];
 
@@ -137,5 +138,6 @@ private:
             std::runtime_error("Left operand must not have dynamic axes (i.e. should not be minibatch data, but be a Parameter of fixed size)");
 
         outputs.push_back(OutputVariable(NDShape({ leftOperand.Shape()[0] }), leftOperand.GetDataType(), rightOperand.DynamicAxes()));
+        return outputs;
     }
 };

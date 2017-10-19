@@ -109,8 +109,9 @@ private:
     const wchar_t* sizekey = L"size";
 
     // Compute the dimensions of the output variable and return the proper shape and dynamic axes
-    void InferOutputs(std::vector<Variable>& outputs) override
+    OutputsVectorType InferOutputs() override
     {
+        std::vector<Variable> outputs;
         // Pull out the inputs to the function, left is kernels right is activations
         auto leftOperand = Inputs()[0];
         auto rightOperand = Inputs()[1];
@@ -135,6 +136,7 @@ private:
         auto numOutRows = !pad ? (h - size)/stride + 1 : (h - 1)/stride + 1;
         // return the appropriate output shape 
         outputs.push_back(OutputVariable(NDShape({ numOutRows, numOutCols, num_filters }), leftOperand.GetDataType(), rightOperand.DynamicAxes()));
+        return outputs;
     }
 
     FunctionPtr Clone(const std::vector<Variable>& clonedInputs) override

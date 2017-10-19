@@ -599,16 +599,16 @@ namespace CNTK
             if (leftOperandShapeC == rightOperandShapeC) // fast path--note this won't catch if both inputs have inferred dimensions, which is an error condition
                 return leftOperandShapeC;
 
-            auto leftOperandShape  = leftOperandShapeC;
-            auto rightOperandShape = rightOperandShapeC;
+            auto leftOperandShape  = leftOperandShapeC.IsUnknown() ? rightOperandShapeC : leftOperandShapeC;
+            //if (leftOperandShapeC.IsUnknown())
+            //    leftOperandShape = rightOperandShapeC;
+            //auto rightOperandShape = rightOperandShapeC.IsUnknown() ? leftOperandShape : rightOperandShapeC;
+            //auto rightOperandShape = rightOperandShapeC.IsUnknown() ? (leftOperandShapeC.IsUnknown() ? rightOperandShapeC : leftOperandShapeC) : rightOperandShapeC;
+            auto rightOperandShape = rightOperandShapeC.IsUnknown() ? leftOperandShapeC : rightOperandShapeC;
+            //if (rightOperandShapeC.IsUnknown())
+            //    rightOperandShape = leftOperandShape;
 
-            if (leftOperandShape.IsUnknown())
-                leftOperandShape = rightOperandShape;
-
-            if (rightOperandShape.IsUnknown())
-                rightOperandShape = leftOperandShape;
-
-            // All operand shapes should be known
+            // All operand shapes should now be known
             assert(!leftOperandShape.IsUnknown()&& !rightOperandShape.IsUnknown());
 
             const auto& shapeWithSmallerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? rightOperandShape : leftOperandShape;

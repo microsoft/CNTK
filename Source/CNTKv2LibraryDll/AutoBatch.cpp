@@ -2316,7 +2316,6 @@ class Variable::AutoBatch
     {
         // create the object
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Pass, L"RawPrimitiveFunction", 3);
-        // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
         auto fPtr = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(attributes), std::move(name));
         // unfortunately output initialization must be separated out since it requires s shared_ptr to f
         let& fInputs = fPtr->m_inputs;
@@ -2464,7 +2463,6 @@ class Variable::AutoBatch
         // Note: We can use make_shared since no shared_ptrs to these clones are ever exposed across the DLL boundary.
         //if (fCloned->m_uniqueIdForDebugging == 20000)
         //    fprintf(stderr, "");
-        // PERF BUGBUG: This does not need to use MakeSharedObject(), make_shared() is fine, since functions created with this are internal-use only.
         // unfortunately output initialization must be separated out since it requires s shared_ptr to fCloned
         // get the output shape
         let& outputs = clonee.m_outputs;
@@ -3062,17 +3060,22 @@ class Variable::AutoBatch
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"intermediate reshape", 3, numBatchItems);
                 // TODO: Any way we can fold the reshape in using m_redirection? ... no need, this will become part of Gather.
                 // start with actual shape we have, and make it the one we want
-                auto outputShape = MakeVector(batchedInput.Shape().Dimensions()); // PERF BUGBUG!
                 if (batchAxis < fromSliceAxis)
                 {
+                    auto outputShape = MakeVector(batchedInput.Shape().Dimensions()); // PERF BUGBUG!
                     if (batchAxis + 1 != fromSliceAxis)
                         LogicError("stacking axis not adjacent to batch axis??"); // TODO: Can this legally happen?
                     fail_if(outputShape[batchAxis] * outputShape[batchAxis + 1] != batchDim, "batch axis cannot be absorbed into stacking axis??");
                     outputShape.pop_back();
                     outputShape.back() = batchDim;
+                    // insert a Reshape() op
+                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape,
+                                                             Dictionary(),
+                                                             f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 }
                 else // batchAxis > fromSliceAxis
                 {
+                    auto outputShape = MakeVector(batchedInput.Shape().Dimensions()); // PERF BUGBUG!
                     if (outputShape.back() == batchDim)
                         outputShape.insert(outputShape.end() - 1, batchAxis - fromSliceAxis, 1);
                     else
@@ -3083,11 +3086,11 @@ class Variable::AutoBatch
                         outputShape.back() /= batchDim;
                         outputShape.push_back(batchDim);
                     }
+                    // insert a Reshape() op
+                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape,
+                                                             Dictionary(),
+                                                             f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 }
-                // insert a Reshape() op
-                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, vector<Variable>{ batchedInput }, outputShape,
-                                                         Dictionary(),
-                                                         f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 // and that's now really our input to the batched operation
             }
             fail_if(batchedInput.Shape()[batchAxis] != batchDim, "CreateBatchedInputFor() post=condition not fulfilled??"); // with all this axis mess, verify this function's post-condition
@@ -4742,7 +4745,6 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape,
     }
 }
 
-// TODO: make the interface nicer. The composite should be locked away in a struct Invocable.
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
 // It is a valid PrimitiveFunction, but it shares the composite instead of owning it, and therefore not a valid BlockFunction for the static-graph machinery.
 // TODO: Prevent the static machinery from tripping over this.
