@@ -296,15 +296,19 @@ namespace CNTK
     void Trainer::DoDistributedLossEvalAveraging()
     {
         float averageTrainingLoss = 0;
-        if (m_aggregatedTrainingLossValue)
+        bool aggregateTrainingLoss = false;
+        if (m_aggregatedTrainingLossValue && m_aggregatedTrainingLossValue->IsInitialized())
         {
             averageTrainingLoss = m_aggregatedTrainingLossValue->AsScalar<float>();
+            aggregateTrainingLoss = true;
         }
 
         float averageEvalCriterion = 0;
-        if (m_aggregatedTrainingEvalCriterionValue)
+        bool aggregateEvalCriterion = false;
+        if (m_aggregatedTrainingEvalCriterionValue && m_aggregatedTrainingEvalCriterionValue->IsInitialized())
         {
             averageEvalCriterion = m_aggregatedTrainingEvalCriterionValue->AsScalar<float>();
+            aggregateEvalCriterion = true;
         }
 
         NDArrayViewPtr inPlaceAggregateTrainingLoss = std::make_shared<NDArrayView>(averageTrainingLoss, NDShape{ }, DeviceDescriptor::CPUDevice());
@@ -312,12 +316,18 @@ namespace CNTK
         vector<NDArrayViewPtr> inPlaceAggregateVector = { inPlaceAggregateTrainingLoss, inPlaceAggregateEvalCriterion };
         
         DistributedCommunicatorPtr communicator = MPICommunicator();
-        communicator->AggregateInPlace(inPlaceAggregateVector, communicator->Workers());
-        
-        inPlaceAggregateTrainingLoss->SetValue(inPlaceAggregateTrainingLoss->AsScalar<float>() / communicator->Workers().size());
-        m_aggregatedTrainingLossValue->CopyFrom(Value(inPlaceAggregateTrainingLoss));
+        if (aggregateTrainingLoss || aggregateEvalCriterion)
+        {
+            communicator->AggregateInPlace(inPlaceAggregateVector, communicator->Workers());
+        }
 
-        if (m_aggregatedTrainingEvalCriterionValue)
+        if (aggregateTrainingLoss)
+        {
+            inPlaceAggregateTrainingLoss->SetValue(inPlaceAggregateTrainingLoss->AsScalar<float>() / communicator->Workers().size());
+            m_aggregatedTrainingLossValue->CopyFrom(Value(inPlaceAggregateTrainingLoss));
+        }
+
+        if (aggregateEvalCriterion)
         {        
             inPlaceAggregateEvalCriterion->SetValue(inPlaceAggregateEvalCriterion->AsScalar<float>() / communicator->Workers().size());
             m_aggregatedTrainingEvalCriterionValue->CopyFrom(Value(inPlaceAggregateEvalCriterion));

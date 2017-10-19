@@ -722,7 +722,7 @@ namespace CNTK
 
         void Update(const ValuePtr& delta, const DeviceDescriptor& device);
         void Reset();
-
+        bool IsInitialized() { return !m_isUninitialized; }
     private:
         void ResetToZero();
 
