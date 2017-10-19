@@ -100,13 +100,13 @@ namespace CNTK
             {
                 if (argument.m_dataFields->m_compositeArgumentIndex != VariableFields::m_compositeArgumentIndexUndefined)
                     LogicError("m_compositeArgumentIndex should not be used when !m_compositeIsShared");
-                if (!argument.m_dataFields->m_blockFunctionVariableMapping.m_dataFields)
+                if (!argument.m_dataFields->More().m_blockFunctionVariableMapping.m_dataFields)
                     LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
-                return argument.m_dataFields->m_blockFunctionVariableMapping;
+                return argument.m_dataFields->More().m_blockFunctionVariableMapping;
             }
             else // shared composite: pretend value is found in block's m_inputs, at index m_compositeArgumentIndex
             {
-                if (argument.m_dataFields->m_blockFunctionVariableMapping.m_dataFields)
+                if (argument.m_dataFields->HasMore() && argument.m_dataFields->m_more->m_blockFunctionVariableMapping.m_dataFields)
                     LogicError("m_blockFunctionVariableMapping should not be set when m_compositeIsShared");
                 if (argument.m_dataFields->m_compositeArgumentIndex == VariableFields::m_compositeArgumentIndexUndefined)
                     LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for shared-composite argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
@@ -124,7 +124,7 @@ namespace CNTK
                 LogicError("BlockFunctionOutputMapping: Must only be called on OutputVariables");
             if (BlockFunctionOutputMapping(output) == Variable())
                 LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for output '%S'", AsString().c_str(), OpName().c_str(), output.AsString().c_str());
-            return output.m_dataFields->m_blockFunctionVariableMapping;
+            return output.m_dataFields->More().m_blockFunctionVariableMapping;
         }
 
     protected:
@@ -145,7 +145,7 @@ namespace CNTK
                     {
                         // It has changed, and not to a Constant or Parameter.
                         if (!m_compositeIsShared) // (if shared then we only store an index, which does not change)
-                            argument.m_dataFields->m_blockFunctionVariableMapping = replacement;
+                            argument.m_dataFields->More().m_blockFunctionVariableMapping = replacement;
                         if (BlockFunctionPlaceholderMapping(argument) == replacement)
                             LogicError("BlockFunction::OnPlaceholdersReplaced inputs incorrectly updated upon replacing placeholders");
                     }
@@ -207,7 +207,7 @@ namespace CNTK
             for (auto argumentMapping : argumentsMap)
             {
                 if (!m_compositeIsShared)
-                    argumentMapping.first.m_dataFields->m_blockFunctionVariableMapping = argumentMapping.second; // composite Placeholder remembers its actual input
+                    argumentMapping.first.m_dataFields->More().m_blockFunctionVariableMapping = argumentMapping.second; // composite Placeholder remembers its actual input
                 else
                     LogicError("DetermineInputs is not supposed to be called when composite is not shared. That'd be a different constructor.");
                     //argumentMapping.first.m_dataFields->m_compositeArgumentIndex = blockFunctionInputs.size(); // for shared composite (Dynamite), we remember the index instead
@@ -219,6 +219,7 @@ namespace CNTK
 
         OutputsVectorType InferOutputs() override
         {
+            // Note: This is not used for the case of static-block invocation in Dynamite.
             std::vector<Variable> outputs;
             // We determine the outputs by replacing the arguments of the composite with new placeholders with updated 
             // shape etc. information matching the corresponding mapped input
@@ -228,8 +229,8 @@ namespace CNTK
             {
                 auto currentArgumentMapping = BlockFunctionPlaceholderMapping(currentArgument); // this was remembered in the constructor
                 auto newArgument = PlaceholderLike(currentArgumentMapping);
-                newArgument.m_dataFields->m_blockFunctionVariableMapping = currentArgument.m_dataFields->m_blockFunctionVariableMapping; // == currentArgumentMapping or, if shared composite, null
-                newArgument.m_dataFields->m_compositeArgumentIndex       = currentArgument.m_dataFields->m_compositeArgumentIndex;
+                newArgument.m_dataFields->More().m_blockFunctionVariableMapping = currentArgument.m_dataFields->More().m_blockFunctionVariableMapping; // == currentArgumentMapping or, if shared composite, null
+                newArgument.m_dataFields->m_compositeArgumentIndex = currentArgument.m_dataFields->m_compositeArgumentIndex;
 
                 replacementMap.insert({ currentArgument, newArgument });
             }
@@ -241,7 +242,7 @@ namespace CNTK
             for (const auto& compositeOutput : compositeOutputs)
             {
                 auto output = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), compositeOutput.NeedsGradient(), Name());
-                output.m_dataFields->m_blockFunctionVariableMapping = compositeOutput;
+                output.m_dataFields->More().m_blockFunctionVariableMapping = compositeOutput;
 
                 outputs.push_back(output);
             }
@@ -258,7 +259,7 @@ namespace CNTK
         // Therefore we cannot use Placeholder::m_blockFunctionVariableMapping to store the redirect
         // to the actual argument to be used in place of the Placeholder.
         // Instead, we use Placeholder::m_compositeArgumentIndex. The following conceptual equivalence
-        // should hold: plVar->m_blockFunctionVariableMapping === m_inputs[plVar->m_compositeArgumentIndex].
+        // should hold: plVar->More().m_blockFunctionVariableMapping === m_inputs[plVar->m_compositeArgumentIndex].
         // TODO: Can we switch BlockFunction to this at large?
         bool m_compositeIsShared = false; // true for Dynamite
         bool m_isBasicBlock = false;      // if true then keep as primitive operation for all batching decisions

@@ -11,6 +11,21 @@
 
 namespace CNTK
 {
+    ///
+    /// Class that stores a std::wstring, but most if the time is empty, so that it is cheaper to have one extra redirection.
+    ///
+    class OptionalString
+    {
+        std::wstring* m_string;
+    public:
+        OptionalString()                       : m_string(nullptr)                        { }
+        OptionalString(const std::wstring&  s) : m_string(new std::wstring(s))            { }
+        OptionalString(      std::wstring&& s) : m_string(new std::wstring(std::move(s))) { }
+        OptionalString& operator=(const std::wstring& s) { auto newString = s.empty() ? nullptr : new std::wstring(s); if (m_string) delete m_string; m_string = newString; return *this; }
+        operator const std::wstring&() const { static const std::wstring s_emptyString; return m_string ? *m_string : s_emptyString; }
+        operator bool() const { return m_string && !m_string->empty(); }
+        const wchar_t* c_str() const { return m_string ? m_string->c_str() : L""; }
+    };
     struct VariableFields final : public std::enable_shared_from_this<VariableFields>
     {
         friend class CompositeFunction;
@@ -18,7 +33,6 @@ namespace CNTK
 
         // variable type
         NDShape m_shape; // TODO: use fixed vector up to 6 or so (vector is 24 bytes)
-        std::vector<Axis> m_dynamicAxes; // TODO: make an object
         ::CNTK::DataType m_dataType;
         bool m_needsGradient;
         bool m_isSparse;
@@ -42,31 +56,55 @@ namespace CNTK
 
         // graph
         std::weak_ptr<PrimitiveFunction> m_ownerFunction; // OutputVariables only: Primitive that owns this output.
-        std::wstring m_name; // TODO: make a unique_ptr
-        mutable std::wstring m_uid; // TODO: make a unique_ptr
-        Variable m_blockFunctionVariableMapping; // TODO: make a unique_ptr, so save those 3 shared_ptrs
+        OptionalString m_name;
 
         // debugging aid for identifying objects
         unsigned int m_uniqueIdForDebugging = GetUniqueId(); static unsigned int GetUniqueId() { static unsigned int id = 0; return ++id; }
 
-        // lazy initialization
-        std::unique_ptr<std::once_flag> m_initValueFlag;
-        std::unique_ptr<ParameterInitializer> m_valueInitializer;
-        std::unique_ptr<DeviceDescriptor> m_valueInitializationDevice;
+        // less commonly used fields are tucked away in a separate struct.
+        // The assumption is that the vast majority of variables do not have this. Saves > 128 bytes (2 cache rows) for each Variable.
+        struct MoreVariableFields
+        {
+            // type
+            std::vector<Axis> m_dynamicAxes;
 
-        // static computation
-        std::atomic<size_t> m_valueTimeStamp;
+            // graph
+            mutable std::wstring m_uid;
+            Variable m_blockFunctionVariableMapping;
+
+            // lazy initialization
+            std::unique_ptr<std::once_flag> m_initValueFlag;
+            std::unique_ptr<ParameterInitializer> m_valueInitializer;
+            std::unique_ptr<DeviceDescriptor> m_valueInitializationDevice;
+
+            // static computation
+            std::atomic<size_t> m_valueTimeStamp = 0;
+        };
+        mutable std::unique_ptr<MoreVariableFields> m_more;
+        bool HasMore() const { return m_more.get() != nullptr; }
+        MoreVariableFields& LazyGetMore() const
+        {
+            if (!HasMore()) // TODO: This should be made thread-safe.
+                m_more.reset(new MoreVariableFields());
+            return *m_more;
+        }
+        MoreVariableFields& More() { return LazyGetMore(); }
+        const MoreVariableFields& More() const { return LazyGetMore(); }
 
         VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, const std::weak_ptr<PrimitiveFunction>& ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
             : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value),
-              m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)
+              m_needsGradient(needsGradient)/*, m_dynamicAxes(dynamicAxes)*/, m_isSparse(isSparse), m_name(name)/*, m_uid(uid), m_valueTimeStamp(0)*/
         {
             if (value && (type != value->GetDataType()))
                 InvalidArgument("The DataType of the Parameter/Constant Variable '%S' does not match the DataType of the associated Value", AsString().c_str());
 
+            if (!uid.empty())
+                More().m_uid = uid;
+
             // Validate that each of the dynamic axes are unique
             if (!dynamicAxes.empty())
             {
+                More().m_dynamicAxes = dynamicAxes;
                 std::unordered_set<Axis> uniqueDynamicAxis;
                 for (auto& currentDynamicAxis : dynamicAxes)
                 {
@@ -95,7 +133,7 @@ namespace CNTK
         // simple version used during cloning
         VariableFields(NDShape&& shape, VariableKind varType, ::CNTK::DataType type, bool needsGradient, bool isSparse)
             : m_shape(std::move(shape)), m_varKind(varType), m_dataType(type),
-              m_needsGradient(needsGradient), m_isSparse(isSparse), m_valueTimeStamp(0)
+              m_needsGradient(needsGradient), m_isSparse(isSparse)/*, m_valueTimeStamp(0)*/
         {
         }
 

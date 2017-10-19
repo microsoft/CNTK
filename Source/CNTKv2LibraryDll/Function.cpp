@@ -363,7 +363,7 @@ namespace CNTK
                     var.m_dataFields->m_shape = placeholder.Shape();
 
                 if ((var.DynamicAxes() == Axis::UnknownDynamicAxes()) && (placeholder.DynamicAxes() != Axis::UnknownDynamicAxes()))
-                    var.m_dataFields->m_dynamicAxes = placeholder.DynamicAxes();
+                    var.m_dataFields->More().m_dynamicAxes = placeholder.DynamicAxes();
             }
         }
     }
@@ -440,7 +440,7 @@ namespace CNTK
             if ((currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
             {
                 updated = true;
-                currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
+                currentOutputVar.m_dataFields->More().m_dynamicAxes = newOutputVar.DynamicAxes();
             }
 
             if ((!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape())) ||
@@ -459,12 +459,12 @@ namespace CNTK
             currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
             currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
             currentOutputVar.m_dataFields->m_needsGradient = newOutputVar.NeedsGradient();
-            currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
+            currentOutputVar.m_dataFields->More().m_dynamicAxes = newOutputVar.DynamicAxes();
             updated = true;
         }
 
         if (currentOutputVar.OutputOwner()->IsBlock()) // TODO: missing "&& updated"?
-            currentOutputVar.m_dataFields->m_blockFunctionVariableMapping = newOutputVar.m_dataFields->m_blockFunctionVariableMapping; // composite's output
+            currentOutputVar.m_dataFields->More().m_blockFunctionVariableMapping = newOutputVar.m_dataFields->More().m_blockFunctionVariableMapping; // composite's output
 
         return updated;
     }

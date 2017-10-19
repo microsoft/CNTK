@@ -38,9 +38,11 @@ namespace CNTK
         return m_dataFields->m_shape; 
     }
 
+    static const std::vector<Axis> c_noDynamicAxes;
     const std::vector<Axis>& Variable::DynamicAxes() const
     {
-        return m_dataFields->m_dynamicAxes; 
+        const auto& fields = *m_dataFields;
+        return fields.HasMore() ? fields.m_more->m_dynamicAxes : c_noDynamicAxes;
     }
 
     VariableKind Variable::Kind() const 
@@ -88,7 +90,7 @@ namespace CNTK
 
     //const Variable& Variable::BlockFunctionVariableMapping() const
     //{
-    //    return m_dataFields->m_blockFunctionVariableMapping;
+    //    return m_dataFields->More().m_blockFunctionVariableMapping;
     //}
 
     PrimitiveFunctionPtr Variable::OutputOwner() const 
@@ -189,23 +191,24 @@ namespace CNTK
         //if (!IsConstant() && !IsParameter())
             LogicError("Variable '%S' Value(): Only Variables of kind Parameter and Constant have a Value.", AsString().c_str());
 
-        if (m_dataFields->m_initValueFlag)
+        auto* more = m_dataFields->m_more.get();
+        if (more && more->m_initValueFlag)
         {
-            std::call_once(*m_dataFields->m_initValueFlag, [=]{
-                assert(m_dataFields->m_value == nullptr);
-                assert(m_dataFields->m_valueInitializer);
-                assert(m_dataFields->m_valueInitializationDevice);
+            std::call_once(*more->m_initValueFlag, [=]{
+                assert(more->m_value == nullptr);
+                assert(more->m_valueInitializer);
+                assert(more->m_valueInitializationDevice);
 
                 switch (GetDataType())
                 {
                 case DataType::Float:
                 {
-                    m_dataFields->m_value = CreateValueFromParameterInitializer<float>(Shape(), *m_dataFields->m_valueInitializer, *m_dataFields->m_valueInitializationDevice);
+                    m_dataFields->m_value = CreateValueFromParameterInitializer<float>(Shape(), *more->m_valueInitializer, *more->m_valueInitializationDevice);
                     break;
                 }
                 case DataType::Double:
                 {
-                    m_dataFields->m_value = CreateValueFromParameterInitializer<double>(Shape(), *m_dataFields->m_valueInitializer, *m_dataFields->m_valueInitializationDevice);
+                    m_dataFields->m_value = CreateValueFromParameterInitializer<double>(Shape(), *more->m_valueInitializer, *more->m_valueInitializationDevice);
                     break;
                 }
                 default:
@@ -213,8 +216,8 @@ namespace CNTK
                     break;
                 }
 
-                m_dataFields->m_valueInitializer = nullptr;
-                m_dataFields->m_valueInitializationDevice = nullptr;
+                more->m_valueInitializer = nullptr;
+                more->m_valueInitializationDevice = nullptr;
             });
         }
 
@@ -251,14 +254,15 @@ namespace CNTK
 #endif
 
         bool alreadySet = false;
-        if (m_dataFields->m_initValueFlag)
+        auto* more = m_dataFields->m_more.get();
+        if (more && more->m_initValueFlag)
         {
             // In the case of lazy initialization, try to avoid the redundant call to the initializer. 
-            std::call_once(*m_dataFields->m_initValueFlag, [=, &value, &alreadySet] {
+            std::call_once(*more->m_initValueFlag, [=, &value, &alreadySet] {
                 // If the variable hasn't been initialized yet, clone the content of the supplied value and delete the initializer.
-                m_dataFields->m_value = value->DeepClone(*m_dataFields->m_valueInitializationDevice, false);
-                m_dataFields->m_valueInitializer = nullptr;
-                m_dataFields->m_valueInitializationDevice = nullptr;
+                m_dataFields->m_value = value->DeepClone(*more->m_valueInitializationDevice, false);
+                more->m_valueInitializer = nullptr;
+                more->m_valueInitializationDevice = nullptr;
                 alreadySet = true;
             });
         }
@@ -290,15 +294,16 @@ namespace CNTK
     {
         std::wstringstream wss;
         wss << VariableKindName(m_varKind) << "('";
-        if (m_name != L"")
-            wss << m_name;
+        if (m_name)
+            wss << m_name.c_str();
         else
             wss << Uid();
         bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+        const auto& dynamicAxes = m_more ? m_more->m_dynamicAxes : c_noDynamicAxes;
         if (reverse)
-            wss << "', " << DynamicAxesAsString(m_dynamicAxes, reverse) << ", " << m_shape.AsString() << ")";
+            wss << "', " << DynamicAxesAsString(dynamicAxes, reverse) << ", " << m_shape.AsString() << ")";
         else
-            wss << "', " << m_shape.AsString() << ", " << DynamicAxesAsString(m_dynamicAxes, reverse) << ")";
+            wss << "', " << m_shape.AsString() << ", " << DynamicAxesAsString(dynamicAxes, reverse) << ")";
         return wss.str();
     }
 
@@ -327,7 +332,8 @@ namespace CNTK
     const std::wstring& VariableFields::Uid() const
     {
         // we create the uid string lazily, since we don't look at it for most nodes
-        if (m_uid.empty())
+        auto& uid = More().m_uid;
+        if (uid.empty())
         {
             if (m_varKind == VariableKind::Output && !IsObjectExpired(m_ownerFunction) && Owner() && Owner()->IsPrimitive())
             {
@@ -338,13 +344,13 @@ namespace CNTK
                 for (i = 0; i < outputs.size(); i++)
                     if (outputs[i].m_dataFields.get() == this)
                         break;
-                m_uid = owner->Uid() + L"_" + VariableKindName(m_varKind) + L"_" + std::to_wstring(i);
+                uid = owner->Uid() + L"_" + VariableKindName(m_varKind) + L"_" + std::to_wstring(i);
             }
             else
                 // otherwise just use the kind
-                m_uid = Internal::GenerateUid(m_varKind);
+                uid = Internal::GenerateUid(m_varKind);
         }
-        return m_uid;
+        return uid;
     }
 
     std::shared_ptr<VariableFields> VariableFields::Clone() const
@@ -360,13 +366,13 @@ namespace CNTK
             m_ownerFunction,
             (m_value) ? m_value->DeepClone() : nullptr,
             m_needsGradient,
-            m_dynamicAxes,
+            HasMore() ? m_more->m_dynamicAxes : c_noDynamicAxes,
             m_isSparse,
             m_name,
             std::wstring()/*Internal::GenerateUid(m_varKind)*/);
 
-        if (m_valueInitializer)
-            clone->SetValueInitialization(*m_valueInitializer, *m_valueInitializationDevice);
+        if (HasMore() && m_more->m_valueInitializer)
+            clone->SetValueInitialization(*m_more->m_valueInitializer, *m_more->m_valueInitializationDevice);
 
         return clone;
     }
@@ -379,16 +385,17 @@ namespace CNTK
         assert(!m_valueInitializer);
         assert(!m_valueInitializationDevice);
 
-        m_initValueFlag.reset(new std::once_flag());
-        m_valueInitializer.reset(new ParameterInitializer(initializationConfig));
+        More();
+        m_more->m_initValueFlag.reset(new std::once_flag());
+        m_more->m_valueInitializer.reset(new ParameterInitializer(initializationConfig));
 
-        if (m_valueInitializer->Contains(RandomSeedAttributeName)) {
-            auto& seed = m_valueInitializer->operator[](RandomSeedAttributeName);
+        if (m_more->m_valueInitializer->Contains(RandomSeedAttributeName)) {
+            auto& seed = m_more->m_valueInitializer->operator[](RandomSeedAttributeName);
             if ((unsigned long)seed.Value<size_t>() == SentinelValueForAutoSelectRandomSeed)
                 seed.Value<size_t>() = Internal::GenerateRandomSeed();
         }
 
-        m_valueInitializationDevice.reset(new DeviceDescriptor(device));
+        m_more->m_valueInitializationDevice.reset(new DeviceDescriptor(device));
     }
 
     static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, double scale, unsigned long seed) 
@@ -678,12 +685,12 @@ namespace CNTK
     {
         if (!IsParameter() && !IsConstant())
             LogicError("Variable '%S' CurrentValueTimeStamp: Variable must be a Parameter or Constant", AsString().c_str());
-        return m_dataFields->m_valueTimeStamp.load(); 
+        return m_dataFields->More().m_valueTimeStamp.load(); 
     }
 
     void Parameter::RecordValueUpdate()
     {
-        m_dataFields->m_valueTimeStamp++;
+        m_dataFields->More().m_valueTimeStamp++;
     }
 
 #if 0
@@ -720,7 +727,7 @@ namespace CNTK
 
     void Constant::RecordValueUpdate()
     {
-        m_dataFields->m_valueTimeStamp++;
+        m_dataFields->More().m_valueTimeStamp++;
     }
 
     void Constant::SetValue(const NDArrayViewPtr& value)
