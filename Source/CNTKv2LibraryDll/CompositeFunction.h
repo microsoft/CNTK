@@ -122,7 +122,7 @@ namespace CNTK
 
         OutputsVectorType InferOutputs() override
         {
-            return MakeVector(m_rootFunction->InitOutputs()); // note: not super-efficient, but only used for static composites, so it's OK for now
+            return m_rootFunction->InitOutputs();
         }
 
         virtual void Backward(const BackPropStatePtr& state,

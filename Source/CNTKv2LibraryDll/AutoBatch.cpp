@@ -2245,7 +2245,7 @@ class Variable::AutoBatch
             // PERF BUGBUG: newInputs is already a copy that we can just move
             // PERF BUGBUG: We should short-circuit the free ops for composites as well.
             let isFree = IsViewOp(f.m_op);
-            return CreateAndMemoizeBatchedOp(f, /*move*/newInputs, compositeBatchDim, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
+            return CreateAndMemoizeBatchedOp(f, Function::InputsVectorType(move(newInputs)), compositeBatchDim, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
         };
 
         NDShapeDimension invocationArgsFreeDim = ABSENT_FREE_DIMENSION;
@@ -2281,11 +2281,11 @@ class Variable::AutoBatch
     // In that case, all inputs[*], unless not batched, must have the same batch axis (an example of a non-batched arg is the first arg of a matrix product).
     // Note that compositeBatchDim is only valid if we are cloning from a composite.
     // TODO: pass 'inputs' as rvalue ref, and move it below.
-    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& clonee, const vector<Variable>& inputs, NDShapeDimension compositeBatchDim, size_t batchAxis, NDShapeDimension batchSize, const wchar_t* logPrefix, bool isFree)
+    PrimitiveFunctionPtr CreateAndMemoizeBatchedOp(const PrimitiveFunction& clonee, Function::InputsVectorType&& inputs, NDShapeDimension compositeBatchDim, size_t batchAxis, NDShapeDimension batchSize, const wchar_t* logPrefix, bool isFree)
     {
         // special case for basic blocks: need to clone the entire composite (for backprop)
         if (clonee.m_op == PrimitiveOpType::Block)
-            return InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(clonee), inputs/*m_batchedInputs*/, batchAxis, batchSize);
+            return InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(clonee), inputs, batchAxis, batchSize);
 
         // get the unbatched output shape, considering the case that 'clonee' lives inside a composite
         let& cloneeOutputShape = clonee.m_outputs.front().Shape();
@@ -3462,7 +3462,7 @@ class Variable::AutoBatch
         //              Note: This is not covered by CSE, since CSE is only used for complex cases.
         //if (f0.m_uniqueIdForDebugging == 23286)
         //    Break;
-        auto batchedOp = CreateAndMemoizeBatchedOp(f0, m_batchedInputs, /*compositeBatchDim=*/ABSENT_FREE_DIMENSION/*dummy*/, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
+        auto batchedOp = CreateAndMemoizeBatchedOp(f0, Function::InputsVectorType(move(m_batchedInputs)), /*compositeBatchDim=*/ABSENT_FREE_DIMENSION/*dummy*/, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
 
         // some stats and checks
         if (!anyBatchedInputs)
@@ -3522,6 +3522,7 @@ class Variable::AutoBatch
         // To keep the batchedOp ref count alive, FinalizeBatchedOpAndUpdateSchedule() saves the shared_ptr in all m_redirection.m_functionHolder.
 
         // release the ref counts on the batched inputs; but keep the vector's memory allocated
+        // TODO: CreateAndMemoizeBatchedOp() already moves out the ref counts. Do we still need this? --TODO: double-check that they have been moved out
         m_batchedInputs.clear();
     }
 
@@ -4712,7 +4713,7 @@ static inline NDShapeDimensions ReplaceWithFreeDim(const NDShapeDimensions& inSh
     {
         auto shape = MakeVector(inShape); // PERF BUGBUG: Do this without malloc
         shape.push_back(NDShape::FreeDimension);
-        return shape;
+        return NDShapeDimensions(shape);
     }
     else
     {

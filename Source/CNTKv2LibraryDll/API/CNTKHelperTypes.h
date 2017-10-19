@@ -64,11 +64,11 @@ public:
     const T& operator[](size_t index) const { return at(index); }
     T&       operator[](size_t index)       { return at(index); }
     // construct certain collection types directly
-    operator std::vector      <TValueNonConst>() const { return std::vector      <TValueNonConst>(cbegin(), cend()); }
-    operator std::list        <TValueNonConst>() const { return std::list        <TValueNonConst>(cbegin(), cend()); }
-    operator std::forward_list<TValueNonConst>() const { return std::forward_list<TValueNonConst>(cbegin(), cend()); }
-    operator std::deque       <TValueNonConst>() const { return std::deque       <TValueNonConst>(cbegin(), cend()); }
-    operator std::set         <TValueNonConst>() const { return std::set         <TValueNonConst>(cbegin(), cend()); }
+    /*explicit*/ operator std::vector      <TValueNonConst>() const { return std::vector      <TValueNonConst>(cbegin(), cend()); }
+    /*explicit*/ operator std::list        <TValueNonConst>() const { return std::list        <TValueNonConst>(cbegin(), cend()); }
+    /*explicit*/ operator std::forward_list<TValueNonConst>() const { return std::forward_list<TValueNonConst>(cbegin(), cend()); }
+    /*explicit*/ operator std::deque       <TValueNonConst>() const { return std::deque       <TValueNonConst>(cbegin(), cend()); }
+    /*explicit*/ operator std::set         <TValueNonConst>() const { return std::set         <TValueNonConst>(cbegin(), cend()); }
     // others
     bool operator==(const Span& other) const
     {
@@ -342,7 +342,7 @@ public:
 #define WHERE_IS_ITERABLE(Type)  , typename = std::enable_if<!std::is_same<typename Type::const_iterator, void>::value>::type
     // BUGBUG: This is still not correct. It also test whether the iterator is temporary. Otherwise we must not move stuff out.
     template<typename Collection WHERE_IS_TEMPORARY(Collection)> // move construction from rvalue [thanks to Billy O'Neal for the tip]
-    FixedVectorWithBuffer(Collection&& other) : Span(Allocate(other.size()), other.size())
+    explicit FixedVectorWithBuffer(Collection&& other) : Span(Allocate(other.size()), other.size())
     {
         auto* b = begin();
         const auto* e = end();
@@ -355,7 +355,7 @@ public:
     }
 
     template<typename Collection WHERE_IS_ITERABLE(Collection)/*, typename = std::enable_if_t<std::is_lvalue_reference_v<Collection&&>>*/> // copy construction from lvalue --TODO: Verify: is this ever called? And is the other ever called?
-    FixedVectorWithBuffer(const Collection& other) : FixedVectorWithBuffer(other.begin(), other.end()) { }
+    explicit FixedVectorWithBuffer(const Collection& other) : FixedVectorWithBuffer(other.begin(), other.end()) { }
 
     // construct from iterator pair. All variable-length copy construction/assignment (that is, except for C(2,a,b)) goes through this.
     template<typename CollectionIterator WHERE_IS_ITERATOR(CollectionIterator)>
@@ -404,10 +404,10 @@ public:
 
     //FixedVectorWithBuffer(const Span& other) : FixedVectorWithBuffer(other.begin(), other.end()) { } // TODO: Is this needed, or captured by template above?
 
-    FixedVectorWithBuffer(const std::initializer_list<T>& other) : FixedVectorWithBuffer(other.begin(), other.end()) { }
+    explicit FixedVectorWithBuffer(const std::initializer_list<T>& other) : FixedVectorWithBuffer(other.begin(), other.end()) { }
 
     template<typename T2> // initializer from a different type, e.g. size_t instead of NDShapeDimension
-    FixedVectorWithBuffer(const std::initializer_list<T2>& other) :
+    explicit FixedVectorWithBuffer(const std::initializer_list<T2>& other) :
         FixedVectorWithBuffer(Transform(other, [](const T2& val) { return (T)val; }))
     { }
 

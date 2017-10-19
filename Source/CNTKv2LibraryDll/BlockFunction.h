@@ -247,7 +247,7 @@ namespace CNTK
                 outputs.push_back(output);
             }
 
-            return std::move(outputs); // note: not super-efficient, but only used for static composites, so it's OK for now
+            return OutputsVectorType(std::move(outputs)); // note: not super-efficient, but only used for static composites, so it's OK for now
         }
 
     private:

@@ -115,7 +115,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
             {
                 auto paddedShape = MakeVector(totalShape);
                 paddedShape.resize(shape.Rank(), 1); // (NDShapeDimensions is not resizable, so need to take a detour)
-                totalShape = move(paddedShape);
+                totalShape = NDShapeDimensions(move(paddedShape));
             }
             for (size_t k = 0; k < shape.Rank(); k++)
             {

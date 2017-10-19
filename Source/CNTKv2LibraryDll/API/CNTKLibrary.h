@@ -204,6 +204,9 @@ namespace CNTK
         NDShape(const NDShapeDimensionsSpan& dimensions)
             : m_shapeDims(dimensions)
         {}
+        NDShape(const std::vector<NDShapeDimension>& dimensions)
+            : m_shapeDims(dimensions)
+        {}
         NDShape(const std::vector<size_t>& dimensions)
             : m_shapeDims(Transform(dimensions, [](size_t dim) { return (NDShapeDimension)dim; }))
         {}

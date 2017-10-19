@@ -319,7 +319,7 @@ namespace CNTK
         {
             //std::vector<Variable> outputs;
             //outputs.assign(m_inputs.begin(), m_inputs.end());
-            return MakeVector(m_inputs); // not super-efficient, but OK for now for static graphs
+            return OutputsVectorType(m_inputs); // not super-efficient, but OK for now for static graphs
         }
 #ifndef DYNAMITE_ONLY
         else if (m_op == PrimitiveOpType::UnpackSequence) // special case: UnpackSequence() has two outputs
