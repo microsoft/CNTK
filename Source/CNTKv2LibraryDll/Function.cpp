@@ -140,7 +140,7 @@ namespace CNTK
                 inputs = { m_inputs[1], m_inputs[0] };
             }
             else
-            inputs = m_inputs;
+            inputs = std::vector<Variable>(m_inputs);
         }
         else
             inputs = compositeFunction->DetermineInputs(pythonOperandOrder);

@@ -523,7 +523,7 @@ namespace CNTK
             return outputShape;
         }
 
-        static size_t MaxInputRank(const std::vector<Variable>& inputs)
+        static size_t MaxInputRank(const InputsVectorType& inputs)
         {
             size_t maxRank = 0;
             for (int i = 0; i < inputs.size(); i++)
@@ -536,7 +536,7 @@ namespace CNTK
             return maxRank;
         }
 
-        static NDShape SpliceOutputShape(const std::vector<Variable>& inputs, size_t axis)
+        static NDShape SpliceOutputShape(const InputsVectorType& inputs, size_t axis)
         {
             // We must fuse all tensor shapes
 
@@ -556,7 +556,7 @@ namespace CNTK
             // This dimension is created, while all others are verified for consistency
             size_t index = axis;
             outputDims[index] = 0;
-            for (int i = 0; i < inputs.size(); i++)
+            for (size_t i = 0; i < inputs.size(); i++)
             {
                 // check/fuse dims and accumulate the spliced dimension
                 auto& shape = inputs[i].Shape();
@@ -580,7 +580,7 @@ namespace CNTK
                         if ((outputDims[k] == NDShape::InferredDimension) || (outputDims[k] == 1))
                             outputDims[k] = dim; // Broadcast
                         else if ((dim != outputDims[k]) && (dim != 1) && (dim != NDShape::InferredDimension))
-                            InvalidArgument("Splice: Conflicting dimensionality of axis %d between operand #%d (%d) and other(s) (%d).", (int)k, i, (int)dim, (int)outputDims[k]);
+                            InvalidArgument("Splice: Conflicting dimensionality of axis %d between operand #%d (%d) and other(s) (%d).", (int)k, (int)i, (int)dim, (int)outputDims[k]);
                     }
                 }
             }

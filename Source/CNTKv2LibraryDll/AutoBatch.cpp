@@ -1182,7 +1182,7 @@ class Variable::AutoBatch
     //  - Upon return, it will contain the one batch dim value that is shared across all substituted placeholders.
     VisitorTag m_compositeVisitorTag; // helper for managing tree traversal through composite (not nested)
     template<class F>
-    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& clonee, const vector<Variable>& invocationArgs, /*in/out*/NDShapeDimension& invocationArgsFreeDim, /*out*/ NDShapeDimension& inlinedFreeDim, const F& cloneFn) const
+    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& clonee, const Function::InputsVectorType& invocationArgs, /*in/out*/NDShapeDimension& invocationArgsFreeDim, /*out*/ NDShapeDimension& inlinedFreeDim, const F& cloneFn) const
     {
         // if we already cloned this one then just return the clone
         if (m_compositeVisitorTag.Visited(clonee.m_autoBatchState.m_visitedTag))
@@ -1200,7 +1200,7 @@ class Variable::AutoBatch
         // First clone the clonee's inputs;
         inlinedFreeDim = ABSENT_FREE_DIMENSION; // resulting batch dim
         let& cloneeInputs = clonee.m_inputs;
-        vector<Variable> inlinedInputs(cloneeInputs.size()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
+        Function::InputsVectorType inlinedInputs(cloneeInputs.size(), Variable()); // (note: this is one malloc per cloned PrimitiveFunction. inlinedInputs then gets moved, not copied, into that function)
         for (size_t i = 0; i < cloneeInputs.size(); i++)
         {
             let& cloneeInput = cloneeInputs[i];
@@ -2221,7 +2221,7 @@ class Variable::AutoBatch
     // Any nested blocks are executed inside here as well.
     // This function can be seen as a special case of ExecuteBatchedOpAndUpdateSchedule() that assumes
     // batched inputs and consistent batching for all ops, and therefore does not perform any additional (re-)batching.
-    PrimitiveFunctionPtr InlineAndMemoizeBatchedBasicBlock(const BlockFunction& block, const vector<Variable>& invocationArgs, size_t batchAxis/*or SIZE_MAX*/, NDShapeDimension batchSize)
+    PrimitiveFunctionPtr InlineAndMemoizeBatchedBasicBlock(const BlockFunction& block, const Function::InputsVectorType& invocationArgs, size_t batchAxis/*or SIZE_MAX*/, NDShapeDimension batchSize)
     {
         CudaStatsGuard cudaStatsguard(block.m_op, L"invoke basic block", 3, block.m_outputs.front().Shape().TotalSize(/*check=*/false));
         // BUGBUG:
@@ -2230,7 +2230,7 @@ class Variable::AutoBatch
         //  - this does not short-circuit operations. We need to do the same to the composite as we do to the dynamic graph in forward-graph building.
 
         // lambda (cloneFn) that RInlineComposite() calls for each cloned function in the composite
-        let cloneFn = [this, batchAxis, batchSize](PrimitiveFunction& f, vector<Variable>&& newInputs, NDShapeDimension compositeBatchDim) -> PrimitiveFunctionPtr
+        let cloneFn = [this, batchAxis, batchSize](PrimitiveFunction& f, Function::InputsVectorType&& newInputs, NDShapeDimension compositeBatchDim) -> PrimitiveFunctionPtr
         {
             // This lambda must apply the passed in the composite's PrimitiveFunction 'f' to 'newInputs'.
             // The newInputs are batched; that is, their shapes may mismatch those of f's inputs in that they may have an additional batch axis.
@@ -2245,7 +2245,7 @@ class Variable::AutoBatch
             // PERF BUGBUG: newInputs is already a copy that we can just move
             // PERF BUGBUG: We should short-circuit the free ops for composites as well.
             let isFree = IsViewOp(f.m_op);
-            return CreateAndMemoizeBatchedOp(f, Function::InputsVectorType(move(newInputs)), compositeBatchDim, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
+            return CreateAndMemoizeBatchedOp(f, move(newInputs), compositeBatchDim, anyBatchedInputs ? batchAxis : SIZE_MAX, batchSize, L"()"/*f0*/, isFree);
         };
 
         NDShapeDimension invocationArgsFreeDim = ABSENT_FREE_DIMENSION;
@@ -2406,7 +2406,7 @@ class Variable::AutoBatch
     }
 
     // helper to verify that we figured out the FreeDimension replacement for a clonee correctly
-    static void VerifyFreeDimensionReplacement(const vector<Variable>& cloneeInputs, const vector<Variable>& operands, NDShapeDimension newInputsFreeDim)
+    static void VerifyFreeDimensionReplacement(const Function::InputsVectorType& cloneeInputs, const Function::InputsVectorType& operands, NDShapeDimension newInputsFreeDim)
     {
         let arity = cloneeInputs.size();
         fail_if(arity > 0 && newInputsFreeDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
@@ -2451,15 +2451,16 @@ class Variable::AutoBatch
     // Special consideration is given to nested BlockFunctions.
     // This runs in early inlining, and is thus time-critical. This function was at one point measured to take 10% of total Forward time,
     // so the code below has been hand-optimized by single-stepping through disassembly.
-    static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& clonee, vector<Variable>&& newInputs, size_t newInputsFreeDim)
+    static PrimitiveFunctionPtr ClonePrimitiveFunction(PrimitiveFunction& clonee, Function::InputsVectorType&& newInputs, size_t newInputsFreeDim)
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
         // clone it
+        vector<Variable> newInputs1(move(newInputs));  // PERF BUGBUG! Change to InputsVectorType
         PrimitiveFunctionPtr fCloned =
             /*if*/ (clonee.m_op == PrimitiveOpType::Block) ?
-                MakeSharedObject<BlockFunction>(static_cast<BlockFunction&>(clonee).Composite(), move(newInputs), static_cast<BlockFunction&>(clonee).IsBasicBlock(), wstring(), wstring()/*static_cast<BlockFunction&>(clonee).OpName()), wstring(clonee.Name())*/)
+                MakeSharedObject<BlockFunction>(static_cast<BlockFunction&>(clonee).Composite(), move(newInputs1), static_cast<BlockFunction&>(clonee).IsBasicBlock(), wstring(), wstring()/*static_cast<BlockFunction&>(clonee).OpName()), wstring(clonee.Name())*/)
             /*else*/:
-                MakeSharedObject<PrimitiveFunction>(clonee.m_op, move(newInputs), move(ShallowCloneDictionary(clonee.m_attributes)));// , wstring(clonee.Name()));
+                MakeSharedObject<PrimitiveFunction>(clonee.m_op, move(newInputs1), move(ShallowCloneDictionary(clonee.m_attributes)));// , wstring(clonee.Name()));
         // Note: We can use make_shared since no shared_ptrs to these clones are ever exposed across the DLL boundary.
         //if (fCloned->m_uniqueIdForDebugging == 20000)
         //    fprintf(stderr, "");
@@ -3133,7 +3134,7 @@ class Variable::AutoBatch
             // create a new PrimitiveFunction Splice()
             vector<NDShapeDimension> outputShape; // determine output shape   --TODO: use a vector<NDShapeDimension> in this class
             outputShape.reserve(batchAxis + 1);
-            outputShape = input0Shape.Dimensions();
+            outputShape = vector<NDShapeDimension>(input0Shape.Dimensions());
             //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
             outputShape.resize(batchAxis, 1); // pad to batchAxis
             outputShape.push_back(batchDim);  // and add the batch axis
@@ -4683,7 +4684,7 @@ Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee,
 // The result is either the dim (if all inputs have a batch dim) or ABSENT_FREE_DIMENSION (if no input has a batch dim), or an error.
 // BUGBUG: This constraint is no longer needed. Also, tis should use the correct axes.
 // This function has the heuristics built in that the batch axis is hard-coded as 1.
-static NDShapeDimension DetermineInvokeFreeDim(const vector<Variable>& inputs)
+static NDShapeDimension DetermineInvokeFreeDim(const Function::InputsVectorType& inputs)
 {
     let freeAxis = 1; // TODO: this must be parameterized somehow
     NDShapeDimension invocationArgsFreeDim = 0; // 0 means no input at all
