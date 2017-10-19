@@ -953,7 +953,8 @@ public:
         *this = other;
         other.clear();
     }
-    PrimitiveFunction* front() const { return head; }
+    PrimitiveFunction& front() { return *begin(); }
+    const PrimitiveFunction& front() const { return *begin(); }
     bool empty() const { return !head; }
     size_t size() const { return count; }
     void clear()
@@ -961,19 +962,30 @@ public:
         head = nullptr;
         count = 0;
     }
-    class FunctionListIterator
+    template<typename PrimitiveFunctionType>
+    class FunctionListIterator : public std::iterator<forward_iterator_tag, PrimitiveFunctionType>
     {
-        PrimitiveFunction* iter;
+        PrimitiveFunctionType* iter;
     public:
-        FunctionListIterator(PrimitiveFunction* f) : iter(f) { }
-        PrimitiveFunction* operator->() const { return iter; }
-        operator PrimitiveFunction*() const { return iter; }
-        PrimitiveFunction& operator*() const { return *iter; } // TODO: This is weird, figure this out
-        PrimitiveFunction* operator++() { iter = iter->m_autoBatchState.m_link; return iter; }
+        FunctionListIterator(PrimitiveFunctionType* f) : iter(f) { }
+        PrimitiveFunctionType* operator->() const { return iter; }
+        operator PrimitiveFunctionType*() const { return iter; }
+        PrimitiveFunctionType& operator*() const { return *iter; }
+        FunctionListIterator operator++() { auto cur = *this; operator++(1); return cur; }
+        FunctionListIterator operator++(int) { iter = iter->m_autoBatchState.m_link; return *this; }
+        //bool operator==(const FunctionListIterator& other) { return iter == other.iter; }
         bool operator!=(const FunctionListIterator& other) { return iter != other.iter; }
+        //difference_type operator-(const FunctionListIterator& other) const { fail_if(true, "x"); }
     };
-    FunctionListIterator begin() const { return front(); }
-    FunctionListIterator end()   const { return nullptr; }
+    typedef FunctionListIterator<PrimitiveFunction> iterator;
+    typedef FunctionListIterator<PrimitiveFunction const> const_iterator;
+    typedef PrimitiveFunction& value_type;
+    iterator       begin()        { return head; }
+    iterator       end()          { return nullptr; }
+    const_iterator begin()  const { return head; }
+    const_iterator end()    const { return nullptr; }
+    const_iterator cbegin() const { return head; }
+    const_iterator cend()   const { return nullptr; }
 };
 class NonOwningFunctionListBuilder : public NonOwningFunctionList // over PrimitiveFunction, using m_autoBatchState.m_link
 {
@@ -1786,7 +1798,7 @@ class Variable::AutoBatch
                 // So far this does not show up in profiling.
                 for (auto& iter : m_regularOps) // (vector)
                 {
-                    if (AreBatchable(f, *iter.front()))
+                    if (AreBatchable(f, iter.front()))
                     {
                         // Found another function that this is batchable with: add to batch.
                         iter.push_back(&f); // (note: This just adds to a linked list, and is therefore cheap.)
@@ -1816,7 +1828,7 @@ class Variable::AutoBatch
         // TODO: just return 'true'; or maybe rename to IsBatchNormPending()
         bool GetBatchNormPending(const vector<NonOwningFunctionListBuilder>::const_iterator& iter)
         {
-            let& f = *iter->front();
+            let& f = iter->front();
             if (f.m_op == PrimitiveOpType::BatchNormalization)
             {
                 let bnId = f.m_autoBatchState.m_batchNormId;
@@ -1856,7 +1868,7 @@ class Variable::AutoBatch
                     // TODO: just say if IsBatchNormPending(iter) continue;
                     diff = -((int)GetBatchNormPending(iter) - (int)GetBatchNormPending(best)); // BatchNormalization with pending inputs always loses
                     if (diff) goto got_diff;
-                    diff = -((int)iter->front()->m_autoBatchState.m_depthHint - (int)best->front()->m_autoBatchState.m_depthHint); // barrier: higher depthHint gets batched last
+                    diff = -((int)iter->front().m_autoBatchState.m_depthHint - (int)best->front().m_autoBatchState.m_depthHint); // barrier: higher depthHint gets batched last
                     if (diff) goto got_diff;
                     diff = (int)iter->size() - (int)best->size();
                 got_diff:
@@ -1866,7 +1878,7 @@ class Variable::AutoBatch
                 // special case BatchNormalization
                 if (GetBatchNormPending(best)) // the only ready op is BN with some instances still pending -> error (I am not sure under which circumstances this may ever happen)
                     InvalidArgument("Primitive op '%S' with id %d must not be used in a recurrent loop (must not depend on its own output).",
-                        PrimitiveOpTypeName(best->front()->m_op).c_str(), (int)best->front()->m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
+                        PrimitiveOpTypeName(best->front().m_op).c_str(), (int)best->front().m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
                 // and remove this one from the list
                 NonOwningFunctionList out = *best; // since NonOwningFunctionListBuilder uses unmanaged pointers, we can just copy it
                 m_regularOps.erase(best); // TODO: suboptimal complexity; but a list has the same problem. Priority queue?
@@ -2746,7 +2758,7 @@ class Variable::AutoBatch
     bool IsShortCircuitingBatchedOpDuplicatesNeeded(NonOwningFunctionList ops)
     {
         CudaStatsGuard cudaStatsGuard(PrimitiveOpType::NotEqual, L"CSE pre", 3, ops.size());
-        let& f0 = *ops.front();
+        let& f0 = ops.front();
         let numArgs = f0.m_inputs.size();
         for (size_t i = 0; i < numArgs; i++)
         {
@@ -2936,10 +2948,11 @@ class Variable::AutoBatch
     // If all inputs are identical and that can be represented by broadcasting (which is only possible if BATCHING).
     // In that case, the output will have no batchAxis (which implies it is 1, which means 'broadcast along the batchAxis' to all ops).
     // The stackingMode passed here does not affect the meaning of batchAxis and batchDim; but rather their constraints.
+    vector<NDShapeDimension> m_CreateBatchedInputFor_outputShapeBuffer;
     inline Variable CreateBatchedInputFor(NonOwningFunctionList ops, size_t batchAxis, NDShapeDimension batchDim, StackingMode stackingMode,
                                           size_t i, /*in/out*/bool& anyBatchedInputs)
     {
-        let& f0 = *ops.front();
+        let& f0 = ops.front();
         // special case: for matrix-product class operations, the first argument is non-batchable
         // It has already been verified to be identical as part of the batchability condition.
         if (IsMatrixProduct(f0.m_op) && i == 0)
@@ -3077,7 +3090,9 @@ class Variable::AutoBatch
                 }
                 else // batchAxis > fromSliceAxis
                 {
-                    auto outputShape = MakeVector(batchedInputDims); // PERF BUGBUG--can we do better than this? E.g. use a shared vector class member for this?
+                    auto& outputShape = m_CreateBatchedInputFor_outputShapeBuffer;
+                    outputShape.assign(batchedInputDims.begin(), batchedInputDims.end());
+                    //auto outputShape = MakeVector(batchedInputDims); // PERF BUGBUG--can we do better than this? E.g. use a shared vector class member for this?
                     if (outputShape.back() == batchDim)
                         outputShape.insert(outputShape.end() - 1, batchAxis - fromSliceAxis, 1);
                     else
@@ -3103,9 +3118,7 @@ class Variable::AutoBatch
             //if (stackingMode == StackingMode::STACKING)
             //    Break;
             // create the arguments to the gather operation
-            vector<Variable> gatherInputs; // TODO: Use a Transform
-            gatherInputs.reserve(numBatchItems);
-            for (let& f : ops)
+            let createArgumentFn = [&](const PrimitiveFunction& f) -> Variable
             {
                 let& input = f.m_inputs[i];
                 let& inputFields = GetInputFields(input);
@@ -3118,18 +3131,19 @@ class Variable::AutoBatch
                     broadcastShape.resize(batchAxis);
                     broadcastShape.push_back(f.m_autoBatchState.m_batchDim); // this is the shape we want
                     // insert a ReduceElements op, which in fact ignores its axes and therefore can also be used to broadcast
-                    gatherInputs.push_back(CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, Function::InputsVectorType(1, input), broadcastShape,
-                                                                     Dictionary(PrimitiveFunction::AttributeNameReductionOpName, PrimitiveFunction::InternalSumReductionOpName),
-                                                                     f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/false));
+                    return CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, Function::InputsVectorType(1, input), broadcastShape,
+                                                     Dictionary(PrimitiveFunction::AttributeNameReductionOpName, PrimitiveFunction::InternalSumReductionOpName),
+                                                     f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/false);
                     // Note that at this point, the inputs to the Gather operation will have inconsistent
                     // rank; those we expanded here have a batch axis, while the unexpanded may not.
                     // Gather can handle that.
                 }
                 else
-                    gatherInputs.push_back(input);
+                    return input;
                 // note: Variable is just three shared_ptrs, one being NULL; so this is cheap
                 // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
-            }
+            };
+            Function::InputsVectorType gatherInputs(Transform(ops, createArgumentFn));
             CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, numBatchItems);
             let& input0Shape = CacheAndGetValue(gatherInputs[0])->Shape();
             // create a new PrimitiveFunction Splice()
@@ -3143,7 +3157,7 @@ class Variable::AutoBatch
             // BUGBUG: vv The move(gatherInputs) is ineffective because ultimately, the copy (not move) constructor of PrimtiveFunction ends up being called.
             //if (f0.m_op == PrimitiveOpType::ElementTimes && f0.m_attributes.Size() > 0 && stackingMode == StackingMode::STACKING) // we were batched for batching
             //    Break;
-            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, Function::InputsVectorType(gatherInputs), outputShape, // PERF BUGBUG: use a Transform
+            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs), outputShape, // PERF BUGBUG: use a Transform
                                              Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)batchAxis)),
                                              f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                              /*isFree=*/false, /*logSpliceAsGather=*/true);
@@ -3162,7 +3176,7 @@ class Variable::AutoBatch
     void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
     {
         // get a representative op
-        let& f0 = *ops.front();
+        let& f0 = ops.front();
         let op = f0.m_op;
         let opClass = g_oscTable[op]; // operation-specific auto-batching class
         // fail on unsupported classes
@@ -3610,7 +3624,7 @@ public:
             //  - "best" = heuristically chosen to be best executed in batch
             auto opBatch = m_schedule.pop_best();
             // log (if barrier crossed)
-            let& f0 = *opBatch.front();
+            let& f0 = opBatch.front();
             if (ShouldProfile(f0)) // profiling diagnostics
             {
                 let& inputs = f0.m_inputs;

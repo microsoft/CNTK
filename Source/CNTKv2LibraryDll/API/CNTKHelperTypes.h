@@ -110,7 +110,7 @@ class TransformingSpan
     typedef decltype(std::declval<Lambda>()(std::forward<T>(std::declval<T>()))) TLambda; // type of result of lambda call
     typedef typename std::remove_reference<TLambda>::type TValue;
     typedef typename std::remove_cv<TValue>::type TValueNonConst;
-    CollectionIterator beginIter, endIter;
+    CollectionType& m_collection; // we keep the collection itself, so that we can e.g. call size() on it
     const Lambda& lambda;
     // transforming iterator
     class Iterator : public std::iterator<CollectionIteratorCategory, TValue>
@@ -125,6 +125,7 @@ class TransformingSpan
         auto operator->() const { return &operator*(); }
         bool operator==(const Iterator& other) const { return argIter == other.argIter; }
         bool operator!=(const Iterator& other) const { return argIter != other.argIter; }
+        // BUGBUG: The following won't work for forward iterators, such as NonOwningFunctionList
         Iterator operator+(difference_type offset) const { return Iterator(argIter + offset, lambda); }
         Iterator operator-(difference_type offset) const { return Iterator(argIter - offset, lambda); }
         difference_type operator-(const Iterator& other) const { return argIter - other.argIter; }
@@ -132,17 +133,17 @@ class TransformingSpan
 public:
     typedef TLambda value_type;
     // note: constness must be contained in CollectionType
-    TransformingSpan(CollectionType& collection, const Lambda& lambda) : beginIter(collection.begin()), endIter(collection.end()), lambda(lambda) { }
+    TransformingSpan(CollectionType& collection, const Lambda& lambda) : m_collection(collection), /*beginIter(collection.begin()), endIter(collection.end()),*/ lambda(lambda) { }
     typedef Iterator const_iterator;
     typedef Iterator iterator;
-    const_iterator cbegin() const { return const_iterator(beginIter, lambda); }
-    const_iterator cend()   const { return const_iterator(endIter  , lambda); }
+    const_iterator cbegin() const { return const_iterator(m_collection.begin(), lambda); }
+    const_iterator cend()   const { return const_iterator(m_collection.end()  , lambda); }
     const_iterator begin()  const { return cbegin(); }
     const_iterator end()    const { return cend();   }
-    iterator       begin()        { return iterator(beginIter, lambda); }
-    iterator       end()          { return iterator(endIter,   lambda); }
-    size_t         size()   const { return (size_t)(endIter - beginIter); }
-    bool           empty()  const { return endIter == beginIter; }
+    iterator       begin()        { return iterator(m_collection.begin(), lambda); }
+    iterator       end()          { return iterator(m_collection.end()  , lambda); }
+    size_t         size()   const { return m_collection.size(); }
+    bool           empty()  const { return m_collection.empty(); }
     // construct certain collection types directly
     explicit operator std::vector      <TValueNonConst>() const { return std::vector      <TValueNonConst>(cbegin(), cend()); } // note: don't call as_vector etc., will not be inlined! in VS 2015!
     explicit operator std::list        <TValueNonConst>() const { return std::list        <TValueNonConst>(cbegin(), cend()); }
