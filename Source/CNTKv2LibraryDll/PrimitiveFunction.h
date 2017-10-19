@@ -933,7 +933,37 @@ namespace CNTK
         static void BackpropTo(const NDArrayView* outputGradient, size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, const NDArrayViewPtr& inputGradient, double beta, const PrimitiveFunction& funcForErrMsg);
 
     private:
+        // --- data members ---
         PrimitiveOpType m_op;
+
+        // Dynamite
+#ifdef DYNAMITE_ONLY    // for Dynamite, we never allow loops, and can therefore short-circuit this whole business
+        static const bool m_isKnownToBeAcyclic = true; // true if it is guaranteed that this PrimitiveFunction can never be part of a cycle (==has no Placeholder leaves)
+#else
+        bool m_isKnownToBeAcyclic = true; // true if it is guaranteed that this PrimitiveFunction can never be part of a cycle (==has no Placeholder leaves)
+#endif
+        friend class NonOwningFunctionList;
+        friend class NonOwningFunctionListBuilder;
+        enum class StackingMode { STACKING, BATCHING, STACKING_BUT_MAY_BATCH };
+        struct
+        {
+            mutable size_t m_visitedTag = 0; // used for tree traversal at various places (currently only in backprop, in two places, and in composite inlining)
+            PrimitiveFunction* m_link;       // temporary linked list, e.g. for batched operations. In composite inlining, it points to an already inlined clone
+            PrimitiveFunction* m_aliasList;  // list of aliases (common subexpression), local to ExecuteBatchedOpAndUpdateSchedule()
+            PrimitiveFunction* m_bucketList; // list of hash-table entries (for CSE, local to class DedupSet)
+            mutable size_t m_cachedOpHash = SIZE_MAX-1; // hash for batchability check; 0 means not set yet   --set to SIZE_MAX to detect missing initialization
+            unsigned int m_pendingInputs;    // during batched forward: counter how many inputs have already become available
+            //size_t m_aliasHash = SIZE_MAX-1; // hash for alias detection (common subexpression elimination)    --set to SIZE_MAX-1 to detect if we miss to initialize; remove this
+            unsigned int m_depthHint;        // max of depth hints over all inputs
+            // cached:
+            size_t m_batchNormId = INT_MAX-1; // 0 if none   --TODO: INT_MAX chosen as to cause an access violation if left unchanged
+            size_t m_batchAxis = INT_MAX - 1; // max over ranks of batchable inputs; minus 1 if stacking. Computed upon Schedule().
+            NDShapeDimension m_batchDim;      // max m_shape[m_batchAxis] over all batchable inputs. Computed upon Schedule().
+            StackingMode m_stacking;          // true if batch axis is the last axis, rather than a new one
+        } m_autoBatchState;
+        mutable DynamicProfilerPtr m_profiler;   // profile using this profiler if set
+        static const DynamicProfilerPtr& CurrentDynamicProfiler();
+
         // Increasing s_serializationVersion every time we add more ops allows us to print
         // a more meaningful message when trying to load a new model with a stale binary.
         // version 1: initial version.
@@ -953,35 +983,6 @@ namespace CNTK
         // Version 17: Add Pad.
         // Version 18: Add Crop node.
         static const size_t s_serializationVersion = 18;
-
-        // Dynamite
-#ifdef DYNAMITE_ONLY    // for Dynamite, we never allow loops, and can therefore short-circuit this whole business
-        static const bool m_isKnownToBeAcyclic = true; // true if it is guaranteed that this PrimitiveFunction can never be part of a cycle (==has no Placeholder leaves)
-#else
-        bool m_isKnownToBeAcyclic = true; // true if it is guaranteed that this PrimitiveFunction can never be part of a cycle (==has no Placeholder leaves)
-#endif
-        friend class NonOwningFunctionList;
-        friend class NonOwningFunctionListBuilder;
-        enum class StackingMode { STACKING, BATCHING, STACKING_BUT_MAY_BATCH };
-        struct
-        {
-            mutable size_t m_visitedTag = 0; // used for tree traversal at various places (currently only in backprop, in two places, and in composite inlining)
-            size_t m_pendingInputs;          // during batched forward: counter how many inputs have already become available
-            PrimitiveFunction* m_link;       // temporary linked list, e.g. for batched operations. In composite inlining, it points to an already inlined clone
-            PrimitiveFunction* m_aliasList;  // list of aliases (common subexpression), local to ExecuteBatchedOpAndUpdateSchedule()
-            PrimitiveFunction* m_bucketList; // list of hash-table entries (for CSE, local to class DedupSet)
-            mutable size_t m_cachedOpHash = SIZE_MAX-1; // hash for batchability check; 0 means not set yet   --set to SIZE_MAX to detect missing initialization
-            //size_t m_aliasHash = SIZE_MAX-1; // hash for alias detection (common subexpression elimination)    --set to SIZE_MAX-1 to detect if we miss to initialize; remove this
-            size_t m_depthHint;              // max of depth hints over all inputs
-            // cached:
-            size_t m_batchNormId = INT_MAX-1; // 0 if none   --TODO: INT_MAX chosen as to cause an access violation if left unchanged
-            StackingMode m_stacking;          // true if batch axis is the last axis, rather than a new one
-            size_t m_batchAxis = INT_MAX - 1; // max over ranks of batchable inputs; minus 1 if stacking. Computed upon Schedule().
-            NDShapeDimension m_batchDim;      // max m_shape[m_batchAxis] over all batchable inputs. Computed upon Schedule().
-        } m_autoBatchState;
-        mutable DynamicProfilerPtr m_profiler;   // profile using this profiler if set
-        static const DynamicProfilerPtr& CurrentDynamicProfiler();
-
     public:
         // debugging aid for identifying objects
         size_t m_uniqueIdForDebugging = GetUniqueId(); static size_t GetUniqueId() { static size_t id = 0; return ++id; }

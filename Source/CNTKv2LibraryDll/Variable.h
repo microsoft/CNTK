@@ -11,21 +11,6 @@
 
 namespace CNTK
 {
-    ///
-    /// Class that stores a std::wstring, but most if the time is empty, so that it is cheaper to have one extra redirection.
-    ///
-    class OptionalString
-    {
-        std::wstring* m_string;
-    public:
-        OptionalString()                       : m_string(nullptr)                        { }
-        OptionalString(const std::wstring&  s) : m_string(new std::wstring(s))            { }
-        OptionalString(      std::wstring&& s) : m_string(new std::wstring(std::move(s))) { }
-        OptionalString& operator=(const std::wstring& s) { auto newString = s.empty() ? nullptr : new std::wstring(s); if (m_string) delete m_string; m_string = newString; return *this; }
-        operator const std::wstring&() const { static const std::wstring s_emptyString; return m_string ? *m_string : s_emptyString; }
-        operator bool() const { return m_string && !m_string->empty(); }
-        const wchar_t* c_str() const { return m_string ? m_string->c_str() : L""; }
-    };
     struct VariableFields final : public std::enable_shared_from_this<VariableFields>
     {
         friend class CompositeFunction;

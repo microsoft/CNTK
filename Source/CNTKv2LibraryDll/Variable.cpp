@@ -294,7 +294,7 @@ namespace CNTK
     {
         std::wstringstream wss;
         wss << VariableKindName(m_varKind) << "('";
-        if (m_name)
+        if (!m_name.empty())
             wss << m_name.c_str();
         else
             wss << Uid();

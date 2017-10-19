@@ -1401,7 +1401,7 @@ namespace CNTK
 
     private:
         int m_staticAxisIdx;
-        std::wstring m_name;
+        OptionalString m_name;
         bool m_isOrderedDynamicAxis;
     };
 
@@ -3881,7 +3881,14 @@ namespace CNTK
         CNTK_API static DynamicProfilerPtr SetDynamicProfiler(const DynamicProfilerPtr&, bool outer = false);
 
     private:
-        static UserFunctionFactoryPtr s_userFunctionFactory;
+        bool IsNative() const { return m_native; }
+        Dictionary SerializeNativeImpl() const;
+        static FunctionPtr DeserializeNativeImpl(const std::vector<Variable>& inputs, const std::wstring& name, const Dictionary& dict);
+
+#ifdef SWIGPYTHON
+    public:
+        void SetNative(bool native) { m_native = native; }
+#endif
 
     private:
         //CNTK_API Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
@@ -3891,38 +3898,33 @@ namespace CNTK
         // move constructor where everything is prepared outside; used in auto-batching
         Function(InputsVectorType&& inputs, Dictionary&& functionConfig/*, std::wstring&& name, std::wstring&& uid*/);
 
+        // --- data members ---
+
         //std::vector<Variable> m_inputs; // primitives: direct input variables; composites: empty (Inputs() determines all leaves on the fly); block: all leaves as if it was a composite
         InputsVectorType m_inputs; // primitives: direct input variables; composites: empty (Inputs() determines all leaves on the fly); block: all leaves as if it was a composite
+        OutputsVectorType m_outputs;
 #ifdef DYNAMITE_ONLY
         unsigned int m_outputsInitFlag = 0;
 #else
         std::once_flag m_outputsInitFlag = 0;
         std::thread::id m_outputInitializingByThreadId;
 #endif
-        OutputsVectorType m_outputs;
 
         FunctionPtr m_rootFunction; // This is a PrimitiveFunctionPtr for composites, or a nullptr for PrimitiveFunction instances
-        std::wstring m_name;
-        mutable std::wstring m_uid;
         Dictionary m_attributes;
+
+        // secondary stuff
+        OptionalString m_name;
+        mutable OptionalString m_uid;
         //std::unordered_set<std::wstring> m_dirtyAttributes;
         bool m_dirtyAttributeDropoutRate = false;
         bool m_dirtyAttributeRngSeed = false;
 
-#ifdef SWIGPYTHON
-    public:
-        void SetNative(bool native) { m_native = native; }
-#endif
-
-    private:
-        bool IsNative() const { return m_native; }
-
+        // user-function related
         bool m_native = true;
+        static UserFunctionFactoryPtr s_userFunctionFactory;
 
-        Dictionary SerializeNativeImpl() const;
-
-        static FunctionPtr DeserializeNativeImpl(const std::vector<Variable>& inputs, const std::wstring& name, const Dictionary& dict);
-
+        // serialization-related
         static const size_t s_serializationVersion = 1;
     };
 
