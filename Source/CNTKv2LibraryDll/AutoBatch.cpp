@@ -2274,11 +2274,11 @@ class Variable::AutoBatch
     // by setting its m_acyclicOutputPrimitiveReference field.
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
     template<typename ShapeType>
-    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, Function::InputsVectorType&& inputs, const ShapeType& shape, Dictionary&& attributes, const wstring& name,
+    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, Function::InputsVectorType&& inputs, const ShapeType& shape, Dictionary&& attributes/*, const wstring& name*/,
                                        const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                        bool isFree = false, bool logSpliceAsGather = false)
     {
-        auto fPtr = CreateAndMemoizeOp(op, move(inputs), shape, move(attributes), name, profiler, logPrefix, isFree, logSpliceAsGather);
+        auto fPtr = CreateAndMemoizeOp(op, move(inputs), shape, move(attributes)/*, name*/, profiler, logPrefix, isFree, logSpliceAsGather);
         let& output = fPtr->m_outputs.front();
         // To make the consumer of this hold a reference to this PrimitiveFunction, inject a strong ref to the copy of its Output.
         //input = output.CompositePreservingCopy(fPtr); // without the acyclic trick, this works as well, but is not quite right since fPtr is not a Composite
@@ -2315,21 +2315,20 @@ class Variable::AutoBatch
         if (IsMatrixProduct(clonee.m_op))
             fail_if(inputs.front().Shape() != clonee.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
 #endif
-        return CreateAndMemoizeOp(clonee.m_op, move(inputs), shape, move(attributes), clonee.m_name, clonee.m_profiler, L"*"/*clonee*/, isFree);
+        return CreateAndMemoizeOp(clonee.m_op, move(inputs), shape, move(attributes)/*, clonee.m_name*/, clonee.m_profiler, L"*"/*clonee*/, isFree);
     }
 
     // create a PrimitiveFunction and execute it right away
     // This executes RawPrimitiveFunction() and MemoizeKnowableValueInArena().
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
     template<typename ShapeType>
-    PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, Function::InputsVectorType&& inputs, const ShapeType& shape, Dictionary&& attributes, const wstring& name,
+    PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, Function::InputsVectorType&& inputs, const ShapeType& shape, Dictionary&& attributes/*, const wstring& name*/,
                                             const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                             bool isFree = false, bool logSpliceAsGather = false)
     {
         // create the object
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Pass, L"RawPrimitiveFunction", 3);
-        vector<Variable> inputs1(inputs); // PERF BUGBUG
-        auto fPtr = MakeSharedObject<PrimitiveFunction>(op, move(inputs1), move(attributes), move(name));
+        auto fPtr = MakeSharedObject<PrimitiveFunction>(op, move(inputs), move(attributes)/*, move(name)*/);
         // unfortunately output initialization must be separated out since it requires s shared_ptr to f
         let& fInputs = fPtr->m_inputs;
         fPtr->InitOutput(OutputVariable(NDShape(shape)/*it's a &&*/, fInputs.front().GetDataType(),
@@ -2468,12 +2467,11 @@ class Variable::AutoBatch
     {
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Cos, L"ClonePrimitiveFunction", 3);
         // clone it
-        vector<Variable> newInputs1(move(newInputs));  // PERF BUGBUG! Change to InputsVectorType
         PrimitiveFunctionPtr fCloned =
-            /*if*/ (clonee.m_op == PrimitiveOpType::Block) ?
-                MakeSharedObject<BlockFunction>(static_cast<BlockFunction&>(clonee).Composite(), move(newInputs1), static_cast<BlockFunction&>(clonee).IsBasicBlock(), wstring(), wstring()/*static_cast<BlockFunction&>(clonee).OpName()), wstring(clonee.Name())*/)
+            /*if*/ (clonee.m_op == PrimitiveOpType::Block) ?                     // PERF BUGBUG: vvv short-circuit this as well
+                MakeSharedObject<BlockFunction>(static_cast<BlockFunction&>(clonee).Composite(), MakeVector(newInputs), static_cast<BlockFunction&>(clonee).IsBasicBlock(), wstring(), wstring()/*static_cast<BlockFunction&>(clonee).OpName()), wstring(clonee.Name())*/)
             /*else*/:
-                MakeSharedObject<PrimitiveFunction>(clonee.m_op, move(newInputs1), move(ShallowCloneDictionary(clonee.m_attributes)));// , wstring(clonee.Name()));
+                MakeSharedObject<PrimitiveFunction>(clonee.m_op, move(newInputs), move(ShallowCloneDictionary(clonee.m_attributes)));// , wstring(clonee.Name()));
         // Note: We can use make_shared since no shared_ptrs to these clones are ever exposed across the DLL boundary.
         //if (fCloned->m_uniqueIdForDebugging == 20000)
         //    fprintf(stderr, "");
@@ -3059,7 +3057,8 @@ class Variable::AutoBatch
                                                              PrimitiveFunction::AttributeNameBeginIndex, (int)beginIndex,
                                                              PrimitiveFunction::AttributeNameEndIndex,   (int)endIndex
                                                          ),
-                                                         f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
+                                                         //f0.m_name,
+                                                         f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                                          /*isFree=*/true);
                 // and that's our input to the batched operation
                 // TODO: Can this be done by directly messing with the Variable? Make a deep copy of the var object with begin/end slice?
@@ -3086,7 +3085,8 @@ class Variable::AutoBatch
                     // insert a Reshape() op
                     batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(1, move(batchedInput)), outputShape,
                                                              Dictionary(),
-                                                             f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
+                                                             //f0.m_name,
+                                                             f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 }
                 else // batchAxis > fromSliceAxis
                 {
@@ -3106,7 +3106,8 @@ class Variable::AutoBatch
                     // insert a Reshape() op
                     batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(1, move(batchedInput)), outputShape,
                                                              Dictionary(),
-                                                             f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
+                                                             //f0.m_name,
+                                                             f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 }
                 // and that's now really our input to the batched operation
             }
@@ -3133,7 +3134,8 @@ class Variable::AutoBatch
                     // insert a ReduceElements op, which in fact ignores its axes and therefore can also be used to broadcast
                     return CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, Function::InputsVectorType(1, input), broadcastShape,
                                                      Dictionary(PrimitiveFunction::AttributeNameReductionOpName, PrimitiveFunction::InternalSumReductionOpName),
-                                                     f0.m_name, f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/false);
+                                                     //f0.m_name,
+                                                     f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/false);
                     // Note that at this point, the inputs to the Gather operation will have inconsistent
                     // rank; those we expanded here have a batch axis, while the unexpanded may not.
                     // Gather can handle that.
@@ -3157,9 +3159,10 @@ class Variable::AutoBatch
             // BUGBUG: vv The move(gatherInputs) is ineffective because ultimately, the copy (not move) constructor of PrimtiveFunction ends up being called.
             //if (f0.m_op == PrimitiveOpType::ElementTimes && f0.m_attributes.Size() > 0 && stackingMode == StackingMode::STACKING) // we were batched for batching
             //    Break;
-            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs), outputShape, // PERF BUGBUG: use a Transform
+            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs), outputShape,
                                              Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)batchAxis)),
-                                             f0.m_name, f0.m_profiler, L"#"/*gatherInputs[0]*/,
+                                             //f0.m_name,
+                                             f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                              /*isFree=*/false, /*logSpliceAsGather=*/true);
         }
     }
@@ -3505,7 +3508,7 @@ class Variable::AutoBatch
                 arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
 
                 // Reshape() here does not need the properties at this level anymore; output shape is sufficient
-                let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, Function::InputsVectorType(1, move(arg)), batchedOutputShape, Dictionary(), f0.m_name, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
+                let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, Function::InputsVectorType(1, move(arg)), batchedOutputShape, Dictionary()/*, f0.m_name*/, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
 
                 batchedOp = reshapeOp; // this is the result that we redistribute from to the individual consumers
             }

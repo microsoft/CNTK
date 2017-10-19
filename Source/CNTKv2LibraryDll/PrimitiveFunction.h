@@ -329,9 +329,11 @@ namespace CNTK
             //    fprintf(stderr, "");
         }
     protected: // special short-circuited versions private to auto-batcher (also called via BlockFunction(), hence 'protected')
+        void InitOutput(Variable&& output);
         // This must not be used for anything else.
-        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, Dictionary&& functionConfig, std::wstring&& name)
-            : Function(std::move(inputs), std::move(functionConfig), std::move(name), std::wstring()),
+    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
+        PrimitiveFunction(PrimitiveOpType op, InputsVectorType&& inputs, Dictionary&& functionConfig/*, std::wstring&& name*/)
+            : Function(MakeVector(inputs), std::move(functionConfig), std::wstring()/*move(name)*/, std::wstring()),
               m_op(op),
               m_profiler(CurrentDynamicProfiler())
         {
@@ -351,7 +353,6 @@ namespace CNTK
             }
 #endif
         }
-        void InitOutput(Variable&& output);
     private:
 
         // Note: This code is to allow bypassing the composite pointer in a hybrid build that maintains
