@@ -371,12 +371,12 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TY
     {
         if (m_preferredDeviceId == CPUDEVICE)
         {
-            m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormat, numRows, numCols, nnz);
+            m_CPUSparseMatrix = ::CNTK::MakeSharedObject<CPUSparseMatrix<ElemType>>(matrixFormat, numRows, numCols, nnz);
             SetDataLocation(CPU, SPARSE);
         }
         else
         {
-            m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(numRows, numCols, nnz, m_preferredDeviceId, matrixFormat);
+            m_GPUSparseMatrix = ::CNTK::MakeSharedObject<GPUSparseMatrix<ElemType>>(numRows, numCols, nnz, m_preferredDeviceId, matrixFormat);
             SetDataLocation(GPU, SPARSE);
         }
     }
@@ -389,12 +389,12 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TY
 
         if (m_preferredDeviceId == CPUDEVICE)
         {
-            m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(numRows, numCols);
+            m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>(numRows, numCols);
             SetDataLocation(CPU, DENSE);
         }
         else
         {
-            m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(numRows, numCols, m_preferredDeviceId);
+            m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(numRows, numCols, m_preferredDeviceId);
             SetDataLocation(GPU, DENSE);
         }
 
@@ -412,12 +412,12 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* p
         if (matrixFlags & matrixFormatSparse)
         {
             // WARNING: matrixFlag is not passed in and externally managed array cannot be passed in
-            m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nnz);
+            m_CPUSparseMatrix = ::CNTK::MakeSharedObject<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nnz);
             SetDataLocation(CPU, SPARSE);
         }
         else
         {
-            m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(numRows, numCols, pArray, matrixFlags);
+            m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>(numRows, numCols, pArray, matrixFlags);
             SetDataLocation(CPU, DENSE);
         }
     }
@@ -426,13 +426,13 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* p
         if (matrixFlags & matrixFormatSparse)
         {
             // m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(numRows,numCols,nnz, pArray,matrixFlags,m_preferredDeviceId);
-            m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(m_preferredDeviceId, MatrixFormat(matrixFlags & MatrixFormat::matrixFormatMask));
+            m_GPUSparseMatrix = ::CNTK::MakeSharedObject<GPUSparseMatrix<ElemType>>(m_preferredDeviceId, MatrixFormat(matrixFlags & MatrixFormat::matrixFormatMask));
             m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, nnz, true, false);
             SetDataLocation(GPU, SPARSE);
         }
         else
         {
-            m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(numRows, numCols, m_preferredDeviceId, pArray, matrixFlags);
+            m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(numRows, numCols, m_preferredDeviceId, pArray, matrixFlags);
             SetDataLocation(GPU, DENSE);
         }
     }
@@ -461,10 +461,10 @@ Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE dev
     deepCopyFrom._transferToDevice(m_preferredDeviceId, true);
 
     DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, this,
-                            m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(*(deepCopyFrom.m_CPUMatrix)),
-                            m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(*(deepCopyFrom.m_GPUMatrix)),
-                            m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(*(deepCopyFrom.m_CPUSparseMatrix)),
-                            m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(*(deepCopyFrom.m_GPUSparseMatrix)));
+                            m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>(*(deepCopyFrom.m_CPUMatrix)),
+                            m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(*(deepCopyFrom.m_GPUMatrix)),
+                            m_CPUSparseMatrix = ::CNTK::MakeSharedObject<CPUSparseMatrix<ElemType>>(*(deepCopyFrom.m_CPUSparseMatrix)),
+                            m_GPUSparseMatrix = ::CNTK::MakeSharedObject<GPUSparseMatrix<ElemType>>(*(deepCopyFrom.m_GPUSparseMatrix)));
 
     // should we move back?
     deepCopyFrom._transferToDevice(origCopyFromDeviceId, true);
@@ -484,10 +484,10 @@ Matrix<ElemType>::Matrix(Matrix<ElemType>&& moveFrom)
 #else
     DISPATCH_MATRIX_ON_FLAG(&moveFrom,
                             this,
-                            m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(*(moveFrom.m_CPUMatrix))),
-                            m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(*(moveFrom.m_GPUMatrix))),
-                            m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(static_cast<CPUSparseMatrix<ElemType>&&>(*(moveFrom.m_CPUSparseMatrix))),
-                            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(static_cast<GPUSparseMatrix<ElemType>&&>(*(moveFrom.m_GPUSparseMatrix))));
+                            m_CPUMatrix = new CPUMatrix<ElemType>(move/*static_cast<CPUMatrix<ElemType>&&>*/(*(moveFrom.m_CPUMatrix))),
+                            m_GPUMatrix = new GPUMatrix<ElemType>(move/*static_cast<GPUMatrix<ElemType>&&>*/(*(moveFrom.m_GPUMatrix))),
+                            m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(move/*static_cast<CPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_CPUSparseMatrix))),
+                            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(move/*static_cast<GPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_GPUSparseMatrix))));
 
     m_preferredDeviceId = moveFrom.m_preferredDeviceId;
 #endif
@@ -509,17 +509,17 @@ Matrix<ElemType>& Matrix<ElemType>::operator=(Matrix<ElemType>&& moveFrom)
 
     DISPATCH_MATRIX_ON_FLAG(&moveFrom,
                             this,
-                            if (m_CPUMatrix != nullptr) m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(*(moveFrom.m_CPUMatrix)));
-                            else m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(*(moveFrom.m_CPUMatrix))),
+                            if (m_CPUMatrix != nullptr) m_CPUMatrix->operator=(move/*static_cast<CPUMatrix<ElemType>&&>*/(*(moveFrom.m_CPUMatrix)));
+                            else m_CPUMatrix = new CPUMatrix<ElemType>(move/*static_cast<CPUMatrix<ElemType>&&>*/(*(moveFrom.m_CPUMatrix))),
 
-                            if (m_GPUMatrix != nullptr) m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(*(moveFrom.m_GPUMatrix)));
-                            else m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(*(moveFrom.m_GPUMatrix))),
+                            if (m_GPUMatrix != nullptr) m_GPUMatrix->operator=(move/*static_cast<GPUMatrix<ElemType>&&>*/(*(moveFrom.m_GPUMatrix)));
+                            else m_GPUMatrix = new GPUMatrix<ElemType>(move/*static_cast<GPUMatrix<ElemType>&&>*/(*(moveFrom.m_GPUMatrix))),
 
-                            if (m_CPUSparseMatrix != nullptr) m_CPUSparseMatrix->operator=(static_cast<CPUSparseMatrix<ElemType>&&>(*(moveFrom.m_CPUSparseMatrix)));
-                            else m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(static_cast<CPUSparseMatrix<ElemType>&&>(*(moveFrom.m_CPUSparseMatrix))),
+                            if (m_CPUSparseMatrix != nullptr) m_CPUSparseMatrix->operator=(move/*static_cast<CPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_CPUSparseMatrix)));
+                            else m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(move/*static_cast<CPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_CPUSparseMatrix))),
 
-                            if (m_GPUSparseMatrix != nullptr) m_GPUSparseMatrix->operator=(static_cast<GPUSparseMatrix<ElemType>&&>(*(moveFrom.m_GPUSparseMatrix)));
-                            else m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(static_cast<GPUSparseMatrix<ElemType>&&>(*(moveFrom.m_GPUSparseMatrix))));
+                            if (m_GPUSparseMatrix != nullptr) m_GPUSparseMatrix->operator=(move/*static_cast<GPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_GPUSparseMatrix)));
+                            else m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(move/*static_cast<GPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_GPUSparseMatrix))));
 
 #endif
     return *this;
@@ -615,14 +615,14 @@ void Matrix<ElemType>::Read(File& stream)
         if (M.GetDeviceId() < 0)
         {
             if (!M.m_CPUMatrix)
-                M.m_CPUMatrix = make_shared<CPUMatrix<ElemType>>();
+                M.m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>();
             stream >> (*M.m_CPUMatrix);
             M.SetDataLocation(CPU, DENSE);
         }
         else
         {
             if (!M.m_GPUMatrix)
-                M.m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(M.GetDeviceId());
+                M.m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(M.GetDeviceId());
             stream >> (*M.m_GPUMatrix);
             M.SetDataLocation(GPU, DENSE);
         }
@@ -636,7 +636,7 @@ void Matrix<ElemType>::Read(File& stream)
         else
         {
             if (M.m_GPUSparseMatrix == NULL)
-                M.m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(M.GetDeviceId());
+                M.m_GPUSparseMatrix = ::CNTK::MakeSharedObject<GPUSparseMatrix<ElemType>>(M.GetDeviceId());
             stream >> (*M.m_GPUSparseMatrix);
             M.SetDataLocation(GPU, SPARSE);
         }
@@ -762,16 +762,16 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
         if (GetCurrentMatrixLocation() == CPU || GetCurrentMatrixLocation() == BOTH)
         {
             if (slice.m_CPUMatrix)
-                slice.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
+                slice.m_CPUMatrix->operator=(move/*static_cast<CPUMatrix<ElemType>&&>*/(m_CPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
             else
-                slice.m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
+                slice.m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>(move/*static_cast<CPUMatrix<ElemType>&&>*/(m_CPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
         }
         if (GetCurrentMatrixLocation() == GPU || GetCurrentMatrixLocation() == BOTH)
         {
             if (slice.m_GPUMatrix)
-                slice.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
+                slice.m_GPUMatrix->operator=(move/*static_cast<GPUMatrix<ElemType>&&>*/(m_GPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
             else
-                slice.m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
+                slice.m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(move/*static_cast<GPUMatrix<ElemType>&&>*/(m_GPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
         }
     }
     else if (GetMatrixType() == MatrixType::SPARSE)
@@ -781,16 +781,16 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
         if (GetCurrentMatrixLocation() == CPU || GetCurrentMatrixLocation() == BOTH)
         {
             if (slice.m_CPUSparseMatrix)
-                slice.m_CPUSparseMatrix->operator=(static_cast<CPUSparseMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                slice.m_CPUSparseMatrix->operator=(move/*static_cast<CPUSparseMatrix<ElemType>&&>*/(m_CPUSparseMatrix->ColumnSlice(startColumn, numCols)));
             else
-                slice.m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(static_cast<CPUSparseMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                slice.m_CPUSparseMatrix = ::CNTK::MakeSharedObject<CPUSparseMatrix<ElemType>>(move/*static_cast<CPUSparseMatrix<ElemType>&&>*/(m_CPUSparseMatrix->ColumnSlice(startColumn, numCols)));
         }
         if (GetCurrentMatrixLocation() == GPU || GetCurrentMatrixLocation() == BOTH)
         {
             if (slice.m_GPUSparseMatrix)
-                slice.m_GPUSparseMatrix->operator=(static_cast<GPUSparseMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                slice.m_GPUSparseMatrix->operator=(move/*static_cast<GPUSparseMatrix<ElemType>&&>*/(m_GPUSparseMatrix->ColumnSlice(startColumn, numCols)));
             else
-                slice.m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(static_cast<GPUSparseMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                slice.m_GPUSparseMatrix = ::CNTK::MakeSharedObject<GPUSparseMatrix<ElemType>>(move/*static_cast<GPUSparseMatrix<ElemType>&&>*/(m_GPUSparseMatrix->ColumnSlice(startColumn, numCols)));
         }
     }
     else
@@ -814,13 +814,13 @@ Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fr
             if (m_CPUMatrix)
                 m_CPUMatrix->AssignColumnSlice(*fromMatrix.m_CPUMatrix, startColumn, numCols);
             else
-                m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(fromMatrix.m_CPUMatrix->ColumnSlice(startColumn, numCols, numCols));
+                m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>(fromMatrix.m_CPUMatrix->ColumnSlice(startColumn, numCols, numCols));
         },
         {
             if (m_GPUMatrix)
                 m_GPUMatrix->AssignColumnSlice(*fromMatrix.m_GPUMatrix, startColumn, numCols);
             else
-                m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(fromMatrix.m_GPUMatrix->ColumnSlice(startColumn, numCols, numCols));
+                m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(fromMatrix.m_GPUMatrix->ColumnSlice(startColumn, numCols, numCols));
         },
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
@@ -1000,17 +1000,17 @@ void Matrix<ElemType>::AssignDiagonalValuesTo(Matrix<ElemType>& diag) const
         if (devId == CPUDEVICE)
         {
             if (diag.m_CPUMatrix)
-                diag.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->Diagonal()));
+                diag.m_CPUMatrix->operator=(move/*static_cast<CPUMatrix<ElemType>&&>*/(m_CPUMatrix->Diagonal()));
             else
-                diag.m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->Diagonal()));
+                diag.m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>(move/*static_cast<CPUMatrix<ElemType>&&>*/(m_CPUMatrix->Diagonal()));
             diag.SetDataLocation(CPU, DENSE);
         }
         else
         {
             if (diag.m_GPUMatrix)
-                diag.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->Diagonal()));
+                diag.m_GPUMatrix->operator=(move/*static_cast<GPUMatrix<ElemType>&&>*/(m_GPUMatrix->Diagonal()));
             else
-                diag.m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->Diagonal()));
+                diag.m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(move/*static_cast<GPUMatrix<ElemType>&&>*/(m_GPUMatrix->Diagonal()));
             diag.SetDataLocation(GPU, DENSE);
         }
     }
@@ -1020,17 +1020,17 @@ void Matrix<ElemType>::AssignDiagonalValuesTo(Matrix<ElemType>& diag) const
         if (devId == CPUDEVICE)
         {
             if (diag.m_CPUMatrix)
-                diag.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->DiagonalToDense()));
+                diag.m_CPUMatrix->operator=(move/*static_cast<CPUMatrix<ElemType>&&>*/(m_CPUSparseMatrix->DiagonalToDense()));
             else
-                diag.m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->DiagonalToDense()));
+                diag.m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>(move/*static_cast<CPUMatrix<ElemType>&&>*/(m_CPUSparseMatrix->DiagonalToDense()));
             diag.SetDataLocation(CPU, DENSE);
         }
         else
         {
             if (diag.m_GPUMatrix)
-                diag.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->DiagonalToDense()));
+                diag.m_GPUMatrix->operator=(move/*static_cast<GPUMatrix<ElemType>&&>*/(m_GPUSparseMatrix->DiagonalToDense()));
             else
-                diag.m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->DiagonalToDense()));
+                diag.m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(move/*static_cast<GPUMatrix<ElemType>&&>*/(m_GPUSparseMatrix->DiagonalToDense()));
             diag.SetDataLocation(GPU, DENSE);
         }
     }
@@ -1069,9 +1069,9 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
         if (newMatrixType == MatrixType::SPARSE)
         {
             if (!m_baseMatrix)
-                m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(newMatrixFormat);
+                m_CPUSparseMatrix = ::CNTK::MakeSharedObject<CPUSparseMatrix<ElemType>>(newMatrixFormat);
             else
-                m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(newMatrixFormat, GetNumRows(), GetNumCols(), 1);
+                m_CPUSparseMatrix = ::CNTK::MakeSharedObject<CPUSparseMatrix<ElemType>>(newMatrixFormat, GetNumRows(), GetNumCols(), 1);
 
             if (keepValues)
                 CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
@@ -1082,9 +1082,9 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
         else if (newMatrixType == MatrixType::DENSE)
         {
             if (!m_baseMatrix)
-                m_CPUMatrix = make_shared<CPUMatrix<ElemType>>();
+                m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>();
             else
-                m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(GetNumRows(), GetNumCols());
+                m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>(GetNumRows(), GetNumCols());
 
             if (keepValues)
                 m_CPUMatrix->SetValue(m_CPUSparseMatrix->CopyColumnSliceToDense(0, GetNumCols()));
@@ -1100,9 +1100,9 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
         if (newMatrixType == MatrixType::SPARSE)
         {
             if (!m_baseMatrix)
-                m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(GetDeviceId(), newMatrixFormat);
+                m_GPUSparseMatrix = ::CNTK::MakeSharedObject<GPUSparseMatrix<ElemType>>(GetDeviceId(), newMatrixFormat);
             else
-                m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(GetNumRows(), GetNumCols(), 0, GetDeviceId(), newMatrixFormat);
+                m_GPUSparseMatrix = ::CNTK::MakeSharedObject<GPUSparseMatrix<ElemType>>(GetNumRows(), GetNumCols(), 0, GetDeviceId(), newMatrixFormat);
 
             if (keepValues)
                 m_GPUSparseMatrix->SetValue(*m_GPUMatrix);
@@ -1113,9 +1113,9 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
         else if (newMatrixType == MatrixType::DENSE)
         {
             if (!m_baseMatrix)
-                m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(GetDeviceId());
+                m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(GetDeviceId());
             else
-                m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(GetNumRows(), GetNumCols(), GetDeviceId());
+                m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(GetNumRows(), GetNumCols(), GetDeviceId());
 
             if (keepValues)
                 m_GPUSparseMatrix->CopyToDenseMatrix(*m_GPUMatrix);
@@ -1554,12 +1554,12 @@ void Matrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCC
     // data should already be copied to destination.
     DISPATCH_MATRIX_ON_FLAG(this, this,
         {
-            if (!m_CPUSparseMatrix) m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nz);
+            if (!m_CPUSparseMatrix) m_CPUSparseMatrix = ::CNTK::MakeSharedObject<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nz);
             m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols);
             m_CPUSparseMatrix->AssignColumnSliceToDense(*m_CPUMatrix, 0, numCols);
         },
         {
-            if (!m_GPUSparseMatrix) m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(numRows, numCols, nz, GetDeviceId(), matrixFormatSparseCSC);
+            if (!m_GPUSparseMatrix) m_GPUSparseMatrix = ::CNTK::MakeSharedObject<GPUSparseMatrix<ElemType>>(numRows, numCols, nz, GetDeviceId(), matrixFormatSparseCSC);
             m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols);
             m_GPUSparseMatrix->AssignColumnSliceToDense(*m_GPUMatrix, 0, numCols);
         },
@@ -4327,12 +4327,12 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                 if (m_GPUSparseMatrix && m_GPUSparseMatrix->GetComputeDeviceId() == to_id)
                     m_GPUSparseMatrix->Resize(m_CPUSparseMatrix->GetNumRows(), m_CPUSparseMatrix->GetNumCols(), m_CPUSparseMatrix->NzCount());
                 else
-                    m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(m_CPUSparseMatrix->GetNumRows(), m_CPUSparseMatrix->GetNumCols(), m_CPUSparseMatrix->NzCount(), to_id, m_CPUSparseMatrix->GetFormat());
+                    m_GPUSparseMatrix = ::CNTK::MakeSharedObject<GPUSparseMatrix<ElemType>>(m_CPUSparseMatrix->GetNumRows(), m_CPUSparseMatrix->GetNumCols(), m_CPUSparseMatrix->NzCount(), to_id, m_CPUSparseMatrix->GetFormat());
             }
             else
             {
                 if (!m_GPUSparseMatrix || m_GPUSparseMatrix->GetComputeDeviceId() != to_id)
-                    m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(to_id);
+                    m_GPUSparseMatrix = ::CNTK::MakeSharedObject<GPUSparseMatrix<ElemType>>(to_id);
                 m_GPUSparseMatrix->SetValue(*m_CPUSparseMatrix);
             }
 
@@ -4354,7 +4354,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
             if (to_id < 0) // to CPU
             {
                 if (!m_CPUSparseMatrix)
-                    m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(m_GPUSparseMatrix->GetFormat());
+                    m_CPUSparseMatrix = ::CNTK::MakeSharedObject<CPUSparseMatrix<ElemType>>(m_GPUSparseMatrix->GetFormat());
 
                 if (emptyTransfer)
                     m_CPUSparseMatrix->Resize(m_GPUSparseMatrix->GetNumRows(), m_GPUSparseMatrix->GetNumCols(), m_GPUSparseMatrix->NzCount(), true);
@@ -4389,14 +4389,14 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                 if (m_GPUMatrix && m_GPUMatrix->GetComputeDeviceId() == to_id)
                     m_GPUMatrix->Resize(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols());
                 else
-                    m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id);
+                    m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id);
             }
             else
             {
                 if (m_GPUMatrix && m_GPUMatrix->GetComputeDeviceId() == to_id)
                     m_GPUMatrix->SetValue(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->Data());
                 else
-                    m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->Data());
+                    m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->Data());
             }
             if (isBeingMoved)
             {
@@ -4418,7 +4418,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                     if (m_CPUMatrix)
                         m_CPUMatrix->Resize(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols());
                     else
-                        m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols());
+                        m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols());
                 }
                 else
                 {
@@ -4426,7 +4426,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                     if (m_CPUMatrix)
                         m_CPUMatrix->SetValue(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr);
                     else
-                        m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr, matrixFlagNormal);
+                        m_CPUMatrix = ::CNTK::MakeSharedObject<CPUMatrix<ElemType>>(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr, matrixFlagNormal);
 
                     delete[] arr;
                 }
@@ -5425,7 +5425,7 @@ template <class ElemType>
             },
             { NOT_IMPLEMENTED; },
             {
-                c.m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(c.m_GPUSparseMatrix->CopyToDenseMatrix());
+                c.m_GPUMatrix = ::CNTK::MakeSharedObject<GPUMatrix<ElemType>>(move(c.m_GPUSparseMatrix->CopyToDenseMatrix()));
                 GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUMatrix, 1, *c.m_GPUSparseMatrix, *c.m_GPUMatrix);
                 c.SetDataLocation(GPU, DENSE);
                 c.m_GPUSparseMatrix = nullptr;

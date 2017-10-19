@@ -903,10 +903,10 @@ namespace CNTK
     {
         std::wstringstream wss;
         wss << "Axis(";
-        if (IsStaticAxis() && m_name == Axis::StaticAxisNamePrefix + std::to_wstring(StaticAxisIndex(false)))
+        if (IsStaticAxis() && m_name.get() == Axis::StaticAxisNamePrefix + std::to_wstring(StaticAxisIndex(false)))
             wss << StaticAxisIndex(false);
         else
-            wss << "'" << m_name << "'";
+            wss << "'" << m_name.c_str() << "'";
         wss << ")";
 
         return wss.str();

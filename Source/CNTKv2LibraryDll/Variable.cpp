@@ -57,7 +57,7 @@ namespace CNTK
 
     const std::wstring& Variable::Name() const
     {
-        return m_dataFields->m_name; 
+        return m_dataFields->m_name.get(); 
     }
 
     void Variable::DebugUpdateName(const std::wstring& newName)
@@ -368,7 +368,7 @@ namespace CNTK
             m_needsGradient,
             HasMore() ? m_more->m_dynamicAxes : c_noDynamicAxes,
             m_isSparse,
-            m_name,
+            m_name.get(),
             std::wstring()/*Internal::GenerateUid(m_varKind)*/);
 
         if (HasMore() && m_more->m_valueInitializer)

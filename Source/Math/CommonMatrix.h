@@ -615,7 +615,7 @@ protected:
     void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice )
     {
         ZeroValues();
-        m_sob = make_shared<BaseMatrixStorage<ElemType>>(matrixFormat, computeDevice);
+        m_sob = ::CNTK::MakeSharedObject<BaseMatrixStorage<ElemType>>(matrixFormat, computeDevice);
     }
 
 protected:
@@ -637,7 +637,7 @@ protected:
     // TODO: m_sliceViewOffset has a different meaning in sparse (column offset) versus dense (offset in elements to start of pointer). This should perhaps be fixed.
     size_t m_sliceViewOffset; // slice view: dense: pArray[m_sliceViewOffset] is top-left element; sparse: index of first column
     // TODO: implement m_colStride
-    size_t m_colStride; // TODO: This is not implemented at all.
+    //size_t m_colStride; // TODO: This is not implemented at all.
 
     // Storage OBject containing the underlying data used by this matrix
     shared_ptr<BaseMatrixStorage<ElemType>> m_sob;

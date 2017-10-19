@@ -447,14 +447,22 @@ public:
 ///
 class OptionalString
 {
-    std::wstring* m_string;
+    const std::wstring* m_string;
+    void Release() { if (m_string) delete m_string; }
+    void ReleaseAndReplace(const std::wstring* other) { Release(); m_string = other; }
 public:
-    OptionalString()                       : m_string(nullptr)                        { }
-    OptionalString(const std::wstring&  s) : m_string(new std::wstring(s))            { }
-    OptionalString(      std::wstring&& s) : m_string(new std::wstring(std::move(s))) { }
-    ~OptionalString() { if (m_string) delete m_string; }
-    OptionalString& operator=(const std::wstring& s) { auto newString = s.empty() ? nullptr : new std::wstring(s); if (m_string) delete m_string; m_string = newString; return *this; }
-    operator const std::wstring&() const { static const std::wstring s_emptyString; return m_string ? *m_string : s_emptyString; }
+    OptionalString()                       : m_string(nullptr) { }
+    OptionalString(OptionalString&& other) : m_string(other.m_string) { other.m_string = nullptr; }
+    OptionalString(const OptionalString& other) : OptionalString(other.get()) { }
+    explicit OptionalString(      std::wstring&& s) : m_string(s.empty() ? nullptr : new std::wstring(std::move(s))) { }
+    explicit OptionalString(const std::wstring&  s) : m_string(s.empty() ? nullptr : new std::wstring(s)) { }
+    ~OptionalString() { Release(); }
+    OptionalString& operator=(const std::wstring& s) { auto newString = s.empty() ? nullptr : new std::wstring(s);            ReleaseAndReplace(newString); return *this; }
+    OptionalString& operator=(std::wstring&& s)      { auto newString = s.empty() ? nullptr : new std::wstring(std::move(s)); ReleaseAndReplace(newString); return *this; }
+    OptionalString& operator=(const OptionalString& other) { return operator=(other.get()); }
+    OptionalString& operator=(OptionalString&& other) { ReleaseAndReplace(other.m_string); other.m_string = nullptr; return *this; }
+    operator const std::wstring&() const { return get(); }
+    const std::wstring& get() const { static const std::wstring s_emptyString; return m_string ? *m_string : s_emptyString; }
     bool empty() const { return m_string && !m_string->empty(); }
     const wchar_t* c_str() const { return m_string ? m_string->c_str() : L""; }
 };
@@ -569,12 +577,12 @@ class FixedSizePool
                     }
                 }
                 // try to allocate in current block
-                auto res = currentBlock->TryAllocate<T>(nextItemIndex);
+                auto res = currentBlock->template TryAllocate<T>(nextItemIndex);
                 auto* p = res.first;
                 if (p) // found one in the current block
                 {
                     totalItemsAllocated++; // account for it
-                    auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(p);
+                    auto* pItem = reinterpret_cast<FixedSizePoolItem<typename T>*>(p);
                     //pItem->blockIndex = (decltype(pItem->blockIndex))currentBlockIndex; // remember which block it came from
                     pItem->flagPtr = res.second; // remember flag location for trivial deallocation
                     //Assert(pItem->blockIndex == currentBlockIndex); // (overflow)
@@ -584,7 +592,7 @@ class FixedSizePool
                 currentBlock++;
                 nextItemIndex = 0;
             }
-            LogicError("FixedSizePoolAllocator: Allocation in newly created block unexpectedly failed.");
+            //LogicError("FixedSizePoolAllocator: Allocation in newly created block unexpectedly failed.");
         }
         template<typename T>
         void Deallocate(T* p)
@@ -631,12 +639,12 @@ public:
         if (cnt != 1)
             InvalidArgument("FixedSizePoolAllocatorT: This allocator only supports allocation of single items.");
         auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
-        return reinterpret_cast<pointer>(storage.Allocate<T>());
+        return reinterpret_cast<pointer>(storage.template Allocate<T>());
     }
     inline void deallocate(pointer p, size_type)
     {
         auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
-        storage.Deallocate<T>(p);
+        storage.template Deallocate<T>(p);
     }
 public:
     static void SomeTest()
@@ -650,7 +658,7 @@ public:
         v1.push_back(13); v1.push_back(13); v1.push_back(13); v1.push_back(13); v1.push_back(13);
         v1.push_back(13); v1.push_back(13); v1.push_back(13); v1.push_back(13); v1.push_back(13);
         std::list<int> v2(v1.begin(), v1.end());
-        auto ps = std::allocate_shared<string>(alloc, "test");
+        auto ps = std::allocate_shared<std::string>(alloc, "test");
         ps.reset();
         auto pi = std::allocate_shared<int>(alloc, 1968);
     }
@@ -727,6 +735,5 @@ inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs)
 #endif
 }
 #endif
-
 
 } // namespace

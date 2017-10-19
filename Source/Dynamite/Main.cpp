@@ -378,8 +378,78 @@ namespace X{
 }
 #endif
 
+class enable_strong_shared_ptr
+{
+    mutable size_t referenceCount = 0;
+    template<class T>
+    friend class strong_shared_ptr;
+    void AddRef() const noexcept { referenceCount++; }
+    size_t DecRef() const noexcept { referenceCount--; return referenceCount; }
+};
+
+///
+/// Simple shared_ptr that has no weak-ptr concept, and requires the controlled object to derive from enable_strong_shared_ptr.
+/// The hope is to cut through the overhead of shared_ptr and get trivial inlining of these operations.
+///
+template<class T>
+class strong_shared_ptr final
+{
+    T* m_ptr;
+    static T* AddRef(T* other)
+    {
+        if (other)
+            other->AddRef();
+        return other;
+    }
+    void Release()
+    {
+        if (m_ptr)
+            if (m_ptr->DecRef() == 0)
+                delete m_ptr;
+    }
+    void ReleaseAndReplace(T* other)
+    {
+        Release();
+        m_ptr = other;
+    }
+public:
+    typedef T element_type;
+    strong_shared_ptr()          noexcept : m_ptr(nullptr) { }
+    strong_shared_ptr(nullptr_t) noexcept : m_ptr(nullptr) { }
+    strong_shared_ptr(T* ptr)    noexcept : m_ptr(AddRef(ptr)) { }
+    strong_shared_ptr(const strong_shared_ptr& other) noexcept : m_ptr(AddRef(other.m_ptr)) { }
+    strong_shared_ptr(strong_shared_ptr&&      other) noexcept : m_ptr(other.m_ptr) { other.m_ptr = nullptr; }
+    ~strong_shared_ptr() noexcept { Release(); }
+    strong_shared_ptr& operator=(const strong_shared_ptr& other)     { ReleaseAndReplace(AddRef(other.m_ptr));                return *this; }
+    strong_shared_ptr& operator=(strong_shared_ptr&& other) noexcept { ReleaseAndReplace(other.m_ptr); other.m_ptr = nullptr; return *this; }
+    void reset() noexcept { ReleaseAndReplace(nullptr); }
+    typename std::add_lvalue_reference_t<T> operator*() const noexcept { return *m_ptr; }
+    T* operator->() const noexcept { return m_ptr; }
+    T* get()        const noexcept { return m_ptr; }
+    explicit operator bool() const noexcept { return m_ptr != nullptr; }
+    void swap(strong_shared_ptr& other) noexcept { ::swap(m_ptr, other.m_ptr); }
+};
+
+class C : public enable_strong_shared_ptr
+{
+    std::string test;
+public:
+    C() : test("hello world")
+    {
+    }
+    ~C()
+    {
+        fprintf(stderr, "");
+    }
+};
+
 int main(int argc, char *argv[])
 {
+    {
+        auto pp = strong_shared_ptr<C>(new C());
+        auto oo2 = move(pp);
+        pp;
+    }
     using namespace CNTK;
     {
         string a("test");

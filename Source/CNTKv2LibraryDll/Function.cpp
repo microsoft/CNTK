@@ -321,7 +321,7 @@ namespace CNTK
             else // everything else is a composite
                 m_uid = Internal::GenerateUid(L"CompositeFunction");
         }
-        return m_uid;
+        return m_uid.get();
     }
 
     bool Function::IsBlock() const

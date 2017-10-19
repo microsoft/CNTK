@@ -490,14 +490,14 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
         let numColumns  = viewElements        / sobRows;
         if (firstColumn * sobRows != m_shape.GetOffset() || numColumns * sobRows != viewElements)
             InvalidArgument("AsMatrix: Flattened [%s] matrix has an offset or width that is not a multiple of the storage object's row dimension.", string(m_shape).c_str());
-        return make_shared<Matrix<ElemType>>(move(m_sob->ColumnSlice(firstColumn, numColumns)));
+        return ::CNTK::MakeSharedObject<Matrix<ElemType>>(move(m_sob->ColumnSlice(firstColumn, numColumns)));
     }
     else // dense
     {
         // Dense matrices can be arbitrarily reshaped and sliced. We fist slice from a row vector, and then reshape it.
         auto slice = m_sob->ColumnSlice(m_shape.GetOffset(), viewElements, /*pretendSourceHasNumCols=*/m_sob->GetNumElements());
         slice.Reshape(m_shape_0, m_shape_1);
-        return make_shared<Matrix<ElemType>>(move(slice));
+        return ::CNTK::MakeSharedObject<Matrix<ElemType>>(move(slice));
     }
 }
 
@@ -744,7 +744,7 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::GetSOBViewPtr() const
         m_shape.VerifyIsDense();
         Matrix<ElemType> sliceBuf(CPUDEVICE/*dummy*/);
         GatherScatterGetSOBView(*this, sliceBuf); 
-        return make_shared<Matrix<ElemType>>(move(sliceBuf));
+        return ::CNTK::MakeSharedObject<Matrix<ElemType>>(move(sliceBuf));
     }
 }
 

@@ -1382,7 +1382,7 @@ namespace CNTK
         ///
         /// Name of 'this' axis
         ///
-        const std::wstring& Name() const { return m_name; }
+        const std::wstring& Name() const { return m_name.get(); }
 
         ///
         /// Returns a string representation for this Axis.
@@ -3513,7 +3513,7 @@ namespace CNTK
         ///
         /// Returns the name of 'this' Function.
         ///
-        const std::wstring& Name() const { return m_name; }
+        const std::wstring& Name() const { return m_name.get(); }
 
         ///
         /// Sets the name of 'this' Function.
