@@ -19,7 +19,7 @@ namespace CNTK
         BlockFunction(FunctionPtr&& composite,
                       const std::vector<std::pair<Variable, Variable>>& argumentsMap, // [composite's Placeholder] -> actual input it should pretend to be
                       const std::wstring& blockOpName, Dictionary&& attributes,
-                      const std::wstring& blockName = L"", const std::wstring& uid = GenerateUid(PrimitiveOpType::Block))
+                      const std::wstring& blockName = std::wstring(), const std::wstring& uid = GenerateUid(PrimitiveOpType::Block))
             : PrimitiveFunction(PrimitiveOpType::Block, DetermineInputs(composite, argumentsMap, blockName), std::move(attributes), blockName, uid),
             m_composite(composite), m_blockOpName(blockOpName)
         {

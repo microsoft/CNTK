@@ -2285,7 +2285,7 @@ class Variable::AutoBatch
     {
         // special case for basic blocks: need to clone the entire composite (for backprop)
         if (clonee.m_op == PrimitiveOpType::Block)
-            return InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(clonee), m_batchedInputs, batchAxis, batchSize);
+            return InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(clonee), inputs/*m_batchedInputs*/, batchAxis, batchSize);
 
         // get the unbatched output shape, considering the case that 'clonee' lives inside a composite
         let& cloneeOutputShape = clonee.m_outputs.front().Shape();
@@ -2457,7 +2457,7 @@ class Variable::AutoBatch
         // clone it
         PrimitiveFunctionPtr fCloned =
             /*if*/ (clonee.m_op == PrimitiveOpType::Block) ?
-                MakeSharedObject<BlockFunction>(static_cast<BlockFunction&>(clonee).Composite(), move(newInputs), static_cast<BlockFunction&>(clonee).IsBasicBlock(), wstring(static_cast<BlockFunction&>(clonee).OpName()), wstring(clonee.Name()))
+                MakeSharedObject<BlockFunction>(static_cast<BlockFunction&>(clonee).Composite(), move(newInputs), static_cast<BlockFunction&>(clonee).IsBasicBlock(), wstring(), wstring()/*static_cast<BlockFunction&>(clonee).OpName()), wstring(clonee.Name())*/)
             /*else*/:
                 MakeSharedObject<PrimitiveFunction>(clonee.m_op, move(newInputs), move(ShallowCloneDictionary(clonee.m_attributes)));// , wstring(clonee.Name()));
         // Note: We can use make_shared since no shared_ptrs to these clones are ever exposed across the DLL boundary.
