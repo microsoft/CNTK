@@ -26,6 +26,8 @@ template <class ElemType>
 class MATH_API TensorView
 {
 public:
+    typedef typename Matrix<ElemType>::MatrixPtr MatrixPtr;
+
     // -------------------------------------------------------------------
     // construction
     // -------------------------------------------------------------------
@@ -228,19 +230,19 @@ public:
     void DoGatherBatchOf(const IArrayRef<const TensorView*>& inputs, size_t axis);
     void DoScatterBatchOf(ElemType beta, const IArrayRef<TensorView*>& outputs, size_t axis) const;
 
-    shared_ptr<Matrix<ElemType>> AsMatrix() const;
+    MatrixPtr AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }
 
     // -------------------------------------------------------------------
     // accessors
     // -------------------------------------------------------------------
 
-    const shared_ptr<Matrix<ElemType>>& GetSOBPtr() const { return m_sob; }
-    const Matrix<ElemType>& GetSOB() const { return *m_sob; }
-    Matrix<ElemType>&       GetSOB()       { return *m_sob; }
+    const MatrixPtr&        GetSOBPtr() const { return m_sob; }
+    const Matrix<ElemType>& GetSOB()    const { return *m_sob; }
+    Matrix<ElemType>&       GetSOB()          { return *m_sob; }
     friend Test::TensorTest<ElemType>;
 
-    shared_ptr<Matrix<ElemType>> GetSOBViewPtr() const;
+    MatrixPtr GetSOBViewPtr() const;
 
     // -------------------------------------------------------------------
     // others
@@ -253,8 +255,8 @@ private:
     // sob members
     // -------------------------------------------------------------------
 
-    shared_ptr<Matrix<ElemType>> m_sob; // Storage OBject that holds the data that is being viewed with this TensorView. This is really a reference (not owing the buffer).
-    TensorShape m_shape;                // the meta-data that describes the data's shape and/or access pattern
+    MatrixPtr m_sob;     // Storage OBject that holds the data that is being viewed with this TensorView. This is really a reference (not owing the buffer).
+    TensorShape m_shape; // the meta-data that describes the data's shape and/or access pattern
 };
 
 }}}

@@ -445,7 +445,7 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
 // convert tensor into a Matrix object
 // BUGBUG: Rethink whether for rank < 2, padding ones at the end is correct when the matrix is meant to be transposed.
 template <class ElemType>
-shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
+typename TensorView<ElemType>::MatrixPtr TensorView<ElemType>::AsMatrix() const
 {
     if (m_shape.GetRank() > 2)
         InvalidArgument("AsMatrix: The [%s] tensor has too many axes to be interpreted as a matrix (max 2).", string(m_shape).c_str());
@@ -734,7 +734,7 @@ void TensorView<ElemType>::DoScatterBatchOf(ElemType beta, const IArrayRef<Tenso
 // -------------------------------------------------------------------
 
 template <class ElemType>
-shared_ptr<Matrix<ElemType>> TensorView<ElemType>::GetSOBViewPtr() const
+typename TensorView<ElemType>::MatrixPtr TensorView<ElemType>::GetSOBViewPtr() const
 {
     // return the original if no need for slicing and dicing
     if (GatherScatterCanPassSOB(*this))
