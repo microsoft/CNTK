@@ -456,7 +456,7 @@ namespace CNTK
         Forward(arguments, outputs, computeDevice, {});
     }
 
-    void Function::Save(std::vector<char> &vectorBuf)
+    void Function::Save(std::vector<unsigned char> &vectorBuf)
     {
         Dictionary model = Serialize();
         std::ostringstream stream;

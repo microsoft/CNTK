@@ -167,12 +167,13 @@ namespace CNTK.CSTrainingExamples
                 while (GetImageAndLabelMinibatch(trainingDataMap, batchSize, batchCount++,
                     imageDims, animalModelNumClasses, device, out imageBatch, out labelBatch))
                 {
+                    //TODO: sweepEnd should be set properly.
                     trainer.TrainMinibatch(new Dictionary<Variable, Value>() {
                         { imageInput, imageBatch },
-                        { labelInput, labelBatch } }, device);
+                        { labelInput, labelBatch } }, false, device);
                     TestHelper.PrintTrainingProgress(trainer, minibatchCount, 1);
                 }
-            }
+            }                       
 
             // save the trained model
             transferLearningModel.Save(animalsModelFile);
@@ -212,7 +213,7 @@ namespace CNTK.CSTrainingExamples
             {
                 // randomize 
                 int n = trainingDataMap.Count;
-                Random random = new Random();
+                Random random = new Random(0);
                 while (n > 1)
                 {
                     n--;
