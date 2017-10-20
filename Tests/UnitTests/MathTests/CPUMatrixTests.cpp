@@ -474,6 +474,16 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixElementOperations, RandomSeedFixture)
     m2(1, 1) = 74.20321058;
     m2(1, 2) = 201.71315737;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceAsinh();
+    m2(0, 0) = 0.88137359;
+    m2(0, 1) = 1.44363548;
+    m2(0, 2) = 1.81844646;
+    m2(1, 0) = 2.09471255;
+    m2(1, 1) = 2.31243834;
+    m2(1, 2) = 2.49177985;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 }
 
 BOOST_FIXTURE_TEST_CASE(CPUMatrixNorms, RandomSeedFixture)
