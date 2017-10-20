@@ -88,13 +88,13 @@ protected:
     bool m_BackwardDataCalledYet;
     TensorShape shapeXT;
     TensorShape shapeYT;
-    shared_ptr<Matrix<ElemType>> m_transposedInput;
-    shared_ptr<Matrix<ElemType>> m_transposedOutput;
-    shared_ptr<Matrix<ElemType>> m_transposedDInput;
-    shared_ptr<Matrix<ElemType>> m_transposedDOutput;
-    shared_ptr<Matrix<ElemType>> m_workspace;
-    shared_ptr<Matrix<ElemType>> m_reserve;
-    shared_ptr<Matrix<ElemType>> m_packingIndex;
+    MatrixPtr m_transposedInput;
+    MatrixPtr m_transposedOutput;
+    MatrixPtr m_transposedDInput;
+    MatrixPtr m_transposedDOutput;
+    MatrixPtr m_workspace;
+    MatrixPtr m_reserve;
+    MatrixPtr m_packingIndex;
 
 private:
     void TransposeHelper(const MatrixBasePtr matX, const TensorShape &shapeX, MatrixBasePtr matY, TensorShape &shapeY);

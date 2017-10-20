@@ -1014,8 +1014,8 @@ private:
     bool ReduceSequenceAxis() const { return m_inferInputRankToMap == ReduceSequenceAxisWithoutInferredInputRank; }
 
     static const int NumInputs = 2;
-    shared_ptr<Matrix<ElemType>> m_tempScatterIndices[NumInputs];
-    shared_ptr<Matrix<ElemType>> m_tempUnpackedValue[NumInputs];
+    MatrixPtr m_tempScatterIndices[NumInputs];
+    MatrixPtr m_tempUnpackedValue[NumInputs];
 };
 
 // -----------------------------------------------------------------------
@@ -1521,10 +1521,10 @@ public:
 
 private:
     // invNorm nodes tranfer data between ForwardProp and BackpropTo
-    shared_ptr<Matrix<ElemType>> m_invNorm0;
-    shared_ptr<Matrix<ElemType>> m_invNorm1;
+    MatrixPtr m_invNorm0;
+    MatrixPtr m_invNorm1;
     // the rest are temporaries, values don't need to be maintained
-    shared_ptr<Matrix<ElemType>> m_temp;
+    MatrixPtr m_temp;
 };
 
 template class CosDistanceNode<float>;
@@ -1844,13 +1844,13 @@ public:
 
 private:
     // invNorm nodes tranfer data between ForwardProp and BackpropTo
-    shared_ptr<Matrix<ElemType>> m_invNorm0;
-    shared_ptr<Matrix<ElemType>> m_invNorm1;
-    shared_ptr<Matrix<ElemType>> m_leftTerm;
-    shared_ptr<Matrix<ElemType>> m_rightTerm;
+    MatrixPtr m_invNorm0;
+    MatrixPtr m_invNorm1;
+    MatrixPtr m_leftTerm;
+    MatrixPtr m_rightTerm;
     // the rest are temporaries, values don't need to be maintained
-    shared_ptr<Matrix<ElemType>> m_invNormSquare;
-    shared_ptr<Matrix<ElemType>> m_temp;
+    MatrixPtr m_invNormSquare;
+    MatrixPtr m_temp;
 };
 
 template class CosDistanceWithNegativeSamplesNode<float>;
@@ -1926,11 +1926,11 @@ protected:
 
     size_t GetNumberOfSamples() const { return m_numSamples; }
     void SetNumberOfSamples(size_t samples) { m_numSamples = samples; }
-    shared_ptr<Matrix<ElemType>> GetAccumulator() { return m_accumulator; }
+    MatrixPtr GetAccumulator() { return m_accumulator; }
     // Copies internal accumulator to the output.
     void CopyAccumulatorToValue();
 
-    shared_ptr<Matrix<ElemType>> m_accumulator;
+    MatrixPtr m_accumulator;
     size_t m_numSamples;
 };
 

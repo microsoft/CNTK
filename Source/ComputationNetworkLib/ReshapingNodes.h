@@ -369,10 +369,10 @@ private:
     ElementWiseOperator m_reductionOp; // the reduction operation mapped to our internal opCode
     ElemType m_scale;                  // 1 or, for Mean, 1/number of elements we are reducing over
 
-    shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
+    MatrixPtr m_tempGatherIndices;
     shared_ptr<Matrix<char>> m_tempMask;
-    shared_ptr<Matrix<ElemType>> m_tempScatterIndices;
-    shared_ptr<Matrix<ElemType>> m_tempUnpackedData;
+    MatrixPtr m_tempScatterIndices;
+    MatrixPtr m_tempUnpackedData;
 };
 
 // -----------------------------------------------------------------------
@@ -514,9 +514,9 @@ public:
 
 private:
     bool m_layoutsMatch;
-    shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
-    shared_ptr<Matrix<ElemType>> m_tempScatterIndices;
-    shared_ptr<Matrix<ElemType>> m_tempUnpackedData;
+    MatrixPtr m_tempGatherIndices;
+    MatrixPtr m_tempScatterIndices;
+    MatrixPtr m_tempUnpackedData;
 };
 
 template class ReconcileDynamicAxisNode<float>;

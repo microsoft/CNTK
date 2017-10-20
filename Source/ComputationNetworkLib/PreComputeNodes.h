@@ -355,9 +355,9 @@ public:
     }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_mean;
-    shared_ptr<Matrix<ElemType>> m_var;
-    shared_ptr<Matrix<ElemType>> m_temp;
+    MatrixPtr m_mean;
+    MatrixPtr m_var;
+    MatrixPtr m_temp;
 };
 
 template class InvStdDevNode<float>;

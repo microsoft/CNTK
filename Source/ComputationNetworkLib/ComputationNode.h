@@ -1208,7 +1208,6 @@ struct ITakesDynamicAxis
 template <typename ElemType>
 struct MultiOutputNode
 {
-    typedef typename Matrix<ElemType>::MatrixPtr MatrixPtr;
 public:
     MultiOutputNode(size_t numOutputs)
         : m_numOutputs(numOutputs)
@@ -1226,8 +1225,8 @@ public:
     std::vector<bool> m_outputsHasNewMBLayout;
     std::vector<std::shared_ptr<MBLayout>> m_outputsMBLayout;
     std::vector<bool> m_outputsIsValueSparse;
-    std::vector<MatrixPtr> m_outputsValue;
-    std::vector<MatrixPtr> m_outputsGradient;
+    std::vector<typename Matrix<ElemType>::MatrixPtr> m_outputsValue;
+    std::vector<typename Matrix<ElemType>::MatrixPtr> m_outputsGradient;
 };
 
 // =======================================================================

@@ -77,6 +77,8 @@ struct EpochCriterion : public std::pair<double, size_t>
 template <class ElemType>
 struct CriterionAccumulator
 {
+    typedef typename Matrix<ElemType>::MatrixPtr MatrixPtr;
+
     // constructor params:
     //  criterionNodes                  - list of criterion nodes
     //  accumulatorCriterionNodesNodes  - list of criterion nodes that already accumulate results
@@ -186,8 +188,8 @@ public:
     CriterionAccumulator& operator=(const CriterionAccumulator&) = delete;
 
 private:
-    shared_ptr<Matrix<ElemType>> m_aggregateCriterionValues; // [1 x N]
-    vector<size_t> m_aggregateSampleCounts;                  // [N]
+    MatrixPtr m_aggregateCriterionValues;   // [1 x N]
+    vector<size_t> m_aggregateSampleCounts; // [N]
 
     const std::vector<ComputationNodeBasePtr> m_criterionNodes;
     // Criterion nodes that accumulate result themselves.

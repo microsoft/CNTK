@@ -254,7 +254,7 @@ public:
     }
 
 protected:
-    shared_ptr<Matrix<ElemType>> m_gradientTemp;
+    MatrixPtr m_gradientTemp;
 };
 
 #define UsingSoftmaxNodeBaseMembers         \
@@ -325,7 +325,7 @@ public:
     }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_diff;
+    MatrixPtr m_diff;
 };
 
 template class SoftmaxNode<float>;
@@ -392,7 +392,7 @@ public:
     }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_softmax;
+    MatrixPtr m_softmax;
 };
 
 template class LogSoftmaxNode<float>;

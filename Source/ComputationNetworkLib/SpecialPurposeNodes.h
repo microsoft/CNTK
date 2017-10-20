@@ -419,12 +419,12 @@ public:
     }
 
 protected:
-    shared_ptr<Matrix<ElemType>> m_prior;
-    shared_ptr<Matrix<ElemType>> m_normedDeviation;
-    shared_ptr<Matrix<ElemType>> m_normedDeviationVectors;
-    shared_ptr<Matrix<ElemType>> m_stddev;
-    shared_ptr<Matrix<ElemType>> m_posterior;
-    shared_ptr<Matrix<ElemType>> m_temp;
+    MatrixPtr m_prior;
+    MatrixPtr m_normedDeviation;
+    MatrixPtr m_normedDeviationVectors;
+    MatrixPtr m_stddev;
+    MatrixPtr m_posterior;
+    MatrixPtr m_temp;
 };
 
 template class GMMLogLikelihoodNode<float>;
@@ -650,9 +650,9 @@ public:
     }
 
 protected:
-    shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
-    shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
-    shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
+    MatrixPtr m_logSoftmaxOfRight;
+    MatrixPtr m_softmaxOfRight;
+    MatrixPtr m_gammaFromLattice;
     double m_frameDropThreshold;
     double m_fsSmoothingWeight; // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
     double m_seqGammarAMF;
@@ -960,11 +960,11 @@ public:
 
 protected:
     virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-    shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
-    shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
-    shared_ptr<Matrix<ElemType>> m_CTCposterior;
-    shared_ptr<Matrix<ElemType>> m_maxIndexes;
-    shared_ptr<Matrix<ElemType>> m_maxValues;
+    MatrixPtr m_logSoftmaxOfRight;
+    MatrixPtr m_softmaxOfRight;
+    MatrixPtr m_CTCposterior;
+    MatrixPtr m_maxIndexes;
+    MatrixPtr m_maxValues;
 
     msra::lattices::GammaCalculation<ElemType> m_GammaCal;
     size_t m_blankTokenId;
@@ -1022,7 +1022,7 @@ class AssignNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"Assign"; }
 
-    shared_ptr<Matrix<ElemType>> m_result;
+    MatrixPtr m_result;
 
 public:
     DeclareConstructorFromConfigWithNumInputs(AssignNode);

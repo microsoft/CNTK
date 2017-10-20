@@ -363,7 +363,7 @@ public:
     */
     // this is for frame-by-frame reading of data.
     // data is first read into these matrices and then if needed is column-by-column retrieved
-    map<wstring, std::shared_ptr<Matrix<ElemType>>> mMatrices;
+    map<wstring, MatrixPtr> mMatrices;
     bool GetFrame(StreamMinibatchInputs& matrices, const size_t tidx, vector<size_t>& history);
 
     // create proposals

@@ -33,6 +33,7 @@ protected:
     // constructor
     CNTKEvalBase() : m_net(nullptr) { }
 public:
+    typedef typename Matrix<ElemType>::MatrixPtr MatrixPtr;
 
     // CreateNetwork - create a network based on the network description
     // networkDescription - network description

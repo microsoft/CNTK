@@ -138,9 +138,9 @@ public:
     }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
-    shared_ptr<Matrix<ElemType>> m_tempScatterIndices;
-    shared_ptr<Matrix<ElemType>> m_tempUnpackedData;
+    MatrixPtr m_tempGatherIndices;
+    MatrixPtr m_tempScatterIndices;
+    MatrixPtr m_tempUnpackedData;
 };
 
 // -----------------------------------------------------------------------
@@ -492,9 +492,9 @@ private:
     bool m_suppressMaskOutput;
 
     shared_ptr<Matrix<char>> m_tempMask;
-    shared_ptr<Matrix<ElemType>> m_tempScatterIndices;
-    shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
-    shared_ptr<Matrix<ElemType>> m_tempPackedGradientData;
+    MatrixPtr m_tempScatterIndices;
+    MatrixPtr m_tempGatherIndices;
+    MatrixPtr m_tempPackedGradientData;
 };
 
 template class UnpackSequenceNode<float>;

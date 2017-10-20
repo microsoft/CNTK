@@ -262,7 +262,7 @@ void CNTKEvalExtended<ElemType>::StartForwardEvaluation(const std::vector<wstrin
 
     for (const auto& node : m_outputNodes)
     {
-        shared_ptr<Matrix<ElemType>> outputMatrix = dynamic_pointer_cast<Matrix<ElemType>>(node->ValuePtr());
+        MatrixPtr outputMatrix = dynamic_pointer_cast<Matrix<ElemType>>(node->ValuePtr());
         if (outputMatrix->GetMatrixType() != MatrixType::DENSE)
             RuntimeError("Sparse outputs are not supported by this API.");
     }
@@ -377,7 +377,7 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
     {
         auto node = m_outputNodes[i2];
         
-        shared_ptr<Matrix<ElemType>> outputMatrix = dynamic_pointer_cast<Matrix<ElemType>>(node->ValuePtr());
+        MatrixPtr outputMatrix = dynamic_pointer_cast<Matrix<ElemType>>(node->ValuePtr());
         auto pMBLayout = node->GetMBLayout();
         if (!pMBLayout)
         {

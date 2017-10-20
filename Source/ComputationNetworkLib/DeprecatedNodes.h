@@ -283,8 +283,8 @@ public:
     }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_innerproduct;
-    shared_ptr<Matrix<ElemType>> m_rightGradient;
+    MatrixPtr m_innerproduct;
+    MatrixPtr m_rightGradient;
 };
 
 template class DiagTimesNode<float>;

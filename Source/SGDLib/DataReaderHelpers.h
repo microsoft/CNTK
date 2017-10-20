@@ -282,6 +282,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class SubminibatchDispatcher
     {
     private:
+        typedef typename Matrix<ElemType>::MatrixPtr MatrixPtr;
+
         typedef std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> Lattice;
         typedef std::vector<size_t> Uid;
         typedef std::vector<size_t> ExtrauttMap;
@@ -300,8 +302,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Uid m_uidCache;
         ExtrauttMap m_extrauttmapCache;
         Boundaries m_BoundariesCache;
-        shared_ptr<Matrix<ElemType>> m_netCriterionAccumulator;
-        shared_ptr<Matrix<ElemType>> m_netEvaluationAccumulator;
+        MatrixPtr m_netCriterionAccumulator;
+        MatrixPtr m_netEvaluationAccumulator;
         std::map<wstring, vector<shared_ptr<INodeState>>> m_netStates; // m_netStatefulNodes[node][i] caches the state of i-th subminibatch of node
         bool m_hasLattices;
 

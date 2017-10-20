@@ -24,15 +24,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 struct MemRequestInfo
 {
+    typedef typename Matrix<ElemType>::MatrixPtr MatrixPtr;
     DEVICEID_TYPE deviceId;                     // which device to allocate data 
-    std::vector<shared_ptr<Matrix<ElemType>>*> pMatrixPtrs;    // memory pointers 
+    std::vector<MatrixPtr*> pMatrixPtrs;        // memory pointers 
     size_t matrixSize;                          // memory size 
     bool mbScale;                               // whether the memory shall be scaled by minibatch size 
     bool isWorkSpace;                           // workspace memory or not, by workspace we indicate whether a memory space will be released very shortly after allocation 
     int allocStep;                              // at what step counter memory allocation is requested 
     int releaseStep;                            // at what step counter memory release is requested  
     int memoryId;                               // integer indexing the memory buffer ID 
-    MemRequestInfo(DEVICEID_TYPE deviceId, shared_ptr<Matrix<ElemType>>*pMatrixPtr, size_t matrixSize, bool mbScale, bool isWorkSpace, int allocStep)
+    MemRequestInfo(DEVICEID_TYPE deviceId, MatrixPtr*pMatrixPtr, size_t matrixSize, bool mbScale, bool isWorkSpace, int allocStep)
         :deviceId(deviceId), matrixSize(matrixSize), mbScale(mbScale), isWorkSpace(isWorkSpace), allocStep(allocStep), releaseStep(INT_MAX), memoryId(-1)
     {
         pMatrixPtrs.push_back(pMatrixPtr);
@@ -104,7 +105,7 @@ public:
     };
 
     template <class ElemType>
-    MemRequestInfo<ElemType>* GetMemInfo(shared_ptr<Matrix<ElemType>> *pMatrixPtr)
+    MemRequestInfo<ElemType>* GetMemInfo(typename Matrix<ElemType>::MatrixPtr *pMatrixPtr)
     {
         vector<MemRequestInfo<ElemType>>& memInfoVec = GetMemRequestInfoVec<ElemType>();
         // iterate through the vector and find the pointer memInfo
@@ -117,9 +118,9 @@ public:
     }
 
     template <class ElemType>
-    void RequestRelease(shared_ptr<Matrix<ElemType>> *pMatrixPtr)
+    void RequestRelease(typename Matrix<ElemType>::MatrixPtr *pMatrixPtr)
     {
-        auto memInfo = GetMemInfo(pMatrixPtr);
+        auto memInfo = GetMemInfo<ElemType>(pMatrixPtr);
         if (memInfo != nullptr)
         {
             memInfo->SetReleaseStep(m_stepCounter);
@@ -134,7 +135,7 @@ public:
     // mbScale is another flag indicating if the size of the memory will scale w.r.t. the minibatch size. Unfortunately, at the time of memory
     // request and pointer assignment, we don't known the minibatch size. Thus our memory sharing algorithm is sub-optimal. 
     template <class ElemType>
-    void RequestAllocate(DEVICEID_TYPE deviceId, shared_ptr<Matrix<ElemType>>*pMatrixPtr, size_t matrixSize, bool mbScale, bool isWorkSpace)
+    void RequestAllocate(DEVICEID_TYPE deviceId, typename Matrix<ElemType>::MatrixPtr *pMatrixPtr, size_t matrixSize, bool mbScale, bool isWorkSpace)
     {
         vector<MemRequestInfo<ElemType>>& memInfoVec = GetMemRequestInfoVec<ElemType>(); 
         MemRequestInfo<ElemType> memInfo(deviceId, pMatrixPtr, matrixSize, mbScale, isWorkSpace, m_stepCounter);
@@ -197,13 +198,13 @@ public:
 
         if (aliasInfo.releaseCount == aliasInfo.totalCount)
         {
-            RequestRelease((shared_ptr<Matrix<ElemType>>*)aliasInfo.pMatrixPtr);
+            RequestRelease<ElemType>((typename Matrix<ElemType>::MatrixPtr*)aliasInfo.pMatrixPtr);
             aliasInfo.pMatrixPtr = nullptr;
         }
     }
 
     template <class ElemType>
-    void RequestAliasedAllocate(DEVICEID_TYPE deviceId, AliasNodePtr node, shared_ptr<Matrix<ElemType>>*pMatrixPtr, size_t matrixSize, bool mbScale)
+    void RequestAliasedAllocate(DEVICEID_TYPE deviceId, AliasNodePtr node, typename Matrix<ElemType>::MatrixPtr *pMatrixPtr, size_t matrixSize, bool mbScale)
     {
         const auto iter = m_aliasLookup.find(node);
         if (iter == m_aliasLookup.end())
@@ -215,11 +216,11 @@ public:
         {
             // first allocation for the group
             aliasInfo.pMatrixPtr = pMatrixPtr;
-            RequestAllocate(deviceId, pMatrixPtr, matrixSize, mbScale, false);
+            RequestAllocate<ElemType>(deviceId, pMatrixPtr, matrixSize, mbScale, false);
         }
         else
         {
-            auto aliasRootMatrixPtr = (shared_ptr<Matrix<ElemType>>*)aliasInfo.pMatrixPtr;
+            auto aliasRootMatrixPtr = (typename Matrix<ElemType>::MatrixPtr*)aliasInfo.pMatrixPtr;
             *pMatrixPtr = *aliasRootMatrixPtr;
             GetMemInfo<ElemType>(aliasRootMatrixPtr)->pMatrixPtrs.push_back(pMatrixPtr);
         }

@@ -124,8 +124,8 @@ public:
     }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
-    shared_ptr<Matrix<ElemType>> m_maxValues;
+    MatrixPtr m_maxIndexes0, m_maxIndexes1;
+    MatrixPtr m_maxValues;
     int m_topK;
 };
 
@@ -449,10 +449,10 @@ protected:
     size_t m_numberOfQueryUrls;
     size_t m_maxNumberOfUrlsPerQuery;
     // store the gains and weights
-    shared_ptr<Matrix<ElemType>> m_urlGain0;
-    shared_ptr<Matrix<ElemType>> m_urlGain1;
-    shared_ptr<Matrix<ElemType>> m_urlDiscount0;
-    shared_ptr<Matrix<ElemType>> m_urlDiscount1;
+    MatrixPtr m_urlGain0;
+    MatrixPtr m_urlGain1;
+    MatrixPtr m_urlDiscount0;
+    MatrixPtr m_urlDiscount1;
 };
 
 template class NDCG1EvalNode<float>;
@@ -718,8 +718,8 @@ public:
     std::vector<size_t> TokensToIgnore() const { return m_tokensToIgnore; }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
-    shared_ptr<Matrix<ElemType>> m_maxValues;
+    MatrixPtr m_maxIndexes0, m_maxIndexes1;
+    MatrixPtr m_maxValues;
     bool m_squashInputs;
     float m_subPen;
     float m_delPen;

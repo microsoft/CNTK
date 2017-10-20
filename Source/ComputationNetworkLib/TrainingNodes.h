@@ -105,7 +105,7 @@ public:
     }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_leftMinusRight;
+    MatrixPtr m_leftMinusRight;
 };
 
 template class SquareErrorNode<float>;
@@ -234,8 +234,8 @@ public:
     }
 
 protected:
-    shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
-    shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
+    MatrixPtr m_logSoftmaxOfRight;
+    MatrixPtr m_softmaxOfRight;
 };
 
 template class CrossEntropyWithSoftmaxNode<float>;
@@ -365,9 +365,9 @@ public:
 
 private:
     // matrix value passed from evaluate to computePartial
-    shared_ptr<Matrix<ElemType>> m_logOfRight;
+    MatrixPtr m_logOfRight;
     // temporary
-    shared_ptr<Matrix<ElemType>> m_leftDivRight;
+    MatrixPtr m_leftDivRight;
 };
 
 template class CrossEntropyNode<float>;
@@ -456,7 +456,7 @@ public:
     }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_gradientOfL1Norm; // temporary
+    MatrixPtr m_gradientOfL1Norm; // temporary
 };
 
 template class MatrixL1RegNode<float>;
@@ -903,18 +903,18 @@ protected:
 
     ElemType m_sigma;
     // Score differences between url pairs
-    shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
+    MatrixPtr m_pairwiseDifferences;
     // 1/(1+exp(sigma*(si - sj)))
-    shared_ptr<Matrix<ElemType>> m_lambdas;
+    MatrixPtr m_lambdas;
     
     // update of weight matrix
-    shared_ptr<Matrix<ElemType>> m_weightUpdate;
+    MatrixPtr m_weightUpdate;
     
     // store the gains and position discounts
-    shared_ptr<Matrix<ElemType>> m_urlGain0;
-    shared_ptr<Matrix<ElemType>> m_urlGain1;
-    shared_ptr<Matrix<ElemType>> m_urlDiscount0;
-    shared_ptr<Matrix<ElemType>> m_urlDiscount1;
+    MatrixPtr m_urlGain0;
+    MatrixPtr m_urlGain1;
+    MatrixPtr m_urlDiscount0;
+    MatrixPtr m_urlDiscount1;
 };
 
 template class LambdaRankNode<float>;
@@ -2185,12 +2185,12 @@ public:
     }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_classZeroLabels;
-    shared_ptr<Matrix<ElemType>> m_result;
-    shared_ptr<Matrix<ElemType>> m_temp;
+    MatrixPtr m_classZeroLabels;
+    MatrixPtr m_result;
+    MatrixPtr m_temp;
 
     // for weighted log-loss
-    shared_ptr<Matrix<ElemType>> m_sumOfWeights;
+    MatrixPtr m_sumOfWeights;
 };
 
 template class LogisticNode<float>;
@@ -2341,7 +2341,7 @@ public:
     }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_maskOfDropout;
+    MatrixPtr m_maskOfDropout;
 };
 
 // -----------------------------------------------------------------------
@@ -3039,13 +3039,13 @@ private:
     Matrix<ElemType> m_one;  // constant [1x1] matrix that contains a 1 (used for updating the shared count)
 
     // Interpolated actual mean/inverse stddev values. Pre-computed on forward pass, also used in gradient computation.
-    shared_ptr<Matrix<ElemType>> m_savedMean;
-    shared_ptr<Matrix<ElemType>> m_savedInvStdDev;
+    MatrixPtr m_savedMean;
+    MatrixPtr m_savedInvStdDev;
     // Temp buffer for scale and bias derivatives. Only used in BackpropTo(), carrying info from first call to subsequent calls.
     // Not used for blendFactor=1 in CNTK engine.
-    shared_ptr<Matrix<ElemType>> m_dDataDummy;
-    shared_ptr<Matrix<ElemType>> m_dScale;
-    shared_ptr<Matrix<ElemType>> m_dBias;
+    MatrixPtr m_dDataDummy;
+    MatrixPtr m_dScale;
+    MatrixPtr m_dBias;
 
     bool m_gradientValid = false;
 

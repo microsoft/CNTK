@@ -265,8 +265,8 @@ protected:
     ImageLayoutKind m_imageLayout;
 
     size_t m_maxTempMemSizeInSamples;
-    shared_ptr<Matrix<ElemType>> m_tempMatrixForward;
-    shared_ptr<Matrix<ElemType>> m_tempMatrixBackward;
+    MatrixPtr m_tempMatrixForward;
+    MatrixPtr m_tempMatrixBackward;
 
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
 };
@@ -877,7 +877,7 @@ protected:
     PoolKind m_poolKind;
     TensorShape m_roiOutputShape;
     double m_spatialScale;
-    shared_ptr<Matrix<ElemType>> m_tempMatrix;
+    MatrixPtr m_tempMatrix;
     Matrix<ElemType> m_argmaxData;
 };
 
