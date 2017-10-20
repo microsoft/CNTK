@@ -3713,6 +3713,11 @@ namespace CNTK
     CNTK_API FunctionPtr Cosh(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise asinh operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Asinh(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise sinh operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Sinh(const Variable& operand, const std::wstring& name = L"");

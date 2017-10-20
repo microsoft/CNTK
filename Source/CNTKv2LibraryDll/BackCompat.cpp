@@ -154,6 +154,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Sin;
                 else if (node->OperationName() == OperationNameOf(CoshNode))
                     opType = PrimitiveOpType::Cosh;
+                else if (node->OperationName() == OperationNameOf(AsinhNode))
+                    opType = PrimitiveOpType::Asinh;
                 else if (node->OperationName() == OperationNameOf(SinhNode))
                     opType = PrimitiveOpType::Sinh;
                 else if (node->OperationName() == OperationNameOf(PassNode))

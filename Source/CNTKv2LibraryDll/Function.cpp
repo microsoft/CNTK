@@ -1126,6 +1126,11 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Cosh, operand, Dictionary(), name);
     }
 
+    FunctionPtr Asinh(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Asinh, operand, Dictionary(), name);
+    }
+
     FunctionPtr Sinh(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Sinh, operand, Dictionary(), name);
