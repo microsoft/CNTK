@@ -698,15 +698,15 @@ namespace CNTK
         template <typename ElementType>
         static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr>
         GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape,
-                                                    const std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>& outputMatrixStorage,
-                                                    const std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>& tempIndicesStorage);
+                                                    const typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr& outputMatrixStorage,
+                                                    const typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr& tempIndicesStorage);
 
         template <typename ElementType>
         static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr>
         GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape = nullptr)
         {
-            auto nullSharedPtr = std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>(nullptr);
-            return GetCNTKImplMatrixAndMBLayoutFromValueObject(var, value, inferredVarShape, nullSharedPtr, nullSharedPtr);
+            auto nullSharedPtr = typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr(nullptr);
+            return GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(var, value, inferredVarShape, nullSharedPtr, nullSharedPtr);
         }
 
         template <typename ElementType>

@@ -330,7 +330,7 @@ namespace CNTK
     // This function is no longer used (inlined into GetMatrix()).
     // TODO: This processes the TensorShape twice. We should just inline GetMatrixImpl().
     template <typename ElementType>
-    /*static*/ std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(const TensorView<ElementType>& paddedTensorView, size_t rowColSplitPoint)
+    /*static*/ Matrix<ElementType>::MatrixPtr NDArrayView::GetMatrixImpl(const TensorView<ElementType>& paddedTensorView, size_t rowColSplitPoint)
     {
         // only contiguous tensors can be processed by the Matrix lib
         paddedTensorView.GetShape().VerifyIsDense();
@@ -411,7 +411,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    std::shared_ptr<Matrix<ElementType>> NDArrayView::GetWritableMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/)
+    typename Matrix<ElementType>::MatrixPtr NDArrayView::GetWritableMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/)
     {
         let* thisc = const_cast<NDArrayView*>(this);
         let resc = thisc->GetMatrix<ElementType>(rowColSplitPoint);
@@ -1477,8 +1477,8 @@ namespace CNTK
     template std::shared_ptr<const Matrix<float>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
     template std::shared_ptr<const Matrix<double>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
 
-    template std::shared_ptr<Matrix<float>> NDArrayView::GetWritableMatrix<float>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
-    template std::shared_ptr<Matrix<double>> NDArrayView::GetWritableMatrix<double>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
+    template Matrix<float>::MatrixPtr NDArrayView::GetWritableMatrix<float>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
+    template Matrix<double>::MatrixPtr NDArrayView::GetWritableMatrix<double>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
     //template std::shared_ptr<TensorView<float>> NDArrayView::GetWritableTensorViewMin2D<float>();
     //template std::shared_ptr<TensorView<double>> NDArrayView::GetWritableTensorViewMin2D<double>();
 

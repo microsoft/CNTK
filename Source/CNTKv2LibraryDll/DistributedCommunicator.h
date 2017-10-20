@@ -117,7 +117,7 @@ namespace CNTK
         }
 
         template <typename ElementType>
-        std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(const NDArrayViewPtr& arrayView)
+        typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr GetWritableMatrix(const NDArrayViewPtr& arrayView)
         {
             return arrayView->GetWritableMatrix<ElementType>();
         }

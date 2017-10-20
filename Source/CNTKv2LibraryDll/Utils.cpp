@@ -735,8 +735,8 @@ namespace CNTK
 
     template <typename ElementType>
     std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape,
-                                                                                                                          const std::shared_ptr<Matrix<ElementType>>& outputMatrixStorage,
-                                                                                                                          const std::shared_ptr<Matrix<ElementType>>& tempIndicesStorage)
+                                                                                                                          const typename Matrix<ElementType>::MatrixPtr& outputMatrixStorage,
+                                                                                                                          const typename Matrix<ElementType>::MatrixPtr& tempIndicesStorage)
     {
         VerifyVariableValueCompatibility(var, value, inferredVarShape);
 
@@ -848,7 +848,7 @@ namespace CNTK
             // The data needs to be rearranged since CNTK requires sequences to be interleaved across timesteps
             // Now generate the gather indices
             auto numColsPerSample = varShape.SubShape(VariableRowColSplitPoint(var)).TotalSize();
-            std::shared_ptr<Matrix<ElementType>> matrixData = outputMatrixStorage;
+            Matrix<ElementType>::MatrixPtr matrixData = outputMatrixStorage;
             auto matrixDataNumRows = varShape.TotalSize() / numColsPerSample;
             auto matrixDataNumCols = layout->GetNumCols() * numColsPerSample;
             auto matrixType = value->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE;

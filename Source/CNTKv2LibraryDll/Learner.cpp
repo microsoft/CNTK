@@ -64,7 +64,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ shared_ptr<Matrix<ElementType>> LearnerBase::GetWritableMatrix(const NDArrayViewPtr& arrayView)
+    /*static*/ typename Matrix<ElementType>::MatrixPtr LearnerBase::GetWritableMatrix(const NDArrayViewPtr& arrayView)
     {
         return arrayView->GetWritableMatrix<ElementType>();
     }
@@ -887,8 +887,8 @@ namespace CNTK
     }
 
     // Explicit template instantiations
-    template shared_ptr<Matrix<float>> LearnerBase::GetWritableMatrix<float>(const NDArrayViewPtr& arrayView);
-    template shared_ptr<Matrix<double>> LearnerBase::GetWritableMatrix<double>(const NDArrayViewPtr& arrayView);
+    template typename Matrix<float>::MatrixPtr LearnerBase::GetWritableMatrix<float>(const NDArrayViewPtr& arrayView);
+    template typename Matrix<double>::MatrixPtr LearnerBase::GetWritableMatrix<double>(const NDArrayViewPtr& arrayView);
 
     LearnerPtr SGDLearner(const vector<Parameter>& parameters,
                           const LearningRateSchedule& learningRateSchedule,

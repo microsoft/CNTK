@@ -1033,13 +1033,13 @@ namespace CNTK
         CNTK_API NDArrayViewPtr Reviewed(const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool readOnly) const;
 
         //template <typename ElementType>
-        //static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>& tensorView, size_t rowColSplitPoint);
+        //static typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>& tensorView, size_t rowColSplitPoint);
 
         template <typename ElementType>
         std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint) const;
 
         template <typename ElementType>
-        std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);
+        typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr GetWritableMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);
 
         template<typename ElementType>
         friend class TensorViewPtrArrayRef;

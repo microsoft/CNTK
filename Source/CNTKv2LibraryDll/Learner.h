@@ -89,7 +89,7 @@ namespace CNTK
         static std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(const NDArrayViewPtr& arrayView);
 
         template <typename ElementType>
-        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(const NDArrayViewPtr& arrayView);
+        static typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr GetWritableMatrix(const NDArrayViewPtr& arrayView);
 
         template <typename ElementType>
         static const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView(const NDArrayViewPtr& arrayView);
