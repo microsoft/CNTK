@@ -1036,7 +1036,7 @@ namespace CNTK
         //static typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>& tensorView, size_t rowColSplitPoint);
 
         template <typename ElementType>
-        std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint) const;
+        typename Microsoft::MSR::CNTK::Matrix<ElementType>::ConstMatrixPtr GetMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint) const;
 
         template <typename ElementType>
         typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr GetWritableMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);

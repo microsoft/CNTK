@@ -109,6 +109,7 @@ private:
 
 public:
     typedef std::shared_ptr<Matrix<ElemType>> MatrixPtr;
+    typedef std::shared_ptr<const Matrix<ElemType>> ConstMatrixPtr;
     // Constructors, destructors and other static matrix builders
     // Each constructor can take deviceId as parameter.
     // If deviceId<0 then the matrix will be based in RAM (CPUMatrix)

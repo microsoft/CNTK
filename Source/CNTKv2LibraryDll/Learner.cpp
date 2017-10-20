@@ -58,7 +58,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ shared_ptr<const Matrix<ElementType>> LearnerBase::GetMatrix(const NDArrayViewPtr& arrayView)
+    /*static*/ typename Matrix<ElementType>::ConstMatrixPtr LearnerBase::GetMatrix(const NDArrayViewPtr& arrayView)
     {
         return arrayView->GetMatrix<ElementType>();
     }

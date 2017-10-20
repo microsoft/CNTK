@@ -86,7 +86,7 @@ namespace CNTK
         // The following four static protected methods expose private methods of NDArrayView class
         // (which declares LearnerBase as friend class), so that they are available to subclasses.
         template <typename ElementType>
-        static std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(const NDArrayViewPtr& arrayView);
+        static typename Microsoft::MSR::CNTK::Matrix<ElementType>::ConstMatrixPtr GetMatrix(const NDArrayViewPtr& arrayView);
 
         template <typename ElementType>
         static typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr GetWritableMatrix(const NDArrayViewPtr& arrayView);

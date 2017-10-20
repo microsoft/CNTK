@@ -111,7 +111,7 @@ namespace CNTK
         }
 
         template <typename ElementType>
-        std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(const NDArrayViewPtr& arrayView)
+        typename Microsoft::MSR::CNTK::Matrix<ElementType>::ConstMatrixPtr GetMatrix(const NDArrayViewPtr& arrayView)
         {
             return arrayView->GetMatrix<ElementType>();
         }

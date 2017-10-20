@@ -696,13 +696,13 @@ namespace CNTK
         static void VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape = nullptr);
 
         template <typename ElementType>
-        static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr>
+        static std::pair<typename Microsoft::MSR::CNTK::Matrix<ElementType>::ConstMatrixPtr, Microsoft::MSR::CNTK::MBLayoutPtr>
         GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape,
                                                     const typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr& outputMatrixStorage,
                                                     const typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr& tempIndicesStorage);
 
         template <typename ElementType>
-        static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr>
+        static std::pair<typename Microsoft::MSR::CNTK::Matrix<ElementType>::ConstMatrixPtr, Microsoft::MSR::CNTK::MBLayoutPtr>
         GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape = nullptr)
         {
             auto nullSharedPtr = typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr(nullptr);

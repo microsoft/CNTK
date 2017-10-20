@@ -19,14 +19,14 @@ namespace CNTK
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
     public:
+#if 0   // I run into problems with template resolution, it does not match the packedDataMatrix argument, in VS 2015.
         template <typename ElementType>
         PackedValue(const NDShape& sampleShape, const std::vector<Axis>& sampleDynamicAxes, const typename Microsoft::MSR::CNTK::Matrix<ElementType>::MatrixPtr& packedDataMatrix, const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout>& packedDataLayout, bool isReadOnly)
             : Value(nullptr), m_isPacked(true), m_sampleShape(sampleShape), m_sampleDynamicAxes(sampleDynamicAxes), m_packedData(nullptr), m_packedDataLayout(packedDataLayout), m_isReadOnly(isReadOnly)
         {
             NDShape packedMatrixShape({ packedDataMatrix->GetNumRows(), packedDataMatrix->GetNumCols() });
 #if 1
-            m_packedData = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), packedMatrixShape, m_isReadOnly,
-                                                         packedDataMatrix);
+            m_packedData = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), packedMatrixShape, m_isReadOnly, packedDataMatrix);
 #else
             auto tensorView = new Microsoft::MSR::CNTK::TensorView<ElementType>(packedDataMatrix, AsTensorShapeMin2D(packedMatrixShape));
             m_packedData = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(packedDataMatrix->GetDeviceId()), AsStorageFormat(packedDataMatrix->GetFormat()), packedMatrixShape, m_isReadOnly, tensorView);
@@ -35,6 +35,22 @@ namespace CNTK
             // Determine unpacked shape
             m_unpackedShape = GetUnpackedShape(sampleShape, sampleDynamicAxes, packedDataLayout);
         }
+#else   // temporary solution: manually unrolling it
+        PackedValue(const NDShape& sampleShape, const std::vector<Axis>& sampleDynamicAxes, const typename Microsoft::MSR::CNTK::Matrix<float>::MatrixPtr& packedDataMatrix, const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout>& packedDataLayout, bool isReadOnly)
+            : Value(nullptr), m_isPacked(true), m_sampleShape(sampleShape), m_sampleDynamicAxes(sampleDynamicAxes), m_packedData(nullptr), m_packedDataLayout(packedDataLayout), m_isReadOnly(isReadOnly)
+        {
+            NDShape packedMatrixShape({ packedDataMatrix->GetNumRows(), packedDataMatrix->GetNumCols() });
+            m_packedData = MakeSharedObject<NDArrayView>(AsDataType<float>(), packedMatrixShape, m_isReadOnly, packedDataMatrix);
+            m_unpackedShape = GetUnpackedShape(sampleShape, sampleDynamicAxes, packedDataLayout);
+        }
+        PackedValue(const NDShape& sampleShape, const std::vector<Axis>& sampleDynamicAxes, const typename Microsoft::MSR::CNTK::Matrix<double>::MatrixPtr& packedDataMatrix, const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout>& packedDataLayout, bool isReadOnly)
+            : Value(nullptr), m_isPacked(true), m_sampleShape(sampleShape), m_sampleDynamicAxes(sampleDynamicAxes), m_packedData(nullptr), m_packedDataLayout(packedDataLayout), m_isReadOnly(isReadOnly)
+        {
+            NDShape packedMatrixShape({ packedDataMatrix->GetNumRows(), packedDataMatrix->GetNumCols() });
+            m_packedData = MakeSharedObject<NDArrayView>(AsDataType<double>(), packedMatrixShape, m_isReadOnly, packedDataMatrix);
+            m_unpackedShape = GetUnpackedShape(sampleShape, sampleDynamicAxes, packedDataLayout);
+        }
+#endif
 
         bool IsPacked() const { return m_isPacked; }
 
@@ -119,7 +135,7 @@ namespace CNTK
         }
 
         template <typename ElementType>
-        std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, std::shared_ptr<Microsoft::MSR::CNTK::MBLayout>> PackedData()
+        std::pair<typename Microsoft::MSR::CNTK::Matrix<ElementType>::ConstMatrixPtr, std::shared_ptr<Microsoft::MSR::CNTK::MBLayout>> PackedData()
         {
             if (!m_isPacked)
                 InvalidArgument("PackedValue::PackedData called on a Value object that has already been unpacked.");

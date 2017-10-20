@@ -54,7 +54,7 @@ public:
 #else
         auto& outputValuePtrRef = this->template ValuePtrRef();
 #endif
-        auto packedMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(dummyVar, inputDataValue, nullptr, outputValuePtrRef, m_tempGatherIndices);
+        auto packedMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElemType>(dummyVar, inputDataValue, nullptr, outputValuePtrRef, m_tempGatherIndices);
 
         let& outMBLayout = GetMBLayout();
         outMBLayout->CopyFrom(packedMatrixAndLayout.second, /*keepName=*/true);
@@ -390,7 +390,7 @@ public:
 
         auto gradientDataValue = ::CNTK::MakeSharedObject<::CNTK::Value>(gradientDataNDArrayView, ::CNTK::CreateMask(sequenceLengths));
         auto dummyVar = ::CNTK::InputVariable(::CNTK::AsNDShape(InputRef(0).GetSampleLayout()), gradientDataNDArrayView->IsSparse(), ::CNTK::AsDataType<ElemType>());
-        auto packedGradientMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(dummyVar, gradientDataValue, nullptr, m_tempPackedGradientData, m_tempGatherIndices);
+        auto packedGradientMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElemType>(dummyVar, gradientDataValue, nullptr, m_tempPackedGradientData, m_tempGatherIndices);
 
         if (*packedGradientMatrixAndLayout.second != *inMBLayout)
             LogicError("%ls: %s node unpacked gradient MBLayout does not match input MBLayout.", Base::NodeDescription().c_str(), typeid(*this).name());

@@ -376,7 +376,7 @@ namespace CNTK
 #endif
 
     template <typename ElementType>
-    std::shared_ptr<const Matrix<ElementType>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const
+    typename Matrix<ElementType>::ConstMatrixPtr NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const
     {
         if (AsDataType<ElementType>() != m_dataType)
             LogicError("NDArrayView::GetMatrix: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
@@ -1227,7 +1227,7 @@ namespace CNTK
         if(GetStorageFormat() != StorageFormat::SparseCSC)
             RuntimeError("The SparseCSCDataBuffers() method only supports CSC sparse format.");
 
-        std::shared_ptr<const Matrix<ElementType>> matrix = GetMatrix<ElementType>();
+        typename Matrix<ElementType>::ConstMatrixPtr matrix = GetMatrix<ElementType>();
         auto matrixDims = GetMatrixDimensions(Shape());
         if (matrix->GetNumRows() != matrixDims.first)
             LogicError("The number of rows of the underlying matrix does not match the shape.");
@@ -1282,7 +1282,7 @@ namespace CNTK
         if (GetStorageFormat() != StorageFormat::SparseBlockCol)
             RuntimeError("The SparseBlockColumnDataBuffers() method only supports sparse block column format.");
 
-        std::shared_ptr<const Matrix<ElementType>> matrix = GetMatrix<ElementType>();
+        typename Matrix<ElementType>::ConstMatrixPtr matrix = GetMatrix<ElementType>();
 
         size_t numBlocks;
         size_t numRows;
@@ -1474,8 +1474,8 @@ namespace CNTK
     template CNTK_API float* NDArrayView::WritableDataBuffer<float>();
     template CNTK_API double* NDArrayView::WritableDataBuffer<double>();
 
-    template std::shared_ptr<const Matrix<float>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
-    template std::shared_ptr<const Matrix<double>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
+    template Matrix<float>::ConstMatrixPtr NDArrayView::GetMatrix<float>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
+    template Matrix<double>::ConstMatrixPtr NDArrayView::GetMatrix<double>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
 
     template Matrix<float>::MatrixPtr NDArrayView::GetWritableMatrix<float>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
     template Matrix<double>::MatrixPtr NDArrayView::GetWritableMatrix<double>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
