@@ -392,6 +392,12 @@ public:
     }
 };
 
+//template<>
+//template<>
+///*static*/ typename FixedSizePool<sizeof FixedSizePoolItem<C>>::Storage strong_shared_ptr<C>::s_storage;
+    
+//FixedSizePool<sizeof(FixedSizePoolItem<C>)>::Storage g_storage;
+
 int main(int argc, char *argv[])
 {
     {

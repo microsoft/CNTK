@@ -459,7 +459,7 @@ template<size_t itemByteSize>
 class FixedSizePool
 {
     static void Assert(bool cond) { if (!cond) LogicError("FixedSizePool: An assertion failed."); }
-
+public:
     // class to store objects of size itemByteSize in lists of char arrays
     //template<size_t itemByteSize>
     class Storage
@@ -588,8 +588,6 @@ class FixedSizePool
     template<class T>
     friend class strong_shared_ptr;
 public:
-    // say FixedSizePool::get() to get access to a globally shared instance for all pools of the same itemByteSize
-    static Storage/*<itemByteSize>*/& get() { static Storage/*<itemByteSize>*/ storage; return storage; }
 };
 
 // a C++ allocator that allocates objects of type <T> in FixedSizePool Storage objects shared across all types of the same size
@@ -614,17 +612,22 @@ public: // required boilerplate --is there no base to derive from to provide thi
     inline void destroy(pointer p) { p->~T(); }
     inline bool operator==(FixedSizePoolAllocatorT const&) { return true; }
     inline bool operator!=(FixedSizePoolAllocatorT const& a) { return !operator==(a); }
+private:
+    // say FixedSizePool::get() to get access to a globally shared instance for all pools of the same itemByteSize
+    static auto& GetStorage() { static FixedSizePool<sizeof(FixedSizePoolItem<T>)>::Storage/*<itemByteSize>*/ s_storage; return s_storage; }
 public:
     inline pointer allocate(size_type cnt = 1, typename std::allocator<void>::const_pointer = 0)
     {
         if (cnt != 1)
             InvalidArgument("FixedSizePoolAllocatorT: This allocator only supports allocation of single items.");
-        auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
+        //auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
+        auto& storage = GetStorage();
         return reinterpret_cast<pointer>(storage.template Allocate<T>());
     }
     inline void deallocate(pointer p, size_type = 1)
     {
-        auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
+        //auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
+        auto& storage = GetStorage();
         storage.template Deallocate<T>(p);
     }
 public:
@@ -743,10 +746,17 @@ class strong_shared_ptr final
             other->AddRef();
         return other;
     }
+    template<size_t N>
+    static typename FixedSizePool<N>::Storage& GetTheStorage()
+    {
+        static FixedSizePool<N>::Storage s_storage;
+        return s_storage;
+    }
     static auto& GetStorage()
     {
-        static FixedSizePool<sizeof(FixedSizePoolItem<T>)>::Storage storage;
-        return storage;
+        return GetTheStorage<sizeof FixedSizePoolItem<T>>();
+        //extern FixedSizePool<sizeof(FixedSizePoolItem<T>)>::Storage g_storage;
+        //return g_storage;
     }
     void Release()
     {

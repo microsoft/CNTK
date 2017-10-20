@@ -527,6 +527,7 @@ namespace CNTK
     Variable::Variable(Variable&&) = default;
     Variable& Variable::operator=(const Variable&) = default;
     Variable& Variable::operator=(Variable&&) = default;
+    //FixedSizePool<sizeof(FixedSizePoolItem<Variable>)>::Storage g_storage;
 
     template <typename ElementType>
     /*static*/ NDArrayViewPtr Variable::CreateValueFromParameterInitializer(const NDShape& shape, const ParameterInitializer& initConfig, const DeviceDescriptor& device)
