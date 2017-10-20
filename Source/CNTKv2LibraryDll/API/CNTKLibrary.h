@@ -28,11 +28,10 @@
 #define final
 #define explicit
 #define static_assert(condition, message)
-#else
-#include "HalfConverter.hpp"
 #endif
 
 #include "CNTKLibraryInternals.h"
+#include "HalfConverter.hpp"
 
 // undef max in the rest of the file to avoid conflicts with the max macro defined in windows.h.
 #pragma push_macro("max")
