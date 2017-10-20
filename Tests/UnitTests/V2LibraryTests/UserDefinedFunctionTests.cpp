@@ -121,7 +121,7 @@ private:
 
         for (auto tempFuncOutput : tempFuncOutputs)
             outputs.push_back(OutputVariable(tempFuncOutput.Shape(), tempFuncOutput.GetDataType(), tempFuncOutput.DynamicAxes()));
-        return  outputs;
+        return OutputsVectorType(outputs);
     }
 
 public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.

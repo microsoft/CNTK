@@ -136,7 +136,7 @@ private:
         auto numOutRows = !pad ? (h - size)/stride + 1 : (h - 1)/stride + 1;
         // return the appropriate output shape 
         outputs.push_back(OutputVariable(NDShape({ numOutRows, numOutCols, num_filters }), leftOperand.GetDataType(), rightOperand.DynamicAxes()));
-        return outputs;
+        return OutputsVectorType(outputs);
     }
 
     FunctionPtr Clone(const std::vector<Variable>& clonedInputs) override

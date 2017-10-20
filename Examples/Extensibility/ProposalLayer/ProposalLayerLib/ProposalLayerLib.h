@@ -235,7 +235,7 @@ private:
         auto dtype = firstOperand.GetDataType();
         auto dynamicAxes = firstOperand.DynamicAxes();
         outputs.push_back(OutputVariable(proposalShape, dtype, dynamicAxes , false, L"rpn_rois_raw"));
-        return outputs;
+        return OutputsVectorType(outputs);
     }
 
     FunctionPtr Clone(const std::vector<Variable>& clonedInputs) override
