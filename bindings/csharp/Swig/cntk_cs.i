@@ -70,12 +70,12 @@
 
     NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false)
     {
-        return new CNTK::NDArrayView(viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
+        return new CNTK::NDArrayView(CNTK::DataType::Float, viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
     }
 
     NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false)
     {
-        return new CNTK::NDArrayView(viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
+        return new CNTK::NDArrayView(CNTK::DataType::Double, viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
     }
 
     static NDArrayViewPtr CNTK::NDArrayView::RandomNormalFloat(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device)

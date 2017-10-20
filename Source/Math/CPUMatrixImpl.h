@@ -1008,22 +1008,22 @@ void CPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemTy
 
     std::mt19937_64 generator;
     generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
-    boost::random::uniform_real_distribution<ElemType> r(low, high);
+    boost::random::uniform_real_distribution<double> r((double)low, (double)high);
 
     ElemType* bufPtr = Data();
     long m = (long) GetNumElements();
     // four-way unrolling
     for (long i = 0; i < (m & ~3); i += 4)
     {
-        bufPtr[i] = r(generator);
-        bufPtr[i + 1] = r(generator);
-        bufPtr[i + 2] = r(generator);
-        bufPtr[i + 3] = r(generator);
+        bufPtr[i]     = (ElemType)r(generator);
+        bufPtr[i + 1] = (ElemType)r(generator);
+        bufPtr[i + 2] = (ElemType)r(generator);
+        bufPtr[i + 3] = (ElemType)r(generator);
     }
     // handle remaining stuffs
     for (long i = m & ~3; i < m; i++)
     {
-        bufPtr[i] = r(generator);
+        bufPtr[i] = (ElemType)r(generator);
     }
 }
 
@@ -1038,8 +1038,8 @@ void CPUMatrix<ElemType>::SetUniformRandomValue(RNGHandle& rngHandle, const Elem
     if (cpuRNGHandle == nullptr)
         LogicError("rngHandle must be a CPURNGHandle.");
 
-    boost::random::uniform_real_distribution<ElemType> r(low, high);
-    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r]() {return r(cpuRNGHandle->Generator()); });
+    boost::random::uniform_real_distribution<double> r((double)low, (double)high);
+    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r]() {return (ElemType)r(cpuRNGHandle->Generator()); });
 }
 
 template <class ElemType>
@@ -1052,9 +1052,9 @@ void CPUMatrix<ElemType>::SetGaussianRandomValue(RNGHandle& rngHandle, const Ele
     if (cpuRNGHandle == nullptr)
         LogicError("rngHandle must be a CPURNGHandle.");
 
-    boost::random::normal_distribution<ElemType> r(mean, stdev);
+    boost::random::normal_distribution<double> r((double)mean, (double)stdev);
     auto n = AsMultipleOf(GetNumElements(), 2);
-    std::generate(Data(), Data() + n, [&cpuRNGHandle, &r]() {return r(cpuRNGHandle->Generator()); });
+    std::generate(Data(), Data() + n, [&cpuRNGHandle, &r]() {return (ElemType)r(cpuRNGHandle->Generator()); });
 }
 
 template <class ElemType>
@@ -1067,8 +1067,8 @@ void CPUMatrix<ElemType>::SetGumbelRandomValue(RNGHandle& rngHandle, const ElemT
     if (cpuRNGHandle == nullptr)
         LogicError("rngHandle must be a CPURNGHandle.");
 
-    boost::random::uniform_real_distribution<ElemType> r(0, 1);
-    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r, loc, scale]() {return loc - scale * log(-log1p(-r(cpuRNGHandle->Generator()))); });
+    boost::random::uniform_real_distribution<double> r(0, 1);
+    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r, loc, scale]() {return (ElemType)(loc - scale * log(-log1p(-r(cpuRNGHandle->Generator())))); });
 }
 
 
@@ -1084,12 +1084,12 @@ void CPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
     auto& us = *this;
 
     std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
-    boost::random::normal_distribution<ElemType> r(mean, sigma);
+    boost::random::normal_distribution<double> r((double)mean, (double)sigma);
 
     // #pragma omp parallel for is not thread safe. Also the results would not be deterministic
     foreach_coord (i, j, us)
     {
-        us(i, j) = r(generator);
+        us(i, j) = (ElemType)r(generator);
     }
 }
 
@@ -1105,7 +1105,7 @@ void CPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, con
     auto& us = *this;
 
     std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
-    boost::random::normal_distribution<ElemType> r(mean, sigma);
+    boost::random::normal_distribution<double> r((double)mean, (double)sigma);
 
     const ElemType high = mean + 2 * sigma;
     const ElemType low = mean - 2 * sigma;
@@ -1114,7 +1114,7 @@ void CPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, con
     {
         ElemType tmp = 0;
         do
-            tmp = r(generator);
+            tmp = (ElemType)r(generator);
         while (tmp < low || tmp > high ); // Rejection sampling is fine here because the acceptance probability is about 0.9545
         us(i, j) = tmp;
     }
@@ -1133,7 +1133,7 @@ void CPUMatrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const Elem
 
     std::mt19937_64 generator;
     generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
-    boost::random::normal_distribution<ElemType> r(mean, sigma);
+    boost::random::normal_distribution<double> r((double)mean, (double)sigma);
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
     for (long j = 0; j < n; j++)
@@ -1141,10 +1141,10 @@ void CPUMatrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const Elem
         // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
         {
-            us(i, j) = r(generator);
-            us(i + 1, j) = r(generator);
-            us(i + 2, j) = r(generator);
-            us(i + 3, j) = r(generator);
+            us(i, j)     = (ElemType)r(generator);
+            us(i + 1, j) = (ElemType)r(generator);
+            us(i + 2, j) = (ElemType)r(generator);
+            us(i + 3, j) = (ElemType)r(generator);
         }
         // handle remaining stuffs
         for (long i = m & ~3; i < m; i++)
@@ -1167,7 +1167,7 @@ void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
         LogicError("rngHandle must be a CPURNGHandle.");
 
     auto& us = *this;
-    boost::random::uniform_real_distribution<ElemType> r(0, 1);
+    boost::random::uniform_real_distribution<double> r(0, 1);
     long m = (long) GetNumRows(), n = (long) GetNumCols();
     ElemType v;
     for (long j = 0; j < n; j++)
@@ -1175,7 +1175,7 @@ void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
         // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
         {
-            v = r(cpuRNGHandle->Generator());
+            v = (ElemType)r(cpuRNGHandle->Generator());
             us(i, j) = v <= maskRate ? (ElemType)0 : scaleValue;
             v = r(cpuRNGHandle->Generator());
             us(i + 1, j) = v <= maskRate ? (ElemType)0 : scaleValue;
@@ -1187,7 +1187,7 @@ void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
         // handle remaining stuffs
         for (long i = m & ~3; i < m; i++)
         {
-            v = r(cpuRNGHandle->Generator());
+            v = (ElemType)r(cpuRNGHandle->Generator());
             us(i, j) = v <= maskRate ? (ElemType)0 : scaleValue;
         }
     }

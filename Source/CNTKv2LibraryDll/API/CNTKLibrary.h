@@ -739,6 +739,9 @@ namespace CNTK
             case DataType::Double:
                 SetValue(value);
                 break;
+            case DataType::Float16:
+                SetValue((float16)value);
+                break;
             default:
                 LogicError("Unsupported DataType %s.", DataTypeName(m_dataType));
                 break;

@@ -7,31 +7,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// specialization to RunTimeError for now due to boost implementation only support build-in type
-template <>
-void CPUMatrix<half>::SetGaussianRandomValue(RNGHandle& rngHandle, const half mean, const half stdev)
-{
-    RuntimeError("half SetGaussianRandomValue not supported.");
-}
-
-template <>
-void CPUMatrix<half>::SetGaussianRandomValue(const half mean, const half sigma, unsigned long seed)
-{
-    RuntimeError("half SetGaussianRandomValue not supported.");
-}
-
-template <>
-void CPUMatrix<half>::SetTruncatedNormalRandomValue(const half mean, const half sigma, unsigned long seed)
-{
-    RuntimeError("half SetTruncatedNormalRandomValue not supported.");
-}
-
-template <>
-void CPUMatrix<half>::AddGaussianRandomValue(const half mean, const half sigma, unsigned long seed)
-{
-    RuntimeError("half AddGaussianRandomValue not supported.");
-}
-
 // specialization to RunTimeError for now due to omp implementation only support build-in type
 template <>
 void CPUMatrix<half>::AssignSoftmaxSum(const CPUMatrix<half>& softmax, CPUMatrix<half>& c)
