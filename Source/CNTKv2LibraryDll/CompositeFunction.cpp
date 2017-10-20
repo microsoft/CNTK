@@ -1682,6 +1682,9 @@ namespace CNTK
             case DataType::Double:
                 PopulateComputationNodeValue<double>({ argument, argumentValue }, argumentComputationNode, layoutsPopulated);
                 break;
+            case DataType::Float16:
+                PopulateComputationNodeValue<half>({ argument, argumentValue }, argumentComputationNode, layoutsPopulated);
+                break;
             default:
                 LogicError("Function '%S' Forward: Unsupported DataType %s.", AsString().c_str(), DataTypeName(argumentValue->GetDataType()));
                 break;

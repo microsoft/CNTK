@@ -672,6 +672,9 @@ namespace CNTK
             case DataType::Double:
                 valueObject = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(m_sampleShape, m_sampleDynamicAxes, *(m_packedData->GetMatrix<double>()), m_packedDataLayout, m_isReadOnly);
                 break;
+            case DataType::Float16:
+                valueObject = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(m_sampleShape, m_sampleDynamicAxes, *(m_packedData->GetMatrix<half>()), m_packedDataLayout, m_isReadOnly);
+                break;
             default:
                 LogicError("Unsupported DataType %s", DataTypeName(dataType));
             }

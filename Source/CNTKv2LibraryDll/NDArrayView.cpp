@@ -24,17 +24,6 @@ static constexpr CNTK::float16 numeric_limits<CNTK::float16>::quiet_NaN() _NOEXC
 
 }
 
-namespace CNTK
-{
-
-template<>
-inline DataType AsDataType<half>()
-{
-    return DataType::Float16;
-}
-
-}
-
 using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK

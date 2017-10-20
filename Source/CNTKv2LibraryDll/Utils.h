@@ -726,4 +726,11 @@ namespace CNTK
     };
 
     std::wstring DynamicAxesAsString(const std::vector<Axis>& da, bool rowMajor = false);
+
+    // half is V1 ElemType, so specialize here instead of in CNTKLibrary.h
+    template<>
+    inline DataType AsDataType<half>()
+    {
+        return DataType::Float16;
+    }
 }
