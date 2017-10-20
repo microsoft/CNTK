@@ -534,7 +534,7 @@ public:
                         lambdaIJ = (gainI - UrlJ.m_gain) * (discountI - discountJ) / (discountI * discountJ);
 
                         // |delta NDCG|
-                        lambdaIJ = (idealMetric == (ElemType)0.0 ? (ElemType) 0.0 : abs(lambdaIJ / idealMetric));
+                        lambdaIJ = (idealMetric == (ElemType)0.0 ? (ElemType) 0.0 : (ElemType)abs(lambdaIJ / idealMetric));
 
                         // Combine lambda
                         lambdaIJ = lambdas(0, pairsCount++) * lambdaIJ;
