@@ -1259,18 +1259,6 @@ namespace CNTK
         explicit Axis(int staticAxisIdx)
             : m_staticAxisIdx(staticAxisIdx), m_isOrderedDynamicAxis(false)
         {
-            if (IsStaticAxis())
-                m_name = StaticAxisNamePrefix + std::to_wstring(staticAxisIdx);
-            else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForAllStaticAxes)
-                m_name = L"AllStaticAxes";
-            else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForUnknownAxes)
-                m_name = L"UnknownAxes";
-            else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForAllAxes)
-                m_name = L"AllAxes";
-            else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForDynamicAxes)
-                m_name = StaticAxisNamePrefix + L"DynamicAxisSentinel";
-            else
-                LogicError("Unknown sentinel value for Axis");
         }
 
         ///
@@ -1382,7 +1370,25 @@ namespace CNTK
         ///
         /// Name of 'this' axis
         ///
-        const std::wstring& Name() const { return m_name.get(); }
+        const std::wstring& Name() const
+        {
+            if (m_name.empty())
+            {
+                if (IsStaticAxis())
+                    m_name = StaticAxisNamePrefix + std::to_wstring(m_staticAxisIdx);
+                else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForAllStaticAxes)
+                    m_name = L"AllStaticAxes";
+                else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForUnknownAxes)
+                    m_name = L"UnknownAxes";
+                else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForAllAxes)
+                    m_name = L"AllAxes";
+                else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForDynamicAxes)
+                    m_name = StaticAxisNamePrefix + L"DynamicAxisSentinel";
+                else
+                    LogicError("Unknown sentinel value for Axis");
+            }
+            return m_name.get();
+        }
 
         ///
         /// Returns a string representation for this Axis.
@@ -1401,7 +1407,7 @@ namespace CNTK
 
     private:
         int m_staticAxisIdx;
-        OptionalString m_name;
+        mutable OptionalString m_name; // (initialized lazily, since not needed most of the time) --TODO: Needed for some hash. Is that often?
         bool m_isOrderedDynamicAxis;
     };
 

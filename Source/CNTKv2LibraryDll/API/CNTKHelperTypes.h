@@ -443,27 +443,81 @@ public:
 };
 
 ///
-/// Class that stores a std::wstring, but most if the time is empty, so that it is cheaper to have one extra redirection.
+/// Simple shared_ptr that has no weak-ptr concept, and requires the controlled object to derive from enable_strong_shared_ptr.
+/// The hope is to cut through the overhead of shared_ptr and get trivial inlining of these operations.
+///
+class enable_strong_shared_ptr
+{
+    mutable size_t referenceCount = 0;
+    template<class T>
+    friend class strong_shared_ptr;
+    void AddRef() const noexcept { referenceCount++; }
+    size_t DecRef() const noexcept { referenceCount--; return referenceCount; }
+};
+template<class T>
+class strong_shared_ptr final
+{
+    T* m_ptr;
+    static T* AddRef(T* other)
+    {
+        if (other)
+            other->AddRef();
+        return other;
+    }
+    void Release()
+    {
+        if (m_ptr)
+            if (m_ptr->DecRef() == 0)
+                delete m_ptr;
+    }
+    void ReleaseAndReplace(T* other)
+    {
+        Release();
+        m_ptr = other;
+    }
+public:
+    typedef T element_type;
+    strong_shared_ptr()          noexcept : m_ptr(nullptr) { }
+    strong_shared_ptr(nullptr_t) noexcept : m_ptr(nullptr) { }
+    strong_shared_ptr(T* ptr)    noexcept : m_ptr(AddRef(ptr)) { }
+    strong_shared_ptr(const strong_shared_ptr& other) noexcept : m_ptr(AddRef(other.m_ptr)) { }
+    strong_shared_ptr(strong_shared_ptr&&      other) noexcept : m_ptr(other.m_ptr) { other.m_ptr = nullptr; }
+    ~strong_shared_ptr() noexcept { Release(); }
+    strong_shared_ptr& operator=(const strong_shared_ptr& other)     { ReleaseAndReplace(AddRef(other.m_ptr));                return *this; }
+    strong_shared_ptr& operator=(strong_shared_ptr&& other) noexcept { ReleaseAndReplace(other.m_ptr); other.m_ptr = nullptr; return *this; }
+    void reset() noexcept { ReleaseAndReplace(nullptr); }
+    typename std::add_lvalue_reference_t<T> operator*() const noexcept { return *m_ptr; }
+    T* operator->() const noexcept { return m_ptr; }
+    T* get()        const noexcept { return m_ptr; }
+    explicit operator bool() const noexcept { return m_ptr != nullptr; }
+    void swap(strong_shared_ptr& other) noexcept { ::swap(m_ptr, other.m_ptr); }
+};
+
+///
+/// Class that stores an immutable std::wstring. Assumes it is most of the time is empty, so that it is cheaper to have one extra redirection.
+/// Also uses a shared pointer, i.e. the string is not copied but shared if assigned.
 ///
 class OptionalString
 {
-    const std::wstring* m_string;
-    void Release() { if (m_string) delete m_string; }
-    void ReleaseAndReplace(const std::wstring* other) { Release(); m_string = other; }
+    struct SharedString : public enable_strong_shared_ptr, std::wstring
+    {
+        SharedString(const std::wstring& s) : std::wstring(s) { }
+        SharedString(std::wstring&& s) : std::wstring(move(s)) { }
+    };
+    strong_shared_ptr<SharedString const> m_string;
 public:
     OptionalString()                       : m_string(nullptr) { }
-    OptionalString(OptionalString&& other) : m_string(other.m_string) { other.m_string = nullptr; }
-    OptionalString(const OptionalString& other) : OptionalString(other.get()) { }
-    explicit OptionalString(      std::wstring&& s) : m_string(s.empty() ? nullptr : new std::wstring(std::move(s))) { }
-    explicit OptionalString(const std::wstring&  s) : m_string(s.empty() ? nullptr : new std::wstring(s)) { }
-    ~OptionalString() { Release(); }
-    OptionalString& operator=(const std::wstring& s) { auto newString = s.empty() ? nullptr : new std::wstring(s);            ReleaseAndReplace(newString); return *this; }
-    OptionalString& operator=(std::wstring&& s)      { auto newString = s.empty() ? nullptr : new std::wstring(std::move(s)); ReleaseAndReplace(newString); return *this; }
-    OptionalString& operator=(const OptionalString& other) { return operator=(other.get()); }
-    OptionalString& operator=(OptionalString&& other) { ReleaseAndReplace(other.m_string); other.m_string = nullptr; return *this; }
+    OptionalString(OptionalString&& other) : m_string(move(other.m_string)) { }
+    OptionalString(const OptionalString& other) : m_string(other.m_string) { }
+    explicit OptionalString(const std::wstring&  s) : m_string(s.empty() ? nullptr : new SharedString(s)) { }
+    explicit OptionalString(      std::wstring&& s) : m_string(s.empty() ? nullptr : new SharedString(std::move(s))) { }
+    OptionalString& operator=(const std::wstring& s) { m_string = s.empty() ? nullptr : new SharedString(s);            return *this; }
+    OptionalString& operator=(std::wstring&& s)      { m_string = s.empty() ? nullptr : new SharedString(std::move(s)); return *this; }
+    OptionalString& operator=(const OptionalString& other) { m_string = other.m_string;       return *this; }
+    OptionalString& operator=(OptionalString&& other)      { m_string = move(other.m_string); return *this; }
     operator const std::wstring&() const { return get(); }
     const std::wstring& get() const { static const std::wstring s_emptyString; return m_string ? *m_string : s_emptyString; }
-    bool empty() const { return m_string && !m_string->empty(); }
+    bool empty() const { return !m_string || m_string->empty(); }
     const wchar_t* c_str() const { return m_string ? m_string->c_str() : L""; }
 };
 
