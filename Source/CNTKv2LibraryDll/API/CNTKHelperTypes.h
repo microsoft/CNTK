@@ -447,10 +447,8 @@ public:
 ///
 /// MakeSharedObject() -- Custom shared-ptr allocator that uses fixed-size pools and custom deleter across the DLL boundary.
 ///
-#if 1
-// first define a C++ allocator class to use for this, so that we
-//  - get the benefit of a make_shared-like allocation with control block and actual object allocated together
-//  - can be sure the correct deleter is called (on the correct heap)
+/// Pool-based allocator for efficient memory management
+///
 
 // a pool for allocating objects of one specific size
 // BUGBUG: Does not work if T is marked 'final'. How does shared_ptr do it?
@@ -566,14 +564,15 @@ public:
         const auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(const_cast<std::remove_const_t<T>*>(p));
         auto* flagPtr = pItem->flagPtr;
         Block::Deallocate(flagPtr);
-        //Assert(pItem->blockIndex < blocks.size());
-        //blocks[pItem->blockIndex]->Deallocate(p);
-        //Assert(totalItemsAllocated > 0);
         totalItemsAllocated--;
     }
 };
 
-// a C++ allocator that allocates objects of type <T> in FixedSizePool FixedSizePoolStorage objects shared across all types of the same size
+///
+/// C++ allocator
+///  - get the benefit of a make_shared-like allocation with control block and actual object allocated together
+///  - can be sure the correct deleter is called (on the correct heap)
+///
 template<typename T>
 class FixedSizePoolAllocatorT
 {
@@ -631,77 +630,6 @@ public:
     }
 };
 typedef FixedSizePoolAllocatorT<char> FixedSizePoolAllocator; // turns out, the actual template argument does not matter here, it is never used this way
-
-// Similar to make_shared except that it associates a custom allocator with the shared_ptr to ensure
-// that objects are deleted on the same side of the library DLL where they are allocated
-template <typename T, typename ...CtorArgTypes /*WHERE_IS_NOT_BASE_OF(enable_strong_shared_ptr<typename T>, typename T)*/>
-inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs)
-{
-    FixedSizePoolAllocator objectAllocator;
-    return std::allocate_shared<T>(objectAllocator, std::forward<CtorArgTypes>(ctorArgs)...);
-}
-#else
-template<class T>
-class ObjectPool
-{
-    // actual allocated item is a char array large enough to hold Node and T
-    struct Node { Node* next; };
-    static Node* & s_first() { static Node* first = nullptr; return first; }
-public:
-    // destructor frees up all items in the linked list
-    ~ObjectPool()
-    {
-        auto& first = s_first();
-        while (first)
-        {
-            Node* next = first->next;
-            delete[] (char*)first;
-            first = next;
-        }
-    }
-    // allocate one
-    static T* CheckOut()
-    {
-        auto& first = s_first();
-        Node* p = first;
-        if (p)
-            first = p->next; // got one in the free list: check it out from there
-        else
-            p = (Node*)new char[std::max(sizeof T, sizeof Node)]; // else allocate a new one
-        return (T*)p;
-    }
-    // deallocate: return buffer to the free list
-    // User must already have called the destructor, so this is now uninitialized memory.
-    static void CheckIn(T* pt)
-    {
-        auto& first = s_first();
-        Node* p = (Node*)pt;
-        p->next = first;
-        first = p;
-    }
-    // the deleter function to pass to the shared_ptr
-    static void Delete(T* ptr)
-    {
-        ptr->~T();
-        CheckIn(ptr);
-    }
-};
-
-// Similar to make_shared except that it associates a custom deleter with the shared_ptr to ensure
-// that objects are deleted on the same side of the library DLL where they are allocated
-template <typename T, typename ...CtorArgTypes>
-inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs)
-{
-#if 1
-    auto objPtr = ObjectPool<T>::CheckOut();
-    new (objPtr) T(std::forward<CtorArgTypes>(ctorArgs)...);
-    return std::shared_ptr<T>(objPtr, ObjectPool<T>::Delete);
-#else
-    auto objPtr = new T(std::forward<CtorArgTypes>(ctorArgs)...);
-    return std::shared_ptr<T>(objPtr, [](T* ptr) { delete ptr; });
-#endif
-}
-#endif
 
 ///
 /// Simple intrusive strong shared_ptr (no weak-ptr support), aimed to combat STL's shared_ptr overhead/inlining problems.
@@ -781,12 +709,26 @@ public:
     }
 };
 
-// variant for classes that implement the simple shared_ptr variant
+///
+/// Creates a shared object using our own intrusive shared class.
+///
 // TODO: figure out the constraint thingy here, then rename the -1 away
 template <typename T, typename ...CtorArgTypes /*WHERE_IS_BASE_OF(enable_strong_shared_ptr<typename T>, typename T)*/>
 inline strong_shared_ptr<T> MakeSharedObject1(CtorArgTypes&& ...ctorArgs)
 {
     return strong_shared_ptr<T>::MakeSharedObject(std::forward<CtorArgTypes>(ctorArgs)...);
+}
+
+///
+/// Creates a shared object, using a shared_ptr with custom allocator (pool-based, working across DLL boundaru)
+/// Similar to make_shared except that it associates a custom allocator with the shared_ptr to ensure
+/// that objects are deleted on the same side of the library DLL where they are allocated
+///
+template <typename T, typename ...CtorArgTypes /*WHERE_IS_NOT_BASE_OF(enable_strong_shared_ptr<typename T>, typename T)*/>
+inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs)
+{
+    FixedSizePoolAllocator objectAllocator;
+    return std::allocate_shared<T>(objectAllocator, std::forward<CtorArgTypes>(ctorArgs)...);
 }
 
 ///
