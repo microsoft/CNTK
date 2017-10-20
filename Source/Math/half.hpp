@@ -304,7 +304,7 @@ inline half max(const half& lhs, const half& rhs)
     return half(max((float)lhs, (float)rhs));
 }
 
-inline half abs(half arg)
+inline half abs(const half& arg)
 {
     return half(abs((float)arg));
 }
