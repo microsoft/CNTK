@@ -342,6 +342,8 @@ public:
 #define WHERE_IS_TEMPORARY(Type) , typename = std::enable_if<!std::is_lvalue_reference<Type&&>::value>::type
 #define WHERE_IS_ITERATOR(Type)  , typename = std::enable_if<!std::is_same<typename std::iterator_traits<Type>::value_type, void>::value>::type
 #define WHERE_IS_ITERABLE(Type)  , typename = std::enable_if<!std::is_same<typename Type::const_iterator, void>::value>::type
+#define WHERE_IS_BASE_OF(B,D)    , typename = std::enable_if< std::is_convertible<typename D*,typename B*>::value>::type
+#define WHERE_IS_NOT_BASE_OF(B,D), typename = std::enable_if<!std::is_convertible<typename D*,typename B*>::value>::type
     // BUGBUG: This is still not correct. It also test whether the iterator is temporary. Otherwise we must not move stuff out.
     template<typename Collection WHERE_IS_TEMPORARY(Collection)> // move construction from rvalue [thanks to Billy O'Neal for the tip]
     explicit FixedVectorWithBuffer(Collection&& other) : Span(Allocate(other.size()), other.size())
@@ -443,85 +445,6 @@ public:
 };
 
 ///
-/// Simple shared_ptr that has no weak-ptr concept, and requires the controlled object to derive from enable_strong_shared_ptr.
-/// The hope is to cut through the overhead of shared_ptr and get trivial inlining of these operations.
-///
-class enable_strong_shared_ptr
-{
-    mutable size_t referenceCount = 0;
-    template<class T>
-    friend class strong_shared_ptr;
-    void AddRef() const noexcept { referenceCount++; }
-    size_t DecRef() const noexcept { referenceCount--; return referenceCount; }
-};
-template<class T>
-class strong_shared_ptr final
-{
-    T* m_ptr;
-    static T* AddRef(T* other)
-    {
-        if (other)
-            other->AddRef();
-        return other;
-    }
-    void Release()
-    {
-        if (m_ptr)
-            if (m_ptr->DecRef() == 0)
-                delete m_ptr;
-    }
-    void ReleaseAndReplace(T* other)
-    {
-        Release();
-        m_ptr = other;
-    }
-public:
-    typedef T element_type;
-    strong_shared_ptr()          noexcept : m_ptr(nullptr) { }
-    strong_shared_ptr(nullptr_t) noexcept : m_ptr(nullptr) { }
-    strong_shared_ptr(T* ptr)    noexcept : m_ptr(AddRef(ptr)) { }
-    strong_shared_ptr(const strong_shared_ptr& other) noexcept : m_ptr(AddRef(other.m_ptr)) { }
-    strong_shared_ptr(strong_shared_ptr&&      other) noexcept : m_ptr(other.m_ptr) { other.m_ptr = nullptr; }
-    ~strong_shared_ptr() noexcept { Release(); }
-    strong_shared_ptr& operator=(const strong_shared_ptr& other)     { ReleaseAndReplace(AddRef(other.m_ptr));                return *this; }
-    strong_shared_ptr& operator=(strong_shared_ptr&& other) noexcept { ReleaseAndReplace(other.m_ptr); other.m_ptr = nullptr; return *this; }
-    void reset() noexcept { ReleaseAndReplace(nullptr); }
-    typename std::add_lvalue_reference_t<T> operator*() const noexcept { return *m_ptr; }
-    T* operator->() const noexcept { return m_ptr; }
-    T* get()        const noexcept { return m_ptr; }
-    explicit operator bool() const noexcept { return m_ptr != nullptr; }
-    void swap(strong_shared_ptr& other) noexcept { ::swap(m_ptr, other.m_ptr); }
-};
-
-///
-/// Class that stores an immutable std::wstring. Assumes it is most of the time is empty, so that it is cheaper to have one extra redirection.
-/// Also uses a shared pointer, i.e. the string is not copied but shared if assigned.
-///
-class OptionalString
-{
-    struct SharedString : public enable_strong_shared_ptr, std::wstring
-    {
-        SharedString(const std::wstring& s) : std::wstring(s) { }
-        SharedString(std::wstring&& s) : std::wstring(move(s)) { }
-    };
-    strong_shared_ptr<SharedString const> m_string;
-public:
-    OptionalString()                       : m_string(nullptr) { }
-    OptionalString(OptionalString&& other) : m_string(move(other.m_string)) { }
-    OptionalString(const OptionalString& other) : m_string(other.m_string) { }
-    explicit OptionalString(const std::wstring&  s) : m_string(s.empty() ? nullptr : new SharedString(s)) { }
-    explicit OptionalString(      std::wstring&& s) : m_string(s.empty() ? nullptr : new SharedString(std::move(s))) { }
-    OptionalString& operator=(const std::wstring& s) { m_string = s.empty() ? nullptr : new SharedString(s);            return *this; }
-    OptionalString& operator=(std::wstring&& s)      { m_string = s.empty() ? nullptr : new SharedString(std::move(s)); return *this; }
-    OptionalString& operator=(const OptionalString& other) { m_string = other.m_string;       return *this; }
-    OptionalString& operator=(OptionalString&& other)      { m_string = move(other.m_string); return *this; }
-    operator const std::wstring&() const { return get(); }
-    const std::wstring& get() const { static const std::wstring s_emptyString; return m_string ? *m_string : s_emptyString; }
-    bool empty() const { return !m_string || m_string->empty(); }
-    const wchar_t* c_str() const { return m_string ? m_string->c_str() : L""; }
-};
-
-///
 /// MakeSharedObject() -- Custom shared-ptr allocator that uses fixed-size pools and custom deleter across the DLL boundary.
 ///
 #if 1
@@ -530,6 +453,7 @@ public:
 //  - can be sure the correct deleter is called (on the correct heap)
 
 // a pool for allocating objects of one specific size
+// BUGBUG: Does not work if T is marked 'final'. How does shared_ptr do it?
 template<typename T> struct FixedSizePoolItem : public T { char* flagPtr; };
 template<size_t itemByteSize>
 class FixedSizePool
@@ -636,7 +560,7 @@ class FixedSizePool
                 if (p) // found one in the current block
                 {
                     totalItemsAllocated++; // account for it
-                    auto* pItem = reinterpret_cast<FixedSizePoolItem<typename T>*>(p);
+                    auto* pItem = reinterpret_cast<FixedSizePoolItem<typename T>*>(const_cast<std::remove_const_t<T>*>(p));
                     //pItem->blockIndex = (decltype(pItem->blockIndex))currentBlockIndex; // remember which block it came from
                     pItem->flagPtr = res.second; // remember flag location for trivial deallocation
                     //Assert(pItem->blockIndex == currentBlockIndex); // (overflow)
@@ -652,7 +576,7 @@ class FixedSizePool
         void Deallocate(T* p)
         {
             //fprintf(stderr, "deallocate<%s>()  --> %d bytes (%d incl. index)\n", typeid(T).name(), (int)sizeof T, (int)itemByteSize);
-            const auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(p);
+            const auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(const_cast<std::remove_const_t<T>*>(p));
             auto* flagPtr = pItem->flagPtr;
             Block::Deallocate(flagPtr);
             //Assert(pItem->blockIndex < blocks.size());
@@ -670,13 +594,14 @@ public:
 template<typename T>
 class FixedSizePoolAllocatorT
 {
-public: // required boilerplate
+public: // required boilerplate --is there no base to derive from to provide this & deal with the intricacies?
     typedef T value_type;
     typedef value_type* pointer; typedef const value_type* const_pointer;
     typedef value_type& reference; typedef const value_type& const_reference;
     typedef std::size_t size_type; typedef std::ptrdiff_t difference_type;
     template<typename U> struct rebind { typedef FixedSizePoolAllocatorT<U> other; };
-    inline pointer address(reference r) { return &r; } inline const_pointer address(const_reference r) { return &r; }
+    inline pointer address(reference r) { return &r; }
+    //inline const_pointer address(const_reference r) { return &r; } // causes a dup error
     inline explicit FixedSizePoolAllocatorT() {}
     inline ~FixedSizePoolAllocatorT() {}
     inline explicit FixedSizePoolAllocatorT(FixedSizePoolAllocatorT const&) {}
@@ -688,14 +613,14 @@ public: // required boilerplate
     inline bool operator==(FixedSizePoolAllocatorT const&) { return true; }
     inline bool operator!=(FixedSizePoolAllocatorT const& a) { return !operator==(a); }
 public:
-    inline pointer allocate(size_type cnt, typename std::allocator<void>::const_pointer = 0)
+    inline pointer allocate(size_type cnt = 1, typename std::allocator<void>::const_pointer = 0)
     {
         if (cnt != 1)
             InvalidArgument("FixedSizePoolAllocatorT: This allocator only supports allocation of single items.");
         auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
         return reinterpret_cast<pointer>(storage.template Allocate<T>());
     }
-    inline void deallocate(pointer p, size_type)
+    inline void deallocate(pointer p, size_type = 1)
     {
         auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
         storage.template Deallocate<T>(p);
@@ -721,7 +646,7 @@ typedef FixedSizePoolAllocatorT<char> FixedSizePoolAllocator; // turns out, the 
 
 // Similar to make_shared except that it associates a custom allocator with the shared_ptr to ensure
 // that objects are deleted on the same side of the library DLL where they are allocated
-template <typename T, typename ...CtorArgTypes>
+template <typename T, typename ...CtorArgTypes /*WHERE_IS_NOT_BASE_OF(enable_strong_shared_ptr<typename T>, typename T)*/>
 inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs)
 {
     FixedSizePoolAllocator objectAllocator;
@@ -789,5 +714,115 @@ inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs)
 #endif
 }
 #endif
+
+///
+/// Simple intrusive strong shared_ptr (no weak-ptr support), aimed to combat STL's shared_ptr overhead/inlining problems.
+/// Requires the controlled object to derive from enable_strong_shared_ptr.
+///
+template<class T>
+class enable_strong_shared_ptr
+{
+    mutable size_t referenceCount = 0;
+    template<class T>
+    friend class strong_shared_ptr;
+    void AddRef() const noexcept { referenceCount++; }
+    size_t DecRef() const noexcept { referenceCount--; return referenceCount; }
+public:
+    T* get() const { return static_cast<T*>(*this); } // TODO: no, must return strong_shared_ptr<T>
+    //strong_shared_ptr<T> shared_from_this() const { get(); }
+};
+template<class T>
+class strong_shared_ptr final
+{
+    T* m_ptr;
+    static T* AddRef(T* other)
+    {
+        if (other)
+            other->AddRef();
+        return other;
+    }
+    void Release()
+    {
+        if (m_ptr && m_ptr->DecRef() == 0)
+        {
+            m_ptr->~T();
+            FixedSizePoolAllocatorT<T>().deallocate(m_ptr);
+        }
+    }
+    void ReleaseAndReplace(T* other)
+    {
+        Release();
+        m_ptr = other;
+    }
+    explicit strong_shared_ptr(T* ptr) noexcept : m_ptr(AddRef(ptr)) { } // private, can only be used via Construct
+public:
+    typedef T element_type;
+    strong_shared_ptr()          noexcept : m_ptr(nullptr) { }
+    strong_shared_ptr(const strong_shared_ptr& other) noexcept : m_ptr(AddRef(other.m_ptr)) { }
+    strong_shared_ptr(strong_shared_ptr&&      other) noexcept : m_ptr(other.m_ptr) { other.m_ptr = nullptr; }
+    ~strong_shared_ptr() noexcept { Release(); }
+    strong_shared_ptr& operator=(const strong_shared_ptr& other)     { ReleaseAndReplace(AddRef(other.m_ptr));                return *this; }
+    strong_shared_ptr& operator=(strong_shared_ptr&& other) noexcept { ReleaseAndReplace(other.m_ptr); other.m_ptr = nullptr; return *this; }
+    void reset() noexcept { ReleaseAndReplace(nullptr); }
+    typename std::add_lvalue_reference_t<T> operator*() const noexcept { return *m_ptr; }
+    T* operator->() const noexcept { return m_ptr; }
+    T* get()        const noexcept { return m_ptr; }
+    explicit operator bool() const noexcept { return m_ptr != nullptr; }
+    void swap(strong_shared_ptr& other) noexcept { std::swap(m_ptr, other.m_ptr); }
+    bool operator==(const strong_shared_ptr& other) const noexcept { return m_ptr == other.m_ptr; }
+    bool operator!=(const strong_shared_ptr& other) const noexcept { return m_ptr != other.m_ptr; }
+    // the only way to construct the held object anew is this function, since we control the allocator
+    template <typename ...CtorArgTypes>
+    static strong_shared_ptr MakeSharedObject(CtorArgTypes&& ...ctorArgs)
+    {
+        T* p = FixedSizePoolAllocatorT<T>().allocate();
+        try
+        {
+            return strong_shared_ptr(new (const_cast<std::remove_const_t<T>*>(p)) T(std::forward<CtorArgTypes>(ctorArgs)...));
+        }
+        catch (...)
+        {
+            FixedSizePoolAllocatorT<T>().deallocate(p);
+            throw;
+        }
+    }
+};
+
+// variant for classes that implement the simple shared_ptr variant
+// TODO: figure out the constraint thingy here, then rename the -1 away
+template <typename T, typename ...CtorArgTypes /*WHERE_IS_BASE_OF(enable_strong_shared_ptr<typename T>, typename T)*/>
+inline strong_shared_ptr<T> MakeSharedObject1(CtorArgTypes&& ...ctorArgs)
+{
+    return strong_shared_ptr<T>::MakeSharedObject(std::forward<CtorArgTypes>(ctorArgs)...);
+}
+
+///
+/// Class that stores an immutable std::wstring. Assumes it is most of the time is empty, so that it is cheaper to have one extra redirection.
+/// Also uses a shared pointer, i.e. the string is not copied but shared if assigned.
+///
+class OptionalString
+{
+    struct SharableString : public enable_strong_shared_ptr<SharableString>, std::wstring
+    {
+        SharableString(const std::wstring& s) : std::wstring(s) { }
+        SharableString(std::wstring&& s) : std::wstring(move(s)) { }
+    };
+    typedef strong_shared_ptr<SharableString const> StringPtr;
+    StringPtr m_string;
+public:
+    OptionalString() { }
+    OptionalString(OptionalString&& other) : m_string(move(other.m_string)) { }
+    OptionalString(const OptionalString& other) : m_string(other.m_string) { }
+    explicit OptionalString(const std::wstring&  s) : m_string(s.empty() ? StringPtr() : StringPtr::MakeSharedObject(s)) { }
+    explicit OptionalString(      std::wstring&& s) : m_string(s.empty() ? StringPtr() : StringPtr::MakeSharedObject(std::move(s))) { }
+    OptionalString& operator=(const std::wstring& s) { if (s.empty()) m_string.reset(); else m_string = StringPtr::MakeSharedObject((s)); return *this; }
+    OptionalString& operator=(std::wstring&& s)      { if (s.empty()) m_string.reset(); else m_string = StringPtr::MakeSharedObject((std::move(s))); return *this; }
+    OptionalString& operator=(const OptionalString& other) { m_string = other.m_string;       return *this; }
+    OptionalString& operator=(OptionalString&& other)      { m_string = move(other.m_string); return *this; }
+    operator const std::wstring&() const { return get(); }
+    const std::wstring& get() const { static const std::wstring s_emptyString; return m_string ? *m_string : s_emptyString; }
+    bool empty() const { return !m_string || m_string->empty(); }
+    const wchar_t* c_str() const { return m_string ? m_string->c_str() : L""; }
+};
 
 } // namespace

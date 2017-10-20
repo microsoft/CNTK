@@ -353,14 +353,14 @@ namespace CNTK
         return uid;
     }
 
-    std::shared_ptr<VariableFields> VariableFields::Clone() const
+    VariableFieldsPtr VariableFields::Clone() const
     {
         if (Owner() != nullptr)
             InvalidArgument("Output variable '%S' cannot be cloned.", AsString().c_str());
 
         // Note: We do not clone m_blockFunctionVariableMapping
         // TODO: Do VariableFields really need to use MakeSharedObject()? Can they transfer ownership across a DLL boundary?
-        auto clone = MakeSharedObject<VariableFields>(m_shape,
+        auto clone = MakeSharedObject1<VariableFields>(m_shape,
             m_varKind,
             m_dataType,
             m_ownerFunction,
@@ -511,14 +511,22 @@ namespace CNTK
     }
 
     Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
-        m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, name, uid)),
+        m_dataFields(MakeSharedObject1<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, name, uid)),
         m_shapeDims(&m_dataFields->m_shape.Dimensions())
     {}
 
     Variable::Variable(NDShape&& shape, VariableKind varType, CNTK::DataType dataType, bool needsGradient, bool isSparse) :
-        m_dataFields(MakeSharedObject<VariableFields>(std::move(shape), varType, dataType, needsGradient, isSparse)),
+        m_dataFields(MakeSharedObject1<VariableFields>(std::move(shape), varType, dataType, needsGradient, isSparse)),
         m_shapeDims(&m_dataFields->m_shape.Dimensions())
     {}
+
+    // the others are default. They must be defined nevertheless, because of the incomplete type w.r.t. strong_shared_ptr
+    Variable::Variable() = default;
+    Variable::~Variable() = default;
+    Variable::Variable(const Variable&) = default;
+    Variable::Variable(Variable&&) = default;
+    Variable& Variable::operator=(const Variable&) = default;
+    Variable& Variable::operator=(Variable&&) = default;
 
     template <typename ElementType>
     /*static*/ NDArrayViewPtr Variable::CreateValueFromParameterInitializer(const NDShape& shape, const ParameterInitializer& initConfig, const DeviceDescriptor& device)

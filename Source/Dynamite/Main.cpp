@@ -379,7 +379,7 @@ namespace X{
 #endif
 
 
-class C : public CNTK::enable_strong_shared_ptr
+class C : public CNTK::enable_strong_shared_ptr<C>
 {
     std::string test;
 public:
@@ -395,6 +395,7 @@ public:
 int main(int argc, char *argv[])
 {
     {
+        MakeSharedObject1<C>();
         CNTK::OptionalString pp(L"test");
         CNTK::OptionalString ss(pp);
         CNTK::OptionalString qq(move(pp));

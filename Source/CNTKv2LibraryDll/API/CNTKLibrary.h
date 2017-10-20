@@ -2056,7 +2056,12 @@ namespace CNTK
         /// Default constructor for creating an invalid/null Variable instance.
         /// Required for use in a std::vector container.
         ///
-        Variable() {}
+        CNTK_API Variable();
+        CNTK_API ~Variable();
+        CNTK_API Variable(const Variable&);
+        CNTK_API Variable(Variable&&);
+        CNTK_API Variable& operator=(const Variable&);
+        CNTK_API Variable& operator=(Variable&&);
 
         ///
         /// Returns the shape of 'this' variable
@@ -2175,7 +2180,7 @@ namespace CNTK
 #ifdef SWIGPYTHON
     public:
 #endif
-        Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name, const std::wstring& uid)
+        CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name, const std::wstring& uid)
             : Variable(shape, varType, dataType, value, needsGradient, dynamicAxes, /*isSparse =*/ false, name, uid)
         {}
 
@@ -2187,7 +2192,7 @@ namespace CNTK
 #ifdef SWIGPYTHON
     public:
 #endif
-        Variable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes, const std::wstring& uid)
+        CNTK_API Variable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes, const std::wstring& uid)
             : Variable(shape, VariableKind::Input, dataType, nullptr, needsGradient, dynamicAxes, isSparse, name, uid)
         {}
 
