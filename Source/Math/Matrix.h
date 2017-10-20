@@ -156,6 +156,7 @@ private:
     void Init(DEVICEID_TYPE deviceID);
     void SetDataLocation(CurrentDataLocation location, MatrixType type = UNDETERMINED) const;
     void ShallowCopyFrom(const Matrix<ElemType>& other);
+    void ShallowMoveFrom(Matrix<ElemType>&& other);
 
 public:
     // down-cast to make life easier

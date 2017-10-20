@@ -169,15 +169,20 @@ MatrixBase::~MatrixBase() { }
 //            { GPU code },
 //            ...
 
-// Initialize members 
+// Construct members
+// This function is only called from constructors.
 template <class ElemType>
 void Matrix<ElemType>::Init(DEVICEID_TYPE deviceId)
 {
-    ReleaseMemory();
+    m_baseMatrix = nullptr;
+
+    m_matrixType = MatrixType::UNDETERMINED;
+    m_currentDataLocation = CurrentDataLocation::NONE;
+
     m_preferredDeviceId = deviceId;
     m_numTimesDeviceChanged = 0;
     m_numTimesMatrixTypeChanged = 0;
-    m_devicesTransferedTo[1]    = m_devicesTransferedTo[0] = CPUDEVICE - 1; // (some value that is different from any valid value)
+    m_devicesTransferedTo[1] = m_devicesTransferedTo[0] = CPUDEVICE - 1; // (some value that is different from any valid value)
 }
 
 // shallow-copy all members
@@ -198,6 +203,31 @@ void Matrix<ElemType>::ShallowCopyFrom(const Matrix<ElemType>& other)
     m_numTimesMatrixTypeChanged = other.m_numTimesMatrixTypeChanged;
     m_devicesTransferedTo[0]    = other.m_devicesTransferedTo[0]; // TODO: spelling
     m_devicesTransferedTo[1]    = other.m_devicesTransferedTo[1];
+}
+
+// shallow-move all members
+template <class ElemType>
+void Matrix<ElemType>::ShallowMoveFrom(Matrix<ElemType>&& other)
+{
+    m_baseMatrix                = other.m_baseMatrix;
+    m_GPUMatrix                 = move(other.m_GPUMatrix);
+    m_CPUMatrix                 = move(other.m_CPUMatrix);
+    m_GPUSparseMatrix           = move(other.m_GPUSparseMatrix);
+    m_CPUSparseMatrix           = move(other.m_CPUSparseMatrix);
+
+    m_matrixType                = other.m_matrixType;
+    m_currentDataLocation       = other.m_currentDataLocation;
+
+    m_preferredDeviceId         = other.m_preferredDeviceId;
+    m_numTimesDeviceChanged     = other.m_numTimesDeviceChanged;
+    m_numTimesMatrixTypeChanged = other.m_numTimesMatrixTypeChanged;
+    m_devicesTransferedTo[0]    = other.m_devicesTransferedTo[0];
+    m_devicesTransferedTo[1]    = other.m_devicesTransferedTo[1];
+    // virgin-init the source
+    other.m_baseMatrix = nullptr;
+    other.m_matrixType = MatrixType::UNDETERMINED;
+    other.m_currentDataLocation = CurrentDataLocation::NONE;
+    other.m_preferredDeviceId = CPUDEVICE;
 }
 
 // Call this function after an update operation has created/set/updated the respective pointers.
@@ -473,55 +503,19 @@ Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE dev
 }
 
 
-//move constructor, shallow copy
+// move constructor, shallow copy
 template <class ElemType>
 Matrix<ElemType>::Matrix(Matrix<ElemType>&& moveFrom)
 {
-    Init((DEVICEID_TYPE)moveFrom.GetDeviceId());
-
-#if 1
-    operator=(move(moveFrom));
-#else
-    DISPATCH_MATRIX_ON_FLAG(&moveFrom,
-                            this,
-                            m_CPUMatrix = new CPUMatrix<ElemType>(move/*static_cast<CPUMatrix<ElemType>&&>*/(*(moveFrom.m_CPUMatrix))),
-                            m_GPUMatrix = new GPUMatrix<ElemType>(move/*static_cast<GPUMatrix<ElemType>&&>*/(*(moveFrom.m_GPUMatrix))),
-                            m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(move/*static_cast<CPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_CPUSparseMatrix))),
-                            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(move/*static_cast<GPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_GPUSparseMatrix))));
-
-    m_preferredDeviceId = moveFrom.m_preferredDeviceId;
-#endif
+    ShallowMoveFrom(move(moveFrom));
 }
 
-//move assignment operator, shallow copy
+// move assignment operator, shallow copy
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::operator=(Matrix<ElemType>&& moveFrom)
 {
-    if (this == &moveFrom)
-        LogicError("Matrix: Move assignment into itself is forbidden.");
-#if 1
     // shallow-copy all members
-    ShallowCopyFrom(moveFrom);
-    // virgin-init the source
-    moveFrom.Init(CPUDEVICE);
-#else
-    m_preferredDeviceId = moveFrom.m_preferredDeviceId;
-
-    DISPATCH_MATRIX_ON_FLAG(&moveFrom,
-                            this,
-                            if (m_CPUMatrix != nullptr) m_CPUMatrix->operator=(move/*static_cast<CPUMatrix<ElemType>&&>*/(*(moveFrom.m_CPUMatrix)));
-                            else m_CPUMatrix = new CPUMatrix<ElemType>(move/*static_cast<CPUMatrix<ElemType>&&>*/(*(moveFrom.m_CPUMatrix))),
-
-                            if (m_GPUMatrix != nullptr) m_GPUMatrix->operator=(move/*static_cast<GPUMatrix<ElemType>&&>*/(*(moveFrom.m_GPUMatrix)));
-                            else m_GPUMatrix = new GPUMatrix<ElemType>(move/*static_cast<GPUMatrix<ElemType>&&>*/(*(moveFrom.m_GPUMatrix))),
-
-                            if (m_CPUSparseMatrix != nullptr) m_CPUSparseMatrix->operator=(move/*static_cast<CPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_CPUSparseMatrix)));
-                            else m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(move/*static_cast<CPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_CPUSparseMatrix))),
-
-                            if (m_GPUSparseMatrix != nullptr) m_GPUSparseMatrix->operator=(move/*static_cast<GPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_GPUSparseMatrix)));
-                            else m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(move/*static_cast<GPUSparseMatrix<ElemType>&&>*/(*(moveFrom.m_GPUSparseMatrix))));
-
-#endif
+    ShallowMoveFrom(move(moveFrom));
     return *this;
 }
 
