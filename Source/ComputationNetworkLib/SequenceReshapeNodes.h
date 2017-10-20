@@ -67,7 +67,7 @@ public:
         if (inputIndex == 0)
         {
             ElemType gapPadValue = 0;
-            auto gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), Gradient(), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, std::shared_ptr<Matrix<char>>(nullptr), /*batchMajor=*/ false, &gapPadValue);
+            auto gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), Gradient(), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, Matrix<char>::MatrixPtr(nullptr), /*batchMajor=*/ false, &gapPadValue);
             auto inputGradient = InputRef(inputIndex).GradientTensorFor(InputRef(inputIndex).GetSampleLayout().GetRank(), FrameRange(InputRef(inputIndex).GetMBLayout()));
 
             if (InputRef(inputIndex).IsGradientInitializedBy(this))
@@ -491,7 +491,7 @@ private:
     ElemType m_paddingValue;
     bool m_suppressMaskOutput;
 
-    shared_ptr<Matrix<char>> m_tempMask;
+    Matrix<char>::MatrixPtr m_tempMask;
     MatrixPtr m_tempScatterIndices;
     MatrixPtr m_tempGatherIndices;
     MatrixPtr m_tempPackedGradientData;

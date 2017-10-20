@@ -23,7 +23,7 @@ namespace CNTK
     NDMask::NDMask(const NDShape& shape, Matrix<char>* matrix)
         : m_device(AsDeviceDescriptor(matrix->GetDeviceId())), m_maskShape(shape)
     {
-        m_matrixView = std::shared_ptr<Matrix<char>>(matrix, [](Matrix<char>* ptr) { delete ptr; });
+        m_matrixView = Matrix<char>::MatrixPtr(matrix, [](Matrix<char>* ptr) { delete ptr; });
     }
 
     NDMask::NDMask(const NDShape& shape, const DeviceDescriptor& device)

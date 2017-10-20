@@ -370,7 +370,7 @@ private:
     ElemType m_scale;                  // 1 or, for Mean, 1/number of elements we are reducing over
 
     MatrixPtr m_tempGatherIndices;
-    shared_ptr<Matrix<char>> m_tempMask;
+    Matrix<char>::MatrixPtr m_tempMask;
     MatrixPtr m_tempScatterIndices;
     MatrixPtr m_tempUnpackedData;
 };
@@ -456,7 +456,7 @@ public:
                     InvalidArgument("%ls %ls operation does not support broadcasting the left operand to the right operand's dynamic axis, inside a recurrent loop.", NodeName().c_str(), OperationName().c_str());
 
                 ElemType gapPadValue = 0;
-                gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, std::shared_ptr<Matrix<char>>(nullptr), /*batchMajor=*/ true, &gapPadValue);
+                gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, Matrix<char>::MatrixPtr(nullptr), /*batchMajor=*/ true, &gapPadValue);
                 inputGradient = Input(inputIndex)->GradientTensorFor(rank, FrameRange(InputRef(inputIndex).GetMBLayout(), 0));
             }
 

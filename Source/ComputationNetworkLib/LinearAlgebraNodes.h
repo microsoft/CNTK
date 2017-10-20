@@ -528,7 +528,7 @@ private:
                 inputMBLayout,
                 m_tempUnpackedValue[i],
                 m_tempScatterIndices[i],
-                std::shared_ptr<Matrix<char>>(nullptr),
+                Matrix<char>::MatrixPtr(nullptr),
                 /*batchMajor=*/ false,
                 &gapPadValue);
         }
@@ -569,7 +569,7 @@ private:
                 input0MBLayout, // the same for both operands
                 m_tempUnpackedValue[i],
                 m_tempScatterIndices[i],
-                std::shared_ptr<Matrix<char>>(nullptr),
+                Matrix<char>::MatrixPtr(nullptr),
                 /*batchMajor=*/ false,
                 &gapPadValue);
 

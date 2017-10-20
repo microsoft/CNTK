@@ -132,7 +132,7 @@ template<class ElemType>
                                                                   const MBLayoutPtr& layout,
                                                                   const MatrixPtr& unpackedDataStorage,
                                                                   const MatrixPtr& tempIndicesStorage,
-                                                                  const std::shared_ptr<Matrix<char>>& tempMaskStorage,
+                                                                  const Matrix<char>::MatrixPtr& tempMaskStorage,
                                                                   bool batchMajor,
                                                                   const ElemType* gapPadValue)
 {

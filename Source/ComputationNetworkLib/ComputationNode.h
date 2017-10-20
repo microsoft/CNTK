@@ -1508,7 +1508,7 @@ public:
                                        const MBLayoutPtr& layout,
                                        const MatrixPtr& unpackedDataStorage,
                                        const MatrixPtr& tempIndicesStorage,
-                                       const std::shared_ptr<Matrix<char>>& tempMaskStorage,
+                                       const Matrix<char>::MatrixPtr& tempMaskStorage,
                                        bool batchMajor,
                                        const ElemType* gapPadValue);
 
@@ -1519,7 +1519,7 @@ public:
                                        const ElemType* gapPadValue)
     {
         auto nullSharedPtr = MatrixPtr(nullptr);
-        return Unpack(sampleShape, packedData, layout, nullSharedPtr, nullSharedPtr, std::shared_ptr<Matrix<char>>(nullptr), batchMajor, gapPadValue);
+        return Unpack(sampleShape, packedData, layout, nullSharedPtr, nullSharedPtr, Matrix<char>::MatrixPtr(nullptr), batchMajor, gapPadValue);
     }
 
     static void BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
