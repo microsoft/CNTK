@@ -461,7 +461,6 @@ class FixedSizePool
     static void Assert(bool cond) { if (!cond) LogicError("FixedSizePool: An assertion failed."); }
 public:
     // class to store objects of size itemByteSize in lists of char arrays
-    //template<size_t itemByteSize>
     class Storage
     {
         struct Block
@@ -494,15 +493,6 @@ public:
                 Assert(*flagPtr == (char)true);
                 *flagPtr = false;
             }
-            //template<typename T>
-            //void Deallocate(T* p)
-            //{
-            //    size_t itemIndex = (((char*)p) - bytes.data()) / itemByteSize;
-            //    Assert(itemIndex < capacity);
-            //    Assert(p == (T*)(bytes.data() + itemIndex * itemByteSize));
-            //    Assert(!!used[itemIndex]);
-            //    used[itemIndex] = false;
-            //}
         };
         // state of allocation
         std::list<Block> blocks;                          // all blocks we have currently allocated
@@ -588,6 +578,11 @@ public:
     template<class T>
     friend class strong_shared_ptr;
 public:
+};
+template<typename T>
+struct XStorage
+{
+    static typename FixedSizePool<sizeof FixedSizePoolItem<T>>::Storage s_storage;
 };
 
 // a C++ allocator that allocates objects of type <T> in FixedSizePool Storage objects shared across all types of the same size
@@ -749,12 +744,14 @@ class strong_shared_ptr final
     template<size_t N>
     static typename FixedSizePool<N>::Storage& GetTheStorage()
     {
-        static FixedSizePool<N>::Storage s_storage;
-        return s_storage;
+        //return FixedSizePool<N>::s_storage;
+        //static FixedSizePool<N>::Storage s_storage;
+        //return s_storage;
     }
     static auto& GetStorage()
     {
-        return GetTheStorage<sizeof FixedSizePoolItem<T>>();
+        return XStorage<T>::s_storage;
+        //return GetTheStorage<sizeof FixedSizePoolItem<T>>();
         //extern FixedSizePool<sizeof(FixedSizePoolItem<T>)>::Storage g_storage;
         //return g_storage;
     }
@@ -819,6 +816,7 @@ inline strong_shared_ptr<T> MakeSharedObject1(CtorArgTypes&& ...ctorArgs)
 ///
 class OptionalString
 {
+public: // for shared object allocatio only --TODO: figure out a better way
     struct SharableString : public enable_strong_shared_ptr<SharableString>, std::wstring
     {
         SharableString(const std::wstring& s) : std::wstring(s) { }

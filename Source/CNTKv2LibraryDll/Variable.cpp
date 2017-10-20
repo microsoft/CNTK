@@ -510,6 +510,9 @@ namespace CNTK
         return CreateInitializer(Microsoft::MSR::CNTK::TruncNormalInitializerTypeName, scale, seed);
     }
 
+    //template<> typename FixedSizePool<sizeof FixedSizePoolItem<VariableFields>>::Storage FixedSizePool<sizeof FixedSizePoolItem<VariableFields>>::s_storage;
+    template<> typename FixedSizePool<sizeof FixedSizePoolItem<VariableFields>>::Storage XStorage<VariableFields>::s_storage;
+
     Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
         m_dataFields(MakeSharedObject1<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, name, uid)),
         m_shapeDims(&m_dataFields->m_shape.Dimensions())
@@ -527,7 +530,6 @@ namespace CNTK
     Variable::Variable(Variable&&) = default;
     Variable& Variable::operator=(const Variable&) = default;
     Variable& Variable::operator=(Variable&&) = default;
-    //FixedSizePool<sizeof(FixedSizePoolItem<Variable>)>::Storage g_storage;
 
     template <typename ElementType>
     /*static*/ NDArrayViewPtr Variable::CreateValueFromParameterInitializer(const NDShape& shape, const ParameterInitializer& initConfig, const DeviceDescriptor& device)

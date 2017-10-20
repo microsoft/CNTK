@@ -1029,5 +1029,6 @@ namespace CNTK
     template CNTK_API __declspec_noreturn void ThrowFormatted<std::runtime_error>(const char* format, ...);
     template CNTK_API __declspec_noreturn void ThrowFormatted<std::logic_error>(const char* format, ...);
     template CNTK_API __declspec_noreturn void ThrowFormatted<std::invalid_argument>(const char* format, ...);
-}
 
+    template<> typename FixedSizePool<sizeof FixedSizePoolItem<OptionalString::SharableString const>>::Storage XStorage<OptionalString::SharableString const>::s_storage;
+}

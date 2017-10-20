@@ -392,11 +392,8 @@ public:
     }
 };
 
-//template<>
-//template<>
-///*static*/ typename FixedSizePool<sizeof FixedSizePoolItem<C>>::Storage strong_shared_ptr<C>::s_storage;
-    
-//FixedSizePool<sizeof(FixedSizePoolItem<C>)>::Storage g_storage;
+template<> typename FixedSizePool<sizeof FixedSizePoolItem<C>>::Storage XStorage<C>::s_storage;
+template<> typename FixedSizePool<sizeof FixedSizePoolItem<OptionalString::SharableString const>>::Storage XStorage<OptionalString::SharableString const>::s_storage;
 
 int main(int argc, char *argv[])
 {
