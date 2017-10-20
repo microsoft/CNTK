@@ -176,10 +176,22 @@ def create_faster_rcnn_model(features, scaled_gt_boxes, dims_input, cfg):
     # Load the pre-trained classification net and clone layers
     base_model = load_model(cfg['BASE_MODEL_PATH'])
     conv_layers = clone_conv_layers(base_model, cfg)
-    fc_layers = clone_model(base_model, [cfg["MODEL"].POOL_NODE_NAME], [cfg["MODEL"].LAST_HIDDEN_NODE_NAME], clone_method=CloneMethod.clone)
+    # fc_layers = clone_model(base_model, [cfg["MODEL"].POOL_NODE_NAME], [cfg["MODEL"].LAST_HIDDEN_NODE_NAME], clone_method=CloneMethod.clone)
+    if cfg["CNTK"].USE_DROPOUT:
+        fc_layers = clone_model(base_model, [cfg["MODEL"].POOL_NODE_NAME], [cfg["MODEL"].LAST_HIDDEN_NODE_NAME], clone_method=CloneMethod.clone)
+    else:
+        h1_end = "h1.y" if cfg["MODEL"].BASE_MODEL == "AlexNet" else "relu6"
+        h2_start = "h1_d" if cfg["MODEL"].BASE_MODEL == "AlexNet" else "drop6"
+        h2_end = "h2.y" if cfg["MODEL"].BASE_MODEL == "AlexNet" else "relu7"
+        fc_layer1 = clone_model(base_model, [cfg["MODEL"].POOL_NODE_NAME], [h1_end], clone_method=CloneMethod.clone)
+        fc_layer2 = clone_model(base_model, [h2_start], [h2_end], clone_method=CloneMethod.clone)
+        fc_layers = Sequential([fc_layer1, fc_layer2])
 
-    # Normalization and conv layers
-    feat_norm = features - Constant([[[v]] for v in cfg["MODEL"].IMG_PAD_COLOR])
+    # REVIEW SPTIWARI: Removing mean subtraction from here as it is part of minibatch reader.
+    # # Normalization and conv layers
+    # feat_norm = features - Constant([[[v]] for v in cfg["MODEL"].IMG_PAD_COLOR])
+    # feat_norm = user_function(DebugLayerSingle(feat_norm, debug_name="feat_norm_debug"))
+    feat_norm = features
     conv_out = conv_layers(feat_norm)
 
     # RPN and prediction targets
@@ -189,8 +201,12 @@ def create_faster_rcnn_model(features, scaled_gt_boxes, dims_input, cfg):
 
     # Fast RCNN and losses
     cls_score, bbox_pred = create_fast_rcnn_predictor(conv_out, rois, fc_layers, cfg)
+
     detection_losses = create_detection_losses(cls_score, label_targets, bbox_pred, rois, bbox_targets, bbox_inside_weights, cfg)
+    # REVIEW SPTIWARI: Modifying the loss below to activate the debug nodes above.
     loss = rpn_losses + detection_losses
+    # loss = rpn_losses + detection_losses + fc6_sum + fc7_sum  + relu1_1_node_sum + relu1_2_node_sum + pool1_node_sum + relu2_1_node_sum + relu3_1_node_sum# + fc6_sc_sum + fc6_b_sum
+
     pred_error = classification_error(cls_score, label_targets, axis=1)
 
     return loss, pred_error
@@ -255,8 +271,9 @@ def compute_rpn_proposals(rpn_model, image_input, roi_input, dims_input, cfg):
         pad_height=cfg.IMAGE_HEIGHT,
         pad_value=cfg["MODEL"].IMG_PAD_COLOR,
         max_images=num_images,
-        randomize=False, use_flipping=False,
-        proposal_provider=None)
+        randomize=False, use_flipping=cfg["TRAIN"].USE_FLIPPED,
+        proposal_provider=None,
+        mean_img=cfg["MODEL"].IMG_PAD_COLOR)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -303,7 +320,10 @@ def train_faster_rcnn(cfg):
 # Trains a Faster R-CNN model end-to-end
 def train_faster_rcnn_e2e(cfg):
     # Input variables denoting features and labeled ground truth rois (as 5-tuples per roi)
-    image_input = input_variable(shape=(cfg.NUM_CHANNELS, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH),
+    # image_input = input_variable(shape=(cfg.NUM_CHANNELS, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH),
+    #                              dynamic_axes=[Axis.default_batch_axis()],
+    #                              name=cfg["MODEL"].FEATURE_NODE_NAME)
+    image_input = input_variable(shape=(cfg.NUM_CHANNELS, cntk.FreeDimension, cntk.FreeDimension),
                                  dynamic_axes=[Axis.default_batch_axis()],
                                  name=cfg["MODEL"].FEATURE_NODE_NAME)
     roi_input = input_variable((cfg.INPUT_ROIS_PER_IMAGE, 5), dynamic_axes=[Axis.default_batch_axis()])
@@ -378,7 +398,9 @@ def train_faster_rcnn_alternating(cfg):
     image_input = input_variable(shape=(cfg.NUM_CHANNELS, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH),
                                  dynamic_axes=[Axis.default_batch_axis()],
                                  name=feature_node_name)
-    feat_norm = image_input - Constant([[[v]] for v in cfg["MODEL"].IMG_PAD_COLOR])
+    # REVIEW SPTIWARI: Removing mean subtraction from here as it is part of minibatch reader.
+    # feat_norm = image_input - Constant([[[v]] for v in cfg["MODEL"].IMG_PAD_COLOR])
+    feat_norm = image_input
     roi_input = input_variable((cfg.INPUT_ROIS_PER_IMAGE, 5), dynamic_axes=[Axis.default_batch_axis()])
     scaled_gt_boxes = alias(roi_input, name='roi_input')
     dims_input = input_variable((6), dynamic_axes=[Axis.default_batch_axis()])
@@ -548,10 +570,11 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
         pad_width=cfg.IMAGE_WIDTH,
         pad_height=cfg.IMAGE_HEIGHT,
         pad_value=cfg["MODEL"].IMG_PAD_COLOR,
-        randomize=True,
+        randomize=False, # REVIEW SPTIWARI: Was True
         use_flipping=cfg["TRAIN"].USE_FLIPPED,
         max_images=cfg["DATA"].NUM_TRAIN_IMAGES,
-        proposal_provider=proposal_provider)
+        proposal_provider=proposal_provider,
+        mean_img=cfg["MODEL"].IMG_PAD_COLOR)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -568,6 +591,47 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
         sample_count = 0
         while sample_count < cfg["DATA"].NUM_TRAIN_IMAGES:  # loop over minibatches in the epoch
             data = od_minibatch_source.next_minibatch(min(cfg.MB_SIZE, cfg["DATA"].NUM_TRAIN_IMAGES-sample_count), input_map=input_map)
+
+            # ------------------------------------
+            # REVIEW SPTIWARI: Getting parameters of various nodes
+            fc6_node_proxy = find_by_name(loss, "fc6")
+            fc7_node_proxy = find_by_name(loss, "fc7")
+            bbox_regr_W_node_proxy = find_by_name(loss, "bbox_regr.W")
+            bbox_regr_b_node_proxy = find_by_name(loss, "bbox_regr.b")
+            cls_score_W_node_proxy = find_by_name(loss, "cls_score.W")
+            cls_score_b_node_proxy = find_by_name(loss, "cls_score.b")
+            rpn_cls_score_node_proxy = find_by_name(loss, "rpn_cls_score")
+            rpn_bbox_pred_node_proxy = find_by_name(loss, "rpn_bbox_pred")
+            print("fc6.W -- Max: %f, Min: %f\n" % (
+            np.max(fc6_node_proxy.parameters[0].value), np.min(fc6_node_proxy.parameters[0].value)))
+            print("fc6.b -- Max: %f, Min: %f\n" % (
+            np.max(fc6_node_proxy.parameters[1].value), np.min(fc6_node_proxy.parameters[1].value)))
+            print("fc7.W -- Max: %f, Min: %f\n" % (
+                np.max(fc7_node_proxy.parameters[0].value), np.min(fc7_node_proxy.parameters[0].value)))
+            print("fc7.b -- Max: %f, Min: %f\n" % (
+                np.max(fc7_node_proxy.parameters[1].value), np.min(fc7_node_proxy.parameters[1].value)))
+            print("bbox_regr.W -- Max: %f, Min: %f\n" % (
+                np.max(bbox_regr_W_node_proxy.value), np.min(bbox_regr_W_node_proxy.value)))
+            print("bbox_regr.b -- Max: %f, Min: %f\n" % (
+                np.max(bbox_regr_b_node_proxy.value), np.min(bbox_regr_b_node_proxy.value)))
+            print("cls_score.W -- Max: %f, Min: %f\n" % (
+                np.max(cls_score_W_node_proxy.value), np.min(cls_score_W_node_proxy.value)))
+            print("cls_score.b -- Max: %f, Min: %f\n" % (
+                np.max(cls_score_b_node_proxy.value), np.min(cls_score_b_node_proxy.value)))
+            print("rpn_cls_score.W -- Max: %f, Min: %f\n" % (
+                np.max(rpn_cls_score_node_proxy.parameters[0].value),
+                np.min(rpn_cls_score_node_proxy.parameters[0].value)))
+            print("rpn_cls_score.b -- Max: %f, Min: %f\n" % (
+                np.max(rpn_cls_score_node_proxy.parameters[1].value),
+                np.min(rpn_cls_score_node_proxy.parameters[1].value)))
+            print("rpn_bbox_pred.W -- Max: %f, Min: %f\n" % (
+                np.max(rpn_bbox_pred_node_proxy.parameters[0].value),
+                np.min(rpn_bbox_pred_node_proxy.parameters[0].value)))
+            print("rpn_bbox_pred.b -- Max: %f, Min: %f\n" % (
+                np.max(rpn_bbox_pred_node_proxy.parameters[1].value),
+                np.min(rpn_bbox_pred_node_proxy.parameters[1].value)))
+            # ------------------------------------
+
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress

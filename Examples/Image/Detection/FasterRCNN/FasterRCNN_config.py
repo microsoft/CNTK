@@ -19,12 +19,14 @@ cfg = __C
 
 __C.CNTK = edict()
 
+# REVIEW SPTIWARI: Add the USE_DROPOUT parameter. True by default. Set False for debugging purposes.
+cfg["CNTK"].USE_DROPOUT = True # False
 # If set to 'True' training will be skipped if a trained model exists already
-__C.CNTK.MAKE_MODE = False
+__C.CNTK.MAKE_MODE = False # REVIEW SPTIWARI: Was True
 # E2E or 4-stage training
 __C.CNTK.TRAIN_E2E = True
 # set to 'True' to use deterministic algorithms
-__C.CNTK.FORCE_DETERMINISTIC = False
+__C.CNTK.FORCE_DETERMINISTIC = True # REVIEW SPTIWARI: Was False
 # set to 'True' to run only a single epoch
 __C.CNTK.FAST_MODE = False
 # Debug parameters
@@ -64,7 +66,7 @@ __C.RESULTS_NMS_THRESHOLD = 0.5
 __C.RESULTS_NMS_CONF_THRESHOLD = 0.0
 
 # Enable plotting of results generally / also plot background boxes / also plot unregressed boxes
-__C.VISUALIZE_RESULTS = False
+__C.VISUALIZE_RESULTS = False # REVIEW SPTIWARI: Make this True if you want to save images.
 __C.DRAW_NEGATIVE_ROIS = False
 __C.DRAW_UNREGRESSED_ROIS = False
 # only for plotting results: boxes with a score lower than this threshold will be considered background

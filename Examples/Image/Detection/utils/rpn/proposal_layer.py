@@ -146,7 +146,9 @@ class ProposalLayer(UserFunction):
 
         # 4. sort all (proposal, score) pairs by score from highest to lowest
         # 5. take top pre_nms_topN (e.g. 6000)
+        # REVIEW SPTIWARI: Removing mergesort below for debugging and matching Caffe model.
         order = scores.ravel().argsort(kind='mergesort')[::-1]
+        # order = scores.ravel().argsort()[::-1]
         if pre_nms_topN > 0:
             order = order[:pre_nms_topN]
         proposals = proposals[order, :]
@@ -155,7 +157,19 @@ class ProposalLayer(UserFunction):
         # 6. apply nms (e.g. threshold = 0.7)
         # 7. take after_nms_topN (e.g. 300)
         # 8. return the top proposals (-> RoIs top)
-        keep = nms(np.hstack((proposals, scores)), nms_thresh)
+
+        # # REVIEW SPTIWARI: Warning: Very hacky!!
+        # # Since nms results are not matching exactly, I am reading 'keep' below from a file
+        # # for the second image, i.e. 000007.jpg. The below is a hack to do that, just for
+        # # debugging purposes. Remove this once debugging is done.
+        # if np.allclose(proposals[0,0], 728.62866, 1e-5):
+        #     # This is the second image (000007.jpg) case
+        #     import pickle
+        #     with open('E:\\cntk2\\Examples\\Image\\Detection\\FasterRCNN\\nms_output_000007.pkl', 'rb') as fp:
+        #         keep = pickle.load(fp)
+        # else:
+        #     keep = nms(np.hstack((proposals, scores)), nms_thresh, use_gpu_nms=False)
+        keep = nms(np.hstack((proposals, scores)), nms_thresh, use_gpu_nms=False)
         if post_nms_topN > 0:
             keep = keep[:post_nms_topN]
         proposals = proposals[keep, :]

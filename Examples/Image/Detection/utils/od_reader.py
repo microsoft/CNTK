@@ -20,7 +20,8 @@ class ObjectDetectionReader:
                  max_annotations_per_image, pad_width, pad_height, pad_value,
                  randomize, use_flipping,
                  proposal_provider, proposal_iou_threshold,
-                 provide_targets, normalize_means, normalize_stds, max_images=None):
+                 provide_targets, normalize_means, normalize_stds, max_images=None,
+                 mean_img=None):
         self._num_classes = num_classes
         self._pad_width = pad_width
         self._pad_height = pad_height
@@ -33,6 +34,7 @@ class ObjectDetectionReader:
         self._provide_targets = provide_targets
         self._normalize_means = normalize_means
         self._normalize_stds = normalize_stds
+        self._mean_img = mean_img
 
         self._proposal_dict = {}
         self._proposal_targets = {}
@@ -41,6 +43,9 @@ class ObjectDetectionReader:
 
         self._num_images = self._parse_map_files(img_map_file, roi_map_file, max_annotations_per_image, max_images)
         self._img_stats = [None for _ in range(self._num_images)]
+
+        # side length used for non-fixed image size
+        self._shorter_size_px = 600
 
         self._reading_order = None
         self._reading_index = -1
@@ -148,6 +153,10 @@ class ObjectDetectionReader:
             img = cv2.imdecode(imgnp, 1)
         else:
             img = cv2.imread(image_path)
+            # # REVIEW SPTIWARI: Adding below to save the image as text file to use in Caffe
+            # np.savetxt('E:\\cntk2\\Examples\\Image\\Detection\\FasterRCNN\\000005_0.txt', img[:, :, 0], fmt='%f')
+            # np.savetxt('E:\\cntk2\\Examples\\Image\\Detection\\FasterRCNN\\000005_1.txt', img[:, :, 1], fmt='%f')
+            # np.savetxt('E:\\cntk2\\Examples\\Image\\Detection\\FasterRCNN\\000005_2.txt', img[:, :, 2], fmt='%f')
 
         return img
 
@@ -157,7 +166,7 @@ class ObjectDetectionReader:
 
         # prepare image statistics for scaling and padding images later
         # [target_w, target_h, img_width, img_height, top, bottom, left, right, scale_factor]
-        img_stats = compute_image_stats(img_width, img_height, self._pad_width, self._pad_height)
+        img_stats = compute_image_stats(img_width, img_height, self._pad_width, self._pad_height, self._shorter_size_px)
         self._img_stats[index] = img_stats
         scale_factor = img_stats[-1]
         top = img_stats[4]
@@ -169,12 +178,13 @@ class ObjectDetectionReader:
         xyxy *= scale_factor
         xyxy += (left, top, left, top)
 
-        # not needed since xyxy is just a reference: annotations[:, :4] = xyxy
-        # TODO: do we need to round/floor/ceil xyxy coords?
-        annotations[:, 0] = np.round(annotations[:, 0])
-        annotations[:, 1] = np.round(annotations[:, 1])
-        annotations[:, 2] = np.round(annotations[:, 2])
-        annotations[:, 3] = np.round(annotations[:, 3])
+        # # not needed since xyxy is just a reference: annotations[:, :4] = xyxy
+        # # TODO: do we need to round/floor/ceil xyxy coords?
+        # # REVIEW SPTIWARI: Remove this rounding below because caffe model does not do it.
+        # annotations[:, 0] = np.round(annotations[:, 0])
+        # annotations[:, 1] = np.round(annotations[:, 1])
+        # annotations[:, 2] = np.round(annotations[:, 2])
+        # annotations[:, 3] = np.round(annotations[:, 3])
 
         # prepare proposals
         if self._proposal_provider is not None:
@@ -211,22 +221,32 @@ class ObjectDetectionReader:
         image_path = self._img_file_paths[index]
 
         img = self._read_image(image_path)
+        # REVIEW SPTIWARI: Subtract mean image here itself. Remove the subtraction (the first node) from graph.
+        img = img.astype(np.float32, copy=False)
+        if self._mean_img is not None:
+            img -= self._mean_img
         if self._img_stats[index] is None:
             self._prepare_annotations_proposals_and_stats(index, img)
 
         target_w, target_h, img_width, img_height, top, bottom, left, right, scale = self._img_stats[index]
 
-        resized = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_NEAREST)
-        resized_with_pad = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT,
-                                              value=self._pad_value)
+        # REVIEW SPTIWARI: Use cv2.resize overload used by Caffe for exact number match.
+        resized_with_pad = cv2.resize(img, None, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+        # resized_with_pad = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_LINEAR)
+        # resized_with_pad = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_NEAREST)
+        # # resized = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_NEAREST)
+        # # resized_with_pad = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT,
+        # #                                      value=self._pad_value)
         if self._flip_image:
             resized_with_pad = cv2.flip(resized_with_pad, 1)
 
         # transpose(2,0,1) converts the image to the HWC format which CNTK expects
         model_arg_rep = np.ascontiguousarray(np.array(resized_with_pad, dtype=np.float32).transpose(2, 0, 1))
 
-        # dims = pad_width, pad_height, scaled_image_width, scaled_image_height, orig_img_width, orig_img_height
-        dims = (self._pad_width, self._pad_height, target_w, target_h, img_width, img_height)
+        # # OLD: Ignore  dims = pad_width, pad_height, scaled_image_width, scaled_image_height, orig_img_width, orig_img_height
+        # # REVIEW SPTIWARI: Changed below line to make pad_width and pad_height match target_w and tagret_h
+        # dims = (self._pad_width, self._pad_height, target_w, target_h, img_width, img_height)
+        dims = (target_w, target_h, target_w, target_h, img_width, img_height)
         if DEBUG:
             return model_arg_rep, dims, resized_with_pad
         return model_arg_rep, dims

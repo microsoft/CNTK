@@ -42,21 +42,35 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, cfg, add_loss_functions=True)
     # RPN network
     # init = 'normal', initValueScale = 0.01, initBias = 0.1
     num_channels = cfg["MODEL"].RPN_NUM_CHANNELS
+    # REVIEW SPTIWARI: Fixing the initial values of weights.
     rpn_conv_3x3 = Convolution((3, 3), num_channels, activation=relu, pad=True, strides=1,
                                 init = normal(scale=0.01), init_bias=0.0)(conv_out)
     rpn_cls_score = Convolution((1, 1), 18, activation=None, name="rpn_cls_score",
                                 init = normal(scale=0.01), init_bias=0.0)(rpn_conv_3x3)  # 2(bg/fg)  * 9(anchors)
     rpn_bbox_pred = Convolution((1, 1), 36, activation=None, name="rpn_bbox_pred",
                                 init = normal(scale=0.01), init_bias=0.0)(rpn_conv_3x3)  # 4(coords) * 9(anchors)
+    # rpn_conv_3x3 = Convolution((3, 3), num_channels, activation=relu, pad=True, strides=1,
+    #                            init=1e-4, init_bias=0.0)(conv_out)
+    # # rpn_conv_3x3 = user_function(DebugLayerSingle(rpn_conv_3x3, debug_name="rpn_conv_3x3_debug"))
+    # rpn_cls_score = Convolution((1, 1), 18, activation=None, name="rpn_cls_score",
+    #                             init=1e-4, init_bias=0.0)(rpn_conv_3x3)  # 2(bg/fg)  * 9(anchors)
+    # # rpn_cls_score = user_function(DebugLayerSingle(rpn_cls_score, debug_name="rpn_cls_score_debug"))
+    # rpn_bbox_pred = Convolution((1, 1), 36, activation=None, name="rpn_bbox_pred",
+    #                             init=1e-4, init_bias=0.0)(rpn_conv_3x3)  # 4(coords) * 9(anchors)
+    # # rpn_bbox_pred = user_function(DebugLayerSingle(rpn_bbox_pred, debug_name="rpn_bbox_pred_debug"))
+
 
     # apply softmax to get (bg, fg) probabilities and reshape predictions back to grid of (18, H, W)
     num_predictions = int(rpn_cls_score.shape[0] / 2)
-    rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions, rpn_cls_score.shape[1], rpn_cls_score.shape[2]), name="rpn_cls_score_rshp")
-    p_rpn_cls_score_rshp = cntk.placeholder()
-    rpn_cls_sm = softmax(p_rpn_cls_score_rshp, axis=0)
-    rpn_cls_prob = cntk.as_block(rpn_cls_sm, [(p_rpn_cls_score_rshp, rpn_cls_score_rshp)], 'Softmax', 'rpn_cls_prob')
-    rpn_cls_prob_reshape = reshape(rpn_cls_prob, rpn_cls_score.shape, name="rpn_cls_prob_reshape")
-
+    # rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions, rpn_cls_score.shape[1], rpn_cls_score.shape[2]), name="rpn_cls_score_rshp")
+    rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions), 0, 1, name="rpn_cls_score_rshp")
+    # p_rpn_cls_score_rshp = cntk.placeholder()
+    # rpn_cls_sm = softmax(p_rpn_cls_score_rshp, axis=0)
+    # rpn_cls_prob = cntk.as_block(rpn_cls_sm, [(p_rpn_cls_score_rshp, rpn_cls_score_rshp)], 'Softmax', 'rpn_cls_prob')
+    rpn_cls_prob = softmax(rpn_cls_score_rshp, axis=0)
+    # rpn_cls_prob_reshape = reshape(rpn_cls_prob, rpn_cls_score.shape, name="rpn_cls_prob_reshape")
+    rpn_cls_prob_reshape = reshape(rpn_cls_prob, (2*num_predictions), 0, 2, name="rpn_cls_prob_reshape")
+    # rpn_cls_prob_reshape = user_function(DebugLayerSingle(rpn_cls_prob_reshape, debug_name="rpn_cls_prob_reshape_debug"))
     # proposal layer
     rpn_rois = create_proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, cfg)
 
@@ -90,13 +104,14 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, cfg, add_loss_functions=True)
 
         # The terms that are accounted for in the cls loss are those that have a label >= 0
         cls_num_terms = reduce_sum(keeps)
+        # cls_num_terms = user_function(DebugLayerSingle(cls_num_terms, debug_name="cls_num_terms_debug"))
         cls_normalization_factor = 1.0 / cls_num_terms
         normalized_rpn_cls_loss = reduce_sum(rpn_loss_cls) * cls_normalization_factor
 
         reduced_rpn_loss_cls = cntk.as_block(normalized_rpn_cls_loss,
                                              [(p_rpn_labels, rpn_labels), (p_rpn_cls_score_rshp, rpn_cls_score_rshp)],
                                              'CE_with_ignore', 'norm_rpn_cls_loss')
-
+        # reduced_rpn_loss_cls = user_function(DebugLayerSingle(reduced_rpn_loss_cls, debug_name="reduced_rpn_loss_cls_debug"))
         # regression loss
         p_rpn_bbox_pred = cntk.placeholder()
         p_rpn_bbox_targets = cntk.placeholder()
@@ -110,6 +125,7 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, cfg, add_loss_functions=True)
                                               [(p_rpn_bbox_pred, rpn_bbox_pred), (p_rpn_bbox_targets, rpn_bbox_targets),
                                                (p_rpn_bbox_inside_weights, rpn_bbox_inside_weights)],
                                               'SmoothL1Loss', 'norm_rpn_bbox_loss')
+        # reduced_rpn_loss_bbox = user_function(DebugLayerSingle(reduced_rpn_loss_bbox, debug_name="reduced_rpn_loss_bbox_debug"))
 
         rpn_losses = plus(reduced_rpn_loss_cls, reduced_rpn_loss_bbox, name="rpn_losses")
 

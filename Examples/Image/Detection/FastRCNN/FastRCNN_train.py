@@ -174,12 +174,16 @@ def create_fast_rcnn_predictor(conv_out, rois, fc_layers, cfg):
     fc_out = fc_layers(roi_out)
 
     # prediction head
+    # REVIEW SPTIWARI: Changed initial values for the layers above and initialized it to constant values below
     W_pred = parameter(shape=(4096, cfg["DATA"].NUM_CLASSES), init=normal(scale=0.01), name="cls_score.W")
+    # W_pred = parameter(shape=(4096, cfg["DATA"].NUM_CLASSES), init=1e-4, name="cls_score.W")
     b_pred = parameter(shape=cfg["DATA"].NUM_CLASSES, init=0, name="cls_score.b")
     cls_score = plus(times(fc_out, W_pred), b_pred, name='cls_score')
 
     # regression head
+    # REVIEW SPTIWARI: Changed initial values for the layers above and initialized it to constant values below
     W_regr = parameter(shape=(4096, cfg["DATA"].NUM_CLASSES*4), init=normal(scale=0.001), name="bbox_regr.W")
+    # W_regr = parameter(shape=(4096, cfg["DATA"].NUM_CLASSES * 4), init=1e-4, name="bbox_regr.W")
     b_regr = parameter(shape=cfg["DATA"].NUM_CLASSES*4, init=0, name="bbox_regr.b")
     bbox_pred = plus(times(fc_out, W_regr), b_regr, name='bbox_regr')
 

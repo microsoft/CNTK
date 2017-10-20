@@ -79,7 +79,8 @@
       <GenerateLineInfo>true</GenerateLineInfo>
       <AdditionalCompilerOptions>/WX</AdditionalCompilerOptions>
       <CodeGeneration>$(NvidiaCompute)</CodeGeneration>
-      <FastMath>true</FastMath>
+      <FastMath>false</FastMath>
+      <!-- <FastMath>true</FastMath> -->
       <GPUDebugInfo>false</GPUDebugInfo>
       <GPUDebugInfo Condition="'$(CNTK_CUDA_DEVICE_DEBUGINFO)'=='1'">true</GPUDebugInfo>
       <AdditionalOptions>-Xcudafe "--diag_suppress=field_without_dll_interface" -Xcompiler "/wd 4819" %(AdditionalOptions)</AdditionalOptions>

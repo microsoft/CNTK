@@ -17,21 +17,22 @@ def get_configuration():
     from FasterRCNN_config import cfg as detector_cfg
     # for VGG16 base model use:         from utils.configs.VGG16_config import cfg as network_cfg
     # for AlexNet base model use:       from utils.configs.AlexNet_config import cfg as network_cfg
-    from utils.configs.AlexNet_config import cfg as network_cfg
+    from utils.configs.VGG16_config import cfg as network_cfg
     # for Pascal VOC 2007 data set use: from utils.configs.Pascal_config import cfg as dataset_cfg
     # for the Grocery data set use:     from utils.configs.Grocery_config import cfg as dataset_cfg
-    from utils.configs.Grocery_config import cfg as dataset_cfg
+    from utils.configs.Pascal_config import cfg as dataset_cfg
 
     return merge_configs([detector_cfg, network_cfg, dataset_cfg])
 
-# trains and evaluates a Fast R-CNN model.
+# trains and evaluates a Faster R-CNN model.
 if __name__ == '__main__':
     cfg = get_configuration()
     prepare(cfg, False)
     cntk.device.try_set_default_device(cntk.device.gpu(cfg.GPU_ID))
 
-    # train and test
+    # train
     trained_model = train_faster_rcnn(cfg)
+    # test
     eval_results = compute_test_set_aps(trained_model, cfg)
 
     # write AP results to output
