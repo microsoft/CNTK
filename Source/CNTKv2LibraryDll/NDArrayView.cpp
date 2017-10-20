@@ -17,7 +17,7 @@ namespace std
 {
 
 template<>
-static constexpr CNTK::float16 numeric_limits<CNTK::float16>::quiet_NaN() _NOEXCEPT
+static constexpr CNTK::float16 numeric_limits<CNTK::float16>::quiet_NaN()
 {
     return CNTK::float16(numeric_limits<float>::quiet_NaN());
 }

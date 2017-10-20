@@ -525,7 +525,7 @@ public:
                     {
                         Url& UrlJ = *itUrlJ;
                         discountJ = m_logWeights[UrlJ.m_rank];
-                        if (abs(gainI - UrlJ.m_gain) < 0.0000001)
+                        if (abs(gainI - UrlJ.m_gain) < (ElemType)0.0000001)
                         {
                             continue;
                         }
@@ -534,7 +534,7 @@ public:
                         lambdaIJ = (gainI - UrlJ.m_gain) * (discountI - discountJ) / (discountI * discountJ);
 
                         // |delta NDCG|
-                        lambdaIJ = (idealMetric == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / idealMetric));
+                        lambdaIJ = (idealMetric == (ElemType)0.0 ? (ElemType) 0.0 : abs(lambdaIJ / idealMetric));
 
                         // Combine lambda
                         lambdaIJ = lambdas(0, pairsCount++) * lambdaIJ;
