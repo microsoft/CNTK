@@ -455,137 +455,125 @@ public:
 // a pool for allocating objects of one specific size
 // BUGBUG: Does not work if T is marked 'final'. How does shared_ptr do it?
 template<typename T> struct FixedSizePoolItem : public T { char* flagPtr; };
+// class to store objects of size itemByteSize in lists of char arrays
 template<size_t itemByteSize>
-class FixedSizePool
+class FixedSizePoolStorage
 {
     static void Assert(bool cond) { if (!cond) LogicError("FixedSizePool: An assertion failed."); }
-public:
-    // class to store objects of size itemByteSize in lists of char arrays
-    class Storage
+    struct Block
     {
-        struct Block
+        static const size_t capacity = 65536; // we reserve this many at a time
+        std::vector<char> bytes = std::vector<char>(capacity * itemByteSize); // [byte offset]
+        std::vector<char> used  = std::vector<char>(capacity, false);         // [item index]  true if this entry is used
+        // Note: time measurement comparing vector<bool> vs. vector<char> vs. using flagptr was inconclusive
+        template<typename T>
+        inline std::pair<T*, char*> TryAllocate(size_t& nextItemIndex)
         {
-            static const size_t capacity = 65536; // we reserve this many at a time
-            std::vector<char> bytes = std::vector<char>(capacity * itemByteSize); // [byte offset]
-            std::vector<char> used  = std::vector<char>(capacity, false);         // [item index]  true if this entry is used
-            // Note: time measurement comparing vector<bool> vs. vector<char> vs. using flagptr was inconclusive
-            template<typename T>
-            inline std::pair<T*, char*> TryAllocate(size_t& nextItemIndex)
+            //Assert(nextItemIndex <= capacity);
+            while (nextItemIndex < capacity)
             {
-                //Assert(nextItemIndex <= capacity);
-                while (nextItemIndex < capacity)
+                if (!used[nextItemIndex])
                 {
-                    if (!used[nextItemIndex])
-                    {
-                        T* p = (T*)(bytes.data() + nextItemIndex * itemByteSize);
-                        char* flagPtr = &used[nextItemIndex];
-                        *flagPtr = true; // and mark as allocated
-                        //used[nextItemIndex] = true; // and mark as allocated
-                        nextItemIndex++;
-                        return std::make_pair(p, flagPtr);
-                    }
+                    T* p = (T*)(bytes.data() + nextItemIndex * itemByteSize);
+                    char* flagPtr = &used[nextItemIndex];
+                    *flagPtr = true; // and mark as allocated
+                    //used[nextItemIndex] = true; // and mark as allocated
                     nextItemIndex++;
+                    return std::make_pair(p, flagPtr);
                 }
-                return std::make_pair(nullptr, nullptr); // this block is full
+                nextItemIndex++;
             }
-            static void Deallocate(char* flagPtr)
-            {
-                Assert(*flagPtr == (char)true);
-                *flagPtr = false;
-            }
-        };
-        // state of allocation
-        std::list<Block> blocks;                          // all blocks we have currently allocated
-        size_t totalItemsAllocated = 0;                   // we have presently this many live objects
-        size_t totalItemsReserved = 0;                    // we are holding memory sufficient to hold this many
-        // state of scan
-        typename std::list<Block>::iterator currentBlock; // we are allocating from this block
-        size_t nextItemIndex;                             // index of next item. If at end of block, this is equal to blockCapacity
-        void ResetScan()
-        {
-            currentBlock = blocks.begin();
-            nextItemIndex = 0;
+            return std::make_pair(nullptr, nullptr); // this block is full
         }
-    public:
-        Storage()
+        static void Deallocate(char* flagPtr)
         {
-            ResetScan();
-            //fprintf(stderr, "Scan reset for storage of elements of %d bytes\n", (int)itemByteSize);
-        }
-        template<typename T>
-        T* Allocate()
-        {
-            //if (sizeof(FixedSizePoolItem<T>) != itemByteSize)
-            //    LogicError("FixedSizePoolAllocator: Called for an object of the wrong size.");
-            //Assert(totalItemsReserved >= totalItemsAllocated);
-            //fprintf(stderr, "allocate<%s>()  --> %d bytes (%d incl. index)\n", typeid(T).name(), (int)sizeof T, (int)itemByteSize);
-            // find next free location
-            for (;;)
-            {
-                // all blocks are full: either reset the scan or grow
-                if (currentBlock == blocks.end())
-                {
-                    if (totalItemsReserved > totalItemsAllocated * 2)
-                    {
-                        // if we have 50% utilization or below, we start over the scan in our existing allocated space
-                        // At 50%, on av. we need to scan 1 extra item to find a free one.
-                        ResetScan();
-                    }
-                    else
-                    {
-                        // too few free items, we'd scan lots of items to find one: instead use a fresh block
-                        //if ((decltype(FixedSizePoolItem<T>::blockIndex))(currentBlockIndex + 1) != currentBlockIndex + 1)
-                        //    LogicError("FixedSizePoolAllocator: Too many blocks.");
-                        blocks.emplace_back(Block());
-                        totalItemsReserved += Block::capacity;
-                        // enter the new block
-                        currentBlock = blocks.end();
-                        currentBlock--;
-                        nextItemIndex = 0;
-                    }
-                }
-                // try to allocate in current block
-                auto res = currentBlock->template TryAllocate<T>(nextItemIndex);
-                auto* p = res.first;
-                if (p) // found one in the current block
-                {
-                    totalItemsAllocated++; // account for it
-                    auto* pItem = reinterpret_cast<FixedSizePoolItem<typename T>*>(const_cast<std::remove_const_t<T>*>(p));
-                    //pItem->blockIndex = (decltype(pItem->blockIndex))currentBlockIndex; // remember which block it came from
-                    pItem->flagPtr = res.second; // remember flag location for trivial deallocation
-                    //Assert(pItem->blockIndex == currentBlockIndex); // (overflow)
-                    return p;
-                }
-                // current block is full: advance the scan to the next block
-                currentBlock++;
-                nextItemIndex = 0;
-            }
-            //LogicError("FixedSizePoolAllocator: Allocation in newly created block unexpectedly failed.");
-        }
-        template<typename T>
-        void Deallocate(T* p)
-        {
-            //fprintf(stderr, "deallocate<%s>()  --> %d bytes (%d incl. index)\n", typeid(T).name(), (int)sizeof T, (int)itemByteSize);
-            const auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(const_cast<std::remove_const_t<T>*>(p));
-            auto* flagPtr = pItem->flagPtr;
-            Block::Deallocate(flagPtr);
-            //Assert(pItem->blockIndex < blocks.size());
-            //blocks[pItem->blockIndex]->Deallocate(p);
-            //Assert(totalItemsAllocated > 0);
-            totalItemsAllocated--;
+            Assert(*flagPtr == (char)true);
+            *flagPtr = false;
         }
     };
-    template<class T>
-    friend class strong_shared_ptr;
+    // state of allocation
+    std::list<Block> blocks;                          // all blocks we have currently allocated
+    size_t totalItemsAllocated = 0;                   // we have presently this many live objects
+    size_t totalItemsReserved = 0;                    // we are holding memory sufficient to hold this many
+    // state of scan
+    typename std::list<Block>::iterator currentBlock; // we are allocating from this block
+    size_t nextItemIndex;                             // index of next item. If at end of block, this is equal to blockCapacity
+    void ResetScan()
+    {
+        currentBlock = blocks.begin();
+        nextItemIndex = 0;
+    }
 public:
-};
-template<typename T>
-struct XStorage
-{
-    static typename FixedSizePool<sizeof FixedSizePoolItem<T>>::Storage s_storage;
+    FixedSizePoolStorage()
+    {
+        ResetScan();
+        //fprintf(stderr, "Scan reset for storage of elements of %d bytes\n", (int)itemByteSize);
+    }
+    template<typename T>
+    T* Allocate()
+    {
+        //if (sizeof(FixedSizePoolItem<T>) != itemByteSize)
+        //    LogicError("FixedSizePoolAllocator: Called for an object of the wrong size.");
+        //Assert(totalItemsReserved >= totalItemsAllocated);
+        //fprintf(stderr, "allocate<%s>()  --> %d bytes (%d incl. index)\n", typeid(T).name(), (int)sizeof T, (int)itemByteSize);
+        // find next free location
+        for (;;)
+        {
+            // all blocks are full: either reset the scan or grow
+            if (currentBlock == blocks.end())
+            {
+                if (totalItemsReserved > totalItemsAllocated * 2)
+                {
+                    // if we have 50% utilization or below, we start over the scan in our existing allocated space
+                    // At 50%, on av. we need to scan 1 extra item to find a free one.
+                    ResetScan();
+                }
+                else
+                {
+                    // too few free items, we'd scan lots of items to find one: instead use a fresh block
+                    //if ((decltype(FixedSizePoolItem<T>::blockIndex))(currentBlockIndex + 1) != currentBlockIndex + 1)
+                    //    LogicError("FixedSizePoolAllocator: Too many blocks.");
+                    blocks.emplace_back(Block());
+                    totalItemsReserved += Block::capacity;
+                    // enter the new block
+                    currentBlock = blocks.end();
+                    currentBlock--;
+                    nextItemIndex = 0;
+                }
+            }
+            // try to allocate in current block
+            auto res = currentBlock->template TryAllocate<T>(nextItemIndex);
+            auto* p = res.first;
+            if (p) // found one in the current block
+            {
+                totalItemsAllocated++; // account for it
+                auto* pItem = reinterpret_cast<FixedSizePoolItem<typename T>*>(const_cast<std::remove_const_t<T>*>(p));
+                //pItem->blockIndex = (decltype(pItem->blockIndex))currentBlockIndex; // remember which block it came from
+                pItem->flagPtr = res.second; // remember flag location for trivial deallocation
+                //Assert(pItem->blockIndex == currentBlockIndex); // (overflow)
+                return p;
+            }
+            // current block is full: advance the scan to the next block
+            currentBlock++;
+            nextItemIndex = 0;
+        }
+        //LogicError("FixedSizePoolAllocator: Allocation in newly created block unexpectedly failed.");
+    }
+    template<typename T>
+    void Deallocate(T* p)
+    {
+        //fprintf(stderr, "deallocate<%s>()  --> %d bytes (%d incl. index)\n", typeid(T).name(), (int)sizeof T, (int)itemByteSize);
+        const auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(const_cast<std::remove_const_t<T>*>(p));
+        auto* flagPtr = pItem->flagPtr;
+        Block::Deallocate(flagPtr);
+        //Assert(pItem->blockIndex < blocks.size());
+        //blocks[pItem->blockIndex]->Deallocate(p);
+        //Assert(totalItemsAllocated > 0);
+        totalItemsAllocated--;
+    }
 };
 
-// a C++ allocator that allocates objects of type <T> in FixedSizePool Storage objects shared across all types of the same size
+// a C++ allocator that allocates objects of type <T> in FixedSizePool FixedSizePoolStorage objects shared across all types of the same size
 template<typename T>
 class FixedSizePoolAllocatorT
 {
@@ -609,19 +597,19 @@ public: // required boilerplate --is there no base to derive from to provide thi
     inline bool operator!=(FixedSizePoolAllocatorT const& a) { return !operator==(a); }
 private:
     // say FixedSizePool::get() to get access to a globally shared instance for all pools of the same itemByteSize
-    static auto& GetStorage() { static FixedSizePool<sizeof(FixedSizePoolItem<T>)>::Storage/*<itemByteSize>*/ s_storage; return s_storage; }
+    static auto& GetStorage() { static FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)>/*<itemByteSize>*/ s_storage; return s_storage; }
 public:
     inline pointer allocate(size_type cnt = 1, typename std::allocator<void>::const_pointer = 0)
     {
         if (cnt != 1)
             InvalidArgument("FixedSizePoolAllocatorT: This allocator only supports allocation of single items.");
-        //auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
+        //auto& storage = FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)>::get();
         auto& storage = GetStorage();
         return reinterpret_cast<pointer>(storage.template Allocate<T>());
     }
     inline void deallocate(pointer p, size_type = 1)
     {
-        //auto& storage = FixedSizePool<sizeof(FixedSizePoolItem<T>)>::get();
+        //auto& storage = FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)>::get();
         auto& storage = GetStorage();
         storage.template Deallocate<T>(p);
     }
@@ -741,20 +729,11 @@ class strong_shared_ptr final
             other->AddRef();
         return other;
     }
-    template<size_t N>
-    static typename FixedSizePool<N>::Storage& GetTheStorage()
+    struct Storage
     {
-        //return FixedSizePool<N>::s_storage;
-        //static FixedSizePool<N>::Storage s_storage;
-        //return s_storage;
-    }
-    static auto& GetStorage()
-    {
-        return XStorage<T>::s_storage;
-        //return GetTheStorage<sizeof FixedSizePoolItem<T>>();
-        //extern FixedSizePool<sizeof(FixedSizePoolItem<T>)>::Storage g_storage;
-        //return g_storage;
-    }
+        static FixedSizePoolStorage<sizeof FixedSizePoolItem<T>> s_storage;
+    };
+    static auto& GetStorage() { return Storage::s_storage; }
     void Release()
     {
         if (m_ptr && m_ptr->DecRef() == 0)
@@ -828,10 +807,10 @@ public:
     OptionalString() { }
     OptionalString(OptionalString&& other) : m_string(move(other.m_string)) { }
     OptionalString(const OptionalString& other) : m_string(other.m_string) { }
-    explicit OptionalString(const std::wstring&  s) : m_string(s.empty() ? StringPtr() : StringPtr::MakeSharedObject(s)) { }
-    explicit OptionalString(      std::wstring&& s) : m_string(s.empty() ? StringPtr() : StringPtr::MakeSharedObject(std::move(s))) { }
-    OptionalString& operator=(const std::wstring& s) { if (s.empty()) m_string.reset(); else m_string = StringPtr::MakeSharedObject((s)); return *this; }
-    OptionalString& operator=(std::wstring&& s)      { if (s.empty()) m_string.reset(); else m_string = StringPtr::MakeSharedObject((std::move(s))); return *this; }
+    explicit OptionalString(const std::wstring&  s) : m_string(s.empty() ? StringPtr() : MakeSharedObject1<SharableString const>(s)) { }
+    explicit OptionalString(      std::wstring&& s) : m_string(s.empty() ? StringPtr() : MakeSharedObject1<SharableString const>(std::move(s))) { }
+    OptionalString& operator=(const std::wstring& s) { if (s.empty()) m_string.reset(); else m_string = MakeSharedObject1<SharableString const>((s)); return *this; }
+    OptionalString& operator=(std::wstring&& s)      { if (s.empty()) m_string.reset(); else m_string = MakeSharedObject1<SharableString const>((std::move(s))); return *this; }
     OptionalString& operator=(const OptionalString& other) { m_string = other.m_string;       return *this; }
     OptionalString& operator=(OptionalString&& other)      { m_string = move(other.m_string); return *this; }
     operator const std::wstring&() const { return get(); }
