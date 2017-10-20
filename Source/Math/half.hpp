@@ -299,6 +299,11 @@ inline half exp(half arg)
     return half(exp((float)arg));
 }
 
+inline half max(const half& lhs, const half& rhs)
+{
+    return half(max((float)lhs, (float)rhs));
+}
+
 }
 
 #undef __CUDA_HOSTDEVICE__

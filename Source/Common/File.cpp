@@ -34,6 +34,7 @@
 #define WRITE_BUFFER_SIZE (1024 * 1024)
 
 #include <boost/algorithm/string.hpp>
+#include "half.hpp"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -978,9 +979,11 @@ template <class ElemType>
 
 template vector<float>  File::LoadMatrixFromTextFile<float> (const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 template vector<double> File::LoadMatrixFromTextFile<double>(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
+template vector<half> File::LoadMatrixFromTextFile<half>(const std::wstring& filePath, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 
 template vector<float>  File::LoadMatrixFromStringLiteral<float> (const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 template vector<double> File::LoadMatrixFromStringLiteral<double>(const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
+template vector<half> File::LoadMatrixFromStringLiteral<half>(const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 
 #ifndef CNTK_COMPONENT_VERSION
 #error CNTK_COMPONENT_VERSION must be set

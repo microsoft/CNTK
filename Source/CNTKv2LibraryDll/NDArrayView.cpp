@@ -119,7 +119,7 @@ namespace CNTK
     }
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const void* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/)
-        : NDArrayView(dataType, device, StorageFormat::SparseCSC, viewShape, false, AllocateTensorView(dataType, StorageFormat::SparseCSC, viewShape, device, numNonZeroValues))
+        : NDArrayView(dataType, device, StorageFormat::SparseCSC, viewShape, false, AllocateTensorView(dataType, StorageFormat::SparseCSC, viewShape, device, numNonZeroValues * DataTypeSize(dataType)))
     {
         if ((colStarts == nullptr) || (rowIndices == nullptr) || (nonZeroValues == nullptr) || (numNonZeroValues == 0) || (numNonZeroValues > viewShape.TotalSize()))
             InvalidArgument("Invalid sparse CSC format data specified for construction of NDArrayView with shape '%S'; "

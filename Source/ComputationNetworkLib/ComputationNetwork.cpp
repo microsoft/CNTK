@@ -47,6 +47,12 @@ vector<MemRequestInfo<double>>& MatrixPool::GetMemRequestInfoVec<double>()
     return m_memRequestInfoDoubleVec;
 }
 
+template <>
+vector<MemRequestInfo<half>>& MatrixPool::GetMemRequestInfoVec<half>()
+{
+    return m_memRequestInfoHalfVec;
+}
+
 // -----------------------------------------------------------------------
 // construction
 // -----------------------------------------------------------------------

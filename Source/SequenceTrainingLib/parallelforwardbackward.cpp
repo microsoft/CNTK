@@ -737,6 +737,11 @@ void lattice::parallelstate::setloglls(const Microsoft::MSR::CNTK::Matrix<double
     throw ::logic_error("Double precision not supported for sequence training");
 }
 
+void lattice::parallelstate::setloglls(const Microsoft::MSR::CNTK::Matrix<half>& /*loglls*/)
+{
+    throw ::logic_error("Half precision not supported for sequence training");
+}
+
 void lattice::parallelstate::getgamma(Microsoft::MSR::CNTK::Matrix<float>& loglls)
 {
     pimpl->getgamma(loglls);
@@ -744,6 +749,11 @@ void lattice::parallelstate::getgamma(Microsoft::MSR::CNTK::Matrix<float>& logll
 
 // TODO: Overload to enable compilation for DoublePrecision though its currently unsupported
 void lattice::parallelstate::getgamma(Microsoft::MSR::CNTK::Matrix<double>& /*loglls*/)
+{
+    throw ::logic_error("Double precision not supported for sequence training");
+}
+
+void lattice::parallelstate::getgamma(Microsoft::MSR::CNTK::Matrix<half>& /*loglls*/)
 {
     throw ::logic_error("Double precision not supported for sequence training");
 }

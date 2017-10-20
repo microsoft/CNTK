@@ -1766,6 +1766,15 @@ namespace CNTK
                 nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(var, computationNode, matrix, layout);
             break;
         }
+        case DataType::Float16:
+        {
+            auto& matrix = getGradient ? computationNode->As<ComputationNode<half>>()->Gradient() : computationNode->As<ComputationNode<half>>()->Value();
+            if (varValue == nullptr)
+                nodeValue = MakeSharedObject<PackedValue>(varShape, var.DynamicAxes(), std::make_shared<Matrix<half>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+            else
+                nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<half>(var, computationNode, matrix, layout);
+            break;
+        }
         default:
             CNTK::LogicError("CompositeFunction::Forward/Backward: Unsupported DataType %s", DataTypeName(var.GetDataType()));
             break;
@@ -1923,6 +1932,8 @@ namespace CNTK
             GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, inputsToExcludeGradientsFor, true);
         else if (dataType == DataType::Double)
             GetComputationNetwork<double>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, inputsToExcludeGradientsFor, true);
+        else if (dataType == DataType::Float16)
+            GetComputationNetwork<half>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, inputsToExcludeGradientsFor, true);
         else
             InvalidArgument("Unsupported DataType %s", DataTypeName(dataType));
 

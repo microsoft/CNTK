@@ -944,5 +944,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Batch
 
 template class ComputationNetworkBuilder<float>;
 template class ComputationNetworkBuilder<double>;
+template class ComputationNetworkBuilder<half>;
 
 }}}

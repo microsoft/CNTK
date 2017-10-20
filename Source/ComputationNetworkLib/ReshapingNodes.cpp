@@ -373,6 +373,7 @@ template <class ElemType>
 
 template class ReduceElementsNode<float>;
 template class ReduceElementsNode<double>;
+template class ReduceElementsNode<half>;
 
 // -----------------------------------------------------------------------
 // Where(bitVector) -- extract indices of non-0 values in a sequence
@@ -490,6 +491,7 @@ template <class ElemType>
 
 template class WhereNode<float>;
 template class WhereNode<double>;
+template class WhereNode<half>;
 
 // -----------------------------------------------------------------------
 // PackedIndexNode(targetObject, indexSequence) -- map sequence
@@ -551,6 +553,7 @@ template <class ElemType>
 
 template class PackedIndexNode<float>;
 template class PackedIndexNode<double>;
+template class PackedIndexNode<half>;
 
 // -----------------------------------------------------------------------
 // GatherPackedNode(packedIndex, sourceData) -- gather operation
@@ -623,6 +626,7 @@ template <class ElemType>
 
 template class GatherPackedNode<float>;
 template class GatherPackedNode<double>;
+template class GatherPackedNode<half>;
 
 // -----------------------------------------------------------------------
 // ScatterPackedNode(layoutData, packedIndex, sourceData) -- scatter operation
@@ -686,6 +690,7 @@ template <class ElemType>
 
 template class ScatterPackedNode<float>;
 template class ScatterPackedNode<double>;
+template class ScatterPackedNode<half>;
 
 // -----------------------------------------------------------------------
 // CropNode -- crop operation, crops first input according to shape of second
@@ -1026,5 +1031,6 @@ bool CropNode<ElemType>::SupportsTransformOnInput(size_t inputIndex)
 
 template class CropNode<float>;
 template class CropNode<double>;
+template class CropNode<half>;
 
 }}}

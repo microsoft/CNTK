@@ -1178,8 +1178,7 @@ template <>
 template <>
 /*static*/ half Matrix<half>::MakeNan(size_t /*payload*/)
 {
-    RuntimeError("MakeNan half is not implemented.");
-    return 0;
+    return half(nanf(""));
 }
 template <>
 /*static*/ char Matrix<char>::MakeNan(size_t)
@@ -1316,6 +1315,7 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
 // If this is ever used for something that needs performance, it should not be too hard (but labor) to implement this efficiently.
 static void DoCastAssignValuesOf(Matrix<float>&  target, const Matrix<float>&  other) { target.AssignValuesOf(other); }
 static void DoCastAssignValuesOf(Matrix<double>& target, const Matrix<double>& other) { target.AssignValuesOf(other); }
+static void DoCastAssignValuesOf(Matrix<half>& target, const Matrix<half>& other) { target.AssignValuesOf(other); }
 template<class ElemType>
 static void CopyToVector(const Matrix<ElemType>& source, vector<ElemType>& sourceData)
 {
@@ -1371,7 +1371,10 @@ void Matrix<ElemType>::CastAssignValuesOf(const MatrixBase& other) /*override*/ 
     const Matrix<double> * otherd = dynamic_cast<const Matrix<double>*>(&other);
     if (otherd)
         return DoCastAssignValuesOf(*this, *otherd);
-    LogicError("CastAssignValuesOf: Only accepts float and double matrices.");
+    const Matrix<half> * otherh = dynamic_cast<const Matrix<half>*>(&other);
+    if (otherh)
+        return DoCastAssignValuesOf(*this, *otherh);
+    LogicError("CastAssignValuesOf: Only accepts float, double and half matrices.");
 }
 
 template<>

@@ -91,6 +91,7 @@ public:
 
 template class PlusNode<float>;
 template class PlusNode<double>;
+template class PlusNode<half>;
 
 // -----------------------------------------------------------------------
 // LogPlusNode (summand1, summand2)
@@ -165,6 +166,7 @@ public:
 
 template class LogPlusNode<float>;
 template class LogPlusNode<double>;
+template class LogPlusNode<half>;
 
 
 // -----------------------------------------------------------------------
@@ -225,6 +227,7 @@ public:
 
 template class PowNode<float>;
 template class PowNode<double>;
+template class PowNode<half>;
 
 
 // -----------------------------------------------------------------------
@@ -287,6 +290,7 @@ public:
 
 template class MinusNode<float>;
 template class MinusNode<double>;
+template class MinusNode<half>;
 
 // -----------------------------------------------------------------------
 // ElementTimesNode (factor1, factor2)
@@ -360,6 +364,7 @@ public:
 
 template class ElementTimesNode<float>;
 template class ElementTimesNode<double>;
+template class ElementTimesNode<half>;
 
 // -----------------------------------------------------------------------
 // TimesNodeBase (A, B, outputRank=1)
@@ -1051,6 +1056,7 @@ public:
 
 template class TimesNode<float>;
 template class TimesNode<double>;
+template class TimesNode<half>;
 
 // -----------------------------------------------------------------------
 // TransposeTimesNode (A', B)
@@ -1080,6 +1086,7 @@ public:
 
 template class TransposeTimesNode<float>;
 template class TransposeTimesNode<double>;
+template class TransposeTimesNode<half>;
 
 // Fixed-point matrix product. This scales inputs to 16bit signed integers by Symmetric quantizers, performs
 // integer multiplication using SSE/AVX2, and transforms the results back.
@@ -1170,6 +1177,7 @@ public:
 
 template class QuantizedTimesNode<float>;
 template class QuantizedTimesNode<double>;
+template class QuantizedTimesNode<half>;
 
 // -----------------------------------------------------------------------
 // SumElementsNode (input)
@@ -1405,6 +1413,7 @@ private:
 
 template class TransposeDimensionsNode<float>;
 template class TransposeDimensionsNode<double>;
+template class TransposeDimensionsNode<half>;
 
 // -----------------------------------------------------------------------
 // CosDistanceNode (left, right)
@@ -1525,6 +1534,7 @@ private:
 
 template class CosDistanceNode<float>;
 template class CosDistanceNode<double>;
+template class CosDistanceNode<half>;
 
 // -----------------------------------------------------------------------
 // KhatriRaoProductNode (left, right)
@@ -1851,6 +1861,7 @@ private:
 
 template class CosDistanceWithNegativeSamplesNode<float>;
 template class CosDistanceWithNegativeSamplesNode<double>;
+template class CosDistanceWithNegativeSamplesNode<half>;
 
 template <class ElemType>
 void UpdateRunningAverage(ComputationNode<ElemType>& newInput, TensorView<ElemType>& runningAverage,

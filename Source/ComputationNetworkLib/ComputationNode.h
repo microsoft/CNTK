@@ -2106,7 +2106,7 @@ public:
             s_constOnes[rows].find(cols) == s_constOnes[rows].end()) // not found
         {
             shared_ptr<Matrix<ElemType>> matrix = make_shared<Matrix<ElemType>>(rows, cols, (DEVICEID_TYPE) deviceId);
-            matrix->SetValue(1);
+            matrix->SetValue((ElemType)1);
             s_constOnes[rows][cols] = matrix;
         }
 

@@ -133,6 +133,7 @@ private:
 
 template class CuDnnBatchNormEngine<float>;
 template class CuDnnBatchNormEngine<double>;
+template class CuDnnBatchNormEngine<half>;
 
 template <typename ElemType>
 std::unique_ptr<BatchNormEngine<ElemType>> CuDnnBatchNormEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
@@ -143,6 +144,7 @@ std::unique_ptr<BatchNormEngine<ElemType>> CuDnnBatchNormEngineFactory<ElemType>
 
 template class CuDnnBatchNormEngineFactory<float>;
 template class CuDnnBatchNormEngineFactory<double>;
+template class CuDnnBatchNormEngineFactory<half>;
 
 CudaTimer::~CudaTimer()
 {

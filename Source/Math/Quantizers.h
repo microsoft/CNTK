@@ -67,8 +67,8 @@ public:
         }
         else
         {
-            m_quantizeFactor = this->rangeMax / shiftedMax;
-            m_inverseQuantizerFactor = 1 / m_quantizeFactor;
+            m_quantizeFactor = (RawType)this->rangeMax / shiftedMax;
+            m_inverseQuantizerFactor = (RawType)1 / m_quantizeFactor;
         }
 
         for (size_t i = 0; i < input.size(); i++)
