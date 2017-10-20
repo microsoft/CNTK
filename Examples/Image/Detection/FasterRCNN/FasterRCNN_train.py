@@ -592,45 +592,45 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
         while sample_count < cfg["DATA"].NUM_TRAIN_IMAGES:  # loop over minibatches in the epoch
             data = od_minibatch_source.next_minibatch(min(cfg.MB_SIZE, cfg["DATA"].NUM_TRAIN_IMAGES-sample_count), input_map=input_map)
 
-            # ------------------------------------
-            # REVIEW SPTIWARI: Getting parameters of various nodes
-            fc6_node_proxy = find_by_name(loss, "fc6")
-            fc7_node_proxy = find_by_name(loss, "fc7")
-            bbox_regr_W_node_proxy = find_by_name(loss, "bbox_regr.W")
-            bbox_regr_b_node_proxy = find_by_name(loss, "bbox_regr.b")
-            cls_score_W_node_proxy = find_by_name(loss, "cls_score.W")
-            cls_score_b_node_proxy = find_by_name(loss, "cls_score.b")
-            rpn_cls_score_node_proxy = find_by_name(loss, "rpn_cls_score")
-            rpn_bbox_pred_node_proxy = find_by_name(loss, "rpn_bbox_pred")
-            print("fc6.W -- Max: %f, Min: %f\n" % (
-            np.max(fc6_node_proxy.parameters[0].value), np.min(fc6_node_proxy.parameters[0].value)))
-            print("fc6.b -- Max: %f, Min: %f\n" % (
-            np.max(fc6_node_proxy.parameters[1].value), np.min(fc6_node_proxy.parameters[1].value)))
-            print("fc7.W -- Max: %f, Min: %f\n" % (
-                np.max(fc7_node_proxy.parameters[0].value), np.min(fc7_node_proxy.parameters[0].value)))
-            print("fc7.b -- Max: %f, Min: %f\n" % (
-                np.max(fc7_node_proxy.parameters[1].value), np.min(fc7_node_proxy.parameters[1].value)))
-            print("bbox_regr.W -- Max: %f, Min: %f\n" % (
-                np.max(bbox_regr_W_node_proxy.value), np.min(bbox_regr_W_node_proxy.value)))
-            print("bbox_regr.b -- Max: %f, Min: %f\n" % (
-                np.max(bbox_regr_b_node_proxy.value), np.min(bbox_regr_b_node_proxy.value)))
-            print("cls_score.W -- Max: %f, Min: %f\n" % (
-                np.max(cls_score_W_node_proxy.value), np.min(cls_score_W_node_proxy.value)))
-            print("cls_score.b -- Max: %f, Min: %f\n" % (
-                np.max(cls_score_b_node_proxy.value), np.min(cls_score_b_node_proxy.value)))
-            print("rpn_cls_score.W -- Max: %f, Min: %f\n" % (
-                np.max(rpn_cls_score_node_proxy.parameters[0].value),
-                np.min(rpn_cls_score_node_proxy.parameters[0].value)))
-            print("rpn_cls_score.b -- Max: %f, Min: %f\n" % (
-                np.max(rpn_cls_score_node_proxy.parameters[1].value),
-                np.min(rpn_cls_score_node_proxy.parameters[1].value)))
-            print("rpn_bbox_pred.W -- Max: %f, Min: %f\n" % (
-                np.max(rpn_bbox_pred_node_proxy.parameters[0].value),
-                np.min(rpn_bbox_pred_node_proxy.parameters[0].value)))
-            print("rpn_bbox_pred.b -- Max: %f, Min: %f\n" % (
-                np.max(rpn_bbox_pred_node_proxy.parameters[1].value),
-                np.min(rpn_bbox_pred_node_proxy.parameters[1].value)))
-            # ------------------------------------
+            # # ------------------------------------
+            # # REVIEW SPTIWARI: Getting parameters of various nodes
+            # fc6_node_proxy = find_by_name(loss, "fc6")
+            # fc7_node_proxy = find_by_name(loss, "fc7")
+            # bbox_regr_W_node_proxy = find_by_name(loss, "bbox_regr.W")
+            # bbox_regr_b_node_proxy = find_by_name(loss, "bbox_regr.b")
+            # cls_score_W_node_proxy = find_by_name(loss, "cls_score.W")
+            # cls_score_b_node_proxy = find_by_name(loss, "cls_score.b")
+            # rpn_cls_score_node_proxy = find_by_name(loss, "rpn_cls_score")
+            # rpn_bbox_pred_node_proxy = find_by_name(loss, "rpn_bbox_pred")
+            # print("fc6.W -- Max: %f, Min: %f\n" % (
+            # np.max(fc6_node_proxy.parameters[0].value), np.min(fc6_node_proxy.parameters[0].value)))
+            # print("fc6.b -- Max: %f, Min: %f\n" % (
+            # np.max(fc6_node_proxy.parameters[1].value), np.min(fc6_node_proxy.parameters[1].value)))
+            # print("fc7.W -- Max: %f, Min: %f\n" % (
+            #     np.max(fc7_node_proxy.parameters[0].value), np.min(fc7_node_proxy.parameters[0].value)))
+            # print("fc7.b -- Max: %f, Min: %f\n" % (
+            #     np.max(fc7_node_proxy.parameters[1].value), np.min(fc7_node_proxy.parameters[1].value)))
+            # print("bbox_regr.W -- Max: %f, Min: %f\n" % (
+            #     np.max(bbox_regr_W_node_proxy.value), np.min(bbox_regr_W_node_proxy.value)))
+            # print("bbox_regr.b -- Max: %f, Min: %f\n" % (
+            #     np.max(bbox_regr_b_node_proxy.value), np.min(bbox_regr_b_node_proxy.value)))
+            # print("cls_score.W -- Max: %f, Min: %f\n" % (
+            #     np.max(cls_score_W_node_proxy.value), np.min(cls_score_W_node_proxy.value)))
+            # print("cls_score.b -- Max: %f, Min: %f\n" % (
+            #     np.max(cls_score_b_node_proxy.value), np.min(cls_score_b_node_proxy.value)))
+            # print("rpn_cls_score.W -- Max: %f, Min: %f\n" % (
+            #     np.max(rpn_cls_score_node_proxy.parameters[0].value),
+            #     np.min(rpn_cls_score_node_proxy.parameters[0].value)))
+            # print("rpn_cls_score.b -- Max: %f, Min: %f\n" % (
+            #     np.max(rpn_cls_score_node_proxy.parameters[1].value),
+            #     np.min(rpn_cls_score_node_proxy.parameters[1].value)))
+            # print("rpn_bbox_pred.W -- Max: %f, Min: %f\n" % (
+            #     np.max(rpn_bbox_pred_node_proxy.parameters[0].value),
+            #     np.min(rpn_bbox_pred_node_proxy.parameters[0].value)))
+            # print("rpn_bbox_pred.b -- Max: %f, Min: %f\n" % (
+            #     np.max(rpn_bbox_pred_node_proxy.parameters[1].value),
+            #     np.min(rpn_bbox_pred_node_proxy.parameters[1].value)))
+            # # ------------------------------------
 
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
