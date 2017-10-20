@@ -461,7 +461,7 @@ class FixedSizePool
     static void Assert(bool cond) { if (!cond) LogicError("FixedSizePool: An assertion failed."); }
 
     // class to store objects of size itemByteSize in lists of char arrays
-    template<size_t itemByteSize>
+    //template<size_t itemByteSize>
     class Storage
     {
         struct Block
@@ -585,9 +585,11 @@ class FixedSizePool
             totalItemsAllocated--;
         }
     };
+    template<class T>
+    friend class strong_shared_ptr;
 public:
     // say FixedSizePool::get() to get access to a globally shared instance for all pools of the same itemByteSize
-    static Storage<itemByteSize>& get() { static Storage<itemByteSize> storage; return storage; }
+    static Storage/*<itemByteSize>*/& get() { static Storage/*<itemByteSize>*/ storage; return storage; }
 };
 
 // a C++ allocator that allocates objects of type <T> in FixedSizePool Storage objects shared across all types of the same size
@@ -741,12 +743,17 @@ class strong_shared_ptr final
             other->AddRef();
         return other;
     }
+    static auto& GetStorage()
+    {
+        static FixedSizePool<sizeof(FixedSizePoolItem<T>)>::Storage storage;
+        return storage;
+    }
     void Release()
     {
         if (m_ptr && m_ptr->DecRef() == 0)
         {
             m_ptr->~T();
-            FixedSizePoolAllocatorT<T>().deallocate(m_ptr);
+            GetStorage().Deallocate<T>(m_ptr);
         }
     }
     void ReleaseAndReplace(T* other)
@@ -775,14 +782,14 @@ public:
     template <typename ...CtorArgTypes>
     static strong_shared_ptr MakeSharedObject(CtorArgTypes&& ...ctorArgs)
     {
-        T* p = FixedSizePoolAllocatorT<T>().allocate();
+        T* p = GetStorage().Allocate<T>();
         try
         {
             return strong_shared_ptr(new (const_cast<std::remove_const_t<T>*>(p)) T(std::forward<CtorArgTypes>(ctorArgs)...));
         }
         catch (...)
         {
-            FixedSizePoolAllocatorT<T>().deallocate(p);
+            GetStorage().Deallocate<T>(p);
             throw;
         }
     }
