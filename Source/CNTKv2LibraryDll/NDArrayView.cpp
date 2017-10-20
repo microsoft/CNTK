@@ -13,21 +13,19 @@
 #include <algorithm>
 #include "TensorShape.h"
 
-namespace std
-{
-
-template<>
-static constexpr CNTK::float16 numeric_limits<CNTK::float16>::quiet_NaN() noexcept
-{
-    return CNTK::float16(numeric_limits<float>::quiet_NaN());
-}
-
-}
-
 using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    template<typename ElemType>
+    static inline quiet_NaN()
+    {
+        if (std::is_same<ElemType, float16>::Value)
+            return float16(std::numeric_limits<float>::quiet_NaN());
+        else
+            return std::numeric_limits<ElemType>::quiet_NaN()
+    }
+
     template <typename V1ElemType>
     static TensorView<V1ElemType>* AllocateTensorView(const NDShape& viewShape,
                                                        const DeviceDescriptor& device,
@@ -762,7 +760,7 @@ namespace CNTK
         if (scalarData->Shape().TotalSize() != 1)
             LogicError("NDArrayView::AsScalar: The NDArrayView shaped '%S' is not a scalar.", scalarData->Shape().AsString().c_str());
 
-        ElementType scalar = std::numeric_limits<ElementType>::quiet_NaN();
+        ElementType scalar = quiet_NaN();
         std::shared_ptr<const NDArrayView> cpuData;
         if (scalarData->Device() == DeviceDescriptor::CPUDevice())
             cpuData = scalarData;
