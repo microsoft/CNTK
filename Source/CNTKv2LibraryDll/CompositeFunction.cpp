@@ -1728,6 +1728,9 @@ namespace CNTK
             case DataType::Double:
                 PopulateComputationNodeGradient<double>(gradientVarValuePair, outputComputationNode);
                 break;
+            case DataType::Float16:
+                PopulateComputationNodeGradient<half>(gradientVarValuePair, outputComputationNode);
+                break;
             default:
                 LogicError("Function '%S' Backward: Unsupported DataType %s.", AsString().c_str(), DataTypeName(gradientValue->GetDataType()));
                 break;

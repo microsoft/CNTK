@@ -174,6 +174,8 @@ namespace CNTK
     {
         if (GetDataType() == DataType::Double)
             SetValue((double)value);
+        else if (GetDataType() == DataType::Float16)
+            SetValue((float16)value);
         else
         {
             if (IsSparse())
