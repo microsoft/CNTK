@@ -18,12 +18,15 @@ using namespace Microsoft::MSR::CNTK;
 namespace CNTK
 {
     template<typename ElemType>
-    static inline quiet_NaN()
+    inline ElemType quiet_NaN()
     {
-        if (std::is_same<ElemType, float16>::Value)
-            return float16(std::numeric_limits<float>::quiet_NaN());
-        else
-            return std::numeric_limits<ElemType>::quiet_NaN()
+        return std::numeric_limits<ElemType>::quiet_NaN();
+    }
+
+    template<>
+    inline float16 quiet_NaN<float16>()
+    {
+        return float16(std::numeric_limits<float>::quiet_NaN());
     }
 
     template <typename V1ElemType>
@@ -760,7 +763,7 @@ namespace CNTK
         if (scalarData->Shape().TotalSize() != 1)
             LogicError("NDArrayView::AsScalar: The NDArrayView shaped '%S' is not a scalar.", scalarData->Shape().AsString().c_str());
 
-        ElementType scalar = quiet_NaN();
+        ElementType scalar = quiet_NaN<ElementType>();
         std::shared_ptr<const NDArrayView> cpuData;
         if (scalarData->Device() == DeviceDescriptor::CPUDevice())
             cpuData = scalarData;
