@@ -1201,7 +1201,7 @@ namespace CNTK
         DeviceDescriptor m_device;
         NDShape m_maskShape;
 
-        std::shared_ptr<Microsoft::MSR::CNTK::Matrix<char>> m_matrixView;
+        Microsoft::MSR::CNTK::Matrix<char>::MatrixPtr m_matrixView;
     };
 
     ///

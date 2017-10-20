@@ -54,6 +54,7 @@ protected:
     bool m_clsinfoRead;
 
 public:
+    typedef std::shared_ptr<Matrix<ElemType>> MatrixPtr;
     using LabelType = wstring;
     using LabelIdType = long;
     long nwords, dims, nsamps, nglen, nmefeats;
