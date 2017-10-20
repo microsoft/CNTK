@@ -63,6 +63,18 @@ namespace CNTK
         inline bool operator==(const float16& rhs) const { return (__x == rhs.__x); }
         inline bool operator!=(const float16& rhs) const { return (__x != rhs.__x); }
 #endif
+
+        static float16 create(float f)
+        {
+            float16 v;
+            float2halfbits(&f, &v.__x);
+            return v;
+        }
+
+        static float16 create(double d)
+        {
+            return create((float)d);
+        }
     };
 
     ///
@@ -740,7 +752,7 @@ namespace CNTK
                 SetValue(value);
                 break;
             case DataType::Float16:
-                SetValue((float16)value);
+                SetValue(float16::create(value));
                 break;
             default:
                 LogicError("Unsupported DataType %s.", DataTypeName(m_dataType));
