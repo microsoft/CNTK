@@ -130,8 +130,8 @@ template<class ElemType>
 /*static*/ TensorView<ElemType> ComputationNode<ElemType>::Unpack(const TensorShape& sampleShape,
                                                                   const Matrix<ElemType>& packedData,
                                                                   const MBLayoutPtr& layout,
-                                                                  const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
-                                                                  const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
+                                                                  const MatrixPtr& unpackedDataStorage,
+                                                                  const MatrixPtr& tempIndicesStorage,
                                                                   const std::shared_ptr<Matrix<char>>& tempMaskStorage,
                                                                   bool batchMajor,
                                                                   const ElemType* gapPadValue)
@@ -148,7 +148,7 @@ template<class ElemType>
         unpackedShape = unpackedShape.AppendInPlace(i++, batchMajor ? maxNumTimeSteps : numSequences);
     }
 
-    std::shared_ptr<Matrix<ElemType>> unpackedData;
+    MatrixPtr unpackedData;
     if ((maxNumTimeSteps == 1) || (numSequences == 1) || (batchMajor && (layout->GetNumParallelSequences() == layout->GetNumSequences())))
     {
         unpackedData = std::make_shared<Matrix<ElemType>>(packedData.AsReference());
@@ -234,7 +234,7 @@ template<class ElemType>
                                                              ElemType beta,
                                                              Matrix<ElemType>& broadcastTo,
                                                              const FrameRange& targetFrameRange,
-                                                             const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage)
+                                                             const MatrixPtr& tempIndicesStorage)
 {
     auto targetLayout = targetFrameRange.m_pMBLayout;
     

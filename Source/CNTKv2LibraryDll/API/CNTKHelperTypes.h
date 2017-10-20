@@ -644,7 +644,7 @@ class enable_strong_shared_ptr
     void AddRef() const noexcept { referenceCount++; }
     size_t DecRef() const noexcept { referenceCount--; return referenceCount; }
 public:
-    T* get() const { return static_cast<T*>(*this); } // TODO: no, must return strong_shared_ptr<T>
+    //T* get() const { return static_cast<T*>(*this); } // TODO: no, must return strong_shared_ptr<T>
     //strong_shared_ptr<T> shared_from_this() const { get(); }
 };
 template<class T>

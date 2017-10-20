@@ -54,8 +54,10 @@ template <class ElemType> class CPUSparseMatrix;
 template <class ElemType> class DeviceBoundNumber;
 
 // <ElemType>-agnostic base class
-struct /*interface*/ MATH_API MatrixBase
+struct /*interface*/ MATH_API MatrixBase   // : public ::CNTK::enable_strong_shared_ptr<MatrixBase>
 {
+    typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
+    //typedef ::CNTK::strong_shared_ptr<MatrixBase> MatrixBasePtr;
     virtual int GetDeviceId() const = 0;
     virtual MatrixType GetMatrixType() const = 0;
     virtual MatrixFormat GetFormat() const = 0;
@@ -68,7 +70,7 @@ struct /*interface*/ MATH_API MatrixBase
     // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
     virtual ~MatrixBase();
 };
-typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
+typedef MatrixBase::MatrixBasePtr MatrixBasePtr;
 
 // Note: To comply with BLAS libraries, matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor convertion.
 // !!!WARNING!!! This class is NOT THREAD SAFE. Test and add necessary modifications if using in multi-threaded environment
@@ -106,6 +108,7 @@ private:
     static void CopyElementsFromDenseToSparse(CPUMatrix<ElemType>& from, CPUSparseMatrix<ElemType>& dest);
 
 public:
+    typedef std::shared_ptr<Matrix<ElemType>> MatrixPtr;
     // Constructors, destructors and other static matrix builders
     // Each constructor can take deviceId as parameter.
     // If deviceId<0 then the matrix will be based in RAM (CPUMatrix)
@@ -159,6 +162,7 @@ private:
     void ShallowMoveFrom(Matrix<ElemType>&& other);
 
 public:
+#if 0
     // down-cast to make life easier
     template <class T>
     static shared_ptr<T> DownCast(shared_ptr<BaseMatrix<ElemType>> inode)
@@ -168,6 +172,7 @@ public:
             LogicError("A Matrix of mismatching type was passed.");
         return node;
     }
+#endif
 
     MatrixType GetMatrixType() const final;
     MatrixFormat GetFormat() const final;

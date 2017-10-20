@@ -1208,6 +1208,7 @@ struct ITakesDynamicAxis
 template <typename ElemType>
 struct MultiOutputNode
 {
+    typedef typename Matrix<ElemType>::MatrixPtr MatrixPtr;
 public:
     MultiOutputNode(size_t numOutputs)
         : m_numOutputs(numOutputs)
@@ -1225,8 +1226,8 @@ public:
     std::vector<bool> m_outputsHasNewMBLayout;
     std::vector<std::shared_ptr<MBLayout>> m_outputsMBLayout;
     std::vector<bool> m_outputsIsValueSparse;
-    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsValue;
-    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsGradient;
+    std::vector<MatrixPtr> m_outputsValue;
+    std::vector<MatrixPtr> m_outputsGradient;
 };
 
 // =======================================================================
@@ -1243,6 +1244,7 @@ protected:
 
     // std containers such as list and map does not support class reference so we need to use pointer
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
+    typedef typename Matrix<ElemType>::MatrixPtr MatrixPtr;
 
 public:
 
@@ -1505,8 +1507,8 @@ public:
     static TensorView<ElemType> Unpack(const TensorShape& sampleShape,
                                        const Matrix<ElemType>& packedData,                                       
                                        const MBLayoutPtr& layout,
-                                       const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
-                                       const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
+                                       const MatrixPtr& unpackedDataStorage,
+                                       const MatrixPtr& tempIndicesStorage,
                                        const std::shared_ptr<Matrix<char>>& tempMaskStorage,
                                        bool batchMajor,
                                        const ElemType* gapPadValue);
@@ -1517,7 +1519,7 @@ public:
                                        bool batchMajor,
                                        const ElemType* gapPadValue)
     {
-        auto nullSharedPtr = std::shared_ptr<Matrix<ElemType>>(nullptr);
+        auto nullSharedPtr = MatrixPtr(nullptr);
         return Unpack(sampleShape, packedData, layout, nullSharedPtr, nullSharedPtr, std::shared_ptr<Matrix<char>>(nullptr), batchMajor, gapPadValue);
     }
 
@@ -1526,7 +1528,7 @@ public:
                                   ElemType beta,
                                   Matrix<ElemType>& broadcastTo,
                                   const FrameRange& targetFrameRange,
-                                  const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage);
+                                  const MatrixPtr& tempIndicesStorage);
 
     // -----------------------------------------------------------------------
     // accessors for value and gradient
@@ -1536,7 +1538,7 @@ public:
     Matrix<ElemType>&       Value()       { return *m_value; }
 
     MatrixBasePtr ValuePtr() const override final { return m_value; }    // readers want this as a shared_ptr straight
-    std::shared_ptr<Matrix<ElemType>>& ValuePtrRef() { return m_value; }
+    MatrixPtr& ValuePtrRef() { return m_value; }
 
     // Note: We cannot return a const& since returning m_value as a MatrixBasePtr is a type cast that generates a temporary. Interesting.
 
@@ -1544,7 +1546,7 @@ public:
     Matrix<ElemType>&       Gradient()       { return *m_gradient; }
 
     MatrixBasePtr GradientPtr() const { return m_gradient; }
-    std::shared_ptr<Matrix<ElemType>>& GradientPtrRef() { return m_gradient; }
+    MatrixPtr& GradientPtrRef() { return m_gradient; }
     // TODO: This is only used for testing whether a gradient has been allocated. Maybe reduce to bool HasGradient()?
 
     MatrixType GetPreferredGradientMatrixType() { return m_preferredGradientMatrixType; }
@@ -1911,7 +1913,7 @@ protected:
     // this function is used to create matrices for those needed before matrix pool is available
     // e.g., for model parameters and input nodes you will need to resize the functions based on NDL
     // and before matrix pool is available
-    void CreateMatrixIfNull(shared_ptr<Matrix<ElemType>>& matrixPtr)
+    void CreateMatrixIfNull(MatrixPtr& matrixPtr)
     {
         if (!matrixPtr)
             matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
@@ -1921,7 +1923,7 @@ protected:
     // if the matrix's size will scale with minibatch size, set mbScale = true 
     // if workspace flag is true, the memory request will be treated specially. We assume workspace memory will share their own pointers 
     // this is currently a workaround for workspace memory for convolutions
-    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false, bool aliasing=false)
+    void RequestMatrixFromPool(MatrixPtr& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false, bool aliasing=false)
     {
         if (matrixPtr == nullptr)
         {
@@ -1932,7 +1934,7 @@ protected:
         }
     }
 
-    void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, bool aliasing=false)
+    void ReleaseMatrixToPool(MatrixPtr& matrixPtr, MatrixPool& matrixPool, bool aliasing=false)
     {
         assert(matrixPtr != nullptr);
         if (aliasing)
@@ -2105,12 +2107,12 @@ public:
         if (s_constOnes.find(rows) == s_constOnes.end() ||
             s_constOnes[rows].find(cols) == s_constOnes[rows].end()) // not found
         {
-            shared_ptr<Matrix<ElemType>> matrix = make_shared<Matrix<ElemType>>(rows, cols, (DEVICEID_TYPE) deviceId);
+            MatrixPtr matrix = make_shared<Matrix<ElemType>>(rows, cols, (DEVICEID_TYPE) deviceId);
             matrix->SetValue(1);
             s_constOnes[rows][cols] = matrix;
         }
 
-        shared_ptr<Matrix<ElemType>> m = s_constOnes[rows][cols];
+        MatrixPtr m = s_constOnes[rows][cols];
         m->TransferFromDeviceToDevice(m->GetDeviceId(), deviceId);
 
         return *m;
@@ -2122,9 +2124,9 @@ public:
 
 protected:
 
-    shared_ptr<Matrix<ElemType>> m_value, m_gradient;
+    MatrixPtr m_value, m_gradient;
 
-    static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
+    static std::map<size_t, std::map<size_t, MatrixPtr>> s_constOnes;
 
     MatrixType m_preferredGradientMatrixType = UNDETERMINED;
 };
