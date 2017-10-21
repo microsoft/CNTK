@@ -3051,7 +3051,7 @@ class Variable::AutoBatch
                 // create a new PrimitiveFunction Slice()
                 auto outputShape = fromDims; // determine output shape
                 outputShape.back()/*[fromSliceAxis]*/ = endIndex - beginIndex; // narrow it down to the range of the slice we are taking
-                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, Function::InputsVectorType(1, fromOutput), outputShape,
+                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, Function::InputsVectorType(nullptr/*1*/, fromOutput), outputShape,
                                                          Dictionary(
                                                              PrimitiveFunction::AttributeNameAxis,       Axis((int)fromSliceAxis),
                                                              PrimitiveFunction::AttributeNameBeginIndex, (int)beginIndex,
@@ -3083,7 +3083,7 @@ class Variable::AutoBatch
                     auto outputShape = batchedInputDims.BackPopped();
                     outputShape.back() = batchDim;
                     // insert a Reshape() op
-                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(1, move(batchedInput)), outputShape,
+                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(batchedInput)), outputShape,
                                                              Dictionary(),
                                                              //f0.m_name,
                                                              f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
@@ -3104,7 +3104,7 @@ class Variable::AutoBatch
                         outputShape.push_back(batchDim);
                     }
                     // insert a Reshape() op
-                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(1, move(batchedInput)), outputShape,
+                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(batchedInput)), outputShape,
                                                              Dictionary(),
                                                              //f0.m_name,
                                                              f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
@@ -3132,7 +3132,7 @@ class Variable::AutoBatch
                     broadcastShape.resize(batchAxis);
                     broadcastShape.push_back(f.m_autoBatchState.m_batchDim); // this is the shape we want
                     // insert a ReduceElements op, which in fact ignores its axes and therefore can also be used to broadcast
-                    return CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, Function::InputsVectorType(1, input), broadcastShape,
+                    return CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, Function::InputsVectorType(nullptr/*1*/, input), broadcastShape,
                                                      Dictionary(PrimitiveFunction::AttributeNameReductionOpName, PrimitiveFunction::InternalSumReductionOpName),
                                                      //f0.m_name,
                                                      f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/false);
@@ -3508,7 +3508,7 @@ class Variable::AutoBatch
                 arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
 
                 // Reshape() here does not need the properties at this level anymore; output shape is sufficient
-                let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, Function::InputsVectorType(1, move(arg)), batchedOutputShape, Dictionary()/*, f0.m_name*/, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
+                let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(arg)), batchedOutputShape, Dictionary()/*, f0.m_name*/, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
 
                 batchedOp = reshapeOp; // this is the result that we redistribute from to the individual consumers
             }
@@ -4513,7 +4513,7 @@ void PrimitiveFunction::InitOutput(Variable&& output)
     // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
     //m_outputs.resize(1);
     //m_outputs.front() = move(output);
-    m_outputs.assign(1, move(output));
+    m_outputs.assign(nullptr/*1*/, move(output));
 }
 
 /*Internal::*/Invocable::Invocable(size_t arity, size_t freeAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :

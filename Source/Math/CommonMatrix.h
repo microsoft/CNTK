@@ -626,11 +626,15 @@ protected:
     // copy all metadata (but not content that m_sob points to)
     void ShallowCopyFrom(const BaseMatrix& other) 
     {
-        *this = other;
+        m_numRows         = other.m_numRows;
+        m_numCols         = other.m_numCols;
+        m_sliceViewOffset = other.m_sliceViewOffset;
+        m_sob             = other.m_sob;
     }
 
 protected:
 
+    // --- data members ---
     size_t m_numRows;
     size_t m_numCols;
     // TODO: m_sliceViewOffset has a different meaning in sparse (column offset) versus dense (offset in elements to start of pointer). This should perhaps be fixed.

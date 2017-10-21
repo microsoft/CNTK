@@ -2202,7 +2202,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatri
     {
         NOT_IMPLEMENTED;
     }
-    if (c.m_sob == nullptr)
+    if (c.m_sob.get() == nullptr)
         c.ZeroInit(a.GetFormat(), a.GetComputeDeviceId());
 
     if (a.GetNumCols() != b.GetNumCols() || a.GetNumRows() != b.GetNumRows())

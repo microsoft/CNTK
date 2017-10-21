@@ -601,7 +601,7 @@ void GPUMatrix<ElemType>::Clear()
 {
     VerifyWritable(__FUNCTION__);
     //if (OwnBuffer() && m_pArray != NULL)
-    if (m_sob != nullptr)
+    if (m_sob.get() != nullptr)
     {
         if (GetComputeDeviceId()>= 0)
         {
