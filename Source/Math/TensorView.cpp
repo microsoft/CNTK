@@ -688,7 +688,7 @@ void TensorView<ElemType>::DoScatterBatchOf(ElemType beta, const IArrayRef<Tenso
     // Redistributes a batched object to outputs along the last axis of 'this'.
     // Each output shape must, 1-padded, match the input ('this') shape except for the last input
     // dimension, which is the sum of the (1-padded) output dimensions.
-#if 0 // disable this for reproducability (ScatterBatch uses atomicAdd)
+#if 1 // disable this for reproducability (ScatterBatch uses atomicAdd)
     if (CanGatherScatterBatch(m_shape, outputs, axis))
     {
         if (m_shape.GetRank() == 0)

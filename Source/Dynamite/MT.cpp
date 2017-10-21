@@ -689,11 +689,14 @@ void Train(string systemId, wstring outputDirectory)
             totalLabels += info.numberOfSamples;
             let smoothedLossVal = smoothedLoss.Update(lossPerLabel, info.numberOfSamples);
             let elapsed = timer.ElapsedSeconds(); // [sec]
+            partTimer.Restart();
+            mbLoss = Variable();
+            let timeDeleteGraph = partTimer.Elapsed();
             if (communicator->CurrentWorker().IsMain())
-                fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f ms\n",
+                fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
                                 (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
                                 info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples,
-                                1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeBackward, 1000.0 * timePerUpdate);
+                                1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeBackward, 1000.0 * timePerUpdate, 1000.0 * timeDeleteGraph);
             // log
             // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
             if (mbCount < 400 || mbCount % 5 == 0)
@@ -701,9 +704,6 @@ void Train(string systemId, wstring outputDirectory)
             if (std::isnan(lossPerLabel))
                 throw runtime_error("Loss is NaN.");
 #else
-            partTimer.Restart();
-            mbLoss = Variable();
-            let timeDeleteGraph = partTimer.Elapsed();
             let elapsed = timer.ElapsedSeconds(); // [sec]
             double lossPerLabel = 0, smoothedLossVal = 0;
             fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, d=%.0f ms\n",
