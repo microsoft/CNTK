@@ -257,7 +257,7 @@ enum MatrixFlags
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class BaseMatrixStorage : public enable_shared_from_this<BaseMatrixStorage<ElemType>>
+class BaseMatrixStorage : public ::CNTK::enable_strong_shared_ptr<BaseMatrixStorage<ElemType>> //enable_shared_from_this<BaseMatrixStorage<ElemType>>
 {
     template <class ElemType2> friend class BaseMatrix;
 
@@ -591,31 +591,30 @@ protected:
 
     size_t GetNumElements() const { return m_numRows * m_numCols; }
 
-
     void ZeroInit()
     {
         MatrixFormat defFmt = matrixFormatDense;
         DEVICEID_TYPE compDev = -1;
-        if (m_sob != nullptr)
+        if (m_sob.get() != nullptr)
         {
             defFmt = m_sob->GetFormat();
             compDev = m_sob->GetComputeDeviceId();
-
         }
         ZeroInit(defFmt, compDev);
     }
 
     void ZeroValues()
     {
-        m_numRows           = 0;
-        m_numCols           = 0;
-        m_sliceViewOffset   = 0;
-        m_sob               = nullptr;
+        m_numRows         = 0;
+        m_numCols         = 0;
+        m_sliceViewOffset = 0;
+        m_sob.reset();
     }
     void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice )
     {
         ZeroValues();
-        m_sob = ::CNTK::MakeSharedObject<BaseMatrixStorage<ElemType>>(matrixFormat, computeDevice);
+        //m_sob = ::CNTK::MakeSharedObject<BaseMatrixStorage<ElemType>>(matrixFormat, computeDevice);
+        m_sob = ::CNTK::MakeSharedObject1<BaseMatrixStorage<ElemType>>(matrixFormat, computeDevice);
     }
 
 protected:
@@ -640,7 +639,11 @@ protected:
     //size_t m_colStride; // TODO: This is not implemented at all.
 
     // Storage OBject containing the underlying data used by this matrix
+#if 0 // this switches between shared_ptr and our own for the sub-objects
     shared_ptr<BaseMatrixStorage<ElemType>> m_sob;
+#else
+    mutable ::CNTK::strong_shared_ptr<BaseMatrixStorage<ElemType>> m_sob;
+#endif
 };
 
 }}}

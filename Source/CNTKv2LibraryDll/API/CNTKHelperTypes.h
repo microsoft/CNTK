@@ -643,6 +643,7 @@ class enable_strong_shared_ptr
     friend class strong_shared_ptr;
     void AddRef() const noexcept { referenceCount++; }
     size_t DecRef() const noexcept { referenceCount--; return referenceCount; }
+    size_t UseCount() const noexcept { return referenceCount; }
 public:
     //T* get() const { return static_cast<T*>(*this); } // TODO: no, must return strong_shared_ptr<T>
     //strong_shared_ptr<T> shared_from_this() const { get(); }
@@ -682,12 +683,14 @@ public:
     strong_shared_ptr(const strong_shared_ptr& other) noexcept : m_ptr(AddRef(other.m_ptr)) { }
     strong_shared_ptr(strong_shared_ptr&&      other) noexcept : m_ptr(other.m_ptr) { other.m_ptr = nullptr; }
     ~strong_shared_ptr() noexcept { Release(); }
-    strong_shared_ptr& operator=(const strong_shared_ptr& other)     { ReleaseAndReplace(AddRef(other.m_ptr));                return *this; }
+    strong_shared_ptr& operator=(const strong_shared_ptr& other) { ReleaseAndReplace(AddRef(other.m_ptr));                return *this; }
     strong_shared_ptr& operator=(strong_shared_ptr&& other) noexcept { ReleaseAndReplace(other.m_ptr); other.m_ptr = nullptr; return *this; }
     void reset() noexcept { ReleaseAndReplace(nullptr); }
     typename std::add_lvalue_reference_t<T> operator*() const noexcept { return *m_ptr; }
-    T* operator->() const noexcept { return m_ptr; }
-    T* get()        const noexcept { return m_ptr; }
+    T* operator->()    const noexcept { return m_ptr; }
+    T* get()           const noexcept { return m_ptr; }
+    bool unique()      const noexcept { return m_ptr && m_ptr->UseCount() == 1; }
+    size_t use_count() const noexcept { return m_ptr ? m_ptr->UseCount() : 0; }
     explicit operator bool() const noexcept { return m_ptr != nullptr; }
     void swap(strong_shared_ptr& other) noexcept { std::swap(m_ptr, other.m_ptr); }
     bool operator==(const strong_shared_ptr& other) const noexcept { return m_ptr == other.m_ptr; }
