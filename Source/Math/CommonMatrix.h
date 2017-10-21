@@ -269,11 +269,6 @@ public:
 
     BaseMatrixStorage(MatrixFormat matrixFormat = matrixFormatDense, DEVICEID_TYPE computeDevice = CPUDEVICE)
     {
-//        ZeroInit(format, computeDevice);
-//    }
-//
-//    void ZeroInit(const MatrixFormat matrixFormat = matrixFormatDense, const DEVICEID_TYPE computeDevice = -1)
-//    {
         m_externalBuffer           = false;
         m_format                   = matrixFormat;
         m_computeDevice            = computeDevice;
@@ -299,8 +294,6 @@ public:
     ~BaseMatrixStorage()
     {
         ReleaseMemory();
-        m_numRows = 0;
-        m_numCols = 0;
     }
 
     void ReleaseMemory()

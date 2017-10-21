@@ -525,13 +525,13 @@ void Matrix<ElemType>::ReleaseMemory()
     m_baseMatrix = nullptr;
     // Perf: Avoid assignments to shared_ptr unless necessary. In certain versions of the standard library
     // they cause ref counting, and this piece of code is called often..
-    if (m_GPUMatrix.get() != nullptr)
+    //if (m_GPUMatrix.get() != nullptr)
         m_GPUMatrix.reset();
-    if (m_CPUMatrix.get() != nullptr)
+    //if (m_CPUMatrix.get() != nullptr)
         m_CPUMatrix.reset();
-    if (m_GPUSparseMatrix.get() != nullptr)
+    //if (m_GPUSparseMatrix.get() != nullptr)
         m_GPUSparseMatrix.reset();
-    if (m_CPUSparseMatrix.get() != nullptr)
+    //if (m_CPUSparseMatrix.get() != nullptr)
         m_CPUSparseMatrix.reset();
     m_matrixType = MatrixType::UNDETERMINED;
     m_currentDataLocation = CurrentDataLocation::NONE;

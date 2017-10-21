@@ -640,7 +640,6 @@ void GPUMatrix<ElemType>::ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> 
     m_workspace->push(std::move(src));
 }
 
-#pragma region Basic Operators
 // column-slice constructor
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>&other, size_t startColumn, size_t numCols, size_t sourceNumCols) :
@@ -658,9 +657,6 @@ GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>&other, size_t startColu
     if (startColumn + numCols > sourceNumCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)other.m_numCols);
 
-    //BaseMatrix<ElemType>::ZeroInit();
-    //SetComputeDeviceId(other.GetComputeDeviceId());
-
     // set up all fields (these live in BaseMatrix)
     m_numRows = sourceNumRows;
     m_numCols = numCols;
@@ -668,6 +664,7 @@ GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>&other, size_t startColu
     m_sob = other.m_sob;
 }
 
+#pragma region Basic Operators
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {
