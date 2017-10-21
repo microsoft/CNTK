@@ -510,7 +510,6 @@ namespace CNTK
         return CreateInitializer(Microsoft::MSR::CNTK::TruncNormalInitializerTypeName, scale, seed);
     }
 
-    //template<> typename FixedSizePool<sizeof FixedSizePoolItem<VariableFields>>::Storage FixedSizePool<sizeof FixedSizePoolItem<VariableFields>>::s_storage;
     template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<VariableFields>> strong_shared_ptr<VariableFields>::Storage::s_storage;
 
     Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :

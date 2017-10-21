@@ -467,7 +467,7 @@ protected:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class MATH_API BaseMatrix
+class MATH_API BaseMatrix : public ::CNTK::enable_strong_shared_ptr<BaseMatrix<ElemType>>
 {
 protected:    
     // Default constructor. Copy/Move constructors might set doNotInitialize to true to avoid double initialization.

@@ -83,10 +83,27 @@ class MATH_API Matrix : public MatrixBase
     typedef MatrixBase Base;
 private:
     mutable BaseMatrix<ElemType>*                 m_baseMatrix;
+#if 0 // this switches between shared_ptr and our own for the sub-objects
     mutable shared_ptr<GPUMatrix      <ElemType>> m_GPUMatrix;
     mutable shared_ptr<CPUMatrix      <ElemType>> m_CPUMatrix;
     mutable shared_ptr<GPUSparseMatrix<ElemType>> m_GPUSparseMatrix;
     mutable shared_ptr<CPUSparseMatrix<ElemType>> m_CPUSparseMatrix;
+    template <typename T, typename ...CtorArgTypes>
+    static inline std::shared_ptr<T> MakeSharedMatrixObject(CtorArgTypes&& ...ctorArgs)
+    {
+        return ::CNTK::MakeSharedObject<T>(std::forward<CtorArgTypes>(ctorArgs)...);
+    }
+#else
+    mutable ::CNTK::strong_shared_ptr<GPUMatrix      <ElemType>> m_GPUMatrix;
+    mutable ::CNTK::strong_shared_ptr<CPUMatrix      <ElemType>> m_CPUMatrix;
+    mutable ::CNTK::strong_shared_ptr<GPUSparseMatrix<ElemType>> m_GPUSparseMatrix;
+    mutable ::CNTK::strong_shared_ptr<CPUSparseMatrix<ElemType>> m_CPUSparseMatrix;
+    template <typename T, typename ...CtorArgTypes>
+    static inline ::CNTK::strong_shared_ptr<T> MakeSharedMatrixObject(CtorArgTypes&& ...ctorArgs)
+    {
+        return ::CNTK::MakeSharedObject1<T>(std::forward<CtorArgTypes>(ctorArgs)...);
+    }
+#endif
 
     mutable MatrixType m_matrixType;
     mutable CurrentDataLocation m_currentDataLocation; // Indicates which matrix is current
@@ -110,6 +127,8 @@ private:
 public:
     typedef std::shared_ptr<Matrix<ElemType>> MatrixPtr;
     typedef std::shared_ptr<const Matrix<ElemType>> ConstMatrixPtr;
+    //typedef ::CNTK::strong_shared_ptr<Matrix<ElemType>> MatrixPtr;
+    //typedef ::CNTK::strong_shared_ptr<const Matrix<ElemType>> ConstMatrixPtr;
     // Constructors, destructors and other static matrix builders
     // Each constructor can take deviceId as parameter.
     // If deviceId<0 then the matrix will be based in RAM (CPUMatrix)

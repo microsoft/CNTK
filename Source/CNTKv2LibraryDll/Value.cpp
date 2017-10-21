@@ -120,7 +120,7 @@ namespace CNTK
 
         auto matrix = sequenceData->GetMatrix<ElementType>();
         matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(DeviceDescriptor::CPUDevice()), true);
-        auto cpuSparseMatrix = matrix->m_CPUSparseMatrix;
+        const auto* cpuSparseMatrix = matrix->m_CPUSparseMatrix.get();
         auto currentSequenceNumCols = matrix->GetNumCols();
         auto currentSequenceColStarts = cpuSparseMatrix->SecondaryIndexLocation();
         auto currentSequenceNumNonZeroValues = currentSequenceColStarts[currentSequenceNumCols] - currentSequenceColStarts[0];

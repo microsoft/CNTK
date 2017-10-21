@@ -667,7 +667,7 @@ class strong_shared_ptr final
         if (m_ptr && m_ptr->DecRef() == 0)
         {
             m_ptr->~T();
-            GetStorage().Deallocate<T>(m_ptr);
+            GetStorage().template Deallocate<T>(m_ptr);
         }
     }
     void ReleaseAndReplace(T* other)
@@ -696,14 +696,14 @@ public:
     template <typename ...CtorArgTypes>
     static strong_shared_ptr MakeSharedObject(CtorArgTypes&& ...ctorArgs)
     {
-        T* p = GetStorage().Allocate<T>();
+        T* p = GetStorage().template Allocate<T>();
         try
         {
             return strong_shared_ptr(new (const_cast<std::remove_const_t<T>*>(p)) T(std::forward<CtorArgTypes>(ctorArgs)...));
         }
         catch (...)
         {
-            GetStorage().Deallocate<T>(p);
+            GetStorage().template Deallocate<T>(p);
             throw;
         }
     }

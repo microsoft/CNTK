@@ -1239,35 +1239,35 @@ namespace CNTK
             RuntimeError("NDArrayView::SparseDataBuffers: The underlying matrix of 'this' NDArrayView is not in the CSC sparse format.");
 
         size_t numNonZeroValues;
-        ElementType* nonZeroValues;
-        SparseIndexType* colStarts;
-        SparseIndexType* rowIndices;
+        const ElementType* nonZeroValues;
+        const SparseIndexType* colStarts;
+        const SparseIndexType* rowIndices;
         if (m_device.Type() == DeviceKind::CPU)
         {
             if (sizeof(CPUSPARSE_INDEX_TYPE) != sizeof(SparseIndexType))
                 LogicError("Inconsistent data type for sparse index in 'this' Value and the underlying matrix on CPU.");
-            std::shared_ptr<Microsoft::MSR::CNTK::CPUSparseMatrix<ElementType>> sparseMatrix = matrix->m_CPUSparseMatrix;
+            const auto* /*std::shared_ptr<Microsoft::MSR::CNTK::CPUSparseMatrix<ElementType>>*/ sparseMatrix = matrix->m_CPUSparseMatrix.get();
             numNonZeroValues = sparseMatrix->NzCount();
-            nonZeroValues = static_cast<ElementType *>(sparseMatrix->NzValues());
-            colStarts = static_cast<SparseIndexType *>(sparseMatrix->ColLocation());
-            rowIndices = static_cast<SparseIndexType *>(sparseMatrix->RowLocation());
+            nonZeroValues = static_cast<const ElementType *>(sparseMatrix->NzValues());
+            colStarts     = static_cast<const SparseIndexType *>(sparseMatrix->ColLocation());
+            rowIndices    = static_cast<const SparseIndexType *>(sparseMatrix->RowLocation());
         }
         else if (m_device.Type() == DeviceKind::GPU)
         {
             if (sizeof(GPUSPARSE_INDEX_TYPE) != sizeof(SparseIndexType))
                 LogicError("Inconsistent data type for sparse index in 'this' Value and the underlying matrix on GPU.");
-            std::shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<ElementType>> sparseMatrix = matrix->m_GPUSparseMatrix;
+            const auto* /*std::shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<ElementType>>*/ sparseMatrix = matrix->m_GPUSparseMatrix.get();
             numNonZeroValues = sparseMatrix->NzCount();
-            nonZeroValues = static_cast<ElementType *>(sparseMatrix->NzValues());
-            colStarts = static_cast<SparseIndexType *>(sparseMatrix->ColLocation());
-            rowIndices = static_cast<SparseIndexType *>(sparseMatrix->RowLocation());
+            nonZeroValues = static_cast<const ElementType *>(sparseMatrix->NzValues());
+            colStarts     = static_cast<const SparseIndexType *>(sparseMatrix->ColLocation());
+            rowIndices    = static_cast<const SparseIndexType *>(sparseMatrix->RowLocation());
         }
         else
         {
             RuntimeError("NDArrayView::SparseDataBuffers: The device %S is currently not supported.",DeviceKindName(m_device.Type()));
         }
 
-        return std::tuple<ElementType *, SparseIndexType *, SparseIndexType *, size_t>(nonZeroValues, colStarts, rowIndices, numNonZeroValues);
+        return std::tuple<const ElementType *, const SparseIndexType *, const SparseIndexType *, size_t>(nonZeroValues, colStarts, rowIndices, numNonZeroValues);
     }
 
     template <typename ElementType>
@@ -1287,20 +1287,20 @@ namespace CNTK
         size_t numBlocks;
         size_t numRows;
         size_t numCols;
-        ElementType* blockValues;
-        SparseIndexType* blockId2Col;
-        SparseIndexType* col2BlockId;
+        const ElementType* blockValues;
+        const SparseIndexType* blockId2Col;
+        const SparseIndexType* col2BlockId;
         if (m_device.Type() == DeviceKind::GPU)
         {
             if (sizeof(GPUSPARSE_INDEX_TYPE) != sizeof(SparseIndexType))
                 LogicError("Inconsistent data type for sparse index in 'this' Value and the underlying matrix on GPU.");
-            std::shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<ElementType>> sparseMatrix = matrix->m_GPUSparseMatrix;
+            const auto* /*std::shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<ElementType>>*/ sparseMatrix = matrix->m_GPUSparseMatrix.get();
             numBlocks = sparseMatrix->GetBlockSize();
             numRows = sparseMatrix->GetNumRows();
             numCols = sparseMatrix->GetNumCols();
-            blockValues = static_cast<ElementType *>(sparseMatrix->NzValues());
-            blockId2Col = static_cast<SparseIndexType *>(sparseMatrix->BlockId2ColOrRow());
-            col2BlockId = static_cast<SparseIndexType *>(sparseMatrix->ColOrRow2BlockId());
+            blockValues = static_cast<const ElementType *>(sparseMatrix->NzValues());
+            blockId2Col = static_cast<const SparseIndexType *>(sparseMatrix->BlockId2ColOrRow());
+            col2BlockId = static_cast<const SparseIndexType *>(sparseMatrix->ColOrRow2BlockId());
         }
         else
         {
@@ -1308,7 +1308,7 @@ namespace CNTK
             RuntimeError("NDArrayView::SparseBlockColumnDataBuffers: The device %S is currently not supported.", DeviceKindName(m_device.Type()));
         }
 
-        return std::tuple<ElementType *, SparseIndexType *, SparseIndexType *, size_t, size_t, size_t>(blockValues, blockId2Col, col2BlockId, numBlocks, numRows, numCols);
+        return std::tuple<const ElementType *, const SparseIndexType *, const SparseIndexType *, size_t, size_t, size_t>(blockValues, blockId2Col, col2BlockId, numBlocks, numRows, numCols);
     }
 
     void NDArrayView::AdjustSparseBlockColumn(const SparseIndexType* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col)
