@@ -16,7 +16,7 @@
 #include <set>
 #include <vector>
 
-//#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
+#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
 
 #define let const auto
 //#define Named(n) (L##n)
@@ -535,7 +535,7 @@ public:
 static UnaryBroadcastingModel LengthNormalization(const Axis& axis = Axis(0))
 {
 #ifdef DISABLE_NORMALIZATIONS
-    axis; device;
+    axis;
     return UnaryModel(vector<Parameter>{ }, [=](const Variable& x)
     {
         return x;
@@ -847,7 +847,7 @@ static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, c
 static UnaryBroadcastingModel BatchNormalization(const size_t axis, const wstring& name /*= wstring()*/)
 {
 #ifdef DISABLE_NORMALIZATIONS
-    device; name; axis;
+    name; axis;
     return Identity;
 #else
     static size_t id = 0; // unique id

@@ -56,7 +56,7 @@ size_t decoderRecurrentDim = 1024;
 size_t numDecoderResNetProjections = 4;
 size_t decoderProjectionDim = 768;
 size_t topHiddenProjectionDim = 1024;
-size_t subMinibatches = 1;// 0;
+size_t subMinibatches = 10;
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
