@@ -172,7 +172,6 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(CPUSparseMatrix<
 template <class ElemType>
 CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
 {
-    ZeroValues();
 }
 
 template <class ElemType>

@@ -763,9 +763,9 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
         if (GetCurrentMatrixLocation() == GPU || GetCurrentMatrixLocation() == BOTH)
         {
             if (slice.m_GPUMatrix)
-                slice.m_GPUMatrix->operator=(move/*static_cast<GPUMatrix<ElemType>&&>*/(m_GPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
+                slice.m_GPUMatrix->operator=(GPUMatrix<ElemType>(*m_GPUMatrix, startColumn, numCols, sourceNumCols));
             else
-                slice.m_GPUMatrix = MakeSharedMatrixObject<GPUMatrix<ElemType>>(move/*static_cast<GPUMatrix<ElemType>&&>*/(m_GPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
+                slice.m_GPUMatrix = MakeSharedMatrixObject<GPUMatrix<ElemType>>(*m_GPUMatrix, startColumn, numCols, sourceNumCols);
         }
     }
     else if (GetMatrixType() == MatrixType::SPARSE)
@@ -814,7 +814,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fr
             if (m_GPUMatrix)
                 m_GPUMatrix->AssignColumnSlice(*fromMatrix.m_GPUMatrix, startColumn, numCols);
             else
-                m_GPUMatrix = MakeSharedMatrixObject<GPUMatrix<ElemType>>(fromMatrix.m_GPUMatrix->ColumnSlice(startColumn, numCols, numCols));
+                m_GPUMatrix = MakeSharedMatrixObject<GPUMatrix<ElemType>>(*fromMatrix.m_GPUMatrix, startColumn, numCols, numCols);
         },
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);

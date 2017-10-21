@@ -253,7 +253,8 @@ enum MatrixFlags
 };
 
 // -----------------------------------------------------------------------
-// BaseMatrixStorage -- base class for all matrix types (CPU, GPU) x (dense, sparse)
+// BaseMatrixStorage -- storage object (m_sob) for all matrix types (CPU, GPU) x (dense, sparse)
+// Storage objects are shared by vies into the same data.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -266,14 +267,33 @@ private:
     BaseMatrixStorage<ElemType>& operator=(const BaseMatrixStorage<ElemType>& ) = delete;
 public:
 
-    BaseMatrixStorage() 
+    BaseMatrixStorage(MatrixFormat matrixFormat = matrixFormatDense, DEVICEID_TYPE computeDevice = CPUDEVICE)
     {
-        ZeroInit(matrixFormatDense, CPUDEVICE);
-    }
-
-    BaseMatrixStorage(MatrixFormat format, DEVICEID_TYPE computeDevice)
-    {
-        ZeroInit(format, computeDevice);
+//        ZeroInit(format, computeDevice);
+//    }
+//
+//    void ZeroInit(const MatrixFormat matrixFormat = matrixFormatDense, const DEVICEID_TYPE computeDevice = -1)
+//    {
+        m_externalBuffer           = false;
+        m_format                   = matrixFormat;
+        m_computeDevice            = computeDevice;
+        m_numRows                  = 0;
+        m_numCols                  = 0;
+        m_pArray                   = nullptr;
+        m_elemSizeAllocated        = 0;
+        m_totalBufferSizeAllocated = 0;
+        m_blockSize                = 0; // block size
+        m_tempDeviceBuffer         = nullptr;
+        m_tempDeviceBufferSize     = 0;
+        m_tempHostBuffer           = nullptr; // used to copy values.
+        m_tempHostBufferSize       = 0;
+        m_colIdx                   = 0; // used to SetValue()
+        m_compIndexSize            = 0;
+        m_nzValues                 = nullptr;
+        m_unCompIndex              = nullptr; // row/col ids in CSC/CSR format
+        m_compIndex                = nullptr; // begin ids of col/row in CSC/CSR format
+        m_blockIds                 = nullptr; // block ids
+        m_blockIdShift             = 0; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
     }
 
     ~BaseMatrixStorage()
@@ -391,30 +411,6 @@ protected:
     CPUSPARSE_INDEX_TYPE* GetCompIndex() const { return m_compIndex; }
     void SetCompIndex(CPUSPARSE_INDEX_TYPE* parray) { m_compIndex = parray; }
 
-    void ZeroInit(const MatrixFormat matrixFormat = matrixFormatDense, const DEVICEID_TYPE computeDevice = -1)
-    {
-        m_externalBuffer           = false;
-        m_format                   = matrixFormat;
-        m_computeDevice            = computeDevice;
-        m_numRows                  = 0;
-        m_numCols                  = 0;
-        m_pArray                   = nullptr;
-        m_elemSizeAllocated        = 0;
-        m_totalBufferSizeAllocated = 0;
-        m_blockSize                = 0; // block size
-        m_tempDeviceBuffer         = nullptr;
-        m_tempDeviceBufferSize     = 0;
-        m_tempHostBuffer           = nullptr; // used to copy values.
-        m_tempHostBufferSize       = 0;
-        m_colIdx                   = 0; // used to SetValue()
-        m_compIndexSize            = 0;
-        m_nzValues                 = nullptr;
-        m_unCompIndex              = nullptr; // row/col ids in CSC/CSR format
-        m_compIndex                = nullptr; // begin ids of col/row in CSC/CSR format
-        m_blockIds                 = nullptr; // block ids
-        m_blockIdShift             = 0; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
-    }
-
 protected:
     // **************************
     // Variables required by all matrices
@@ -479,7 +475,6 @@ protected:
 
     virtual ~BaseMatrix()
     {
-        ZeroValues();
     }
 public:
     void VerifyResizable(const char* function) const 
@@ -591,6 +586,14 @@ protected:
 
     size_t GetNumElements() const { return m_numRows * m_numCols; }
 
+    void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice)
+    {
+        m_numRows = 0;
+        m_numCols = 0;
+        m_sliceViewOffset = 0;
+        //m_sob = ::CNTK::MakeSharedObject<BaseMatrixStorage<ElemType>>(matrixFormat, computeDevice);
+        m_sob = ::CNTK::MakeSharedObject1<BaseMatrixStorage<ElemType>>(matrixFormat, computeDevice);
+    }
     void ZeroInit()
     {
         MatrixFormat defFmt = matrixFormatDense;
@@ -603,18 +606,13 @@ protected:
         ZeroInit(defFmt, compDev);
     }
 
+    // reset a live matrix to valid but empty state, e.g. when moving from it
     void ZeroValues()
     {
-        m_numRows         = 0;
-        m_numCols         = 0;
+        m_numRows = 0;
+        m_numCols = 0;
         m_sliceViewOffset = 0;
         m_sob.reset();
-    }
-    void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice )
-    {
-        ZeroValues();
-        //m_sob = ::CNTK::MakeSharedObject<BaseMatrixStorage<ElemType>>(matrixFormat, computeDevice);
-        m_sob = ::CNTK::MakeSharedObject1<BaseMatrixStorage<ElemType>>(matrixFormat, computeDevice);
     }
 
 protected:
@@ -630,6 +628,16 @@ protected:
         m_numCols         = other.m_numCols;
         m_sliceViewOffset = other.m_sliceViewOffset;
         m_sob             = other.m_sob;
+    }
+
+    // copy all metadata (but not content that m_sob points to)
+    void ShallowMoveFrom(BaseMatrix&& other)
+    {
+        m_numRows = other.m_numRows;
+        m_numCols = other.m_numCols;
+        m_sliceViewOffset = other.m_sliceViewOffset;
+        m_sob = other.m_sob;
+        other.ZeroValues();
     }
 
 protected:

@@ -660,7 +660,7 @@ public:
 
     // helper to access to element(0,0) without having to type-cast
     virtual double Get00Element() const = 0;
-    __forceinline MatrixBasePtr ValuePtr() const { return /*virtual*/ValueBasePtr(); }; // for use in readers that pass the agnostic object around
+    MatrixBasePtr ValuePtr() const { return /*virtual*/ValueBasePtr(); }; // for use in readers that pass the agnostic object around
     virtual MatrixBasePtr ValueBasePtr() const = 0; // ComputationNode<>::ValuePtr() returns a Matrix<> ptr
 
     // TODO: two sets of functions, choose one

@@ -313,8 +313,8 @@ struct ReaderFixture
         bool useSharedLayout = true)
     {
         auto mbInputs = make_shared<StreamMinibatchInputs>();
-        std::vector<MatrixPtr> features;
-        std::vector<MatrixPtr> labels;
+        std::vector<Matrix<ElemType>::MatrixPtr> features;
+        std::vector<Matrix<ElemType>::MatrixPtr> labels;
 
         // For the time being, use the same layout across all inputs.
         // TODO: add an option to create per-input layouts (once we have test-cases with different layouts)

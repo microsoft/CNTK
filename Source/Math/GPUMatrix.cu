@@ -525,13 +525,15 @@ void GPUMatrix<ElemType>::ZeroInit(int deviceId)
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>::GPUMatrix(int deviceId)
+GPUMatrix<ElemType>::GPUMatrix(int deviceId) :
+    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     ZeroInit(deviceId);
 };
 
 template <class ElemType>
-GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId)
+GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId) :
+    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     ZeroInit(deviceId);
     m_numRows = numRows;
@@ -546,24 +548,26 @@ GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int d
 };
 
 template <class ElemType>
-GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags)
+GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags) :
+    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     ZeroInit(deviceId);
     SetValue(numRows, numCols, deviceId, pArray, matrixFlags);
 };
 
 template <class ElemType>
-GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom)
+GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom) :
+    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     ZeroInit();
     SetValue(deepCopyFrom);
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>::GPUMatrix(GPUMatrix<ElemType>&& moveFrom)
+GPUMatrix<ElemType>::GPUMatrix(GPUMatrix<ElemType>&& moveFrom) :
+    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
-    ShallowCopyFrom(moveFrom);
-    moveFrom.ZeroValues();
+    ShallowMoveFrom(move(moveFrom));
 }
 
 //assignment operator, deep copy
@@ -581,11 +585,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::operator=(const GPUMatrix<ElemType>& d
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::operator=(GPUMatrix<ElemType>&& moveFrom)
 {
-    if (this != &moveFrom)
-    {
-        ShallowCopyFrom(moveFrom);
-        moveFrom.ZeroValues();
-    }
+    //if (this != &moveFrom) // standard makes this undefined behavior
+    //{
+        ShallowMoveFrom(move(moveFrom));
+    //}
     return *this;
 }
 
@@ -638,29 +641,31 @@ void GPUMatrix<ElemType>::ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> 
 }
 
 #pragma region Basic Operators
+// column-slice constructor
 template <class ElemType>
-GPUMatrix<ElemType> GPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols, size_t sourceNumCols) const
+GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>&other, size_t startColumn, size_t numCols, size_t sourceNumCols) :
+    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     // we reinterpret the matrix to have sourceNumCols columns
-    size_t sourceNumRows = GetNumRows();
-    if (sourceNumCols != GetNumCols() && sourceNumRows != 0)
+    size_t sourceNumRows = other.GetNumRows();
+    if (sourceNumCols != other.GetNumCols() && sourceNumRows != 0)
     {
-        if (GetNumElements() % sourceNumCols != 0)
+        if (other.GetNumElements() % sourceNumCols != 0)
             InvalidArgument("ColumnSlice: sourceNumCols argument incompatible with shape.");
-        sourceNumRows = GetNumElements() / sourceNumCols;
+        sourceNumRows = other.GetNumElements() / sourceNumCols;
     }
 
     if (startColumn + numCols > sourceNumCols)
-        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
+        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)other.m_numCols);
 
-    GPUMatrix<ElemType> slice(GetComputeDeviceId());
+    //BaseMatrix<ElemType>::ZeroInit();
+    //SetComputeDeviceId(other.GetComputeDeviceId());
 
-    slice.ShallowCopyFrom(*this);
-    slice.m_numCols = numCols;
-    slice.m_numRows = sourceNumRows;
-    slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * sourceNumRows;
-
-    return slice;
+    // set up all fields (these live in BaseMatrix)
+    m_numRows = sourceNumRows;
+    m_numCols = numCols;
+    m_sliceViewOffset = other.m_sliceViewOffset + startColumn * sourceNumRows;
+    m_sob = other.m_sob;
 }
 
 template <class ElemType>
@@ -5331,13 +5336,13 @@ template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, 
 template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, char* pArray, const size_t matrixFlags);
 template GPUMatrix<char>::GPUMatrix(const GPUMatrix<char>&);
 template GPUMatrix<char>::GPUMatrix(GPUMatrix<char>&&);
+template GPUMatrix<char>::GPUMatrix(const GPUMatrix<char>&, size_t startColumn, size_t numCols, size_t sourceNumCols);
 template char* GPUMatrix<char>::CopyToArray() const;
 template void GPUMatrix<char>::ChangeDeviceTo(int);
 template void GPUMatrix<char>::Resize(size_t, size_t, bool);
 template void GPUMatrix<char>::RequireSize(size_t, size_t, bool);
 
 template GPUMatrix<char>::~GPUMatrix();
-template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols, size_t sourceNumCols) const;
 template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
 template GPUMatrix<char>::GPUMatrix(int);
 template void GPUMatrix<char>::SetValue(const char);
@@ -5356,13 +5361,13 @@ template GPUMatrix<short>::GPUMatrix(const size_t numRows, const size_t numCols,
 template GPUMatrix<short>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, short* pArray, const size_t matrixFlags);
 template GPUMatrix<short>::GPUMatrix(const GPUMatrix<short>&);
 template GPUMatrix<short>::GPUMatrix(GPUMatrix<short>&&);
+template GPUMatrix<short>::GPUMatrix(const GPUMatrix<short>&, size_t startColumn, size_t numCols, size_t sourceNumCols);
 template short* GPUMatrix<short>::CopyToArray() const;
 template void GPUMatrix<short>::ChangeDeviceTo(int);
 template void GPUMatrix<short>::Resize(size_t, size_t, bool);
 template void GPUMatrix<short>::RequireSize(size_t, size_t, bool);
 
 template GPUMatrix<short>::~GPUMatrix();
-template GPUMatrix<short> GPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols, size_t sourceNumCols) const;
 template GPUMatrix<short>& GPUMatrix<short>::operator=(GPUMatrix<short>&&);
 template GPUMatrix<short>::GPUMatrix(int);
 template void GPUMatrix<short>::SetValue(const short);

@@ -168,20 +168,6 @@ public:
 
 public:
     using Base::VerifyWritable;
-    static const int MaxGpus = MAX_GPUS;
-
-private:
-    static cublasHandle_t s_cuHandle[MaxGpus];
-    static void* s_curandGenerator;
-
-// Have to use disable the warning to avoid issues with __declspec(dllexport) on Windows (C4251).
-// Also, NVCC FE corresponding warning has to be disabled, see MathCUDA.vcxproj.
-// The only workaround is to use naked pointer.
-#pragma warning(push)
-#pragma warning(disable : 4251)
-    mutable std::unique_ptr<conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>> m_workspace;
-    mutable std::shared_ptr<CuDnnRNNExecutor<ElemType>> m_rnnExecutor; // for cudnn5 RNN
-#pragma warning(pop)
 
 private:
     void performElementWiseFunction(const ElementWiseOperator kind, const ElemType* src);
@@ -189,7 +175,7 @@ private:
     size_t LocateColumn(const size_t j) const;
     void Clear();
     void ZeroInit(int deviceId);
-    void ZeroInit() { Base::ZeroInit(); }
+    void ZeroInit() { Base::ZeroInit(); } // (exists so that the overload gets recognized)
 
     std::unique_ptr<GPUMatrix<ElemType>> GetOrCreateWorkspace() const;
     void ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> src) const;
@@ -201,6 +187,7 @@ public:
     GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom);
     GPUMatrix<ElemType>& operator=(const GPUMatrix<ElemType>& deepCopyFrom); // assignment operator, deep copy
     GPUMatrix(GPUMatrix<ElemType>&& moveFrom);
+    GPUMatrix(const GPUMatrix&, size_t startColumn, size_t numCols, size_t sourceNumCols);
     GPUMatrix<ElemType>& operator=(GPUMatrix<ElemType>&& moveFrom); // move assignment operator, shallow copy
     ~GPUMatrix(void);
 
@@ -217,7 +204,7 @@ public:
     void ChangeDeviceTo(DEVICEID_TYPE to_id);
 
 public:
-    GPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols, size_t sourceNumCols) const;
+    //GPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols, size_t sourceNumCols) const; // ColumnSlice() is a constructor
     GPUMatrix<ElemType>& AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
     GPUMatrix<ElemType>& SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
@@ -679,6 +666,23 @@ public:
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;
     }
+public:
+    static const int MaxGpus = MAX_GPUS;
+
+private:
+    static cublasHandle_t s_cuHandle[MaxGpus];
+    static void* s_curandGenerator;
+
+    // --- additional data members ---
+
+// Have to use disable the warning to avoid issues with __declspec(dllexport) on Windows (C4251).
+// Also, NVCC FE corresponding warning has to be disabled, see MathCUDA.vcxproj.
+// The only workaround is to use naked pointer.
+#pragma warning(push)
+#pragma warning(disable : 4251)
+    mutable std::unique_ptr<conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>> m_workspace;
+    mutable std::shared_ptr<CuDnnRNNExecutor<ElemType>> m_rnnExecutor; // for cudnn5 RNN
+#pragma warning(pop)
 };
 
 typedef GPUMatrix<float> GPUSingleMatrix;
