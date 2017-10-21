@@ -210,6 +210,10 @@ namespace CNTK
         NDShape(const std::vector<size_t>& dimensions)
             : m_shapeDims(Transform(dimensions, [](size_t dim) { return (NDShapeDimension)dim; }))
         {}
+        template<typename IteratorType WHERE_IS_ITERATOR(IteratorType)>
+        NDShape(const IteratorType& beginIter, const IteratorType& endIter)
+            : m_shapeDims(Transform(Span<IteratorType>(beginIter, endIter), [](size_t dim) { return (NDShapeDimension)dim; }))
+        {}
 
         ///
         /// Construct a NDShape instance with specified dimensions.
@@ -1025,10 +1029,10 @@ namespace CNTK
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
     private:
-    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
+    public: // public for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
         CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, size_t beginElement, size_t endElement, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
-        CNTK_API NDArrayView(::CNTK::DataType dataType, const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
+        CNTK_API NDArrayView(::CNTK::DataType dataType, const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject, bool sobTypeAlreadyVerified = false);
     private:
         CNTK_API NDArrayViewPtr Reviewed(const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool readOnly) const;
 
@@ -1186,7 +1190,7 @@ namespace CNTK
         CNTK_API void CopyFrom(const NDMask& source);
 
     private:
-    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
+    public: // public for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         NDMask(const NDShape& shape, Microsoft::MSR::CNTK::Matrix<char>* matrix);
     private:
 
@@ -5456,7 +5460,7 @@ namespace CNTK
         void UpdateTestProgress(size_t numSamples, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
 
     protected:
-    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
+    public: // public for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         Evaluator(const FunctionPtr& evaluationFunction, const std::vector<ProgressWriterPtr>& progressWriters = {}, bool initializeCombined = true);
     protected:
 
@@ -5582,7 +5586,7 @@ namespace CNTK
 
         friend class TrainingSession;
 
-    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
+    public: // public for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners,
                 const std::vector<ProgressWriterPtr>& progressWriters = {});
         Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners,

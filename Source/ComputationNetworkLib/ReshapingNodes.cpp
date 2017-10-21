@@ -786,7 +786,7 @@ void CropNode<ElemType>::ForwardProp(const FrameRange& /*fr*/)
     // Retrieve input and output views for the values. Input and output views are tensor views
     // that define parts of first input and output that we operate on (we copy input from input view
     // to output).
-    CroppedIOViews ioViews = CreateIOViews(&ComputationNode<ElemType>::ValuePtr);
+    CroppedIOViews ioViews = CreateIOViews(&ComputationNode<ElemType>::ValueBasePtr);
 
     // Copy values from cropped input to output.
     ioViews.outputView.AssignCopyOf(ioViews.inputViewCropped);
@@ -804,7 +804,7 @@ void CropNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& /
         // Retrieve input and output views for the gradients. Input and output views are tensor views
         // that define parts of first input and output that we operate on (we copy gradients from output view
         // to input view).
-        CroppedIOViews ioViews = CreateIOViews(&ComputationNode<ElemType>::GradientPtr);
+        CroppedIOViews ioViews = CreateIOViews(&ComputationNode<ElemType>::GradientBasePtr);
 
         // Copy gradients from output to cropped input.
         ioViews.inputViewCropped.AddCopyOf(ioViews.outputView);

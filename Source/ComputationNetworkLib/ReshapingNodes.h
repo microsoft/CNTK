@@ -1119,6 +1119,7 @@ private:
     using TransformerNode::m_transforms;
 
     // Declaration of matrix getting method to unify accessing values and gradients.
+    // TODO: Why MatrixBasePtr, and not Matrix<ElemType>::MatrixPtr?
     typedef MatrixBasePtr(ComputationNode<ElemType>::*MatrixGetter)() const;
 
     // Helper structure to store input/output views which define parts of input and output we work with.

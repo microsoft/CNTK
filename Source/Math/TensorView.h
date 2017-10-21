@@ -32,8 +32,15 @@ public:
     // construction
     // -------------------------------------------------------------------
 
+    // main constructor
+    TensorView(const MatrixPtr& sob, const TensorShape& shape);
     // reinterpret a matrix storage object (SOB) as a TensorView with a given TensorShape  --this is the main constructor
-    TensorView(const MatrixBasePtr& sob, const TensorShape& shape);
+    __forceinline TensorView(const MatrixBasePtr& sob, const TensorShape& shape)
+        : TensorView(dynamic_pointer_cast<Matrix<ElemType>>(sob), shape)
+    {
+        if (!m_sob)
+            LogicError("TensorView: Attempted to create a TensorView<ElemType> on a storage object of a different ElemType.");
+    }
 #if 0
     // cast a Matrix as a 2D TensorView (without shape change)
     TensorView(const MatrixBasePtr& sob)

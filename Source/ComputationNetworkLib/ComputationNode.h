@@ -660,7 +660,8 @@ public:
 
     // helper to access to element(0,0) without having to type-cast
     virtual double Get00Element() const = 0;
-    virtual MatrixBasePtr ValuePtr() const = 0; // for use in readers that pass the agnostic object around
+    __forceinline MatrixBasePtr ValuePtr() const { return /*virtual*/ValueBasePtr(); }; // for use in readers that pass the agnostic object around
+    virtual MatrixBasePtr ValueBasePtr() const = 0; // ComputationNode<>::ValuePtr() returns a Matrix<> ptr
 
     // TODO: two sets of functions, choose one
     const std::wstring& NodeName() const { return m_nodeName; }
@@ -1536,16 +1537,18 @@ public:
     const Matrix<ElemType>& Value() const { return *m_value; }
     Matrix<ElemType>&       Value()       { return *m_value; }
 
-    MatrixBasePtr ValuePtr() const override final { return m_value; }    // readers want this as a shared_ptr straight
-    MatrixPtr& ValuePtrRef() { return m_value; }
+    MatrixBasePtr ValueBasePtr() const override final { return m_value; } // as Base; meant to be called from MatrixBase::ValuePtr
+    const MatrixPtr& ValuePtr() const { return m_value; }
+    MatrixPtr&       ValuePtrRef()    { return m_value; }
 
     // Note: We cannot return a const& since returning m_value as a MatrixBasePtr is a type cast that generates a temporary. Interesting.
 
     const Matrix<ElemType>& Gradient() const { return *m_gradient; }
     Matrix<ElemType>&       Gradient()       { return *m_gradient; }
 
-    MatrixBasePtr GradientPtr() const { return m_gradient; }
-    MatrixPtr& GradientPtrRef() { return m_gradient; }
+    MatrixBasePtr GradientBasePtr() const { return m_gradient; }
+    const MatrixPtr& GradientPtr()  const { return m_gradient; }
+    MatrixPtr&       GradientPtrRef()     { return m_gradient; }
     // TODO: This is only used for testing whether a gradient has been allocated. Maybe reduce to bool HasGradient()?
 
     MatrixType GetPreferredGradientMatrixType() { return m_preferredGradientMatrixType; }
@@ -1638,7 +1641,7 @@ public:
         return GradientFor(fr);
     }
     // tensor version of the above functions
-    TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr) const
+    TensorView<ElemType> DataTensorFor(const MatrixPtr& data, size_t rank, const FrameRange& fr) const
     {
         try
         {
@@ -2237,7 +2240,7 @@ public:
     virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
     virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
     virtual double Get00Element() const override { NOT_IMPLEMENTED; }
-    virtual MatrixBasePtr ValuePtr() const override { NOT_IMPLEMENTED; }
+    virtual MatrixBasePtr ValueBasePtr() const override { NOT_IMPLEMENTED; }
     virtual void UpdateFunctionMBSize() override { NOT_IMPLEMENTED; }
     virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
     virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
@@ -2393,6 +2396,7 @@ protected:                                                                      
     using Base::ValidateUnaryMap;                                                                                                                        \
     using Base::ValidateUnaryReduce;                                                                                                                     \
     using Base::ValueFor;                                                                                                                                \
+    using Base::ValueBasePtr;                                                                                                                            \
     using Base::ValuePtr;                                                                                                                                \
     using Base::ValueTensorFor;                                                                                                                          \
     using Base::VerifyDataSize;                                                                                                                          \

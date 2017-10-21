@@ -38,11 +38,9 @@ using namespace std;
 
 // main constructor (all constructors except the default one route through this)
 template <class ElemType>
-TensorView<ElemType>::TensorView(const MatrixBasePtr& sob, const TensorShape& shape)
-    : m_sob(dynamic_pointer_cast<Matrix<ElemType>>(sob)), m_shape(shape)
+TensorView<ElemType>::TensorView(const MatrixPtr& sob, const TensorShape& shape)
+    : m_sob(sob), m_shape(shape)
 {
-    if (!m_sob)
-        LogicError("TensorView: Attempted to create a TensorView<ElemType> on a storage object of a different ElemType.");
 #ifdef _DEBUG
     // check bounds of TensorShape against underlying storage object
     // This is useful to detect errors like passing a matrix from the wrong input.

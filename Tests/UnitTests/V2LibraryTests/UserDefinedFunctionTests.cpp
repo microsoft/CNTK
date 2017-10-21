@@ -124,7 +124,7 @@ private:
         return OutputsVectorType(outputs);
     }
 
-public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
+public: // public for MakeSharedObject() only. TODO: Remove once we know how to do that right.
     UserDefinedTimesOrPlusFunction(const Variable& leftOperand, const Variable& rightOperand, bool isTimes, const std::wstring& name)
         : Function({ leftOperand, rightOperand }, Dictionary(), name), m_isTimes(isTimes)
     {

@@ -168,7 +168,7 @@ namespace CNTK
         }
 
     private:
-    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
+    public: // public for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         PackedValue(const NDShape& sampleShape, const std::vector<Axis>& sampleDynamicAxes, const NDArrayViewPtr& packedData, const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout>& packedDataLayout, bool isReadOnly)
             : Value(nullptr), m_isPacked(true), m_sampleShape(sampleShape), m_sampleDynamicAxes(sampleDynamicAxes), m_packedData(packedData), m_packedDataLayout(packedDataLayout), m_isReadOnly(isReadOnly)
         {

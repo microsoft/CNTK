@@ -499,8 +499,6 @@ public:
     const SmallVector<size_t>& GetDims() const { return m_dims; } // get all, e.g. for logging or for constructing derived tensors with edited dimensions
     const SmallVector<ptrdiff_t>& GetStrides() const { return m_strides; }
 
-    const std::vector<size_t> GetDimsAsVector() const { return std::vector<size_t>(m_dims.begin(), m_dims.end()); } // and with type cast to std::vector, e.g. for passing to NDShape
-
     // test whether the tensor represents a column vector (but allowing added broadcasting dimensions)
     // A tensor represents a column vector when all dimensions except the leading are 1.
     bool IsColumnVector() const

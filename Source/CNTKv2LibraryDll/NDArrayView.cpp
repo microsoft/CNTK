@@ -91,13 +91,13 @@ namespace CNTK
         }
     }
 
-    NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly/* = false*/)
+    __forceinline NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly/* = false*/)
         : NDArrayView(dataType, viewShape, readOnly, CreateStorageObject(dataType, viewShape, device, dataBuffer, bufferSizeInBytes))
     {
     }
 
     template <typename ElementType>
-    NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/)
+    __forceinline NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/)
         : NDArrayView(AsDataType<ElementType>(), viewShape, false, CreateStorageObject<ElementType>(viewShape, StorageFormat::SparseCSC, device, numNonZeroValues))
     {
         if ((colStarts == nullptr) || (rowIndices == nullptr) || (nonZeroValues == nullptr) || (numNonZeroValues == 0) || (numNonZeroValues > viewShape.TotalSize()))
@@ -110,6 +110,13 @@ namespace CNTK
         m_isReadOnly = readOnly;
     }
 
+    // same but with known ElementType
+    template<typename ElementType>
+    static __forceinline void* ConstructTensorView(Internal::TensorViewUnion& space, const typename Matrix<ElementType>::MatrixPtr& sob, const TensorShape& shape)
+    {
+        // placement-construct it inside m_tensorViewUnion, passed to this function as 'space'
+        return new ((TensorView<ElementType>*)&space) TensorView<ElementType>(sob, shape);
+    }
     // ElementType-erasing version of new TensorView(sob, shape), based on dataType.
     static_assert(sizeof(TensorView<float> ) == sizeof(Internal::TensorViewUnion), "TensorViewUnion has wrong size");
     static_assert(sizeof(TensorView<double>) == sizeof(Internal::TensorViewUnion), "TensorViewUnion has wrong size");
@@ -122,15 +129,14 @@ namespace CNTK
         {
             auto matrix = dynamic_pointer_cast<Matrix<float>>(sob);
             if (matrix)
-                return new ((TensorView<float>*)&space) TensorView<float>(matrix, shape);
+                return ConstructTensorView<float>(space, matrix, shape);
         }
         break;
         case DataType::Double:
         {
             auto matrix = dynamic_pointer_cast<Matrix<double>>(sob);
             if (matrix)
-                return new ((TensorView<double>*)&space) TensorView<double>(matrix, shape);
-                //return shared_ptr<void>(new TensorView<double>(matrix, shape), [](void* p) { delete (const TensorView<double>*)(p); });
+                return ConstructTensorView<double>(space, matrix, shape);
         }
         break;
         default:
@@ -139,7 +145,18 @@ namespace CNTK
         }
         LogicError("Storage Object is not of DataType %s", DataTypeName(dataType));
     }
-    static void DestructTensorView(Internal::TensorViewUnion& space, CNTK::DataType dataType)
+    // same but using static cast, without error check  --TODO: remove the code dup
+    static __forceinline void* ConstructTensorViewStatic(Internal::TensorViewUnion& space, CNTK::DataType dataType, const shared_ptr<MatrixBase>& sob, const TensorShape& shape)
+    {
+        // placement-construct it inside m_tensorViewUnion, passed to this function as 'space'
+        switch (dataType)
+        {
+        case DataType::Float:  return ConstructTensorView<float> (space, static_pointer_cast<Matrix<float >>(sob), shape);
+        case DataType::Double: return ConstructTensorView<double>(space, static_pointer_cast<Matrix<double>>(sob), shape);
+        }
+        LogicError("Unsupported DataType %s", DataTypeName(dataType));
+    }
+    static __forceinline void DestructTensorView(Internal::TensorViewUnion& space, CNTK::DataType dataType)
     {
         // placement-delete
         switch (dataType)
@@ -186,7 +203,7 @@ namespace CNTK
 #define LAZY_2D_PADDING // if defined then rank-2 padding of TensorShapes happens upon access, not upon creation
 
     // constructor optimized for shape passed as NDShape (this constructs a dense object)
-    NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const shared_ptr<MatrixBase>& sob)
+    NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const MatrixBasePtr& sob)
         : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())), m_viewShape(viewShape), m_isReadOnly(readOnly)
     {
 #ifdef LAZY_2D_PADDING
@@ -194,7 +211,6 @@ namespace CNTK
 #else
         const auto tensorShape = AsTensorShapeMin2D(viewShape); // not lazy (old version): sdo it here and bake it into teh object
 #endif
-        //m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
         ConstructTensorView(m_tensorViewUnion, dataType, sob, tensorShape);
     }
 
@@ -219,17 +235,20 @@ namespace CNTK
             // TODO: this is not nice, conflating two constructors, needing hacks like overwriting m_offset. Separate out the one for arena allocation.
         }
         //m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
-        ConstructTensorView(m_tensorViewUnion, dataType, sob, tensorShape);
+        ConstructTensorViewStatic(m_tensorViewUnion, dataType, sob, tensorShape); // -Static means that we won't double-check the dynamic type of the sob
     }
 
     // constructor optimized for shape passed as TensorShape (allowing strides and offset for slicing)
-    NDArrayView::NDArrayView(CNTK::DataType dataType, const TensorShape& tensorShape, bool readOnly, const shared_ptr<MatrixBase>& sob) :
+    NDArrayView::NDArrayView(CNTK::DataType dataType, const TensorShape& tensorShape, bool readOnly, const shared_ptr<MatrixBase>& sob, bool sobTypeAlreadyVerified) :
         m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())),
-        m_viewShape(move(tensorShape.GetDimsAsVector())), // this is a malloc()
+        m_viewShape(tensorShape.GetDims().begin(), tensorShape.GetDims().end()),
         m_isReadOnly(readOnly)
     {
         //m_tensorViewPtr = NewTensorView(dataType, sob, tensorShape);
-        ConstructTensorView(m_tensorViewUnion, dataType, sob, tensorShape);
+        if (sobTypeAlreadyVerified)
+            ConstructTensorViewStatic(m_tensorViewUnion, dataType, sob, tensorShape);
+        else
+            ConstructTensorView(m_tensorViewUnion, dataType, sob, tensorShape);
     }
 
     // create a new NDArrayView that subplants the tensorShape
@@ -240,9 +259,9 @@ namespace CNTK
         switch (m_dataType)
         {
         case DataType::Float:
-            return MakeSharedObject<NDArrayView>(GetDataType(), tensorShape, readOnly, NativeTensorView<float>().GetSOBPtr());
+            return MakeSharedObject<NDArrayView>(GetDataType(), tensorShape, readOnly, NativeTensorView<float>().GetSOBPtr(), true);
         case DataType::Double:
-            return MakeSharedObject<NDArrayView>(GetDataType(), tensorShape, readOnly, NativeTensorView<double>().GetSOBPtr());
+            return MakeSharedObject<NDArrayView>(GetDataType(), tensorShape, readOnly, NativeTensorView<double>().GetSOBPtr(), true);
         default:
             LogicError("NDArrayView::GetStorageObjectPtr: Unsupported DataType %s", DataTypeName(m_dataType));
         }

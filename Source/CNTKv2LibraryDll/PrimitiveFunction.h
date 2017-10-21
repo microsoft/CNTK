@@ -287,7 +287,7 @@ namespace CNTK
 
     protected:
         // base constructor, called by all others except the move one
-    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
+    public: // public for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
             : Function(inputs, std::move(functionConfig), nullptr, functionName, uid),
               m_op(op),
@@ -331,7 +331,7 @@ namespace CNTK
     protected: // special short-circuited versions private to auto-batcher (also called via BlockFunction(), hence 'protected')
         void InitOutput(Variable&& output);
         // This must not be used for anything else.
-    public: // for MakeSharedObject() only. TODO: Remove once we know how to do that right.
+    public: // public for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         PrimitiveFunction(PrimitiveOpType op, InputsVectorType&& inputs, Dictionary&& functionConfig/*, std::wstring&& name*/)
             : Function(std::move(inputs), std::move(functionConfig)/*, std::wstring(), std::wstring())*/),
               m_op(op),
