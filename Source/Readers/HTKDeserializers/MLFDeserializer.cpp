@@ -400,8 +400,11 @@ void MLFDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const Con
     size_t totalNumSequences = 0;
     size_t totalNumFrames = 0;
     bool enableCaching = corpus->IsHashingEnabled() && config.GetCacheIndex();
+
     for (const auto& path : mlfPaths)
     {
+        fprintf(stderr, "Opening path '%ls'\n", path.c_str());
+
         attempt(5, [this, path, enableCaching, corpus]()
         {
             MLFIndexBuilder builder(FileWrapper(path, L"rbS"), corpus);
@@ -409,14 +412,18 @@ void MLFDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const Con
             m_indices.emplace_back(builder.Build());
         });
 
+        fprintf(stderr, "Opened path '%ls'\n", path.c_str());
+
         m_mlfFiles.push_back(path);
         
         auto& index = m_indices.back();
         // Build auxiliary for GetSequenceByKey.
+        size_t chunkIds = 0;
         for (const auto& chunk : index->Chunks())
         {
             // Preparing chunk info that will be exposed to the outside.
             auto chunkId = static_cast<ChunkIdType>(m_chunks.size());
+            fprintf(stderr, "Opening chunk '%zu'\n", chunkIds);
             uint32_t offsetInSamples = 0;
             for (uint32_t i = 0; i < chunk.NumberOfSequences(); ++i)
             {
@@ -430,6 +437,7 @@ void MLFDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const Con
             totalNumFrames += chunk.NumberOfSamples();
             m_chunkToFileIndex.insert(make_pair(&chunk, m_mlfFiles.size() - 1));
             m_chunks.push_back(&chunk);
+            fprintf(stderr, "Opened chunk '%zu'\n", chunkIds++);
             if (m_chunks.size() >= numeric_limits<ChunkIdType>::max())
                 RuntimeError("Number of chunks exceeded overflow limit.");
         }
