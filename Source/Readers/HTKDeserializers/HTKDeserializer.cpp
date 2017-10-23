@@ -133,6 +133,7 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
     {
         std::unordered_set<size_t> uniqueIds;
         string line, key;
+        size_t linesRead = 0;
         while (getline(scp, line))
         {
             config.AdjustUtterancePath(rootPath, scpDir, line);
@@ -158,6 +159,11 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
             {
                 duplicates[id].push_back(key);
             }
+
+            if (linesRead % 1000 == 0)
+                fprintf(stderr, "Lines read %zu \n", linesRead);
+
+            linesRead++;
         }
     }
 
