@@ -58,7 +58,7 @@ namespace CNTK
         if (m_evaluationFunction != m_aggregatedEvaluationFunction)
             result.push_back(m_aggregatedEvaluationFunction);
 
-        if (m_evaluationFunction != m_testSampleCountVar && m_aggregatedEvaluationFunction != m_testSampleCountVar)
+        if (Variable(m_evaluationFunction) != m_testSampleCountVar && Variable(m_aggregatedEvaluationFunction) != m_testSampleCountVar)
             result.push_back(m_testSampleCountVar);
 
         return result;

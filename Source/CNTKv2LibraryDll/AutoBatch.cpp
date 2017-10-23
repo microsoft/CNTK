@@ -1083,7 +1083,7 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& shape, N
 // share quite a bit of state.
 // ===========================================================================
 
-class Variable::AutoBatch
+class InternalVariable::AutoBatch
 {
     using SliceRange = Internal::AutoBatchRedirection::SliceRange;
     using StackingMode = PrimitiveFunction::StackingMode;
@@ -4464,7 +4464,7 @@ NDArrayViewPtr PrimitiveFunction::BatchedForward() const
     //let comp = CompositeFunction::Create(sthis);
     //let res = comp->FilteredInputs<Variable>([](const Variable& v) { return v.m_dataFields->m_uniqueIdForDebugging == 243; });
     //res;
-    auto autoBatcher = Variable::AutoBatch();
+    auto autoBatcher = InternalVariable::AutoBatch();
     return autoBatcher.BatchedForward(m_outputs.front());
 }
 
@@ -4472,7 +4472,7 @@ NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 // TODO: CNTK grad() allows to pass multiple roots. Does that ever make sense in this context?
 void PrimitiveFunction::BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const
 {
-    auto autoBatcher = Variable::AutoBatch(); // has some internal state
+    auto autoBatcher = InternalVariable::AutoBatch(); // has some internal state
     autoBatcher.BatchedBackward(m_outputs.front(), gradients);
 }
 
@@ -4570,7 +4570,7 @@ void PrimitiveFunction::InitOutput(Variable&& output)
             let bnId = f.Attributes()[PrimitiveFunction::AttributeNameSyncId].Value<size_t>();
             fCompositePtr->m_basicBlockInfo.m_batchNormIds->push_back(bnId);
         }
-        if (Variable::AutoBatch::IsBarrier(f))
+        if (InternalVariable::AutoBatch::IsBarrier(f))
             fCompositePtr->m_basicBlockInfo.m_depthHint = max(fCompositePtr->m_basicBlockInfo.m_depthHint, f.Attributes()[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
     }, /*traverseInsideBlockFunction=*/ true);
     m_composite = move(fCompositePtr);

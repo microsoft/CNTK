@@ -13,75 +13,75 @@
 namespace CNTK
 {
     Variable::Variable(const FunctionPtr& function)
-        : Variable(function->Output())
+        : InternalVariable(function->Output())
     {
     }
 
     // move-constructor variant, for Dynamite only
     Variable::Variable(FunctionPtr&& function) :
 #ifdef DYNAMITE_ONLY // It's OK if user-held Variables are no outputs of composites as long as the graph is acyclic. That is always true in Dynamite.
-        Variable(CompositePreservingCopy(*this, move(function)))
+        InternalVariable(CompositePreservingCopy(*this, move(function)))
         // Note: Detour via static needed to allow for a sequence point between function->RawOutputs() and move(function).
 #else
-        Variable(function->Output())
+        InternalVariable(function->Output())
 #endif
     {
     }
-    /*static*/ Variable Variable::CompositePreservingCopy(const Variable& other, std::shared_ptr<const Function>&& composite)
+    /*static*/ InternalVariable InternalVariable::CompositePreservingCopy(const InternalVariable& other, std::shared_ptr<const Function>&& composite)
     {
         const auto& output = composite->RawOutputs().front();
         return output.CompositePreservingCopy(move(composite));
     }
 
-    const NDShape& Variable::Shape() const
+    const NDShape& InternalVariable::Shape() const
     {
         return m_dataFields->m_shape; 
     }
 
     static const std::vector<Axis> c_noDynamicAxes;
-    const std::vector<Axis>& Variable::DynamicAxes() const
+    const std::vector<Axis>& InternalVariable::DynamicAxes() const
     {
         const auto& fields = *m_dataFields;
         return fields.HasMore() ? fields.m_more->m_dynamicAxes : c_noDynamicAxes;
     }
 
-    VariableKind Variable::Kind() const 
+    VariableKind InternalVariable::Kind() const
     {
         return m_dataFields->m_varKind; 
     }
 
-    bool Variable::IsSparse() const
+    bool InternalVariable::IsSparse() const
     {
         return m_dataFields->m_isSparse; 
     }
 
-    const std::wstring& Variable::Name() const
+    const std::wstring& InternalVariable::Name() const
     {
         return m_dataFields->m_name.get(); 
     }
 
-    void Variable::DebugUpdateName(const std::wstring& newName)
+    void InternalVariable::DebugUpdateName(const std::wstring& newName)
     {
         m_dataFields->m_name = newName;
     }
 
-    const std::wstring& Variable::Uid() const
+    const std::wstring& InternalVariable::Uid() const
     {
         return m_dataFields->Uid();
     }
-    DataType Variable::GetDataType() const
+    DataType InternalVariable::GetDataType() const
     {
         return m_dataFields->m_dataType; 
     }
 
-    bool Variable::NeedsGradient() const
+    bool InternalVariable::NeedsGradient() const
     {
         return m_dataFields->m_needsGradient; 
     }
 
-    Variable Variable::Clone() const
+    InternalVariable InternalVariable::Clone() const
     {
-        Variable clonedVariable;
+        InternalVariable clonedVariable;
         clonedVariable.m_dataFields = m_dataFields->Clone();
         clonedVariable.m_shapeDims = &m_dataFields->m_shape.Dimensions();
 
@@ -93,7 +93,7 @@ namespace CNTK
     //    return m_dataFields->More().m_blockFunctionVariableMapping;
     //}
 
-    PrimitiveFunctionPtr Variable::OutputOwner() const 
+    PrimitiveFunctionPtr InternalVariable::OutputOwner() const
     {
         if (!IsOutput())
             LogicError("OutputOwner: Must only be called on OutputVariables");
@@ -103,17 +103,17 @@ namespace CNTK
         return owner;
     }
 
-    FunctionPtr Variable::Owner() const
+    FunctionPtr InternalVariable::Owner() const
     {
         return m_dataFields->Owner();
     }
 
-    bool Variable::OwnerIs(const Function* f) const
+    bool InternalVariable::OwnerIs(const Function* f) const
     {
         return m_dataFields->OwnerIs(f);
     }
 
-    Variable Variable::CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const
+    InternalVariable InternalVariable::CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const
     {
 #if 1
         // TODO: This breakpoint was never hit. Is it ever called? If not, remove.
@@ -130,7 +130,7 @@ namespace CNTK
 #endif
     }
 
-    Variable Variable::CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const
+    InternalVariable InternalVariable::CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const
     {
         // We have to preserve the whole subgraph.
         Variable result;
@@ -142,7 +142,7 @@ namespace CNTK
         return result;
     }
 
-    Variable Variable::NonCompositePreservingCopy() const
+    InternalVariable InternalVariable::NonCompositePreservingCopy() const
     {
 #if 1
         Variable result;
@@ -158,7 +158,22 @@ namespace CNTK
 #endif
     }
 
-    void Variable::SetOwner(const std::weak_ptr<PrimitiveFunction>& ownerFunction)
+    // downcast from InternalVariable to Variable
+    // This is needed to allow Parameter and Constant to be passed as Variable.
+    // Outputs, on the other hand, should always be cast while implanting a ref-count holder.
+    Variable::Variable(const InternalVariable& other) :
+        InternalVariable(other)
+    {
+        // TODO: Check that not Output.
+    }
+
+    Variable::Variable(InternalVariable&& other) :
+        InternalVariable(std::move(other))
+    {
+        // TODO: Check that not Output.
+    }
+
+    void InternalVariable::SetOwner(const std::weak_ptr<PrimitiveFunction>& ownerFunction)
     {
         if (Kind() != VariableKind::Output)
             LogicError("Variable '%S' SetOwner: Owner can only be set for Output Variables", AsString().c_str());
@@ -170,7 +185,7 @@ namespace CNTK
     }
 
     // simplified version for internal use only
-    void Variable::SetOwner(std::weak_ptr<PrimitiveFunction>&& ownerFunction)
+    void InternalVariable::SetOwner(std::weak_ptr<PrimitiveFunction>&& ownerFunction)
     {
         m_dataFields->m_ownerFunction = move(ownerFunction);
     }
@@ -185,7 +200,7 @@ namespace CNTK
             return Combine({ *this });
     }
 
-    NDArrayViewPtr Variable::Value() const
+    NDArrayViewPtr InternalVariable::Value() const
     {
         if (IsInput() || IsPlaceholder())
         //if (!IsConstant() && !IsParameter())
@@ -235,12 +250,12 @@ namespace CNTK
         return m_dataFields->m_value;
     }
 
-    void Variable::Backward(std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& gradients) const
+    void InternalVariable::Backward(std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& gradients) const
     {
         OutputOwner()->BatchedBackward(gradients);
     }
 
-    void Variable::SetValue(const NDArrayViewPtr& value)
+    void InternalVariable::SetValue(const NDArrayViewPtr& value)
     {
         if (!(IsParameter() || IsConstant()))
             LogicError("Variable '%S' SetValue(): Can only be invoked on a Parameter or Constant variable.", AsString().c_str());
@@ -276,7 +291,7 @@ namespace CNTK
         }
     }
 
-    std::wstring Variable::AsString() const
+    std::wstring InternalVariable::AsString() const
     {
         return m_dataFields->AsString();
     }
@@ -512,17 +527,24 @@ namespace CNTK
 
     template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<VariableFields>> strong_shared_ptr<VariableFields>::Storage::s_storage;
 
-    Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
+    InternalVariable::InternalVariable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
         m_dataFields(MakeSharedObject1<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, name, uid)),
         m_shapeDims(&m_dataFields->m_shape.Dimensions())
     {}
 
-    Variable::Variable(NDShape&& shape, VariableKind varType, CNTK::DataType dataType, bool needsGradient, bool isSparse) :
+    InternalVariable::InternalVariable(NDShape&& shape, VariableKind varType, CNTK::DataType dataType, bool needsGradient, bool isSparse) :
         m_dataFields(MakeSharedObject1<VariableFields>(std::move(shape), varType, dataType, needsGradient, isSparse)),
         m_shapeDims(&m_dataFields->m_shape.Dimensions())
     {}
 
     // the others are default. They must be defined nevertheless, because of the incomplete type w.r.t. strong_shared_ptr
+    InternalVariable::InternalVariable() = default;
+    InternalVariable::~InternalVariable() = default;
+    InternalVariable::InternalVariable(const InternalVariable&) = default;
+    InternalVariable::InternalVariable(InternalVariable&&) = default;
+    InternalVariable& InternalVariable::operator=(const InternalVariable&) = default;
+    InternalVariable& InternalVariable::operator=(InternalVariable&&) = default;
+
     Variable::Variable() = default;
     Variable::~Variable() = default;
     Variable::Variable(const Variable&) = default;
@@ -531,7 +553,7 @@ namespace CNTK
     Variable& Variable::operator=(Variable&&) = default;
 
     template <typename ElementType>
-    /*static*/ NDArrayViewPtr Variable::CreateValueFromParameterInitializer(const NDShape& shape, const ParameterInitializer& initConfig, const DeviceDescriptor& device)
+    /*static*/ NDArrayViewPtr InternalVariable::CreateValueFromParameterInitializer(const NDShape& shape, const ParameterInitializer& initConfig, const DeviceDescriptor& device)
     {
         auto dataType = AsDataType<ElementType>();
         auto value = MakeSharedObject<NDArrayView>(dataType, shape, device);
@@ -585,7 +607,7 @@ namespace CNTK
 
     static const std::wstring s_variableTypeValue = L"Variable";
 
-    /*virtual*/ Dictionary Variable::Serialize() const
+    /*virtual*/ Dictionary InternalVariable::Serialize() const
     {
         if (IsOutput())
             LogicError("Variable '%S': Output variables cannot be saved.", AsString().c_str());
@@ -622,11 +644,11 @@ namespace CNTK
         return dict;
     }
 
-    /*static*/ Variable Variable::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
+    /*static*/ InternalVariable InternalVariable::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, uidKey, kindKey, dataTypeKey, dynamicAxisKey, isSparseKey, needsGradientKey, shapeKey };
 
-        size_t version = ValidateDictionary<Variable>(dict, s_requiredDictionaryKeys, s_variableTypeValue, s_serializationVersion);
+        size_t version = ValidateDictionary<InternalVariable>(dict, s_requiredDictionaryKeys, s_variableTypeValue, s_serializationVersion);
 
         const auto& uid = dict[uidKey].Value<std::wstring>();
 
@@ -639,7 +661,7 @@ namespace CNTK
             LogicError("Unexpected variable kind '%ls':'%u' (%s).",
                        kindKey.c_str(),
                        static_cast<std::underlying_type<VariableKind>::type>(kind),
-                       GetVersionsString<Variable>(s_serializationVersion, version).c_str());
+                       GetVersionsString<InternalVariable>(s_serializationVersion, version).c_str());
         }
         
         DataType dataType = DataType(dict[dataTypeKey].Value<std::size_t>());
@@ -650,7 +672,7 @@ namespace CNTK
             LogicError("Unexpected variable datatype '%ls':'%u' (%s).", 
                        dataTypeKey.c_str(), 
                        static_cast<std::underlying_type<DataType>::type>(dataType),
-                       GetVersionsString<Variable>(s_serializationVersion, version).c_str());
+                       GetVersionsString<InternalVariable>(s_serializationVersion, version).c_str());
         }
         
         const vector<DictionaryValue>& dictionaryValueVector = dict[dynamicAxisKey].Value<vector<DictionaryValue>>();
@@ -674,24 +696,24 @@ namespace CNTK
 
             // TODO: this copying here is redundant, value should be moved from the dictionary to the variable.
             // Also, the correct device should be used upfront when deserializing NDArrayView.
-            Variable var(shape, kind, dataType, value.DeepClone(device, value.IsReadOnly()), needsGradient, dynamicAxis, isSparse, name, uid);
+            InternalVariable var(shape, kind, dataType, value.DeepClone(device, value.IsReadOnly()), needsGradient, dynamicAxis, isSparse, name, uid);
             if (var.IsParameter())
                 return Parameter(var);
             else
                 return Constant(var);
         }
 
-        return Variable(shape, kind, dataType, nullptr, needsGradient, dynamicAxis, isSparse, name, uid);
+        return InternalVariable(shape, kind, dataType, nullptr, needsGradient, dynamicAxis, isSparse, name, uid);
     }
 
     Parameter::Parameter(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
-        : Variable(shape, VariableKind::Parameter, dataType, nullptr, true, {}, name, Internal::GenerateUid(VariableKind::Parameter))
+        : InternalVariable(shape, VariableKind::Parameter, dataType, nullptr, true, {}, name, Internal::GenerateUid(VariableKind::Parameter))
     {
 
         m_dataFields->SetValueInitialization(initializer, device);
     }
 
-    size_t Variable::CurrentValueTimeStamp() const
+    size_t InternalVariable::CurrentValueTimeStamp() const
     {
         if (!IsParameter() && !IsConstant())
             LogicError("Variable '%S' CurrentValueTimeStamp: Variable must be a Parameter or Constant", AsString().c_str());
@@ -719,7 +741,7 @@ namespace CNTK
 #endif
 
     Constant::Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
-        : Variable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, std::wstring())// Internal::GenerateUid(VariableKind::Constant))
+        : InternalVariable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, std::wstring())// Internal::GenerateUid(VariableKind::Constant))
     {
         m_dataFields->SetValueInitialization(initializer, device);
     }
@@ -742,7 +764,7 @@ namespace CNTK
 
     void Constant::SetValue(const NDArrayViewPtr& value)
     {
-        Variable::SetValue(value);
+        InternalVariable::SetValue(value);
         RecordValueUpdate();
     }
 }
