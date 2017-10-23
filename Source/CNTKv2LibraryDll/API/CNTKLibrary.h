@@ -1936,10 +1936,18 @@ namespace CNTK
         CNTK_API void Save(const std::wstring& filename);
         CNTK_API static Dictionary Load(const std::wstring& filename);
 
+    private: public: // TODO: This must be public to define the FixedSizePoolStorage. How to avoid this?
+        struct SharableDict : public enable_strong_shared_ptr<std::unordered_map<std::wstring, DictionaryValue>>, public std::unordered_map<std::wstring, DictionaryValue>
+        {
+            template<size_t N> friend class FixedSizePoolStorage;
+            SharableDict() { }
+            SharableDict(const SharableDict& otherMap) : std::unordered_map<std::wstring, DictionaryValue>(otherMap) { }
+        };
     private:
-        std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
-        CNTK_API const std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData() const;
-        CNTK_API std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData();
+        //std::shared_ptr<SharableDict> m_dictionaryData;
+        strong_shared_ptr<SharableDict> m_dictionaryData;
+        CNTK_API const SharableDict& GetDictionaryData() const;
+        CNTK_API       SharableDict& GetDictionaryData();
         static const size_t s_version = 1;// TODO: check this: latest master does not initialize this
     };
 

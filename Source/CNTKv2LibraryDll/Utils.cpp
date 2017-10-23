@@ -151,21 +151,23 @@ namespace CNTK
     {
     }
 
-    const std::unordered_map<std::wstring, DictionaryValue>& Dictionary::GetDictionaryData() const
+    const Dictionary::SharableDict& Dictionary::GetDictionaryData() const
     {
         if (m_dictionaryData)
             return *m_dictionaryData;
-        static std::unordered_map<std::wstring, DictionaryValue> s_emptyDict;
+        static SharableDict s_emptyDict;
         assert(s_emptyDict.empty());
         return s_emptyDict;
     }
 
-    std::unordered_map<std::wstring, DictionaryValue>& Dictionary::GetDictionaryData()
+    Dictionary::SharableDict& Dictionary::GetDictionaryData()
     {
         if (!m_dictionaryData)
-            m_dictionaryData.reset(new std::unordered_map <std::wstring, DictionaryValue>());
+            //m_dictionaryData.reset(new SharableDict());
+            m_dictionaryData = MakeSharedObject1<SharableDict>();
         return *m_dictionaryData;
     }
+    template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<Dictionary::SharableDict>> strong_shared_ptr<Dictionary::SharableDict>::Storage::s_storage;
 
     Dictionary::~Dictionary()
     {
@@ -179,7 +181,11 @@ namespace CNTK
     Dictionary& Dictionary::operator=(const Dictionary& other)
     {
         assert(this != &other);
-        m_dictionaryData.reset(other.m_dictionaryData ? new unordered_map<wstring, DictionaryValue>(*(other.m_dictionaryData)) : nullptr);
+        //m_dictionaryData.reset(other.m_dictionaryData ? new unordered_map<wstring, DictionaryValue>(*(other.m_dictionaryData)) : nullptr);
+        if (other.m_dictionaryData)
+            m_dictionaryData = MakeSharedObject1<SharableDict>(*other.m_dictionaryData);
+        else
+            m_dictionaryData.reset();
         return *this;
     }
 

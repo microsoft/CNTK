@@ -56,7 +56,7 @@ size_t decoderRecurrentDim = 1024;
 size_t numDecoderResNetProjections = 4;
 size_t decoderProjectionDim = 768;
 size_t topHiddenProjectionDim = 1024;
-size_t subMinibatches = 10;
+size_t subMinibatches = 1;
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
@@ -66,6 +66,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtVocabSize = 79439;
         srcTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.CHS.txt"; srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.ENU.txt"; tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
+        subMinibatches = 10;
     }
     else if (systemId == "chs_enu_small")
     {
@@ -73,6 +74,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtVocabSize = 79439;
         srcTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.small.CHS.txt"; srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.small.ENU.txt"; tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
+        subMinibatches = 10;
     }
     else if (systemId == "rom_enu")
     {
