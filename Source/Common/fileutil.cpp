@@ -423,6 +423,7 @@ void fprintfOrDie(FILE* f, const char* fmt, ...)
     va_list arg_ptr;
     va_start(arg_ptr, fmt);
     int rc = vfprintf(f, fmt, arg_ptr);
+    va_end(arg_ptr);
     if (rc < 0)
     {
         RuntimeError("error writing to file: %s", strerror(errno));
@@ -2098,7 +2099,7 @@ static inline std::string wcstombs(const std::wstring& p) // output: MBCS
 {
     size_t len = p.length();
     vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
-    fill(buf.begin(), buf.end(), 0);
+    fill(buf.begin(), buf.end(), (char)0);
     ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
     return std::string(&buf[0]);
 }

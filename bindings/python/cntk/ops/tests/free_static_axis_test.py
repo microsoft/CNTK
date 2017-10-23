@@ -160,6 +160,32 @@ def test_free_static_times():
     assert np.array_equal(w_grad, np.asarray([[0.5, .5], [.2, .2]], dtype=np.float32))
 
 
+FREE_STATIC_AXES_POOLING_DATA = [
+    ((C.FreeDimension, C.FreeDimension, C.FreeDimension),
+     C.AVG_POOLING,
+     (2, 2),
+     (2, 2),
+     [[[[2.5, 4.5], [10.5, 12.5]]]]),
+    ((C.FreeDimension, C.FreeDimension, C.FreeDimension),
+     C.MAX_POOLING,
+     (2, 2),
+     (2, 2),
+     [[[[5, 7], [13, 15]]]]),
+    ((C.FreeDimension, C.FreeDimension, C.FreeDimension),
+     C.AVG_POOLING,
+     (2, 2),
+     (2, 1),
+     [[[[2.5, 3.5, 4.5], [10.5, 11.5, 12.5]]]])
+]
+@pytest.mark.parametrize("input_shape, pooling_type, window_shape, strides, expected", FREE_STATIC_AXES_POOLING_DATA)
+def test_free_static_pooling(input_shape, pooling_type, window_shape, strides, expected):
+    img = np.reshape(np.arange(16, dtype=np.float32), [1, 4, 4])
+    x = C.input_variable(input_shape)
+    avg_pooling = C.pooling(x, pooling_type, window_shape, strides)
+    assert avg_pooling.shape == (C.FreeDimension, C.FreeDimension, C.FreeDimension)
+    assert np.allclose(avg_pooling.eval({x:[img]}), np.asarray(expected, dtype=np.float32))
+
+
 from cntk.ops.functions import Function, UserFunction
 from .ops_test_utils import AA
 

@@ -237,12 +237,6 @@ protected:
     }
 
 protected:
-    static bool IsGpu(DEVICEID_TYPE deviceId)
-    {
-        return deviceId >= 0;
-    }
-
-protected:
     using IntMatPtr = std::unique_ptr<Matrix<int>>;
 
     Matrix<int> m_mpRowCol;
@@ -572,8 +566,6 @@ public:
 
 protected:
     using typename Base::IntMatPtr;
-
-    using Base::IsGpu;
 
     using Base::m_geometry;
     using Base::m_deviceId;

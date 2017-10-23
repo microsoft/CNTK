@@ -1148,6 +1148,35 @@ void CPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, co
     }
 }
 
+/// sparse *= alpha
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::Scale(const ElemType alpha, CPUSparseMatrix<ElemType>& rhs)
+{
+    if (rhs.IsEmpty())
+    {
+        LogicError("Scale: the input sparse matrix is empty.");
+    }
+
+    if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC || rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSR)
+    {
+        size_t col_num = (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC) ? rhs.GetNumCols() : rhs.GetNumRows();
+        size_t start = rhs.SecondaryIndexLocation()[0];
+        size_t end = rhs.SecondaryIndexLocation()[col_num];
+        for (size_t p = start; p < end; p++)
+        {
+            rhs.Buffer()[p] *= alpha;
+        }
+    }
+    else if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseBlockCol || rhs.GetFormat() == MatrixFormat::matrixFormatSparseBlockRow)
+    {
+        size_t len = (rhs.GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? rhs.GetNumRows() : rhs.GetNumCols();
+        for (size_t p = 0; p < rhs.GetBlockSize() * len; p++)
+        {
+            rhs.Buffer()[p] *= alpha;
+        }
+    }
+}
+
 // dense += sparse
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, CPUMatrix<ElemType>& rhs)
@@ -1291,10 +1320,8 @@ void CPUSparseMatrix<ElemType>::InnerProduct(const CPUSparseMatrix<ElemType>& a,
 // 2) this = c
 // TODO: NormalGrad is a misnomer here. Come up with a better name.
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum)
+void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum, const ElemType unitGainFactor)
 {
-    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
-
     if (c.IsEmpty())
     {
         c.RequireSize(GetNumRows(), GetNumCols());
@@ -1396,7 +1423,7 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
 }
 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
+void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp)
 {
     size_t numColsNeeded = 2 * GetNumCols();
 
@@ -1417,23 +1444,26 @@ void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemT
     ElemType* smoothAda = c.Data();
     ElemType* smoothX2 = c.Data() + n;
     ElemType* val = functionValues.Data();
+    auto rows = GetNumRows();
 
 #pragma omp parallel for
     // TODO: Unroll 4-times for better performance leveraging vectorization
-    for (int j = 0; j < (int)GetBlockSize(); j++)
+    for (auto blockid = 0; blockid < (int)GetBlockSize(); ++blockid)
     {
-        size_t i = GetBlockIds()[j] - GetBlockIdShift();
-        size_t len = GetNumRows();
-        size_t start = j * len;
-        for (size_t p = start; p < start + len; p++)
+        auto col = GetBlockIds()[blockid] - GetBlockIdShift();
+        auto columnOffset = col * rows;
+        auto blockOffset = blockid * rows;
+        auto decay = std::pow(rho, currentTimestamp - 1 - timestamps[col]);
+        timestamps[col] = currentTimestamp;
+        for (auto row = 0; row < rows; ++row)
         {
-            size_t denseIndex = i * len + (p - start);
-            ElemType g = grad[p];
-            ElemType adaSqr = rho * smoothAda[denseIndex] + (1 - rho) * g * g;
+            size_t denseIndex = columnOffset + row;;
+            ElemType g = grad[blockOffset + row];
+            ElemType adaSqr = rho * decay * smoothAda[denseIndex] + (1 - rho) * g * g;
             smoothAda[denseIndex] = adaSqr;
-            ElemType x2 = smoothX2[denseIndex];
+            ElemType x2 = decay * smoothX2[denseIndex];
             ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
-            smoothX2[denseIndex] = rho * smoothX2[denseIndex] + (1 - rho) * deltaX * deltaX;
+            smoothX2[denseIndex] = rho * x2 + (1 - rho) * deltaX * deltaX;
             val[denseIndex] += learningRate * deltaX;
         }
     }
@@ -1726,7 +1756,9 @@ MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
         // read in the sparse matrix info
         for (size_t i = 0; i < nz; ++i)
         {
-            stream >> dataBuffer[i];
+            double dvalue;
+            stream >> dvalue;
+            dataBuffer[i] = (ElemType)dvalue;
         }
         for (size_t i = 0; i < nz; ++i)
         {
@@ -1769,7 +1801,7 @@ MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
 
         for (size_t i = 0; i < nz; ++i)
         {
-            stream << dataBuffer[i];
+            stream << (double)dataBuffer[i];
         }
         for (size_t i = 0; i < nz; ++i)
         {

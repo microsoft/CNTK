@@ -47,6 +47,12 @@ vector<MemRequestInfo<double>>& MatrixPool::GetMemRequestInfoVec<double>()
     return m_memRequestInfoDoubleVec;
 }
 
+template <>
+vector<MemRequestInfo<half>>& MatrixPool::GetMemRequestInfoVec<half>()
+{
+    return m_memRequestInfoHalfVec;
+}
+
 // -----------------------------------------------------------------------
 // construction
 // -----------------------------------------------------------------------
@@ -812,7 +818,7 @@ void ComputationNetwork::DescribeNetworkUsingDot(list<ComputationArc>& arcs,
     fstream << FormSpecialNodes(dotcfg.m_featuresStyle, m_featureNodes);
     // labels
     fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labelNodes);
-    // critera
+    // criteria
     fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_criterionNodes);
     // pre-compute nodes
     fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, preComputedNodes);
@@ -1232,7 +1238,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     auto GetAllPriorNodes = [](ComputationNodeBasePtr node)->bool
     {
         std::wstring lowerName = node->GetName();
-        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), [](wchar_t v) { return (wchar_t)::tolower(v); });
 
         return node->OperationName() == OperationNameOf(LearnableParameter) && (lowerName.find(L"prior") != wstring::npos);
     };

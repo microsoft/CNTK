@@ -291,7 +291,7 @@ public:
 
             // map all to lowercase
             std::wstring lvalue = std::wstring(value.begin(), value.end());
-            std::transform(lvalue.begin(), lvalue.end(), lvalue.begin(), ::tolower); // note: may crash for chars >127. Don't use those.
+            std::transform(lvalue.begin(), lvalue.end(), lvalue.begin(), [](wchar_t c) { return (wchar_t)::tolower(c); }); // note: may crash for chars >127. Don't use those.
 
             // add to the respective node group
             m_net->AddToNodeGroup(lvalue, compNode);

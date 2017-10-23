@@ -726,4 +726,20 @@ namespace CNTK
     };
 
     std::wstring DynamicAxesAsString(const std::vector<Axis>& da, bool rowMajor = false);
+
+    template <typename T> //T can be Variable or StreamInfo
+    static bool IsAtSweepEnd(const std::unordered_map<T, MinibatchData>& arguments)
+    {
+        return std::any_of(arguments.begin(), arguments.end(), [](const std::pair<const T, MinibatchData>& kv)
+        {
+            return kv.second.sweepEnd;
+        });
+    }
+
+    // half is V1 ElemType, so specialize here instead of in CNTKLibrary.h
+    template<>
+    inline DataType AsDataType<half>()
+    {
+        return DataType::Float16;
+    }
 }

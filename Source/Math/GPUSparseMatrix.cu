@@ -19,7 +19,6 @@
 #include "CommonMatrix.h"
 #include <iostream> // for cout/cerr
 #include <assert.h>
-#include "fpgeneric.h"
 
 typedef unsigned char byte;
 
@@ -1461,7 +1460,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
 // 2) this = c
 // TODO: NormalGrad is a misnomer here. Come up with a better name.
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum)
+void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum, ElemType unitGainFactor)
 {
     VerifyWritable(__FUNCTION__);
 
@@ -1487,7 +1486,7 @@ void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemTyp
             Data(),
             BlockId2ColOrRow(),
             c.Data(),
-            unitGainMomentum);
+            unitGainFactor);
     }
     else
     {
@@ -1551,7 +1550,7 @@ void GPUSparseMatrix<ElemType>::FSAdagrad(
     ElemType momentum,
     ElemType adaWeight,
     ElemType adaMul,
-    bool unitGainMomentum)
+    ElemType unitGainFactor)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
@@ -1573,7 +1572,7 @@ void GPUSparseMatrix<ElemType>::FSAdagrad(
     _fsadagrad4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         n, Data(), ColOrRow2BlockId(), GetNumRows(),
         c.Data(), c.Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
+        learnRatePerSample, momentum, adaWeight, adaMul, unitGainFactor);
 }
 
 template <class ElemType>
@@ -1585,7 +1584,7 @@ void GPUSparseMatrix<ElemType>::Adam(
     ElemType adaWeight,
     ElemType adaMul,
     ElemType epsilon,
-    bool unitGainMomentum,
+    ElemType unitGainFactor,
     bool adamax)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
@@ -1608,7 +1607,7 @@ void GPUSparseMatrix<ElemType>::Adam(
     _adam4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         n, Data(), ColOrRow2BlockId(), GetNumRows(),
         c.Data(), c.Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainMomentum, adamax);
+        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainFactor, adamax);
 }
 
 template <class ElemType>
@@ -1695,8 +1694,17 @@ ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     return (ElemType)aveMultiplier / n;
 }
 
+__global__ void _updateTimestamps(CUDA_LONG N, const GPUSPARSE_INDEX_TYPE* blockId2ColOrRow, int* timestamps, int currentTimestamp)
+{
+    auto blockid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (blockid >= N)
+        return;
+    auto col = blockId2ColOrRow[blockid];
+    timestamps[col] = currentTimestamp;
+}
+
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>&c, GPUMatrix<ElemType>&functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
+void GPUSparseMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>&c, GPUMatrix<ElemType>&functionValues, ElemType learningRate, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
@@ -1713,12 +1721,15 @@ void GPUSparseMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>&c, GPUMatrix<ElemTy
 
     assert((c.GetNumRows() == GetNumRows()) && (c.GetNumCols() == numColsNeeded));
 
-    size_t n = GetNumElements();
+    size_t n = GetBlockSize() * GetNumRows();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _adadelta4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
-        n, Data(), ColOrRow2BlockId(), GetNumRows(),
-        c.Data(), c.Data() + n, functionValues.Data(),
-        learningRate, rho, epsilon);
+        n, Data(), BlockId2ColOrRow(), GetNumRows(),
+        c.Data(), c.Data() + GetNumElements(), functionValues.Data(),
+        learningRate, rho, epsilon, timestamps, currentTimestamp);
+    n = GetBlockSize();
+    blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+    _updateTimestamps<<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(n, BlockId2ColOrRow(), timestamps, currentTimestamp);
 }
 
 // sparse X dense = dense
@@ -3054,7 +3065,9 @@ MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
         // read in the sparse matrix info
         for (size_t i = 0; i < nz; ++i)
         {
-            stream >> dataBuffer[i];
+            double dvalue;
+            stream >> dvalue;
+            dataBuffer[i] = (ElemType)dvalue;
         }
         for (size_t i = 0; i < nz; ++i)
         {
@@ -3120,63 +3133,7 @@ MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
 
         for (size_t i = 0; i < nz; ++i)
         {
-            stream << dataBuffer[i];
-        }
-        for (size_t i = 0; i < nz; ++i)
-        {
-            size_t val = unCompressedIndex[i];
-            stream << val;
-        }
-        for (size_t i = 0; i < compressedSize; ++i)
-        {
-            size_t val = compressedIndex[i];
-            stream << val;
-        }
-
-        delete[] dataBuffer;
-        delete[] unCompressedIndex;
-        delete[] compressedIndex;
-    }
-
-    stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
-
-    return stream;
-}
-
-// specialization because of POD warning
-template <>
-MATH_API File& operator<<(File& stream, const GPUSparseMatrix<half>& us)
-{
-    if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
-        NOT_IMPLEMENTED;
-
-    stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
-    stream << sizeof(half);
-    std::wstring s(L"nnmatrix");
-    stream << s;
-
-    size_t nz = us.GetNumNZElements(), numElemAllocated = us.GetNumElemAllocated(), numRows = us.GetNumRows(), numCols = us.GetNumCols();
-    size_t compressedSize = us.SecondaryIndexCount();
-    int format = us.GetFormat();
-
-    stream << format << nz << numCols << numRows;
-
-    if (nz > 0)
-    {
-        half* dataBuffer = nullptr;
-        CPUSPARSE_INDEX_TYPE* compressedIndex = nullptr;
-        CPUSPARSE_INDEX_TYPE* unCompressedIndex = nullptr;
-
-        if (us.GetFormat() == matrixFormatSparseCSC)
-            us.GetMatrixFromCSCFormat(compressedIndex, unCompressedIndex, dataBuffer, numElemAllocated, nz, numRows, numCols);
-        else if (us.GetFormat() == matrixFormatSparseCSR)
-            us.GetMatrixFromCSRFormat(compressedIndex, unCompressedIndex, dataBuffer, numElemAllocated, nz, numRows, numCols);
-        else
-            NOT_IMPLEMENTED;
-
-        for (size_t i = 0; i < nz; ++i)
-        {
-            stream << *(short*)&dataBuffer[i];
+            stream << (double)dataBuffer[i];
         }
         for (size_t i = 0; i < nz; ++i)
         {

@@ -312,7 +312,7 @@ def nce_loss(weights, biases, inputs, labels, noise_distribution, num_samples=32
         >>> np.round(loss.eval({x:x0, y:y0}), decimals=3)
         array([ 2.385,  3.035,  3.886,  3.868], dtype=float32)
         >>> # after training, use the logits for predictions
-        >>> logits = C.times(W, C.reshape(x, (xdim, 1))) + b
+        >>> logits = C.times_transpose(x, W) + C.reshape(b, -1)
 
     Args:
         weights: parameter (or variable in general) containing the weights with

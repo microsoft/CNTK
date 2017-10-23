@@ -140,6 +140,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Sigmoid;
                 else if (node->OperationName() == OperationNameOf(StableSigmoidNode))
                     opType = PrimitiveOpType::StableSigmoid;
+                else if (node->OperationName() == OperationNameOf(AtanhNode))
+                    opType = PrimitiveOpType::Atanh;
                 else if (node->OperationName() == OperationNameOf(TanhNode))
                     opType = PrimitiveOpType::Tanh;
                 else if (node->OperationName() == OperationNameOf(AsinNode))

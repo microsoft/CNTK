@@ -116,6 +116,7 @@ protected:
 
 template class CntkBatchNormEngine<float>;
 template class CntkBatchNormEngine<double>;
+template class CntkBatchNormEngine<half>;
 
 template <typename T> bool HasFlag(T src, T testFlag)
 {
@@ -149,5 +150,6 @@ std::unique_ptr<BatchNormEngine<ElemType>> BatchNormEngine<ElemType>::Create(DEV
 
 template class BatchNormEngine<float>;
 template class BatchNormEngine<double>;
+template class BatchNormEngine<half>;
 
 }}}

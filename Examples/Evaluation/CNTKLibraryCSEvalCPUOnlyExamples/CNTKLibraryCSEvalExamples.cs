@@ -522,7 +522,7 @@ namespace CNTKLibraryCSEvalExamples
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
-                // Evalaute the model.
+                // Evaluate the model.
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Get output result.
@@ -646,7 +646,7 @@ namespace CNTKLibraryCSEvalExamples
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
-                // Evalaute the model
+                // Evaluate the model
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Get evaluation result.
@@ -766,7 +766,7 @@ namespace CNTKLibraryCSEvalExamples
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
-                // Evalaute the model.
+                // Evaluate the model.
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Get result
@@ -805,6 +805,161 @@ namespace CNTKLibraryCSEvalExamples
                     Console.WriteLine(String.Format("     {0, 10} ---- {1}", inputWords[i], indexToSlots[maxIndex]));
                 }
                 Console.WriteLine();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// The example shows
+        /// - how to load a pretrained model and evaluate an intermediate layer of its network
+        /// </summary>
+        /// <param name="device">Specify on which device to run the evaluation</param>
+        public static void EvaluateIntermediateLayer(DeviceDescriptor device)
+        {
+            try
+            {
+                Console.WriteLine("\n===== Evaluate intermediate layer =====\n");
+
+                // Load the model.
+                // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
+                // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
+                string modelFilePath = "resnet20.dnn";
+                ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
+                Function rootFunc = Function.Load(modelFilePath, device);
+
+                Function interLayerPrimitiveFunc = rootFunc.FindByName("final_avg_pooling");
+
+                // The Function returned by FindByName is a primitive function.
+                // For evaluation, it is required to create a composite function from the primitive function.
+                Function modelFunc = Function.AsComposite(interLayerPrimitiveFunc);
+
+                Variable outputVar = modelFunc.Output;
+                Variable inputVar = modelFunc.Arguments.Single();
+
+                // Get shape data for the input variable
+                NDShape inputShape = inputVar.Shape;
+                int imageWidth = inputShape[0];
+                int imageHeight = inputShape[1];
+                int imageChannels = inputShape[2];
+                int imageSize = inputShape.TotalSize;
+
+                var inputDataMap = new Dictionary<Variable, Value>();
+                var outputDataMap = new Dictionary<Variable, Value>();
+
+                // Image preprocessing to match input requirements of the model.
+                // This program uses images from the CIFAR-10 dataset for evaluation.
+                // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
+                string sampleImage = "00000.png";
+                ThrowIfFileNotExist(sampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", sampleImage));
+                Bitmap bmp = new Bitmap(Bitmap.FromFile(sampleImage));
+                var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                List<float> resizedCHW = resized.ParallelExtractCHW();
+
+                // Create input data map
+                var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
+                inputDataMap.Add(inputVar, inputVal);
+
+                // Create output data map. Using null as Value to indicate using system allocated memory.
+                // Alternatively, create a Value object and add it to the data map.
+                outputDataMap.Add(outputVar, null);
+
+                // Start evaluation on the device
+                modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+
+                // Get evaluate result as dense output
+                var outputVal = outputDataMap[outputVar];
+                var outputData = outputVal.GetDenseData<float>(outputVar);
+
+                Console.WriteLine("Evaluation result of intermediate layer final_avg_pooling");
+                PrintOutput(outputVar.Shape.TotalSize, outputData);
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// The example shows
+        /// - how to load a pretrained model and evaluate several nodes by combining their outputs
+        /// </summary>
+        /// <param name="device">Specify on which device to run the evaluation</param>
+        public static void EvaluateCombinedOutputs(DeviceDescriptor device)
+        {
+            try
+            {
+                Console.WriteLine("\n===== Evaluate combined outputs =====\n");
+
+                // Load the model.
+                // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
+                // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
+                string modelFilePath = "resnet20.dnn";
+                ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
+                Function modelFunc = Function.Load(modelFilePath, device);
+
+                // Get node of interest
+                Function interLayerPrimitiveFunc = modelFunc.FindByName("final_avg_pooling");
+                Variable poolingOutput = interLayerPrimitiveFunc.Output;
+
+                // Create a function which combine outputs from the node "final_avg_polling" and the final layer of the model.
+                Function evalFunc = Function.Combine(new[] { modelFunc.Output, poolingOutput });
+                Variable inputVar = evalFunc.Arguments.Single();
+
+                // Get shape data for the input variable
+                NDShape inputShape = inputVar.Shape;
+                int imageWidth = inputShape[0];
+                int imageHeight = inputShape[1];
+                int imageChannels = inputShape[2];
+                int imageSize = inputShape.TotalSize;
+
+                var inputDataMap = new Dictionary<Variable, Value>();
+                var outputDataMap = new Dictionary<Variable, Value>();
+
+                // Image preprocessing to match input requirements of the model.
+                // This program uses images from the CIFAR-10 dataset for evaluation.
+                // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
+                string sampleImage = "00000.png";
+                ThrowIfFileNotExist(sampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", sampleImage));
+                Bitmap bmp = new Bitmap(Bitmap.FromFile(sampleImage));
+                var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                List<float> resizedCHW = resized.ParallelExtractCHW();
+
+                // Create input data map
+                var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
+                inputDataMap.Add(inputVar, inputVal);
+
+                // Create output data map. Using null as Value to indicate using system allocated memory.
+                // Alternatively, create a Value object and add it to the data map.
+                var modelOutput = evalFunc.Outputs[0];
+                var interLayerOutput = evalFunc.Outputs[1];
+
+                outputDataMap.Add(modelOutput, null);
+                outputDataMap.Add(interLayerOutput, null);
+
+                // Start evaluation on the device
+                evalFunc.Evaluate(inputDataMap, outputDataMap, device);
+
+                // Get evaluate result as dense output
+                foreach (var outputVariableValuePair in outputDataMap)
+                {
+                    var variable = outputVariableValuePair.Key;
+                    var value = outputVariableValuePair.Value;
+                    var outputData = value.GetDenseData<float>(variable);
+
+                    string variableName = "last layer of the model";
+                    if (variable.Name == interLayerPrimitiveFunc.Name) {
+                        variableName = "intermediate layer " + variable.Name;
+                    }
+                    
+                    Console.WriteLine("Evaluation result of {0}", variableName);
+                    PrintOutput(variable.Shape.TotalSize, outputData);
+                }
             }
             catch (Exception ex)
             {

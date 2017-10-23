@@ -46,9 +46,9 @@
     {
         if (device.Type() == CNTK::DeviceKind::GPU)
         {
-            auto cpuView = new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
-            auto gpuView = new CNTK::NDArrayView(cpuView->GetDataType(), cpuView->GetStorageFormat(), viewShape, device);
-            gpuView->CopyFrom(*cpuView);
+            CNTK::NDArrayView cpuView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
+            auto gpuView = new CNTK::NDArrayView(cpuView.GetDataType(), cpuView.GetStorageFormat(), viewShape, device);
+            gpuView->CopyFrom(cpuView);
             return gpuView;
         }
         else
@@ -59,9 +59,9 @@
     {
         if (device.Type() == CNTK::DeviceKind::GPU)
         {
-            auto cpuView = new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
-            auto gpuView = new CNTK::NDArrayView(cpuView->GetDataType(), cpuView->GetStorageFormat(), viewShape, device);
-            gpuView->CopyFrom(*cpuView);
+            CNTK::NDArrayView cpuView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
+            auto gpuView = new CNTK::NDArrayView(cpuView.GetDataType(), cpuView.GetStorageFormat(), viewShape, device);
+            gpuView->CopyFrom(cpuView);
             return gpuView;
         }
         else
@@ -70,12 +70,12 @@
 
     NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false)
     {
-        return new CNTK::NDArrayView(viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
+        return new CNTK::NDArrayView(CNTK::DataType::Float, viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
     }
 
     NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false)
     {
-        return new CNTK::NDArrayView(viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
+        return new CNTK::NDArrayView(CNTK::DataType::Double, viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
     }
 
     static NDArrayViewPtr CNTK::NDArrayView::RandomNormalFloat(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device)
@@ -153,6 +153,3 @@
 // before %template instantiation, MomentumAsTimeConstantScheduleCS will be generated
 // without TrainingParameterScheduleDouble being its base class - because TrainingParameterScheduleDouble
 // is not created yet.
-%template(TrainingParameterPerSampleScheduleDouble) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
-
-%include "MomentumAsTimeConstantScheduleCS.h"

@@ -1,4 +1,4 @@
-# CNTK Examples: Image/Detection/Fast R-CNN
+# CNTK Examples: Image/Detection/FastRCNN
 
 ## Overview
 
@@ -17,17 +17,17 @@ Check out the CNTK Tutorial on [Object Detection using Fast R-CNN](https://docs.
 
 `Fast R-CNN` is an object detection algorithm proposed by `Ross Girshick` in 2015. The paper is accepted to ICCV 2015, and archived at https://arxiv.org/abs/1504.08083. Fast R-CNN builds on previous work to efficiently classify object proposals using deep convolutional networks. Compared to previous work, Fast R-CNN employs a `region of interest pooling` scheme that allows training to be single stage, with a multi-task loss. It trains the very deep VGG16 network 9x faster than R-CNN, is 213x faster at test-time, and achieves a higher mAP on PASCAL VOC 2012.
 
-In this example, we use [AlexNet](../../Classification/AlexNet) as a pre-trained model, and adapt it to a toy dataset of images captured from a refrigerator to detect objects inside.
+In this example, we use [AlexNet](../../../../../PretrainedModels) as a pre-trained model, and adapt it to a toy dataset of images captured from a refrigerator to detect objects inside.
 
 ## Running the example
 
 ### Getting the data and AlexNet model
 
-we use a toy dataset of images captured from a refrigerator to demonstrate Fast-R-CNN. Both the dataset and the pre-trained AlexNet model can be downloaded by running the following Python command:
+We use a toy dataset of images captured from a refrigerator to demonstrate Fast-R-CNN. Both the dataset and the pre-trained AlexNet model can be downloaded by running the following Python command (run from Examples/Image/Detection/FastRCNN folder):
 
-`python install_fastrcnn.py`
+`python install_data_and_model.py`
 
-After running the script, the toy dataset will be installed under the `Image/DataSets/Grocery` folder. And the AlexNet model will be downloaded to the `Image/PretrainedModels` folder. We recommend you to keep the downloaded data in the respective folder while downloading, as the configuration files in this folder assumes that by default.
+After running the script, the toy dataset will be installed under the `Examples/Image/DataSets/Grocery` folder. The AlexNet model will be downloaded to the `PretrainedModels` folder in the root CNTK folder. We recommend you to keep the downloaded data in the respective folder while downloading, as the configuration files in this folder assumes that by default.
 
 ### Setup
 

@@ -89,8 +89,15 @@
 %ignore CNTK::Dictionary::operator=;
 %ignore CNTK::Dictionary::operator[];
 
+%ignore CNTK::TrainingParameterSchedule::TrainingParameterSchedule(TrainingParameterSchedule<T>&&); 
+%ignore CNTK::TrainingParameterSchedule(const std::vector<T>&, std::size_t);
 %ignore CNTK::TrainingParameterSchedule::operator=;
 %ignore CNTK::TrainingParameterSchedule::operator[];
+%attribute(CNTK::TrainingParameterSchedule<double>, std::size_t, minibatch_size, GetMinibatchSize, SetMinibatchSize);
+%attribute(CNTK::TrainingParameterSchedule<std::size_t>, std::size_t, minibatch_size, GetMinibatchSize, SetMinibatchSize);
+%attribute(CNTK::Learner, std::size_t, minibatch_size, GetMinibatchSize, SetMinibatchSize);
+// for internal test purpose
+%attribute(CNTK::Learner, CNTK::LearningRateSchedule, _learning_rate_schedule, GetLearningRateSchedule, SetLearningRateSchedule);
 
 %ignore CNTK::GetCheckedMode;
 
@@ -105,11 +112,17 @@
 // consumption in proxy objects.
 %rename(train_minibatch_overload_for_minibatchdata) CNTK::Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
 %rename(train_minibatch_overload_for_minibatchdata) CNTK::Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>&, std::unordered_map<Variable, ValuePtr>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
-%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
-%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, std::unordered_map<Variable, ValuePtr>& , const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
+%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice(), bool distributed = false);
+%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, std::unordered_map<Variable, ValuePtr>& , const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice(), bool distributed = false);
 
 %rename(l1_regularization_weight) CNTK::AdditionalLearningOptions::l1RegularizationWeight;
 %rename(l2_regularization_weight) CNTK::AdditionalLearningOptions::l2RegularizationWeight;
+%rename(ignored_minibatch_size) CNTK::TrainingParameterSchedule<double>::IgnoredMinibatchSize;
+%rename(ignored_minibatch_size) CNTK::TrainingParameterSchedule<std::size_t>::IgnoredMinibatchSize;
+%rename(_MINIBATCH_SIZE) CNTK::Learner::MinibatchSizeKey; // L"MinibatchSize"
+%rename(ignored_minibatch_size)  CNTK::Learner::IgnoredMinibatchSize;
+%rename(_options) CNTK::Learner::GetOptions;
+
 %rename(ndcg_at_1) CNTK::NDCGAt1;
 
 // if we don't except RandomUniform the corresponding template functions will not be generated
@@ -259,6 +272,11 @@ def dynamic_axes(self):
         {
             numpy_type = NPY_DOUBLE;
             buffer = (void*)cpuView->DataBuffer<double>();
+        }
+        else if (cntk_type == CNTK::DataType::Float16)
+        {
+            numpy_type = NPY_HALF;
+            buffer = (void*)cpuView->DataBuffer<float16>();
         }
         else
         {
@@ -460,6 +478,13 @@ fail:   return false;
             case CNTK::DictionaryValue::Type::NDShape:
                 val = NDShapeToTuple(dictVal.Value<CNTK::NDShape>());
                 break;
+            case CNTK::DictionaryValue::Type::TrainingParameterSchedule:
+            {
+                CNTK::TrainingParameterSchedule<double>* schedulePtr = new CNTK::TrainingParameterSchedule<double>(dictVal.Value<CNTK::TrainingParameterSchedule<double>>());
+                
+                val = SWIG_NewPointerObj(schedulePtr, $descriptor(CNTK::TrainingParameterSchedule<double>), 1);
+                break;
+            }
             case CNTK::DictionaryValue::Type::Axis:
                 val = PyTuple_New(3);
                 if (val == NULL)
@@ -759,6 +784,12 @@ public:
 
 %typemap(out, fragment="NDShapeToTuple") CNTK::NDShape {
     $result = NDShapeToTuple($1);
+}
+
+%extend CNTK::TrainingParameterSchedule {
+   T __getitem__(size_t count) {
+    return (*$self)[count];
+  }
 }
 
 %extend CNTK::NDShape {
@@ -1461,6 +1492,9 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::SwigMinibatchSource)
 %shared_ptr(CNTK::SwigDataDeserializer)
 %shared_ptr(CNTK::SwigChunk)
+%shared_ptr(CNTK::TrainingParameterSchedule<double>)
+%shared_ptr(CNTK::TrainingParameterSchedule<size_t>)
+
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibraryExperimental.h"
@@ -1789,11 +1823,11 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
         {
             if (borrow)
             {
-                 view = new NDArrayView(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 view = new NDArrayView(DataType::Float, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Float), DeviceDescriptor::CPUDevice(), readOnly);
             }
             else
             {
-                 NDArrayView  tmp(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 NDArrayView  tmp(DataType::Float, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Float), DeviceDescriptor::CPUDevice(), readOnly);
                  view = new NDArrayView(DataType::Float, tmp.Shape(), device);
                  view->CopyFrom(tmp);
             }
@@ -1802,18 +1836,31 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
         {
             if (borrow)
             {
-                 view = new NDArrayView(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 view = new NDArrayView(DataType::Double, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Double), DeviceDescriptor::CPUDevice(), readOnly);
             }
             else
             {
-                 NDArrayView  tmp(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 NDArrayView  tmp(DataType::Double, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Double), DeviceDescriptor::CPUDevice(), readOnly);
                  view = new NDArrayView(DataType::Double, tmp.Shape(), device);
+                 view->CopyFrom(tmp);
+            }
+        }
+        else if (typecode == NPY_HALF)
+        {
+            if (borrow)
+            {
+                 view = new NDArrayView(DataType::Float16, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Float16), DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                 NDArrayView  tmp(DataType::Float16, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Float16), DeviceDescriptor::CPUDevice(), readOnly);
+                 view = new NDArrayView(DataType::Float16, tmp.Shape(), device);
                  view->CopyFrom(tmp);
             }
         }
         else
         {
-            throw std::logic_error("NumPy array of type float32 or float64 expected");
+            throw std::logic_error("NumPy array of type float16, float32 or float64 expected");
         }
 
         return view;
@@ -1857,18 +1904,18 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
         {
             if (borrow)
             {
-                view = new NDArrayView(shape,
+                view = new NDArrayView(DataType::Float, shape,
                  (CNTK::SparseIndexType*)PyArray_DATA(indices),
                  (CNTK::SparseIndexType*)PyArray_DATA(indptr),
-                 (float*)PyArray_DATA(data), numNonZeroValues,
+                 PyArray_DATA(data), numNonZeroValues,
                  DeviceDescriptor::CPUDevice(), readOnly);
             }
             else
             {
-                NDArrayView tmp(shape,
+                NDArrayView tmp(DataType::Float, shape,
                  (CNTK::SparseIndexType*)PyArray_DATA(indices),
                  (CNTK::SparseIndexType*)PyArray_DATA(indptr),
-                 (float*)PyArray_DATA(data), numNonZeroValues,
+                 PyArray_DATA(data), numNonZeroValues,
                  DeviceDescriptor::CPUDevice(), readOnly);
                 view = new NDArrayView(DataType::Float, StorageFormat::SparseCSC, tmp.Shape(), device);
                 view->CopyFrom(tmp);
@@ -1878,26 +1925,47 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
         {
             if (borrow)
             {
-                view = new NDArrayView(shape,
+                view = new NDArrayView(DataType::Double, shape,
                  (CNTK::SparseIndexType*)PyArray_DATA(indices),
                  (CNTK::SparseIndexType*)PyArray_DATA(indptr),
-                 (double*)PyArray_DATA(data), numNonZeroValues,
+                 PyArray_DATA(data), numNonZeroValues,
                  DeviceDescriptor::CPUDevice(), readOnly);
             }
             else
             {
-                NDArrayView tmp(shape,
+                NDArrayView tmp(DataType::Double, shape,
                  (CNTK::SparseIndexType*)PyArray_DATA(indices),
                  (CNTK::SparseIndexType*)PyArray_DATA(indptr),
-                 (double*)PyArray_DATA(data), numNonZeroValues,
+                 PyArray_DATA(data), numNonZeroValues,
                  DeviceDescriptor::CPUDevice(), readOnly);
                 view = new NDArrayView(DataType::Double, StorageFormat::SparseCSC, tmp.Shape(), device);
                 view->CopyFrom(tmp);
             }
         }
+        else if (typecode == NPY_HALF)
+        {
+            if (borrow)
+            {
+                view = new NDArrayView(DataType::Float16, shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                NDArrayView tmp(DataType::Float16, shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+                view = new NDArrayView(DataType::Float16, StorageFormat::SparseCSC, tmp.Shape(), device);
+                view->CopyFrom(tmp);
+            }
+        }
         else
         {
-            throw std::logic_error("NumPy array of type float32 or float64 expected");
+            throw std::logic_error("NumPy array of type float16, float32 or float64 expected");
         }
 
         return view;
@@ -1920,12 +1988,12 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 %template(DictionaryValueFromNDArrayView) CNTK::DictionaryValue::DictionaryValue<CNTK::NDArrayView>;
+%template(DictionaryValueFromTrainingDoubleParameterSchedule) CNTK::DictionaryValue::DictionaryValue<CNTK::TrainingParameterSchedule<double>>;
 
-%template(training_parameter_per_sample_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
-%template(training_parameter_per_minibatch_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Minibatch>;
-
-typedef CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample> MinibatchSizeSchedule;
-%template(minibatch_size_schedule) CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample>;
+typedef CNTK::TrainingParameterSchedule<size_t> MinibatchSizeSchedule;
+%template(minibatch_size_schedule)  CNTK::TrainingParameterSchedule<size_t>;
+typedef CNTK::TrainingParameterSchedule<double> TrainingDoubleParameterSchedule;
+%template(training_double_parameter_schedule) CNTK::TrainingParameterSchedule<double>;
 
 %template(OptionalBool) CNTK::Internal::Optional<bool>;
 

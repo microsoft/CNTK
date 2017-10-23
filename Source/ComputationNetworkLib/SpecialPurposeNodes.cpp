@@ -144,5 +144,6 @@ template <class ElemType>
 
 template class TraceNode<float>;
 template class TraceNode<double>;
+template class TraceNode<half>;
 
 }}}

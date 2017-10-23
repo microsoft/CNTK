@@ -12,6 +12,7 @@
 #error CNTK requires the NVIDIA cuDNN library 5.0 or higher to build, cf. https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#cudnn or https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Linux#cudnn for installation instructions.
 #endif
 #include <memory>
+#include "half.hpp"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -49,6 +50,13 @@ struct Consts
 {
     static const ElemType Zero;
     static const ElemType One;
+};
+
+template <>
+struct Consts<half>
+{
+    static const float Zero;
+    static const float One;
 };
 
 } } }

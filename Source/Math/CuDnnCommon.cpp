@@ -9,7 +9,12 @@
 #include "half.hpp"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
+#ifndef CPUONLY
+MATH_API std::size_t GetCUDNNVersion()
+{
+    return cudnnGetVersion();
+}
+#endif
 template <>
 const float Consts<float>::One = 1;
 template <>
@@ -18,13 +23,6 @@ template <>
 const float Consts<float>::Zero = 0;
 template <>
 const double Consts<double>::Zero = 0;
-
-template <>
-struct Consts<half>
-{
-    static const float Zero;
-    static const float One;
-};
 
 const float Consts<half>::Zero = 0;
 const float Consts<half>::One = 1;

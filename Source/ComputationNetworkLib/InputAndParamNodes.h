@@ -108,7 +108,7 @@ private:
         {
             fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f(%f*%f), onCPU=%s.\n)",
                     NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
-                    (int)randomSeed, (int)fanOut, (int)fanIn, range, range/initValueScale, initValueScale, initOnCPUOnly ? "true" : "false");
+                    (int)randomSeed, (int)fanOut, (int)fanIn, (float)range, (float)(range/initValueScale), (float)(initValueScale), initOnCPUOnly ? "true" : "false");
         }
     }
 

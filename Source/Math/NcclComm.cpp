@@ -31,6 +31,7 @@ ncclRedOp_t ncclRedOpFromMpiOp(MPI_Op op)
 NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     : m_ncclComm(nullptr), m_stream(nullptr)
 {
+    cudaDeviceSynchronize();
     size_t numRanks = mpi->NumNodesInUse();
     std::vector<int> allDevs(numRanks);
     std::vector<std::array<char, MPI_MAX_PROCESSOR_NAME>> allHosts(numRanks);
@@ -40,19 +41,21 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     mpi->Allgather(&deviceId, 1, MPI_INT, allDevs.data(), 1, MPI_INT);
     mpi->Allgather(procName.data(), MPI_MAX_PROCESSOR_NAME, MPI_CHAR, allHosts[0].data(), MPI_MAX_PROCESSOR_NAME, MPI_CHAR);
 
-    for (size_t r = 0; r<numRanks; r++)
+    for (size_t r = 0; r < numRanks; r++)
     {
         if (allDevs[r] == CPUDEVICE)
         {
             fprintf(stderr, "NcclComm: disabled, at least one rank using CPU device\n");
             return;
         }
-        for (size_t s = 0; s<r; s++)
+        for (size_t s = 0; s < r; s++)
+        {
             if (allHosts[r] == allHosts[s] && allDevs[r] == allDevs[s])
             {
                 fprintf(stderr, "NcclComm: disabled, same device used by more than one rank\n");
                 return;
             }
+        }
     }
 
     ncclUniqueId ncclId;
@@ -70,7 +73,7 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     PrepareDevice(deviceId);
     res = ncclCommInitRank(&m_ncclComm, numRanks, ncclId, mpi->CurrentNodeRank());
     if (res != ncclSuccess)
-        RuntimeError("NcclComm failed to initialize: %s", ncclGetErrorString(res));
+        RuntimeError("NcclComm failed to initialize: %s. Set the ENV \"NCCL_DEBUG=INFO\" for more information.", ncclGetErrorString(res));
 
     cudaStreamCreateWithFlags(&m_stream, cudaStreamDefault)
         || "cudaStreamCreateWithFlags failed";

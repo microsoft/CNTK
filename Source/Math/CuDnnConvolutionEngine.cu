@@ -30,11 +30,6 @@ const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x)
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-static bool IsGpu(DEVICEID_TYPE deviceId)
-{
-    return deviceId >= 0;
-}
-
 class CuDnnKernel
 {
 public:

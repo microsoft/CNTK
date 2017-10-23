@@ -97,6 +97,8 @@ class QLearning(AgentBaseClass):
         else:
             self._loss = model['loss']
 
+
+        minibatch_size = int(self._parameters.minibatch_size)
         # If gradient_clipping_threshold_per_sample is inf, gradient clipping
         # will not be performed. Set gradient_clipping_with_truncation to False
         # to clip the norm.

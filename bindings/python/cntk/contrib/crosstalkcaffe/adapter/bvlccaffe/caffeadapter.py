@@ -214,13 +214,16 @@ class SetupCaffeParameters(object):
         '''
         cntk_layer_def.parameters = cntkmodel.CntkSpliceParameters()
 
-        cntk_layer_def.parameters.axis = caffe_parameters.axis
+        if caffe_parameters is not None:
+            cntk_layer_def.parameters.axis = caffe_parameters.axis
+        else:
+            cntk_layer_def.parameters.axis = 1
         output_tensor = inputs_info[0].tensor[:]
         output_tensor[0] = 0
         for input_info in inputs_info:
             if not output_tensor[1:] == input_info.tensor[1:]:
                 raise IndexError('Non-align tensor information\n')
-            output_tensor[0] += input_info.tensor[caffe_parameters.axis - 1]
+            output_tensor[0] += input_info.tensor[cntk_layer_def.parameters.axis - 1]
         cntk_layer_def.tensor = output_tensor
 
     @staticmethod
@@ -541,9 +544,9 @@ class CaffeAdapter(baseadapter.Adapter):
     @staticmethod
     def _get_layer_parameters(raw_layer):
         convert_name = raw_layer.type.lower() + 'param'
-        for term in dir(raw_layer):
-            if term.lower().replace('_', '') == convert_name:
-                return getattr(raw_layer, term)
+        for (descriptor, attr) in raw_layer.ListFields():
+            if descriptor.name.lower().replace('_','') == convert_name:
+                return attr
         return None
 
     def _try_special_case_wrapper(self, raw_layer):

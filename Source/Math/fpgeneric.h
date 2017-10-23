@@ -369,13 +369,13 @@ inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t generator, d
 {
     return curandGenerateUniformDouble(generator, outputPtr, num);
 }
-inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t generator, half *outputPtr, size_t num)
+inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t, half *outputPtr, size_t num)
 {
     curandState *devStates;
     cudaMalloc((void **)&devStates, sizeof(curandState));
     setup_state<<<1,1>>>(devStates, time(NULL)); // What does curandGenerateUniform actually doing? should also pass in state here
 
-    dim3 dimGrid((num+COPY_BLOCK_DIM-1)/COPY_BLOCK_DIM, 1, 1);
+    dim3 dimGrid((unsigned int)(num+COPY_BLOCK_DIM-1)/COPY_BLOCK_DIM, 1, 1);
     dim3 dimBlock(COPY_BLOCK_DIM, 1, 1);
     GenerateUniformHalf<<<dimGrid, dimBlock>>>(devStates, outputPtr, (int)num);
 
@@ -396,7 +396,7 @@ inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t, half *output
     cudaMalloc((void **)&devStates, sizeof(curandState));
     setup_state<<<1,1>>>(devStates, time(NULL)); // What does curandGenerateUniform actually doing? should also pass in state here
 
-    dim3 dimGrid((n+COPY_BLOCK_DIM-1)/COPY_BLOCK_DIM, 1, 1);
+    dim3 dimGrid((unsigned int)(n+COPY_BLOCK_DIM-1)/COPY_BLOCK_DIM, 1, 1);
     dim3 dimBlock(COPY_BLOCK_DIM, 1, 1);
     GenerateNormalHalf<<<dimGrid, dimBlock>>>(devStates, outputPtr, (int)n, mean, stddev);
 

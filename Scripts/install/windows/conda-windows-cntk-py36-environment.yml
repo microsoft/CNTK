@@ -11,6 +11,7 @@ dependencies:
 - numpy=1.11.2=py36_0
 - pandas=0.19.1=np111py36_0
 - pandas-datareader=0.2.1=py36_0
+- pandoc=1.19.2.1
 - pillow=3.4.2=py36_0
 - pip=9.0.1=py36_1
 - python=3.6.0=0
@@ -30,5 +31,6 @@ dependencies:
   - pytest==3.0.3
   - sphinx-rtd-theme==0.2.4
   - sphinx==1.5.4
+  - nbsphinx==0.2.14  
   - twine==1.8.1
   - protobuf==3.2.0
