@@ -385,7 +385,7 @@ void Train(string systemId, wstring outputDirectory)
     //  - LR is specified for av gradient
     //  - numer should be /minibatchSize
     //  - denom should be /sqrt(minibatchSize)
-    let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;
+    let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;//         *10;
     let lr0 = 0.0003662109375 * f;
     auto baseLearner = AdamLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
         MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
