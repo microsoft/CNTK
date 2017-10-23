@@ -12,6 +12,7 @@ from ..variables import Record
 from ..ops import combine, splice, sequence, reconcile_dynamic_axes
 from .blocks import *
 from .blocks import _get_initial_state_or_default, _inject_name
+from ..internal.utils import  _subnode_name
 
 
 def Delay(T=1, initial_state=default_override_or(0), name=''):
@@ -144,8 +145,8 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), 
         last_valids = [nth(ones_like_input, t) for t in range(window_size)]
     
         # stack rows 'beside' each other in a new static axis (create a new static axis that doesn't exist)
-        value = splice(*last_values, axis=axis, name='value')
-        valid = splice(*last_valids, axis=axis, name='valid')
+        value = splice(*last_values, axis=axis, name=_subnode_name(name,'value'))
+        valid = splice(*last_valids, axis=axis, name=_subnode_name(name,'valid'))
     
         # value[t] = value of t steps back; valid[t] = true if there was a value t steps back
         return (value, valid)

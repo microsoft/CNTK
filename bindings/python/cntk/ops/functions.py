@@ -20,7 +20,7 @@ from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
                           _value_as_sequence_or_array
 from cntk.internal.utils import get_python_function_arguments, \
                                 map_function_arguments, _py_dict_to_cntk_dict, \
-                                _to_cntk_dict_value
+                                _to_cntk_dict_value, _subnode_name, _SUBNODE_NAME_SEP
 from cntk.internal import _UDFDeserializeCallbackWrapper, _serialize
 from cntk.internal.sanitize import is_byte_buffer
 from ..variables import Record, Variable
@@ -478,7 +478,10 @@ class Function(cntk_py.Function):
             # and then looks it up by name, as that will fail although both instances are identical.
             from cntk.logging.graph import find_by_name
             root = self.block_root if self.is_block else self
-            item = typemap(find_by_name)(root, name, depth=1)
+            #find the name or not try find name with parent name:
+            item = typemap(find_by_name)(root, name, depth=1) \
+                   or typemap(find_by_name)(root, _subnode_name(root.name, name), depth=1) \
+                   or typemap(find_by_name)(root, _subnode_name(self.name, name), depth=1)
             if item:
                 return item
 
