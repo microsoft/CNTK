@@ -2068,7 +2068,7 @@ namespace CNTK
 
         ///
         /// Default constructor for creating an invalid/null InternalVariable instance.
-        /// Required for use in a std::vector container.
+        /// Required for use in an external std::vector container.
         ///
         CNTK_API InternalVariable();
         CNTK_API ~InternalVariable();
@@ -2228,12 +2228,12 @@ namespace CNTK
         void SetOwner(const std::weak_ptr<PrimitiveFunction>& ownerFunction);
         void SetOwner(std::weak_ptr<PrimitiveFunction>&& ownerFunction);
 
-    protected:// TODO: these move into Variable
-        InternalVariable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
-        InternalVariable CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const;
-        static InternalVariable CompositePreservingCopy(const InternalVariable& other, std::shared_ptr<const Function>&& composite);
-
-        InternalVariable NonCompositePreservingCopy() const;
+    //protected:// TODO: these move into Variable
+    //    InternalVariable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
+    //    InternalVariable CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const;
+    //    static InternalVariable CompositePreservingCopy(const InternalVariable& other, std::shared_ptr<const Function>&& composite);
+    //
+    //    InternalVariable NonCompositePreservingCopy() const;
 
     private:
 #if defined(SWIGCSHARP) || defined(SWIGJAVA)
@@ -2249,7 +2249,7 @@ namespace CNTK
         VariableFieldsPtr m_dataFields;
         static const size_t s_serializationVersion = 1;
 
-    private:
+    private: protected: // TODO: move to Variable
         std::shared_ptr<const Function> m_outputComposite; // Outputs() returns copies with this set.
 #ifdef DYNAMITE_ONLY
         // Note: This ^^ is called outputComposite, but there is no assumption that it actually is a composite. Maybe we can even merge this with vv.
@@ -2360,24 +2360,12 @@ namespace CNTK
         ///
         CNTK_API size_t size() const;
 
-    private:
-        //Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const
-        //{
-        //    return InternalVariable::CompositePreservingCopy(composite);
-        //}
-        //Variable CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const
-        //{
-        //    return InternalVariable::CompositePreservingCopy(std::move(composite));
-        //}
-        //static Variable CompositePreservingCopy(const Variable& other, std::shared_ptr<const Function>&& composite)
-        //{
-        //    return InternalVariable::CompositePreservingCopy(other, std::move(composite));
-        //}
-        //
-        //Variable NonCompositePreservingCopy() const
-        //{
-        //    return InternalVariable::NonCompositePreservingCopy();
-        //}
+    protected:
+        Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
+        Variable CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const;
+        static Variable CompositePreservingCopy(const InternalVariable& other, std::shared_ptr<const Function>&& composite);
+
+        Variable NonCompositePreservingCopy() const;
 
     private:
 #if defined(SWIGCSHARP) || defined(SWIGJAVA)
@@ -4023,7 +4011,7 @@ namespace CNTK
         static bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate);
 
         // Returns a outputs without ref-counting the owner.
-        friend class InternalVariable;
+        friend class Variable;
         CNTK_API const auto RawOutputs() const { const auto& outputs = const_cast<Function*>(this)->InitOutputs(); return MakeSpan(outputs); }
 
     private:

@@ -20,14 +20,14 @@ namespace CNTK
     // move-constructor variant, for Dynamite only
     Variable::Variable(FunctionPtr&& function) :
 #ifdef DYNAMITE_ONLY // It's OK if user-held Variables are no outputs of composites as long as the graph is acyclic. That is always true in Dynamite.
-        InternalVariable(CompositePreservingCopy(*this, move(function)))
+        Variable(CompositePreservingCopy(*this, move(function)))
         // Note: Detour via static needed to allow for a sequence point between function->RawOutputs() and move(function).
 #else
         InternalVariable(function->Output())
 #endif
     {
     }
-    /*static*/ InternalVariable InternalVariable::CompositePreservingCopy(const InternalVariable& other, std::shared_ptr<const Function>&& composite)
+    /*static*/ Variable Variable::CompositePreservingCopy(const InternalVariable& other, std::shared_ptr<const Function>&& composite)
     {
         const auto& output = composite->RawOutputs().front();
         return output.CompositePreservingCopy(move(composite));
@@ -113,7 +113,7 @@ namespace CNTK
         return m_dataFields->OwnerIs(f);
     }
 
-    InternalVariable InternalVariable::CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const
+    Variable Variable::CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const
     {
 #if 1
         // TODO: This breakpoint was never hit. Is it ever called? If not, remove.
@@ -130,7 +130,7 @@ namespace CNTK
 #endif
     }
 
-    InternalVariable InternalVariable::CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const
+    Variable Variable::CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const
     {
         // We have to preserve the whole subgraph.
         Variable result;
@@ -142,7 +142,7 @@ namespace CNTK
         return result;
     }
 
-    InternalVariable InternalVariable::NonCompositePreservingCopy() const
+    Variable Variable::NonCompositePreservingCopy() const
     {
 #if 1
         Variable result;
@@ -164,13 +164,15 @@ namespace CNTK
     Variable::Variable(const InternalVariable& other) :
         InternalVariable(other)
     {
-        // TODO: Check that not Output.
+        if (IsOutput())
+            LogicError("Variable '%S' from InternalVariable: Should not be applied to Outputs.", AsString().c_str());
     }
 
     Variable::Variable(InternalVariable&& other) :
         InternalVariable(std::move(other))
     {
-        // TODO: Check that not Output.
+        if (IsOutput())
+            LogicError("Variable '%S' from InternalVariable: Should not be applied to Outputs.", AsString().c_str());
     }
 
     void InternalVariable::SetOwner(const std::weak_ptr<PrimitiveFunction>& ownerFunction)
@@ -537,7 +539,7 @@ namespace CNTK
         m_shapeDims(&m_dataFields->m_shape.Dimensions())
     {}
 
-    // the others are default. They must be defined nevertheless, because of the incomplete type w.r.t. strong_shared_ptr
+    // the others are default. They must be defined nevertheless, because of the incomplete type w.r.t. strong_shared_ptr in external uses
     InternalVariable::InternalVariable() = default;
     InternalVariable::~InternalVariable() = default;
     InternalVariable::InternalVariable(const InternalVariable&) = default;
@@ -545,6 +547,7 @@ namespace CNTK
     InternalVariable& InternalVariable::operator=(const InternalVariable&) = default;
     InternalVariable& InternalVariable::operator=(InternalVariable&&) = default;
 
+    // the others are default. They must be defined nevertheless, because of the incomplete type w.r.t. strong_shared_ptr in external uses
     Variable::Variable() = default;
     Variable::~Variable() = default;
     Variable::Variable(const Variable&) = default;
