@@ -84,7 +84,8 @@ namespace CNTK
                 //if (BlockFunctionOutputMapping(output) == Variable())
                 //    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for output '%S'", AsString().c_str(), OpName().c_str(), output.AsString().c_str());
 
-                outputsMap[output] = BlockFunctionOutputMapping(output);
+                let outputVar = Variable(output, true);
+                outputsMap[outputVar] = BlockFunctionOutputMapping(outputVar);
             }
 
             return outputsMap;
@@ -118,11 +119,11 @@ namespace CNTK
 
         // determine for an Output in this->m_outputs which outputs of m_composite it should pretend to be
         // Will fail if no mapping has been set up.
-        const Variable& BlockFunctionOutputMapping(const /*Output*/Variable& output) const
+        const Variable& BlockFunctionOutputMapping(const /*Output*/InternalVariable& output) const
         {
             if (!output.IsOutput())
                 LogicError("BlockFunctionOutputMapping: Must only be called on OutputVariables");
-            if (BlockFunctionOutputMapping(output) == Variable())
+            if (BlockFunctionOutputMapping(output) == InternalVariable())
                 LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for output '%S'", AsString().c_str(), OpName().c_str(), output.AsString().c_str());
             return output.m_dataFields->More().m_blockFunctionVariableMapping;
         }
@@ -220,7 +221,7 @@ namespace CNTK
         OutputsVectorType InferOutputs() override
         {
             // Note: This is not used for the case of static-block invocation in Dynamite.
-            std::vector<Variable> outputs;
+            std::vector<InternalVariable> outputs;
             // We determine the outputs by replacing the arguments of the composite with new placeholders with updated 
             // shape etc. information matching the corresponding mapped input
             auto currentArguments = m_composite->Arguments(); // (this is an expensive operation, requiring a full traversal and a full copy+shared_ptr of the inputs array)
@@ -242,7 +243,7 @@ namespace CNTK
             for (const auto& compositeOutput : compositeOutputs)
             {
                 auto output = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), compositeOutput.NeedsGradient(), Name());
-                output.m_dataFields->More().m_blockFunctionVariableMapping = compositeOutput;
+                output.m_dataFields->More().m_blockFunctionVariableMapping = Variable(compositeOutput, true);
 
                 outputs.push_back(output);
             }

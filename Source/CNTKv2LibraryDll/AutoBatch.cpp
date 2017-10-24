@@ -1269,8 +1269,8 @@ class InternalVariable::AutoBatch
             {
                 fail_if(cloneeInputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
                 let fInlinedPtr = RInlineComposite(*cloneeInputFields.Owner(), invocationArgs, /*in/out*/ invocationArgsFreeDim, /*out*/ thisFreeDim, cloneFn);
-                inlinedInputs[i] = fInlinedPtr->m_outputs.front();
-                inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
+                inlinedInputs[i] = Variable(fInlinedPtr->m_outputs.front(), ConstFunctionPtr(), fInlinedPtr);
+                //inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
                 // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
             }
             // update inlinedFreeDim
@@ -1897,7 +1897,7 @@ class InternalVariable::AutoBatch
     // TODO: What to do with multi-valued functions? Which ones are there? What is Combine(), a barrier?
     // Caller must call m_visitorTag.Begin() first.
     // 'var' is an input; that is, what m_inputs[] points to, not undergone any redirect.
-    void RBuildForwardGraphAndSchedule(const Variable& var, size_t depth)
+    void RBuildForwardGraphAndSchedule(const InternalVariable& var, size_t depth)
     {
         auto& fields = GetInputFields(var);
         // return if this node was already visited
@@ -2100,7 +2100,7 @@ class InternalVariable::AutoBatch
     // The real value may be a view into this object that has not been realized yet.
     // Use this to find out properties, such as the device, type, and storage format.
     // Currently only used for batched BatchNorm.
-    static const NDArrayView* GetValueObject(const Variable& v)
+    static const NDArrayView* GetValueObject(const InternalVariable& v)
     {
         auto& fields = GetInputFields(v);
         if (fields.m_value)
@@ -2114,7 +2114,7 @@ class InternalVariable::AutoBatch
     }
     // this gets the non-redirected data fields, which describe v's properties as an input
     // This returns the fields of a potentially virtual value that does not produce its own output but merely views another.
-    static VariableFields& GetInputFields(const Variable& v)
+    static VariableFields& GetInputFields(const InternalVariable& v)
     {
         return *v.m_dataFields;
     }
@@ -2147,7 +2147,7 @@ class InternalVariable::AutoBatch
             let& fields = GetInputFields(input); // (the fields that describe input as an input, e.g. its shape after potential see-through ops)
             // little helper function to fix up variable names by removing _Output_0
             // TODO: Once we support >1 output, this needs a bit more code.
-            let GetVarName = [](const Variable& input) -> wstring
+            let GetVarName = [](const InternalVariable& input) -> wstring
             {
                 auto uid = input.Uid();
                 if (uid.size() > 9 && wcscmp(uid.c_str() + uid.size() - 9, L"_Output_0") == 0)
@@ -2281,9 +2281,10 @@ class InternalVariable::AutoBatch
         auto fPtr = CreateAndMemoizeOp(op, move(inputs), shape, move(attributes)/*, name*/, profiler, logPrefix, isFree, logSpliceAsGather);
         let& output = fPtr->m_outputs.front();
         // To make the consumer of this hold a reference to this PrimitiveFunction, inject a strong ref to the copy of its Output.
-        //input = output.CompositePreservingCopy(fPtr); // without the acyclic trick, this works as well, but is not quite right since fPtr is not a Composite
-        Variable input = output;                           // copy the Variable object (which is mostly a shared_ptr tp VariableFields which are not copied but shared)
-        input.m_acyclicOutputPrimitiveReference = move(fPtr); // and implant the reference to the Primitive that generated it, for reference countiung
+        //input = output.CompositePreservingCopy(fPtr);         // without the acyclic trick, this works as well, but is not quite right since fPtr is not a Composite
+        Variable input = Variable(output, FunctionPtr(), fPtr); // copy the Variable object (which is mostly a shared_ptr tp VariableFields which are not copied but shared)
+        // TODO: Add the move overload to Variable()
+        //input.m_acyclicOutputPrimitiveReference = move(fPtr); // and implant the reference to the Primitive that generated it, for reference countiung
         return input;
     }
 
@@ -2364,7 +2365,7 @@ class InternalVariable::AutoBatch
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     // The result is stored in f.m_outputs.front()'s m_value.
-    const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool logSpliceAsGather = false)
+    const void MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool logSpliceAsGather = false)
     {
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
@@ -2414,7 +2415,6 @@ class InternalVariable::AutoBatch
             m_stats.numDoneGatherOps++;
         else
             m_stats.numDoneOtherOps++;
-        return output;
     }
 
     // helper to verify that we figured out the FreeDimension replacement for a clonee correctly
@@ -2452,9 +2452,9 @@ class InternalVariable::AutoBatch
     }
 
     // simplified version avoiding moving unnecessary parameters around (esp. strings)
-    static Variable OutputVariable(NDShape&& shape, ::CNTK::DataType dataType, bool needsGradient, bool isSparse)
+    static InternalVariable OutputVariable(NDShape&& shape, ::CNTK::DataType dataType, bool needsGradient, bool isSparse)
     {
-        return Variable(move(shape), VariableKind::Output, dataType, needsGradient, isSparse);
+        return InternalVariable(move(shape), VariableKind::Output, dataType, needsGradient, isSparse);
     }
 
     // clone a PrimitiveFunction
@@ -3039,11 +3039,11 @@ class InternalVariable::AutoBatch
             let& fromDims = fromOutput.Shape().Dimensions();  // ...and its shape dimensions
             fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
             let fromSliceAxis = fromDims.size() - 1;          // the slice of from is taken along this axis
-            Variable batchedInput; // our return value
+            Variable batchedInput = Variable(fromOutput, ConstFunctionPtr(), static_pointer_cast<PrimitiveFunction const>(from->shared_from_this())); // our return value
             if (beginIndex == 0 && endIndex == fromDims.back()/*[fromSliceAxis]*/) // full range: just take it, no need to slice at all
             {
                 // BUGBUG: ^^ This does not cover STACKING of a previously BATCHED result
-                batchedInput = fromOutput; // note: graph already has a strong ref to output elsewhere
+                batchedInput; // this is what we want here
             }
             else // sub-range: splice it by taking a slice view on the previously spliced batch
             {
@@ -3051,7 +3051,7 @@ class InternalVariable::AutoBatch
                 // create a new PrimitiveFunction Slice()
                 auto outputShape = fromDims; // determine output shape
                 outputShape.back()/*[fromSliceAxis]*/ = endIndex - beginIndex; // narrow it down to the range of the slice we are taking
-                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, Function::InputsVectorType(nullptr/*1*/, fromOutput), outputShape,
+                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, Function::InputsVectorType(nullptr/*1*/, batchedInput), outputShape,
                                                          Dictionary(
                                                              PrimitiveFunction::AttributeNameAxis,       Axis((int)fromSliceAxis),
                                                              PrimitiveFunction::AttributeNameBeginIndex, (int)beginIndex,
@@ -3504,8 +3504,8 @@ class InternalVariable::AutoBatch
                 let batchedOutputShape = unbatchedOutputShape.SubShape(0, unbatchedOutputRank).AppendAxis(unbatchedOutputRank, batchSize); // desired batched output shape without the singleton axes
                 fail_if(batchedOutputShape.TotalSize(/*check=*/false) != batchedOp->m_outputs.front().Shape().TotalSize(/*check=*/false), "output shape has unexpected axes that should be singletons but aren't");
 
-                Variable arg = batchedOp->m_outputs.front();
-                arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
+                Variable arg = Variable(batchedOp->m_outputs.front(), ConstFunctionPtr(), batchedOp); // TODO: use a proper constructor here
+                //arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
 
                 // Reshape() here does not need the properties at this level anymore; output shape is sufficient
                 let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(arg)), batchedOutputShape, Dictionary()/*, f0.m_name*/, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
@@ -3600,7 +3600,7 @@ public:
     //     - at most one Slice in a chain, since Slice (into a batched op) is onlty generated on top of a real
     //       CUDA op
     //     - in backprop, we further short-circuit these into one
-    NDArrayViewPtr BatchedForward(const Variable& v)
+    NDArrayViewPtr BatchedForward(const InternalVariable& v)
     {
         auto& fields = GetInputFields(v);
         // if value already there then just return it
@@ -3895,7 +3895,7 @@ public:
     }
 
     // helper during initialization: reset m_gradients if it is redirected
-    VariableFields& ResetInputGradient(const Variable& input)
+    VariableFields& ResetInputGradient(const InternalVariable& input)
     {
         auto& inputFields = GetInputFields(input);
         if (!inputFields.m_redirection.empty())
@@ -4373,7 +4373,7 @@ public:
     // implant gradients into all variables
     // Unlike BatchedForward(), this is eager. If you call it twice, it's a completely new computation.
     // If you need multiple gradients, ask for them in a single go.
-    void BatchedBackward(const Variable& root, unordered_map<Parameter, NDArrayViewPtr>& gradients)
+    void BatchedBackward(const InternalVariable& root, unordered_map<Parameter, NDArrayViewPtr>& gradients)
     {
         if (!root.m_dataFields->m_needsGradient)
             LogicError("BatchedBackward: cannot compute gradient for root with m_needsGradient being False.");
@@ -4501,7 +4501,7 @@ void PrimitiveFunction::MemoizeKnowableValue() const
 // ===========================================================================
 
 // special short-circuited version where output is created outside
-void PrimitiveFunction::InitOutput(Variable&& output)
+void PrimitiveFunction::InitOutput(InternalVariable&& output)
 {
     //std::call_once(m_outputsInitFlag, [this]() {});
 #ifndef DYNAMITE_ONLY
@@ -4916,7 +4916,7 @@ Variable BlockFunction::FinalizeInvoke(const vector<Variable>& argumentList, boo
         }
         outputShape = ReplaceFreeDim(compositeOutput.Shape().Dimensions(), inputsFreeDim);
     }
-    Variable blockOutput =
+    InternalVariable blockOutput =
         /*if*/ (!shapeIsKnown) ? // if we are being called while building a static graph
             OutputVariable(NDShape::Unknown(), DataType::Unknown, vector<Axis>(), Name())
         /*else*/:
@@ -4924,7 +4924,9 @@ Variable BlockFunction::FinalizeInvoke(const vector<Variable>& argumentList, boo
     fail_if(blockOutput.Shape().HasFreeDimension(), "Invoke: still has FreeDimension??");
     InitOutput(move(blockOutput));
     // behave as if this was returning a Composite: implant a ref count. This will be taken over by the next consumer.
-    return m_outputs.front().CompositePreservingCopy(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
+    return Variable(m_outputs.front(), static_pointer_cast<PrimitiveFunction>(shared_from_this()), ConstPrimitiveFunctionPtr());
+    // TODO: Maybe this can instead keep the primitive directly?
+    //return m_outputs.front().CompositePreservingCopy(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
 }
 
 // helpers to make Variables behave like indexable arrays

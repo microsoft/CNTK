@@ -2018,7 +2018,7 @@ namespace CNTK
     // Forward declarations
     inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes(), bool needsGradient = false, bool isSparse = false);
     inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name = std::wstring());
+    inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name = std::wstring());
 
     ///
     /// Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
@@ -2044,13 +2044,6 @@ namespace CNTK
 
         friend class Internal::VariableResolver;
 
-//#ifndef SWIG
-//    private:
-//        friend inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*=Axis::UnknownDynamicAxes()*/, bool needsGradient /*= false*/, bool isSparse /*= false*/);
-//        friend inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes()*/);
-//        friend inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name /*= L""*/);
-//#endif
-
     public:
 
         ///
@@ -2064,7 +2057,7 @@ namespace CNTK
         /// Implicit conversion to a FunctionPtr; creates a pass through primitive Function
         /// This returns a new CompositeFunction that wraps Owner().   --TODO: ^^is this comment correct?
         ///
-        CNTK_API operator FunctionPtr() const;
+        //CNTK_API operator FunctionPtr() const;
 
         ///
         /// Default constructor for creating an invalid/null InternalVariable instance.
@@ -2192,6 +2185,8 @@ namespace CNTK
         //CNTK_API NDArrayViewPtr Value() const;
         CNTK_API void SetValue(const NDArrayViewPtr& value);
 
+        CNTK_API InternalVariable Clone() const;
+
     private:
 #ifdef SWIGPYTHON
     public:
@@ -2213,8 +2208,6 @@ namespace CNTK
         bool OwnerIs(const Function* f) const; // faster than saying Owner() == ...
 
         //CNTK_API const InternalVariable& BlockFunctionVariableMapping() const; // [fseide] has been moved to BlockFunction
-
-        CNTK_API InternalVariable Clone() const;
 
         CNTK_API virtual Dictionary Serialize() const override;
 
@@ -2248,15 +2241,6 @@ namespace CNTK
     protected:
         VariableFieldsPtr m_dataFields;
         static const size_t s_serializationVersion = 1;
-
-    private: protected: // TODO: move to Variable
-        std::shared_ptr<const Function> m_outputComposite; // Outputs() returns copies with this set.
-#ifdef DYNAMITE_ONLY
-        // Note: This ^^ is called outputComposite, but there is no assumption that it actually is a composite. Maybe we can even merge this with vv.
-#endif
-        std::shared_ptr<const PrimitiveFunction> m_acyclicOutputPrimitiveReference; // Output: ref to Primitive if known to be acyclic.
-        // for debugging:
-        const NDShapeDimensionsSpan* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in the debugger
     };
 
     // this is the exported version
@@ -2281,7 +2265,7 @@ namespace CNTK
     private:
         friend inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*=Axis::UnknownDynamicAxes()*/, bool needsGradient /*= false*/, bool isSparse /*= false*/);
         friend inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes()*/);
-        friend inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name /*= L""*/);
+        friend inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name /*= L""*/);
 #endif
 
     public:
@@ -2289,8 +2273,16 @@ namespace CNTK
         ///
         /// Construct from InternalVariable
         ///
-        CNTK_API Variable(const InternalVariable& variable);
-        CNTK_API Variable(InternalVariable&& variable);
+        // The direct construction from InternalVariable should not happen, but
+        // not all code has been updated. That code uses the ", true" version, to
+        // make it easy to detect.
+        //CNTK_API Variable(const InternalVariable& variable);
+        //CNTK_API Variable(InternalVariable&& variable);
+        CNTK_API Variable(const InternalVariable& variable, bool); // special version, to be fixed some day
+        CNTK_API Variable(const class Parameter& variable);
+        CNTK_API Variable(Parameter&& variable);
+        CNTK_API Variable(const class Constant& variable);
+        CNTK_API Variable(Constant&& variable);
 
         ///
         /// Create an 'Output' variable aliasing the output of the specified Function
@@ -2326,7 +2318,7 @@ namespace CNTK
 
     protected:
         //CNTK_API NDArrayViewPtr Value() const;
-        CNTK_API void SetValue(const NDArrayViewPtr& value);
+        //CNTK_API void SetValue(const NDArrayViewPtr& value);
 
     private:
 #ifdef SWIGPYTHON
@@ -2339,16 +2331,12 @@ namespace CNTK
         // TODO: This should be a private but if not made public, the python bindings build complains about an unresolved external
         // Probably due the above ctor being a public method in SWIG codegen
     public:
-        CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
-            InternalVariable(shape, varType, dataType, value, needsGradient, dynamicAxes, isSparse, name, uid)
-        {
-        }
+        CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
 
         // simplified version for Dynamite
-        CNTK_API Variable(NDShape&& shape, VariableKind varType, ::CNTK::DataType dataType, bool needsGradient, bool isSparse) :
-            InternalVariable(std::move(shape), varType, dataType, needsGradient, isSparse)
-        {
-        }
+        CNTK_API Variable(NDShape&& shape, VariableKind varType, ::CNTK::DataType dataType, bool needsGradient, bool isSparse);
+
+        CNTK_API Variable Clone() const;
 
         ///
         /// Index the last axis. This maps to Slice().
@@ -2361,11 +2349,14 @@ namespace CNTK
         CNTK_API size_t size() const;
 
     protected:
-        Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
-        Variable CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const;
-        static Variable CompositePreservingCopy(const InternalVariable& other, std::shared_ptr<const Function>&& composite);
+        Variable CompositePreservingCopy(const ConstFunctionPtr& composite) const;
+        Variable CompositePreservingCopy(ConstFunctionPtr&& composite) const;
+        static Variable CompositePreservingCopy(const InternalVariable& other, ConstFunctionPtr&& composite);
 
         Variable NonCompositePreservingCopy() const;
+
+        /*CNTK_API*/ Variable(const InternalVariable& other, const ConstFunctionPtr&  composite, const ConstPrimitiveFunctionPtr& primitive);
+        /*CNTK_API*/ Variable(const InternalVariable& other,       ConstFunctionPtr&& composite, const ConstPrimitiveFunctionPtr& primitive);
 
     private:
 #if defined(SWIGCSHARP) || defined(SWIGJAVA)
@@ -2378,18 +2369,16 @@ namespace CNTK
 #endif
 
     protected:
-        //VariableFieldsPtr m_dataFields;
-        //static const size_t s_serializationVersion = 1;
-
-     // TODO: after refactoring, these will light up
-//    private:
-//        std::shared_ptr<const Function> m_outputComposite; // Outputs() returns copies with this set.
-//#ifdef DYNAMITE_ONLY
-//        // Note: This ^^ is called outputComposite, but there is no assumption that it actually is a composite. Maybe we can even merge this with vv.
-//#endif
-//        std::shared_ptr<const PrimitiveFunction> m_acyclicOutputPrimitiveReference; // Output: ref to Primitive if known to be acyclic.
-//        // for debugging:
-//        const NDShapeDimensionsSpan* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in the debugger
+    public: // for now
+        ConstFunctionPtr m_outputComposite; // Outputs() returns copies with this set.
+    protected:
+#ifdef DYNAMITE_ONLY
+        // Note: This ^^ is called outputComposite, but there is no assumption that it actually is a composite. Maybe we can even merge this with vv.
+#endif
+        friend class InternalVariable::AutoBatch; // TODO: remove this, and instead have the correct constructor that sets this field up automatically
+        ConstPrimitiveFunctionPtr m_acyclicOutputPrimitiveReference; // Output: ref to Primitive if known to be acyclic.
+        // for debugging:
+        const NDShapeDimensionsSpan* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in the debugger
     };
 
     // TODO: Variable equality should be based on uids.
@@ -2537,7 +2526,7 @@ namespace CNTK
     ///
     /// Create an 'Output' variable
     ///
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name = std::wstring())
+    inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name = std::wstring())
     {
         return OutputVariable(shape, dataType, dynamicAxes, /*needsGradient =*/ true, name);
     }
@@ -2545,17 +2534,17 @@ namespace CNTK
     ///
     /// Create an 'Output' variable
     ///
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name /*= L""*/)
+    inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name /*= L""*/)
     {
-        return Variable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, /*isSparse =*/ false, name, std::wstring());// Internal::GenerateUid(VariableKind::Output));
+        return InternalVariable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, /*isSparse =*/ false, name, std::wstring());// Internal::GenerateUid(VariableKind::Output));
     }
 
     ///
     /// Create an 'Output' variable
     ///
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, bool isSparse, const std::wstring& name /*= L""*/)
+    inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, bool isSparse, const std::wstring& name /*= L""*/)
     {
-        return Variable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, isSparse, name, std::wstring());// Internal::GenerateUid(VariableKind::Output));
+        return InternalVariable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, isSparse, name, std::wstring());// Internal::GenerateUid(VariableKind::Output));
     }
 
     static const int SentinelValueForInferParamInitRank = std::numeric_limits<int>::max();
@@ -3538,7 +3527,7 @@ namespace CNTK
 
     public:
         typedef FixedVectorWithBuffer<Variable, 2> InputsVectorType;
-        typedef FixedVectorWithBuffer<Variable, 1> OutputsVectorType;
+        typedef FixedVectorWithBuffer<InternalVariable, 1> OutputsVectorType;
 
         ///
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values corresponding
@@ -4008,7 +3997,7 @@ namespace CNTK
                                                      std::unordered_set<Variable>& replacedPlaceholders);
 
     protected:
-        static bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate);
+        static bool ValidateOrUpdateOutput(const InternalVariable& output, const InternalVariable& newOutput, bool alwaysUpdate);
 
         // Returns a outputs without ref-counting the owner.
         friend class Variable;
@@ -4042,7 +4031,7 @@ namespace CNTK
         CNTK_API std::shared_ptr<std::vector<Variable>> OutputsImpl() const;
 
         void ValidateOrUpdateOutputs();
-        void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<Variable>& buffer);
+        void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<InternalVariable>& buffer);
 
         static void ReplacePlaceholderInPlace(Variable& var,
                                               const std::unordered_map<Variable, Variable>& placeholderReplacements,

@@ -68,7 +68,7 @@ namespace CNTK
             if (outputs.size() != 1)
                 LogicError("Function '%S' UpdateInternalState: a stateful primitive function must have a single output.", AsString().c_str());
 
-            const auto& rng = ExecVars().m_variableToNodeMap.at(outputs[0])->As<RngUser>();
+            const auto& rng = ExecVars().m_variableToNodeMap.at(Variable(outputs[0], true))->As<RngUser>();
 
             Dictionary state;
             state[PrimitiveFunction::AttributeNameRngSeed] = static_cast<size_t>(rng->GetRngSeed());
@@ -246,7 +246,7 @@ namespace CNTK
                                  inputVar.Uid().c_str(), GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
             }
 
-            uidToInputMap[inputVar.Uid()] = inputVar;
+            uidToInputMap[inputVar.Uid()] = Variable(inputVar, true);
         }
 
         const auto& functions = dict[functionsKey].Value<vector<DictionaryValue>>();
@@ -280,11 +280,11 @@ namespace CNTK
                         CNTK::LogicError("CompositeFunction::Deserialize: Unexpected variable '%S' instead of a Placeholder (uid = %ls) (%s).",
                                          it->second.AsString().c_str(), it->second.Uid().c_str(), GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
                     }
-                    allPlaceholderReplacements[it->second] = output;
+                    allPlaceholderReplacements[it->second] = Variable(output, true);
                 }
                 else
                 {
-                    uidToInputMap[output.Uid()] = output;
+                    uidToInputMap[output.Uid()] = Variable(output, true);
                 }
             }
         }
@@ -403,7 +403,7 @@ namespace CNTK
             // copy the state directly into the network
             for (const auto& output : function->RawOutputs())
             {
-                auto node = ExecVars().m_variableToNodeMap.at(output);
+                auto node = ExecVars().m_variableToNodeMap.at(Variable(output, true));
                 node->As<RngUser>()->SetRngState(seed, offset);
             }
         }
@@ -530,7 +530,7 @@ namespace CNTK
         {
             assert(variable.IsOutput());
             // The primary output of a function is its first output
-            auto primaryOutput = variable.Owner()->RawOutputs()[0];
+            auto primaryOutput = Variable(variable.Owner()->RawOutputs()[0], true);
             // If this variable is not the primary output, then we need to look up the primary output
             // so that the variableToNodeMap will contain a mapping from the primary variable to an OutputMultiplexerNode
             // which is how we handle multiple outputs in V1. See also the instantiation of OutputMultiplexerNode in this file.
@@ -1192,7 +1192,7 @@ namespace CNTK
             assert(i < outputs.size());
 
             computationNodePtr = New<OutputMultiplexerNode<ElementType>>(network->GetDeviceId(), CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name(), useMangledNamesForComputationNodes), i);
-            inputNodesBasePtrs = { variableToNodeMap[outputs[0]] };
+            inputNodesBasePtrs = { variableToNodeMap[Variable(outputs[0], true)] };
         }
 
         network->AddNodeToNetAndAttachInputs(computationNodePtr, inputNodesBasePtrs);
@@ -1318,12 +1318,13 @@ namespace CNTK
         auto rootFunction = compositeFunction->RootFunction();
         const auto& rootFunctionOutputs = rootFunction->RawOutputs();
         for (auto rootOutput : rootFunctionOutputs)
-            GetNode(rootOutput, computationNetwork, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsExcludedFromGradientComputation, useMangledNamesForComputationNodes);
+            GetNode(Variable(rootOutput, true), computationNetwork, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsExcludedFromGradientComputation, useMangledNamesForComputationNodes);
 
         // We need to patch the Computation node mappings for the arguments of block functions
         // since for recurrent inputs, the mappings are not fully established the first time
         std::function<void(const Variable&)> PatchBlockArgumentsAndOutputsMapping;
-        PatchBlockArgumentsAndOutputsMapping = [&variableToNodeMap, &PatchBlockArgumentsAndOutputsMapping](const Variable& var) {
+        PatchBlockArgumentsAndOutputsMapping = [&variableToNodeMap, &PatchBlockArgumentsAndOutputsMapping](const InternalVariable& var)
+        {
             if (var.IsOutput())
             {
                 BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(var.OutputOwner().get());
@@ -1341,7 +1342,7 @@ namespace CNTK
 
                     auto mappingVarNodeIter = variableToNodeMap.find(blockFunction->BlockFunctionOutputMapping(var));
                     if (mappingVarNodeIter != variableToNodeMap.end())
-                        variableToNodeMap[var] = mappingVarNodeIter->second;
+                        variableToNodeMap[Variable(var, true)] = mappingVarNodeIter->second;
                 }
             }
         };
@@ -1355,7 +1356,8 @@ namespace CNTK
         // If any of the function or requested outputs is not a root node, we need to explicitly
         // add it to the 'output' group of the ComputationNetwork
         std::unordered_set<Variable> networkOutputs(outputs);
-        networkOutputs.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
+        auto rootFunctionOutputVars(Transform(rootFunctionOutputs, [](const InternalVariable& v) { return Variable(v, true); }));
+        networkOutputs.insert(rootFunctionOutputVars.begin(), rootFunctionOutputVars.end());
         for (auto output : networkOutputs)
         {
             if (!IsVariableRoot(output))
@@ -1551,10 +1553,12 @@ namespace CNTK
             // Now recursively traverse the network in a top-down fashion
             auto rootFunction = RootFunction();
             const auto& rootFunctionOutputs = rootFunction->RawOutputs();
-            ExecVars().m_allNetworkRoots.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
+            auto rootFunctionOutputsVars = Transform(rootFunctionOutputs, [](const InternalVariable& v) { return Variable(v, true); });
+            ExecVars().m_allNetworkRoots.insert(rootFunctionOutputsVars.begin(), rootFunctionOutputsVars.end());
+            //ExecVars().m_allNetworkRoots.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
             std::vector<ComputationNodeBasePtr> forwardRootNodes;
-            for (auto rootOutput : rootFunctionOutputs)
-                forwardRootNodes.push_back(ExecVars().m_variableToNodeMap.at(rootOutput));
+            for (const auto& rootOutput : rootFunctionOutputs)
+                forwardRootNodes.push_back(ExecVars().m_variableToNodeMap.at(Variable(rootOutput, true)));
 
             std::vector<ComputationNodeBasePtr> forwardOutputNodes;
             ExecVars().m_allNetworkRoots.insert(outputs.begin(), outputs.end());
@@ -1886,7 +1890,7 @@ namespace CNTK
         for (auto output : outputs)
             requestedOutputVariables.insert(output.first);
 
-        std::unordered_set<Variable> functionOutputs(m_outputs.begin(), m_outputs.end());
+        //std::unordered_set<Variable> functionOutputs(m_outputs.begin(), m_outputs.end());
         std::unordered_set<Variable> requiredArguments;
         for (auto outputVariable : requestedOutputVariables)
         {

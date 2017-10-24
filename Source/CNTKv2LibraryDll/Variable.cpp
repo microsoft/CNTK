@@ -12,9 +12,21 @@
 
 namespace CNTK
 {
-    Variable::Variable(const FunctionPtr& function)
-        : InternalVariable(function->Output())
+    Variable::Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
+        InternalVariable(shape, varType, dataType, value, needsGradient, dynamicAxes, isSparse, name, uid)
     {
+        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+    }
+    Variable::Variable(NDShape&& shape, VariableKind varType, ::CNTK::DataType dataType, bool needsGradient, bool isSparse) :
+        InternalVariable(std::move(shape), varType, dataType, needsGradient, isSparse)
+    {
+        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+    }
+
+    Variable::Variable(const FunctionPtr& function) :
+        Variable(function->Output())
+    {
+        m_shapeDims = &m_dataFields->m_shape.Dimensions();
     }
 
     // move-constructor variant, for Dynamite only
@@ -27,10 +39,22 @@ namespace CNTK
 #endif
     {
     }
-    /*static*/ Variable Variable::CompositePreservingCopy(const InternalVariable& other, std::shared_ptr<const Function>&& composite)
+    /*static*/ Variable Variable::CompositePreservingCopy(const InternalVariable& other, ConstFunctionPtr&& composite)
     {
         const auto& output = composite->RawOutputs().front();
-        return output.CompositePreservingCopy(move(composite));
+        return Variable((const InternalVariable&)output, move(composite), PrimitiveFunctionPtr());
+        //return output.CompositePreservingCopy(move(composite));
+    }
+
+    Variable::Variable(const InternalVariable& other, const ConstFunctionPtr& composite, const ConstPrimitiveFunctionPtr& primitive) :
+        InternalVariable(other), m_outputComposite(composite), m_acyclicOutputPrimitiveReference(primitive)
+    {
+        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+    }
+    Variable::Variable(const InternalVariable& other, ConstFunctionPtr&& composite, const ConstPrimitiveFunctionPtr& primitive) :
+        InternalVariable(other), m_outputComposite(std::move(composite)), m_acyclicOutputPrimitiveReference(primitive)
+    {
+        m_shapeDims = &m_dataFields->m_shape.Dimensions();
     }
 
     const NDShape& InternalVariable::Shape() const
@@ -83,9 +107,17 @@ namespace CNTK
     {
         InternalVariable clonedVariable;
         clonedVariable.m_dataFields = m_dataFields->Clone();
-        clonedVariable.m_shapeDims = &m_dataFields->m_shape.Dimensions();
 
         return clonedVariable;
+    }
+
+    Variable Variable::Clone() const
+    {
+        InternalVariable clonedVariable = InternalVariable::Clone();
+        return Variable(clonedVariable, m_outputComposite, m_acyclicOutputPrimitiveReference);
+
+        //clonedVariable.m_dataFields = m_dataFields->Clone();
+        //return clonedVariable;
     }
 
     //const Variable& Variable::BlockFunctionVariableMapping() const
@@ -113,8 +145,9 @@ namespace CNTK
         return m_dataFields->OwnerIs(f);
     }
 
-    Variable Variable::CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const
+    Variable Variable::CompositePreservingCopy(const ConstFunctionPtr& composite) const
     {
+        //return Variable((const InternalVariable&)*this, composite, m_acyclicOutputPrimitiveReference);
 #if 1
         // TODO: This breakpoint was never hit. Is it ever called? If not, remove.
         return CompositePreservingCopy(move(std::shared_ptr<const Function>(composite))); // will call the move version below
@@ -130,8 +163,10 @@ namespace CNTK
 #endif
     }
 
-    Variable Variable::CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const
+    // TODO: xyz replace by constructor
+    Variable Variable::CompositePreservingCopy(ConstFunctionPtr&& composite) const
     {
+        //return Variable((const InternalVariable&)*this, std::move(composite), m_acyclicOutputPrimitiveReference);
         // We have to preserve the whole subgraph.
         Variable result;
         // This must copy all data members except m_outputComposite.
@@ -144,6 +179,7 @@ namespace CNTK
 
     Variable Variable::NonCompositePreservingCopy() const
     {
+        //return Variable((const InternalVariable&)*this, ConstFunctionPtr(), m_acyclicOutputPrimitiveReference);
 #if 1
         Variable result;
         // This must copy all data members except m_outputComposite.
@@ -161,18 +197,52 @@ namespace CNTK
     // downcast from InternalVariable to Variable
     // This is needed to allow Parameter and Constant to be passed as Variable.
     // Outputs, on the other hand, should always be cast while implanting a ref-count holder.
-    Variable::Variable(const InternalVariable& other) :
+    //Variable::Variable(const InternalVariable& other) :
+    //    InternalVariable(other)
+    //{
+    //    if (IsOutput())
+    //        LogicError("Variable '%S' from InternalVariable: Should not be applied to Outputs.", AsString().c_str());
+    //    m_shapeDims = &m_dataFields->m_shape.Dimensions();
+    //}
+    //
+    //Variable::Variable(InternalVariable&& other) :
+    //    InternalVariable(std::move(other))
+    //{
+    //    if (IsOutput())
+    //        LogicError("Variable '%S' from InternalVariable: Should not be applied to Outputs.", AsString().c_str());
+    //    m_shapeDims = &m_dataFields->m_shape.Dimensions();
+    //}
+
+    // special version. Use this for all places where Variable and InternalVariable cannot be easily disentangled.
+    // This bypasses the IsOutput check. In the future, there should be no call to this.
+    Variable::Variable(const InternalVariable& other, bool) :
         InternalVariable(other)
     {
-        if (IsOutput())
-            LogicError("Variable '%S' from InternalVariable: Should not be applied to Outputs.", AsString().c_str());
+        m_shapeDims = &m_dataFields->m_shape.Dimensions();
     }
 
-    Variable::Variable(InternalVariable&& other) :
+    Variable::Variable(const Parameter& other) :
+        InternalVariable(other)
+    {
+        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+    }
+
+    Variable::Variable(Parameter&& other) :
         InternalVariable(std::move(other))
     {
-        if (IsOutput())
-            LogicError("Variable '%S' from InternalVariable: Should not be applied to Outputs.", AsString().c_str());
+        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+    }
+
+    Variable::Variable(const Constant& other) :
+        InternalVariable(other)
+    {
+        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+    }
+
+    Variable::Variable(Constant&& other) :
+        InternalVariable(std::move(other))
+    {
+        m_shapeDims = &m_dataFields->m_shape.Dimensions();
     }
 
     void InternalVariable::SetOwner(const std::weak_ptr<PrimitiveFunction>& ownerFunction)
@@ -530,13 +600,11 @@ namespace CNTK
     template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<VariableFields>> strong_shared_ptr<VariableFields>::Storage::s_storage;
 
     InternalVariable::InternalVariable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
-        m_dataFields(MakeSharedObject1<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, name, uid)),
-        m_shapeDims(&m_dataFields->m_shape.Dimensions())
+        m_dataFields(MakeSharedObject1<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, name, uid))
     {}
 
     InternalVariable::InternalVariable(NDShape&& shape, VariableKind varType, CNTK::DataType dataType, bool needsGradient, bool isSparse) :
-        m_dataFields(MakeSharedObject1<VariableFields>(std::move(shape), varType, dataType, needsGradient, isSparse)),
-        m_shapeDims(&m_dataFields->m_shape.Dimensions())
+        m_dataFields(MakeSharedObject1<VariableFields>(std::move(shape), varType, dataType, needsGradient, isSparse))
     {}
 
     // the others are default. They must be defined nevertheless, because of the incomplete type w.r.t. strong_shared_ptr in external uses

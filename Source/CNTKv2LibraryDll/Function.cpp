@@ -98,7 +98,7 @@ namespace CNTK
 #endif
                 }
 
-                outputVar.m_outputComposite.reset(); // TODO: Can this be done in InferOutputs? I think this only applies to Combine().
+                //outputVar.m_outputComposite.reset(); // TODO: Can this be done in InferOutputs? I think this only applies to Combine().
             }
 #ifndef DYNAMITE_ONLY // This is only needed for user functions, which are not defined in Dynamite
             if (outputs.size() < outputs.capacity())
@@ -157,7 +157,8 @@ namespace CNTK
 #ifdef DYNAMITE_ONLY
         // It's OK if user-held Variables are no outputs of composites as long as the graph is acyclic. That is always true in Dynamite.
         const auto& outputs = RawOutputs(); // = InitOutputs(), m_outputs
-        return outputs.front().CompositePreservingCopy(shared_from_this()); // this implants a ref count
+        return Variable(outputs.front(), shared_from_this(), PrimitiveFunctionPtr()); // this implants a ref count
+        //return outputs.front().CompositePreservingCopy(shared_from_this()); // this implants a ref count
 #else
         const auto& outputs = RawOutputs();
         if (outputs.size() != 1)
@@ -171,8 +172,9 @@ namespace CNTK
     {
         std::vector<Variable> outputs;
         std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(const_cast<Function*>(this)->shared_from_this()));
-        for (auto& v : RawOutputs())
-            outputs.push_back(v.CompositePreservingCopy(composite));
+        for (const auto& v : RawOutputs())
+            outputs.push_back(Variable(v, composite, PrimitiveFunctionPtr()));
+            //outputs.push_back(v.CompositePreservingCopy(composite));
 
         return std::shared_ptr<std::vector<Variable>>(new std::vector<Variable>(std::move(outputs)), [](std::vector<Variable>* ptr) { delete ptr; });
     }
@@ -404,7 +406,14 @@ namespace CNTK
             // Combine's outputs are just a copy of its inputs and any replacements need to be properly
             // reflected in the outputs as well
             for (auto& outputVar : InitOutputs())
-                ReplacePlaceholderInPlace(outputVar, placeholderReplacements, replacedPlaceholders);
+            {
+                auto outputVarAsVariable = Variable(outputVar,
+                                                    IsComposite() ? shared_from_this() : ConstFunctionPtr(),
+                                                    IsComposite() ? PrimitiveFunctionPtr() : dynamic_pointer_cast<PrimitiveFunction>(primitiveRootFunction));
+                // TODO: This ^^ is funky--can it be simplified?
+                ReplacePlaceholderInPlace(outputVarAsVariable, placeholderReplacements, replacedPlaceholders);
+                //ReplacePlaceholderInPlace(outputVar, placeholderReplacements, replacedPlaceholders);
+            }
         }
 
         OnPlaceholdersReplaced(placeholderReplacements, replacedPlaceholders);
@@ -414,7 +423,7 @@ namespace CNTK
                                                       std::unordered_set<Variable>& /*replacedPlaceholders*/)
     {}
 
-    /*static*/ bool Function::ValidateOrUpdateOutput(const Variable& currentOutputVar, const Variable& newOutputVar, bool alwaysUpdate)
+    /*static*/ bool Function::ValidateOrUpdateOutput(const InternalVariable& currentOutputVar, const InternalVariable& newOutputVar, bool alwaysUpdate)
     {
         bool updated = false;
         if (!alwaysUpdate)
@@ -479,7 +488,7 @@ namespace CNTK
         const size_t maxNumValidationPassesAllowed = 128;
         bool recurrentNodeOutputModified = false;
         size_t numValidationPasses = 0;
-        std::vector<Variable> outputVarBuffer;
+        std::vector<InternalVariable> outputVarBuffer;
         outputVarBuffer.reserve(Function::MaxNumOutputs);
         do
         {
@@ -494,7 +503,7 @@ namespace CNTK
                 "indicating a potential infinite inference loop.", AsString().c_str(), (int)numValidationPasses);
     }
 
-    void Function::ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<Variable>& outputsUsingNewInputs)
+    void Function::ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<InternalVariable>& outputsUsingNewInputs)
     {
         assert(visitedFunctions.find(this) == visitedFunctions.end());
         visitedFunctions[this] = 1;
@@ -697,7 +706,7 @@ namespace CNTK
             outputVarIndex++;
         }
 
-        return clonedFunction->RawOutputs()[outputVarIndex];
+        return Variable(clonedFunction->RawOutputs()[outputVarIndex], true);
     }
 
     FunctionPtr Function::ReplacePlaceholder(const Variable& placeholderReplacement)
@@ -928,8 +937,9 @@ namespace CNTK
         std::vector<Variable> rootFunctionOutputReplacements;
         for (const auto& output : compositeRootFunctionOutputs)
         {
-            if (replacements.find(output) != replacements.end())
-                rootFunctionOutputReplacements.push_back(replacements.at(output));
+            Variable outputVar(output, true);
+            if (replacements.find(outputVar) != replacements.end())
+                rootFunctionOutputReplacements.push_back(replacements.at(outputVar));
         }
 
         if (!rootFunctionOutputReplacements.empty())
@@ -985,7 +995,10 @@ namespace CNTK
                         {
                             const auto& visitedFunctionOutputs = visitedFunction->RawOutputs();
                             for (const auto& visitedFunctionOutput : visitedFunctionOutputs)
-                                cloningReplacementsForPlaceholderReplacement[visitedFunctionOutput] = GetCorrespondingOutputVariableFromClone(visitedFunctionOutput, visitedFunction, cloneMap.at(visitedFunction.get()));
+                            {
+                                let visitedFunctionOutputVar = Variable(visitedFunctionOutput, true);
+                                cloningReplacementsForPlaceholderReplacement[visitedFunctionOutputVar] = GetCorrespondingOutputVariableFromClone(visitedFunctionOutputVar, visitedFunction, cloneMap.at(visitedFunction.get()));
+                            }
                         }
                     }
 

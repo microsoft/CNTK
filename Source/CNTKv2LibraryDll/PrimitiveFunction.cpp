@@ -324,7 +324,7 @@ namespace CNTK
 #ifndef DYNAMITE_ONLY
         else if (m_op == PrimitiveOpType::UnpackSequence) // special case: UnpackSequence() has two outputs
         {
-            std::vector<Variable> outputs;
+            std::vector<InternalVariable> outputs;
             auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
             if (!suppressMaskOutput)
             {
@@ -343,7 +343,7 @@ namespace CNTK
     }
 
     // output type inference for the case of a single output
-    Variable PrimitiveFunction::InferOutput()
+    InternalVariable PrimitiveFunction::InferOutput()
     {
         if (m_op == PrimitiveOpType::NoOp)
             return OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), m_inputs[0].IsSparse(), Name());

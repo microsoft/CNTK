@@ -325,11 +325,11 @@ namespace CNTK
     public:
         ~PrimitiveFunction()
         {
-            //if (m_uniqueIdForDebugging == 368869)
+            //if (m_uniqueIdForDebugging == 11)
             //    fprintf(stderr, "");
         }
     protected: // special short-circuited versions private to auto-batcher (also called via BlockFunction(), hence 'protected')
-        void InitOutput(Variable&& output);
+        void InitOutput(InternalVariable&& output);
         // This must not be used for anything else.
     public: // public for MakeSharedObject() only. TODO: Remove once we know how to do that right.
         PrimitiveFunction(PrimitiveOpType op, InputsVectorType&& inputs, Dictionary&& functionConfig/*, std::wstring&& name*/)
@@ -921,7 +921,7 @@ namespace CNTK
             std::vector<Axis>& dynamicAxesToReduce,
             bool & isAllAxesReduced);
 
-        Variable InferOutput();
+        InternalVariable InferOutput();
 
     public:
         NDArrayViewPtr BatchedForward() const;

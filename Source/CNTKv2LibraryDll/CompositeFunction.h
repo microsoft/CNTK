@@ -177,7 +177,7 @@ namespace CNTK
             if (preOrder)
             {
                 for (const auto& rootOutput : rootFunctionOutputs)
-                    functor(rootOutput);
+                    functor(Variable(rootOutput, true));
             }
 
             auto rootFunctionInputs = rootFunction->Inputs(pythonOperandOrder);
@@ -198,7 +198,7 @@ namespace CNTK
             if (!preOrder)
             {
                 for (const auto& rootOutput : rootFunctionOutputs)
-                    functor(rootOutput);
+                    functor(Variable(rootOutput, true));
             }
         }
 
@@ -290,7 +290,7 @@ namespace CNTK
         {
             vector<FunctionPtr> functions;
             std::vector<Variable> inputs;
-            std::unordered_set<Variable> uniqueInputs;
+            std::unordered_set<InternalVariable> uniqueInputs;
             TraverseVariables(rootFunction, visitedFunctions,
                 [&inputs, &uniqueInputs](const Variable& var)
                 {
