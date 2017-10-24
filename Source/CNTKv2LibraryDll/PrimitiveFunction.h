@@ -354,6 +354,18 @@ namespace CNTK
             }
 #endif
         }
+    protected:
+        // even simpler version without dictionary or name
+        // Protected since it is used by BlockFunction().
+        PrimitiveFunction(PrimitiveOpType op, InputsVectorType&& inputs)
+            : Function(std::move(inputs), Dictionary()),
+            m_op(op),
+            m_profiler(CurrentDynamicProfiler())
+        {
+            UpdateAcyclicReferences();
+            if (op != PrimitiveOpType::Block && !m_isKnownToBeAcyclic)
+                LogicError("RawPrimitiveFunction: Somehow a PrimitiveFunction created by the auto-batched ended up as not being known to be acyclic.");
+        }
     private:
 
         // Note: This code is to allow bypassing the composite pointer in a hybrid build that maintains

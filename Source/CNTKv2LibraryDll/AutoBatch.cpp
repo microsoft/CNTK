@@ -4632,40 +4632,6 @@ void PrimitiveFunction::InitOutput(InternalVariable&& output)
     m_stillNeedsToInferShapes = true;
 }
 
-Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
-{
-    if (m_forceImmediate)
-    {
-        return m_lambdaRememberedForDebugging(m_operands);
-    }
-
-    // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
-    // We leave the Parameters in the m_argsMap array untouched (they are at the end).
-    // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
-    //  m_argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
-    //  m_operands     = what the arguments should prerent to be
-    let composite = static_pointer_cast<CompositeFunction>(m_composite); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
-
-    // this leaves 'm_stillNeedsToInferShapes' true until called for the first time with fully known shapes
-    // This returns 'true' only once, and evaluates the IsUnknown test only once for a dynamic invocation
-    // (but multiple times for initial invocations during construction of static graphs).
-    bool determineShapesThisTime;
-    if (m_stillNeedsToInferShapes && all_of(m_operands.begin(), m_operands.end(), [](const Variable& arg) { return !arg.Shape().IsUnknown(); }))
-    {
-        m_stillNeedsToInferShapes = false;
-        determineShapesThisTime = true;
-    }
-    else
-        determineShapesThisTime = false;
-    // BUGBUG: Do we need this? m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy())); for the operands
-    // TODO: Since we copy the operands, we could augment the Parameters here as well.
-    let f = MakeSharedObject<BlockFunction>(composite, m_argumentList, vector<Variable>(m_operands), m_isBasicBlock, determineShapesThisTime, wstring());
-    let res = f->FinalizeInvoke(m_argumentList, /*shapeIsKnown=*/!m_stillNeedsToInferShapes);
-    for (size_t i = 0; i < m_arity; i++)
-        SetOperand(i, m_noArg);
-    return res;
-}
-
 // determine "the" free dimension of an invocation, using a hack (fixed axis := 1)
 // The result is either the dim (if all inputs have a batch dim) or ABSENT_FREE_DIMENSION (if no input has a batch dim), or an error.
 // BUGBUG: This constraint is no longer needed. Also, tis should use the correct axes.
@@ -4733,6 +4699,46 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape,
     }
 }
 
+// called to invoke a static function inside a dynamic graph, or as part of building another static graph
+// The operands must have been implanted in m_operands before calling this, and will be cleared at the end.
+// ...TODO: pass m_operands as a &
+Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
+{
+    auto& operands = m_operands; // TODO: pass as &, for clarity
+    if (m_forceImmediate)
+    {
+        return m_lambdaRememberedForDebugging(m_operands);
+    }
+
+    // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
+    // We leave the Parameters in the m_argsMap array untouched (they are at the end).
+    // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
+    //  m_argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
+    //  operands     = what the arguments should prerent to be
+
+    // this leaves 'm_stillNeedsToInferShapes' true until called for the first time with fully known shapes
+    // This returns 'true' only once, and evaluates the IsUnknown test only once for a dynamic invocation
+    // (but multiple times for initial invocations during construction of static graphs).
+    bool determineShapesThisTime;
+    if (m_stillNeedsToInferShapes && all_of(operands.begin(), operands.end(), [](const Variable& arg) { return !arg.Shape().IsUnknown(); }))
+    {
+        m_stillNeedsToInferShapes = false;
+        determineShapesThisTime = true;
+    }
+    else
+        determineShapesThisTime = false;
+    // BUGBUG: Do we need this? m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy())); for the operands
+    // TODO: Since we copy the operands, we could augment the Parameters here as well.
+    let composite = static_pointer_cast<CompositeFunction>(m_composite); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
+    let f = MakeSharedObject<BlockFunction>(composite, m_argumentList, m_isBasicBlock,
+                                            Function::InputsVectorType(/*move*/(operands)), determineShapesThisTime);
+    let res = f->FinalizeInvoke(m_argumentList, /*shapeIsKnown=*/!m_stillNeedsToInferShapes);
+    // release references to the arguments
+    for (size_t i = 0; i < m_arity; i++)
+        SetOperand(i, m_noArg);
+    return res;
+}
+
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
 // It is a valid PrimitiveFunction, but it shares the composite instead of owning it, and therefore not a valid BlockFunction for the static-graph machinery.
 // TODO: Prevent the static machinery from tripping over this.
@@ -4748,17 +4754,15 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape,
 // In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
 // is inferred. This is controlled by the determineShapes flag.
 // PERF BUGBUG: Can we change operands to InputsVectorType?
-BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, /*mutable*/std::vector<Variable>& argumentList, std::vector<Variable>&& operands, bool isBasicBlock, bool determineShapes, wstring&& blockName) :
-    PrimitiveFunction(PrimitiveOpType::Block, move(operands), Dictionary(), move(blockName)), m_composite(callee),
-    m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
+BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, /*mutable*/std::vector<Variable>& argumentList, bool isBasicBlock,
+                             InputsVectorType&& operands, bool determineShapes) :
+    PrimitiveFunction(PrimitiveOpType::Block, move(operands)),
+    m_composite(callee), m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
 {
     // The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
     // The caller must pass in this flag. --TODO: encapsulate this in the Invocable class.
-    if (!determineShapes)
+    if (!determineShapes) // note: This is only ever 'true' for one time during the life of an Invocation; so this is the fast path.
         return;
-
-    //if (callee->Name() != L"dense.normWeight")
-    //    Break;
 
     let& compositeOutputs = callee->RawOutputs(); // RawOutputs() forces callee.m_compositeOutputs to be initialized if not yet. It would initialize it to something is shape IsUnknown, though.
     if (compositeOutputs.size() != 1)
