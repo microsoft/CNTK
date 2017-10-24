@@ -325,6 +325,7 @@ namespace CNTK
     public:
         ~PrimitiveFunction()
         {
+            //fprintf(stderr, "Deallocating id %d\n", (int)m_uniqueIdForDebugging);
             //if (m_uniqueIdForDebugging == 11)
             //    fprintf(stderr, "");
         }

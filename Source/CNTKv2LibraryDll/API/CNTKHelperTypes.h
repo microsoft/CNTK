@@ -504,6 +504,10 @@ class FixedSizePoolStorage
     std::list<Block> blocks;
     size_t totalItemsAllocated = 0; // we have presently this many live objects
     size_t totalItemsReserved = 0;  // we are holding memory sufficient to hold this many
+    // stats
+    size_t totalAllocations = 0;
+    size_t totalAllocationScanSteps = 0;
+    size_t totalDeallocations = 0;
     // state of scan
     Block* currentBlock;            // we are allocating from this block
     size_t nextItemIndex;           // index of next item. If at end of block, this is equal to blockCapacity
@@ -564,6 +568,7 @@ public:
             if (p) // found one in the current block
             {
                 totalItemsAllocated++; // account for it
+                totalAllocations++;    // stats
                 auto* pItem = reinterpret_cast<FixedSizePoolItem<typename T>*>(const_cast<std::remove_const_t<T>*>(p));
                 //pItem->blockIndex = (decltype(pItem->blockIndex))currentBlockIndex; // remember which block it came from
                 pItem->flagPtr = res.second; // remember flag location for trivial deallocation
@@ -573,6 +578,7 @@ public:
             // current block is full: advance the scan to the next block
             currentBlock = currentBlock->next;
             nextItemIndex = 0;
+            totalAllocationScanSteps++;    // stats
         }
         //LogicError("FixedSizePoolAllocator: Allocation in newly created block unexpectedly failed.");
     }
@@ -584,6 +590,7 @@ public:
         auto* flagPtr = pItem->flagPtr;
         Block::Deallocate(flagPtr);
         totalItemsAllocated--;
+        totalDeallocations++;
     }
 };
 

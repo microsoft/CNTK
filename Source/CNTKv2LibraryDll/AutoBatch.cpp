@@ -4597,17 +4597,19 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
     // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
     // We leave the Parameters in the m_argsMap array untouched (they are at the end).
     // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
-    let res = Invoke(m_composite, m_argumentList, m_operands, m_isBasicBlock, /*ref*/ m_stillNeedsToInferShapes);
+    const /*Composite*/FunctionPtr& callee = m_composite;
+    /*mutable*/ vector<Variable>& argumentList = m_argumentList;
+    const vector<Variable>& operands = m_operands;
+    bool isBasicBlock = m_isBasicBlock;
+    bool& needToDetermineShapes = m_stillNeedsToInferShapes;
     // BUGBUG: I get an "unexpectedly expired" weak_ptr when I enable this.
-    //for (size_t i = 0; i < arity; i++)
-    //    SetArg(i, noArg);
-    return res;
-}
-
-// argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
-// operands     = what the arguments should prerent to be. Must currently include a copy of Parameters at the end.
-Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee, /*mutable*/ vector<Variable>& argumentList, const vector<Variable>& operands, bool isBasicBlock, bool& needToDetermineShapes, const std::wstring& name /*= std::wstring()*/) const
-{
+//    return res;
+//}
+//
+//// argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
+//// operands     = what the arguments should prerent to be. Must currently include a copy of Parameters at the end.
+//Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee, /*mutable*/ vector<Variable>& argumentList, const vector<Variable>& operands, bool isBasicBlock, bool& needToDetermineShapes, const std::wstring& name /*= std::wstring()*/) const
+//{
     let composite = static_pointer_cast<CompositeFunction>(callee); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
 #if 0   // This baloney, at least in the case of isBasicBlock.
     // TODO: To make use of this if !isBasicBlock, we must make sure that the static cloning machinery understands the shared composite.
@@ -4648,8 +4650,11 @@ Variable /*Internal::*/Invocable::Invoke(const /*Composite*/FunctionPtr& callee,
             determineShapesThisTime = false;
         // BUGBUG: Do we need this? m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy())); for the operands
         // TODO: Since we copy the operands, we could augment the Parameters here as well.
-        let f = MakeSharedObject<BlockFunction>(composite, argumentList, vector<Variable>(operands), isBasicBlock, determineShapesThisTime, wstring(name));
-        return f->FinalizeInvoke(argumentList, /*shapeIsKnown=*/!needToDetermineShapes);
+        let f = MakeSharedObject<BlockFunction>(composite, argumentList, vector<Variable>(operands), isBasicBlock, determineShapesThisTime, wstring());
+        let res = f->FinalizeInvoke(argumentList, /*shapeIsKnown=*/!needToDetermineShapes);
+        for (size_t i = 0; i < m_arity; i++)
+            SetOperand(i, m_noArg);
+        return res;
     }
 }
 

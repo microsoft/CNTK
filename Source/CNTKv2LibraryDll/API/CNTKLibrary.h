@@ -4900,9 +4900,9 @@ namespace CNTK
         {
             m_operands[argIndex] = argVal;
         }
-        Variable noArg; // dummy for clearing out the args map
+        Variable m_noArg; // dummy for clearing out the args map
         CNTK_API Variable DoInvoke() const; // note: caller must call SetOperand() first to set the operands
-        Variable Invoke(const FunctionPtr& composite, std::vector<Variable>& argumentList, const std::vector<Variable>& operands, bool isBasicBlock, bool& determineShapes, const std::wstring& name = std::wstring()) const;
+        //Variable Invoke(const FunctionPtr& composite, std::vector<Variable>& argumentList, const std::vector<Variable>& operands, bool isBasicBlock, bool& determineShapes, const std::wstring& name = std::wstring()) const;
         // TODO: ^^ merge Invoke() into DoInvoke()
     public:
         Invocable(bool isBasicBlock, size_t freeAxis, const std::function<Variable(                                                 )>& f, std::wstring name) : Invocable(0, freeAxis, isBasicBlock, [=](const std::vector<Variable>& args) { args; return f(                   ); }, name) { }
