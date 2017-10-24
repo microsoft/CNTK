@@ -235,3 +235,23 @@ def _py_dict_to_cntk_dict(py_dict):
     for k, v in py_dict.items():
         res[k] = _to_cntk_dict_value(v)
     return res
+
+
+_SUBNODE_NAME_SEP = '.'
+'''
+Sub-node name separator. 
+'''
+
+def _subnode_name(parent_name, name):
+    '''
+    Create sub-node names (parameters, biases and so on) based on parent node names to make it easier to debug.
+    
+    Args:
+        parent_name (str): Parent node name
+        name (str): sub-node name
+    
+    Returns:
+        A sub-node name which use its parent name as prefix and separated by '.'.
+    :return: 
+    '''
+    return parent_name + _SUBNODE_NAME_SEP + name if parent_name else name

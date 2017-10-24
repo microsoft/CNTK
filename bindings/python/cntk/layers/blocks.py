@@ -16,6 +16,7 @@ from cntk.variables import Constant, Parameter
 from cntk.ops import times, slice, sigmoid, tanh, softplus
 #from .typing import Signature
 from cntk.internal import _as_tuple
+from ..internal.utils import _subnode_name
 from cntk.initializer import glorot_uniform
 from _cntk_py import InferredDimension
 from cntk.default_options import get_default_override, default_override_or
@@ -185,7 +186,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
 
     # parameters bound to this Function
     init_param = np.log(np.exp(steepness) -1) / steepness  # initialize so that factor is initially 1 (has no effect)
-    param = Parameter((), init=init_param, name='alpha')
+    param = Parameter((), init=init_param, name=_subnode_name(name, 'alpha'))
     beta = softplus(param, steepness=steepness)
 
     # expression
@@ -231,21 +232,21 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     cell_shape_stacked_H = tuple(cell_shape_list)  # patched dims with stack_axis duplicated 4 times
 
     # parameters
-    b  = Parameter(            cell_shape_stacked,   init=init_bias, name='b')                              # bias
-    W  = Parameter(_INFERRED + cell_shape_stacked,   init=init,      name='W')                              # input
-    H  = Parameter(shape     + cell_shape_stacked_H, init=init,      name='H')                              # hidden-to-hidden
-    H1 = Parameter(shape     + cell_shape,           init=init,      name='H1') if type == 'GRU' else None  # hidden-to-hidden
-    Ci = Parameter(            cell_shape,           init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Cf = Parameter(            cell_shape,           init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Co = Parameter(            cell_shape,           init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    b  = Parameter(            cell_shape_stacked,   init=init_bias, name=_subnode_name(name,'b'))                              # bias
+    W  = Parameter(_INFERRED + cell_shape_stacked,   init=init,      name=_subnode_name(name,'W'))                              # input
+    H  = Parameter(shape     + cell_shape_stacked_H, init=init,      name=_subnode_name(name,'H'))                              # hidden-to-hidden
+    H1 = Parameter(shape     + cell_shape,           init=init,      name=_subnode_name(name,'H1')) if type == 'GRU' else None  # hidden-to-hidden
+    Ci = Parameter(            cell_shape,           init=init,      name=_subnode_name(name,'Ci')) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Cf = Parameter(            cell_shape,           init=init,      name=_subnode_name(name,'Cf')) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Co = Parameter(            cell_shape,           init=init,      name=_subnode_name(name,'Co')) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
 
-    Wmr = Parameter(cell_shape + shape, init=init, name='P') if has_projection else None  # final projection
+    Wmr = Parameter(cell_shape + shape, init=init, name=_subnode_name(name,'P')) if has_projection else None  # final projection
 
     # each use of a stabilizer layer must get its own instance
-    Sdh = Stabilizer(enable_self_stabilization=enable_self_stabilization, name='dh_stabilizer')
-    Sdc = Stabilizer(enable_self_stabilization=enable_self_stabilization, name='dc_stabilizer')
-    Sct = Stabilizer(enable_self_stabilization=enable_self_stabilization, name='c_stabilizer')
-    Sht = Stabilizer(enable_self_stabilization=enable_self_stabilization, name='P_stabilizer')
+    Sdh = Stabilizer(enable_self_stabilization=enable_self_stabilization, name=_subnode_name(name,'dh_stabilizer'))
+    Sdc = Stabilizer(enable_self_stabilization=enable_self_stabilization, name=_subnode_name(name,'dc_stabilizer'))
+    Sct = Stabilizer(enable_self_stabilization=enable_self_stabilization, name=_subnode_name(name,'c_stabilizer'))
+    Sht = Stabilizer(enable_self_stabilization=enable_self_stabilization, name=_subnode_name(name,'P_stabilizer'))
 
     # define the model function itself
     # general interface for Recurrence():

@@ -15,11 +15,12 @@ from ..ops.functions import Function, BlockFunction
 from ..variables import Parameter, Record, Constant
 import cntk as C
 from ..ops import times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, reduce_mean, sqrt
-from cntk.internal import _as_tuple
+from ..internal import _as_tuple
+from ..internal.utils import _subnode_name
+
 from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as SentinelValueForAutoSelectRandomSeed
 from .blocks import _initializer_for, _INFERRED, identity, UntestedBranchError  # helpers
 from cntk.default_options import is_default_override, get_default_override, default_override_or
-
 
 def Dense(shape, activation=default_override_or(identity), init=default_override_or(C.glorot_uniform()),
           input_rank=None, map_rank=None,
@@ -136,8 +137,8 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 
     # parameters bound to this Function
     init_weights = _initializer_for(init, Record(output_rank=output_rank))
-    W = Parameter(input_shape + output_shape, init=init_weights, name='W')
-    b = Parameter(              output_shape, init=init_bias,    name='b') if bias else None
+    W = Parameter(input_shape + output_shape, init=init_weights, name= _subnode_name(name, 'W'))
+    b = Parameter(              output_shape, init=init_bias,    name= _subnode_name(name,'b')) if bias else None
 
     # expression of this function
     @BlockFunction('Dense', name)
@@ -226,7 +227,7 @@ def Embedding(shape=None, init=default_override_or(C.glorot_uniform()), weights=
         init = get_default_override(Embedding, init=init)
         shape = _as_tuple(shape)
         weight_shape = _INFERRED + shape
-        E = Parameter(weight_shape, init=init, name='E')
+        E = Parameter(weight_shape, init=init, name=_subnode_name(name, 'E'))
     # weights given: use them as constant
     else:
         import numpy as np
@@ -234,7 +235,7 @@ def Embedding(shape=None, init=default_override_or(C.glorot_uniform()), weights=
         weight_shape = np.shape(weights)
         if shape is not None: # user may give shape, then it must match
             raise ValueError('Embedding: output shape must not be specified when weights are given')
-        E = Constant(weights, name='E')
+        E = Constant(weights, name=_subnode_name(name, 'E'))
 
     # expression
     @BlockFunction('Embedding', name)
@@ -445,8 +446,8 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-len(actual_output_channels_shape)))
 
     # parameters bound to this Function
-    W = Parameter(actual_output_channels_shape + kernel_shape,                    init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
-    b = Parameter(actual_output_channels_shape + (1,) * len(actual_filter_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
+    W = Parameter(actual_output_channels_shape + kernel_shape,                    init=init_kernel, name=_subnode_name(name,'W'))                   # (K, C, H, W) aka [ W x H x C x K ]
+    b = Parameter(actual_output_channels_shape + (1,) * len(actual_filter_shape), init=init_bias,   name=_subnode_name(name,'b')) if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
     # TODO: Should we cater to the special case of 1D convolution for text? I.e. sequential only (filter_shape=()).
     #       In that case, the convolution is the embedding, and we should use a matrix product to support sparse inputs.
@@ -787,8 +788,8 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
 
     filter_rank = len(filter_shape)
     init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
-    W = Parameter(kernel_shape, init=init_kernel, name='W')
-    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias, name='b') if bias else None
+    W = Parameter(kernel_shape, init=init_kernel, name=_subnode_name(name,'W'))
+    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias, name=_subnode_name(name,'b')) if bias else None
 
     # expression
     @BlockFunction('ConvolutionTranspose', name)
@@ -1248,11 +1249,11 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     norm_shape  = _INFERRED
     if map_rank is not None and map_rank != 1:
         UntestedBranchError("BatchNormalization map_rank can only be 1 or None for now")
-    scale        = Parameter(norm_shape, init=init_scale, name='scale')
-    bias         = Parameter(norm_shape, init=0,          name='bias')
-    run_mean     = Constant(0, shape=norm_shape, name='aggregate_mean')  # note: these are not really constants; they are updated differently
-    run_variance = Constant(0, shape=norm_shape, name='aggregate_variance')
-    run_count    = Constant(0, shape=(),         name='aggregate_count')
+    scale        = Parameter(norm_shape, init=init_scale, name=_subnode_name(name,'scale'))
+    bias         = Parameter(norm_shape, init=0,          name=_subnode_name(name,'bias'))
+    run_mean     = Constant(0, shape=norm_shape, name=_subnode_name(name,'aggregate_mean'))  # note: these are not really constants; they are updated differently
+    run_variance = Constant(0, shape=norm_shape, name=_subnode_name(name,'aggregate_variance'))
+    run_count    = Constant(0, shape=(),         name=_subnode_name(name,'aggregate_count'))
 
     # expression
     @BlockFunction('BatchNormalization', name)
@@ -1295,8 +1296,8 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     epsilon = get_default_override(LayerNormalization, epsilon=epsilon)
 
     # parameters bound to this Function
-    scale = Parameter((), init=initial_scale, name='scale')  # TODO: if this gets usage then offer a Softplus version like Stabilizer() for stability?
-    bias  = Parameter((), init=initial_bias,  name='bias')
+    scale = Parameter((), init=initial_scale, name=_subnode_name(name,'scale'))  # TODO: if this gets usage then offer a Softplus version like Stabilizer() for stability?
+    bias  = Parameter((), init=initial_bias,  name=_subnode_name(name,'bias'))
 
     # expression
     @BlockFunction('LayerNormalization', name)
