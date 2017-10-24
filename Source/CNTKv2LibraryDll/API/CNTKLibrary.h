@@ -2022,11 +2022,30 @@ namespace CNTK
 
     ///
     /// Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
-    /// A Variable is symbolic and does not represent the actual values.
+    /// Variable and InternalVariable are symbolic and do not represent the actual values,
+    /// except for Dynamite, which they represent both a deferred and a realized value.
     /// Also, Variable type is a value type and copies of a Variable object are aliases of the
     /// source Variable object itself and have the same identity.
     ///
-    // Internal Variable is the same without the ref-count holders.
+    /// The InternalVariable is merely a reference (a shared pointer) to VariableFields,
+    /// which contain the actual content. A Variable, in contrast, is an InternalVariable
+    /// that holds a ref count to its owning function (in case of an Output).
+    /// Variable is to InternalVariable as CompositeFunction to PrimitiveFunction.
+    ///
+    /// The ownership hierarchy is:
+    ///  - InternalVariable : VariableFieldsPtr (shared)
+    ///  - Function output : InternalVariable (owned)
+    ///  - Variable (user-visible) : (InternalVariable (owned), FunctionPtr (if output; shared))
+    ///  - Function inputs : Variable
+    /// A Function holds a reference to its output's InternalVariable fields.
+    /// When an output is surfaced to users, the ownerships is reversed: Instead of an InternalVariable
+    /// (owned), users receive a Variable, which is a tuple that owns both the InternalVariable
+    /// and its owning Function.
+    /// When such a Variable is used as the input of a Function, the Function also remembers
+    /// the full Variable (again, that's an output InternalVariable and its owner).
+    /// This way, the graph is fully owned, either by holding its root Function, or a Variable
+    /// that holds both the root Function's output and the root Function itself.
+    ///
     class InternalVariable : private IDictionarySerializable
     {
         friend bool operator==(const InternalVariable& first, const InternalVariable& second);
@@ -2221,13 +2240,6 @@ namespace CNTK
         void SetOwner(const std::weak_ptr<PrimitiveFunction>& ownerFunction);
         void SetOwner(std::weak_ptr<PrimitiveFunction>&& ownerFunction);
 
-    //protected:// TODO: these move into Variable
-    //    InternalVariable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
-    //    InternalVariable CompositePreservingCopy(std::shared_ptr<const Function>&& composite) const;
-    //    static InternalVariable CompositePreservingCopy(const InternalVariable& other, std::shared_ptr<const Function>&& composite);
-    //
-    //    InternalVariable NonCompositePreservingCopy() const;
-
     private:
 #if defined(SWIGCSHARP) || defined(SWIGJAVA)
     public:
@@ -2279,14 +2291,16 @@ namespace CNTK
         //CNTK_API Variable(const InternalVariable& variable);
         //CNTK_API Variable(InternalVariable&& variable);
         CNTK_API Variable(const InternalVariable& variable, bool); // special version, to be fixed some day
-        CNTK_API Variable(const class Parameter& variable);
+        CNTK_API Variable(InternalVariable&& variable, bool);
+        CNTK_API Variable(const Parameter& variable);
         CNTK_API Variable(Parameter&& variable);
         CNTK_API Variable(const class Constant& variable);
         CNTK_API Variable(Constant&& variable);
 
         ///
         /// Create an 'Output' variable aliasing the output of the specified Function
-        /// Throws an exception if called for a Function instance with multiple outputs
+        /// The resulting Variable holds a ref count to the function.
+        /// Throws an exception if called for a Function instance with multiple outputs.
         ///
         CNTK_API Variable(const FunctionPtr& function);
         CNTK_API Variable(FunctionPtr&& function);
@@ -2349,14 +2363,25 @@ namespace CNTK
         CNTK_API size_t size() const;
 
     protected:
-        Variable CompositePreservingCopy(const ConstFunctionPtr& composite) const;
-        Variable CompositePreservingCopy(ConstFunctionPtr&& composite) const;
+        Variable(const InternalVariable& other, const ConstFunctionPtr&  composite, const ConstPrimitiveFunctionPtr& primitive);
+        Variable(const InternalVariable& other, ConstFunctionPtr&& composite, const ConstPrimitiveFunctionPtr& primitive);
+
+        //Variable CompositePreservingCopy(const ConstFunctionPtr& composite) const;
+        //Variable CompositePreservingCopy(ConstFunctionPtr&& composite) const;
+        //Variable NonCompositePreservingCopy() const;
+        Variable Variable::CompositePreservingCopy(const ConstFunctionPtr& composite) const
+        {
+            return Variable((const InternalVariable&)*this, composite, m_acyclicOutputPrimitiveReference);
+        }
+        Variable CompositePreservingCopy(ConstFunctionPtr&& composite) const
+        {
+            return Variable((const InternalVariable&)*this, std::move(composite), m_acyclicOutputPrimitiveReference);
+        }
+        Variable NonCompositePreservingCopy() const
+        {
+            return Variable((const InternalVariable&)*this, ConstFunctionPtr(), m_acyclicOutputPrimitiveReference);
+        }
         static Variable CompositePreservingCopy(const InternalVariable& other, ConstFunctionPtr&& composite);
-
-        Variable NonCompositePreservingCopy() const;
-
-        /*CNTK_API*/ Variable(const InternalVariable& other, const ConstFunctionPtr&  composite, const ConstPrimitiveFunctionPtr& primitive);
-        /*CNTK_API*/ Variable(const InternalVariable& other,       ConstFunctionPtr&& composite, const ConstPrimitiveFunctionPtr& primitive);
 
     private:
 #if defined(SWIGCSHARP) || defined(SWIGJAVA)
