@@ -1298,8 +1298,8 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     epsilon = get_default_override(LayerNormalization, epsilon=epsilon)
 
     # parameters bound to this Function
-    scale = Parameter((), init=initial_scale, name='scale')  # TODO: if this gets usage then offer a Softplus version like Stabilizer() for stability?
-    bias  = Parameter((), init=initial_bias,  name='bias')
+    scale = Parameter(_INFERRED, init=initial_scale, name='scale')  # TODO: if this gets usage then offer a Softplus version like Stabilizer() for stability?
+    bias  = Parameter(_INFERRED, init=initial_bias,  name='bias')
 
     # expression
     @BlockFunction('LayerNormalization', name)
