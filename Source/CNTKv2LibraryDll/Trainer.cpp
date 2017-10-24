@@ -295,6 +295,9 @@ namespace CNTK
 
     void Trainer::DoDistributedLossEvalAveraging()
     {
+        DistributedCommunicatorPtr communicator = MPICommunicator();
+
+        //std::cout << "Entering DoDistributedLossEvalAveraging " << communicator->CurrentWorker().m_globalRank << std::endl;
         float averageTrainingLoss = 0;
         bool aggregateTrainingLoss = false;
         if (m_aggregatedTrainingLossValue && m_aggregatedTrainingLossValue->IsInitialized())
@@ -315,10 +318,10 @@ namespace CNTK
         NDArrayViewPtr inPlaceAggregateEvalCriterion = std::make_shared<NDArrayView>(averageEvalCriterion, NDShape{ }, DeviceDescriptor::CPUDevice());
         vector<NDArrayViewPtr> inPlaceAggregateVector = { inPlaceAggregateTrainingLoss, inPlaceAggregateEvalCriterion };
         
-        DistributedCommunicatorPtr communicator = MPICommunicator();
+        
         if (aggregateTrainingLoss || aggregateEvalCriterion)
         {
-            communicator->AggregateInPlace(inPlaceAggregateVector, communicator->Workers());
+            //communicator->AggregateInPlace(inPlaceAggregateVector, communicator->Workers());
         }
 
         if (aggregateTrainingLoss)
