@@ -170,6 +170,7 @@
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
+    <ClInclude Include="PrimitiveFunctionAttributes.h"/>
     <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="proto\onnx\CNTKToONNX.h" />
@@ -214,7 +215,6 @@
     <ClCompile Include="NDArrayView.cpp" />
     <ClCompile Include="NDMask.cpp" />
     <ClCompile Include="PrimitiveFunction.cpp" />
-    <ClCompile Include="PrimitiveFunctionAttributes.cpp" />
     <ClCompile Include="proto\CNTK.pb.cc.VS_wrapper.cpp" />
     <ClCompile Include="proto\onnx\CNTKToONNX.cpp" />
     <ClCompile Include="proto\onnx\core\constants.cpp" />

@@ -22,12 +22,12 @@
 #include "ConvolutionalNodes.h"
 #include "Variable.h"
 #include "UserFunctionFactory.h"
+#include "PrimitiveFunctionAttributes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
-
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
 

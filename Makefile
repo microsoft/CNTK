@@ -476,7 +476,6 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/PrimitiveFunction.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/PrimitiveFunctionAttributes.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/CompositeFunction.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/UserDefinedFunction.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
