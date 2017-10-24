@@ -163,30 +163,30 @@ namespace CNTK
 #endif
     }
 
-    // TODO: xyz replace by constructor
+    // TODO: Move to header.
     Variable Variable::CompositePreservingCopy(ConstFunctionPtr&& composite) const
     {
-        //return Variable((const InternalVariable&)*this, std::move(composite), m_acyclicOutputPrimitiveReference);
-        // We have to preserve the whole subgraph.
-        Variable result;
-        // This must copy all data members except m_outputComposite.
-        result.m_outputComposite = move(composite);
-        result.m_dataFields = m_dataFields;
-        result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
-        result.m_shapeDims = &m_dataFields->m_shape.Dimensions();
-        return result;
+        return Variable((const InternalVariable&)*this, std::move(composite), m_acyclicOutputPrimitiveReference);
+        //// We have to preserve the whole subgraph.
+        //Variable result;
+        //// This must copy all data members except m_outputComposite.
+        //result.m_outputComposite = move(composite);
+        //result.m_dataFields = m_dataFields;
+        //result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
+        //result.m_shapeDims = &m_dataFields->m_shape.Dimensions();
+        //return result;
     }
 
     Variable Variable::NonCompositePreservingCopy() const
     {
-        //return Variable((const InternalVariable&)*this, ConstFunctionPtr(), m_acyclicOutputPrimitiveReference);
+        return Variable((const InternalVariable&)*this, ConstFunctionPtr(), m_acyclicOutputPrimitiveReference);
 #if 1
-        Variable result;
-        // This must copy all data members except m_outputComposite.
-        result.m_dataFields = m_dataFields;
-        result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
-        result.m_shapeDims = &m_dataFields->m_shape.Dimensions();
-        return result;
+        //Variable result;
+        //// This must copy all data members except m_outputComposite.
+        //result.m_dataFields = m_dataFields;
+        //result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
+        //result.m_shapeDims = &m_dataFields->m_shape.Dimensions();
+        //return result;
 #else
         Variable copy = *this;
         copy.m_outputComposite = nullptr;
@@ -215,6 +215,7 @@ namespace CNTK
 
     // special version. Use this for all places where Variable and InternalVariable cannot be easily disentangled.
     // This bypasses the IsOutput check. In the future, there should be no call to this.
+    // TODO: Make the underlying one private.
     Variable::Variable(const InternalVariable& other, bool) :
         InternalVariable(other)
     {
