@@ -41,7 +41,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <NMakeBuildCommandLine>.\vsbuild.bat "$(OutDir)" "$(DebugBuild)" "$(GpuBuild)" "$(CntkComponentVersion)" "$(SWIG_PATH)" "$(CNTK_PY_VERSIONS)" "$(CNTK_PY27_PATH)" "$(CNTK_PY34_PATH)" "$(CNTK_PY35_PATH)"</NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>.\vsbuild.bat "$(OutDir)" "$(DebugBuild)" "$(GpuBuild)" "$(CntkComponentVersion)" "$(SWIG_PATH)" "$(CNTK_PY_VERSIONS)" "$(CNTK_PY27_PATH)" "$(CNTK_PY34_PATH)" "$(CNTK_PY35_PATH)" "$(CNTK_PY36_PATH)"</NMakeBuildCommandLine>
     <NMakeOutput>dist/pythonwheel</NMakeOutput>
     <NMakeCleanCommandLine>rmdir /s /q build</NMakeCleanCommandLine>
   </PropertyGroup>
@@ -68,6 +68,7 @@
     <None Include="cntk\internal\tests\__init__.py" />
     <None Include="cntk\internal\utils.py" />
     <None Include="cntk\internal\__init__.py" />
+    <None Include="cntk\io\transforms.py" />
     <None Include="cntk\layers\blocks.py" />
     <None Include="cntk\layers\higher_order_layers.py" />
     <None Include="cntk\layers\layers.py" />
@@ -93,14 +94,18 @@
     <None Include="cntk\metrics\tests\metrics_test.py" />
     <None Include="cntk\metrics\tests\__init__.py" />
     <None Include="cntk\metrics\__init__.py" />
+    <None Include="cntk\ops\tests\assign_test.py" />
     <None Include="cntk\ops\tests\block_test.py" />
     <None Include="cntk\ops\tests\combine_test.py" />
+    <None Include="cntk\ops\tests\sequence_test.py" />
     <None Include="cntk\ops\tests\sparse_test.py" />
+    <None Include="cntk\ops\tests\stop_gradient_test.py" />
     <None Include="cntk\ops\tests\userfunction_complex_test.py" />
     <None Include="cntk\ops\tests\userfunction_test.py" />
     <None Include="cntk\pytest.ini" />
     <None Include="cntk\sample_installer.py" />
     <None Include="cntk\tensor.py" />
+    <None Include="cntk\tests\onnx_format_test.py" />
     <None Include="cntk\tests\user_learner.py" />
     <None Include="cntk\tests\variables_test.py" />
     <None Include="cntk\train\distributed.py" />
@@ -141,8 +146,18 @@
     <None Include="cntk\tests\__init__.py" />
     <None Include="README.md" />
     <None Include="setup.py" />
-    <None Include="swig_install.sh" />
     <None Include="test.bat" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cntk\cntk_py_wrap.h">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="cntk\SwigDeserializer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cntk\cntk_py_wrap.cpp">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

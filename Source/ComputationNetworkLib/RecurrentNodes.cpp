@@ -235,7 +235,7 @@ template<class ElemType, int direction>
         //     - matrix column indices into the initial state
         //        - if initial-state sequence has >1 steps, then index from back
         //        - if 1 step, then broadcast that to all
-        //     - or -1 for non-boundary entires
+        //     - or -1 for non-boundary entries
 
         // our own output MB layout
         let& outMBLayout = GetMBLayout();
@@ -294,7 +294,7 @@ template<class ElemType, int direction>
 /*private*/ TensorView<ElemType> DelayedValueNodeBase<ElemType, direction>::GetMaskTensor(size_t rank, const FrameRange& fr) const
 {
     // tensorShape of m_inputInvalidMatrix is [1 x S x T]
-    auto tensorShape = TensorShape(1);
+    auto tensorShape = TensorShape();
     tensorShape.AppendInPlace(rank++, GetMBLayout()->GetNumParallelSequences());
     tensorShape.AppendInPlace(rank++, GetMBLayout()->GetNumTimeSteps());
 

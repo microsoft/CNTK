@@ -4,10 +4,12 @@
 # for full license information.
 # ==============================================================================
 
-# sequence -- first/higher-order functions over sequences, like Recurrence()
+'''
+First / higher-order functions over sequences, like :func:`Recurrence`.
+'''
 
 from ..variables import Record
-from ..ops import combine, past_value, future_value, splice, sequence
+from ..ops import combine, splice, sequence, reconcile_dynamic_axes
 from .blocks import *
 from .blocks import _get_initial_state_or_default, _inject_name
 
@@ -21,9 +23,9 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
 
     Example:
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
-        >>> from cntk.layers import Input, Sequential
+        >>> from cntk.layers import Sequential
         >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = Input(**Sequence[Tensor[2]])
+        >>> x = C.input_variable(**Sequence[Tensor[2]])
         >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
         >>> x0
         array([[[ 0.,  1.],
@@ -34,9 +36,9 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
         ...                            splice])                            # concatenate them
         >>> y = make_trigram(x)
         >>> y(x0)
-        array([[[ 2.,  3.,  0.,  1.,  0.,  0.],
+        [array([[ 2.,  3.,  0.,  1.,  0.,  0.],
                 [ 4.,  5.,  2.,  3.,  0.,  1.],
-                [ 0.,  0.,  4.,  5.,  2.,  3.]]], dtype=float32)
+                [ 0.,  0.,  4.,  5.,  2.,  3.]], dtype=float32)]
         >>> #    --(t-1)--  ---t---  --(t+1)--      
 
     Args:
@@ -55,12 +57,11 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
     @BlockFunction('Delay', name)
     def delay(x):
         # TODO: reenable this
-        ## if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axis() on top
+        ## if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axes() on top
         #if dynamic_axes_like:
         #    r = delay(x, initial_state=initial_state, time_step=time_step, name='')
         #    from .utils import sanitize_input, typemap
-        #    from _cntk_py import reconcile_dynamic_axis
-        #    r = typemap(reconcile_dynamic_axis)(sanitize_input(r), sanitize_input(dynamic_axes_like), name=name)
+        #    r = typemap(reconcile_dynamic_axes)(sanitize_input(r), sanitize_input(dynamic_axes_like), name=name)
         #    return r;
         ## regular case
         return sequence.delay(x, initial_state=initial_state, time_step=T)
@@ -84,9 +85,9 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), 
 
     Example:
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
-        >>> from cntk.layers import Input, Sequential
+        >>> from cntk.layers import Sequential
         >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = Input(**Sequence[Tensor[2]])
+        >>> x = C.input_variable(**Sequence[Tensor[2]])
         >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
         >>> x0
         array([[[ 0.,  1.],
@@ -166,17 +167,25 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
     '''
     RecurrenceFrom(step_function, go_backwards=False, return_full_state=False, name='')
 
-    Layer factory function to create a function that runs a cell function recurrently over an input sequence, with initial state.
+    Layer factory function to create a function that runs a step function recurrently over an input sequence, with initial state.
     This layer is very similar to :func:`~cntk.layers.sequence.Recurrence`,
-    except that the initial state is data dependent, and thus passed to the layer function as a data input
-    rather than as an initialization parameter to the factory function.
+    except that the initial state is not a constant but computed from input data.
+    Thus, in `RecurrenceFrom()`, the initial state is passed to the layer function as a data input
+    rather than, like `Recurrence()`, as an initialization parameter to the factory function.
     This form is meant for use in sequence-to-sequence scenarios.
     This documentation only covers this case; for additional information on parameters, see :func:`~cntk.layers.sequence.Recurrence`.
+    In pseudo-code::
+
+      # pseudo-code for y = RecurrenceFrom(step_function)(s,x)
+      #  x: input sequence of tensors along the dynamic axis
+      #  s: initial state for the recurrence (computed from input data elsewhew)
+      #  y: resulting sequence of outputs along the same dynamic axis
+      y = []              # result sequence goes here
+      for x_n in x:       # pseudo-code for looping over all steps of input sequence along its dynamic axis
+          s = step_function(s, x_n)  # pass previous state and new data to step_function -> new state
+          y.append(s)
 
     The layer function returned by this factory function accepts the initial state as data argument(s).
-    It has the signature ``(initial_state, input_sequence) -> output_sequence``.
-    If the step function has multiple state variables, then the first N parameters are the initial state variables.
-
     The initial state can be non-sequential data, as one would have for a plain sequence-to-sequence model,
     or sequential data. In the latter case, the last item is the initial state.
 
@@ -185,15 +194,15 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
      >>> from cntk.layers.typing import *
 
      >>> # a plain sequence-to-sequence model in training (where label length is known)
-     >>> en = Input(**SequenceOver[Axis('m')][SparseTensor[20000]])  # English input sentence
-     >>> fr = Input(**SequenceOver[Axis('n')][SparseTensor[30000]])  # French target sentence
+     >>> en = C.input_variable(**SequenceOver[Axis('m')][SparseTensor[20000]])  # English input sentence
+     >>> fr = C.input_variable(**SequenceOver[Axis('n')][SparseTensor[30000]])  # French target sentence
 
      >>> embed = Embedding(300)
      >>> encoder = Recurrence(LSTM(500), return_full_state=True)
      >>> decoder = RecurrenceFrom(LSTM(500))       # decoder starts from a data-dependent initial state, hence -From()
      >>> emit = Dense(30000)
      >>> h, c = encoder(embed(en)).outputs         # LSTM encoder has two outputs (h, c)
-     >>> z = emit(decoder(h, c, past_value(fr)))   # decoder takes encoder outputs as initial state
+     >>> z = emit(decoder(h, c, sequence.past_value(fr)))   # decoder takes encoder outputs as initial state
      >>> loss = C.cross_entropy_with_softmax(z, fr)
 
     Args:
@@ -221,7 +230,7 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
 
     step_function = _sanitize_function(step_function)
 
-    # get signature of cell
+    # get signature of step function
     #*prev_state_args, _ = step_function.signature  # Python 3
     prev_state_args = step_function.signature[0:-1]
 
@@ -279,13 +288,27 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     '''
     Recurrence(step_function, go_backwards=False, initial_state=0, return_full_state=False, name='')
 
-    Layer factory function to create a function that runs a step function recurrently over an input sequence.
-    This implements the typical recurrent model.
+    Layer factory function that implements a recurrent model, including the common RNN, LSTM, and GRU recurrences.
+    This factory function creates a function that runs a step function recurrently over an input sequence,
+    where in each step, Recurrence() will pass to the step function a data input as well as the output of the
+    previous step.
+    The following pseudo-code repesents what happens when you call a `Recurrence()` layer::
 
-    The step function can be any :class:`~cntk.ops.functions.Function` or Python function
-    with a signature ``(h_prev, x) -> h``, where ``h_prev`` is the previous state, ``x`` is the new
+      # pseudo-code for y = Recurrence(step_function)(x)
+      #  x: input sequence of tensors along the dynamic axis
+      #  y: resulting sequence of outputs along the same dynamic axis
+      y = []              # result sequence goes here
+      s = initial_state   # s = output of previous step ("state")
+      for x_n in x:       # pseudo-code for looping over all steps of input sequence along its dynamic axis
+          s = step_function(s, x_n)  # pass previous state and new data to step_function -> new state
+          y.append(s)
+
+    The common step functions are :func:`~cntk.layers.blocks.LSTM`, :func:`~cntk.layers.blocks.GRU`, and :func:`~cntk.layers.blocks.RNNStep`,
+    but the step function can be any :class:`~cntk.ops.functions.Function` or Python function.
+    The signature of a step function with a single state variable must be
+    ``(h_prev, x) -> h``, where ``h_prev`` is the previous state, ``x`` is the new
     data input, and the output is the new state.
-    All three are sequences of the same length. The step function will be called item by item.
+    The step function will be called item by item, resulting in a sequence of the same length as the input.
 
     Step functions can have more than one state output, e.g. :func:`~cntk.layers.blocks.LSTM`.
     In this case, the first N arguments are the previous state, followed by one more argument that
@@ -294,10 +317,12 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     (in the LSTM case, the ``h``), while additional state variables are internal (like the LSTM's ``c``).
     If all state variables should be returned, pass ``return_full_state=True``.
 
-    Typical step functions are :func:`~cntk.layers.blocks.LSTM`, :func:`~cntk.layers.blocks.GRU`, and :func:`~cntk.layers.blocks.RNNUnit`.
-    However, any function with a signature as described above is admissible.
+    To provide your own step function, just use any :class:`~cntk.ops.functions.Function` (or equivalent Python function) that
+    has a signature as described above.
     For example, a cumulative sum over a sequence can be computed as ``Recurrence(plus)``,
-    or a GRU layer with projection could be realized as ``Recurrence(GRU(500) >> Dense(200))``;
+    where each step consists of `plus(s,x_n)`, where `s` is the output of the previous call
+    and hence the cumulative sum of all elements up to `x_n`.
+    Another example is a GRU layer with projection, which could be realized as ``Recurrence(GRU(500) >> Dense(200))``,
     where the projection is applied to the hidden state as fed back to the next step.
     ``F>>G`` is a short-hand for ``Sequential([F, G])``.
 
@@ -309,7 +334,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     Note: ``Recurrence()`` is the equivalent to what in functional programming is often called ``scanl()``.
 
     Example:
-     >>> from cntk.layers import Input, Constant, Sequential
+     >>> from cntk.layers import Sequential
      >>> from cntk.layers.typing import Tensor, Sequence
 
      >>> # a recurrent LSTM layer
@@ -326,17 +351,18 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
      >>> tuple(str(axis.name) for axis in bi_lstm_layer.dynamic_axes)  # (note: str() needed only for Python 2.7)
      ('defaultBatchAxis', 'defaultDynamicAxis')
 
-     >>> # cumulative sum over inputs
-     >>> x = Input(**Sequence[Tensor[2]])
+     >>> # custom step function example: using Recurrence() to
+     >>> # compute the cumulative sum over an input sequence
+     >>> x = C.input_variable(**Sequence[Tensor[2]])
      >>> x0 = np.array([[   3,    2],
      ...                [  13,   42],
      ...                [-100, +100]])
      >>> cum_sum = Recurrence(C.plus, initial_state=Constant([0, 0.5]))
      >>> y = cum_sum(x)
      >>> y(x0)
-     array([[[   3. ,    2.5],
+     [array([[   3. ,    2.5],
              [  16. ,   44.5],
-             [ -84. ,  144.5]]], dtype=float32)
+             [ -84. ,  144.5]], dtype=float32)]
 
     Args:
      step_function (:class:`~cntk.ops.functions.Function` or equivalent Python function):
@@ -368,7 +394,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
 
     step_function = _sanitize_function(step_function)
 
-    # get signature of cell
+    # get signature of step function
     #*prev_state_args, _ = step_function.signature  # Python 3
     prev_state_args = step_function.signature[0:-1]
 
@@ -399,6 +425,15 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
     Layer factory function to create a function that runs a step function recurrently over an input sequence,
     and returns the final state.
     This is often used for embeddings of sequences, e.g. in a sequence-to-sequence model.
+    Pseudo-code::
+
+      # pseudo-code for h = Fold(step_function)(x)
+      #  x: input sequence of tensors along the dynamic axis
+      #  h: resulting final step-function output tensor that no longer has a dynamic axis
+      h = initial_state   # h = output of previous step ("state"), and also the final result
+      for x_n in x:       # pseudo-code for looping over all steps of input sequence along its dynamic axis
+          h = step_function(h, x_n)  # pass previous state and new data to step_function -> new state
+      # now h is the result of the final invocation of the step function
 
     ``Fold()`` is the same as :func:`~cntk.layers.sequence.Recurrence` except that only the final state is returned
     (whereas ``Recurrence()`` returns the entire state sequence).
@@ -425,7 +460,7 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
      ...                                    Dense(1, activation=sigmoid) ])
 
      >>> # element-wise max-pooling over an input sequence
-     >>> x = Input(**Sequence[Tensor[2]])
+     >>> x = C.input_variable(**Sequence[Tensor[2]])
      >>> x0 = np.array([[ 1, 2 ],
      ...                [ 6, 3 ],
      ...                [ 4, 2 ],
@@ -475,20 +510,30 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
 
 
 # TODO: This API is still suboptimal, and should be fixed as follows:
-#  - the returned layer function should take the initial_state
 #  - the input length factor should be a layer function; in addition, a fixed max length should be possible
-#  - map_state_function is unused and should be removed
 #  - BUGBUG: tuple-valued state should be supported
-def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name=''):
+def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name=''):
     '''
-    UnfoldFrom(generator_function, until_predicate=None, length_increase=1, initial_state=None, name='')
+    UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name='')
 
     Layer factory function to create a function that implements a recurrent generator.
     Starting with a seed state, the ``UnfoldFrom()`` layer
     repeatedly applies ``generator_function`` and emits the sequence of results.
-    ``UnfoldFrom(f, initial_state=s)``
-    emits the sequence ``f(s), f(f(s)), f(f(f(s))), ...``.
-    ``s`` can be tuple-valued.
+    It stops after a maximum number of steps, or earlier when, if provided, `until_predicate` evaluates to True for the current output.
+    The maximum number of steps is based on a second input from which only the dynamic-axis information is used.
+    This is best explained in pseudo-code::
+
+      # pseudo-code for y = UnfoldFrom(generator_function, until_predicate)(s,axis_like)
+      #  s:         initial state for the recurrence (computed from input data elsewhew),
+      #  axis_like: any input with a dynamic axis, unfold will happen along the same dynamic axis,
+      #  y:         resulting sequence of outputs along the same dynamic axis
+      y = []               # result sequence goes here
+      for _ in axis_like:  # pseudo-code for looping over all steps of dynamic axis of axis_like
+          s = generator_function(s)  # pass previous state and new data to step_function -> new state
+          y.append(s)
+          if until_predicate(s):
+              break
+      # now y is the output of repeatedly applying generator_function()
 
     A typical application is the decoder of a sequence-to-sequence model,
     the generator function ``f`` accepts a two-valued state, with the first
@@ -500,7 +545,7 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
 
     A variant allows the state and the emitted sequence to be different. In that case,
     ``f`` returns a tuple (output value, new state), and
-    ``UnfoldFrom(f, initial_state=s)``
+    ``UnfoldFrom(f)(s)``
     would emit the sequence ``f(s)[0], f(f(s)[1])[0], f(f(f(s)[1])[1])[0], ...``.
 
     The maximum length of the output sequence is not unlimited, but determined by the argument to
@@ -520,25 +565,23 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
       a tuple of N+1 outputs, where the first output is the value to emit, while the others are the state.
      until_predicate (:class:`~cntk.ops.functions.Function` or equivalent Python function):
       A function that denotes when the last element of the unfold has been emitted.
-      It takes the same number of argments as the generator, and returns a scalar that must be 1
+      It takes the same number of arguments as the generator, and returns a scalar that must be 1
       for the last element of the sequence, and 0 otherwise.
       This is subject to the maximum length as determined by the input sequence and ``length_increase``.
       If this parameter is not provided, the output length will be equal to the specified maximum length.
      length_increase (float, defaults to 1): the maximum number of output items is equal to the
-      number of items of the argument to the unfold function, multiplied by this factor.
+      number of items of the `dynamic_axis_like` argument to the returned `unfold()` function, multiplied by this factor.
       For example, pass 1.5 here if the output sequence can be at most 50% longer than the input.
-     initial_state (scalar or tensor without batch dimension; or a tuple thereof):
-      the seed value for the state
      name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.functions.Function`: 
-        A function that accepts one argument (which must be a sequence and provides
-        a reference for the maximum length of the output sequence), and performs the unfold operation on it
+        :class:`~cntk.ops.functions.Function`:
+        A function that accepts two arguments (`initial state` and `dynamic_axis_like`), and performs the unfold operation on it.
+        The `initial state` argument is the initial state for the recurrence.
+        The `dynamic_axis_like` must be a sequence and provides a reference for the maximum length of the output sequence.
     '''
 
     generator_function = _sanitize_function(generator_function)
-    map_state_function = _sanitize_function(map_state_function)
     until_predicate    = _sanitize_function(until_predicate)
 
     # check the signature of the passed function
@@ -546,12 +589,10 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         raise TypeError('generator_function should take 1 positional argument (state) and return a single output or a tuple (output, new state)')
 
     # TODO: having to pass the dynamic axis is suboptimal. Any better way?
-    # BUGBUG: initial_state must be passed to unfold_from
     # We can still pass dynamic_axes_like; reads like "unfold from XXX along axis of YYY".
     # And if we can close over 'input' in the generator, we can also bake it into what we pass, i.e. the length.
     @Function
-    def unfold_from(dynamic_axes_like):
-    #def unfold_from(initial_state, dynamic_axes_like):
+    def unfold_from(initial_state, dynamic_axes_like):
         # create a new dynamic axis if a length increase is specified
         out_axis = dynamic_axes_like
         if length_increase != 1:
@@ -564,12 +605,9 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         z = generator_function(prev_state) # returns either (output) or (output, new state)
         output = z.outputs[0]
         new_state = z.outputs[1] if len(z.outputs) > 1 else output # we allow generator to return a single value if it is identical to the new state
-        # apply map_state_function if given
-        new_state = map_state_function(new_state)
         # implant the dynamic axis (from dynamic_axes_like)
         from cntk.internal import sanitize_input, typemap
-        from ..cntk_py import reconcile_dynamic_axis
-        new_state = typemap(reconcile_dynamic_axis)(sanitize_input(new_state), sanitize_input(out_axis))
+        new_state = typemap(reconcile_dynamic_axes)(sanitize_input(new_state), sanitize_input(out_axis))
         new_state = combine([new_state], name='unfold_new_state')
         state_fwd.resolve_to(new_state)
 
@@ -578,7 +616,7 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
 
         # apply until_predicate if given
         if until_predicate is not None:
-            valid_frames = Recurrence(lambda h, x: (1-past_value(x)) * h, initial_state=1, name='valid_frames')(until_predicate(output))
+            valid_frames = Recurrence(lambda h, x: (1-sequence.past_value(x)) * h, initial_state=1, name='valid_frames')(until_predicate(output))
             output = sequence.gather(output, valid_frames, name='valid_output')
 
         return output

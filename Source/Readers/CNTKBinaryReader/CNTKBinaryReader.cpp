@@ -14,7 +14,9 @@
 #include "SequencePacker.h"
 #include "FramePacker.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 // TODO: This class should go away eventually.
 // TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
@@ -27,11 +29,11 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
     log << "Initializing CNTKBinaryReader";
     try
     {
-        m_deserializer = shared_ptr<IDataDeserializer>(new BinaryChunkDeserializer(configHelper));
+        m_deserializer = shared_ptr<DataDeserializer>(new BinaryChunkDeserializer(configHelper));
 
         if (configHelper.ShouldKeepDataInMemory())
         {
-            m_deserializer = shared_ptr<IDataDeserializer>(new ChunkCache(m_deserializer));
+            m_deserializer = shared_ptr<DataDeserializer>(new ChunkCache(m_deserializer));
             log << " | keeping data in memory";
         }
 
@@ -50,7 +52,8 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
                 true, /* shouldPrefetch */
                 false, /* multithreadedGetNextSequences */
                  0, /*maxNumberOfInvalidSequences */
-                configHelper.UseSampleBasedRandomizationWindow() /*sampleBasedRandomizationWindow */);
+                configHelper.UseSampleBasedRandomizationWindow() /*sampleBasedRandomizationWindow */,
+                GetRandomSeed(config) /*seedOffset*/);
         }
         else
         {
@@ -69,4 +72,4 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
         fprintf(stderr, "%s\n", log.str().c_str());
 }
 
-} } }
+}

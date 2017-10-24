@@ -2,6 +2,7 @@ dataDir: .
 tags:
     - bvt-e (build_sku == 'gpu') and (os == 'linux') and (flavor == 'release') and (device == 'gpu')
     - nightly-e (build_sku == 'gpu') and (os == 'linux')
+    - weekly-e (build_sku == 'gpu') and (os == 'linux')
 
 testCases:
   CNTK Run must be completed:

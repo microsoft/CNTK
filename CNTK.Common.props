@@ -16,6 +16,7 @@
 
     <GpuBuild>true</GpuBuild>
     <GpuBuild Condition="$(Configuration.EndsWith('_CpuOnly'))">false</GpuBuild>
+    <GpuBuild Condition="$(Configuration.EndsWith('_UWP'))">false</GpuBuild>
 
     <CpuOnlyBuild>true</CpuOnlyBuild>
     <CpuOnlyBuild Condition="$(GpuBuild)">false</CpuOnlyBuild>
@@ -26,8 +27,11 @@
     <HasSwig>false</HasSwig>
     <HasSwig Condition="Exists('$(SWIG_PATH)\swig.exe')">true</HasSwig>
 
-    <CntkComponentVersion>2.0beta16</CntkComponentVersion>
-    <CntkComponentVersion Condition="$(DebugBuild)">2.0beta16d</CntkComponentVersion>
+    <HasJava>false</HasJava>
+    <HasJava Condition="Exists('$(JAVA_HOME)\bin\javac.exe')">true</HasJava>
+
+    <CntkComponentVersion>2.2</CntkComponentVersion>
+    <CntkComponentVersion Condition="$(DebugBuild)">$(CntkComponentVersion)d</CntkComponentVersion>
   </PropertyGroup>
   
 </Project>

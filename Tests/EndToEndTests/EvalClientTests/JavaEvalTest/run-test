@@ -1,0 +1,47 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+set -x
+set -e -o pipefail
+
+# This test case is to test Java Evaluation works with the same setup of users.
+# The eval test uses some pretrained models which are not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ -z "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+  echo This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location.
+  exit 1
+fi
+
+# Copy pretrained models and data
+if [ "$OS" == "Windows_NT" ]; then
+  TestDataDir=`cygpath -au "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Bindings/Java"`
+  ModelFile=`cygpath -au "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn"`
+else
+  TestDataDir="$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Bindings/Java"
+  ModelFile="$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn"
+fi
+
+LocalDataDir="$TEST_ROOT_DIR/EvalClientTests/JavaEvalTest/data"
+if [ ! -d "$LocalDataDir" ]; then
+  mkdir "$LocalDataDir"
+fi
+cp "$TestDataDir"/* "$LocalDataDir"
+cp "$ModelFile" "$LocalDataDir"
+
+if [ "$OS" == "Windows_NT" ]; then
+  # Run the evaluation test
+  WindowsDataDir=`cygpath -aw "$LocalDataDir"`
+  DllDir=`cygpath -aw "$TEST_BIN_DIR"`
+
+  # TODO Eliminate the need to set the PATH
+  cd "$TEST_BIN_DIR"
+  java.exe -classpath "$DllDir\java;$DllDir\java\cntk.jar" Main "$WindowsDataDir"
+
+else # On Linux
+
+  TEST_LIB_DIR=$TEST_BIN_DIR/../lib
+  cd $TEST_LIB_DIR
+  java -classpath "$TEST_LIB_DIR/java:$TEST_LIB_DIR/java/cntk.jar" Main "$LocalDataDir"
+
+fi

@@ -1,0 +1,57 @@
+#!/bin/bash
+
+python -c "import sys; sys.exit(not sys.version_info[0:2] in [(2,7), (3,4)])" || {
+  echo Running this test only for Python 2.7 or 3.4 to save time.
+  echo __COMPLETED__
+  exit 0
+}
+
+cd ../../..
+
+downloaders=(
+  Examples/Image/DataSets/Animals/install_animals.py
+  Examples/Image/DataSets/CIFAR-10/install_cifar10.py
+  Examples/Image/DataSets/Flowers/install_flowers.py
+  Examples/Image/DataSets/Grocery/install_grocery.py
+  Examples/Image/DataSets/MNIST/install_mnist.py
+  Examples/Image/DataSets/Pascal/install_pascalvoc.py
+  Examples/Text/LightRNN/PTB/Data/download_data.py
+  Examples/Text/WordLMWithSampledSoftmax/download_data.py
+  Examples/Video/DataSets/UCF11/ucf11_utils.py
+)
+
+callingDownloaders=(
+  Examples/Image/Detection/FastRCNN/install_data_and_model.py
+  Examples/Image/FeatureExtraction/install_data_and_model.py
+  Examples/Image/TransferLearning/install_data_and_model.py
+)
+
+function exitWithError {
+  set +e +x
+  printf "$@" 1>&2
+  exit 1
+}
+
+set -x
+
+# Test for existence and clean
+for p in "${downloaders[@]}"; do
+  [[ -f $p ]] || exitWithError "File %s does not exist.\n" "$p"
+  git clean -fdx "$(dirname "$p")" || exitWithError "Git clean for %s failed.\n" "$p"
+done
+
+ERRORS=0
+for p in "${downloaders[@]}" "${callingDownloaders[@]}"; do
+  python "$p" || {
+    echo Error: running $p failed
+    ((ERRORS++))
+  }
+done
+
+if ((ERRORS != 0)); then
+  echo $ERRORS occurred.
+  exit 1
+else
+  set +x
+  echo __COMPLETED__
+fi

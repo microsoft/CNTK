@@ -3,15 +3,18 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
+"""
+Loss functions.
+"""
 
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from ..ops.functions import CloneMethod, Function, load_model
+from ..ops.functions import CloneMethod, Function
 from ..variables import Variable, Parameter, Constant
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, typemap
 from cntk.internal.utils import get_data_type
+from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as auto_select
 from ..axis import Axis
 
 
@@ -23,8 +26,8 @@ def cosine_distance(x, y, name=''):
     Example:
         >>> a = np.asarray([-1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]).reshape(3,2,2)
         >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
-        >>> x = C.sequence.input(shape=(2,))
-        >>> y = C.sequence.input(shape=(2,))
+        >>> x = C.sequence.input_variable(shape=(2,))
+        >>> y = C.sequence.input_variable(shape=(2,))
         >>> np.round(C.cosine_distance(x,y).eval({x:a,y:b}),5)
         array([[-1.,  1.],
                [ 1.,  0.],
@@ -48,21 +51,21 @@ def cosine_distance(x, y, name=''):
 def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, name=''):
     '''
 
-    Given minibatches for ``x`` and ``y``, this function computes for each element in `x` the cosine distance between 
-    it and the corresponding `y` and additionally the cosine distance between ``x`` and some other elements of ``y`` 
-    (referred to a negative samples). The ``x`` and ``y`` pairs are samples often derived 
-    from embeddings of textual data, though the function can be used for any form of numeric encodings. 
-    When using this function to compute textual similarity, ``x`` represents search query term embedding 
-    and ``y`` represents a document embedding. The negative samples are formed on the fly by shifting 
+    Given minibatches for ``x`` and ``y``, this function computes for each element in `x` the cosine distance between
+    it and the corresponding `y` and additionally the cosine distance between ``x`` and some other elements of ``y``
+    (referred to a negative samples). The ``x`` and ``y`` pairs are samples often derived
+    from embeddings of textual data, though the function can be used for any form of numeric encodings.
+    When using this function to compute textual similarity, ``x`` represents search query term embedding
+    and ``y`` represents a document embedding. The negative samples are formed on the fly by shifting
     the right side (``y``). The ``shift`` indicates how many samples in ``y`` one should shift while
-    forming each negative sample pair. It is often chosen to be 1. As the name suggests 
+    forming each negative sample pair. It is often chosen to be 1. As the name suggests
     ``num_negative_samples`` indicates how many negative samples one would want to generate.
 
     Example:
         >>> qry = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
         >>> doc = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
-        >>> x = C.sequence.input(shape=(4,))
-        >>> y = C.sequence.input(shape=(4,))
+        >>> x = C.sequence.input_variable(shape=(4,))
+        >>> y = C.sequence.input_variable(shape=(4,))
         >>> model = C.cosine_distance_with_negative_samples(x, y, shift=1, num_negative_samples=2)
         >>> np.round(model.eval({x: qry, y: doc}), decimals=4)
         array([[[ 1. ,  0.5,  0. ]],
@@ -75,7 +78,7 @@ def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, nam
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
         y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
         shift: non-zero positive integer representing number of shift to generate a negative sample
-        num_negative_samples: number of negative samples to generate, a non-zero positive integer 
+        num_negative_samples: number of negative samples to generate, a non-zero positive integer
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -92,15 +95,16 @@ def binary_cross_entropy(output, target, name=''):
     r'''
     Computes the binary cross entropy (aka logistic loss) between the ``output`` and ``target``.
 
-    Example:
-        TBA
-
     Args:
         output: the computed posterior probability for a variable to be 1 from the network (typ. a ``sigmoid``)
         target: ground-truth label, 0 or 1
         name (str, optional): the name of the Function instance in the network
+
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
     from cntk.cntk_py import binary_cross_entropy
     dtype = get_data_type(output, target)
@@ -113,16 +117,17 @@ def weighted_binary_cross_entropy(output, target, weight, name=''):
     r'''
     This operation computes the weighted binary cross entropy (aka logistic loss) between the ``output`` and ``target``.
 
-    Example:
-        TBA
-
     Args:
         output: the computed posterior probability from the network
         target: ground-truth label, 0 or 1
         weight: weight of each example
         name (str, optional): the name of the Function instance in the network
+
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
     from cntk.cntk_py import weighted_binary_cross_entropy
     dtype = get_data_type(output, target, weight)
@@ -181,8 +186,8 @@ def squared_error(output, target, name=''):
     This is often used as a training criterion.
 
     Example:
-        >>> i1 = C.input((1,2))
-        >>> i2 = C.input((1,2))
+        >>> i1 = C.input_variable((1,2))
+        >>> i2 = C.input_variable((1,2))
         >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[2., 1.]]], dtype=np.float32), i2:np.asarray([[[4., 6.]]], dtype=np.float32)})
         array([ 29.], dtype=float32)
 
@@ -227,9 +232,9 @@ def lambda_rank(output, gain, group, name=''):
     In the backward direction it back-propagates LambdaRank gradients.
 
     Example:
-        >>> group = C.input((1,))
-        >>> score = C.input((1,), needs_gradient=True)
-        >>> gain  = C.input((1,))
+        >>> group = C.input_variable((1,))
+        >>> score = C.input_variable((1,), needs_gradient=True)
+        >>> gain  = C.input_variable((1,))
         >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1)
         >>> s = np.array([1, 2, 3, 4], dtype=np.float32).reshape(4,1)
         >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1)
@@ -257,3 +262,90 @@ def lambda_rank(output, gain, group, name=''):
     gain = sanitize_input(gain, dtype)
     group = sanitize_input(group, dtype)
     return lambda_rank(output, gain, group, name)
+
+
+@typemap
+def nce_loss(weights, biases, inputs, labels, noise_distribution, num_samples=32, allow_duplicates=True, seed=auto_select, name=''):
+    '''nce_loss(weights, biases, inputs, labels, noise_distribution, num_samples=32, allow_duplicates=True, seed=auto_select, name='')
+    Computes the noise contrastive estimation loss. This implementation mostly
+    follows Chris Dyer's notes [1]. At a high level, this layer draws
+    `num_samples` random labels from `noise_distribution` and then forms
+    `num_samples`+1 binary classification problems where the true label is
+    considered a positive example and the random labels are considered negative
+    examples. The negatives are shared among all the examples in the
+    minibatch. This operation only computes the logits for the labels in the
+    minibatch and the random labels drawn from `noise_distribution`. The
+    gradients will be sparse if the labels are sparse.
+
+    The `noise_distribution` is read once and certain quantities are
+    precomputed based on it. This operation will need to be reinstantiated if
+    the `noise_distribution` changes.
+
+    Shape inference for the weights is currently not supported when inputs are
+    placeholders. Either a concrete input must be used or the weights must be
+    provided without any inferred dimensions.
+
+    Example:
+        >>> import scipy
+        >>> # dimensions of input, number of noise labels, batch size, number of classes
+        >>> xdim = 10
+        >>> samples = 32
+        >>> batch = 4
+        >>> classes = 100
+        >>> # some variables; typically x will be the output of a layer
+        >>> x = C.input_variable(xdim)
+        >>> y = C.input_variable(classes, is_sparse=True)
+        >>> # dummy data
+        >>> x0 = np.arange(batch * xdim, dtype=np.float32).reshape((batch, xdim))/(batch * xdim)
+        >>> data = np.ones(batch, dtype=np.float32)
+        >>> indices = list(range(10, 10*batch+1, 10))
+        >>> indptr = list(range(batch + 1))
+        >>> y0 = scipy.sparse.csr_matrix((data, indices, indptr), shape=(batch, classes))
+        >>> # a dummy noise distribution
+        >>> q = np.arange(classes, dtype=np.float32) + 1 # normalization not necessary
+        >>> # the parameters
+        >>> b = C.parameter((classes, 1), init=-np.log(classes))
+        >>> W = C.parameter((classes, C.InferredDimension), init=C.glorot_uniform(seed=98052))
+        >>> # the loss
+        >>> loss = C.nce_loss(W, b, x, y, q, seed=98052)
+        >>> # evaluate the loss at our dummy data
+        >>> np.round(loss.eval({x:x0, y:y0}), decimals=3)
+        array([ 2.385,  3.035,  3.886,  3.868], dtype=float32)
+        >>> # after training, use the logits for predictions
+        >>> logits = C.times_transpose(x, W) + C.reshape(b, -1)
+
+    Args:
+        weights: parameter (or variable in general) containing the weights with
+         which inputs will be multiplied. Its shape must be
+         (number of classes, dimension of input)
+        biases: parameter (or variable in general) containing the biases that
+         will be added to the product of weights and inputs. Its shape must be
+         (number of classes, 1)
+        inputs: vector of inputs to this layer. Multiplying by the weights and
+         adding the biases gives the logits.
+        labels: a one-hot vector with the ground-truth labels.
+        noise_distribution: a constant vector with dimension equal to the number
+         of classes. The entries must be positive numbers but do not have to
+         sum to 1. random labels will be drawn according to the normalized
+         distribution.
+        num_samples: number of random labels that will be drawn from the
+         `noise_distribution`.
+        allow_duplicates: boolean. If True (default), the random labels can
+         contain duplicates. Compared to `allow_duplicates=False` it is faster
+         but the quality of the approximations is slightly worse for the same
+         number of samples.
+        seed: random seed. The default value selects a unique random seed.
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+
+    See also:
+        [1] C. Dyer. `Notes on Noise Contrastive Estimation and Negative Sampling [pdf] <http://demo.clab.cs.cmu.edu/cdyer/nce_notes.pdf>`_.
+    '''
+    from cntk.cntk_py import nce_loss
+    dtype = get_data_type(inputs, labels, noise_distribution)
+    inputs = sanitize_input(inputs, dtype)
+    labels = sanitize_input(labels, dtype)
+    noise_distribution = sanitize_input(noise_distribution, dtype)
+    return nce_loss(weights, biases, inputs, labels, noise_distribution,
+                    num_samples, allow_duplicates, seed, name)

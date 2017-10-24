@@ -5,10 +5,14 @@
 # ==============================================================================
 
 '''
-default_options: ``with default_options():`` and ``with default_options_for():`` patterns
-'''
+Default options of CNTK functions. 
 
-from cntk.variables import Record
+
+Usage: 
+
+* ``with default_options():``, and
+* ``with default_options_for():``
+'''
 
 # context manager for overriding defaults, use through default_options() or default_options_for() below
 class _OptionsContextManager: # implement Python's 'with' protocol
@@ -22,6 +26,7 @@ class _OptionsContextManager: # implement Python's 'with' protocol
         self.kwargs = kwargs
     # entering with block: link in a new default-options record at head
     def __enter__(self):
+        from .variables import Record
         _OptionsContextManager._current_default_overrides = Record(_scope = self.scope, _outer = _OptionsContextManager._current_default_overrides, **self.kwargs) # insert new scope at head of link
         return self
     # exiting with block: restore previous remembered defaults
@@ -57,7 +62,7 @@ class default_override_or:
 def is_default_override(value):
     return isinstance(value, default_override_or)
 
-def get_default_override(function, **kwargs):
+def get_default_override(function_or_class, **kwargs):
     '''
     Looks up an option default override.
     Meant to be used inside functions that use this facility.
@@ -74,24 +79,44 @@ def get_default_override(function, **kwargs):
     if len(kwargs) != 1:
         raise TypeError("get_default_override() takes 1 keyword argument but %s were given" % len(kwargs))
     key, value = next(iter(kwargs.items())) # this is the keyword argument that the user passed in
-    if function is not None:
+    if function_or_class is not None:
         # first arg, unless None, must be an actual Python function...
-        from inspect import isfunction
-        if not isfunction(function):
-            raise ValueError('get_default_override() expects the first argument to be a Python function')
+        from inspect import isfunction, isclass
+        if not (isfunction(function_or_class) or isclass(function_or_class)):
+            raise ValueError('get_default_override() expects the first argument to be a Python function or class')
         # ...that has an arg with the same name as the given parameter
-        from inspect import getargspec, isfunction
-        args, _, _, _ = getargspec(function)
+        from inspect import getargspec
+        args, _, _, _ = getargspec(function_or_class) if isfunction(function_or_class) else getargspec(function_or_class.__init__)
         if key not in args:
-            raise TypeError("{0}() has no argument named '{1}'".format(function.__name__, key))
+            raise TypeError("{0}() has no argument named '{1}'".format(function_or_class.__name__, key))
     # if the value passed in is not a default, then use that value
     if not is_default_override(value):
         return value
     # traverse linked list of scopes inside-out until an override was found, else fall back to default
     opts = _OptionsContextManager._current_default_overrides
     while opts is not None:
-        if opts._scope is None or function is None or function in opts._scope: # we are in the right scope
+        if opts._scope is None or function_or_class is None or function_or_class in opts._scope: # we are in the right scope
             if hasattr(opts, key):
                 return opts[key]  # look up the option override and return it if present in this scope
         opts = opts._outer # step out one scope and try again
     return value.value # no override found: use the default as passed in
+
+# In some case we couldn't use "with" expression, we need a global setting.
+# This is the global dictionary with key / value format
+_GlobalOptions = {}
+
+
+# set a global option with the input initial value
+def set_global_option(key, value):
+    global  _GlobalOptions
+    # overwrite previous setting
+    _GlobalOptions[key] = value
+
+
+# get the global option value, is not set yet, return the value user set in input
+def get_global_option(key, default_value):
+    if key in _GlobalOptions:
+        return _GlobalOptions[key]
+    else:
+        # return the default value user passed in
+        return default_value

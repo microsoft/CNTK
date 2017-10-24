@@ -20,13 +20,13 @@ call "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" amd64
 
 set MSSdk=1
 set DISTUTILS_USE_SDK=1
-set CNTK_COMPONENT_VERSION=2.0beta16
+set CNTK_COMPONENT_VERSION=2.2
 
 python .\setup.py build_ext --inplace --force --compiler msvc
 if errorlevel 1 exit /b 1
 
 set PATH=%CD%\..\..\x64\Release;%PATH%
-set PYTHONPATH=%CD%;%CD%\examples;%PYTHONPATH%
+set PYTHONPATH=%CD%;%CD%\..\..\Scripts;%CD%\examples;%PYTHONPATH%
 
 pushd cntk\tests
 echo RUNNING cntk unit tests...
@@ -104,6 +104,13 @@ if errorlevel 1 exit /b 1
 echo(
 popd
 
+pushd cntk
+echo RUNNING cntk\variables doctests...
+pytest variables.py
+if errorlevel 1 exit /b 1
+echo(
+popd
+
 pushd cntk\losses
 echo RUNNING cntk\losses doctests...
 pytest __init__.py
@@ -133,8 +140,29 @@ echo(
 popd
 
 pushd cntk\layers
+echo RUNNING cntk\blocks doctests...
+pytest blocks.py
+if errorlevel 1 exit /b 1
+echo(
+popd
+
+pushd cntk\layers
 echo RUNNING cntk\layers doctests...
 pytest layers.py
+if errorlevel 1 exit /b 1
+echo(
+popd
+
+pushd cntk\layers
+echo RUNNING cntk\sequence doctests...
+pytest sequence.py
+if errorlevel 1 exit /b 1
+echo(
+popd
+
+pushd cntk\layers
+echo RUNNING cntk\higher_order_layers doctests...
+pytest higher_order_layers.py
 if errorlevel 1 exit /b 1
 echo(
 popd

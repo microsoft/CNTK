@@ -6,6 +6,7 @@
 //
 
 using System;
+using System.Threading.Tasks;
 using CNTK;
 
 namespace CNTKLibraryCSEvalExamples
@@ -14,6 +15,34 @@ namespace CNTKLibraryCSEvalExamples
     {
         static void Main(string[] args)
         {
+            // Todo: move to a separate unit test.
+            Console.WriteLine("Test Utils");
+
+            int maxThreads = Utils.GetMaxNumCPUThreads();
+            Utils.SetMaxNumCPUThreads(2);
+            Console.WriteLine("MaxNumCPUThreads: before: " + maxThreads + ", after " + Utils.GetMaxNumCPUThreads());
+            Utils.SetMaxNumCPUThreads(maxThreads);
+            Console.WriteLine("reset MaxNumCPuThreads to " + Utils.GetMaxNumCPUThreads());
+
+            var level = Utils.GetTraceLevel();
+            Utils.SetTraceLevel(TraceLevel.Info);
+            Console.WriteLine("TraceLevel: before: " + level + ", after " + Utils.GetTraceLevel());
+            Utils.SetTraceLevel(level);
+            Console.WriteLine("reset TraceLevel to " + Utils.GetTraceLevel());
+
+            Console.WriteLine(Utils.DataTypeName(DataType.Float));
+            Console.WriteLine(Utils.DataTypeSize(DataType.Double));
+            Console.WriteLine(Utils.DeviceKindName(DeviceDescriptor.CPUDevice.Type));
+            Console.WriteLine(Utils.DeviceKindName(DeviceKind.GPU));
+            Console.WriteLine(Utils.IsSparseStorageFormat(StorageFormat.Dense));
+            Console.WriteLine(Utils.IsSparseStorageFormat(StorageFormat.SparseCSC));
+            Console.WriteLine(Utils.IsSparseStorageFormat(StorageFormat.SparseBlockCol));
+            Console.WriteLine(Utils.VariableKindName(VariableKind.Constant));
+            Console.WriteLine(Utils.VariableKindName(VariableKind.Placeholder));
+            Console.WriteLine(Utils.VariableKindName(VariableKind.Input));
+            Console.WriteLine(Utils.VariableKindName(VariableKind.Output));
+            Console.WriteLine(Utils.VariableKindName(VariableKind.Parameter));
+
 #if CPUONLY
             Console.WriteLine("======== Evaluate model on CPU using CPUOnly build ========");
 #else
@@ -25,12 +54,20 @@ namespace CNTKLibraryCSEvalExamples
                 var device = DeviceDescriptor.CPUDevice;
 
                 CNTKLibraryManagedExamples.EvaluationSingleImage(device);
+
                 // Run memory tests.
                 MemoryTests.ValidateObjectReferences(device);
+
                 CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
-                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(device);
+
+                MemoryTests.WriteOutputs();
+                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallelAsync(device).Wait();
+
                 // Run memory tests again.
                 MemoryTests.ValidateObjectReferences(device);
+
+                Task evalTask = CNTKLibraryManagedExamples.EvaluationSingleImageAsync(device);
+                evalTask.Wait();
 
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
                 CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);
@@ -39,6 +76,12 @@ namespace CNTKLibraryCSEvalExamples
                 CNTKLibraryManagedExamples.LoadModelFromMemory(device);
 
                 MemoryTests.WriteOutputs();
+
+                MemoryTests.ValueCopyToSparseCSCTest<float>(device);
+                MemoryTests.ValueCopyToSparseCSCTest<double>(device);
+
+                CNTKLibraryManagedExamples.EvaluateIntermediateLayer(device);
+                CNTKLibraryManagedExamples.EvaluateCombinedOutputs(device);
             }
 
             if (ShouldRunOnGpu())
@@ -49,9 +92,12 @@ namespace CNTKLibraryCSEvalExamples
                 MemoryTests.ValidateObjectReferences(device);
                 CNTKLibraryManagedExamples.EvaluationSingleImage(device);
                 CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
-                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(device);
+                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallelAsync(device).Wait();
                 // Run memory tests.
                 MemoryTests.ValidateObjectReferences(device);
+
+                Task evalTask = CNTKLibraryManagedExamples.EvaluationSingleImageAsync(device);
+                evalTask.Wait();
 
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
                 CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);
@@ -59,6 +105,12 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Run memory tests again.
                 MemoryTests.WriteOutputs();
+
+                MemoryTests.ValueCopyToSparseCSCTest<float>(device);
+                MemoryTests.ValueCopyToSparseCSCTest<double>(device);
+
+                CNTKLibraryManagedExamples.EvaluateIntermediateLayer(device);
+                CNTKLibraryManagedExamples.EvaluateCombinedOutputs(device);
             }
 
             Console.WriteLine("======== Evaluation completes. ========");

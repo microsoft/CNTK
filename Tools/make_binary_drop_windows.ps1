@@ -60,12 +60,13 @@ Remove-Item $baseDropPath\cntk\*.pdb
 Remove-Item $baseDropPath\cntk\python -Recurse
 
 # Keep EvalDll.lib
-Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
+Remove-Item $baseDropPath\cntk\*.lib  -Exclude Cntk.Eval-*.lib, Cntk.Core-*.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
 Remove-Item $baseDropPath\cntk\CommandEval.exe -Force -ErrorAction SilentlyContinue
 Remove-Item $baseDropPath\cntk\Microsoft.VisualStudio.QualityTools.UnitTestFramework.*
+Remove-Item $baseDropPath\cntk\java\Main.class
 
 # Make Include folder
 New-Item -Path $baseIncludePath -ItemType directory
@@ -81,9 +82,17 @@ Foreach ($includeFile in $includeFiles)
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 
-# Copy Examples
+# Copy Tutorials
 Write-Verbose "Copying Tutorials ..."
 Copy-Item Tutorials -Recurse -Destination $baseDropPath\Tutorials
+
+# Copy PretrainedModels
+Write-Verbose "Copying PretrainedModels ..."
+Copy-Item PretrainedModels -Recurse -Destination $baseDropPath\PretrainedModels
+
+# Copy Manual
+Write-Verbose "Copying Manual ..."
+Copy-Item Manual -Recurse -Destination $baseDropPath\Manual
 
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."

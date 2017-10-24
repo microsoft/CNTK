@@ -36,12 +36,12 @@ def test_op_combine(left_operand, right_operand, operations, expected_results, d
     left_value = AA(left_operand, dtype=dt)
     right_value = AA(right_operand, dtype=dt)
 
-    a = C.input(shape=left_value.shape,
+    a = C.input_variable(shape=left_value.shape,
                 dtype=sanitize_dtype_cntk(precision),
                 needs_gradient=True,
                 name='a')
 
-    b = C.input(shape=right_value.shape,
+    b = C.input_variable(shape=right_value.shape,
                 dtype=sanitize_dtype_cntk(precision),
                 needs_gradient=True,
                 name='b')
@@ -68,11 +68,20 @@ def test_op_combine(left_operand, right_operand, operations, expected_results, d
 
 
 def test_op_combine_input_var():
-    from .. import combine, input
+    from .. import combine
 
-    x = C.input(shape=(2))
+    x = C.input_variable(shape=(2))
     func = combine([x])
     value = [[1, 2]]
     res = func.eval({x : value})
     
     assert np.allclose(res, [[1, 2]])
+
+def test_op_combine_subscript():
+    from .. import combine
+
+    x = C.input_variable(shape=(2))
+    assert x == combine([x,x])[0]
+    assert x == combine((x,x))[0]
+    assert x == combine(x,x,name='x2')[0]
+    assert x == combine(combine(x,x),combine(x,x))[0]

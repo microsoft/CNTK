@@ -31,7 +31,7 @@ void TestUpdate(LearnerPtr& learner, const NDShape& shape, size_t numMinibatches
             gradientValues[parameter] = NDArrayView::RandomUniform<ElementType>(shape, -1.0, 1.0, seed + i, device);
         }
 
-        learner->Update(gradientValues, 1);
+        learner->Update(gradientValues, 1, false);
     }
 }
 
@@ -53,7 +53,7 @@ void TestSGDLearner(size_t numParameters, size_t numMinibatches, const DeviceDes
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.4));
+    auto learner = SGDLearner(parameters, TrainingParameterPerSampleSchedule(0.4));
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -62,8 +62,8 @@ void TestMomentumSGDLearner(size_t numParameters, size_t numMinibatches, bool un
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    LearningRatePerMinibatchSchedule learnigRateSchedule = { { 3.0, 2.0, 1.0 }, numMinibatches };
-    MomentumPerSampleSchedule momentumValues = { { { 1, 1.0 }, { 3, 0.1 }, { 10, 0.01 } }, 2 };
+    LearningRateSchedule learnigRateSchedule = LearningRateSchedule({ 3.0, 2.0, 1.0 }, numMinibatches);
+    MomentumSchedule momentumValues = TrainingParameterPerSampleSchedule<double>( { { 1, 1.0 }, { 3, 0.1 }, { 10, 0.01 } }, 2 );
     auto learner = MomentumSGDLearner(parameters, learnigRateSchedule, momentumValues, unitGainMomentum);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
     FloatingPointCompare(learner->LearningRate(), 2.0, "Learner::LearningRate does not match expectation");
@@ -74,8 +74,8 @@ void TestNesterovLearner(size_t numParameters, size_t numMinibatches, bool unitG
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    MomentumAsTimeConstantSchedule momentumValues = { { { 1, 1 }, { 3, 5 }, { 10, 25 } }, 100 };
-    auto learner = NesterovLearner(parameters, LearningRatePerMinibatchSchedule( { { 1, 0.5 }, { 10, 0.25 }, { 20, 0.125 } }, 3 ), momentumValues, unitGainMomentum);
+    MomentumSchedule momentumValues = MomentumAsTimeConstantSchedule( { { 1, 1 }, { 3, 5 }, { 10, 25 } }, 100 );
+    auto learner = NesterovLearner(parameters, LearningRateSchedule( { { 1, 0.5 }, { 10, 0.25 }, { 20, 0.125 } }, 3 ), momentumValues, unitGainMomentum);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -84,7 +84,7 @@ void TestAdaGradLearner(size_t numParameters, size_t numMinibatches, const Devic
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = AdaGradLearner(parameters, LearningRatePerMinibatchSchedule( { 0.5, 0.4, 0.3, 0.2, 0.1 }, 2), true);
+    auto learner = AdaGradLearner(parameters, LearningRateSchedule( std::vector<double>({ 0.5, 0.4, 0.3, 0.2, 0.1 }), 2), true);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -93,7 +93,7 @@ void TestFSAdaGradLearner(size_t numParameters, size_t numMinibatches, bool unit
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = FSAdaGradLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum);
+    auto learner = FSAdaGradLearner(parameters, TrainingParameterPerSampleSchedule<double>({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -102,7 +102,16 @@ void TestAdamLearner(size_t numParameters, size_t numMinibatches, bool unitGainM
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumPerSampleSchedule(0.99));
+    auto learner = AdamLearner(parameters, TrainingParameterPerSampleSchedule<double>({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumSchedule(0.99, 1));
+    TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+}
+
+template <typename ElementType>
+void TestAdamaxLearner(size_t numParameters, size_t numMinibatches, bool unitGainMomentum, const DeviceDescriptor& device)
+{
+    NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
+    auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
+    auto learner = AdamLearner(parameters, TrainingParameterPerSampleSchedule<double>({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumSchedule(0.99, 1), 1e-8, true);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -111,38 +120,55 @@ void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const Devic
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = RMSPropLearner(parameters, LearningRatePerMinibatchSchedule({ { 3, 0.7 }, { 1, 0.2 } }), 0.01, 0.02, 0.03, 0.1, 0.001);
+    auto learner = RMSPropLearner(parameters, 
+        LearningRateSchedule({ std::make_pair( 3, 0.7), std::make_pair( 1, 0.2 ) }),
+        0.95, 1.2, 0.7, 10.0, 0.001);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+}
+
+template <typename ElementType>
+void TestUniversalLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
+{
+    NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
+    auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
+    ElementType lr = (ElementType) 0.06125;
+    ParameterUpdateFunctor mysgd = [lr](Parameter p, Variable g) -> FunctionPtr 
+    { 
+        return Assign(p, Minus(p , ElementTimes(Constant::Scalar(lr), g))); 
+    };
+    auto learner = UniversalLearner(parameters, mysgd);
+    TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+
 }
 
 void TestTrainingParametersSchedule()
 {
-    LearningRatePerSampleSchedule schedule1 = 0.5;
-    assert(schedule1.Unit() == LearningRateSchedule::UnitType::Sample);
+    LearningRateSchedule schedule1(0.5, 1);
+    assert(schedule1.GetMinibatchSize() == 1);
     assert(schedule1[0] == 0.5);
     assert(schedule1[1] == 0.5);
     assert(schedule1[100] == 0.5);
 
-    LearningRatePerSampleSchedule schedule2 = { 0.5 };
-    assert(schedule2.Unit() == LearningRateSchedule::UnitType::Sample);
+    LearningRateSchedule schedule2(std::vector<double>({ 0.5 }), LearningRateSchedule::FullDataSweep, 1);
+    assert(schedule2.GetMinibatchSize() == 1);
     assert(schedule2[0] == 0.5);
     assert(schedule2[10] == 0.5);
     assert(schedule2[100] == 0.5);
 
-    LearningRatePerSampleSchedule schedule3({ 0.5, 0.3, 0.3 });
-    assert(schedule3.Unit() == LearningRateSchedule::UnitType::Sample);
+    LearningRateSchedule schedule3(std::vector<double>{ 0.5, 0.3, 0.3 }, LearningRateSchedule::FullDataSweep, 1);
+    assert(schedule3.GetMinibatchSize() == 1);
     assert(schedule3[0] == 0.5);
     assert(schedule3[1] == 0.3);
     assert(schedule3[100] == 0.3);
 
-    LearningRatePerMinibatchSchedule schedule4 = { vector<double>{ 0.5 }, 10 }; // without vector<> gcc complains that conversion here is ambiguousS
-    assert(schedule4.Unit() == LearningRateSchedule::UnitType::Minibatch);
+    LearningRateSchedule schedule4(vector<double>{ 0.5 }, 10 ); // without vector<> gcc complains that conversion here is ambiguousS
+    assert(schedule4.GetMinibatchSize() == LearningRateSchedule::IgnoredMinibatchSize);
     assert(schedule4[0] == 0.5);
     assert(schedule4[10] == 0.5);
     assert(schedule4[100] == 0.5);
 
-    LearningRatePerSampleSchedule schedule5 = { { 0.5, 0.3, 0.2 }, 10 };
-    assert(schedule5.Unit() == LearningRateSchedule::UnitType::Sample);
+    LearningRateSchedule schedule5{ std::vector<double>{ 0.5, 0.3, 0.2 }, 10 };
+    assert(schedule5.GetMinibatchSize() == LearningRateSchedule::IgnoredMinibatchSize); //unspecified reference minibatch size is 0
     assert(schedule5[0] == 0.5);
     assert(schedule5[9] == 0.5);
     assert(schedule5[10] == 0.3);
@@ -150,21 +176,21 @@ void TestTrainingParametersSchedule()
     assert(schedule5[20] == 0.2);
     assert(schedule5[100] == 0.2);
 
-    MomentumPerMinibatchSchedule schedule6 = { { make_pair(1, 0.5) } }; // without make_pair this is interpreted as a vector of doubles
-    assert(schedule6.Unit() == MomentumSchedule::UnitType::Minibatch);
+    MomentumSchedule schedule6{ { make_pair(1, 0.5) } }; // without make_pair this is interpreted as a vector of doubles
+    assert(schedule6.GetMinibatchSize() == MomentumSchedule::IgnoredMinibatchSize);
     assert(schedule6[0] == 0.5);
     assert(schedule6[10] == 0.5);
     assert(schedule6[100] == 0.5);
 
-    LearningRatePerMinibatchSchedule schedule7 = { { { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } } };
-    assert(schedule7.Unit() == LearningRateSchedule::UnitType::Minibatch);
+    LearningRateSchedule schedule7{ std::vector<std::pair<size_t, double>>{ { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } } };
+    assert(schedule7.GetMinibatchSize() == LearningRateSchedule::IgnoredMinibatchSize);
     assert(schedule7[0] == 0.5);
     assert(schedule7[1] == 0.3);
     assert(schedule7[2] == 0.2);
     assert(schedule7[100] == 0.2);
 
-    MomentumPerMinibatchSchedule schedule8 = { { { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } }, 10 };
-    assert(schedule8.Unit() == MomentumSchedule::UnitType::Minibatch);
+    MomentumSchedule schedule8{ std::vector<std::pair<size_t, double>>{ { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } }, 10 };
+    assert(schedule8.GetMinibatchSize() == MomentumSchedule::IgnoredMinibatchSize);
     assert(schedule8[0] == 0.5);
     assert(schedule8[9] == 0.5);
     assert(schedule8[10] == 0.3);
@@ -172,8 +198,8 @@ void TestTrainingParametersSchedule()
     assert(schedule8[20] == 0.2);
     assert(schedule8[100] == 0.2);
 
-    LearningRatePerSampleSchedule schedule9 = { { { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } } };
-    assert(schedule9.Unit() == LearningRateSchedule::UnitType::Sample);
+    LearningRateSchedule schedule9 = { std::vector<std::pair<size_t, double>>{ { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } }, LearningRateSchedule::FullDataSweep, 1 };
+    assert(schedule9.GetMinibatchSize() == 1);
     assert(schedule9[0] == 0.5);
     assert(schedule9[2] == 0.5);
     assert(schedule9[3] == 0.3);
@@ -181,8 +207,8 @@ void TestTrainingParametersSchedule()
     assert(schedule9[5] == 0.2);
     assert(schedule9[100] == 0.2);
 
-    MomentumPerMinibatchSchedule schedule10 = { { { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } }, 10 };
-    assert(schedule10.Unit() == MomentumSchedule::UnitType::Minibatch);
+    MomentumSchedule schedule10 = { std::vector<std::pair<size_t, double>>{ { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } }, 10 };
+    assert(schedule10.GetMinibatchSize() == MomentumSchedule::IgnoredMinibatchSize);
     assert(schedule10[0] == 0.5);
     assert(schedule10[29] == 0.5);
     assert(schedule10[30] == 0.3);
@@ -190,8 +216,8 @@ void TestTrainingParametersSchedule()
     assert(schedule10[50] == 0.2);
     assert(schedule10[100] == 0.2);
 
-    MomentumAsTimeConstantSchedule schedule11 = { { 0.0, 1.0, 2.0 }, 10 };
-    assert(schedule11.Unit() == MomentumAsTimeConstantSchedule::UnitType::Sample);
+    MomentumSchedule schedule11 = MomentumAsTimeConstantSchedule(std::vector<double>{ 0.0, 1.0, 2.0 }, 10 );
+    assert(schedule11.GetMinibatchSize() == 1);
     assert(schedule11[0] == 0.0);
     assert(schedule11[9] == 0.0);
     assert(schedule11[10] == exp(-1.0 / 1.0));
@@ -199,8 +225,8 @@ void TestTrainingParametersSchedule()
     assert(schedule11[20] == exp(-1.0 / 2.0));
     assert(schedule11[30] == exp(-1.0 / 2.0));
 
-    MomentumAsTimeConstantSchedule schedule12 = schedule11;
-    assert(schedule12.Unit() == MomentumAsTimeConstantSchedule::UnitType::Sample);
+    MomentumSchedule schedule12 = schedule11;
+    assert(schedule12.GetMinibatchSize() == 1);
     assert(schedule12[0] == 0.0);
     assert(schedule12[9] == 0.0);
     assert(schedule12[10] == exp(-1.0 / 1.0));
@@ -208,31 +234,44 @@ void TestTrainingParametersSchedule()
     assert(schedule12[20] == exp(-1.0 / 2.0));
     assert(schedule12[30] == exp(-1.0 / 2.0));
 
-    MomentumAsTimeConstantSchedule schedule13 = 1;
-    assert(schedule13.Unit() == MomentumAsTimeConstantSchedule::UnitType::Sample);
+    MomentumSchedule schedule13 = MomentumAsTimeConstantSchedule(1);
+    assert(schedule13.GetMinibatchSize() == 1);
     assert(schedule13[0] == exp(-1.0 / 1.0));
     assert(schedule13[1] == exp(-1.0 / 1.0));
     assert(schedule13[100] == exp(-1.0 / 1.0));
 
-    MomentumAsTimeConstantSchedule schedule14 = { { 1.0, 2.0, 3.0 } };
-    assert(schedule14.Unit() == MomentumAsTimeConstantSchedule::UnitType::Sample);
+    MomentumSchedule schedule14 = MomentumAsTimeConstantSchedule(std::vector<double>{ 1.0, 2.0, 3.0 } );
+    assert(schedule14.GetMinibatchSize() == 1);
     assert(schedule14[0] == exp(-1.0 / 1.0));
     assert(schedule14[1] == exp(-1.0 / 2.0));
     assert(schedule14[2] == exp(-1.0 / 3.0));
     assert(schedule14[100] == exp(-1.0 / 3.0));
     
-    MomentumAsTimeConstantSchedule schedule15 = { { { 100, 7.0 }, { 10, 5.0 }, { 1, 3.0 } }, 100 };
+    MomentumSchedule schedule15 = MomentumAsTimeConstantSchedule(std::vector<std::pair<size_t, double>>{ { 100, 7.0 }, { 10, 5.0 }, { 1, 3.0 } }, 100 );
 
     auto dict = schedule15.Serialize();
 
     TrainingParameterSchedule<double> schedule16 = TrainingParameterSchedule<double>::Deserialize(dict);
-    assert(schedule16.Unit() == MomentumAsTimeConstantSchedule::UnitType::Sample);
+    assert(schedule16.GetMinibatchSize() == 1);
     assert(schedule16[0] == exp(-1.0 / 7.0));
     assert(schedule16[9999] == exp(-1.0 / 7.0));
     assert(schedule16[10000] == exp(-1.0 / 5.0));
     assert(schedule16[10999] == exp(-1.0 / 5.0));
     assert(schedule16[11000] == exp(-1.0 / 3.0));
     assert(schedule16[99999] == exp(-1.0 / 3.0));
+
+    //test equals
+    std::vector<std::pair<size_t, double>> vec1;
+    vec1.push_back({ 1, 0.5 });
+    vec1.push_back({ 1, 0.3 });
+    LearningRateSchedule schedule17{ vec1, 100, 10 };
+    LearningRateSchedule schedule18{ std::vector<std::pair<size_t, double>>{ { 1, 0.5 },{ 1, 0.3 },{ 1, 0.2 } }, 100, 10 };
+    assert(schedule17 == schedule17);
+    assert(!(schedule17 == schedule18));
+
+    vec1.push_back({ 1, 0.2 });
+    LearningRateSchedule schedule19{ vec1, 100, 10 };
+    assert(schedule18 == schedule19);
 }
 
 void TestDefaultUnitGainGetterAndSetter()
@@ -249,15 +288,18 @@ void TestDefaultUnitGainGetterAndSetter()
 void TestSweepBasedSchedule()
 {
     DeviceDescriptor device = DeviceDescriptor::CPUDevice();
-    auto schedule = LearningRatePerSampleSchedule({ 1, 2, 3, 4, 5 }, LearningRateSchedule::FullDataSweep);
+    auto schedule = LearningRateSchedule({ 1, 2, 3, 4, 5 }, LearningRateSchedule::FullDataSweep, 1);
 
-    auto learner1 = SGDLearner({}, schedule);
+    auto weights = Parameter({ 2 }, DataType::Float, 0, device);
+    auto learner1 = SGDLearner({ weights }, schedule);
     assert(1 == learner1->LearningRate());
 
     
     for (auto i : {2, 3, 4, 5 })
     {
-        std::unordered_map<Parameter, NDArrayViewPtr> gradients {};
+        std::vector<float> gradientValueVector(weights.Shape().TotalSize(), 0);
+        auto gradientValue = MakeSharedObject<NDArrayView>(weights.Shape(), gradientValueVector);
+        std::unordered_map<Parameter, NDArrayViewPtr> gradients{ { weights, gradientValue } };
         learner1->Update(gradients, 1, true);
         assert(i == learner1->LearningRate());
     }
@@ -414,13 +456,34 @@ BOOST_AUTO_TEST_CASE(CreateAndUpdateAdamLearner)
     }
 }
 
+BOOST_AUTO_TEST_CASE(CreateAndUpdateUniversalLearner)
+{
+    for (auto& device : devices)
+    {
+        TestUniversalLearner<float>(numParameters, numMinibatches, device);
+        TestUniversalLearner<double>(numParameters, numMinibatches, device);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateAdamaxLearner)
+{
+    for (auto& device : devices)
+    {
+        for (auto& gain : unitGain)
+        {
+            TestAdamaxLearner<float>(numParameters, numMinibatches, gain, device);
+            TestAdamaxLearner<double>(numParameters, numMinibatches, gain, device);
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(TestResettingLearningRate)
 {
     NDShape shape = { 1 };
     auto numSamples = 1; numParameters = 1, numMinibatches = 1;
     DeviceDescriptor device = DeviceDescriptor::CPUDevice();
     auto parameters = CreateParameters<float>(shape, numParameters, device);
-    auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule({ 0.1, 1, 2, 3, 4, 5 }, numSamples));
+    auto learner = SGDLearner(parameters, LearningRateSchedule(std::vector<double>{ 0.1, 1, 2, 3, 4, 5 }, numSamples, 1));
     BOOST_TEST(learner->LearningRate() == 0.1);
     for (int i = 1; i < 4; i++)
     {
@@ -428,7 +491,7 @@ BOOST_AUTO_TEST_CASE(TestResettingLearningRate)
         BOOST_TEST(learner->LearningRate() == float(i));
     }
 
-    learner->ResetLearningRate(LearningRatePerSampleSchedule({ 9, 10, 20, 30, 40, 50 }, numSamples));
+    learner->ResetLearningRate(LearningRateSchedule(std::vector<double>{ 9, 10, 20, 30, 40, 50 }, numSamples, 1));
     BOOST_TEST(learner->LearningRate() == 9.0);
     for (int i = 1; i < 4; i++)
     {
