@@ -237,7 +237,7 @@ def _py_dict_to_cntk_dict(py_dict):
     return res
 
 
-_SUBNODE_NAME_SEP = '.'
+_SUBNODE_NAME_SEP = '/'
 '''
 Sub-node name separator. 
 '''
