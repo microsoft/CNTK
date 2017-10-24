@@ -18,7 +18,8 @@ namespace CNTK
     class LearnerBase : public Learner
     {
     public:
-        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
+//        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
+        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd) override;
 
         virtual Dictionary CreateCheckpoint() override;
 
@@ -129,9 +130,10 @@ namespace CNTK
 
         // Version history:
         // 1 -- initial version.
-        // 2 -- instead of storing smoothed gradients as a map<parameter_uid, smoothed_grad_value>,
+        // 2 -- instead of storing smoothed gradients as a map<parameter_uid, smoothed_grad_value>.
+        // 3 -- adding sweep count into the checkpoints
         // save them as a vector in the same order as the order of parameters this learner is responsible for.
-        static const size_t s_serializationVersion = 2;
+        static const size_t s_serializationVersion = 3;
     };
 
     // Vanilla gradient descent optimization algorithm.
@@ -398,7 +400,8 @@ namespace CNTK
 
         LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
     
-        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
+        //virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
+        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd) override;
 
     private:
         void AllocateDummySmoothedGradients(const std::vector<Parameter>& parameters)

@@ -14,6 +14,10 @@ namespace CNTK {
 
 using Microsoft::MSR::CNTK::RandomShuffleMT;
 
+// Properties used in the checkpoint.
+const static std::wstring s_chunkPositionProperty = L"chunkPosition";
+const static std::wstring s_sweepIndexProperty = L"sweepIndex";
+
 LTTumblingWindowRandomizer::LTTumblingWindowRandomizer(
     DataDeserializerPtr deserializer,
     bool sampleBasedRandomizationWindow,
@@ -21,7 +25,7 @@ LTTumblingWindowRandomizer::LTTumblingWindowRandomizer(
     size_t seedOffset,
     bool multithreadedGetNextSequences,
     size_t maxNumberOfInvalidSequences)
-: Base(deserializer, multithreadedGetNextSequences, maxNumberOfInvalidSequences),
+    : Base(deserializer, { { s_chunkPositionProperty, 0}, { s_sweepIndexProperty, 0} }, multithreadedGetNextSequences, maxNumberOfInvalidSequences),
   m_randomizationRange(randomizationRange),
   m_seedOffset(seedOffset),
   m_chunkPosition(0),
@@ -116,10 +120,6 @@ void LTTumblingWindowRandomizer::RefillSequenceWindow(SequenceWindow& window)
 
     m_chunkPosition = (ChunkIdType)(m_chunkPosition + m_prefetchedChunks.size()) % m_originalChunkDescriptions.size();
 }
-
-// Properties used in the checkpoint.
-const static std::wstring s_chunkPositionProperty = L"chunkPosition";
-const static std::wstring s_sweepIndexProperty = L"sweepIndex";
 
 std::map<std::wstring, size_t> LTTumblingWindowRandomizer::GetInnerState()
 {

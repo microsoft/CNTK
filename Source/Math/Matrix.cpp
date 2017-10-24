@@ -3323,6 +3323,39 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSinhOf(const Matrix<ElemType>& a)
     return *this;
 }
 
+//[this]=asinh([this]) element wise
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::InplaceAsinh()
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->InplaceAsinh(),
+                            m_GPUMatrix->InplaceAsinh(),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignAsinhOf(const Matrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAsinhOf: Matrix a is empty.");
+
+    DecideAndMoveToRightDevice(a, *this);
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            this,
+                            m_CPUMatrix->AssignAsinhOf(*a.m_CPUMatrix),
+                            m_GPUMatrix->AssignAsinhOf(*a.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::InplaceTruncate(const ElemType threshold)
 {

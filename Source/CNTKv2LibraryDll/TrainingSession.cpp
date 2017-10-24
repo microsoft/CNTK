@@ -7,6 +7,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "CNTKLibrary.h"
+#include "Utils.h"
 #include "fileutil.h"
 #include "PerformanceProfiler.h"
 
@@ -31,35 +32,39 @@ namespace CNTK
 
     CheckpointConfig::CheckpointConfig(
         const std::wstring& checkPointFileName,
-        size_t checkpointFrequencyInSamples,
+        size_t checkpointFrequency,
+        DataUnit checkpointFrequencyUnit,
         bool restoreFromCheckpointIfExists,
         bool preserveAllCheckpoints) :
         m_preserveAll(preserveAllCheckpoints),
         m_restore(restoreFromCheckpointIfExists),
         m_fileName(checkPointFileName),
-        m_frequency(checkpointFrequencyInSamples)
+        m_frequency(checkpointFrequency),
+        m_frequencyUnit(checkpointFrequencyUnit)
     {
         if (m_fileName.empty())
         {
-            if (checkpointFrequencyInSamples != 0 && checkpointFrequencyInSamples != std::numeric_limits<size_t>::max())
+            if (checkpointFrequency != 0 && checkpointFrequency != std::numeric_limits<size_t>::max())
                 InvalidArgument("Checkpoint file name must not be empty if checkpoint frequency is non zero.");
 
             if (preserveAllCheckpoints)
                 InvalidArgument("Checkpoint file name must not be empty if 'preserve all checkpoints' option is specified.");
 
-            checkpointFrequencyInSamples = 0;
+            checkpointFrequency = 0;
         }
     }
 
     CrossValidationConfig::CrossValidationConfig(
         const MinibatchSourcePtr& crossValidationSource,
         const MinibatchSizeSchedule& crossValidationSchedule,
-        size_t crossValidationFrequencyInSamples,
+        size_t crossValidationFrequency,
+        DataUnit crossValidationFrequencyUnit,
         size_t maxSamples,
         const std::unordered_map<Variable, StreamInformation>& inputVarToStream):
         m_source(crossValidationSource),
         m_mbSize(crossValidationSchedule),
-        m_frequency(crossValidationFrequencyInSamples),
+        m_frequency(crossValidationFrequency),
+        m_frequencyUnit(crossValidationFrequencyUnit),
         m_maxSamples(maxSamples),
         m_varToStream(inputVarToStream)
     {
@@ -74,14 +79,15 @@ namespace CNTK
         m_varToStream(inputVarToStream)
     {
     }
-
-    TrainingSessionPtr CreateTrainingSession(
+  
+    CNTK_API TrainingSessionPtr CreateTrainingSession(
         const TrainerPtr& trainer,
         const MinibatchSourcePtr& trainingSource,
         const MinibatchSizeSchedule& minibatchSizeSchedule,
         const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
         size_t maxNumTrainingSamples,
         size_t progressFrequency,
+        DataUnit progressFrequencyUnit,
         const CheckpointConfig& checkpointing,
         const CrossValidationConfig& crossValidation,
         const TestConfig& test)
@@ -92,6 +98,7 @@ namespace CNTK
             inputVarToStream,
             maxNumTrainingSamples,
             progressFrequency,
+            progressFrequencyUnit,
             checkpointing, crossValidation, test);
     }
 
@@ -102,6 +109,7 @@ namespace CNTK
         const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
         size_t maxNumTrainingSamples,
         size_t progressFrequency,
+        DataUnit progressFrequencyUnit,
         const CheckpointConfig& checkpointing,
         const CrossValidationConfig& crossValidation,
         const TestConfig& test) :
@@ -111,6 +119,7 @@ namespace CNTK
         m_varToStream(inputVarToStream),
         m_maxNumSamples(maxNumTrainingSamples),
         m_progressFrequency(progressFrequency),
+        m_progressFrequencyUnit(progressFrequencyUnit),
         m_checkpoint(checkpointing),
         m_cv(crossValidation),
         m_parallelAfterSamples(0),
@@ -149,7 +158,7 @@ namespace CNTK
 
         // Fill-in required actions.
         if (m_checkpoint.m_frequency != 0)
-            m_actions.push_back({ m_checkpoint.m_frequency, 0, 0,
+            m_actions.push_back({ m_checkpoint.m_frequency, m_checkpoint.m_frequencyUnit, 0, 0,
                 [this](size_t currentIndex, const DeviceDescriptor&)
                 {
                     SaveCheckpoint(currentIndex);
@@ -164,12 +173,12 @@ namespace CNTK
         // Report progress before we run cross validation if any.
         if (m_progressFrequency != 0)
         {
-            m_actions.push_back({ m_progressFrequency, 0, 0,
+            m_actions.push_back({ m_progressFrequency, m_progressFrequencyUnit, 0, 0,
                 [this](size_t currentIndex, const DeviceDescriptor&) { ReportProgress(currentIndex); return true; } });
         }
 
         if (m_cv.m_frequency != 0)
-            m_actions.push_back({ m_cv.m_frequency , 0, 0,
+            m_actions.push_back({ m_cv.m_frequency, m_cv.m_frequencyUnit, 0, 0,
                 [this](size_t currentIndex, const DeviceDescriptor& d) { return CrossValidate(currentIndex, d); } });
     }
 
@@ -198,13 +207,15 @@ namespace CNTK
                 ? 0
                 : m_maxNumSamples - Trainer()->TotalNumberOfSamplesSeen();
 
+            //get the sweep end status from GetTrainingMinibatch and use in TrainMiniBatch below
+            bool isMinibatchAtSweepEnd;
             // Note that in case of distributed training we don't want to stop if the local minibatch
             // is empty - it is possible that the other workers are still processing their minibatches.
-            GetTrainingMinibatch(minibatch, samplesLeft, computeDevice);
+            GetTrainingMinibatch(minibatch, &isMinibatchAtSweepEnd, samplesLeft, computeDevice);
 
             // Train on the minibatch.
             OnMinibatchStart();
-            shouldTrain = Trainer()->TrainMinibatch(minibatch, computeDevice);
+            shouldTrain = Trainer()->TrainMinibatch(minibatch, isMinibatchAtSweepEnd, computeDevice);
             earlyExit |= !OnMinibatchEnd(); // If the callback wants to have early exit - we stop training.
 
 #ifndef CNTK_UWP
@@ -212,17 +223,18 @@ namespace CNTK
 #endif
 
             // Peform actions if required.
-            size_t totalNumberOfSamples = Trainer()->TotalNumberOfSamplesSeen();
             for (auto& action : m_actions)
             {
-                size_t index = totalNumberOfSamples / action.frequency;
+                size_t totalNumberOfUnitCounts = Trainer()->TotalNumberOfUnitsSeen(action.frequencyUnit);
+
+                size_t index = totalNumberOfUnitCounts / action.frequency;
                 if (index != action.currentIndex)
                 {
                     // If any action wants to have early exit - we stop training.
                     earlyExit |= !action.action(action.currentIndex, computeDevice);
 
                     action.currentIndex = index;
-                    action.sampleCountWhenLastCalled = totalNumberOfSamples;
+                    action.unitCountWhenLastCalled = totalNumberOfUnitCounts;
                 }
             }
         }
@@ -232,8 +244,9 @@ namespace CNTK
             // Let's do all actions on the last probably a partial data at the end.
             for (auto& action: m_actions)
             {
-                if (Trainer()->TotalNumberOfSamplesSeen() % action.frequency != 0 &&
-                    Trainer()->TotalNumberOfSamplesSeen() != action.sampleCountWhenLastCalled)
+                size_t totalUnitCounts = Trainer()->TotalNumberOfUnitsSeen(action.frequencyUnit);
+                if (totalUnitCounts % action.frequency != 0 &&
+                    totalUnitCounts != action.unitCountWhenLastCalled)
                     action.action(action.currentIndex, computeDevice);
             }
         }
@@ -279,7 +292,7 @@ namespace CNTK
             while (shouldCV)
             {
                 size_t samplesLeft = m_cv.m_maxSamples <= totalNumberOfSamples ? 0 : m_cv.m_maxSamples - totalNumberOfSamples;
-                GetCrossValidationMinibatch(minibatch, (std::min)(m_cv.m_mbSize[totalNumberOfSamples], samplesLeft), computeDevice);
+                GetCrossValidationMinibatch(minibatch, /*pIsMinibatchAtSweepEnd= */nullptr, (std::min)(m_cv.m_mbSize[totalNumberOfSamples], samplesLeft), computeDevice);
 
                 // TODO: it may be slow to rely on TestMinibatch to return error each time, since it may require transfer
                 // of error from the GPU each time, accumulatedError can be allocated on GPU
@@ -320,7 +333,7 @@ namespace CNTK
         while (shouldTest)
         {
             GetNextMinibatch(m_test.m_source, minibatch, m_test.m_varToStream.empty() ? m_varToStream : m_test.m_varToStream,
-                m_test.m_mbSize[totalNumberOfSamples], m_workerRank, m_numberOfWorkers, computeDevice);
+                /*pIsMinibatchAtSweepEnd=*/ nullptr, m_test.m_mbSize[totalNumberOfSamples], m_workerRank, m_numberOfWorkers, computeDevice);
             shouldTest = m_trainer->TestMinibatch(minibatch, errorAndCount, computeDevice, m_numberOfWorkers != 1);
             totalNumberOfSamples += errorAndCount.second;
         }
@@ -333,7 +346,7 @@ namespace CNTK
         Trainer()->SummarizeTrainingProgress();
     }
 
-    void TrainingSession::GetTrainingMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice)
+    void TrainingSession::GetTrainingMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, bool* pIsMinibatchAtSweepEnd, size_t maxMbSize, const DeviceDescriptor& computeDevice)
     {
         size_t workerRank = m_workerRank, numberOfWorkers = m_numberOfWorkers;
 
@@ -348,18 +361,19 @@ namespace CNTK
 
         size_t mbSize = GetMinibatchSize() * scaleFactor;
         mbSize = (std::min)(mbSize, maxMbSize);
-        GetNextMinibatch(m_source, minibatch, m_varToStream, mbSize, workerRank, numberOfWorkers, computeDevice);
+        GetNextMinibatch(m_source, minibatch, m_varToStream, pIsMinibatchAtSweepEnd, mbSize, workerRank, numberOfWorkers, computeDevice);
     }
 
-    void TrainingSession::GetCrossValidationMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice)
+    void TrainingSession::GetCrossValidationMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, bool* pIsMinibatchAtSweepEnd, size_t maxMbSize, const DeviceDescriptor& computeDevice)
     {
-        GetNextMinibatch(m_cv.m_source, minibatch, m_cv.m_varToStream.empty() ? m_varToStream : m_cv.m_varToStream, maxMbSize, m_workerRank, m_numberOfWorkers, computeDevice);
+        GetNextMinibatch(m_cv.m_source, minibatch, m_cv.m_varToStream.empty() ? m_varToStream : m_cv.m_varToStream, pIsMinibatchAtSweepEnd, maxMbSize, m_workerRank, m_numberOfWorkers, computeDevice);
     }
 
     void TrainingSession::GetNextMinibatch(
         const MinibatchSourcePtr& source,
         std::unordered_map<Variable, ValuePtr>& minibatch,
         const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
+        bool* pIsMinibatchAtSweepEnd,
         size_t mbSize,
         size_t workerRank,
         size_t numberOfWorkers,
@@ -372,9 +386,10 @@ namespace CNTK
 
         // TODO: is copy really necessary here?
         auto minibatchData = source->GetNextMinibatch(0 /*numberOfSequences*/, mbSize, numberOfWorkers, workerRank, computeDevice);
+        if (pIsMinibatchAtSweepEnd != nullptr)
+            *pIsMinibatchAtSweepEnd = IsAtSweepEnd(minibatchData);
         if (minibatchData.empty())
             return;
-
         for (auto v : inputVarToStream)
         {
             auto value = minibatchData.find(v.second);
@@ -485,11 +500,12 @@ namespace CNTK
         this->RestoreFromCheckpoint(restoreFile);
 
         // Recalculate actions indicies.
-        size_t totalNumberOfSamples = Trainer()->TotalNumberOfSamplesSeen();
         for (auto& action : m_actions)
         {
-            action.currentIndex = totalNumberOfSamples / action.frequency;
-            action.sampleCountWhenLastCalled = totalNumberOfSamples - totalNumberOfSamples % action.frequency;
+            size_t totalNumberOfUnitCounts = Trainer()->TotalNumberOfUnitsSeen(action.frequencyUnit);
+
+            action.currentIndex = totalNumberOfUnitCounts / action.frequency;
+            action.unitCountWhenLastCalled = totalNumberOfUnitCounts - totalNumberOfUnitCounts % action.frequency;
         }
     }
 }

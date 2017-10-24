@@ -456,7 +456,7 @@ namespace CNTK
         Forward(arguments, outputs, computeDevice, {});
     }
 
-    void Function::Save(std::vector<char> &vectorBuf)
+    void Function::Save(std::vector<unsigned char> &vectorBuf)
     {
         Dictionary model = Serialize();
         std::ostringstream stream;
@@ -1124,6 +1124,11 @@ namespace CNTK
     FunctionPtr Cosh(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Cosh, operand, Dictionary(), name);
+    }
+
+    FunctionPtr Asinh(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Asinh, operand, Dictionary(), name);
     }
 
     FunctionPtr Sinh(const Variable& operand, const std::wstring& name)

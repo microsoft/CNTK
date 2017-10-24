@@ -204,7 +204,7 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
 
     auto learner1 = SGDLearner(parameters, LearningRateSchedule(0.05, 1));
 
-    learner1->Update(gradientValues, 1);
+    learner1->Update(gradientValues, 1, false);
 
     {
         auto checkpoint = learner1->CreateCheckpoint();
@@ -231,8 +231,8 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
         i++;
     }
 
-    learner1->Update(gradientValues, 1);
-    learner2->Update(gradientValues, 1);
+    learner1->Update(gradientValues, 1, false);
+    learner2->Update(gradientValues, 1, false);
 
      auto checkpoint1 = learner1->CreateCheckpoint();
      auto checkpoint2 = learner2->CreateCheckpoint();
@@ -345,7 +345,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::Acos) == 82 &&
                   static_cast<size_t>(PrimitiveOpType::Pad) == 83 &&
                   static_cast<size_t>(PrimitiveOpType::Crop) == 84 &&
-                  static_cast<size_t>(PrimitiveOpType::Atanh) == 85,
+                  static_cast<size_t>(PrimitiveOpType::Atanh) == 85 &&
+                  static_cast<size_t>(PrimitiveOpType::Asinh) == 86,
                   "PrimitiveOpType enum value was modified.");
 }
 

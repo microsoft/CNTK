@@ -425,6 +425,9 @@ public:
     Matrix<ElemType>& InplaceSinh();
     Matrix<ElemType>& AssignSinhOf(const Matrix<ElemType>& a);
 
+    Matrix<ElemType>& InplaceAsinh();
+    Matrix<ElemType>& AssignAsinhOf(const Matrix<ElemType>& a);
+
     Matrix<ElemType>& InplaceLog10();
     Matrix<ElemType>& AssignLog10Of(const Matrix<ElemType>& a);
 
