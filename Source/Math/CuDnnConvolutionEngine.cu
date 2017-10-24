@@ -723,17 +723,11 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
     // a special case is when stride >= input, this means we will have a single output, and thus asymmetric padding is not an issue
     if (poolKind == PoolKind::None)     // only for convolution, pooling seems fine
     {
-        for (int i = 0; i < kernelRank; i++)
+        size_t i;
+        if (geometry->IsAsymmetricPadding(&i))
         {
-            auto lowerPad = geometry->GetLowerPad(i);
-            auto upperPad = geometry->GetUpperPad(i);
-            auto stride = geometry->GetStride(i);
-            if (kernel[i] % 2 == 0 && lowerPad < upperPad && stride < input[i])
-            {
-                fprintf(stderr, "WARNING: Detected asymmetric padding issue with even kernel size and lowerPad (%d) < higherPad (%d) (i=%d), cuDNN will not be able to produce correct result. Switch to reference engine (VERY SLOW). \n", lowerPad, upperPad, i);
-                retVal = false;
-                break;
-            }
+            fprintf(stderr, "WARNING: Detected asymmetric padding issue with even kernel size and lowerPad (%d) < higherPad (%d) (i=%d), cuDNN will not be able to produce correct result. Switch to reference engine (VERY SLOW). \n", geometry->GetLowerPad(i), geometry->GetUpperPad(i), (int)i);
+            retVal = false;
         }
     }
     return retVal;

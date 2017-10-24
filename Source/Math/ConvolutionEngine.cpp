@@ -916,29 +916,13 @@ protected:
             }
         }
 
-        static void GetTrackVecAndOffset(const SmallVector<bool>& autopad, const SmallVector<size_t>& kernelShape, SmallVector<int>& trackVec, SmallVector<int>& inputOffset)
+        static void GetInputOffsets(const ConvolveGeometry* geometry, SmallVector<int>& inputOffset)
         {
-            size_t kW = kernelShape[0];
-            size_t kH = kernelShape[1];
-
-            trackVec.clear();
-            for (int i = 0; i < autopad.size(); i++)
+            size_t dim_size = geometry->InputShape().GetRank();
+            for (size_t i = 0; i < dim_size; i++)
             {
-                trackVec.push_back(autopad[i] ? 1 : 0);
+                inputOffset.push_back(-geometry->GetLowerPad(i));
             }
-            int KH_off = 0;
-            int KW_off = 0;
-            if (trackVec.size() > 0 && trackVec[0] == 1)
-            {
-                KW_off = int((kW - 1) / 2);
-            }
-            if (trackVec.size() > 1 && trackVec[1] == 1)
-            {
-                KH_off = int((kH - 1) / 2);
-            }
-            inputOffset.clear();
-            inputOffset.push_back(-KW_off);
-            inputOffset.push_back(-KH_off);
         }
 
     public:
@@ -949,6 +933,9 @@ protected:
 
         bool Supported(const ConvolveGeometry* geometry, bool forward)
         {
+            //MKL2017 does not support asymmetric padding yet
+            if (geometry->IsAsymmetricPadding()) return false;
+
             //MKL-DNN calls does not support 4th dimention now, we will update the code once MKL release the update.
             return forward ? (geometry->InputShape().GetRank() < m_dimension) : (geometry->OutputShape().GetRank() < m_dimension);
         }
@@ -977,12 +964,12 @@ protected:
             size_t mapCount = geometry->GetMapCount(geometry->KernelShape().GetRank() - 1);
 
             SmallVector<size_t> outputSize, outputStrides, filterSize, filterStrides, inputSize,  inputStrides;
-            SmallVector<int>    trackVec,   inputOffset;
+            SmallVector<int>    inputOffset;
 
             GetSizesAndStrides(geometry->OutputShape(), batchSize, outputSize, outputStrides);
             GetSizesAndStrides(geometry->KernelShape(), mapCount, filterSize, filterStrides);
             GetSizesAndStrides(geometry->InputShape(), batchSize, inputSize, inputStrides);
-            GetTrackVecAndOffset(geometry->AutoPad(), geometry->KernelShape().GetDims(), trackVec, inputOffset);
+            GetInputOffsets(geometry, inputOffset);
 
             const auto& convolutionStride = geometry->Stride().GetDims();
 
